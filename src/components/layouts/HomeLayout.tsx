@@ -9,12 +9,13 @@ const HomeLayout = ({
     children: ReactNode;
 }) => {
     return (
-        <>
+        <div className="relative overflow-x-hidden">
             <Head>
                 <title>{'devpad | ' + title}</title>
+                <link rel="shortcut icon" href="/devpad-favicon.ico" />
             </Head>
-            <main style={{ minHeight: 'calc(100vh - 52px)' }}>{children}</main>
-            <footer className="h-[52px] bg-neutral-900 p-4">
+            <main>{children}</main>
+            <footer className="absolute bottom-0 w-screen h-[52px] bg-neutral-900 p-4">
                 <div className="text-center font-sans text-sm text-neutral-500">
                     <span>website by </span>
                     <a
@@ -25,7 +26,7 @@ const HomeLayout = ({
                     </a>
                 </div>
             </footer>
-        </>
+        </div>
     );
 };
 

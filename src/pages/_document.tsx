@@ -1,7 +1,7 @@
-import Document, { Html, Head, Main, NextScript } from 'next/document';
+import Document, { Html, Head, Main, NextScript, DocumentContext } from 'next/document';
 
 class MyDocument extends Document {
-    static async getInitialProps(ctx: any) {
+    static async getInitialProps(ctx: DocumentContext) {
         const initialProps = await Document.getInitialProps(ctx);
 
         return initialProps;
@@ -16,7 +16,7 @@ class MyDocument extends Document {
                         rel="stylesheet"
                     />
                 </Head>
-                <body className="text-pd-gray-900 bg-white dark:bg-pad-gray-900 dark:text-white">
+                <body className="text-pad-gray-900 bg-gray-200 dark:bg-pad-gray-900 dark:text-white">
                     <Main />
                     <NextScript />
                 </body>
