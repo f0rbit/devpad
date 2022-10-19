@@ -99,8 +99,8 @@ type NavProps = {
 function HomeNavBar({ noicon }: NavProps) {
     const [isOpen, setIsOpen] = useState(false);
     return (
-        <nav className="">
-            <div className="relative">
+        <nav className="relative z-50">
+            <div className="relative z-50">
                 <div className="relative flex h-16 w-full flex-row flex-nowrap items-center justify-center">
                     <div className="absolute left-0 flex items-center justify-center align-middle">
                         <div>{!noicon && <Icon />}</div>
@@ -141,7 +141,7 @@ function HomeNavBar({ noicon }: NavProps) {
                     leaveTo="opacity-0 scale-95"
                 >
                     {() => (
-                        <div className="md:hidden absolute w-full bg-pad-gray-900" id="mobile-menu">
+                        <div className="md:hidden absolute w-full bg-pad-gray-900 rounded-xl" id="mobile-menu">
                             <div className="flex flex-col justify-center items-center space-y-2 px-2 pt-2 pb-3 sm:px-3">
                                 {HOME_LINKS.map((l: PageLink) =>
                                     (l.title != "Login" && NavLink(l.title, true, l.destination))

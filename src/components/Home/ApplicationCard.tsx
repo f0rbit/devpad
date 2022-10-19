@@ -1,13 +1,13 @@
 import Image, { StaticImageData } from 'next/image';
 
-type ImageSource = string | StaticImageData;
+
 type ApplicationCardProps = {
     icon: string | JSX.Element;
     title: string;
     description: string;
     version: string;
     reverse: boolean;
-    images?: ImageSource[];
+    images?: StaticImageData[];
 };
 
 const ApplicationCard = ({
@@ -20,11 +20,11 @@ const ApplicationCard = ({
 }: ApplicationCardProps) => {
     return (
         <>
-            <div className="absolute left-[1.69%] mt-2">
+            <div className="absolute left-3 mt-2">
                 <span className="absolute right-0 mr-5 -mt-1 whitespace-nowrap text-right font-mono text-pad-gray-200">
                     {version}
                 </span>
-                <div className=" h-4 w-4  rounded-full border-2 border-pad-gray-900 bg-pad-purple-500"></div>
+                <div className="h-4 w-4  rounded-full border-2 border-pad-gray-900 bg-pad-purple-500"></div>
             </div>
             <div
                 className={
@@ -33,7 +33,6 @@ const ApplicationCard = ({
             >
                 <div className="w-1/2 drop-shadow-lg">
                     {images?.map((image, index) => {
-                        console.log(image);
                         return (
                             <div key={index} className="w-96">
                                 <Image
