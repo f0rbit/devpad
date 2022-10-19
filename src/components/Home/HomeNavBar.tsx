@@ -121,7 +121,7 @@ function HomeNavBar({ noicon }: NavProps) {
                         <button
                             onClick={() => setIsOpen(!isOpen)}
                             type="button"
-                            className="inline-flex items-center justify-center rounded-md bg-neutral-800 p-2 text-neutral-500 hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-neutral-500 "
+                            className="inline-flex items-center justify-center rounded-md bg-pad-gray-700 p-2 text-white hover:bg-pad-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-neutral-500 "
                             aria-controls="mobile-menu"
                             aria-expanded="false"
                         >
@@ -141,11 +141,12 @@ function HomeNavBar({ noicon }: NavProps) {
                     leaveTo="opacity-0 scale-95"
                 >
                     {() => (
-                        <div className="md:hidden absolute w-full bg-red-500" id="mobile-menu">
+                        <div className="md:hidden absolute w-full bg-pad-gray-900" id="mobile-menu">
                             <div className="flex flex-col justify-center items-center space-y-2 px-2 pt-2 pb-3 sm:px-3">
                                 {HOME_LINKS.map((l: PageLink) =>
-                                    NavLink(l.title, true, l.destination)
+                                    (l.title != "Login" && NavLink(l.title, true, l.destination))
                                 )}
+                                <HomeButton text={"Login"} dest={"login"}/>
                             </div>
                         </div>
                     )}

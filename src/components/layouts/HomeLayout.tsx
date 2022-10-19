@@ -14,7 +14,7 @@ const HomeLayout = ({
                 <title>{'devpad | ' + title}</title>
                 <link rel="shortcut icon" href="/devpad-favicon.ico" />
             </Head>
-            <main>{children}</main>
+            <main style={{minHeight: "100vh"}}>{children}</main>
             <footer className="absolute bottom-0 w-screen h-[52px] bg-neutral-900 p-4">
                 <div className="text-center font-sans text-sm text-neutral-500">
                     <span>website by </span>
