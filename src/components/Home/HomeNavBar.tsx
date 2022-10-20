@@ -104,7 +104,7 @@ function HomeNavBar({ noicon }: NavProps) {
                 <div className="relative flex h-16 w-full flex-row flex-nowrap items-center justify-center">
                     <div className="absolute left-0 flex items-center justify-center align-middle">
                         <div>{!noicon && <Icon />}</div>
-                        <div className="ml-2 text-4xl font-medium text-pad-gray-600 dark:text-white">
+                        <div className="ml-2 text-4xl font-medium text-gray-600 dark:text-white">
                             devpad
                         </div>
                     </div>
