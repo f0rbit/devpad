@@ -1,5 +1,7 @@
-import Head from 'next/head';
-import { ReactNode } from 'react';
+import Head from "next/head";
+import { ReactNode } from "react";
+import CenteredContainer from "@/components/CenteredContainer";
+import HomeNavBar from "../Home/HomeNavBar";
 
 const HomeLayout = ({
     title,
@@ -11,11 +13,18 @@ const HomeLayout = ({
     return (
         <div className="relative overflow-x-hidden">
             <Head>
-                <title>{'devpad | ' + title}</title>
+                <title>{"devpad | " + title}</title>
                 <link rel="shortcut icon" href="/devpad-favicon.ico" />
             </Head>
-            <main style={{minHeight: "100vh overflow-x-hidden"}}>{children}</main>
-            <footer className="absolute bottom-0 w-screen h-[52px] bg-gray-300 dark:bg-neutral-900 p-4">
+            <main style={{minHeight: "calc(100vh - 52px)"}}>
+                <CenteredContainer>
+                    <div className="relative w-full">
+                        <HomeNavBar noicon={false} />
+                    </div>
+                    {children}
+                </CenteredContainer>
+            </main>
+            <footer className="h-[52px] w-screen bg-gray-300 p-4 dark:bg-neutral-900">
                 <div className="text-center font-sans text-sm text-neutral-500">
                     <span>website by </span>
                     <a
