@@ -6,18 +6,12 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
   // Further reading:
   // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
   // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
   url      = env("DATABASE_URL")
-}
-
-model Example {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 // Necessary for Next auth
@@ -27,12 +21,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? // @db.Text
-  access_token      String? // @db.Text
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? // @db.Text
+  id_token          String? @db.Text
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -55,6 +49,9 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+
+  todo_tags  TODO_Tags[] // list of tags created by user
+  todo_items TODO_Item[] // list of items owned by user
 }
 
 model VerificationToken {
@@ -63,4 +60,74 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// todo items
+model TODO_Item {
+  id             String         @id @default(uuid()) @db.Uuid
+  owner          User           @relation(fields: [owner_id], references: [id])
+  owner_id       String         
+  title          String
+  end_time       DateTime?
+  start_time     DateTime?
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  cover_image    String?
+  completed      Boolean        @default(false)
+  completed_time DateTime?
+  visibility     TODO_VISBILITY @default(PRIVATE)
+
+  tags      TODO_ItemTags[]
+  parents   TODO_ItemDependancy[] @relation(name: "parent_item")
+  children  TODO_ItemDependancy[] @relation(name: "child_item")
+  templates TODO_TemplateItem[]
+}
+
+model TODO_TemplateItem {
+  id           String    @id @default(uuid()) @db.Uuid
+  title        String
+  reference    TODO_Item @relation(fields: [reference_id], references: [id])
+  reference_id String    @db.Uuid
+}
+
+model TODO_ItemDependancy {
+  id       String                   @id @default(uuid()) @db.Uuid
+  relation TODO_DEPENDANCY_RELATION
+
+  parent_item    TODO_Item @relation(fields: [parent_item_id], references: [id], name: "parent_item")
+  child_item     TODO_Item @relation(fields: [child_item_id], references: [id], name: "child_item")
+  parent_item_id String    @db.Uuid
+  child_item_id  String    @db.Uuid
+}
+
+model TODO_Tags {
+  id       String @id @default(uuid()) @db.Uuid
+  owner    User   @relation(fields: [owner_id], references: [id])
+  owner_id String 
+  title    String
+  colour   String @default("#000000")
+
+  items TODO_ItemTags[]
+}
+
+model TODO_ItemTags {
+  id      String    @id @default(uuid()) @db.Uuid
+  item    TODO_Item @relation(fields: [item_id], references: [id])
+  item_id String    @db.Uuid
+  tag     TODO_Tags @relation(fields: [tag_id], references: [id])
+  tag_id  String    @db.Uuid
+}
+
+enum TODO_DEPENDANCY_RELATION {
+  SHOW
+  HIDE
+}
+
+// todo enums
+enum TODO_VISBILITY {
+  PUBLIC
+  PRIVATE
+  HIDDEN
+  ARCHIVED
+  DRAFT
 }
