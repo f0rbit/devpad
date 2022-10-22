@@ -34,7 +34,7 @@ function NavLink(name: string, large: boolean, dest: string) {
         <Link href={dest}>
             <a
                 className={
-                    'font-medium text-gray-500 hover:text-pad-purple-500 dark:text-pad-gray-400'
+                    'font-medium text-gray-500 light:hover:text-pad-purple-500 dark:hover:text-pad-purple-500 dark:text-pad-gray-400 transition-colors duration-300'
                 }
                 href={dest}
             >
