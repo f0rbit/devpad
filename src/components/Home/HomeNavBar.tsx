@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { PageLink } from '@/types/page-link';
 import HomeButton from './HomeButton';
+import HoverLink from '../HoverLink';
 
 const HOME_LINKS: PageLink[] = [
     {
@@ -34,11 +35,11 @@ function NavLink(name: string, large: boolean, dest: string) {
         <Link href={dest}>
             <a
                 className={
-                    'font-medium text-gray-500 light:hover:text-pad-purple-500 dark:hover:text-pad-purple-500 dark:text-pad-gray-400 transition-colors duration-300'
+                    'font-medium link-hover'
                 }
                 href={dest}
             >
-                {name}
+                <HoverLink text={name} />
             </a>
         </Link>
     );
