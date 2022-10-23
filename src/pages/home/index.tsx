@@ -16,7 +16,7 @@ const home: NextPage = () => {
         const host =
             typeof window != "undefined"
                 ? window.location.hostname
-                : "localhost:3000";
+                : "devpad.local:3000";
         const protocol =
             typeof window != "undefined" ? window.location.protocol : "http";
         return protocol + "://" + sub + "." + host;

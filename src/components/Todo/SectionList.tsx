@@ -87,7 +87,6 @@ const GroupedLinks = () => {
 };
 
 export const MainLinkSection = ({expanded}: { expanded: boolean }) => {
-    console.log(expanded);
     return (
         <div className="flex h-full w-full flex-col gap-1 bg-gray-200 dark:bg-pad-gray-900 px-4 md:w-64 font-medium">
             <FlatLinks />

@@ -18,7 +18,6 @@ export const TodoContext: Context<TodoContextType> = React.createContext(
 );
 
 const DashboardMainSection = ({ mobile }: { mobile: boolean }) => {
-    console.log("mobile", mobile);
     return (
         <TodoContext.Consumer>
             {({ showList }) => {
@@ -52,7 +51,6 @@ const Dashboard: NextPage = () => {
         setShowList(!showList);
     };
 
-    console.log("showList", showList);
 
     return (
         <TodoContext.Provider

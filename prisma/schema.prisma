@@ -66,14 +66,14 @@ model VerificationToken {
 model TODO_Item {
   id             String         @id @default(uuid()) @db.Uuid
   owner          User           @relation(fields: [owner_id], references: [id])
-  owner_id       String         
+  owner_id       String
   title          String
   end_time       DateTime?
   start_time     DateTime?
   created_at     DateTime       @default(now())
   updated_at     DateTime       @updatedAt
   cover_image    String?
-  completed      Boolean        @default(false)
+  progress       TODO_STATUS    @default(UNSTARTED)
   completed_time DateTime?
   visibility     TODO_VISBILITY @default(PRIVATE)
 
@@ -103,7 +103,7 @@ model TODO_ItemDependancy {
 model TODO_Tags {
   id       String @id @default(uuid()) @db.Uuid
   owner    User   @relation(fields: [owner_id], references: [id])
-  owner_id String 
+  owner_id String
   title    String
   colour   String @default("#000000")
 
@@ -116,6 +116,12 @@ model TODO_ItemTags {
   item_id String    @db.Uuid
   tag     TODO_Tags @relation(fields: [tag_id], references: [id])
   tag_id  String    @db.Uuid
+}
+
+enum TODO_STATUS {
+  UNSTARTED
+  IN_PROGRESS
+  COMPLETED
 }
 
 enum TODO_DEPENDANCY_RELATION {

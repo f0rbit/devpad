@@ -35,7 +35,6 @@ const HOME_LINKS: PageLink[] = [
 function NavLink(name: string, large: boolean, dest: string) {
     const { setLoginOpen } = useContext(LoginContext);
     const { status } = useSession();
-    console.log(status);
     if (name == "Login") {
         if (status != "authenticated") {
             return (
