@@ -15,7 +15,7 @@ const CollapseableSection = ({
 
     return (
         <div className="h-min">
-            <div
+            <button
                 className={"-ml-0.5 inline-flex " + hoverLinkClass}
                 onClick={() => {
                     setExpanded(!expanded);
@@ -24,7 +24,7 @@ const CollapseableSection = ({
             >
                 <span>{expanded ? <ChevronRight /> : <ChevronDown />}</span>
                 <span>{title}</span>
-            </div>
+            </button>
             {expanded && (
                 <div className="ml-8 flex flex-col gap-1">
                     {links.map((link, index) => {

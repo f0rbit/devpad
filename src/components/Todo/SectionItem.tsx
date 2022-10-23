@@ -14,7 +14,7 @@ const SectionLink = ({ link, mobile }: { link: SectionLinkType, mobile: boolean 
         <TodoContext.Consumer>
             {({ setSelectedSection, setShowList }) => {
                 return (
-                    <div
+                    <button
                         title={link.description}
                         className={hoverLinkClass}
                         onClick={() => {
@@ -23,7 +23,7 @@ const SectionLink = ({ link, mobile }: { link: SectionLinkType, mobile: boolean 
                         }}
                     >
                         <span>{link.icon}</span> <span>{link.title}</span>
-                    </div>
+                    </button>
                 );
             }}
         </TodoContext.Consumer>

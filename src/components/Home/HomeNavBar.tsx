@@ -31,6 +31,9 @@ const HOME_LINKS: PageLink[] = [
 ];
 
 function NavLink(name: string, large: boolean, dest: string) {
+    if (dest == "/") {
+        return <a href={dest}><HoverLink text={name} /></a>
+    }
     return (
         <Link href={dest}>
             <a

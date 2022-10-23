@@ -4,22 +4,38 @@ import { TodoContext } from "src/pages/todo/dashboard";
 import HoverLink, { hoverLinkClass } from "../HoverLink";
 
 const TodoNavbar = () => {
-    const { toggleList, setSelectedSection, setShowList } = useContext(TodoContext);
+    const { toggleList, setSelectedSection, setShowList } =
+        useContext(TodoContext);
     return (
         <div className="bg-gray-200 dark:bg-pad-gray-900">
-            <div className="flex flex-row gap-4 py-1 text-gray-600 dark:text-pad-gray-300 mx-4 my-1 items-center h-[40px]">
-                <Menu onClick={() => {
-                    toggleList();
-                }} className={hoverLinkClass + " min-w-min"} />
-                <Home className={hoverLinkClass + " min-w-min"} onClick={() => {
-                    setSelectedSection("current");
-                    setShowList(true);
-                }}/>
-                <div className=" gap-2 rounded-md bg-gray-300 dark:bg-pad-gray-800 px-3 py-1 hidden md:inline-flex">
-                    <Search className="min-w-min"/>
-                    <input className="w-64 bg-transparent focus:outline-none dark:placeholder-pad-gray-400 dark:text-pad-gray-100" placeholder={"Search"}></input>
+            <div className="mx-4 my-1 flex h-[40px] flex-row items-center gap-4 py-1 text-gray-600 dark:text-pad-gray-300">
+                <button
+                    onClick={() => {
+                        toggleList();
+                    }}
+                    className={hoverLinkClass}
+                >
+                    <Menu className={"min-w-min"} />
+                </button>
+
+                <button
+                    className={hoverLinkClass}
+                    onClick={() => {
+                        setSelectedSection("current");
+                        setShowList(true);
+                    }}
+                >
+                    <Home className={"min-w-min"} />
+                </button>
+
+                <div className=" hidden gap-2 rounded-md bg-gray-300 px-3 py-1 dark:bg-pad-gray-800 md:inline-flex">
+                    <Search className="min-w-min" />
+                    <input
+                        className="w-64 bg-transparent focus:outline-none dark:text-pad-gray-100 dark:placeholder-pad-gray-400"
+                        placeholder={"Search"}
+                    ></input>
                 </div>
-                <div className="hidden md:block truncate transition-all">
+                <div className="hidden truncate transition-all md:block">
                     <HoverLink text={"Projects"} />
                     <span>{" > "}</span>
                     <HoverLink text={"gm-server"} />
@@ -28,10 +44,10 @@ const TodoNavbar = () => {
                     <span>{" > "}</span>
                     <HoverLink text={"Edit"} />
                 </div>
-                <div className="ml-auto flex flex-row-reverse gap-4 items-center">
+                <div className="ml-auto flex flex-row-reverse items-center gap-4">
                     <HoverLink text={"Profile"} />
                     <HoverLink text={"Settings"} />
-                    <HoverLink text={"Help"}/>
+                    <HoverLink text={"Help"} />
                 </div>
             </div>
         </div>

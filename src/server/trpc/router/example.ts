@@ -1,5 +1,6 @@
 import { router, publicProcedure } from "../trpc";
 import { z } from "zod";
+import { TRACE_OUTPUT_VERSION } from "next/dist/shared/lib/constants";
 
 export const exampleRouter = router({
   hello: publicProcedure
@@ -10,6 +11,14 @@ export const exampleRouter = router({
       };
     }),
   getAll: publicProcedure.query(({ ctx }) => {
-    return ctx.prisma.example.findMany();
+    console.log("session", ctx.session);
+    return ctx.prisma.tODO_Item.findMany({
+      include: {
+        tags: true,
+        children: true,
+        parents: true,
+        templates: true,
+      }
+    });
   }),
 });
