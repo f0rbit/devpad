@@ -7,6 +7,7 @@ import { PageLink } from "@/types/page-link";
 import HomeButton from "./HomeButton";
 import HoverLink from "../HoverLink";
 import { LoginContext } from "src/pages/_app";
+import { signOut, useSession } from "next-auth/react";
 
 const HOME_LINKS: PageLink[] = [
     {
@@ -33,14 +34,30 @@ const HOME_LINKS: PageLink[] = [
 
 function NavLink(name: string, large: boolean, dest: string) {
     const { setLoginOpen } = useContext(LoginContext);
+    const { status } = useSession();
+    console.log(status);
     if (name == "Login") {
-        return (
-            <button onClick={() => {
-                setLoginOpen(true);
-            }}>
-                <HoverLink text={"Login"} />
-            </button>
-        );
+        if (status != "authenticated") {
+            return (
+                <button
+                    onClick={() => {
+                        setLoginOpen(true);
+                    }}
+                >
+                    <HoverLink text={"Login"} />
+                </button>
+            );
+        } else {
+            return (
+                <button
+                    onClick={() => {
+                        signOut();
+                    }}
+                >
+                    <HoverLink text={"Logout"} />
+                </button>
+            );
+        }
     }
     if (dest == "/") {
         return (

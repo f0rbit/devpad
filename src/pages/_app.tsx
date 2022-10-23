@@ -20,7 +20,7 @@ const MyApp: AppType<{ session: Session | null }> = ({
 }) => {
     const [loginOpen, setLoginOpen] = useState(false);
     return (
-        <SessionProvider session={session}>
+        <SessionProvider>
             <LoginContext.Provider
                 value={{
                     loginOpen,
