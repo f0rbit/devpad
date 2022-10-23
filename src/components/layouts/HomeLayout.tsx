@@ -2,6 +2,7 @@ import Head from "next/head";
 import { ReactNode } from "react";
 import CenteredContainer from "@/components/CenteredContainer";
 import HomeNavBar from "../Home/HomeNavBar";
+import LoginDialog from "../LoginModal";
 
 const HomeLayout = ({
     title,
@@ -21,6 +22,7 @@ const HomeLayout = ({
                     <div className="relative w-full">
                         <HomeNavBar noicon={false} />
                     </div>
+                    <LoginDialog />
                     {children}
                 </CenteredContainer>
             </main>

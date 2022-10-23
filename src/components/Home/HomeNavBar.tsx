@@ -1,47 +1,57 @@
-import { ReactNode, useState } from 'react';
-import { Transition } from '@headlessui/react';
-import logo from 'public/devpad-logo.png';
-import Link from 'next/link';
-import Image from 'next/image';
-import { PageLink } from '@/types/page-link';
-import HomeButton from './HomeButton';
-import HoverLink from '../HoverLink';
+import { ReactNode, useContext, useState } from "react";
+import { Transition } from "@headlessui/react";
+import logo from "public/devpad-logo.png";
+import Link from "next/link";
+import Image from "next/image";
+import { PageLink } from "@/types/page-link";
+import HomeButton from "./HomeButton";
+import HoverLink from "../HoverLink";
+import { LoginContext } from "src/pages/_app";
 
 const HOME_LINKS: PageLink[] = [
     {
-        title: 'Home',
-        destination: '/'
+        title: "Home",
+        destination: "/"
     },
     {
-        title: 'Features',
-        destination: '/features'
+        title: "Features",
+        destination: "/features"
     },
     {
-        title: 'Plans',
-        destination: '/plans'
+        title: "Plans",
+        destination: "/plans"
     },
     {
-        title: 'Resources',
-        destination: '/resources'
+        title: "Resources",
+        destination: "/resources"
     },
     {
-        title: 'Login',
-        destination: '/login'
+        title: "Login",
+        destination: ""
     }
 ];
 
 function NavLink(name: string, large: boolean, dest: string) {
+    const { setLoginOpen } = useContext(LoginContext);
+    if (name == "Login") {
+        return (
+            <button onClick={() => {
+                setLoginOpen(true);
+            }}>
+                <HoverLink text={"Login"} />
+            </button>
+        );
+    }
     if (dest == "/") {
-        return <a href={dest}><HoverLink text={name} /></a>
+        return (
+            <a href={dest}>
+                <HoverLink text={name} />
+            </a>
+        );
     }
     return (
         <Link href={dest}>
-            <a
-                className={
-                    'font-medium link-hover'
-                }
-                href={dest}
-            >
+            <a className={"link-hover font-medium"} href={dest}>
                 <HoverLink text={name} />
             </a>
         </Link>
@@ -112,16 +122,16 @@ function HomeNavBar({ noicon }: NavProps) {
                             devpad
                         </div>
                     </div>
-                    <div className="absolute right-0 ml-10 hidden items-baseline space-x-4 lg:space-x-8 md:flex">
+                    <div className="absolute right-0 ml-10 hidden items-baseline space-x-4 md:flex lg:space-x-8">
                         {HOME_LINKS.map((l: PageLink) =>
                             NavLink(l.title, false, l.destination)
                         )}
                         <HomeButton
-                            text={'Get Started'}
-                            dest={'/get-started'}
+                            text={"Get Started"}
+                            dest={"/get-started"}
                         />
                     </div>
-                    <div className="-mr-2 flex md:hidden absolute right-0">
+                    <div className="absolute right-0 -mr-2 flex md:hidden">
                         <button
                             onClick={() => setIsOpen(!isOpen)}
                             type="button"
@@ -129,32 +139,36 @@ function HomeNavBar({ noicon }: NavProps) {
                             aria-controls="mobile-menu"
                             aria-expanded="false"
                         >
-                            <Hamburger isOpen={isOpen}/>
+                            <Hamburger isOpen={isOpen} />
                         </button>
                     </div>
                 </div>
-                
             </div>
-                <Transition
-                    show={isOpen}
-                    enter="transition ease-out duration-100 transform"
-                    enterFrom="opacity-0 scale-95"
-                    enterTo="opacity-100 scale-100"
-                    leave="transition ease-in duration-75 transform"
-                    leaveFrom="opacity-100 scale-100"
-                    leaveTo="opacity-0 scale-95"
-                >
-                    {() => (
-                        <div className="md:hidden absolute w-full bg-pad-gray-900 rounded-xl" id="mobile-menu">
-                            <div className="flex flex-col justify-center items-center space-y-2 px-2 pt-2 pb-3 sm:px-3">
-                                {HOME_LINKS.map((l: PageLink) =>
-                                    (l.title != "Login" && NavLink(l.title, true, l.destination))
-                                )}
-                                <HomeButton text={"Login"} dest={"login"}/>
-                            </div>
+            <Transition
+                show={isOpen}
+                enter="transition ease-out duration-100 transform"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="transition ease-in duration-75 transform"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+            >
+                {() => (
+                    <div
+                        className="absolute w-full rounded-xl bg-pad-gray-900 md:hidden"
+                        id="mobile-menu"
+                    >
+                        <div className="flex flex-col items-center justify-center space-y-2 px-2 pt-2 pb-3 sm:px-3">
+                            {HOME_LINKS.map(
+                                (l: PageLink) =>
+                                    l.title != "Login" &&
+                                    NavLink(l.title, true, l.destination)
+                            )}
+                            <HomeButton text={"Login"} dest={"login"} />
                         </div>
-                    )}
-                </Transition>
+                    </div>
+                )}
+            </Transition>
         </nav>
     );
 }

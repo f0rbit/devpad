@@ -1,13 +1,10 @@
-import { exampleRouter } from "@/server/trpc/router/example";
-import { publicProcedure } from "@/server/trpc/trpc";
-import { TRPCClient } from "@trpc/client";
 import { useContext } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
 import { trpc } from "src/utils/trpc";
 
 const ListRenderer = () => {
     const { selectedSection } = useContext(TodoContext);
-    const { data } = trpc.example.getAll.useQuery();
+    const { data } = trpc.todo.getAll.useQuery();
     if (!data) {
         return <div>Loading...</div>;
     }
