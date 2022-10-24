@@ -1,3 +1,5 @@
+import { useContext } from "react";
+import { TodoContext } from "src/pages/todo/dashboard";
 import CollapseableSection from "./CollapseableSection";
 import SectionLink, { SectionLinkType } from "./SectionItem";
 
@@ -60,12 +62,14 @@ const tags: SectionLinkType[] = [
 ];
 
 const FlatLinks = () => {
+    const { selectedSection } = useContext(TodoContext);
     return (
         <div className="hidden md:flex flex-col gap-1 mt-2">
             {links.map((link, index) => {
+                console.log(link);
                 return (
-                    <div key={index} className="h-8">
-                        <SectionLink link={link} mobile={false}/>
+                    <div key={index} className={"h-8 " + (selectedSection == link.url ? "text-pad-purple-400" : "")}>
+                        <SectionLink link={link} mobile={false} selected={selectedSection == link.url}/>
                     </div>
                 );
             })}
@@ -73,12 +77,13 @@ const FlatLinks = () => {
     );
 };
 const GroupedLinks = () => {
+    const { selectedSection } = useContext(TodoContext);
     return (
         <div className="grid grid-cols-2 md:hidden gap-2 mt-4 mb-2">
             {links.map((link, index) => {
                 return (
                     <div key={index} className="h-8 bg-gray-300 dark:bg-pad-gray-800 rounded-md flex justify-center items-center drop-shadow-md">
-                        <SectionLink link={link} mobile={true} />
+                        <SectionLink link={link} mobile={true} selected={selectedSection == link.url} />
                     </div>
                 );
             })}

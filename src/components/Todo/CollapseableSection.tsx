@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
 import SectionLink, { SectionLinkType } from "./SectionItem";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { hoverLinkClass } from "../HoverLink";
+import { TodoContext } from "src/pages/todo/dashboard";
 const CollapseableSection = ({
     title,
     links,
@@ -12,7 +13,8 @@ const CollapseableSection = ({
     mobile: boolean;
 }) => {
     const [expanded, setExpanded] = useState(title == "Projects");
-
+    const { selectedSection } = useContext(TodoContext);
+    
     return (
         <div className="h-min">
             <button
@@ -30,7 +32,7 @@ const CollapseableSection = ({
                     {links.map((link, index) => {
                         return (
                             <div key={index} className="">
-                                <SectionLink link={link} mobile={mobile} />
+                                <SectionLink link={link} mobile={mobile} selected={selectedSection == link.url} />
                             </div>
                         );
                     })}

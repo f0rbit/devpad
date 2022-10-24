@@ -66,6 +66,7 @@ model VerificationToken {
 model TODO_Item {
   id             String         @id @default(uuid()) @db.Uuid
   owner          User           @relation(fields: [owner_id], references: [id])
+  description    Json           @db.Json @default("{}")
   owner_id       String
   title          String
   end_time       DateTime?
@@ -76,8 +77,9 @@ model TODO_Item {
   progress       TODO_STATUS    @default(UNSTARTED)
   completed_time DateTime?
   visibility     TODO_VISBILITY @default(PRIVATE)
+  summary        String?
 
-  tags      TODO_ItemTags[]
+  tags      TODO_Tags[]
   parents   TODO_ItemDependancy[] @relation(name: "parent_item")
   children  TODO_ItemDependancy[] @relation(name: "child_item")
   templates TODO_TemplateItem[]
@@ -107,16 +109,10 @@ model TODO_Tags {
   title    String
   colour   String @default("#000000")
 
-  items TODO_ItemTags[]
+  items TODO_Item[]
+
 }
 
-model TODO_ItemTags {
-  id      String    @id @default(uuid()) @db.Uuid
-  item    TODO_Item @relation(fields: [item_id], references: [id])
-  item_id String    @db.Uuid
-  tag     TODO_Tags @relation(fields: [tag_id], references: [id])
-  tag_id  String    @db.Uuid
-}
 
 enum TODO_STATUS {
   UNSTARTED

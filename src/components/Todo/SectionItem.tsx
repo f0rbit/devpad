@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
-import { hoverLinkClass } from "../HoverLink";
+import { hoverClass, hoverLinkClass } from "../HoverLink";
 
 export type SectionLinkType = {
     title: string;
@@ -9,14 +9,14 @@ export type SectionLinkType = {
     url: string;
 };
 
-const SectionLink = ({ link, mobile }: { link: SectionLinkType, mobile: boolean }) => {
+const SectionLink = ({ link, mobile, selected }: { link: SectionLinkType, mobile: boolean, selected?: boolean }) => {
     return (
         <TodoContext.Consumer>
             {({ setSelectedSection, setShowList }) => {
                 return (
                     <button
                         title={link.description}
-                        className={hoverLinkClass}
+                        className={selected ? "text-pad-purple-200 " + hoverClass : hoverLinkClass}
                         onClick={() => {
                             setSelectedSection(link.url);
                             if (mobile) setShowList(false);
