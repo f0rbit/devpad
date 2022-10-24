@@ -9,7 +9,7 @@ const StatusIcon = ({ status }: { status: TODO_STATUS }) => {
             return (
                 <div className="relative w-5">
                     <Square className="relative w-full" />
-                    <MoreHorizontal className="absolute scale-75 top-0" />
+                    <MoreHorizontal className="absolute scale-75 top-0 w-5" />
                 </div>
             );
         case TODO_STATUS.UNSTARTED:

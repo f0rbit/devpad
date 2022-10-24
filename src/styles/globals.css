@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+input, textarea, select {
+    @apply bg-pad-gray-300 px-2 py-0.5 focus:outline-none focus:ring-pad-purple-50 focus:ring-2 rounded-md
+}
+
+#edit-todo > label {
+    @apply text-left md:text-right text-pad-gray-50 my-auto
+}
+
+/* For Webkit-based browsers (Chrome, Safari and Opera) */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+
+/* For IE, Edge and Firefox */
+.scrollbar-hide {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}

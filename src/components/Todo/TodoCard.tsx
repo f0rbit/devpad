@@ -1,6 +1,6 @@
 // React todo card component
 
-import { Prisma, TODO_Item, TODO_STATUS } from "@prisma/client";
+import { Prisma, TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
 import { Edit2, Newspaper, Tags } from "lucide-react";
@@ -11,26 +11,27 @@ import VisiblityIcon from "./VisibilityIcon";
 import StatusIcon from "./StatusIcon";
 import DescriptionParser from "./Description/DescriptionParser";
 import GenericModal from "../GenericModal";
+import TodoEditForm from "./TodoEditForm";
 
 const COLOURS = {
-    COMPLETED: {
+    "COMPLETED": {
         colour: "text-green-400"
     },
-    UNSTARTED: {
+    "UNSTARTED": {
         colour: "text-gray-400"
     },
-    IN_PROGRESS: {
+    "IN_PROGRESS": {
         colour: "text-blue-400"
     }
 };
 
 const getNextStatus = (status: TODO_STATUS) => {
     switch (status) {
-        case TODO_STATUS.COMPLETED:
+        case "COMPLETED":
             return TODO_STATUS.COMPLETED;
-        case TODO_STATUS.UNSTARTED:
+        case "UNSTARTED":
             return TODO_STATUS.IN_PROGRESS;
-        case TODO_STATUS.IN_PROGRESS:
+        case "IN_PROGRESS":
             return TODO_STATUS.COMPLETED;
     }
 };
@@ -53,7 +54,7 @@ const TodoStatus = ({
             }}
             title={"Change status to " + next_status}
         >
-            <div className={COLOURS[status].colour + " fill-current"}>
+            <div className={COLOURS[status]?.colour + " fill-current"}>
                 <StatusIcon status={status} />
             </div>
         </button>
@@ -73,11 +74,27 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
         });
     };
 
+    const updateItem = ({ summary, description, status, visibility  }: {
+        summary: string;
+        description: object;
+        status: TODO_STATUS;
+        visibility: TODO_VISBILITY;
+
+    }) => {
+        setItem({
+            ...item,
+            summary,
+            description,
+            progress: status,
+            visibility
+        });
+    }
+
     return (
         <>
            <div className="absolute">
            <GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-                <div>Edit Screen</div>
+                <TodoEditForm item={item} updateItem={updateItem} setOpen={setEditModalOpen} />
             </GenericModal>
             </div> 
             <div className="group relative w-full rounded-md bg-pad-gray-600 p-4 drop-shadow-md">
