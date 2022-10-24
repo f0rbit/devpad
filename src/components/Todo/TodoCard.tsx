@@ -13,15 +13,15 @@ import DescriptionParser from "./Description/DescriptionParser";
 import GenericModal from "../GenericModal";
 import TodoEditForm from "./TodoEditForm";
 
-const COLOURS = {
+export const COLOURS = {
     COMPLETED: {
-        colour: "text-green-400"
+        colour: "text-green-300"
     },
     UNSTARTED: {
-        colour: "text-gray-400"
+        colour: "text-neutral-400"
     },
     IN_PROGRESS: {
-        colour: "text-blue-400"
+        colour: "text-pad-purple-500"
     }
 };
 
@@ -127,7 +127,7 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
                     />
                 </GenericModal>
             </div>
-            <div className="group relative w-full rounded-md bg-pad-gray-600 p-4 drop-shadow-md">
+            <div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
                 <div className="inline-flex items-center gap-2 align-middle">
                     <TodoStatus
                         status={item.progress}

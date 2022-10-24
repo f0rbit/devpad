@@ -1,5 +1,6 @@
 import { TODO_Item, TODO_STATUS } from "@prisma/client";
 import { dateToDateTime } from "src/utils/dates";
+import { COLOURS } from "./TodoCard";
 
 const TodoEditForm = ({
     item,
@@ -59,13 +60,13 @@ const TodoEditForm = ({
                         defaultValue={item.progress}
                         className="w-full"
                     >
-                        <option value="UNSTARTED" className="text-gray-400">
+                        <option value="UNSTARTED" className={COLOURS.UNSTARTED.colour}>
                             Not Started
                         </option>
-                        <option value="IN_PROGRESS" className="text-blue-400">
+                        <option value="IN_PROGRESS" className={COLOURS.IN_PROGRESS.colour}>
                             In Progress
                         </option>
-                        <option value="COMPLETED" className="text-green-400">
+                        <option value="COMPLETED" className={COLOURS.COMPLETED.colour}>
                             Done
                         </option>
                     </select>
