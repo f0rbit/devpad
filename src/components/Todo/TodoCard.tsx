@@ -3,7 +3,7 @@
 import { Prisma, TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
-import { Edit2, Newspaper, Tags } from "lucide-react";
+import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
 import { hoverLinkClass } from "../HoverLink";
 import TodoTag from "./TodoTag";
 import { FetchedTodo } from "./ListRenderer";
@@ -80,13 +80,17 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
         summary,
         description,
         status,
-        visibility
+        visibility,
+        start_time,
+        end_time
     }: {
         title: string;
         summary: string;
         description: object;
         status: TODO_STATUS;
         visibility: TODO_VISBILITY;
+        start_time: Date;
+        end_time: Date;
     }) => {
         setItem({
             ...item,
@@ -94,7 +98,9 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
             summary,
             description: description,
             progress: status,
-            visibility
+            visibility,
+            start_time,
+            end_time
         });
         update_item.mutate({
             id: item.id,
@@ -103,7 +109,9 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
                 summary,
                 description: JSON.stringify(description),
                 progress: status,
-                visibility
+                visibility,
+                start_time,
+                end_time
             }
         });
     };
@@ -130,6 +138,17 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
                         {item.title}
                     </h1>
                 </div>
+                {item.end_time && (
+                    <div className="flex items-center gap-2 align-middle text-sm">
+                        <CalendarClock className="w-5" />
+                        <span>
+                            {item.end_time?.toLocaleDateString()}
+                        </span>
+                        <span>
+                            {item.end_time?.toTimeString().split(" ")[0]?.substring(0, 5)}
+                        </span>
+                    </div>
+                )}
                 {item.tags?.length > 0 && (
                     <div className="flex items-center gap-2 align-middle">
                         <span>

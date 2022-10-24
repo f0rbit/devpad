@@ -38,6 +38,8 @@ export const todoRouter = router({
                     progress: z.nativeEnum(TODO_STATUS).optional(),
                     summary: z.string().optional(),
                     visibility: z.nativeEnum(TODO_VISBILITY).optional(),
+                    start_time: z.date().optional(),
+                    end_time: z.date().optional(),
                 })
             })
         )
