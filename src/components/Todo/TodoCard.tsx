@@ -14,13 +14,13 @@ import GenericModal from "../GenericModal";
 import TodoEditForm from "./TodoEditForm";
 
 const COLOURS = {
-    "COMPLETED": {
+    COMPLETED: {
         colour: "text-green-400"
     },
-    "UNSTARTED": {
+    UNSTARTED: {
         colour: "text-gray-400"
     },
-    "IN_PROGRESS": {
+    IN_PROGRESS: {
         colour: "text-blue-400"
     }
 };
@@ -63,6 +63,7 @@ const TodoStatus = ({
 
 const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
     const update_progress = trpc.todo.updateProgress.useMutation();
+    const update_item = trpc.todo.updateItem.useMutation();
     const [item, setItem] = useState(initial_item);
     const [editModalOpen, setEditModalOpen] = useState(false);
 
@@ -74,29 +75,50 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
         });
     };
 
-    const updateItem = ({ summary, description, status, visibility  }: {
+    const updateItem = ({
+        title,
+        summary,
+        description,
+        status,
+        visibility
+    }: {
+        title: string;
         summary: string;
         description: object;
         status: TODO_STATUS;
         visibility: TODO_VISBILITY;
-
     }) => {
         setItem({
             ...item,
+            title,
             summary,
-            description,
+            description: description,
             progress: status,
             visibility
         });
-    }
+        update_item.mutate({
+            id: item.id,
+            item: {
+                title,
+                summary,
+                description: JSON.stringify(description),
+                progress: status,
+                visibility
+            }
+        });
+    };
 
     return (
         <>
-           <div className="absolute">
-           <GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-                <TodoEditForm item={item} updateItem={updateItem} setOpen={setEditModalOpen} />
-            </GenericModal>
-            </div> 
+            <div className="absolute">
+                <GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
+                    <TodoEditForm
+                        item={item}
+                        updateItem={updateItem}
+                        setOpen={setEditModalOpen}
+                    />
+                </GenericModal>
+            </div>
             <div className="group relative w-full rounded-md bg-pad-gray-600 p-4 drop-shadow-md">
                 <div className="inline-flex items-center gap-2 align-middle">
                     <TodoStatus

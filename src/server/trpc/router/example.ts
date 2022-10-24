@@ -1,6 +1,6 @@
 import { router, publicProcedure } from "../trpc";
 import { z } from "zod";
-import { TODO_STATUS } from "@prisma/client";
+import { TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
 
 export const todoRouter = router({
     // hello: publicProcedure
@@ -28,6 +28,33 @@ export const todoRouter = router({
             return [];
         }
     }),
+    updateItem: publicProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                item: z.object({
+                    title: z.string().optional(),
+                    description: z.string().optional(),
+                    progress: z.nativeEnum(TODO_STATUS).optional(),
+                    summary: z.string().optional(),
+                    visibility: z.nativeEnum(TODO_VISBILITY).optional(),
+                })
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            if (ctx?.session?.user?.id) {
+                return ctx.prisma.tODO_Item.update({
+                    where: {
+                        id: input.id
+                    },
+                    data: {
+                        ...input.item
+                    }
+                });
+            } else {
+                return null;
+            }
+        }),
     updateProgress: publicProcedure
         .input(
             z.object({

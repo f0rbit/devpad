@@ -1,5 +1,4 @@
 import { TODO_Item, TODO_STATUS } from "@prisma/client";
-import StatusIcon from "./StatusIcon";
 
 const TodoEditForm = ({item, updateItem, setOpen}: {item: TODO_Item, updateItem: any, setOpen: any}) => {
     return (
@@ -11,7 +10,7 @@ const TodoEditForm = ({item, updateItem, setOpen}: {item: TODO_Item, updateItem:
                 <label htmlFor="summary">Summary</label>
                 <input type="text" name="summary" id="summary" defaultValue={item.summary ?? ""} ></input>
                 <label htmlFor="description">Description</label>
-                <textarea name="description" id="description" defaultValue={JSON.stringify(item.description ?? {}, null, 4)} className="h-96 scrollbar-hide"></textarea>
+                <textarea name="description" id="description" defaultValue={typeof item.description != 'string' ? JSON.stringify(item.description ?? {}) : item.description} className="h-96 scrollbar-hide"></textarea>
                 <label htmlFor="progress">Progress</label>
                 <select name="progress" id="progress" defaultValue={item.progress}>
                     <option value="UNSTARTED" className="text-gray-400">Not Started</option>
