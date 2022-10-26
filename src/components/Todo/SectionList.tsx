@@ -66,7 +66,6 @@ const FlatLinks = () => {
     return (
         <div className="hidden md:flex flex-col gap-1 mt-2">
             {links.map((link, index) => {
-                console.log(link);
                 return (
                     <div key={index} className={"h-8 " + (selectedSection == link.url ? "text-pad-purple-400" : "")}>
                         <SectionLink link={link} mobile={false} selected={selectedSection == link.url}/>

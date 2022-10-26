@@ -1,24 +1,26 @@
-import { TODO_Item, TODO_STATUS } from "@prisma/client";
+import { TODO_Item } from "@prisma/client";
 import { dateToDateTime } from "src/utils/dates";
-import { COLOURS } from "./TodoCard";
+import { COLOURS } from "@/components/Todo/TodoCard";
 
-const TodoEditForm = ({
+const GenericTodoEditForm = ({
     item,
-    updateItem,
-    setOpen
+    title,
+    onClick,
+    buttonText,
+    onDeleteClick
 }: {
-    item: TODO_Item;
-    updateItem: any;
-    setOpen: any;
+    item?: TODO_Item;
+    title: string;
+    onClick: any;
+    buttonText: string;
+    onDeleteClick?: () => void;
 }) => {
     return (
         <div
             style={{ maxHeight: "calc(60vh)" }}
-            className="overflow-y-auto pr-2 text-neutral-300 scrollbar-hide"
+            className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300"
         >
-            <div className="mb-4 w-full text-center text-xl">
-                Todo Edit Form
-            </div>
+            <div className="mb-4 w-full text-center text-xl">{title}</div>
             <div
                 style={{
                     gridTemplateColumns: "1fr 7fr",
@@ -32,23 +34,23 @@ const TodoEditForm = ({
                     type="text"
                     name="title"
                     id="title"
-                    defaultValue={item.title}
+                    defaultValue={item?.title}
                 />
                 <label htmlFor="summary">Summary</label>
                 <input
                     type="text"
                     name="summary"
                     id="summary"
-                    defaultValue={item.summary ?? ""}
+                    defaultValue={item?.summary ?? ""}
                 ></input>
                 <label htmlFor="description">Description</label>
                 <textarea
                     name="description"
                     id="description"
                     defaultValue={
-                        typeof item.description != "string"
-                            ? JSON.stringify(item.description ?? {})
-                            : item.description
+                        (typeof item?.description != "string"
+                            ? JSON.stringify(item?.description ?? {})
+                            : item?.description) ?? ""
                     }
                     className="scrollbar-hide h-96"
                 ></textarea>
@@ -57,16 +59,25 @@ const TodoEditForm = ({
                     <select
                         name="progress"
                         id="progress"
-                        defaultValue={item.progress}
+                        defaultValue={item?.progress}
                         className="w-full"
                     >
-                        <option value="UNSTARTED" className={COLOURS.UNSTARTED.colour}>
+                        <option
+                            value="UNSTARTED"
+                            className={COLOURS.UNSTARTED.colour}
+                        >
                             Not Started
                         </option>
-                        <option value="IN_PROGRESS" className={COLOURS.IN_PROGRESS.colour}>
+                        <option
+                            value="IN_PROGRESS"
+                            className={COLOURS.IN_PROGRESS.colour}
+                        >
                             In Progress
                         </option>
-                        <option value="COMPLETED" className={COLOURS.COMPLETED.colour}>
+                        <option
+                            value="COMPLETED"
+                            className={COLOURS.COMPLETED.colour}
+                        >
                             Done
                         </option>
                     </select>
@@ -78,7 +89,7 @@ const TodoEditForm = ({
                     <select
                         name="visibility"
                         id="visibility"
-                        defaultValue={item.visibility}
+                        defaultValue={item?.visibility}
                         className="w-full"
                     >
                         <option value="PRIVATE">Private</option>
@@ -93,7 +104,9 @@ const TodoEditForm = ({
                     type="datetime-local"
                     name="start_date"
                     id="start_date"
-                    defaultValue={dateToDateTime(item.start_time ?? new Date())}
+                    defaultValue={dateToDateTime(
+                        item?.start_time ?? new Date()
+                    )}
                 />
                 <label htmlFor="end_date">End Date</label>
                 <input
@@ -101,56 +114,33 @@ const TodoEditForm = ({
                     name="end_date"
                     id="end_date"
                     defaultValue={
-                        item.end_time ? dateToDateTime(item.end_time) : ""
+                        item?.end_time ? dateToDateTime(item?.end_time) : ""
                     }
                 />
             </div>
-            <div className="mt-4 flex justify-center mb-1">
+            <div className="mt-4 mb-1 flex justify-center gap-2">
+                {onDeleteClick && (
+                    <button
+                        className="rounded-md bg-red-400 px-4 py-2 text-white  duration-300 hover:scale-110 hover:bg-red-500"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            onDeleteClick();
+                        }}
+                    >
+                        Delete
+                    </button>
+                )}
                 <button
                     className="rounded-md bg-green-200 px-4 py-2 text-pad-gray-700 transition-all duration-300 hover:scale-110 hover:bg-green-300"
                     onClick={(e) => {
                         e.preventDefault();
-                        const title = document.getElementById(
-                            "title"
-                        ) as HTMLInputElement;
-                        const summary = document.getElementById(
-                            "summary"
-                        ) as HTMLInputElement;
-                        const description = document.getElementById(
-                            "description"
-                        ) as HTMLInputElement;
-                        const progress = document.getElementById(
-                            "progress"
-                        ) as HTMLSelectElement;
-                        const visibility = document.getElementById(
-                            "visibility"
-                        ) as HTMLSelectElement;
-                        const start_date = document.getElementById(
-                            "start_date"
-                        ) as HTMLInputElement;
-                        const end_date = document.getElementById(
-                            "end_date"
-                        ) as HTMLInputElement;
-                        console.log("start_date", start_date.value);
-                        console.log("end_date", end_date.value);
-                        updateItem({
-                            id: item.id,
-                            title: title.value,
-                            summary: summary.value,
-                            description: JSON.parse(description.value),
-                            status: progress.value as TODO_STATUS,
-                            visibility:
-                                visibility.value as TODO_Item["visibility"],
-                            start_time: new Date(start_date.value),
-                            end_time: new Date(end_date.value)
-                        });
-                        setOpen(false);
+                        onClick();
                     }}
                 >
-                    Save
+                    {buttonText}
                 </button>
             </div>
         </div>
     );
 };
-export default TodoEditForm;
+export default GenericTodoEditForm;

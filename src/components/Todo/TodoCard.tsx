@@ -1,6 +1,6 @@
 // React todo card component
 
-import { Prisma, TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
+import { TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
 import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
@@ -9,9 +9,8 @@ import TodoTag from "./TodoTag";
 import { FetchedTodo } from "./ListRenderer";
 import VisiblityIcon from "./VisibilityIcon";
 import StatusIcon from "./StatusIcon";
-import DescriptionParser from "./Description/DescriptionParser";
 import GenericModal from "../GenericModal";
-import TodoEditForm from "./TodoEditForm";
+import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
 
 export const COLOURS = {
     COMPLETED: {
@@ -61,9 +60,14 @@ const TodoStatus = ({
     );
 };
 
-const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
+const TodoCard = ({
+    initial_item,
+}: {
+    initial_item: FetchedTodo;
+}) => {
     const update_progress = trpc.todo.updateProgress.useMutation();
     const update_item = trpc.todo.updateItem.useMutation();
+    const delete_item = trpc.todo.deleteItem.useMutation();
     const [item, setItem] = useState(initial_item);
     const [editModalOpen, setEditModalOpen] = useState(false);
 
@@ -116,6 +120,22 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
         });
     };
 
+    const deleteCard = async ({ id }: { id: string }) => {
+        await delete_item.mutate(
+            { id },
+            {
+                onSuccess: ({ success }) => {
+                    if (success) {
+                        setItem({
+                            ...item,
+                            visibility: TODO_VISBILITY.DELETED
+                        })
+                    }
+                }
+            }
+        );
+    };
+    if (item.visibility == TODO_VISBILITY.DELETED) return null;
     return (
         <>
             <div className="absolute">
@@ -124,6 +144,7 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
                         item={item}
                         updateItem={updateItem}
                         setOpen={setEditModalOpen}
+                        deleteItem={deleteCard}
                     />
                 </GenericModal>
             </div>
@@ -134,18 +155,17 @@ const TodoCard = ({ initial_item }: { initial_item: FetchedTodo }) => {
                         update_progress={setItemStatus}
                         id={item.id}
                     />
-                    <h1 className="whitespace-nowrap text-2xl font-medium">
-                        {item.title}
-                    </h1>
+                    <h1 className=" text-2xl font-medium">{item.title}</h1>
                 </div>
                 {item.end_time && (
-                    <div className="flex items-center gap-2 align-middle text-sm">
-                        <CalendarClock className="w-5" />
+                    <div className="flex flex-wrap items-center gap-2 align-middle text-sm">
+                        <CalendarClock className="min-w-5 w-5" />
+                        <span>{item.end_time?.toLocaleDateString()}</span>
                         <span>
-                            {item.end_time?.toLocaleDateString()}
-                        </span>
-                        <span>
-                            {item.end_time?.toTimeString().split(" ")[0]?.substring(0, 5)}
+                            {item.end_time
+                                ?.toTimeString()
+                                .split(" ")[0]
+                                ?.substring(0, 5)}
                         </span>
                     </div>
                 )}
