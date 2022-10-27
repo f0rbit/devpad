@@ -133,6 +133,7 @@ const TodoCard = ({ initial_item, layout }: { initial_item: FetchedTodo, layout:
 		);
 	};
 	if (item.visibility == TODO_VISBILITY.DELETED) return null;
+    // TODO: refactor this
     if (layout == TODO_LAYOUT.GRID) {
         return (
             <>
