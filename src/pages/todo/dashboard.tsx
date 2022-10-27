@@ -11,6 +11,8 @@ type TodoContextType = {
 	selectedSection: string;
 	setSelectedSection: Dispatch<SetStateAction<string>>;
 	toggleList: () => void;
+	searchQuery: string;
+	setSearchQuery: Dispatch<SetStateAction<string>>;
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext(
@@ -46,6 +48,7 @@ const DashboardMainSection = ({ mobile }: { mobile: boolean }) => {
 const Dashboard: NextPage = () => {
 	const [showList, setShowList] = useState(true);
 	const [selectedSection, setSelectedSection] = useState("current");
+	const [searchQuery, setSearchQuery] = useState("");
 
 	const toggleList = () => {
 		setShowList(!showList);
@@ -58,7 +61,9 @@ const Dashboard: NextPage = () => {
 				setShowList,
 				selectedSection,
 				setSelectedSection,
-				toggleList
+				toggleList,
+				searchQuery,
+				setSearchQuery
 			}}
 		>
 			<div className="h-screen min-h-full overflow-hidden ">

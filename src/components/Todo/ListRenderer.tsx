@@ -7,7 +7,7 @@ import {
 	TODO_VISBILITY
 } from "@prisma/client";
 import { useSession } from "next-auth/react";
-import { useReducer, useState } from "react";
+import { useContext, useReducer, useState } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
 import { trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
@@ -106,7 +106,7 @@ const ListRenderer = () => {
 
 	return (
 		<TodoContext.Consumer>
-			{({ selectedSection }) => {
+			{({ selectedSection, searchQuery }) => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-100 dark:bg-pad-gray-800">
@@ -140,7 +140,7 @@ const ListRenderer = () => {
 									</div>
 								</div>
 								{renderItems(
-									getSortedData(data, selectedSection),
+									getSortedData(data, selectedSection, searchQuery),
 									layout
 								)}
 							</div>
@@ -178,7 +178,8 @@ export default ListRenderer;
 
 function getSortedData(
 	data: FetchedTodo[],
-	selectedSection: string
+	selectedSection: string,
+	searchQuery: string
 ): FetchedTodo[] {
 	// remove all deleted
 	const sorted = data.filter((item) => item.visibility != TODO_VISBILITY.DELETED);
@@ -191,6 +192,18 @@ function getSortedData(
 		case "recent":
 			return sorted.sort((a, b) => {
 				return a.updated_at > b.updated_at ? -1 : 1;
+			});
+		case "search":
+			// get the searchQuery from TODO_CONTEXT
+			return sorted.filter((item) => {
+				// combine fields into one string
+				const fields = [
+					item.title,
+					item.summary,
+				].join(" ");
+				console.log(fields);
+				// check if the searchQuery is in the fields
+				return fields.toLowerCase().includes(searchQuery.toLowerCase());	
 			});
 		case "upcoming":
 			// first filter out all that took place in the past

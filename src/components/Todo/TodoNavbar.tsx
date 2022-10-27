@@ -28,14 +28,8 @@ const TodoNavbar = () => {
 					<Home className={"min-w-min"} />
 				</button>
 
-				<div className=" hidden gap-2 rounded-md bg-gray-300 px-3 py-1 dark:bg-pad-gray-800 md:inline-flex">
-					<Search className="min-w-min" />
-					<input
-						className="w-64 bg-transparent focus:outline-none dark:text-pad-gray-100 dark:placeholder-pad-gray-400"
-						placeholder={"Search"}
-					></input>
-				</div>
-				<div className="hidden truncate transition-all md:block">
+				
+				{/* <div className="hidden truncate transition-all md:block">
 					<HoverLink text={"Projects"} />
 					<span>{" > "}</span>
 					<HoverLink text={"gm-server"} />
@@ -43,7 +37,7 @@ const TodoNavbar = () => {
 					<HoverLink text={"Add netty.io dependancy"} />
 					<span>{" > "}</span>
 					<HoverLink text={"Edit"} />
-				</div>
+				</div> */}
 				<div className="ml-auto flex flex-row-reverse items-center gap-4">
 					<HoverLink text={"Profile"} />
 					<HoverLink text={"Settings"} />

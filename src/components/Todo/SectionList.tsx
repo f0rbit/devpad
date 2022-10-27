@@ -1,3 +1,4 @@
+import { Search } from "lucide-react";
 import { useContext } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
 import CollapseableSection from "./CollapseableSection";
@@ -111,19 +112,39 @@ const GroupedLinks = () => {
 
 export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
-		<div className="flex h-full w-full flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-64 flex-none">
-			<FlatLinks />
-			<GroupedLinks />
-			<CollapseableSection
-				title={"Projects"}
-				links={projects}
-				mobile={!expanded}
-			/>
-			<CollapseableSection
-				title={"Tags"}
-				links={tags}
-				mobile={!expanded}
-			/>
-		</div>
+		<TodoContext.Consumer>
+			{({ searchQuery, setSearchQuery, setSelectedSection, selectedSection }) => (
+				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-max"> 
+					<div className={"flex flex-row gap-2 rounded-md bg-gray-300 px-3 py-1 dark:bg-pad-gray-800" + (selectedSection == "search" ? " ring-2 ring-pad-purple-200" : "")}>
+						<Search className="min-w-min" />
+						<input
+							className="w-full bg-transparent focus:outline-none dark:text-pad-gray-100 dark:placeholder-pad-gray-400 md:w-48"
+							placeholder={"Search"}
+							type={"text"}
+							value={searchQuery}
+							onInput={(e) => {
+								e.preventDefault();
+								const input = (e.target as HTMLInputElement)
+									.value;
+								setSearchQuery(input);
+								setSelectedSection("search");
+							}}
+						/>
+					</div>
+					<FlatLinks />
+					<GroupedLinks />
+					<CollapseableSection
+						title={"Projects"}
+						links={projects}
+						mobile={!expanded}
+					/>
+					<CollapseableSection
+						title={"Tags"}
+						links={tags}
+						mobile={!expanded}
+					/>
+				</div>
+			)}
+		</TodoContext.Consumer>
 	);
 };

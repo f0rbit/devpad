@@ -2,6 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
+#edit-todo >
 input,
 textarea,
 select {
