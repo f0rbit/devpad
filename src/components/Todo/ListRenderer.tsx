@@ -74,33 +74,29 @@ const ListRenderer = () => {
 	};
 
 	const renderItems = (data: FetchedTodo[], layout: string) => {
+		console.log("data", data);
+
+		const renderData = (data: FetchedTodo[]) => {
+			return data.map((item) => (
+				<TodoCard
+					key={item.id}
+					initial_item={item}
+					layout={layout}
+				/>
+			));
+		}
+
 		switch (layout) {
 			case TODO_LAYOUT.LIST:
 				return (
 					<div className="flex flex-col gap-2">
-						{data?.map((item, index) => {
-							return (
-								<TodoCard
-									key={index}
-									initial_item={item}
-									layout={layout}
-								/>
-							);
-						})}
+						{renderData(data)}
 					</div>
 				);
 			case TODO_LAYOUT.GRID:
 				return (
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ">
-						{data?.map((item, index) => {
-							return (
-								<TodoCard
-									key={index}
-									initial_item={item}
-									layout={layout}
-								/>
-							);
-						})}
+						{renderData(data)}
 					</div>
 				);
 			default:
@@ -108,7 +104,6 @@ const ListRenderer = () => {
 		}
 	};
 
-	console.log("data", data);
 	return (
 		<TodoContext.Consumer>
 			{({ selectedSection }) => {
@@ -144,7 +139,10 @@ const ListRenderer = () => {
 										<div>Layout: {layout}</div>
 									</div>
 								</div>
-								{renderItems(data, layout)}
+								{renderItems(
+									getSortedData(data, selectedSection),
+									layout
+								)}
 							</div>
 						</div>
 						<div className="fixed bottom-4 right-4">
@@ -177,3 +175,39 @@ const ListRenderer = () => {
 };
 
 export default ListRenderer;
+
+function getSortedData(
+	data: FetchedTodo[],
+	selectedSection: string
+): FetchedTodo[] {
+	// remove all deleted
+	const sorted = data.filter((item) => item.visibility != TODO_VISBILITY.DELETED);
+	switch (selectedSection) {
+		case "current":
+			// get all the items with a progress of "IN_PROGRESS"
+			return sorted.filter(
+				(item) => item.progress == TODO_STATUS.IN_PROGRESS
+			);
+		case "recent":
+			return sorted.sort((a, b) => {
+				return a.updated_at > b.updated_at ? -1 : 1;
+			});
+		case "upcoming":
+			// first filter out all that took place in the past
+			return sorted.filter((item) => {
+				if (!item.end_time) return false;
+				return (
+					new Date(item.end_time).getTime() >
+					new Date().getTime()
+				);
+			}).sort((a, b) => {
+				// these cases should never happen because of the filter.
+				if (!a.end_time) return 1;
+				if (!b.end_time) return -1;
+				return a.end_time > b.end_time ? 1 : -1;
+			});
+
+		default:
+			return sorted;
+	}
+}
