@@ -16,6 +16,14 @@ import TodoCreateForm from "./Editors/TodoCreateForm";
 import { LayoutIcon, TODO_LAYOUT } from "./ListLayout";
 import TodoCard from "./TodoCard";
 
+//create your forceUpdate hook
+function useForceUpdate(){
+    const [value, setValue] = useState(0); // integer state
+    return () => setValue(value => value + 1); // update state to force render
+    // An function that increment 👆🏻 the previous state like here 
+    // is better than directly setting `value + 1`
+}
+
 export type FetchedTodo = TODO_Item & {
 	tags: TODO_Tags[];
 	parents: TODO_ItemDependancy[];
@@ -24,11 +32,11 @@ export type FetchedTodo = TODO_Item & {
 };
 
 const ListRenderer = () => {
-	const { status } = useSession();
 	const { data } = trpc.todo.getAll.useQuery();
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const create_item = trpc.todo.createItem.useMutation();
 	const [layout, setLayout] = useState(TODO_LAYOUT.LIST);
+	const forceUpdate = useForceUpdate();
 
 	if (!data) {
 		return <div>Loading...</div>;
@@ -73,6 +81,15 @@ const ListRenderer = () => {
 		);
 	};
 
+	const setItem = (item: FetchedTodo) => {
+		const index = data?.findIndex((i) => i.id === item.id);
+		if (index === undefined) return;
+		data[index] = item;
+		forceUpdate();
+		
+	};
+
+
 	const renderItems = (data: FetchedTodo[], layout: string) => {
 		console.log("data", data);
 
@@ -82,6 +99,7 @@ const ListRenderer = () => {
 					key={item.id}
 					initial_item={item}
 					layout={layout}
+					set_item={setItem}
 				/>
 			));
 		}

@@ -61,7 +61,14 @@ export const todoRouter = router({
 					},
 					data: {
 						...input.item
+					},
+					include: {
+						tags: true,
+						children: true,
+						parents: true,
+						templates: true
 					}
+					
 				});
 			} else {
 				return null;

@@ -63,23 +63,22 @@ const TodoStatus = ({
 
 const TodoCard = ({
 	initial_item,
-	layout
+	layout,
+	set_item
 }: {
 	initial_item: FetchedTodo;
 	layout: string;
+	set_item: (item: FetchedTodo) => void
 }) => {
 	const update_progress = trpc.todo.updateProgress.useMutation();
 	const update_item = trpc.todo.updateItem.useMutation();
 	const delete_item = trpc.todo.deleteItem.useMutation();
-	const [item, setItem] = useState(initial_item);
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = (status: TODO_STATUS) => {
-		update_progress.mutate({ progress: status, item_id: item.id });
-		setItem({
-			...item,
-			progress: status
-		});
+		update_progress.mutate({ progress: status, item_id: initial_item.id });
+		const new_item = { ...initial_item, progress: status };
+		set_item(new_item);
 	};
 
 	const updateItem = ({
@@ -99,18 +98,18 @@ const TodoCard = ({
 		start_time: Date;
 		end_time: Date;
 	}) => {
-		setItem({
-			...item,
-			title,
-			summary,
-			description: description,
-			progress: status,
-			visibility,
-			start_time,
-			end_time
-		});
+		// setItem({
+		// 	...item,
+		// 	title,
+		// 	summary,
+		// 	description: description,
+		// 	progress: status,
+		// 	visibility,
+		// 	start_time,
+		// 	end_time
+		// });
 		update_item.mutate({
-			id: item.id,
+			id: initial_item.id,
 			item: {
 				title,
 				summary,
@@ -120,7 +119,9 @@ const TodoCard = ({
 				start_time,
 				end_time
 			}
-		});
+		}, { onSuccess: (data) => {
+			set_item(data as FetchedTodo);
+		}});
 	};
 
 	const deleteCard = async ({ id }: { id: string }) => {
@@ -129,8 +130,8 @@ const TodoCard = ({
 			{
 				onSuccess: ({ success }) => {
 					if (success) {
-						setItem({
-							...item,
+						set_item({
+							...initial_item,
 							visibility: TODO_VISBILITY.DELETED
 						});
 					}
@@ -138,7 +139,7 @@ const TodoCard = ({
 			}
 		);
 	};
-	if (item.visibility == TODO_VISBILITY.DELETED) return null;
+	if (initial_item.visibility == TODO_VISBILITY.DELETED) return null;
 	// TODO: refactor this
 	if (layout == TODO_LAYOUT.GRID) {
 		return (
@@ -149,7 +150,7 @@ const TodoCard = ({
 						setOpen={setEditModalOpen}
 					>
 						<TodoEditForm
-							item={item}
+							item={initial_item}
 							updateItem={updateItem}
 							setOpen={setEditModalOpen}
 							deleteItem={deleteCard}
@@ -159,44 +160,44 @@ const TodoCard = ({
 				<div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
 					<div className="inline-flex items-center gap-2 align-middle">
 						<TodoStatus
-							status={item.progress}
+							status={initial_item.progress}
 							update_progress={setItemStatus}
-							id={item.id}
+							id={initial_item.id}
 						/>
-						<h1 className=" text-2xl font-medium">{item.title}</h1>
+						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
 					</div>
-					{item.end_time && (
+					{initial_item.end_time && (
 						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 							<CalendarClock className="min-w-5 w-5" />
-							<span>{item.end_time?.toLocaleDateString()}</span>
+							<span>{initial_item.end_time?.toLocaleDateString()}</span>
 							<span>
-								{item.end_time
+								{initial_item.end_time
 									?.toTimeString()
 									.split(" ")[0]
 									?.substring(0, 5)}
 							</span>
 						</div>
 					)}
-					{item.tags?.length > 0 && (
+					{initial_item.tags?.length > 0 && (
 						<div className="flex items-center gap-2 align-middle">
 							<span>
 								<Tags className="w-5" />
 							</span>
 							<span>
-								{item.tags.map((tag, index) => {
+								{initial_item.tags.map((tag, index) => {
 									return <TodoTag key={index} tag={tag} />;
 								})}
 							</span>
 						</div>
 					)}
 
-					{item.summary != undefined && item.summary?.length > 0 && (
+					{initial_item.summary != undefined && initial_item.summary?.length > 0 && (
 						<div className="flex items-center gap-2 align-middle">
 							<span>
 								<Newspaper className="w-5" />
 							</span>
 							<span className="font-mono text-sm">
-								{item.summary}
+								{initial_item.summary}
 							</span>
 						</div>
 					)}
@@ -204,11 +205,11 @@ const TodoCard = ({
 						<span
 							className="text-gray-500 dark:text-pad-gray-400"
 							title={
-								item.visibility[0]?.toUpperCase() +
-								item.visibility.toLowerCase().substring(1)
+								initial_item.visibility[0]?.toUpperCase() +
+								initial_item.visibility.toLowerCase().substring(1)
 							}
 						>
-							<VisiblityIcon visibility={item.visibility} />
+							<VisiblityIcon visibility={initial_item.visibility} />
 						</span>
 						<button
 							className={hoverLinkClass}
@@ -234,7 +235,7 @@ const TodoCard = ({
 						setOpen={setEditModalOpen}
 					>
 						<TodoEditForm
-							item={item}
+							item={initial_item}
 							updateItem={updateItem}
 							setOpen={setEditModalOpen}
 							deleteItem={deleteCard}
@@ -244,44 +245,44 @@ const TodoCard = ({
 				<div className="group relative flex w-full flex-wrap gap-4 rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
 					<div className="inline-flex items-center gap-2 align-middle">
 						<TodoStatus
-							status={item.progress}
+							status={initial_item.progress}
 							update_progress={setItemStatus}
-							id={item.id}
+							id={initial_item.id}
 						/>
-						<h1 className=" text-2xl font-medium">{item.title}</h1>
+						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
 					</div>
-					{item.end_time && (
+					{initial_item.end_time && (
 						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 							<CalendarClock className="min-w-5 w-5" />
-							<span>{item.end_time?.toLocaleDateString()}</span>
+							<span>{initial_item.end_time?.toLocaleDateString()}</span>
 							<span>
-								{item.end_time
+								{initial_item.end_time
 									?.toTimeString()
 									.split(" ")[0]
 									?.substring(0, 5)}
 							</span>
 						</div>
 					)}
-					{item.tags?.length > 0 && (
+					{initial_item.tags?.length > 0 && (
 						<div className="flex items-center gap-2 align-middle">
 							<span>
 								<Tags className="w-5" />
 							</span>
 							<span>
-								{item.tags.map((tag, index) => {
+								{initial_item.tags.map((tag, index) => {
 									return <TodoTag key={index} tag={tag} />;
 								})}
 							</span>
 						</div>
 					)}
 
-					{item.summary != undefined && item.summary?.length > 0 && (
+					{initial_item.summary != undefined && initial_item.summary?.length > 0 && (
 						<div className="flex items-center gap-2 align-middle">
 							<span>
 								<Newspaper className="w-5" />
 							</span>
 							<span className="font-mono text-sm">
-								{item.summary}
+								{initial_item.summary}
 							</span>
 						</div>
 					)}
@@ -289,11 +290,11 @@ const TodoCard = ({
 						<span
 							className="text-gray-500 dark:text-pad-gray-400"
 							title={
-								item.visibility[0]?.toUpperCase() +
-								item.visibility.toLowerCase().substring(1)
+								initial_item.visibility[0]?.toUpperCase() +
+								initial_item.visibility.toLowerCase().substring(1)
 							}
 						>
-							<VisiblityIcon visibility={item.visibility} />
+							<VisiblityIcon visibility={initial_item.visibility} />
 						</span>
 						<button
 							className={hoverLinkClass}

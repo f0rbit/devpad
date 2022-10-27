@@ -43,8 +43,7 @@ export const TodoEditForm = ({
 				const end_date = document.getElementById(
 					"end_date"
 				) as HTMLInputElement;
-				console.log("start_date", start_date.value);
-				console.log("end_date", end_date.value);
+				// end date could be null
 				updateItem({
 					id: item.id,
 					title: title.value,
@@ -53,7 +52,7 @@ export const TodoEditForm = ({
 					status: progress.value as TODO_STATUS,
 					visibility: visibility.value as TODO_VISBILITY,
 					start_time: new Date(start_date.value),
-					end_time: new Date(end_date.value)
+					end_time: end_date.value ? new Date(end_date.value) : null 
 				});
 				setOpen(false);
 			}}
