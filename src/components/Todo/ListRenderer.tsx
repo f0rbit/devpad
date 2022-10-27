@@ -6,6 +6,7 @@ import {
 	TODO_TemplateItem,
 	TODO_VISBILITY
 } from "@prisma/client";
+import { Tag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useContext, useReducer, useState } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
@@ -13,6 +14,7 @@ import { trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
 import { hoverExpandButton } from "../Home/HomeButton";
 import TodoCreateForm from "./Editors/TodoCreateForm";
+import { TodoTagsEditor } from "./Editors/TodoTagsEditor";
 import { LayoutIcon, TODO_LAYOUT } from "./ListLayout";
 import TodoCard from "./TodoCard";
 
@@ -34,6 +36,7 @@ export type FetchedTodo = TODO_Item & {
 const ListRenderer = () => {
 	const { data } = trpc.todo.getAll.useQuery();
 	const [createModalOpen, setCreateModalOpen] = useState(false);
+	const [editTagsModalOpen, setEditTagsModalOpen] = useState(false);
 	const create_item = trpc.todo.createItem.useMutation();
 	const [layout, setLayout] = useState(TODO_LAYOUT.LIST);
 	const forceUpdate = useForceUpdate();
@@ -124,7 +127,7 @@ const ListRenderer = () => {
 
 	return (
 		<TodoContext.Consumer>
-			{({ selectedSection, searchQuery }) => {
+			{({ selectedSection, searchQuery, tags }) => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-100 dark:bg-pad-gray-800">
@@ -155,6 +158,22 @@ const ListRenderer = () => {
 											)}
 										</div>
 										<div>Layout: {layout}</div>
+										<div className="ml-auto">
+											{/* Add a button for editing tags */}
+											<button
+												onClick={() => {
+													setEditTagsModalOpen(
+														true
+													);
+												}}
+													className="rounded-md bg-pad-gray-500 px-2 py-1 shadow-md flex flex-nowrap gap-2 text-sm items-center justify-center align-middle"
+											>
+												<Tag className="p-0.5"/>
+												Edit
+											</button>
+											
+
+										</div>
 									</div>
 								</div>
 								{renderItems(
@@ -184,6 +203,14 @@ const ListRenderer = () => {
 									/>
 								</GenericModal>
 							</div>
+						</div>
+						<div className="absolute">
+							<GenericModal
+								open={editTagsModalOpen}
+								setOpen={setEditTagsModalOpen}
+							>
+								<TodoTagsEditor tags={tags}/>
+							</GenericModal>
 						</div>
 					</>
 				);

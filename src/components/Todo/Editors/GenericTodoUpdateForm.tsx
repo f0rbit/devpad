@@ -26,8 +26,7 @@ const GenericTodoEditForm = ({
 					gridTemplateColumns: "1fr 7fr",
 					width: "calc(100vw - 90px)"
 				}}
-				className="flex flex-col gap-2 md:grid md:max-w-[500px] xl:max-w-[700px]"
-				id="edit-todo"
+				className="flex flex-col gap-2 md:grid md:max-w-[500px] xl:max-w-[700px] edit-todo"
 			>
 				<label htmlFor="title">Title</label>
 				<input
