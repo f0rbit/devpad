@@ -219,8 +219,16 @@ function getSortedData(
 				if (!b.end_time) return -1;
 				return a.end_time > b.end_time ? 1 : -1;
 			});
-
 		default:
+			if (selectedSection.startsWith("tags/")) {
+				const tag = selectedSection.split("/")[1];
+				if (!tag) return [];
+				return sorted.filter((item) => {
+					// get titles of tags
+					const tags = item.tags.map((tag) => tag.title);
+					return tags.includes(tag);
+				});
+			}
 			return sorted;
 	}
 }

@@ -1,9 +1,10 @@
 import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
 import TodoNavbar from "@/components/Todo/TodoNavbar";
-import { NextPage } from "next";
+import { TODO_Tags } from "@prisma/client";
 import React, { Context } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
+import { trpc } from "src/utils/trpc";
 
 type TodoContextType = {
 	showList: boolean;
@@ -13,6 +14,7 @@ type TodoContextType = {
 	toggleList: () => void;
 	searchQuery: string;
 	setSearchQuery: Dispatch<SetStateAction<string>>;
+	tags: TODO_Tags[];
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext(
@@ -45,15 +47,15 @@ const DashboardMainSection = ({ mobile }: { mobile: boolean }) => {
 	);
 };
 
-const Dashboard: NextPage = () => {
+const Dashboard = () => {
 	const [showList, setShowList] = useState(true);
 	const [selectedSection, setSelectedSection] = useState("current");
 	const [searchQuery, setSearchQuery] = useState("");
-
+	const { data: tags } = trpc.todo.getTags.useQuery()
 	const toggleList = () => {
 		setShowList(!showList);
 	};
-
+	const tagsOrEmpty = tags || [] as TODO_Tags[];
 	return (
 		<TodoContext.Provider
 			value={{
@@ -63,7 +65,8 @@ const Dashboard: NextPage = () => {
 				setSelectedSection,
 				toggleList,
 				searchQuery,
-				setSearchQuery
+				setSearchQuery,
+				tags: tagsOrEmpty
 			}}
 		>
 			<div className="h-screen min-h-full overflow-hidden ">

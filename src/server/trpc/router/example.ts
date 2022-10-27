@@ -11,7 +11,6 @@ export const todoRouter = router({
 	//         };
 	//     }),
 	getAll: publicProcedure.query(({ ctx }) => {
-		console.log("next session", ctx.session);
 		if (ctx?.session?.user?.id) {
 			return ctx.prisma.tODO_Item.findMany({
 				where: {
@@ -22,6 +21,17 @@ export const todoRouter = router({
 					children: true,
 					parents: true,
 					templates: true
+				}
+			});
+		} else {
+			return [];
+		}
+	}),
+	getTags: publicProcedure.query(({ ctx }) => {
+		if (ctx?.session?.user?.id) {
+			return ctx.prisma.tODO_Tags.findMany({
+				where: {
+					owner_id: ctx.session.user.id
 				}
 			});
 		} else {
@@ -148,5 +158,6 @@ export const todoRouter = router({
 					progress: input.progress
 				}
 			});
-		})
+		}),
+	
 });
