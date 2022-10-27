@@ -4,8 +4,8 @@ import { authRouter } from "./auth";
 import { todoRouter } from "./example";
 
 export const appRouter = router({
-  todo: todoRouter,
-  auth: authRouter,
+	todo: todoRouter,
+	auth: authRouter
 });
 
 // export type definition of API

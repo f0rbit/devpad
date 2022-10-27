@@ -1,5 +1,5 @@
 export type PageLink = {
-    title: string,
-    destination: string,
-    colour?: string
-}
+	title: string;
+	destination: string;
+	colour?: string;
+};

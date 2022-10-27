@@ -61,7 +61,13 @@ const TodoStatus = ({
 	);
 };
 
-const TodoCard = ({ initial_item, layout }: { initial_item: FetchedTodo, layout: string }) => {
+const TodoCard = ({
+	initial_item,
+	layout
+}: {
+	initial_item: FetchedTodo;
+	layout: string;
+}) => {
 	const update_progress = trpc.todo.updateProgress.useMutation();
 	const update_item = trpc.todo.updateItem.useMutation();
 	const delete_item = trpc.todo.deleteItem.useMutation();
@@ -133,172 +139,177 @@ const TodoCard = ({ initial_item, layout }: { initial_item: FetchedTodo, layout:
 		);
 	};
 	if (item.visibility == TODO_VISBILITY.DELETED) return null;
-    // TODO: refactor this
-    if (layout == TODO_LAYOUT.GRID) {
-        return (
-            <>
-                <div className="absolute">
-                    <GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-                        <TodoEditForm
-                            item={item}
-                            updateItem={updateItem}
-                            setOpen={setEditModalOpen}
-                            deleteItem={deleteCard}
-                        />
-                    </GenericModal>
-                </div>
-                <div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
-                    <div className="inline-flex items-center gap-2 align-middle">
-                        <TodoStatus
-                            status={item.progress}
-                            update_progress={setItemStatus}
-                            id={item.id}
-                        />
-                        <h1 className=" text-2xl font-medium">{item.title}</h1>
-                    </div>
-                    {item.end_time && (
-                        <div className="flex flex-wrap items-center gap-2 align-middle text-sm">
-                            <CalendarClock className="min-w-5 w-5" />
-                            <span>{item.end_time?.toLocaleDateString()}</span>
-                            <span>
-                                {item.end_time
-                                    ?.toTimeString()
-                                    .split(" ")[0]
-                                    ?.substring(0, 5)}
-                            </span>
-                        </div>
-                    )}
-                    {item.tags?.length > 0 && (
-                        <div className="flex items-center gap-2 align-middle">
-                            <span>
-                                <Tags className="w-5" />
-                            </span>
-                            <span>
-                                {item.tags.map((tag, index) => {
-                                    return <TodoTag key={index} tag={tag} />;
-                                })}
-                            </span>
-                        </div>
-                    )}
-    
-                    {item.summary != undefined && item.summary?.length > 0 && (
-                        <div className="flex items-center gap-2 align-middle">
-                            <span>
-                                <Newspaper className="w-5" />
-                            </span>
-                            <span className="font-mono text-sm">
-                                {item.summary}
-                            </span>
-                        </div>
-                    )}
-                    <div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
-                        <span
-                            className="text-gray-500 dark:text-pad-gray-400"
-                            title={
-                                item.visibility[0]?.toUpperCase() +
-                                item.visibility.toLowerCase().substring(1)
-                            }
-                        >
-                            <VisiblityIcon visibility={item.visibility} />
-                        </span>
-                        <button
-                            className={hoverLinkClass}
-                            title="Edit"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                setEditModalOpen(true);
-                            }}
-                        >
-                            <Edit2 className="" />
-                        </button>
-                    </div>
-                </div>
-            </>
-        );
-    } else {
-        // list item
-        return (
-            <>
-                <div className="absolute">
-                    <GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-                        <TodoEditForm
-                            item={item}
-                            updateItem={updateItem}
-                            setOpen={setEditModalOpen}
-                            deleteItem={deleteCard}
-                        />
-                    </GenericModal>
-                </div>
-                <div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md flex gap-4 flex-wrap">
-                    <div className="inline-flex items-center gap-2 align-middle">
-                        <TodoStatus
-                            status={item.progress}
-                            update_progress={setItemStatus}
-                            id={item.id}
-                        />
-                        <h1 className=" text-2xl font-medium">{item.title}</h1>
-                    </div>
-                    {item.end_time && (
-                        <div className="flex flex-wrap items-center gap-2 align-middle text-sm">
-                            <CalendarClock className="min-w-5 w-5" />
-                            <span>{item.end_time?.toLocaleDateString()}</span>
-                            <span>
-                                {item.end_time
-                                    ?.toTimeString()
-                                    .split(" ")[0]
-                                    ?.substring(0, 5)}
-                            </span>
-                        </div>
-                    )}
-                    {item.tags?.length > 0 && (
-                        <div className="flex items-center gap-2 align-middle">
-                            <span>
-                                <Tags className="w-5" />
-                            </span>
-                            <span>
-                                {item.tags.map((tag, index) => {
-                                    return <TodoTag key={index} tag={tag} />;
-                                })}
-                            </span>
-                        </div>
-                    )}
-    
-                    {item.summary != undefined && item.summary?.length > 0 && (
-                        <div className="flex items-center gap-2 align-middle">
-                            <span>
-                                <Newspaper className="w-5" />
-                            </span>
-                            <span className="font-mono text-sm">
-                                {item.summary}
-                            </span>
-                        </div>
-                    )}
-                    <div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
-                        <span
-                            className="text-gray-500 dark:text-pad-gray-400"
-                            title={
-                                item.visibility[0]?.toUpperCase() +
-                                item.visibility.toLowerCase().substring(1)
-                            }
-                        >
-                            <VisiblityIcon visibility={item.visibility} />
-                        </span>
-                        <button
-                            className={hoverLinkClass}
-                            title="Edit"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                setEditModalOpen(true);
-                            }}
-                        >
-                            <Edit2 className="" />
-                        </button>
-                    </div>
-                </div>
-            </>
-        );
-    }
-	
+	// TODO: refactor this
+	if (layout == TODO_LAYOUT.GRID) {
+		return (
+			<>
+				<div className="absolute">
+					<GenericModal
+						open={editModalOpen}
+						setOpen={setEditModalOpen}
+					>
+						<TodoEditForm
+							item={item}
+							updateItem={updateItem}
+							setOpen={setEditModalOpen}
+							deleteItem={deleteCard}
+						/>
+					</GenericModal>
+				</div>
+				<div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
+					<div className="inline-flex items-center gap-2 align-middle">
+						<TodoStatus
+							status={item.progress}
+							update_progress={setItemStatus}
+							id={item.id}
+						/>
+						<h1 className=" text-2xl font-medium">{item.title}</h1>
+					</div>
+					{item.end_time && (
+						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
+							<CalendarClock className="min-w-5 w-5" />
+							<span>{item.end_time?.toLocaleDateString()}</span>
+							<span>
+								{item.end_time
+									?.toTimeString()
+									.split(" ")[0]
+									?.substring(0, 5)}
+							</span>
+						</div>
+					)}
+					{item.tags?.length > 0 && (
+						<div className="flex items-center gap-2 align-middle">
+							<span>
+								<Tags className="w-5" />
+							</span>
+							<span>
+								{item.tags.map((tag, index) => {
+									return <TodoTag key={index} tag={tag} />;
+								})}
+							</span>
+						</div>
+					)}
+
+					{item.summary != undefined && item.summary?.length > 0 && (
+						<div className="flex items-center gap-2 align-middle">
+							<span>
+								<Newspaper className="w-5" />
+							</span>
+							<span className="font-mono text-sm">
+								{item.summary}
+							</span>
+						</div>
+					)}
+					<div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
+						<span
+							className="text-gray-500 dark:text-pad-gray-400"
+							title={
+								item.visibility[0]?.toUpperCase() +
+								item.visibility.toLowerCase().substring(1)
+							}
+						>
+							<VisiblityIcon visibility={item.visibility} />
+						</span>
+						<button
+							className={hoverLinkClass}
+							title="Edit"
+							onClick={(e) => {
+								e.preventDefault();
+								setEditModalOpen(true);
+							}}
+						>
+							<Edit2 className="" />
+						</button>
+					</div>
+				</div>
+			</>
+		);
+	} else {
+		// list item
+		return (
+			<>
+				<div className="absolute">
+					<GenericModal
+						open={editModalOpen}
+						setOpen={setEditModalOpen}
+					>
+						<TodoEditForm
+							item={item}
+							updateItem={updateItem}
+							setOpen={setEditModalOpen}
+							deleteItem={deleteCard}
+						/>
+					</GenericModal>
+				</div>
+				<div className="group relative flex w-full flex-wrap gap-4 rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
+					<div className="inline-flex items-center gap-2 align-middle">
+						<TodoStatus
+							status={item.progress}
+							update_progress={setItemStatus}
+							id={item.id}
+						/>
+						<h1 className=" text-2xl font-medium">{item.title}</h1>
+					</div>
+					{item.end_time && (
+						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
+							<CalendarClock className="min-w-5 w-5" />
+							<span>{item.end_time?.toLocaleDateString()}</span>
+							<span>
+								{item.end_time
+									?.toTimeString()
+									.split(" ")[0]
+									?.substring(0, 5)}
+							</span>
+						</div>
+					)}
+					{item.tags?.length > 0 && (
+						<div className="flex items-center gap-2 align-middle">
+							<span>
+								<Tags className="w-5" />
+							</span>
+							<span>
+								{item.tags.map((tag, index) => {
+									return <TodoTag key={index} tag={tag} />;
+								})}
+							</span>
+						</div>
+					)}
+
+					{item.summary != undefined && item.summary?.length > 0 && (
+						<div className="flex items-center gap-2 align-middle">
+							<span>
+								<Newspaper className="w-5" />
+							</span>
+							<span className="font-mono text-sm">
+								{item.summary}
+							</span>
+						</div>
+					)}
+					<div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
+						<span
+							className="text-gray-500 dark:text-pad-gray-400"
+							title={
+								item.visibility[0]?.toUpperCase() +
+								item.visibility.toLowerCase().substring(1)
+							}
+						>
+							<VisiblityIcon visibility={item.visibility} />
+						</span>
+						<button
+							className={hoverLinkClass}
+							title="Edit"
+							onClick={(e) => {
+								e.preventDefault();
+								setEditModalOpen(true);
+							}}
+						>
+							<Edit2 className="" />
+						</button>
+					</div>
+				</div>
+			</>
+		);
+	}
 };
 
 export default TodoCard;

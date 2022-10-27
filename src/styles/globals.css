@@ -2,21 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
-input, textarea, select {
-    @apply bg-pad-gray-300 px-2 py-0.5 focus:outline-none focus:ring-pad-purple-50 focus:ring-2 rounded-md
+input,
+textarea,
+select {
+	@apply rounded-md bg-pad-gray-300 px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-pad-purple-50;
 }
 
 #edit-todo > label {
-    @apply text-left md:text-right text-pad-gray-50 my-auto
+	@apply my-auto text-left text-pad-gray-50 md:text-right;
 }
 
 /* For Webkit-based browsers (Chrome, Safari and Opera) */
 .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+	display: none;
 }
 
 /* For IE, Edge and Firefox */
 .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
 }
