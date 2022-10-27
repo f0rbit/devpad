@@ -111,7 +111,7 @@ const GroupedLinks = () => {
 
 export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
-		<div className="flex h-full w-full flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-64">
+		<div className="flex h-full w-full flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-64 flex-none">
 			<FlatLinks />
 			<GroupedLinks />
 			<CollapseableSection
