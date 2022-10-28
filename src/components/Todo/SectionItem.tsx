@@ -25,16 +25,19 @@ const SectionLink = ({
 					<button
 						title={link.description}
 						className={
-							selected
+							(selected
 								? "text-pad-purple-200 " + hoverClass
-								: hoverLinkClass
+								: hoverLinkClass) + " w-full"
 						}
 						onClick={() => {
 							setSelectedSection(link.url);
 							if (mobile) setShowList(false);
 						}}
 					>
-						<span>{link.icon}</span> <span>{link.title}</span>
+						<div className="flex flex-row gap-x-1 align-middle">
+							<div>{link.icon}</div>{" "}
+							<div className="truncate">{link.title}</div>
+						</div>
 					</button>
 				);
 			}}

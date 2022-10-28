@@ -286,7 +286,7 @@ const TodoCard = ({
 							</span>
 						</div>
 					)}
-					<div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
+					<div className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
 						<span
 							className="text-gray-500 dark:text-pad-gray-400"
 							title={

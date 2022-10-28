@@ -31,7 +31,7 @@ const CollapseableSection = ({
 				<div className="ml-8 flex flex-col gap-1">
 					{links.map((link, index) => {
 						return (
-							<div key={index} className="">
+							<div key={index} className="w-full">
 								<SectionLink
 									link={link}
 									mobile={mobile}

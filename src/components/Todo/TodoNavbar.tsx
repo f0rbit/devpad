@@ -18,7 +18,7 @@ const TodoNavbar = () => {
 					<Menu className={"min-w-min"} />
 				</button>
 
-				<button
+				{/* <button
 					className={hoverLinkClass}
 					onClick={() => {
 						setSelectedSection("current");
@@ -26,7 +26,7 @@ const TodoNavbar = () => {
 					}}
 				>
 					<Home className={"min-w-min"} />
-				</button>
+				</button> */}
 
 				
 				{/* <div className="hidden truncate transition-all md:block">

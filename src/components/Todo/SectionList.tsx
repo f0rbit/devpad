@@ -114,7 +114,7 @@ export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
 		<TodoContext.Consumer>
 			{({ searchQuery, setSearchQuery, setSelectedSection, selectedSection, tags }) => (
-				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-max"> 
+				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-80"> 
 					<div className={"flex flex-row gap-2 rounded-md bg-gray-300 px-3 py-1 dark:bg-pad-gray-800" + (selectedSection == "search" ? " ring-2 ring-pad-purple-200" : "")}>
 						<Search className="min-w-min" />
 						<input

@@ -2,7 +2,7 @@ import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
 import TodoNavbar from "@/components/Todo/TodoNavbar";
 import { TODO_Tags } from "@prisma/client";
-import React, { Context } from "react";
+import React, { Context, useReducer } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { trpc } from "src/utils/trpc";
 
@@ -15,6 +15,7 @@ type TodoContextType = {
 	searchQuery: string;
 	setSearchQuery: Dispatch<SetStateAction<string>>;
 	tags: TODO_Tags[];
+	setTags: Dispatch<SetStateAction<TODO_Tags[] | undefined>>;
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext(
@@ -51,11 +52,18 @@ const Dashboard = () => {
 	const [showList, setShowList] = useState(true);
 	const [selectedSection, setSelectedSection] = useState("current");
 	const [searchQuery, setSearchQuery] = useState("");
-	const { data: tags } = trpc.todo.getTags.useQuery()
+	var { data: _tags } = trpc.todo.getTags.useQuery();
+	const [tags, setTags] = useState(undefined as TODO_Tags[] | undefined);
+
 	const toggleList = () => {
 		setShowList(!showList);
 	};
-	const tagsOrEmpty = tags || [] as TODO_Tags[];
+
+	if (_tags && !tags) {
+		setTags(_tags);
+	}
+
+	const tagsOrEmpty = tags || ([] as TODO_Tags[]);
 	return (
 		<TodoContext.Provider
 			value={{
@@ -66,7 +74,8 @@ const Dashboard = () => {
 				toggleList,
 				searchQuery,
 				setSearchQuery,
-				tags: tagsOrEmpty
+				tags: tagsOrEmpty,
+				setTags
 			}}
 		>
 			<div className="h-screen min-h-full overflow-hidden ">

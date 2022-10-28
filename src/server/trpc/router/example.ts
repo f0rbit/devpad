@@ -1,6 +1,7 @@
 import { router, publicProcedure } from "../trpc";
 import { z } from "zod";
 import { TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
+import { isTemplateExpression } from "typescript";
 
 export const todoRouter = router({
 	// hello: publicProcedure
@@ -38,6 +39,82 @@ export const todoRouter = router({
 			return [];
 		}
 	}),
+	createTag: publicProcedure
+		.input(z.object({ title: z.string(), colour: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			if (ctx?.session?.user?.id) {
+				return await ctx.prisma.tODO_Tags.create({
+					data: {
+						title: input.title,
+						colour: input.colour,
+						owner_id: ctx.session.user.id
+					}
+				});
+			} else {
+				return null;
+			}
+		}),
+	deleteTag: publicProcedure
+		.input(z.object({ id: z.string() }))
+		.mutation(async ({ ctx, input }) => {
+			if (ctx?.session?.user?.id) {
+				// check that owner owns the tag
+				const tag = await ctx.prisma.tODO_Tags.findUnique({
+					where: {
+						id: input.id
+					}
+				});
+				if (tag?.owner_id === ctx.session.user.id) {
+					// delete the tag
+
+					return await ctx.prisma.tODO_Tags.delete({
+						where: {
+							id: input.id
+						}
+					});
+				} else {
+					return null;
+				}
+			} else {
+				return null;
+			}
+		}),
+	updateTag: publicProcedure
+		
+		.input(
+			z.object({
+				id: z.string(),
+				title: z.string().optional(),
+				colour: z.string().optional()
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (ctx?.session?.user?.id) {
+				// check that owner owns the tag
+				const tag = await ctx.prisma.tODO_Tags.findUnique({
+					where: {
+						id: input.id
+					}
+				});
+				if (tag?.owner_id === ctx.session.user.id) {
+					// update the tag
+					return await ctx.prisma.tODO_Tags.update({
+						where: {
+							id: input.id
+						},
+						data: {
+							title: input.title,
+							colour: input.colour
+						}
+					});
+				} else {
+					return null;
+				}
+			} else {
+				return null;
+			}
+		}),
+		
 	updateItem: publicProcedure
 		.input(
 			z.object({
@@ -68,7 +145,6 @@ export const todoRouter = router({
 						parents: true,
 						templates: true
 					}
-					
 				});
 			} else {
 				return null;
@@ -165,6 +241,5 @@ export const todoRouter = router({
 					progress: input.progress
 				}
 			});
-		}),
-	
+		})
 });

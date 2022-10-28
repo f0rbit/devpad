@@ -127,7 +127,7 @@ const ListRenderer = () => {
 
 	return (
 		<TodoContext.Consumer>
-			{({ selectedSection, searchQuery, tags }) => {
+			{({ selectedSection, searchQuery, tags, setTags }) => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-100 dark:bg-pad-gray-800">
@@ -209,7 +209,7 @@ const ListRenderer = () => {
 								open={editTagsModalOpen}
 								setOpen={setEditTagsModalOpen}
 							>
-								<TodoTagsEditor tags={tags}/>
+								<TodoTagsEditor initial_tags={tags} set_tags={setTags}/>
 							</GenericModal>
 						</div>
 					</>
