@@ -23,3 +23,7 @@ select {
 	-ms-overflow-style: none; /* IE and Edge */
 	scrollbar-width: none; /* Firefox */
 }
+
+input {
+	color-scheme: dark
+}

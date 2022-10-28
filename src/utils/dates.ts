@@ -10,3 +10,11 @@ export const dateToDateTime = (date: Date) => {
 		})
 		.replace(" ", "T");
 };
+
+export const dateToDateAndTime = (date: Date) => {
+	return (
+		date.toLocaleDateString() +
+		" " +
+		date.toTimeString().split(" ")[0]?.substring(0, 5)
+	);
+};

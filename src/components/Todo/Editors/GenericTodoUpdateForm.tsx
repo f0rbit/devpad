@@ -1,6 +1,20 @@
 import { TODO_Item } from "@prisma/client";
-import { dateToDateTime } from "src/utils/dates";
+import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
 import { COLOURS } from "@/components/Todo/TodoCard";
+import {
+	ArrowLeft,
+	ArrowRight,
+	BoxSelect,
+	Calendar,
+	CalendarCheck2,
+	CalendarX2,
+	Eye,
+	Newspaper,
+	Tags,
+	Type
+} from "lucide-react";
+import { FetchedTodo } from "../ListRenderer";
+import TodoTag from "../TodoTag";
 
 const GenericTodoEditForm = ({
 	item,
@@ -9,19 +23,150 @@ const GenericTodoEditForm = ({
 	buttonText,
 	onDeleteClick
 }: {
-	item?: TODO_Item;
+	item?: FetchedTodo;
 	title: string;
 	onClick: any;
 	buttonText: string;
 	onDeleteClick?: () => void;
 }) => {
+	const tag_objects =
+		item?.tags.map((tag) => {
+			return <TodoTag tag={tag} />;
+		}) ?? [];
+
+	const has_times = item?.start_time || item?.end_time;
+
 	return (
 		<div
 			style={{ maxHeight: "calc(60vh)" }}
 			className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300"
 		>
-			<div className="mb-4 w-full text-center text-xl">{title}</div>
-			<div
+			{/* <div className="mb-4 w-full text-center text-xl">{title}</div> */}
+			<div className="flex h-full w-[56rem] max-w-[90vw] flex-row flex-nowrap">
+				<div className="basis-3/4 p-1">
+					<div className="inline-flex w-full items-center gap-2">
+						<Type />
+						<input
+							type="text"
+							className="w-full rounded-md bg-transparent px-3 py-1 text-2xl focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
+							placeholder="Title"
+							defaultValue={item?.title}
+						/>
+					</div>
+					{/* Here is where you would put REQUIRED_BY */}
+
+					{/* Summary */}
+					<div className="inline-flex w-full items-center gap-2">
+						<Newspaper />
+						<input
+							className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
+							placeholder="Summary"
+							defaultValue={item?.summary ?? ""}
+						/>
+					</div>
+					{/* Render tags */}
+					{tag_objects.length > 0 && (
+						<div className="inline-flex w-full items-center gap-2">
+							<Tags />
+							<div className="inline-flex w-full items-center gap-2 px-3 py-1">
+								{tag_objects}
+							</div>
+						</div>
+					)}
+					{has_times && (
+						<div className="inline-flex w-full items-center gap-2">
+							{item.start_time && (
+								<div
+									className="inline-flex w-full items-center gap-2"
+									title="Start Time"
+								>
+									<CalendarCheck2 />
+									<input
+										type="datetime-local"
+										name="end_date"
+										id="end_date"
+										className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
+										defaultValue={
+											item?.start_time
+												? dateToDateTime(
+														item?.start_time
+												  )
+												: ""
+										}
+									/>
+								</div>
+							)}
+							{item.end_time && (
+								<div
+									className="inline-flex w-full items-center gap-2"
+									title="End Time"
+								>
+									<CalendarX2 />
+									<input
+										type="datetime-local"
+										name="end_date"
+										id="end_date"
+										className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
+										defaultValue={
+											item?.end_time
+												? dateToDateTime(item?.end_time)
+												: ""
+										}
+									/>
+								</div>
+							)}
+						</div>
+					)}
+					<div className="relative inline-flex w-full flex-row gap-2 items-center">
+						<BoxSelect className="flex-none"/>
+						<select
+							name="progress"
+							id="progress"
+							defaultValue={item?.progress}
+							className="w-full bg-transparent focus:bg-pad-gray-300 px-3 py-1"
+							title="Status"
+						>
+							<option
+								value="UNSTARTED"
+								className={COLOURS.UNSTARTED.colour}
+							>
+								Not Started
+							</option>
+							<option
+								value="IN_PROGRESS"
+								className={COLOURS.IN_PROGRESS.colour}
+							>
+								In Progress
+							</option>
+							<option
+								value="COMPLETED"
+								className={COLOURS.COMPLETED.colour}
+							>
+								Done
+							</option>
+						</select>
+						<Eye className="flex-none" />
+						<select
+							name="visibility"
+							id="visibility"
+							defaultValue={item?.visibility}
+							className="w-full bg-transparent focus:bg-pad-gray-300 px-3 py-1"
+							title="Visibility"
+						>
+							<option value="PRIVATE">Private</option>
+							<option value="PUBLIC">Public</option>
+							<option value="HIDDEN">Hidden</option>
+							<option value="DRAFT">Draft</option>
+							<option value="ARCHIVED">Archived</option>
+						</select>
+					</div>
+				</div>
+
+				<div className="basis-1/4 bg-red-300">
+					<div className="text-center">Add Modules</div>
+				</div>
+			</div>
+			{/* <div
 				style={{
 					gridTemplateColumns: "1fr 7fr",
 					width: "calc(100vw - 90px)"
@@ -138,7 +283,7 @@ const GenericTodoEditForm = ({
 				>
 					{buttonText}
 				</button>
-			</div>
+			</div> */}
 		</div>
 	);
 };
