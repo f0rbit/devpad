@@ -1,17 +1,17 @@
-import { TODO_VISBILITY } from "@prisma/client";
+import { TASK_VISIBILITY } from "@prisma/client";
 import { Lock, Unlock, EyeOff, Archive, FileEdit } from "lucide-react";
 
-const VisiblityIcon = ({ visibility }: { visibility: TODO_VISBILITY }) => {
+const VisiblityIcon = ({ visibility }: { visibility: TASK_VISIBILITY }) => {
 	switch (visibility) {
-		case TODO_VISBILITY.PRIVATE:
+		case TASK_VISIBILITY.PRIVATE:
 			return <Lock />;
-		case TODO_VISBILITY.PUBLIC:
+		case TASK_VISIBILITY.PUBLIC:
 			return <Unlock />;
-		case TODO_VISBILITY.HIDDEN:
+		case TASK_VISIBILITY.HIDDEN:
 			return <EyeOff />;
-		case TODO_VISBILITY.ARCHIVED:
+		case TASK_VISIBILITY.ARCHIVED:
 			return <Archive />;
-		case TODO_VISBILITY.DRAFT:
+		case TASK_VISIBILITY.DRAFT:
 			return <FileEdit />;
 	}
 	return <></>;

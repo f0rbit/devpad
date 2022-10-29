@@ -1,5 +1,5 @@
-import { TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
-import { FetchedTodo } from "../ListRenderer";
+import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { FetchedTask } from "src/utils/trpc";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
 
 export const TodoEditForm = ({
@@ -8,7 +8,7 @@ export const TodoEditForm = ({
 	setOpen,
 	deleteItem
 }: {
-	item: FetchedTodo;
+	item: FetchedTask;
 	updateItem: any;
 	setOpen: any;
 	deleteItem: any;
@@ -50,10 +50,10 @@ export const TodoEditForm = ({
 					title: title.value,
 					summary: summary.value,
 					// description: JSON.parse(description.value),
-					status: progress.value as TODO_STATUS,
-					visibility: visibility.value as TODO_VISBILITY,
+					progress: progress.value as TASK_PROGRESS,
+					visibility: visibility.value as TASK_VISIBILITY,
 					start_time: new Date(start_date.value),
-					end_time: end_date?.value ? new Date(end_date.value) : null 
+					end_time: end_date?.value ? new Date(end_date.value) : null
 				});
 				setOpen(false);
 			}}

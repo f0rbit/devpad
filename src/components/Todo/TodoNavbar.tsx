@@ -4,45 +4,18 @@ import { TodoContext } from "src/pages/todo/dashboard";
 import HoverLink, { hoverLinkClass } from "../HoverLink";
 
 const TodoNavbar = () => {
-	const { toggleList, setSelectedSection, setShowList } =
-		useContext(TodoContext);
+	const { toggleList } = useContext(TodoContext);
 	return (
 		<div className="bg-gray-200 dark:bg-pad-gray-900">
 			<div className="mx-4 my-1 flex h-[40px] flex-row items-center gap-4 py-1 text-gray-600 dark:text-pad-gray-300">
-				<button
-					onClick={() => {
-						toggleList();
-					}}
-					className={hoverLinkClass}
-				>
+				<button onClick={toggleList} className={hoverLinkClass}>
 					<Menu className={"min-w-min"} />
 				</button>
-
-				{/* <button
-					className={hoverLinkClass}
-					onClick={() => {
-						setSelectedSection("current");
-						setShowList(true);
-					}}
-				>
-					<Home className={"min-w-min"} />
-				</button> */}
-
-				
-				{/* <div className="hidden truncate transition-all md:block">
-					<HoverLink text={"Projects"} />
-					<span>{" > "}</span>
-					<HoverLink text={"gm-server"} />
-					<span>{" > "}</span>
-					<HoverLink text={"Add netty.io dependancy"} />
-					<span>{" > "}</span>
-					<HoverLink text={"Edit"} />
-				</div> */}
-				<div className="ml-auto flex flex-row-reverse items-center gap-4">
+				{/* <div className="ml-auto flex flex-row-reverse items-center gap-4">
 					<HoverLink text={"Profile"} />
 					<HoverLink text={"Settings"} />
 					<HoverLink text={"Help"} />
-				</div>
+				</div> */}
 			</div>
 		</div>
 	);

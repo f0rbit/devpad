@@ -1,4 +1,4 @@
-import { TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
+import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
 
 export const TodoCreateForm = ({
@@ -38,8 +38,8 @@ export const TodoCreateForm = ({
 					title: title.value,
 					summary: summary.value,
 					// description: JSON.parse(description.value),
-					status: progress.value as TODO_STATUS,
-					visibility: visibility.value as TODO_VISBILITY,
+					progress: progress.value as TASK_PROGRESS,
+					visibility: visibility.value as TASK_VISIBILITY,
 					start_time: new Date(start_date.value),
 					end_time: new Date(end_date.value)
 				});

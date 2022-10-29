@@ -27,9 +27,7 @@ const update_item_input = z.object({
 	visibility: z
 		.nativeEnum(TASK_VISIBILITY)
 		.optional()
-		.default(TASK_VISIBILITY.PRIVATE),
-	start_time: z.date(),
-	end_time: z.date().optional().nullish()
+		.default(TASK_VISIBILITY.PRIVATE)
 });
 
 export const taskRouter = router({

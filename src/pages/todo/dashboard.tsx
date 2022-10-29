@@ -1,7 +1,7 @@
 import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
 import TodoNavbar from "@/components/Todo/TodoNavbar";
-import { TODO_Tags } from "@prisma/client";
+import { TaskTags } from "@prisma/client";
 import React, { Context, useReducer } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { trpc } from "src/utils/trpc";
@@ -14,8 +14,8 @@ type TodoContextType = {
 	toggleList: () => void;
 	searchQuery: string;
 	setSearchQuery: Dispatch<SetStateAction<string>>;
-	tags: TODO_Tags[];
-	setTags: Dispatch<SetStateAction<TODO_Tags[] | undefined>>;
+	tags: TaskTags[];
+	setTags: Dispatch<SetStateAction<TaskTags[] | undefined>>;
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext(
@@ -52,18 +52,21 @@ const Dashboard = () => {
 	const [showList, setShowList] = useState(true);
 	const [selectedSection, setSelectedSection] = useState("current");
 	const [searchQuery, setSearchQuery] = useState("");
-	var { data: _tags } = trpc.todo.getTags.useQuery();
-	const [tags, setTags] = useState(undefined as TODO_Tags[] | undefined);
+	var { data: temp_tags } = trpc.tags.get_tags.useQuery();
+	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
 
 	const toggleList = () => {
 		setShowList(!showList);
 	};
 
-	if (_tags && !tags) {
-		setTags(_tags);
+	// will set tags to the data gotten from trpc if tags is empty
+	// i think this is incorrect?
+	// TODO: investigate this.
+	if (temp_tags && !tags) {
+		setTags(temp_tags);
 	}
 
-	const tagsOrEmpty = tags || ([] as TODO_Tags[]);
+	const tags_or_empty = tags || ([] as TaskTags[]);
 	return (
 		<TodoContext.Provider
 			value={{
@@ -74,7 +77,7 @@ const Dashboard = () => {
 				toggleList,
 				searchQuery,
 				setSearchQuery,
-				tags: tagsOrEmpty,
+				tags: tags_or_empty,
 				setTags
 			}}
 		>

@@ -6,7 +6,14 @@ import { createTRPCNext } from "@trpc/next";
 import type { GetInferenceHelpers } from "@trpc/server";
 
 import type { AppRouter } from "../server/trpc/router/_app";
-import { Task, TaskModule, TaskTags, TemplateTask } from "@prisma/client";
+import {
+	Prisma,
+	Task,
+	TaskModule,
+	TaskTags,
+	TemplateTask
+} from "@prisma/client";
+import { Module } from "@/types/page-link";
 
 const getBaseUrl = () => {
 	if (typeof window !== "undefined") return ""; // browser should use relative url
@@ -54,4 +61,12 @@ export type FetchedTask = Task & {
 	modules: TaskModule[];
 	parent: Task;
 	children: Task[];
+};
+
+export const getTaskModule = (task: FetchedTask, module_type: Module) => {
+	return task.modules?.find((module) => module.type === module_type);
+};
+
+export const getModuleData = (module: TaskModule) => {
+	return module.data as Prisma.JsonObject;
 };

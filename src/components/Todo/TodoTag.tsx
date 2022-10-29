@@ -1,9 +1,9 @@
 // todo tag
 
-import { TODO_Tags } from "@prisma/client";
+import { TaskTags } from "@prisma/client";
 import { newShade } from "src/utils/colours";
 
-const TodoTag = ({ tag }: { tag: TODO_Tags }) => {
+const TodoTag = ({ tag }: { tag: TaskTags }) => {
 	const { title, colour } = tag;
 	const bg_colour = newShade(colour, -5);
 	return (

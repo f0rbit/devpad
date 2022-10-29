@@ -2,6 +2,7 @@ import { Search } from "lucide-react";
 import { useContext } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
 import CollapseableSection from "./CollapseableSection";
+import { SearchBox } from "./SearchBox";
 import SectionLink, { SectionLinkType } from "./SectionItem";
 
 const links: SectionLinkType[] = [
@@ -49,18 +50,7 @@ const projects: SectionLinkType[] = [
 	}
 ];
 
-const tags: SectionLinkType[] = [
-	{
-		title: "Tag 1",
-		description: "Tag 1",
-		url: "tags/tag_1"
-	},
-	{
-		title: "Tag 2",
-		description: "Tag 2",
-		url: "tags/tag_2"
-	}
-];
+// TODO: refactor this file.
 
 const FlatLinks = () => {
 	const { selectedSection } = useContext(TodoContext);
@@ -110,27 +100,32 @@ const GroupedLinks = () => {
 	);
 };
 
+const TagLinks = ({ expanded }: { expanded: boolean }) => {
+	return (
+		<TodoContext.Consumer>
+			{({ tags }) => (
+				<CollapseableSection
+					title={"Tags"}
+					links={tags.map((tag) => {
+						return {
+							title: tag.title,
+							description: tag.title,
+							url: "tags/" + tag.title.toLowerCase()
+						};
+					})}
+					mobile={!expanded}
+				/>
+			)}
+		</TodoContext.Consumer>
+	);
+};
+
 export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
 		<TodoContext.Consumer>
-			{({ searchQuery, setSearchQuery, setSelectedSection, selectedSection, tags }) => (
-				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-80"> 
-					<div className={"flex flex-row gap-2 rounded-md bg-gray-300 px-3 py-1 dark:bg-pad-gray-800" + (selectedSection == "search" ? " ring-2 ring-pad-purple-200" : "")}>
-						<Search className="min-w-min" />
-						<input
-							className="w-full bg-transparent focus:outline-none dark:text-pad-gray-100 dark:placeholder-pad-gray-400 md:w-48"
-							placeholder={"Search"}
-							type={"text"}
-							value={searchQuery}
-							onInput={(e) => {
-								e.preventDefault();
-								const input = (e.target as HTMLInputElement)
-									.value;
-								setSearchQuery(input);
-								setSelectedSection("search");
-							}}
-						/>
-					</div>
+			{({ tags }) => (
+				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-200 px-4 font-medium dark:bg-pad-gray-900 md:w-80">
+					<SearchBox />
 					<FlatLinks />
 					<GroupedLinks />
 					<CollapseableSection
@@ -138,17 +133,7 @@ export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 						links={projects}
 						mobile={!expanded}
 					/>
-					<CollapseableSection
-						title={"Tags"}
-						links={tags.map((tag) => {
-							return {
-								title: tag.title,
-								description: tag.title,
-								url: "tags/" + (tag.title.toLowerCase())
-							};
-						})}
-						mobile={!expanded}
-					/>
+					<TagLinks expanded={expanded} />
 				</div>
 			)}
 		</TodoContext.Consumer>

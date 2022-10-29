@@ -1,17 +1,14 @@
-// React todo card component
-
-import { TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
 import { useState } from "react";
-import { trpc } from "src/utils/trpc";
+import { FetchedTask, trpc } from "src/utils/trpc";
 import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
 import { hoverLinkClass } from "../HoverLink";
 import TodoTag from "./TodoTag";
-import { FetchedTodo } from "./ListRenderer";
 import VisiblityIcon from "./VisibilityIcon";
 import StatusIcon from "./StatusIcon";
 import GenericModal from "../GenericModal";
 import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
 import { TODO_LAYOUT } from "./ListLayout";
+import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 
 export const COLOURS = {
 	COMPLETED: {
@@ -25,14 +22,14 @@ export const COLOURS = {
 	}
 };
 
-const getNextStatus = (status: TODO_STATUS) => {
+const getNextStatus = (status: TASK_PROGRESS) => {
 	switch (status) {
 		case "COMPLETED":
-			return TODO_STATUS.COMPLETED;
+			return TASK_PROGRESS.COMPLETED;
 		case "UNSTARTED":
-			return TODO_STATUS.IN_PROGRESS;
+			return TASK_PROGRESS.IN_PROGRESS;
 		case "IN_PROGRESS":
-			return TODO_STATUS.COMPLETED;
+			return TASK_PROGRESS.COMPLETED;
 	}
 };
 
@@ -41,7 +38,7 @@ const TodoStatus = ({
 	update_progress,
 	id
 }: {
-	status: TODO_STATUS;
+	status: TASK_PROGRESS;
 	update_progress: any;
 	id: string;
 }) => {
@@ -61,85 +58,61 @@ const TodoStatus = ({
 	);
 };
 
+type ItemInput = {
+	title: string;
+	progress: TASK_PROGRESS;
+	visibility: TASK_VISIBILITY;
+};
+
 const TodoCard = ({
 	initial_item,
 	layout,
 	set_item
 }: {
-	initial_item: FetchedTodo;
+	initial_item: FetchedTask;
 	layout: string;
-	set_item: (item: FetchedTodo) => void
+	set_item: (item: FetchedTask) => void;
 }) => {
-	const update_progress = trpc.todo.updateProgress.useMutation();
-	const update_item = trpc.todo.updateItem.useMutation();
-	const delete_item = trpc.todo.deleteItem.useMutation();
+	const update_item = trpc.tasks.update_item.useMutation();
+	const delete_item = trpc.tasks.delete_item.useMutation();
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
-	const setItemStatus = (status: TODO_STATUS) => {
-		update_progress.mutate({ progress: status, item_id: initial_item.id });
+	const setItemStatus = (status: TASK_PROGRESS) => {
 		const new_item = { ...initial_item, progress: status };
+		update_item.mutate({ item: new_item, id: initial_item.id });
 		set_item(new_item);
 	};
 
-	const updateItem = ({
-		title,
-		summary,
-		description,
-		status,
-		visibility,
-		start_time,
-		end_time
-	}: {
-		title: string;
-		summary: string;
-		description: object;
-		status: TODO_STATUS;
-		visibility: TODO_VISBILITY;
-		start_time: Date;
-		end_time: Date;
-	}) => {
-		// setItem({
-		// 	...item,
-		// 	title,
-		// 	summary,
-		// 	description: description,
-		// 	progress: status,
-		// 	visibility,
-		// 	start_time,
-		// 	end_time
-		// });
-		update_item.mutate({
-			id: initial_item.id,
-			item: {
-				title,
-				summary,
-				description: JSON.stringify(description),
-				progress: status,
-				visibility,
-				start_time,
-				end_time
+	const updateItem = (item: ItemInput) => {
+		update_item.mutate(
+			{
+				id: initial_item.id,
+				item
+			},
+			{
+				onSuccess: (data) => {
+					set_item(data as FetchedTask);
+				}
 			}
-		}, { onSuccess: (data) => {
-			set_item(data as FetchedTodo);
-		}});
+		);
 	};
 
 	const deleteCard = async ({ id }: { id: string }) => {
 		await delete_item.mutate(
 			{ id },
 			{
-				onSuccess: ({ success }) => {
+				onSuccess: (success) => {
 					if (success) {
 						set_item({
 							...initial_item,
-							visibility: TODO_VISBILITY.DELETED
+							visibility: TASK_VISIBILITY.DELETED
 						});
 					}
 				}
 			}
 		);
 	};
-	if (initial_item.visibility == TODO_VISBILITY.DELETED) return null;
+	if (initial_item.visibility == TASK_VISIBILITY.DELETED) return null;
 	// TODO: refactor this
 	if (layout == TODO_LAYOUT.GRID) {
 		return (
@@ -164,12 +137,16 @@ const TodoCard = ({
 							update_progress={setItemStatus}
 							id={initial_item.id}
 						/>
-						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
+						<h1 className=" text-2xl font-medium">
+							{initial_item.title}
+						</h1>
 					</div>
-					{initial_item.end_time && (
+					{/* {initial_item.end_time && (
 						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 							<CalendarClock className="min-w-5 w-5" />
-							<span>{initial_item.end_time?.toLocaleDateString()}</span>
+							<span>
+								{initial_item.end_time?.toLocaleDateString()}
+							</span>
 							<span>
 								{initial_item.end_time
 									?.toTimeString()
@@ -177,7 +154,7 @@ const TodoCard = ({
 									?.substring(0, 5)}
 							</span>
 						</div>
-					)}
+					)} */}
 					{initial_item.tags?.length > 0 && (
 						<div className="flex items-center gap-2 align-middle">
 							<span>
@@ -191,25 +168,30 @@ const TodoCard = ({
 						</div>
 					)}
 
-					{initial_item.summary != undefined && initial_item.summary?.length > 0 && (
-						<div className="flex items-center gap-2 align-middle">
-							<span>
-								<Newspaper className="w-5" />
-							</span>
-							<span className="font-mono text-sm">
-								{initial_item.summary}
-							</span>
-						</div>
-					)}
+					{/* {initial_item.summary != undefined &&
+						initial_item.summary?.length > 0 && (
+							<div className="flex items-center gap-2 align-middle">
+								<span>
+									<Newspaper className="w-5" />
+								</span>
+								<span className="font-mono text-sm">
+									{initial_item.summary}
+								</span>
+							</div>
+						)} */}
 					<div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
 						<span
 							className="text-gray-500 dark:text-pad-gray-400"
 							title={
 								initial_item.visibility[0]?.toUpperCase() +
-								initial_item.visibility.toLowerCase().substring(1)
+								initial_item.visibility
+									.toLowerCase()
+									.substring(1)
 							}
 						>
-							<VisiblityIcon visibility={initial_item.visibility} />
+							<VisiblityIcon
+								visibility={initial_item.visibility}
+							/>
 						</span>
 						<button
 							className={hoverLinkClass}
@@ -249,12 +231,16 @@ const TodoCard = ({
 							update_progress={setItemStatus}
 							id={initial_item.id}
 						/>
-						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
+						<h1 className=" text-2xl font-medium">
+							{initial_item.title}
+						</h1>
 					</div>
-					{initial_item.end_time && (
+					{/* {initial_item.end_time && (
 						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 							<CalendarClock className="min-w-5 w-5" />
-							<span>{initial_item.end_time?.toLocaleDateString()}</span>
+							<span>
+								{initial_item.end_time?.toLocaleDateString()}
+							</span>
 							<span>
 								{initial_item.end_time
 									?.toTimeString()
@@ -262,7 +248,7 @@ const TodoCard = ({
 									?.substring(0, 5)}
 							</span>
 						</div>
-					)}
+					)} */}
 					{initial_item.tags?.length > 0 && (
 						<div className="flex items-center gap-2 align-middle">
 							<span>
@@ -276,25 +262,35 @@ const TodoCard = ({
 						</div>
 					)}
 
-					{initial_item.summary != undefined && initial_item.summary?.length > 0 && (
-						<div className="flex items-center gap-2 align-middle">
-							<span>
-								<Newspaper className="w-5" />
-							</span>
-							<span className="font-mono text-sm">
-								{initial_item.summary}
-							</span>
-						</div>
-					)}
-					<div className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
+					{/* {initial_item.summary != undefined &&
+						initial_item.summary?.length > 0 && (
+							<div className="flex items-center gap-2 align-middle">
+								<span>
+									<Newspaper className="w-5" />
+								</span>
+								<span className="font-mono text-sm">
+									{initial_item.summary}
+								</span>
+							</div>
+						)} */}
+					<div
+						className={
+							"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " +
+							(layout == "GRID" ? "bottom-2" : "bottom-[25%]")
+						}
+					>
 						<span
 							className="text-gray-500 dark:text-pad-gray-400"
 							title={
 								initial_item.visibility[0]?.toUpperCase() +
-								initial_item.visibility.toLowerCase().substring(1)
+								initial_item.visibility
+									.toLowerCase()
+									.substring(1)
 							}
 						>
-							<VisiblityIcon visibility={initial_item.visibility} />
+							<VisiblityIcon
+								visibility={initial_item.visibility}
+							/>
 						</span>
 						<button
 							className={hoverLinkClass}
