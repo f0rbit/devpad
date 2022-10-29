@@ -67,6 +67,8 @@ export const getTaskModule = (task: FetchedTask, module_type: Module) => {
 	return task.modules?.find((module) => module.type === module_type);
 };
 
-export const getModuleData = (module: TaskModule) => {
-	return module.data as Prisma.JsonObject;
+export const getModuleData = (task: FetchedTask, module_type: Module) => {
+	const module = getTaskModule(task, module_type);
+	if (!module) return null;
+	return module.data as any;
 };

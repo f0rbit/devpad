@@ -237,35 +237,29 @@ function getSortedData(
 			// first filter out all that took place in the past
 			return sorted
 				.filter((item) => {
-					const end = getTaskModule(item, Module.END_DATE);
+					const end = getModuleData(item, Module.END_DATE);
 					if (!end) return false;
-					const data = getModuleData(end)["end_date"]?.valueOf();
-					if (!data) return false;
 					return (
-						new Date(data as Date).getTime() > new Date().getTime()
+						new Date(end["end_date"]).getTime() >
+						new Date().getTime()
 					);
 				})
 				.sort((a, b) => {
-					// these cases should never happen because of the filter.
-					const a_end = getTaskModule(a, Module.END_DATE);
-					if (!a_end) return 1;
-					const b_end = getTaskModule(b, Module.END_DATE);
-					if (!b_end) return -1;
-					const a_data = getModuleData(a_end)["end_date"]?.valueOf();
-					if (!a_data) return 1;
-					const b_data = getModuleData(b_end)["end_date"]?.valueOf();
-					if (!b_data) return -1;
-					return a_data > b_data ? 1 : -1;
+					const a_end = getModuleData(a, Module.END_DATE);
+					const b_end = getModuleData(b, Module.END_DATE);
+					if (!a_end || !b_end) return 0;
+					return new Date(a_end["end_date"]) >
+						new Date(b_end["end_date"])
+						? 1
+						: -1;
 				});
 		case "urgent":
 			// filter out all that aren't urgent priority
 			return sorted.filter((item) => {
 				// extract priority from modules
-				const priority = getTaskModule(item, Module.PRIORITY);
-				if (!priority) return false;
-				const data = getModuleData(priority)["priority"];
-				if (!data) return false;
-				return data == TaskPriority.URGENT;
+				const priority = getModuleData(item, Module.PRIORITY);
+				if (!priority || !priority["priority"]) return false;
+				return priority["priority"] == TaskPriority.URGENT;
 			});
 
 		default:
