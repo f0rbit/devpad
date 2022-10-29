@@ -26,9 +26,8 @@ export const TodoEditForm = ({
 				const title = document.getElementById(
 					"title"
 				) as HTMLInputElement;
-				const summary = document.getElementById(
-					"summary"
-				) as HTMLInputElement;
+			
+			
 				// const description = document.getElementById(
 				// 	"description"
 				// ) as HTMLInputElement;
@@ -38,22 +37,15 @@ export const TodoEditForm = ({
 				const visibility = document.getElementById(
 					"visibility"
 				) as HTMLSelectElement;
-				const start_date = document.getElementById(
-					"start_date"
-				) as HTMLInputElement;
-				const end_date = document.getElementById(
-					"end_date"
-				) as HTMLInputElement;
+			
+		
 				// end date could be null
 				updateItem({
 					id: item.id,
 					title: title.value,
-					summary: summary.value,
 					// description: JSON.parse(description.value),
 					progress: progress.value as TASK_PROGRESS,
 					visibility: visibility.value as TASK_VISIBILITY,
-					start_time: new Date(start_date.value),
-					end_time: end_date?.value ? new Date(end_date.value) : null
 				});
 				setOpen(false);
 			}}

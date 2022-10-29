@@ -34,7 +34,7 @@ const GenericTodoEditForm = ({
 			return <TodoTag tag={tag} />;
 		}) ?? [];
 
-	const has_times = item?.start_time || item?.end_time;
+	// const has_times = item?.start_time || item?.end_time;
 
 	return (
 		<div
@@ -58,7 +58,7 @@ const GenericTodoEditForm = ({
 					{/* Here is where you would put REQUIRED_BY */}
 
 					{/* Summary */}
-					<div className="inline-flex w-full items-center gap-2">
+					{/* <div className="inline-flex w-full items-center gap-2">
 						<Newspaper />
 						<input
 							className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
@@ -67,7 +67,7 @@ const GenericTodoEditForm = ({
 							id="summary"
 							name="summary"
 						/>
-					</div>
+					</div> */}
 					{/* Render tags */}
 					{tag_objects.length > 0 && (
 						<div className="inline-flex w-full items-center gap-2">
@@ -77,7 +77,7 @@ const GenericTodoEditForm = ({
 							</div>
 						</div>
 					)}
-					{has_times && (
+					{/* {has_times && (
 						<div className="inline-flex w-full flex-wrap items-center gap-x-2 md:flex-nowrap">
 							{item.start_time && (
 								<div
@@ -120,7 +120,7 @@ const GenericTodoEditForm = ({
 								</div>
 							)}
 						</div>
-					)}
+					)} */}
 					<div className="relative inline-flex w-full flex-row flex-wrap items-center gap-2 md:flex-nowrap">
 						<span className="flex w-full flex-row items-center gap-2 align-middle">
 							<BoxSelect className="flex-none" />
@@ -167,7 +167,7 @@ const GenericTodoEditForm = ({
 								<option value="ARCHIVED">Archived</option>
 							</select>
 						</span>
-						{item?.set_manual_priority && (
+						{/* {item?.set_manual_priority && (
 							<span className="flex w-full flex-row items-center gap-2 align-middle">
 								<Flag className="flex-none" />
 								<select
@@ -183,7 +183,7 @@ const GenericTodoEditForm = ({
 									<option value="URGENT">Urgent</option>
 								</select>
 							</span>
-						)}
+						)} */}
 					</div>
 				</div>
 

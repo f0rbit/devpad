@@ -18,7 +18,7 @@ export const tagRouter = router({
 			where: { owner_id: ctx.session.user.id }
 		});
 	}),
-	createTag: protected_procedure
+	create_tag: protected_procedure
 		.input(z.object({ title: z.string(), colour: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			return await ctx.prisma.taskTags.create({
@@ -41,7 +41,7 @@ export const tagRouter = router({
 			});
 			return true;
 		}),
-	updateTag: protected_procedure
+	update_tag: protected_procedure
 		.input(
 			z.object({
 				id: z.string(),

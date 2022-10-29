@@ -1,4 +1,4 @@
-import { TODO_Tags } from "@prisma/client";
+import { TaskTags } from "@prisma/client";
 import {
 	Check,
 	Cross,
@@ -22,7 +22,7 @@ const TodoTagEditCard = ({
 	updateTag,
 	deleteTag
 }: {
-	tag: TODO_Tags;
+	tag: TaskTags;
 	createTag: any;
 	updateTag: any;
 	deleteTag: any;
@@ -113,13 +113,13 @@ export const TodoTagsEditor = ({
 	initial_tags,
 	set_tags
 }: {
-	initial_tags: TODO_Tags[];
+	initial_tags: TaskTags[];
 	set_tags: any;
 }) => {
 	const [tags, setTags] = useState(initial_tags);
-	const create_tag = trpc.todo.createTag.useMutation();
-	const delete_tag = trpc.todo.deleteTag.useMutation();
-	const update_tag = trpc.todo.updateTag.useMutation();
+	const create_tag = trpc.tags.create_tag.useMutation();
+	const delete_tag = trpc.tags.delete_tag.useMutation();
+	const update_tag = trpc.tags.update_tag.useMutation();
 
 	const createNewTag = () => {
 		// create a new tag
