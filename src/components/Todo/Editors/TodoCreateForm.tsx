@@ -19,9 +19,9 @@ export const TodoCreateForm = ({
 				const summary = document.getElementById(
 					"summary"
 				) as HTMLInputElement;
-				const description = document.getElementById(
-					"description"
-				) as HTMLInputElement;
+				// const description = document.getElementById(
+				// 	"description"
+				// ) as HTMLInputElement;
 				const progress = document.getElementById(
 					"progress"
 				) as HTMLSelectElement;
@@ -37,7 +37,7 @@ export const TodoCreateForm = ({
 				createItem({
 					title: title.value,
 					summary: summary.value,
-					description: JSON.parse(description.value),
+					// description: JSON.parse(description.value),
 					status: progress.value as TODO_STATUS,
 					visibility: visibility.value as TODO_VISBILITY,
 					start_time: new Date(start_date.value),

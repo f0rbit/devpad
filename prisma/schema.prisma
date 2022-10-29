@@ -64,20 +64,22 @@ model VerificationToken {
 
 // todo items
 model TODO_Item {
-  id             String         @id @default(uuid()) @db.Uuid
-  owner          User           @relation(fields: [owner_id], references: [id])
-  description    Json           @db.Json @default("{}")
-  owner_id       String
-  title          String
-  end_time       DateTime?
-  start_time     DateTime?
-  created_at     DateTime       @default(now())
-  updated_at     DateTime       @updatedAt
-  cover_image    String?
-  progress       TODO_STATUS    @default(UNSTARTED)
-  completed_time DateTime?
-  visibility     TODO_VISBILITY @default(PRIVATE)
-  summary        String?
+  id                  String         @id @default(uuid()) @db.Uuid
+  owner               User           @relation(fields: [owner_id], references: [id])
+  description         Json           @default("{}") @db.Json
+  owner_id            String
+  title               String
+  end_time            DateTime?
+  start_time          DateTime?
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+  cover_image         String?
+  progress            TODO_STATUS    @default(UNSTARTED)
+  completed_time      DateTime?
+  visibility          TODO_VISBILITY @default(PRIVATE)
+  summary             String?
+  priority            TODO_PRIORITY  @default(MEDIUM)
+  set_manual_priority Boolean        @default(false)
 
   tags      TODO_Tags[]
   parents   TODO_ItemDependancy[] @relation(name: "parent_item")
@@ -110,9 +112,7 @@ model TODO_Tags {
   colour   String @default("#000000")
 
   items TODO_Item[]
-
 }
-
 
 enum TODO_STATUS {
   UNSTARTED
@@ -133,4 +133,11 @@ enum TODO_VISBILITY {
   ARCHIVED
   DRAFT
   DELETED
+}
+
+enum TODO_PRIORITY {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

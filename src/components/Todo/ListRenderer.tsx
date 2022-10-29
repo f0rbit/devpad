@@ -1,6 +1,7 @@
 import {
 	TODO_Item,
 	TODO_ItemDependancy,
+	TODO_PRIORITY,
 	TODO_STATUS,
 	TODO_Tags,
 	TODO_TemplateItem,
@@ -264,6 +265,12 @@ function getSortedData(
 				if (!b.end_time) return -1;
 				return a.end_time > b.end_time ? 1 : -1;
 			});
+		case "urgent":
+			// filter out all that aren't urgent priority
+			return sorted.filter((item) => {
+				return item.priority == TODO_PRIORITY.URGENT;
+			})
+
 		default:
 			if (selectedSection.startsWith("tags/")) {
 				const tag = selectedSection.split("/")[1];

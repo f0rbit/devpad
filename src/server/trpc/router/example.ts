@@ -1,6 +1,6 @@
 import { router, publicProcedure } from "../trpc";
 import { z } from "zod";
-import { TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
+import { TODO_Item, TODO_PRIORITY, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
 import { isTemplateExpression } from "typescript";
 
 export const todoRouter = router({
@@ -121,24 +121,30 @@ export const todoRouter = router({
 				id: z.string(),
 				item: z.object({
 					title: z.string(),
-					description: z.string(),
+					description: z.string().optional().nullish(),
 					progress: z.nativeEnum(TODO_STATUS),
 					summary: z.string().optional(),
 					visibility: z.nativeEnum(TODO_VISBILITY),
 					start_time: z.date(),
-					end_time: z.date().optional().nullish()
+					end_time: z.date().optional().nullish(),
+					priority: z.nativeEnum(TODO_PRIORITY).optional(),
 				})
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
+			
 			if (ctx?.session?.user?.id) {
+				const data = {
+					...input.item
+				}
+				if (input.item.priority != TODO_PRIORITY.MEDIUM) {
+					Object.assign(data, {set_manual_priority: true});
+				}
 				return ctx.prisma.tODO_Item.update({
 					where: {
 						id: input.id
 					},
-					data: {
-						...input.item
-					},
+					data,
 					include: {
 						tags: true,
 						children: true,

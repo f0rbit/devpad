@@ -1,4 +1,5 @@
 import { TODO_Item, TODO_STATUS, TODO_VISBILITY } from "@prisma/client";
+import { FetchedTodo } from "../ListRenderer";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
 
 export const TodoEditForm = ({
@@ -7,7 +8,7 @@ export const TodoEditForm = ({
 	setOpen,
 	deleteItem
 }: {
-	item: TODO_Item;
+	item: FetchedTodo;
 	updateItem: any;
 	setOpen: any;
 	deleteItem: any;
@@ -28,9 +29,9 @@ export const TodoEditForm = ({
 				const summary = document.getElementById(
 					"summary"
 				) as HTMLInputElement;
-				const description = document.getElementById(
-					"description"
-				) as HTMLInputElement;
+				// const description = document.getElementById(
+				// 	"description"
+				// ) as HTMLInputElement;
 				const progress = document.getElementById(
 					"progress"
 				) as HTMLSelectElement;
@@ -48,11 +49,11 @@ export const TodoEditForm = ({
 					id: item.id,
 					title: title.value,
 					summary: summary.value,
-					description: JSON.parse(description.value),
+					// description: JSON.parse(description.value),
 					status: progress.value as TODO_STATUS,
 					visibility: visibility.value as TODO_VISBILITY,
 					start_time: new Date(start_date.value),
-					end_time: end_date.value ? new Date(end_date.value) : null 
+					end_time: end_date?.value ? new Date(end_date.value) : null 
 				});
 				setOpen(false);
 			}}
