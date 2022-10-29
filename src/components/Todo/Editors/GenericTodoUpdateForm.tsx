@@ -10,11 +10,14 @@ import {
 	Eye,
 	Flag,
 	Newspaper,
+	Tag,
 	Tags,
 	Type
 } from "lucide-react";
 import TodoTag from "../TodoTag";
 import { FetchedTask } from "src/utils/trpc";
+import { Module } from "@/types/page-link";
+import { ModuleIcon } from "../ModuleIcon";
 
 const GenericTodoEditForm = ({
 	item,
@@ -187,8 +190,23 @@ const GenericTodoEditForm = ({
 					</div>
 				</div>
 
-				<div className="basis-1/4 bg-red-300">
-					<div className="text-center">Add Modules</div>
+				<div className="basis-1/4  text-white">
+					<div className="text-center text-lg mb-2">Add Modules</div>
+					<div className="flex flex-col gap-1">
+						{Object.values(Module).map((module, index) => {
+							return (
+								<button className="flex flex-row items-center gap-2 bg-pad-gray-300 w-full rounded-md py-1 px-2 hover:bg-pad-gray-200" key={index}>
+										{ModuleIcon[module]}
+										<span>{module}</span>
+								</button>
+							);
+						})}
+						{/* Add a button for editing tags */}
+						<button className="flex flex-row items-center gap-2 bg-pad-gray-300 w-full rounded-md py-1 px-2 hover:bg-pad-gray-200">
+							<Tag />
+							<span>tags</span>
+						</button>
+					</div>
 				</div>
 			</div>
 			<div className="mt-4 mb-1 flex justify-center gap-2">

@@ -268,7 +268,7 @@ function getSortedData(
 				if (!tag) return [];
 				return sorted.filter((item) => {
 					// get titles of tags
-					const tags = item.tags.map((tag) => tag.title);
+					const tags = item.tags.map((tag) => tag.title.toLowerCase());
 					return tags.includes(tag);
 				});
 			}
