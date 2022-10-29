@@ -6,6 +6,7 @@ import { createTRPCNext } from "@trpc/next";
 import type { GetInferenceHelpers } from "@trpc/server";
 
 import type { AppRouter } from "../server/trpc/router/_app";
+import { Task, TaskModule, TaskTags, TemplateTask } from "@prisma/client";
 
 const getBaseUrl = () => {
 	if (typeof window !== "undefined") return ""; // browser should use relative url
@@ -38,3 +39,19 @@ export const trpc = createTRPCNext<AppRouter>({
  * @example type HelloOutput = AppRouterTypes['example']['hello']['output']
  **/
 export type AppRouterTypes = GetInferenceHelpers<AppRouter>;
+
+export const TaskInclude = {
+	tags: true,
+	templates: true,
+	modules: true,
+	parent: true,
+	children: true
+};
+
+export type FetchedTask = Task & {
+	tags: TaskTags[];
+	templates: TemplateTask[];
+	modules: TaskModule[];
+	parent: Task;
+	children: Task[];
+};
