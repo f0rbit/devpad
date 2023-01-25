@@ -67,6 +67,10 @@ const transformInput = (module: Module, value: string) => {
 	switch (module) {
 		case Module.SUMMARY:
 			return { summary: value };
+		case Module.DESCRIPTION:
+			return { description: [
+				{"markdown": { "text": value } }
+			]}
 		default:
 			return value;
 	}

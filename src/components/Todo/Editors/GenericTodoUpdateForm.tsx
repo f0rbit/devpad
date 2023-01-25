@@ -6,7 +6,9 @@ import { FetchedTask, getTaskModule } from "src/utils/trpc";
 import { Module } from "@/types/page-link";
 import { ModuleIcon } from "../ModuleIcon";
 import { TaskModule } from "@prisma/client";
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
+import DescriptionParser from "../Description/DescriptionParser";
+import { hoverExpandButton } from "@/components/Home/HomeButton";
 
 const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, addModule }: { item?: FetchedTask; title: string; onClick: any; buttonText: string; onDeleteClick?: () => void; addModule?: (module: Module) => void }) => {
 	const tag_objects =
@@ -47,8 +49,14 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					{/* Here is where you would put REQUIRED_BY */}
 
 					{/* Summary */}
-					{getModules(Module.SUMMARY).map((module, index) => <ItemSummary module={module} key={index} />)}
-					
+					{getModules(Module.SUMMARY).map((module, index) => (
+						<ItemSummary module={module} key={index} />
+					))}
+
+					{/* Description */}
+					{getModules(Module.DESCRIPTION).map((module, index) => (
+						<ItemDescription module={module} key={index} />
+					))}
 
 					{/* Render tags */}
 					{tag_objects.length > 0 && (
@@ -195,12 +203,35 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 
 const ItemSummary = ({ module }: { module: TaskModule }) => {
 	const data = module.data as { summary: string };
-	
+
 	// module should be of type Summary
 	return (
 		<div className="inline-flex w-full items-center gap-2">
-			<Newspaper />
+			{ModuleIcon[module.type as Module]}
 			<input className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" placeholder="Summary" defaultValue={data.summary ?? ""} id={`module-${module.id}`} name="summary" />
+		</div>
+	);
+};
+
+const ItemDescription = ({ module }: { module: TaskModule }) => {
+	const [editing, setEditing] = useState(false);
+
+	const data = module.data as { description: any };
+	// module should be of type Description
+	return (
+		<div className="relative inline-flex w-full gap-2 min-h-[6rem]">
+			{ModuleIcon[module.type as Module]}
+			{editing ? (
+				<textarea className="w-full rounded-md bg-transparent bg-pad-gray-600 px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none scrollbar-hide" placeholder="Description" defaultValue={data?.description[0]?.markdown?.text ?? ""} id={`module-${module.id}`} name="description" />
+			) : (
+				<div className="px-3">
+					<DescriptionParser description={data.description} />
+					<div className="absolute bottom-0 right-0">
+						<button className="px-3 py-1 bg-pad-gray-200 rounded-md m-1 transition-all hover:scale-110" onClick={() => setEditing(!editing)}>{editing ? "Done" : "Edit"}</button>
+					</div>
+				</div>
+			)}
+			
 		</div>
 	);
 };

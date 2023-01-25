@@ -41,7 +41,8 @@ const DescriptionItem = ({ object }: { object: Prisma.JsonObject }) => {
 	const _key = Object.keys(object)[0];
 	if (!_key) return <></>;
 	const value = Object.values(object)[0];
-	return <DescriptionModule _key={_key.toString()} object={value as DescriptionModuleObject} />;
+	console.log({ _key, value });
+	return <DescriptionModule _key={_key} object={value as DescriptionModuleObject} />;
 };
 
 const DescriptionParser = ({ description }: { description: Prisma.JsonObject[] }) => {
