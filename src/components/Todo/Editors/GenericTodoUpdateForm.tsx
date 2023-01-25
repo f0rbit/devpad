@@ -2,14 +2,16 @@ import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
 import { COLOURS } from "@/components/Todo/TodoCard";
 import { ArrowLeft, ArrowRight, BoxSelect, Calendar, CalendarCheck2, CalendarX2, Eye, Flag, Newspaper, Tag, Tags, Type } from "lucide-react";
 import TodoTag from "../TodoTag";
-import { FetchedTask } from "src/utils/trpc";
+import { FetchedTask, getTaskModule } from "src/utils/trpc";
 import { Module } from "@/types/page-link";
 import { ModuleIcon } from "../ModuleIcon";
+import { TaskModule } from "@prisma/client";
+import { ReactNode } from "react";
 
 const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, addModule }: { item?: FetchedTask; title: string; onClick: any; buttonText: string; onDeleteClick?: () => void; addModule?: (module: Module) => void }) => {
 	const tag_objects =
-		item?.tags.map((tag) => {
-			return <TodoTag tag={tag} />;
+		item?.tags.map((tag, index) => {
+			return <TodoTag tag={tag} key={index} />;
 		}) ?? [];
 
 	// const has_times = item?.start_time || item?.end_time;
@@ -28,6 +30,11 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 		console.log("edit tags");
 	};
 
+	const getModules = (module: Module): TaskModule[] => {
+		if (!item) return [];
+		return item?.modules?.filter((m: TaskModule) => m.type === module);
+	};
+
 	return (
 		<div style={{ maxHeight: "calc(60vh)" }} className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300">
 			{/* <div className="mb-4 w-full text-center text-xl">{title}</div> */}
@@ -40,16 +47,9 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					{/* Here is where you would put REQUIRED_BY */}
 
 					{/* Summary */}
-					{/* <div className="inline-flex w-full items-center gap-2">
-						<Newspaper />
-						<input
-							className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
-							placeholder="Summary"
-							defaultValue={item?.summary ?? ""}
-							id="summary"
-							name="summary"
-						/>
-					</div> */}
+					{getModules(Module.SUMMARY).map((module, index) => <ItemSummary module={module} key={index} />)}
+					
+
 					{/* Render tags */}
 					{tag_objects.length > 0 && (
 						<div className="inline-flex w-full items-center gap-2">
@@ -189,6 +189,18 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					{buttonText}
 				</button>
 			</div>
+		</div>
+	);
+};
+
+const ItemSummary = ({ module }: { module: TaskModule }) => {
+	const data = module.data as { summary: string };
+	
+	// module should be of type Summary
+	return (
+		<div className="inline-flex w-full items-center gap-2">
+			<Newspaper />
+			<input className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" placeholder="Summary" defaultValue={data.summary ?? ""} id={`module-${module.id}`} name="summary" />
 		</div>
 	);
 };

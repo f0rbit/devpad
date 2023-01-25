@@ -77,6 +77,7 @@ const TodoCard = ({
 	const update_item = trpc.tasks.update_item.useMutation();
 	const delete_item = trpc.tasks.delete_item.useMutation();
 	const add_module = trpc.tasks.add_module.useMutation();
+	const update_module = trpc.tasks.update_module.useMutation();
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = (status: TASK_PROGRESS) => {
@@ -85,7 +86,7 @@ const TodoCard = ({
 		set_item(new_item);
 	};
 
-	const updateItem = (item: ItemInput) => {
+	const updateItem = (item: ItemInput, modules: { type: string, data: string }[]) => {
 		update_item.mutate(
 			{
 				id: initial_item.id,
@@ -97,6 +98,16 @@ const TodoCard = ({
 				}
 			}
 		);
+
+		update_module.mutate({
+			modules: modules,
+			task_id: initial_item.id
+		},
+		{
+			onSuccess: (data) => {
+				set_item(data as FetchedTask)
+			}
+		})
 	};
 
 	const deleteCard = async ({ id }: { id: string }) => {

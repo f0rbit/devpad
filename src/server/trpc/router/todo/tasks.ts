@@ -25,10 +25,7 @@ const user_owns_task = async (user_id: string, task_id: string) => {
 const update_item_input = z.object({
 	title: z.string(),
 	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED),
-	visibility: z
-		.nativeEnum(TASK_VISIBILITY)
-		.optional()
-		.default(TASK_VISIBILITY.PRIVATE)
+	visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE)
 });
 
 const getDefaultData = (module: string) => {
@@ -69,25 +66,21 @@ export const taskRouter = router({
 			include: TaskInclude
 		})) as FetchedTask[];
 	}),
-	update_item: protected_procedure
-		.input(z.object({ id: z.string(), item: update_item_input }))
-		.mutation(async ({ ctx, input }) => {
-			const owns = await user_owns_task(ctx.session.user.id, input.id);
-			if (!owns) return null;
-			return (await ctx.prisma.task.update({
-				where: { id: input.id },
-				data: { ...input.item },
-				include: TaskInclude
-			})) as FetchedTask;
-		}),
-	create_item: protected_procedure
-		.input(z.object({ item: update_item_input }))
-		.mutation(async ({ ctx, input }) => {
-			return (await ctx.prisma.task.create({
-				data: { ...input.item, owner_id: ctx.session.user.id },
-				include: TaskInclude
-			})) as FetchedTask;
-		}),
+	update_item: protected_procedure.input(z.object({ id: z.string(), item: update_item_input })).mutation(async ({ ctx, input }) => {
+		const owns = await user_owns_task(ctx.session.user.id, input.id);
+		if (!owns) return null;
+		return (await ctx.prisma.task.update({
+			where: { id: input.id },
+			data: { ...input.item },
+			include: TaskInclude
+		})) as FetchedTask;
+	}),
+	create_item: protected_procedure.input(z.object({ item: update_item_input })).mutation(async ({ ctx, input }) => {
+		return (await ctx.prisma.task.create({
+			data: { ...input.item, owner_id: ctx.session.user.id },
+			include: TaskInclude
+		})) as FetchedTask;
+	}),
 
 	delete_item: protected_procedure
 		.input(
@@ -112,10 +105,7 @@ export const taskRouter = router({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const owns = await user_owns_task(
-				ctx.session.user.id,
-				input.task_id
-			);
+			const owns = await user_owns_task(ctx.session.user.id, input.task_id);
 			if (!owns) return false;
 			await ctx.prisma.task.update({
 				where: { id: input.task_id },
@@ -140,5 +130,39 @@ export const taskRouter = router({
 				where: { id: input.task_id },
 				include: TaskInclude
 			});
+		}),
+	update_module: protected_procedure
+		.input(
+			z.object({
+				task_id: z.string(),
+				modules: z.array(
+					z.object({
+						type: z.string(),
+						data: z.any()
+					})
+				)
+			})
+		)
+		.mutation(async ({ ctx, input }) => {
+			const owns = await user_owns_task(ctx.session.user.id, input.task_id);
+			if (!owns) return false;
+			// update each module's data
+			for (const module_input of input.modules) {
+				await ctx.prisma.taskModule.update({
+					where: {
+						task_id_type: {
+							task_id: input.task_id,
+							type: module_input.type
+						}
+					},
+					data: {
+						data: module_input.data
+					}
+				});
+			}
+			return (await ctx.prisma.task.findUnique({
+				where: { id: input.task_id },
+				include: TaskInclude
+			})) as FetchedTask;
 		})
 });

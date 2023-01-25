@@ -75,8 +75,6 @@ const ListRenderer = () => {
 	};
 
 	const renderItems = (data: FetchedTask[], layout: string) => {
-		console.log("data", data);
-
 		const renderData = (data: FetchedTask[]) => {
 			return data.map((item) => (
 				<TodoCard
