@@ -8,7 +8,7 @@ export enum ApplicationVersion {
 }
 
 export type Application = {
-	reverse: boolean;
+	index: number;
 	version: ApplicationVersion;
 	icon: string | JSX.Element;
 	title: string;
