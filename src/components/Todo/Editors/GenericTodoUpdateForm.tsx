@@ -1,39 +1,12 @@
 import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
 import { COLOURS } from "@/components/Todo/TodoCard";
-import {
-	ArrowLeft,
-	ArrowRight,
-	BoxSelect,
-	Calendar,
-	CalendarCheck2,
-	CalendarX2,
-	Eye,
-	Flag,
-	Newspaper,
-	Tag,
-	Tags,
-	Type
-} from "lucide-react";
+import { ArrowLeft, ArrowRight, BoxSelect, Calendar, CalendarCheck2, CalendarX2, Eye, Flag, Newspaper, Tag, Tags, Type } from "lucide-react";
 import TodoTag from "../TodoTag";
 import { FetchedTask } from "src/utils/trpc";
 import { Module } from "@/types/page-link";
 import { ModuleIcon } from "../ModuleIcon";
 
-const GenericTodoEditForm = ({
-	item,
-	title,
-	onClick,
-	buttonText,
-	onDeleteClick,
-	addModule,
-}: {
-	item?: FetchedTask;
-	title: string;
-	onClick: any;
-	buttonText: string;
-	onDeleteClick?: () => void;
-	addModule?: (module: Module) => void;
-}) => {
+const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, addModule }: { item?: FetchedTask; title: string; onClick: any; buttonText: string; onDeleteClick?: () => void; addModule?: (module: Module) => void }) => {
 	const tag_objects =
 		item?.tags.map((tag) => {
 			return <TodoTag tag={tag} />;
@@ -51,29 +24,18 @@ const GenericTodoEditForm = ({
 		}
 	};
 
-	
 	const edit_tags = () => {
 		console.log("edit tags");
 	};
 
 	return (
-		<div
-			style={{ maxHeight: "calc(60vh)" }}
-			className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300"
-		>
+		<div style={{ maxHeight: "calc(60vh)" }} className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300">
 			{/* <div className="mb-4 w-full text-center text-xl">{title}</div> */}
 			<div className="flex h-full w-[56rem] max-w-[85vw] flex-col md:flex-row">
-				<div className={"w-full p-1 " + ( item ? "basis-3/4" : "")}>
+				<div className={"w-full p-1 " + (item ? "basis-3/4" : "")}>
 					<div className="inline-flex w-full items-center gap-2">
 						<Type />
-						<input
-							type="text"
-							className="w-full rounded-md bg-transparent px-3 py-1 text-2xl focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
-							placeholder="Title"
-							defaultValue={item?.title}
-							name="title"
-							id="title"
-						/>
+						<input type="text" className="w-full rounded-md bg-transparent px-3 py-1 text-2xl focus:bg-pad-gray-300 focus:font-mono focus:outline-none" placeholder="Title" defaultValue={item?.title} name="title" id="title" />
 					</div>
 					{/* Here is where you would put REQUIRED_BY */}
 
@@ -92,9 +54,7 @@ const GenericTodoEditForm = ({
 					{tag_objects.length > 0 && (
 						<div className="inline-flex w-full items-center gap-2">
 							<Tags />
-							<div className="inline-flex w-full items-center gap-2 px-3 py-1">
-								{tag_objects}
-							</div>
+							<div className="inline-flex w-full items-center gap-2 px-3 py-1">{tag_objects}</div>
 						</div>
 					)}
 					{/* {has_times && (
@@ -144,42 +104,21 @@ const GenericTodoEditForm = ({
 					<div className="relative inline-flex w-full flex-row flex-wrap items-center gap-2 md:flex-nowrap">
 						<span className="flex w-full flex-row items-center gap-2 align-middle">
 							<BoxSelect className="flex-none" />
-							<select
-								name="progress"
-								id="progress"
-								defaultValue={item?.progress}
-								className="w-full bg-transparent py-1 focus:bg-pad-gray-300"
-								title="Status"
-							>
-								<option
-									value="UNSTARTED"
-									className={COLOURS.UNSTARTED.colour}
-								>
+							<select name="progress" id="progress" defaultValue={item?.progress} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Status">
+								<option value="UNSTARTED" className={COLOURS.UNSTARTED.colour}>
 									Not Started
 								</option>
-								<option
-									value="IN_PROGRESS"
-									className={COLOURS.IN_PROGRESS.colour}
-								>
+								<option value="IN_PROGRESS" className={COLOURS.IN_PROGRESS.colour}>
 									In Progress
 								</option>
-								<option
-									value="COMPLETED"
-									className={COLOURS.COMPLETED.colour}
-								>
+								<option value="COMPLETED" className={COLOURS.COMPLETED.colour}>
 									Done
 								</option>
 							</select>
 						</span>
 						<span className="flex w-full flex-row items-center gap-2 align-middle">
 							<Eye className="flex-none" />
-							<select
-								name="visibility"
-								id="visibility"
-								defaultValue={item?.visibility}
-								className="w-full bg-transparent py-1 focus:bg-pad-gray-300"
-								title="Visibility"
-							>
+							<select name="visibility" id="visibility" defaultValue={item?.visibility} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Visibility">
 								<option value="PRIVATE">Private</option>
 								<option value="PUBLIC">Public</option>
 								<option value="HIDDEN">Hidden</option>
@@ -209,27 +148,18 @@ const GenericTodoEditForm = ({
 
 				{item && (
 					<div className="basis-1/4  text-white">
-						<div className="mb-2 text-center text-lg">
-							Add Modules
-						</div>
+						<div className="mb-2 text-center text-lg">Add Modules</div>
 						<div className="flex flex-col gap-1">
 							{Object.values(Module).map((module, index) => {
 								return (
-									<button
-										className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200"
-										key={index}
-										onClick={() => edit_module(module)}
-									>
+									<button className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200" key={index} onClick={() => edit_module(module)}>
 										{ModuleIcon[module]}
 										<span>{module}</span>
 									</button>
 								);
 							})}
 							{/* Add a button for editing tags */}
-							<button
-								className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200"
-								onClick={edit_tags}
-							>
+							<button className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200" onClick={edit_tags}>
 								<Tag />
 								<span>tags</span>
 							</button>

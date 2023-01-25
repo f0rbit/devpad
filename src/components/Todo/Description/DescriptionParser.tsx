@@ -12,13 +12,7 @@ type DescriptionModuleObject = {
 	items?: CheckListItem[];
 };
 
-export const DescriptionModule = ({
-	_key,
-	object
-}: {
-	_key: string;
-	object: DescriptionModuleObject;
-}) => {
+export const DescriptionModule = ({ _key, object }: { _key: string; object: DescriptionModuleObject }) => {
 	switch (_key) {
 		case "markdown":
 			return <span className="font-mono">{object["text"] ?? ""}</span>;
@@ -30,14 +24,7 @@ export const DescriptionModule = ({
 					{object["items"]?.map((item, index) => {
 						return (
 							<div key={index}>
-								<input
-									type="checkbox"
-									defaultChecked={
-										item["completed"] == "true"
-											? true
-											: false
-									}
-								/>
+								<input type="checkbox" defaultChecked={item["completed"] == "true" ? true : false} />
 								<span>{item["description"]}</span>
 							</div>
 						);
@@ -54,19 +41,10 @@ const DescriptionItem = ({ object }: { object: Prisma.JsonObject }) => {
 	const _key = Object.keys(object)[0];
 	if (!_key) return <></>;
 	const value = Object.values(object)[0];
-	return (
-		<DescriptionModule
-			_key={_key.toString()}
-			object={value as DescriptionModuleObject}
-		/>
-	);
+	return <DescriptionModule _key={_key.toString()} object={value as DescriptionModuleObject} />;
 };
 
-const DescriptionParser = ({
-	description
-}: {
-	description: Prisma.JsonObject[];
-}) => {
+const DescriptionParser = ({ description }: { description: Prisma.JsonObject[] }) => {
 	return (
 		<div className="grid grid-cols-1 gap-4">
 			{Object.values(description).map((object, index) => {

@@ -10,8 +10,8 @@ const home: NextPage = () => {
 				<div className="relative left-0 hidden w-24 justify-center lg:flex ">
 					<div style={{ height: "calc(100% - 30px)" }} className="w-1 rounded-full bg-pad-purple-500"></div>
 				</div>
-				<div className="">
-					{APPLICATIONS.map((application, index) => (
+				<div>
+					{APPLICATIONS.sort((a, b) => a.index - b.index).map((application, index) => (
 						<ApplicationCard key={index} application={application} />
 					))}
 				</div>

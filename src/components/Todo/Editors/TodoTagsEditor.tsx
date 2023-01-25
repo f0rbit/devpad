@@ -1,32 +1,18 @@
 import { TaskTags } from "@prisma/client";
-import {
-	Check,
-	Cross,
-	Edit2,
-	Plus,
-	Save,
-	TimerReset,
-	Trash2,
-	Undo2,
-	X
-} from "lucide-react";
+import { Check, Cross, Edit2, Plus, Save, TimerReset, Trash2, Undo2, X } from "lucide-react";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
 
-const controlClass =
-	"text-neutral-400 hover:text-pad-purple-200 hover:scale-110 duration-300";
+const controlClass = "text-neutral-400 hover:text-pad-purple-200 hover:scale-110 duration-300";
 
-const TodoTagEditCard = ({
-	tag,
-	createTag,
-	updateTag,
-	deleteTag
-}: {
+type TodoTagEditCardProps = {
 	tag: TaskTags;
 	createTag: any;
 	updateTag: any;
 	deleteTag: any;
-}) => {
+}
+
+const TodoTagEditCard = ({ tag, createTag, updateTag, deleteTag }: TodoTagEditCardProps) => {
 	const [isChanged, setChanged] = useState(false);
 	const [title, setTitle] = useState(tag.title);
 	const [colour, setColour] = useState(tag.colour);
@@ -78,30 +64,17 @@ const TodoTagEditCard = ({
 			<div className="flex gap-2">
 				<button
 					title="Cancel Changes"
-					className={
-						controlClass +
-						(isChanged && !created
-							? " cursor-pointer opacity-100"
-							: " cursor-default opacity-0")
-					}
+					className={controlClass + (isChanged && !created ? " cursor-pointer opacity-100" : " cursor-default opacity-0")}
 					onClick={() => {
 						if (!created) resetValues();
 					}}
 				>
 					<Undo2 />
 				</button>
-				<button
-					title={created ? "Save" : "Save Changes"}
-					className={controlClass + " text-green-200"}
-					onClick={commitChanges}
-				>
+				<button title={created ? "Save" : "Save Changes"} className={controlClass + " text-green-200"} onClick={commitChanges}>
 					{created ? <Check /> : <Save />}
 				</button>
-				<button
-					title={created ? "Cancel" : "Delete Tag"}
-					className={controlClass + " text-red-200"}
-					onClick={() => deleteTag(tag.id)}
-				>
+				<button title={created ? "Cancel" : "Delete Tag"} className={controlClass + " text-red-200"} onClick={() => deleteTag(tag.id)}>
 					{created ? <X /> : <Trash2 />}
 				</button>
 			</div>
@@ -109,13 +82,7 @@ const TodoTagEditCard = ({
 	);
 };
 
-export const TodoTagsEditor = ({
-	initial_tags,
-	set_tags
-}: {
-	initial_tags: TaskTags[];
-	set_tags: any;
-}) => {
+export const TodoTagsEditor = ({ initial_tags, set_tags }: { initial_tags: TaskTags[]; set_tags: any }) => {
 	const [tags, setTags] = useState(initial_tags);
 	const create_tag = trpc.tags.create_tag.useMutation();
 	const delete_tag = trpc.tags.delete_tag.useMutation();
@@ -134,13 +101,7 @@ export const TodoTagsEditor = ({
 		]);
 	};
 
-	const createTag = async ({
-		title,
-		colour
-	}: {
-		title: string;
-		colour: string;
-	}) => {
+	const createTag = async ({ title, colour }: { title: string; colour: string }) => {
 		// create a new tag
 		create_tag.mutate(
 			{ title, colour },
@@ -175,10 +136,7 @@ export const TodoTagsEditor = ({
 		);
 	};
 
-	const updateTag = async (
-		id: string,
-		{ title, colour }: { title: string; colour: string }
-	) => {
+	const updateTag = async (id: string, { title, colour }: { title: string; colour: string }) => {
 		// update a tag
 		update_tag.mutate(
 			{ id, title, colour },
@@ -197,36 +155,18 @@ export const TodoTagsEditor = ({
 	};
 
 	return (
-		<div
-			style={{ maxHeight: "calc(60vh)" }}
-			className="scrollbar-hide overflow-y-auto overflow-x-hidden"
-		>
+		<div style={{ maxHeight: "calc(60vh)" }} className="scrollbar-hide overflow-y-auto overflow-x-hidden">
 			<div className="relative mb-4 text-center text-xl font-bold">
 				Edit Tags
-				<div
-					className={
-						"absolute right-1 top-0.5 " +
-						(tags.find((tag) => tag.owner_id == "null") && "hidden")
-					}
-				>
-					<button
-						className={controlClass}
-						title="Create New Tag"
-						onClick={() => createNewTag()}
-					>
+				<div className={"absolute right-1 top-0.5 " + (tags.find((tag) => tag.owner_id == "null") && "hidden")}>
+					<button className={controlClass} title="Create New Tag" onClick={() => createNewTag()}>
 						<Plus />
 					</button>
 				</div>
 			</div>
 			<div className="flex flex-col gap-2 p-1">
 				{tags.map((tag, index) => (
-					<TodoTagEditCard
-						key={index}
-						tag={tag}
-						createTag={createTag}
-						updateTag={updateTag}
-						deleteTag={deleteTag}
-					/>
+					<TodoTagEditCard key={index} tag={tag} createTag={createTag} updateTag={updateTag} deleteTag={deleteTag} />
 				))}
 			</div>
 		</div>

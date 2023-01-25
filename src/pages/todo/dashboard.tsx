@@ -2,7 +2,7 @@ import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
 import TodoNavbar from "@/components/Todo/TodoNavbar";
 import { TaskTags } from "@prisma/client";
-import React, { Context, useReducer } from "react";
+import React, { Context, useCallback, useContext, useEffect } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { trpc } from "src/utils/trpc";
 
@@ -18,33 +18,15 @@ type TodoContextType = {
 	setTags: Dispatch<SetStateAction<TaskTags[] | undefined>>;
 };
 
-export const TodoContext: Context<TodoContextType> = React.createContext(
-	{} as TodoContextType
-);
+export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
 
-const DashboardMainSection = ({ mobile }: { mobile: boolean }) => {
+const DashboardMainSection = ({ mobile, showList }: { mobile: boolean, showList: boolean }) => {
+	if (mobile) return showList ? <MainLinkSection expanded={false} /> : <ListRenderer />;
 	return (
-		<TodoContext.Consumer>
-			{({ showList }) => {
-				const objects = [];
-				if (mobile) {
-					if (showList) {
-						objects.push(
-							<MainLinkSection key={0} expanded={false} />
-						);
-					} else {
-						objects.push(<ListRenderer key={1} />);
-					}
-				} else {
-					if (showList)
-						objects.push(
-							<MainLinkSection key={0} expanded={true} />
-						);
-					objects.push(<ListRenderer key={1} />);
-				}
-				return objects;
-			}}
-		</TodoContext.Consumer>
+		<>
+			{showList && <MainLinkSection expanded={true} />}
+			<ListRenderer />
+		</>
 	);
 };
 
@@ -52,45 +34,43 @@ const Dashboard = () => {
 	const [showList, setShowList] = useState(true);
 	const [selectedSection, setSelectedSection] = useState("current");
 	const [searchQuery, setSearchQuery] = useState("");
-	var { data: temp_tags } = trpc.tags.get_tags.useQuery();
+	const { data: temp_tags } = trpc.tags.get_tags.useQuery();
 	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
 
-	const toggleList = () => {
-		setShowList(!showList);
+	useEffect(() => {
+		if (temp_tags && !tags) {
+			setTags(temp_tags);
+		}
+	}, [temp_tags, tags, setTags]);
+
+	const toggleList = useCallback(() => {
+		setShowList((prev) => !prev);
+	}, [setShowList]);
+
+	const value: TodoContextType = {
+		showList,
+		setShowList,
+		selectedSection,
+		setSelectedSection,
+		toggleList,
+		searchQuery,
+		setSearchQuery,
+		tags: tags ?? [],
+		setTags
 	};
 
-	// will set tags to the data gotten from trpc if tags is empty
-	// i think this is incorrect?
-	// TODO: investigate this.
-	if (temp_tags && !tags) {
-		setTags(temp_tags);
-	}
-
-	const tags_or_empty = tags || ([] as TaskTags[]);
 	return (
-		<TodoContext.Provider
-			value={{
-				showList,
-				setShowList,
-				selectedSection,
-				setSelectedSection,
-				toggleList,
-				searchQuery,
-				setSearchQuery,
-				tags: tags_or_empty,
-				setTags
-			}}
-		>
-			<div className="h-screen min-h-full overflow-hidden ">
-				<div className="">
+		<TodoContext.Provider value={value}>
+			<div className="h-screen min-h-full overflow-hidden">
+				<div>
 					<TodoNavbar />
 				</div>
 				<div className="block h-full w-full md:hidden">
-					<DashboardMainSection mobile={true} />
+					<DashboardMainSection mobile={true} showList={showList} />
 				</div>
 				<div className="hidden h-full w-full md:block">
 					<div className="flex h-full w-full flex-row">
-						<DashboardMainSection mobile={false} />
+						<DashboardMainSection mobile={false} showList={showList} />
 					</div>
 				</div>
 			</div>

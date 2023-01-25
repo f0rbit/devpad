@@ -5,7 +5,6 @@ import type { Session } from "next-auth";
 import type { AppType } from "next/app";
 import { trpc } from "../utils/trpc";
 import React, { Dispatch, SetStateAction, useState } from "react";
-import LoginDialog from "@/components/LoginModal";
 import { unknown } from "zod";
 
 export const LoginContext = React.createContext({
@@ -13,10 +12,7 @@ export const LoginContext = React.createContext({
 	setLoginOpen: unknown as Dispatch<SetStateAction<boolean>>
 });
 
-const MyApp: AppType<{ session: Session | null }> = ({
-	Component,
-	pageProps: { session, ...pageProps }
-}) => {
+const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps: { session, ...pageProps } }) => {
 	const [loginOpen, setLoginOpen] = useState(false);
 	return (
 		<SessionProvider>

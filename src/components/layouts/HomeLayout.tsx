@@ -4,13 +4,7 @@ import CenteredContainer from "@/components/CenteredContainer";
 import HomeNavBar from "../Home/HomeNavBar";
 import LoginDialog from "../LoginModal";
 
-const HomeLayout = ({
-	title,
-	children
-}: {
-	title: string;
-	children: ReactNode;
-}) => {
+const HomeLayout = ({ title, children }: { title: string; children: ReactNode }) => {
 	return (
 		<div className="relative overflow-x-hidden">
 			<Head>
@@ -29,10 +23,7 @@ const HomeLayout = ({
 			<footer className="h-[52px] w-screen bg-gray-300 p-4 dark:bg-neutral-900">
 				<div className="text-center font-sans text-sm text-neutral-500">
 					<span>website by </span>
-					<a
-						href="https://forbit.dev"
-						className="hover:text-blue-500 hover:underline"
-					>
+					<a href="https://forbit.dev" className="hover:text-blue-500 hover:underline">
 						forbit.dev
 					</a>
 				</div>
