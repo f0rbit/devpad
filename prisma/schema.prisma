@@ -84,12 +84,14 @@ model Task {
 }
 
 model TaskModule {
-  id      String   @id @default(uuid()) @db.Uuid
+  id      String   @default(uuid()) @db.Uuid
   task    Task     @relation(fields: [task_id], references: [id])
   task_id String   @db.Uuid
   type    String
   data    Json     @default("{}") @db.Json
   updated DateTime @updatedAt
+
+  @@unique([task_id, type])
 }
 
 model TemplateTask {

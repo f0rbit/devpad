@@ -9,6 +9,7 @@ import GenericModal from "../GenericModal";
 import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
 import { TODO_LAYOUT } from "./ListLayout";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { Module } from "@/types/page-link";
 
 export const COLOURS = {
 	COMPLETED: {
@@ -75,6 +76,7 @@ const TodoCard = ({
 }) => {
 	const update_item = trpc.tasks.update_item.useMutation();
 	const delete_item = trpc.tasks.delete_item.useMutation();
+	const add_module = trpc.tasks.add_module.useMutation();
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = (status: TASK_PROGRESS) => {
@@ -112,6 +114,17 @@ const TodoCard = ({
 			}
 		);
 	};
+
+	const addModule = (module: Module) => {
+		// add the module to the item
+		add_module.mutate({ task_id: initial_item.id, module_id: module }, {
+			onSuccess: (data) => {
+				set_item(data as FetchedTask);
+			}
+		});
+	}
+
+
 	if (initial_item.visibility == TASK_VISIBILITY.DELETED) return null;
 	// TODO: refactor this
 	if (layout == TODO_LAYOUT.GRID) {
@@ -127,6 +140,7 @@ const TodoCard = ({
 							updateItem={updateItem}
 							setOpen={setEditModalOpen}
 							deleteItem={deleteCard}
+							addModule={addModule}
 						/>
 					</GenericModal>
 				</div>
@@ -221,6 +235,7 @@ const TodoCard = ({
 							updateItem={updateItem}
 							setOpen={setEditModalOpen}
 							deleteItem={deleteCard}
+							addModule={addModule}
 						/>
 					</GenericModal>
 				</div>

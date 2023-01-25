@@ -1,3 +1,4 @@
+import { Module } from "@/types/page-link";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { FetchedTask } from "src/utils/trpc";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
@@ -6,12 +7,14 @@ export const TodoEditForm = ({
 	item,
 	updateItem,
 	setOpen,
-	deleteItem
+	deleteItem,
+	addModule,
 }: {
 	item: FetchedTask;
 	updateItem: any;
 	setOpen: any;
 	deleteItem: any;
+	addModule: (module: Module) => void;
 }) => {
 	return (
 		<GenericTodoUpdateForm
@@ -49,6 +52,7 @@ export const TodoEditForm = ({
 				});
 				setOpen(false);
 			}}
+			addModule={addModule}
 		/>
 	);
 };

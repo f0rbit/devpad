@@ -24,13 +24,15 @@ const GenericTodoEditForm = ({
 	title,
 	onClick,
 	buttonText,
-	onDeleteClick
+	onDeleteClick,
+	addModule,
 }: {
 	item?: FetchedTask;
 	title: string;
 	onClick: any;
 	buttonText: string;
 	onDeleteClick?: () => void;
+	addModule?: (module: Module) => void;
 }) => {
 	const tag_objects =
 		item?.tags.map((tag) => {
@@ -38,6 +40,21 @@ const GenericTodoEditForm = ({
 		}) ?? [];
 
 	// const has_times = item?.start_time || item?.end_time;
+	const edit_module = (module: Module) => {
+		if (!addModule) return;
+		var dom_element = document.getElementById("module-" + module);
+		if (!dom_element) {
+			addModule(module);
+		} else {
+			dom_element?.focus();
+			dom_element?.scrollIntoView({ behavior: "smooth" });
+		}
+	};
+
+	
+	const edit_tags = () => {
+		console.log("edit tags");
+	};
 
 	return (
 		<div
@@ -46,7 +63,7 @@ const GenericTodoEditForm = ({
 		>
 			{/* <div className="mb-4 w-full text-center text-xl">{title}</div> */}
 			<div className="flex h-full w-[56rem] max-w-[85vw] flex-col md:flex-row">
-				<div className="w-full basis-3/4 p-1">
+				<div className={"w-full p-1 " + ( item ? "basis-3/4" : "")}>
 					<div className="inline-flex w-full items-center gap-2">
 						<Type />
 						<input
@@ -190,24 +207,35 @@ const GenericTodoEditForm = ({
 					</div>
 				</div>
 
-				<div className="basis-1/4  text-white">
-					<div className="text-center text-lg mb-2">Add Modules</div>
-					<div className="flex flex-col gap-1">
-						{Object.values(Module).map((module, index) => {
-							return (
-								<button className="flex flex-row items-center gap-2 bg-pad-gray-300 w-full rounded-md py-1 px-2 hover:bg-pad-gray-200" key={index}>
+				{item && (
+					<div className="basis-1/4  text-white">
+						<div className="mb-2 text-center text-lg">
+							Add Modules
+						</div>
+						<div className="flex flex-col gap-1">
+							{Object.values(Module).map((module, index) => {
+								return (
+									<button
+										className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200"
+										key={index}
+										onClick={() => edit_module(module)}
+									>
 										{ModuleIcon[module]}
 										<span>{module}</span>
-								</button>
-							);
-						})}
-						{/* Add a button for editing tags */}
-						<button className="flex flex-row items-center gap-2 bg-pad-gray-300 w-full rounded-md py-1 px-2 hover:bg-pad-gray-200">
-							<Tag />
-							<span>tags</span>
-						</button>
+									</button>
+								);
+							})}
+							{/* Add a button for editing tags */}
+							<button
+								className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200"
+								onClick={edit_tags}
+							>
+								<Tag />
+								<span>tags</span>
+							</button>
+						</div>
 					</div>
-				</div>
+				)}
 			</div>
 			<div className="mt-4 mb-1 flex justify-center gap-2">
 				{onDeleteClick && (
