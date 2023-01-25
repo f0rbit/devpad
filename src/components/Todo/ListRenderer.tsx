@@ -2,14 +2,9 @@ import { Module, TaskPriority } from "@/types/page-link";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useContext, useReducer, useState } from "react";
+import React, { BaseSyntheticEvent, Dispatch, SetStateAction, useContext, useReducer, useState } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
-import {
-	FetchedTask,
-	getModuleData,
-	getTaskModule,
-	trpc
-} from "src/utils/trpc";
+import { FetchedTask, getModuleData, getTaskModule, trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
 import { hoverExpandButton } from "../Home/HomeButton";
 import TodoCreateForm from "./Editors/TodoCreateForm";
@@ -37,19 +32,7 @@ const ListRenderer = () => {
 		return <div>Loading...</div>;
 	}
 
-	const createItem = async ({
-		title,
-		progress,
-		visibility,
-		start_time,
-		end_time
-	}: {
-		title: string;
-		progress: TASK_PROGRESS;
-		visibility: TASK_VISIBILITY;
-		start_time: Date;
-		end_time: Date;
-	}) => {
+	const createItem = async ({ title, progress, visibility, start_time, end_time }: { title: string; progress: TASK_PROGRESS; visibility: TASK_VISIBILITY; start_time: Date; end_time: Date }) => {
 		const item = {
 			title,
 			progress,
@@ -74,124 +57,39 @@ const ListRenderer = () => {
 		forceUpdate();
 	};
 
-	const renderItems = (data: FetchedTask[], layout: string) => {
-		const renderData = (data: FetchedTask[]) => {
-			return data.map((item) => (
-				<TodoCard
-					key={item.id}
-					initial_item={item}
-					layout={layout}
-					set_item={setItem}
-				/>
-			));
-		};
-
-		switch (layout) {
-			case TODO_LAYOUT.LIST:
-				return (
-					<div className="flex flex-col gap-2">
-						{renderData(data)}
-					</div>
-				);
-			case TODO_LAYOUT.GRID:
-				return (
-					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ">
-						{renderData(data)}
-					</div>
-				);
-			default:
-				return <></>;
-		}
-	};
-
 	return (
 		<TodoContext.Consumer>
 			{({ selectedSection, searchQuery, tags, setTags }) => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-100 dark:bg-pad-gray-800">
-							<div className="h-[2000px] w-full p-4 text-neutral-400">
+							<div className="w-full p-4 text-neutral-400">
 								<div className="mb-4 rounded-md p-2 font-bold text-neutral-300">
 									<div className="flex flex-row items-center gap-4">
-										<div className="text-2xl font-bold">
-											{selectedSection + " Items"}
-										</div>
-										<div className="flex flex-row items-center gap-2 align-middle">
-											{/* Add a button for each layout */}
-											{Object.values(TODO_LAYOUT).map(
-												(layout_type) => (
-													<button
-														key={layout_type}
-														onClick={() => {
-															setLayout(
-																layout_type
-															);
-														}}
-														className="rounded-md bg-pad-gray-500 px-2 py-1 shadow-md"
-													>
-														<LayoutIcon
-															layout={layout_type}
-														/>
-													</button>
-												)
-											)}
-										</div>
+										<div className="text-2xl font-bold">{selectedSection + " Items"}</div>
+										<LayoutSelectors setLayout={setLayout} />
 										<div>Layout: {layout}</div>
 										<div className="ml-auto">
-											{/* Add a button for editing tags */}
-											<button
-												onClick={() => {
-													setEditTagsModalOpen(true);
-												}}
-												className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-pad-gray-500 px-2 py-1 align-middle text-sm shadow-md"
-											>
-												<Tag className="p-0.5" />
-												Edit
-											</button>
+											<TagEditButton onClick={() => setEditTagsModalOpen(true)} />
 										</div>
 									</div>
 								</div>
-								{renderItems(
-									getSortedData(
-										data,
-										selectedSection,
-										searchQuery
-									),
-									layout
-								)}
+								<RenderTasks data={getSortedData(data, selectedSection, searchQuery)} layout={layout} setItem={setItem} />
 							</div>
 						</div>
 						<div className="fixed bottom-4 right-4">
-							<button
-								className={hoverExpandButton}
-								onClick={(e) => {
-									e.preventDefault();
-									setCreateModalOpen(true);
-								}}
-							>
-								Create
-							</button>
+							<CreateButton onClick={() => setCreateModalOpen(true)} />
+							{/* This is the create todo item form */}
 							<div className="absolute">
-								<GenericModal
-									open={createModalOpen}
-									setOpen={setCreateModalOpen}
-								>
-									<TodoCreateForm
-										createItem={createItem}
-										setOpen={setCreateModalOpen}
-									/>
+								<GenericModal open={createModalOpen} setOpen={setCreateModalOpen}>
+									<TodoCreateForm createItem={createItem} setOpen={setCreateModalOpen} />
 								</GenericModal>
 							</div>
 						</div>
+						{/* This is the edit tags form */}
 						<div className="absolute">
-							<GenericModal
-								open={editTagsModalOpen}
-								setOpen={setEditTagsModalOpen}
-							>
-								<TodoTagsEditor
-									initial_tags={tags}
-									set_tags={setTags}
-								/>
+							<GenericModal open={editTagsModalOpen} setOpen={setEditTagsModalOpen}>
+								<TodoTagsEditor initial_tags={tags} set_tags={setTags} />
 							</GenericModal>
 						</div>
 					</>
@@ -203,21 +101,63 @@ const ListRenderer = () => {
 
 export default ListRenderer;
 
-function getSortedData(
-	data: FetchedTask[],
-	selectedSection: string,
-	searchQuery: string
-): FetchedTask[] {
-	// remove all deleted
-	const sorted = data.filter(
-		(item) => item.visibility != TASK_VISIBILITY.DELETED
+const RenderTasks = ({ data, layout, setItem }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void }) => {
+	const renderData = (data: FetchedTask[]) => {
+		return data.map((item) => <TodoCard key={item.id} initial_item={item} layout={layout} set_item={setItem} />);
+	};
+
+	switch (layout) {
+		case TODO_LAYOUT.LIST:
+			return <div className="flex flex-col gap-2">{renderData(data)}</div>;
+		case TODO_LAYOUT.GRID:
+			return <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 ">{renderData(data)}</div>;
+		default:
+			return <></>;
+	}
+};
+
+const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<string>> }) => {
+	return (
+		<div className="flex flex-row items-center gap-2">
+			{Object.values(TODO_LAYOUT).map((layout_type) => (
+				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md bg-pad-gray-500 px-2 py-1 shadow-md">
+					<LayoutIcon layout={layout_type} />
+				</button>
+			))}
+		</div>
 	);
+};
+
+const TagEditButton = ({ onClick }: { onClick: () => void }) => {
+	return (
+		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-pad-gray-500 px-2 py-1 align-middle text-sm shadow-md">
+			<Tag className="p-0.5" />
+			Edit
+		</button>
+	);
+};
+
+const CreateButton = ({ onClick }: { onClick: () => void }) => {
+	return (
+		<button
+			className={hoverExpandButton}
+			onClick={(e) => {
+				e.preventDefault();
+				onClick();
+			}}
+		>
+			Create
+		</button>
+	);
+};
+
+function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery: string): FetchedTask[] {
+	// remove all deleted
+	const sorted = data.filter((item) => item.visibility != TASK_VISIBILITY.DELETED);
 	switch (selectedSection) {
 		case "current":
 			// get all the items with a progress of "IN_PROGRESS"
-			return sorted.filter(
-				(item) => item.progress == TASK_PROGRESS.IN_PROGRESS
-			);
+			return sorted.filter((item) => item.progress == TASK_PROGRESS.IN_PROGRESS);
 		case "recent":
 			return sorted.sort((a, b) => {
 				return a.updated_at > b.updated_at ? -1 : 1;
@@ -237,19 +177,13 @@ function getSortedData(
 				.filter((item) => {
 					const end = getModuleData(item, Module.END_DATE);
 					if (!end) return false;
-					return (
-						new Date(end["end_date"]).getTime() >
-						new Date().getTime()
-					);
+					return new Date(end["end_date"]).getTime() > new Date().getTime();
 				})
 				.sort((a, b) => {
 					const a_end = getModuleData(a, Module.END_DATE);
 					const b_end = getModuleData(b, Module.END_DATE);
 					if (!a_end || !b_end) return 0;
-					return new Date(a_end["end_date"]) >
-						new Date(b_end["end_date"])
-						? 1
-						: -1;
+					return new Date(a_end["end_date"]) > new Date(b_end["end_date"]) ? 1 : -1;
 				});
 		case "urgent":
 			// filter out all that aren't urgent priority
