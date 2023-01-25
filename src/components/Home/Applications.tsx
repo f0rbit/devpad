@@ -1,0 +1,65 @@
+import ProjectManagerPhoto from "@/public/app_photos/project-manager.png";
+import TrelloBoardPhoto from "@/public/app_photos/trello_board.png";
+import TodoIcon from "@/public/todo-logo.png";
+import ProjectIcon from "@/public/app_photos/manager-icon.png";
+import UniTimetable from "@/public/app_photos/mytimetable.png";
+import JobManagerIcon from "@/public/app_photos/job-manager.png";
+import Image from "next/image";
+import { Application, ApplicationVersion } from "@/types/applications";
+
+const getSubDomain = (sub: string) => {
+	const host = typeof window !== "undefined" ? window.location.hostname : "devpad.local";
+	const protocol = typeof window != "undefined" ? window.location.protocol : "http:";
+	return `${protocol}//${sub}.${host}:3000`;
+};
+
+const APPLICATIONS: Application[] = [
+	{
+		reverse: false,
+		version: ApplicationVersion.IN_DEVELOPMENT,
+		icon: <Image src={TodoIcon} width={96} height={96} alt={"Todo App Icon"} />,
+		title: "TODO",
+		description: "Automatically import TODOs from github source code. Set urgency and dates for deadlines. Apply tags in different scopes and groupings. Log changes and generate a timeline history.",
+		images: [TrelloBoardPhoto],
+		link: getSubDomain("todo")
+	}, {
+        reverse: true,
+        version: ApplicationVersion.NOT_STARTED,
+        icon: <Image src={ProjectIcon} width={96} height={96} alt={"Project Manager Icon"} />,
+        title: "Project Organiser",
+        description: "Manages multiple TODO items at once. Schedule times for goals and achievements. Keep track of project versioning. In-built project progress tracker and history viewer",
+        images: [ProjectManagerPhoto],
+        link: getSubDomain("projects")
+    }, {
+        reverse: false,
+        version: ApplicationVersion.NOT_STARTED,
+        icon: <Image src={JobManagerIcon} width={96} height={96} alt={"Work Manager Icon"} />,
+        title: "Work Manager",
+        description:
+            "This application manages repetitive schedules and assignments, for a Job or for Education. Schedule repeated meetings/classes, schedule time off and breaks. Track classes and meetings, write down notes in a built-in notepad and link to projects and todo items.",
+        images: [UniTimetable],
+        link: getSubDomain("manager")
+    }, {
+        reverse: true,
+        version: ApplicationVersion.NOT_STARTED,
+        icon: <Image src={ProjectIcon} width={96} height={96} alt={"Calendar Icon"} />,
+        title: "Calendar",
+        description:
+
+            "Schedule meetings, keep track of birthdays. Schedule reminders, and remind you before the reminder. Hold ideas for birthday gifts and setup automatic birthday reminders. Keep a hold of tickets and scheduled event information",
+        images: [],
+        link: getSubDomain("calendar")
+    }, {
+        reverse: false,
+        version: ApplicationVersion.NOT_STARTED,
+        icon: <Image src={ProjectIcon} width={96} height={96} alt={"Diary Icon"} />,
+        title: "Diary",
+        description:
+            "Offers a comprehensive timeline. Shows a history of TODO completions, keep track of commitment and visual feedback on staying on track. See upcoming project & job dates, go back in time and see your history. Store life events and link files and images. See all your git commits together, and configure a custom media timeline.",
+        images: [],
+        link: getSubDomain("diary")
+    }
+];
+
+
+export default APPLICATIONS;

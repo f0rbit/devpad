@@ -27,3 +27,7 @@ select {
 input {
 	color-scheme: dark
 }
+
+html {
+	overflow-y: overlay;
+}

@@ -1,17 +1,9 @@
 import Image, { StaticImageData } from "next/image";
 import { UnwrappedButton } from "@/components/Home/HomeButton";
+import { Application } from "@/types/applications";
 
-type ApplicationCardProps = {
-	icon: string | JSX.Element;
-	title: string;
-	description: string;
-	version: string;
-	reverse: boolean;
-	link: string;
-	images: StaticImageData[];
-};
-
-const ApplicationCard = ({ icon, title, description, version, reverse, images, link }: ApplicationCardProps) => {
+const ApplicationCard = ({ application }: { application: Application }) => {
+	const { icon, title, description, images, reverse, version, link } = application;
 	return (
 		<div className="relative">
 			<VersionIndicator version={version} />
@@ -73,9 +65,9 @@ const ApplicationImages = ({ images }: { images: StaticImageData[] }) => {
 
 const VersionIndicator = ({ version }: { version: string }) => {
 	return (
-		<div className="absolute hidden lg:flex h-full items-center -left-[18px] flex-row-reverse">
+		<div className="absolute -left-[18px] hidden h-full flex-row-reverse items-center lg:flex">
 			<div className="h-4 w-4 rounded-full border-2 bg-pad-purple-500 dark:border-pad-gray-900"></div>
-			<span className="mr-6 absolute whitespace-nowrap font-mono text-pad-gray-200">{version}</span>
+			<span className="absolute mr-6 whitespace-nowrap font-mono text-pad-gray-200">{version}</span>
 		</div>
 	);
 };

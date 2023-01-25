@@ -6,13 +6,7 @@ import { createTRPCNext } from "@trpc/next";
 import type { GetInferenceHelpers } from "@trpc/server";
 
 import type { AppRouter } from "../server/trpc/router/_app";
-import {
-	Prisma,
-	Task,
-	TaskModule,
-	TaskTags,
-	TemplateTask
-} from "@prisma/client";
+import { Prisma, Task, TaskModule, TaskTags, TemplateTask } from "@prisma/client";
 import { Module } from "@/types/page-link";
 
 const getBaseUrl = () => {
@@ -27,10 +21,7 @@ export const trpc = createTRPCNext<AppRouter>({
 			transformer: superjson,
 			links: [
 				loggerLink({
-					enabled: (opts) =>
-						process.env.NODE_ENV === "development" ||
-						(opts.direction === "down" &&
-							opts.result instanceof Error)
+					enabled: (opts) => process.env.NODE_ENV === "development" || (opts.direction === "down" && opts.result instanceof Error)
 				}),
 				httpBatchLink({
 					url: `${getBaseUrl()}/api/trpc`

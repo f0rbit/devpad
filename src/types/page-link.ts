@@ -19,5 +19,3 @@ export enum TaskPriority {
 	HIGH,
 	URGENT,
 }
-
-
