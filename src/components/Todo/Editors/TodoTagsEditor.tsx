@@ -10,7 +10,7 @@ type TodoTagEditCardProps = {
 	createTag: any;
 	updateTag: any;
 	deleteTag: any;
-}
+};
 
 const TodoTagEditCard = ({ tag, createTag, updateTag, deleteTag }: TodoTagEditCardProps) => {
 	const [isChanged, setChanged] = useState(false);
@@ -62,23 +62,41 @@ const TodoTagEditCard = ({ tag, createTag, updateTag, deleteTag }: TodoTagEditCa
 				/>
 			</div>
 			<div className="flex gap-2">
-				<button
-					title="Cancel Changes"
-					className={controlClass + (isChanged && !created ? " cursor-pointer opacity-100" : " cursor-default opacity-0")}
-					onClick={() => {
-						if (!created) resetValues();
-					}}
-				>
-					<Undo2 />
-				</button>
-				<button title={created ? "Save" : "Save Changes"} className={controlClass + " text-green-200"} onClick={commitChanges}>
-					{created ? <Check /> : <Save />}
-				</button>
-				<button title={created ? "Cancel" : "Delete Tag"} className={controlClass + " text-red-200"} onClick={() => deleteTag(tag.id)}>
-					{created ? <X /> : <Trash2 />}
-				</button>
+				<CancelChangesButton created={created} isChanged={isChanged} resetValues={resetValues} />
+				<SaveChangesButton created={created} commitChanges={commitChanges} />
+				<DeleteTagButton created={created} onClick={() => deleteTag(tag.id)} />
 			</div>
 		</div>
+	);
+};
+
+const SaveChangesButton = ({ created, commitChanges }: { created: boolean; commitChanges: any }) => {
+	return (
+		<button title={created ? "Save" : "Save Changes"} className={controlClass + " text-green-200"} onClick={commitChanges}>
+			{created ? <Check /> : <Save />}
+		</button>
+	);
+};
+
+const DeleteTagButton = ({ created, onClick }: { created: boolean; onClick: () => void }) => {
+	return (
+		<button title={created ? "Cancel" : "Delete Tag"} className={controlClass + " text-red-200"} onClick={onClick}>
+			{created ? <X /> : <Trash2 />}
+		</button>
+	);
+};
+
+const CancelChangesButton = ({ created, isChanged, resetValues }: { created: boolean; isChanged: boolean; resetValues: any }) => {
+	return (
+		<button
+			title="Cancel Changes"
+			className={controlClass + (isChanged && !created ? " cursor-pointer opacity-100" : " cursor-default opacity-0")}
+			onClick={() => {
+				if (!created) resetValues();
+			}}
+		>
+			<Undo2 />
+		</button>
 	);
 };
 

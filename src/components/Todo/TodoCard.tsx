@@ -280,7 +280,7 @@ const TodoCard = ({
 							<span>
 								<Tags className="w-5" />
 							</span>
-							<span>
+							<span className="flex flex-wrap gap-1">
 								{initial_item.tags.map((tag, index) => {
 									return <TodoTag key={index} tag={tag} />;
 								})}
