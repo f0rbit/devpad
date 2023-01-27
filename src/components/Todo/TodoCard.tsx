@@ -70,6 +70,7 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 		update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
 	};
 
+	/** @todo implement the module update inside of the update item query, instead of chained calls. */
 	const updateItem = (item: ItemInput, modules: { type: string; data: string }[]) => {
 		update_item.mutate(
 			{ id: initial_item.id, item },

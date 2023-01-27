@@ -177,13 +177,13 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 				.filter((item) => {
 					const end = getModuleData(item, Module.END_DATE);
 					if (!end) return false;
-					return new Date(end["end_date"]).getTime() > new Date().getTime();
+					return new Date(end["date"]).getTime() > new Date().getTime();
 				})
 				.sort((a, b) => {
 					const a_end = getModuleData(a, Module.END_DATE);
 					const b_end = getModuleData(b, Module.END_DATE);
 					if (!a_end || !b_end) return 0;
-					return new Date(a_end["end_date"]) > new Date(b_end["end_date"]) ? 1 : -1;
+					return new Date(a_end["date"]) > new Date(b_end["date"]) ? 1 : -1;
 				});
 		case "urgent":
 			// filter out all that aren't urgent priority
