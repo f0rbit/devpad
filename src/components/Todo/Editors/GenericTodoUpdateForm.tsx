@@ -151,6 +151,9 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 								</select>
 							</span>
 						)} */}
+						{getModules(Module.PRIORITY).map((module, index) => (
+							<ItemPriority module={module} key={index} />
+						))}
 					</div>
 				</div>
 
@@ -201,6 +204,22 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 	);
 };
 
+const ItemPriority = ({ module }: { module: TaskModule }) => {
+	const data = module.data as string;
+
+	return (
+		<span className="flex w-full flex-row items-center gap-2 align-middle">
+			<Flag className="flex-none" />
+			<select name="priority" id={`module-${module.id}`} defaultValue={data} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Priority">
+				<option value="LOW">Low</option>
+				<option value="MEDIUM">Medium</option>
+				<option value="HIGH">High</option>
+				<option value="URGENT">Urgent</option>
+			</select>
+		</span>
+	);
+};
+
 const ItemSummary = ({ module }: { module: TaskModule }) => {
 	const data = module.data as { summary: string };
 
@@ -219,19 +238,26 @@ const ItemDescription = ({ module }: { module: TaskModule }) => {
 	const data = module.data as { description: any };
 	// module should be of type Description
 	return (
-		<div className="relative inline-flex w-full gap-2 min-h-[6rem]">
+		<div className="relative inline-flex min-h-[6rem] w-full gap-2">
 			{ModuleIcon[module.type as Module]}
 			{editing ? (
-				<textarea className="w-full rounded-md bg-transparent bg-pad-gray-600 px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none scrollbar-hide" placeholder="Description" defaultValue={data?.description[0]?.markdown?.text ?? ""} id={`module-${module.id}`} name="description" />
+				<textarea
+					className="scrollbar-hide w-full rounded-md bg-transparent bg-pad-gray-600 px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
+					placeholder="Description"
+					defaultValue={data?.description[0]?.markdown?.text ?? ""}
+					id={`module-${module.id}`}
+					name="description"
+				/>
 			) : (
 				<div className="px-3">
 					<DescriptionParser description={data.description} />
 					<div className="absolute bottom-0 right-0">
-						<button className="px-3 py-1 bg-pad-gray-200 rounded-md m-1 transition-all hover:scale-110" onClick={() => setEditing(!editing)}>{editing ? "Done" : "Edit"}</button>
+						<button className="m-1 rounded-md bg-pad-gray-200 px-3 py-1 transition-all hover:scale-110" onClick={() => setEditing(!editing)}>
+							{editing ? "Done" : "Edit"}
+						</button>
 					</div>
 				</div>
 			)}
-			
 		</div>
 	);
 };
