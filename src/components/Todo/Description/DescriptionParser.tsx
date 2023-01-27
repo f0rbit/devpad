@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 import { JSONValue } from "superjson/dist/types";
 
 type CheckListItem = {
@@ -15,7 +16,11 @@ type DescriptionModuleObject = {
 export const DescriptionModule = ({ _key, object }: { _key: string; object: DescriptionModuleObject }) => {
 	switch (_key) {
 		case "markdown":
-			return <span className="font-mono">{object["text"] ?? ""}</span>;
+			return (
+				<span className="">
+					<ReactMarkdown>{object["text"] ?? ""}</ReactMarkdown>
+				</span>
+			);
 		case "image":
 			return <img src={object["url"]} />;
 		case "checklist":

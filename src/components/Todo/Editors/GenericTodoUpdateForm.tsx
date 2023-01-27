@@ -32,7 +32,7 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 	};
 
 	return (
-		<div style={{ maxHeight: "calc(60vh)" }} className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300">
+		<div style={{ maxHeight: "calc(60vh)" }} className="scrollbar-hide overflow-y-auto pr-2 text-gray-700 dark:text-neutral-300">
 			<div className="flex h-full w-[56rem] max-w-[85vw] flex-col md:flex-row">
 				<div className={"w-full p-1 " + (item ? "basis-3/4" : "")}>
 					<div className="inline-flex w-full items-center gap-2">
@@ -71,19 +71,19 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 				</div>
 
 				{item && (
-					<div className="basis-1/4  text-white">
+					<div className="basis-1/4 dark:text-white">
 						<div className="mb-2 text-center text-lg">Add Modules</div>
 						<div className="flex flex-col gap-1">
 							{Object.values(Module).map((module, index) => {
 								return (
-									<button className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200" key={index} onClick={() => edit_module(module)}>
+									<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 hover:bg-gray-200 dark:bg-pad-gray-300 py-1 px-2 dark:hover:bg-pad-gray-200" key={index} onClick={() => edit_module(module)}>
 										{ModuleIcon[module]}
 										<span>{module}</span>
 									</button>
 								);
 							})}
 							{/* Add a button for editing tags */}
-							<button className="flex w-full flex-row items-center gap-2 rounded-md bg-pad-gray-300 py-1 px-2 hover:bg-pad-gray-200" onClick={edit_tags}>
+							<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 hover:bg-gray-200 dark:bg-pad-gray-300 py-1 px-2 dark:hover:bg-pad-gray-200" onClick={edit_tags}>
 								<Tag />
 								<span>tags</span>
 							</button>
@@ -224,7 +224,7 @@ const ItemDescription = ({ module }: { module: TaskModule }) => {
 				<div className="px-3">
 					<DescriptionParser description={data.description} />
 					<div className="absolute bottom-0 right-0">
-						<button className="m-1 rounded-md bg-pad-gray-200 px-3 py-1 transition-all hover:scale-110" onClick={() => setEditing(!editing)}>
+						<button className="m-1 rounded-md bg-gray-200 dark:bg-pad-gray-200 px-3 py-1 transition-all hover:scale-110" onClick={() => setEditing(!editing)}>
 							{editing ? "Done" : "Edit"}
 						</button>
 					</div>

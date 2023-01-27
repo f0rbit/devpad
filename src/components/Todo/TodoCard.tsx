@@ -127,7 +127,7 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
 				</GenericModal>
 			</div>
-			<div className={"group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
+			<div className={"group relative w-full rounded-md bg-gray-100 dark:bg-pad-gray-600 px-4 py-2 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
 				<div className="inline-flex items-center gap-2 align-middle">
 					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
 					<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
@@ -135,8 +135,8 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 				<EndTime endTime={getModuleData(initial_item, Module.END_DATE)} />
 				<TodoTags tags={initial_item?.tags} />
 				<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
-				<div className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
-					<span className="text-gray-500 dark:text-pad-gray-400" title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
+				<div className={"text-gray-400 dark:text-pad-gray-400 duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
+					<span title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
 						<VisiblityIcon visibility={initial_item.visibility} />
 					</span>
 					<button

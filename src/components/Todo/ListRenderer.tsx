@@ -62,14 +62,14 @@ const ListRenderer = () => {
 			{({ selectedSection, searchQuery, tags, setTags }) => {
 				return (
 					<>
-						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-100 dark:bg-pad-gray-800">
-							<div className="w-full p-4 text-neutral-400">
-								<div className="mb-4 rounded-md p-2 font-bold text-neutral-300">
+						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-200 dark:bg-pad-gray-800">
+							<div className="w-full p-4 dark:text-neutral-400 text-gray-600">
+								<div className="mb-4 rounded-md p-2 font-bold dark:text-neutral-300 text-gray-800">
 									<div className="flex flex-row items-center gap-4">
 										<div className="text-2xl font-bold">{selectedSection + " Items"}</div>
-										<LayoutSelectors setLayout={setLayout} />
-										<div>Layout: {layout}</div>
-										<div className="ml-auto">
+										{/* <div>Layout: {layout}</div> */}
+										<div className="ml-auto flex flex-row gap-4">
+											<LayoutSelectors setLayout={setLayout} />
 											<TagEditButton onClick={() => setEditTagsModalOpen(true)} />
 										</div>
 									</div>
@@ -120,7 +120,7 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<str
 	return (
 		<div className="flex flex-row items-center gap-2">
 			{Object.values(TODO_LAYOUT).map((layout_type) => (
-				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md bg-pad-gray-500 px-2 py-1 shadow-md">
+				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md dark:bg-pad-gray-500 bg-gray-300 dark:text-neutral-300 text-gray-500 px-2 py-1 shadow-md">
 					<LayoutIcon layout={layout_type} />
 				</button>
 			))}
@@ -130,7 +130,7 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<str
 
 const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 	return (
-		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-pad-gray-500 px-2 py-1 align-middle text-sm shadow-md">
+		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md dark:bg-pad-gray-500 px-2 py-1 align-middle text-sm shadow-md bg-gray-300 dark:text-neutral-300 text-gray-500">
 			<Tag className="p-0.5" />
 			Edit
 		</button>

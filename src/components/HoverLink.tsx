@@ -1,4 +1,4 @@
-export const linkClass = "text-gray-500 dark:text-pad-gray-400";
+export const linkClass = "text-gray-400 dark:text-pad-gray-400";
 export const hoverClass = "cursor-pointer hover:text-pad-purple-500 dark:hover:text-pad-purple-500 transition-colors duration-300";
 export const hoverLinkClass = linkClass + " " + hoverClass;
 

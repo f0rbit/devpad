@@ -61,7 +61,7 @@ const Dashboard = () => {
 
 	return (
 		<TodoContext.Provider value={value}>
-			<div className="h-screen min-h-full overflow-hidden">
+			<div className="h-screen min-h-full overflow-hidden bg-gray-700 dark:bg-pad-gray-900">
 				<div>
 					<TodoNavbar />
 				</div>
