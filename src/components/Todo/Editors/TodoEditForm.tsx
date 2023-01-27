@@ -1,4 +1,4 @@
-import { Module } from "@/types/page-link";
+import { Module, TaskPriority } from "@/types/page-link";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { FetchedTask, getModuleData } from "src/utils/trpc";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
@@ -74,7 +74,10 @@ const transformInput = (module: Module, value: string) => {
 		case Module.START_DATE:
 		case Module.END_DATE:
 			return { date: new Date(value)}
+		case Module.PRIORITY:
+			return { priority: parseInt(value) }
 		default:
 			return value;
 	}
 };
+

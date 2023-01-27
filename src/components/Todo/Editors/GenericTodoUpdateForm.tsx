@@ -3,7 +3,7 @@ import { COLOURS } from "@/components/Todo/TodoCard";
 import { ArrowLeft, ArrowRight, BoxSelect, Calendar, CalendarCheck2, CalendarX2, Eye, Flag, Newspaper, Tag, Tags, Type } from "lucide-react";
 import TodoTag from "../TodoTag";
 import { FetchedTask, getTaskModule } from "src/utils/trpc";
-import { Module } from "@/types/page-link";
+import { Module, TaskPriority } from "@/types/page-link";
 import { ModuleIcon } from "../ModuleIcon";
 import { TaskModule, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { ReactNode, useState } from "react";
@@ -233,16 +233,17 @@ const TodoVisibility = ({ visibility }: { visibility: TASK_VISIBILITY | undefine
 };
 
 const ItemPriority = ({ module }: { module: TaskModule }) => {
-	const data = module.data as string;
+	const data = module.data as { priority: TaskPriority };
+	const { priority } = data;
 
 	return (
 		<span className="flex w-full flex-row items-center gap-2 align-middle">
 			{ModuleIcon[module.type as Module]}
-			<select name="priority" id={`module-${module.id}`} defaultValue={data} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Priority">
-				<option value="LOW">Low</option>
-				<option value="MEDIUM">Medium</option>
-				<option value="HIGH">High</option>
-				<option value="URGENT">Urgent</option>
+			<select name="priority" id={`module-${module.id}`} defaultValue={priority} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Priority">
+				<option value={TaskPriority.LOW}>Low</option>
+				<option value={TaskPriority.MEDIUM}>Medium</option>
+				<option value={TaskPriority.HIGH}>High</option>
+				<option value={TaskPriority.URGENT}>Urgent</option>
 			</select>
 		</span>
 	);
