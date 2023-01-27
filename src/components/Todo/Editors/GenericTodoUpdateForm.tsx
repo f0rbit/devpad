@@ -5,18 +5,12 @@ import TodoTag from "../TodoTag";
 import { FetchedTask, getTaskModule } from "src/utils/trpc";
 import { Module, TaskPriority } from "@/types/page-link";
 import { ModuleIcon } from "../ModuleIcon";
-import { TaskModule, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { ReactNode, useState } from "react";
 import DescriptionParser from "../Description/DescriptionParser";
 import { hoverExpandButton } from "@/components/Home/HomeButton";
 
 const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, addModule }: { item?: FetchedTask; title: string; onClick: any; buttonText: string; onDeleteClick?: () => void; addModule?: (module: Module) => void }) => {
-	const tag_objects =
-		item?.tags.map((tag, index) => {
-			return <TodoTag tag={tag} key={index} />;
-		}) ?? [];
-
-	// const has_times = item?.start_time || item?.end_time;
 	const edit_module = (module: Module) => {
 		if (!addModule) return;
 		var dom_element = document.getElementById("module-" + module);
@@ -39,7 +33,6 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 
 	return (
 		<div style={{ maxHeight: "calc(60vh)" }} className="scrollbar-hide overflow-y-auto pr-2 text-neutral-300">
-			{/* <div className="mb-4 w-full text-center text-xl">{title}</div> */}
 			<div className="flex h-full w-[56rem] max-w-[85vw] flex-col md:flex-row">
 				<div className={"w-full p-1 " + (item ? "basis-3/4" : "")}>
 					<div className="inline-flex w-full items-center gap-2">
@@ -52,12 +45,7 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 						<ItemSummary module={module} key={index} />
 					))}
 
-					{tag_objects.length > 0 && (
-						<div className="inline-flex w-full items-center gap-2">
-							<Tags />
-							<div className="inline-flex w-full items-center gap-2 px-3 py-1">{tag_objects}</div>
-						</div>
-					)}
+					<TagObjects tags={item?.tags} />
 
 					{getModules(Module.DESCRIPTION).map((module, index) => (
 						<ItemDescription module={module} key={index} />
@@ -72,50 +60,6 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 						))}
 					</div>
 
-					{/* {has_times && (
-						<div className="inline-flex w-full flex-wrap items-center gap-x-2 md:flex-nowrap">
-							{item.start_time && (
-								<div
-									className="inline-flex w-full items-center gap-2"
-									title="Start Time"
-								>
-									<CalendarCheck2 />
-									<input
-										type="datetime-local"
-										name="start_date"
-										id="start_date"
-										className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
-										defaultValue={
-											item?.start_time
-												? dateToDateTime(
-														item?.start_time
-												  )
-												: ""
-										}
-									/>
-								</div>
-							)}
-							{item.end_time && (
-								<div
-									className="inline-flex w-full items-center gap-2"
-									title="End Time"
-								>
-									<CalendarX2 />
-									<input
-										type="datetime-local"
-										name="end_date"
-										id="end_date"
-										className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
-										defaultValue={
-											item?.end_time
-												? dateToDateTime(item?.end_time)
-												: ""
-										}
-									/>
-								</div>
-							)}
-						</div>
-					)} */}
 					<div className="relative inline-flex w-full flex-row flex-wrap items-center gap-2 md:flex-nowrap">
 						<TodoProgress progress={item?.progress} />
 						<TodoVisibility visibility={item?.visibility} />
@@ -172,7 +116,6 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 		</div>
 	);
 };
-
 
 const ItemEndDate = ({ module }: { module: any }) => {
 	const data = module.data;
@@ -287,6 +230,20 @@ const ItemDescription = ({ module }: { module: TaskModule }) => {
 					</div>
 				</div>
 			)}
+		</div>
+	);
+};
+
+const TagObjects = ({ tags }: { tags: TaskTags[] | undefined }) => {
+	if (!tags || tags.length <= 0) return <></>;
+	return (
+		<div className="inline-flex w-full items-center gap-2">
+			<Tags />
+			<div className="inline-flex w-full items-center gap-2 px-3 py-1">
+				{tags.map((tag, index) => (
+					<TodoTag tag={tag} key={index} />
+				))}
+			</div>
 		</div>
 	);
 };
