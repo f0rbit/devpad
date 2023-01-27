@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FetchedTask, trpc } from "src/utils/trpc";
+import { FetchedTask, getModuleData, trpc } from "src/utils/trpc";
 import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
 import { hoverLinkClass } from "../HoverLink";
 import TodoTag from "./TodoTag";
@@ -8,8 +8,9 @@ import StatusIcon from "./StatusIcon";
 import GenericModal from "../GenericModal";
 import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
 import { TODO_LAYOUT } from "./ListLayout";
-import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Module } from "@/types/page-link";
+import { ModuleIcon } from "./ModuleIcon";
 
 export const COLOURS = {
 	COMPLETED: {
@@ -34,15 +35,7 @@ const getNextStatus = (status: TASK_PROGRESS) => {
 	}
 };
 
-const TodoStatus = ({
-	status,
-	update_progress,
-	id
-}: {
-	status: TASK_PROGRESS;
-	update_progress: any;
-	id: string;
-}) => {
+const TodoStatus = ({ status, update_progress, id }: { status: TASK_PROGRESS; update_progress: any; id: string }) => {
 	const next_status = getNextStatus(status);
 	return (
 		<button
@@ -65,15 +58,7 @@ type ItemInput = {
 	visibility: TASK_VISIBILITY;
 };
 
-const TodoCard = ({
-	initial_item,
-	layout,
-	set_item
-}: {
-	initial_item: FetchedTask;
-	layout: string;
-	set_item: (item: FetchedTask) => void;
-}) => {
+const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTask; layout: string; set_item: (item: FetchedTask) => void }) => {
 	const update_item = trpc.tasks.update_item.useMutation();
 	const delete_item = trpc.tasks.delete_item.useMutation();
 	const add_module = trpc.tasks.add_module.useMutation();
@@ -86,7 +71,7 @@ const TodoCard = ({
 		set_item(new_item);
 	};
 
-	const updateItem = (item: ItemInput, modules: { type: string, data: string }[]) => {
+	const updateItem = (item: ItemInput, modules: { type: string; data: string }[]) => {
 		update_item.mutate(
 			{
 				id: initial_item.id,
@@ -99,15 +84,17 @@ const TodoCard = ({
 			}
 		);
 
-		update_module.mutate({
-			modules: modules,
-			task_id: initial_item.id
-		},
-		{
-			onSuccess: (data) => {
-				set_item(data as FetchedTask)
+		update_module.mutate(
+			{
+				modules: modules,
+				task_id: initial_item.id
+			},
+			{
+				onSuccess: (data) => {
+					set_item(data as FetchedTask);
+				}
 			}
-		})
+		);
 	};
 
 	const deleteCard = async ({ id }: { id: string }) => {
@@ -128,13 +115,15 @@ const TodoCard = ({
 
 	const addModule = (module: Module) => {
 		// add the module to the item
-		add_module.mutate({ task_id: initial_item.id, module_id: module }, {
-			onSuccess: (data) => {
-				set_item(data as FetchedTask);
+		add_module.mutate(
+			{ task_id: initial_item.id, module_id: module },
+			{
+				onSuccess: (data) => {
+					set_item(data as FetchedTask);
+				}
 			}
-		});
-	}
-
+		);
+	};
 
 	if (initial_item.visibility == TASK_VISIBILITY.DELETED) return null;
 	// TODO: refactor this
@@ -142,29 +131,14 @@ const TodoCard = ({
 		return (
 			<>
 				<div className="absolute">
-					<GenericModal
-						open={editModalOpen}
-						setOpen={setEditModalOpen}
-					>
-						<TodoEditForm
-							item={initial_item}
-							updateItem={updateItem}
-							setOpen={setEditModalOpen}
-							deleteItem={deleteCard}
-							addModule={addModule}
-						/>
+					<GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
+						<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
 					</GenericModal>
 				</div>
 				<div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
 					<div className="inline-flex items-center gap-2 align-middle">
-						<TodoStatus
-							status={initial_item.progress}
-							update_progress={setItemStatus}
-							id={initial_item.id}
-						/>
-						<h1 className=" text-2xl font-medium">
-							{initial_item.title}
-						</h1>
+						<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
+						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
 					</div>
 					{/* {initial_item.end_time && (
 						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
@@ -180,43 +154,11 @@ const TodoCard = ({
 							</span>
 						</div>
 					)} */}
-					{initial_item.tags?.length > 0 && (
-						<div className="flex items-center gap-2 align-middle">
-							<span>
-								<Tags className="w-5" />
-							</span>
-							<span>
-								{initial_item.tags.map((tag, index) => {
-									return <TodoTag key={index} tag={tag} />;
-								})}
-							</span>
-						</div>
-					)}
-
-					{/* {initial_item.summary != undefined &&
-						initial_item.summary?.length > 0 && (
-							<div className="flex items-center gap-2 align-middle">
-								<span>
-									<Newspaper className="w-5" />
-								</span>
-								<span className="font-mono text-sm">
-									{initial_item.summary}
-								</span>
-							</div>
-						)} */}
+					<TodoTags tags={initial_item?.tags} />
+					<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
 					<div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
-						<span
-							className="text-gray-500 dark:text-pad-gray-400"
-							title={
-								initial_item.visibility[0]?.toUpperCase() +
-								initial_item.visibility
-									.toLowerCase()
-									.substring(1)
-							}
-						>
-							<VisiblityIcon
-								visibility={initial_item.visibility}
-							/>
+						<span className="text-gray-500 dark:text-pad-gray-400" title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
+							<VisiblityIcon visibility={initial_item.visibility} />
 						</span>
 						<button
 							className={hoverLinkClass}
@@ -237,29 +179,14 @@ const TodoCard = ({
 		return (
 			<>
 				<div className="absolute">
-					<GenericModal
-						open={editModalOpen}
-						setOpen={setEditModalOpen}
-					>
-						<TodoEditForm
-							item={initial_item}
-							updateItem={updateItem}
-							setOpen={setEditModalOpen}
-							deleteItem={deleteCard}
-							addModule={addModule}
-						/>
+					<GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
+						<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
 					</GenericModal>
 				</div>
 				<div className="group relative flex w-full flex-wrap gap-4 rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
 					<div className="inline-flex items-center gap-2 align-middle">
-						<TodoStatus
-							status={initial_item.progress}
-							update_progress={setItemStatus}
-							id={initial_item.id}
-						/>
-						<h1 className=" text-2xl font-medium">
-							{initial_item.title}
-						</h1>
+						<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
+						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
 					</div>
 					{/* {initial_item.end_time && (
 						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
@@ -275,48 +202,11 @@ const TodoCard = ({
 							</span>
 						</div>
 					)} */}
-					{initial_item.tags?.length > 0 && (
-						<div className="flex items-center gap-2 align-middle">
-							<span>
-								<Tags className="w-5" />
-							</span>
-							<span className="flex flex-wrap gap-1">
-								{initial_item.tags.map((tag, index) => {
-									return <TodoTag key={index} tag={tag} />;
-								})}
-							</span>
-						</div>
-					)}
-
-					{/* {initial_item.summary != undefined &&
-						initial_item.summary?.length > 0 && (
-							<div className="flex items-center gap-2 align-middle">
-								<span>
-									<Newspaper className="w-5" />
-								</span>
-								<span className="font-mono text-sm">
-									{initial_item.summary}
-								</span>
-							</div>
-						)} */}
-					<div
-						className={
-							"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " +
-							(layout == "GRID" ? "bottom-2" : "bottom-[25%]")
-						}
-					>
-						<span
-							className="text-gray-500 dark:text-pad-gray-400"
-							title={
-								initial_item.visibility[0]?.toUpperCase() +
-								initial_item.visibility
-									.toLowerCase()
-									.substring(1)
-							}
-						>
-							<VisiblityIcon
-								visibility={initial_item.visibility}
-							/>
+					<TodoTags tags={initial_item?.tags} />
+					<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
+					<div className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
+						<span className="text-gray-500 dark:text-pad-gray-400" title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
+							<VisiblityIcon visibility={initial_item.visibility} />
 						</span>
 						<button
 							className={hoverLinkClass}
@@ -333,6 +223,35 @@ const TodoCard = ({
 			</>
 		);
 	}
+};
+
+const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
+	if (!tags || tags.length <= 0) return <></>;
+	return (
+		<div className="flex items-center gap-2 align-middle">
+			<span>
+				<Tags className="w-5" />
+			</span>
+			<span className="flex flex-wrap gap-1">
+				{tags.map((tag, index) => {
+					return <TodoTag key={index} tag={tag} />;
+				})}
+			</span>
+		</div>
+	);
+}
+
+const SummaryText = ({ module }: { module: { summary: string } }) => {
+	if (!module || !module.summary) return <></>;
+	return (
+		<div className="flex items-center gap-2 align-middle">
+			<span>
+				<Newspaper className="w-5" />
+			</span>
+
+			<span className="font-mono text-sm">{module.summary}</span>
+		</div>
+	);
 };
 
 export default TodoCard;
