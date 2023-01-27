@@ -71,6 +71,9 @@ const transformInput = (module: Module, value: string) => {
 			return { description: [
 				{"markdown": { "text": value } }
 			]}
+		case Module.START_DATE:
+		case Module.END_DATE:
+			return { date: new Date(value)}
 		default:
 			return value;
 	}

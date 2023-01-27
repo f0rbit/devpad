@@ -52,16 +52,23 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 						<ItemSummary module={module} key={index} />
 					))}
 
-					{getModules(Module.DESCRIPTION).map((module, index) => (
-						<ItemDescription module={module} key={index} />
-					))}
-
 					{tag_objects.length > 0 && (
 						<div className="inline-flex w-full items-center gap-2">
 							<Tags />
 							<div className="inline-flex w-full items-center gap-2 px-3 py-1">{tag_objects}</div>
 						</div>
 					)}
+
+					{getModules(Module.DESCRIPTION).map((module, index) => (
+						<ItemDescription module={module} key={index} />
+					))}
+
+					<div className="inline-flex w-full flex-wrap items-center gap-x-2 md:flex-nowrap">
+						{getModules(Module.START_DATE).map((module, index) => (
+							<ItemStartDate module={module} key={index} />
+						))}
+					</div>
+
 					{/* {has_times && (
 						<div className="inline-flex w-full flex-wrap items-center gap-x-2 md:flex-nowrap">
 							{item.start_time && (
@@ -159,6 +166,18 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					{buttonText}
 				</button>
 			</div>
+		</div>
+	);
+};
+
+const ItemStartDate = ({ module }: { module: any }) => {
+	const data = module.data;
+	const { date } = data;
+	const value = dateToDateTime(new Date(date));
+	return (
+		<div className="inline-flex w-full items-center gap-2" title="Start Time">
+			{ModuleIcon[module.type as Module]}
+			<input type="datetime-local" name="start_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value} />
 		</div>
 	);
 };
