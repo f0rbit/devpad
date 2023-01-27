@@ -67,6 +67,9 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 						{getModules(Module.START_DATE).map((module, index) => (
 							<ItemStartDate module={module} key={index} />
 						))}
+						{getModules(Module.END_DATE).map((module, index) => (
+							<ItemEndDate module={module} key={index} />
+						))}
 					</div>
 
 					{/* {has_times && (
@@ -166,6 +169,19 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					{buttonText}
 				</button>
 			</div>
+		</div>
+	);
+};
+
+
+const ItemEndDate = ({ module }: { module: any }) => {
+	const data = module.data;
+	const { date } = data;
+	const value = dateToDateTime(new Date(date));
+	return (
+		<div className="inline-flex w-full items-center gap-2" title="End Time">
+			{ModuleIcon[module.type as Module]}
+			<input type="datetime-local" name="end_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value} />
 		</div>
 	);
 };

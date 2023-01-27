@@ -67,25 +67,22 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 
 	const setItemStatus = (status: TASK_PROGRESS) => {
 		const new_item = { ...initial_item, progress: status };
-		update_item.mutate({ item: new_item, id: initial_item.id });
-		set_item(new_item);
+		update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
 	};
 
 	const updateItem = (item: ItemInput, modules: { type: string; data: string }[]) => {
 		update_item.mutate(
 			{ id: initial_item.id, item },
 			{
-				onSuccess: (data) => {
-					set_item(data as FetchedTask);
-				}
-			}
-		);
-
-		update_module.mutate(
-			{ modules: modules, task_id: initial_item.id },
-			{
-				onSuccess: (data) => {
-					set_item(data as FetchedTask);
+				onSuccess: () => {
+					update_module.mutate(
+						{ modules: modules, task_id: initial_item.id },
+						{
+							onSuccess: (data) => {
+								set_item(data as FetchedTask);
+							}
+						}
+					);
 				}
 			}
 		);
@@ -165,7 +162,7 @@ const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
 	return (
 		<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 			<CalendarClock className="min-w-5 w-5" />
-			<span>{date.toLocaleDateString("en-US", options).replaceAll(", ", " @ ")}</span>
+			<span>{date.toLocaleDateString(undefined, options).replaceAll(", ", " @ ")}</span>
 		</div>
 	);
 };
