@@ -14,6 +14,7 @@ export const LoginContext = React.createContext({
 
 const MyApp: AppType<{ session: Session | null }> = ({ Component, pageProps: { session, ...pageProps } }) => {
 	const [loginOpen, setLoginOpen] = useState(false);
+	
 	return (
 		<SessionProvider>
 			<LoginContext.Provider
