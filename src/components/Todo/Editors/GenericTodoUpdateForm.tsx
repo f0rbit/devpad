@@ -5,7 +5,7 @@ import TodoTag from "../TodoTag";
 import { FetchedTask, getTaskModule } from "src/utils/trpc";
 import { Module } from "@/types/page-link";
 import { ModuleIcon } from "../ModuleIcon";
-import { TaskModule } from "@prisma/client";
+import { TaskModule, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { ReactNode, useState } from "react";
 import DescriptionParser from "../Description/DescriptionParser";
 import { hoverExpandButton } from "@/components/Home/HomeButton";
@@ -48,17 +48,14 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					</div>
 					{/* Here is where you would put REQUIRED_BY */}
 
-					{/* Summary */}
 					{getModules(Module.SUMMARY).map((module, index) => (
 						<ItemSummary module={module} key={index} />
 					))}
 
-					{/* Description */}
 					{getModules(Module.DESCRIPTION).map((module, index) => (
 						<ItemDescription module={module} key={index} />
 					))}
 
-					{/* Render tags */}
 					{tag_objects.length > 0 && (
 						<div className="inline-flex w-full items-center gap-2">
 							<Tags />
@@ -110,47 +107,9 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 						</div>
 					)} */}
 					<div className="relative inline-flex w-full flex-row flex-wrap items-center gap-2 md:flex-nowrap">
-						<span className="flex w-full flex-row items-center gap-2 align-middle">
-							<BoxSelect className="flex-none" />
-							<select name="progress" id="progress" defaultValue={item?.progress} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Status">
-								<option value="UNSTARTED" className={COLOURS.UNSTARTED.colour}>
-									Not Started
-								</option>
-								<option value="IN_PROGRESS" className={COLOURS.IN_PROGRESS.colour}>
-									In Progress
-								</option>
-								<option value="COMPLETED" className={COLOURS.COMPLETED.colour}>
-									Done
-								</option>
-							</select>
-						</span>
-						<span className="flex w-full flex-row items-center gap-2 align-middle">
-							<Eye className="flex-none" />
-							<select name="visibility" id="visibility" defaultValue={item?.visibility} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Visibility">
-								<option value="PRIVATE">Private</option>
-								<option value="PUBLIC">Public</option>
-								<option value="HIDDEN">Hidden</option>
-								<option value="DRAFT">Draft</option>
-								<option value="ARCHIVED">Archived</option>
-							</select>
-						</span>
-						{/* {item?.set_manual_priority && (
-							<span className="flex w-full flex-row items-center gap-2 align-middle">
-								<Flag className="flex-none" />
-								<select
-									name="priority"
-									id="priority"
-									defaultValue={item?.priority}
-									className="w-full bg-transparent py-1 focus:bg-pad-gray-300"
-									title="Priority"
-								>
-									<option value="LOW">Low</option>
-									<option value="MEDIUM">Medium</option>
-									<option value="HIGH">High</option>
-									<option value="URGENT">Urgent</option>
-								</select>
-							</span>
-						)} */}
+						<TodoProgress progress={item?.progress} />
+						<TodoVisibility visibility={item?.visibility} />
+
 						{getModules(Module.PRIORITY).map((module, index) => (
 							<ItemPriority module={module} key={index} />
 						))}
@@ -204,12 +163,46 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 	);
 };
 
+const TodoProgress = ({ progress }: { progress: TASK_PROGRESS | undefined }) => {
+	return (
+		<span className="flex w-full flex-row items-center gap-2 align-middle">
+			<BoxSelect className="flex-none" />
+			<select name="progress" id="progress" defaultValue={progress} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Status">
+				<option value="UNSTARTED" className={COLOURS.UNSTARTED.colour}>
+					Not Started
+				</option>
+				<option value="IN_PROGRESS" className={COLOURS.IN_PROGRESS.colour}>
+					In Progress
+				</option>
+				<option value="COMPLETED" className={COLOURS.COMPLETED.colour}>
+					Done
+				</option>
+			</select>
+		</span>
+	);
+};
+
+const TodoVisibility = ({ visibility }: { visibility: TASK_VISIBILITY | undefined }) => {
+	return (
+		<span className="flex w-full flex-row items-center gap-2 align-middle">
+			<Eye className="flex-none" />
+			<select name="visibility" id="visibility" defaultValue={visibility} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Visibility">
+				<option value="PRIVATE">Private</option>
+				<option value="PUBLIC">Public</option>
+				<option value="HIDDEN">Hidden</option>
+				<option value="DRAFT">Draft</option>
+				<option value="ARCHIVED">Archived</option>
+			</select>
+		</span>
+	);
+};
+
 const ItemPriority = ({ module }: { module: TaskModule }) => {
 	const data = module.data as string;
 
 	return (
 		<span className="flex w-full flex-row items-center gap-2 align-middle">
-			<Flag className="flex-none" />
+			{ModuleIcon[module.type as Module]}
 			<select name="priority" id={`module-${module.id}`} defaultValue={data} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Priority">
 				<option value="LOW">Low</option>
 				<option value="MEDIUM">Medium</option>
