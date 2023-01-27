@@ -73,10 +73,7 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 
 	const updateItem = (item: ItemInput, modules: { type: string; data: string }[]) => {
 		update_item.mutate(
-			{
-				id: initial_item.id,
-				item
-			},
+			{ id: initial_item.id, item },
 			{
 				onSuccess: (data) => {
 					set_item(data as FetchedTask);
@@ -85,10 +82,7 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 		);
 
 		update_module.mutate(
-			{
-				modules: modules,
-				task_id: initial_item.id
-			},
+			{ modules: modules, task_id: initial_item.id },
 			{
 				onSuccess: (data) => {
 					set_item(data as FetchedTask);
@@ -126,103 +120,54 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 	};
 
 	if (initial_item.visibility == TASK_VISIBILITY.DELETED) return null;
-	// TODO: refactor this
-	if (layout == TODO_LAYOUT.GRID) {
-		return (
-			<>
-				<div className="absolute">
-					<GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-						<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
-					</GenericModal>
+
+	// list item
+	return (
+		<>
+			<div className="absolute">
+				<GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
+					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
+				</GenericModal>
+			</div>
+			<div className={"group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
+				<div className="inline-flex items-center gap-2 align-middle">
+					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
+					<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
 				</div>
-				<div className="group relative w-full rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
-					<div className="inline-flex items-center gap-2 align-middle">
-						<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
-						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
-					</div>
-					{/* {initial_item.end_time && (
-						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
-							<CalendarClock className="min-w-5 w-5" />
-							<span>
-								{initial_item.end_time?.toLocaleDateString()}
-							</span>
-							<span>
-								{initial_item.end_time
-									?.toTimeString()
-									.split(" ")[0]
-									?.substring(0, 5)}
-							</span>
-						</div>
-					)} */}
-					<TodoTags tags={initial_item?.tags} />
-					<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
-					<div className="duration-400 absolute right-2 bottom-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0">
-						<span className="text-gray-500 dark:text-pad-gray-400" title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
-							<VisiblityIcon visibility={initial_item.visibility} />
-						</span>
-						<button
-							className={hoverLinkClass}
-							title="Edit"
-							onClick={(e) => {
-								e.preventDefault();
-								setEditModalOpen(true);
-							}}
-						>
-							<Edit2 className="" />
-						</button>
-					</div>
+				<EndTime endTime={getModuleData(initial_item, Module.END_DATE)} />
+				<TodoTags tags={initial_item?.tags} />
+				<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
+				<div className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
+					<span className="text-gray-500 dark:text-pad-gray-400" title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
+						<VisiblityIcon visibility={initial_item.visibility} />
+					</span>
+					<button
+						className={hoverLinkClass}
+						title="Edit"
+						onClick={(e) => {
+							e.preventDefault();
+							setEditModalOpen(true);
+						}}
+					>
+						<Edit2 className="" />
+					</button>
 				</div>
-			</>
-		);
-	} else {
-		// list item
-		return (
-			<>
-				<div className="absolute">
-					<GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-						<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
-					</GenericModal>
-				</div>
-				<div className="group relative flex w-full flex-wrap gap-4 rounded-md bg-pad-gray-600 px-4 py-2 drop-shadow-md">
-					<div className="inline-flex items-center gap-2 align-middle">
-						<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
-						<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
-					</div>
-					{/* {initial_item.end_time && (
-						<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
-							<CalendarClock className="min-w-5 w-5" />
-							<span>
-								{initial_item.end_time?.toLocaleDateString()}
-							</span>
-							<span>
-								{initial_item.end_time
-									?.toTimeString()
-									.split(" ")[0]
-									?.substring(0, 5)}
-							</span>
-						</div>
-					)} */}
-					<TodoTags tags={initial_item?.tags} />
-					<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
-					<div className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
-						<span className="text-gray-500 dark:text-pad-gray-400" title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
-							<VisiblityIcon visibility={initial_item.visibility} />
-						</span>
-						<button
-							className={hoverLinkClass}
-							title="Edit"
-							onClick={(e) => {
-								e.preventDefault();
-								setEditModalOpen(true);
-							}}
-						>
-							<Edit2 className="" />
-						</button>
-					</div>
-				</div>
-			</>
-		);
-	}
+			</div>
+		</>
+	);
+};
+
+const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
+	if (!endTime || !endTime.date) return <></>;
+	const { date: timestamp } = endTime;
+	const date = new Date(timestamp);
+	const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" };
+	return (
+		<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
+			<CalendarClock className="min-w-5 w-5" />
+			<span>{date.toLocaleDateString("en-US", options).replaceAll(", ", " @ ")}</span>
+		</div>
+	);
 };
 
 const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
@@ -239,7 +184,7 @@ const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
 			</span>
 		</div>
 	);
-}
+};
 
 const SummaryText = ({ module }: { module: { summary: string } }) => {
 	if (!module || !module.summary) return <></>;
