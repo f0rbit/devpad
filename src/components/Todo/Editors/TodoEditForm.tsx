@@ -1,9 +1,9 @@
 import { Module, TaskPriority } from "@/types/page-link";
-import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { FetchedTask, getModuleData } from "src/utils/trpc";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
 
-export const TodoEditForm = ({ item, updateItem, setOpen, deleteItem, addModule }: { item: FetchedTask; updateItem: any; setOpen: any; deleteItem: any; addModule: (module: Module) => void }) => {
+export const TodoEditForm = ({ item, updateItem, setOpen, deleteItem, addModule, tags }: { item: FetchedTask; updateItem: any; setOpen: any; deleteItem: any; addModule: (module: Module) => void, tags: TaskTags[] | undefined }) => {
 	return (
 		<GenericTodoUpdateForm
 			item={item}
@@ -22,6 +22,8 @@ export const TodoEditForm = ({ item, updateItem, setOpen, deleteItem, addModule 
 				const progress = document.getElementById("progress") as HTMLSelectElement;
 				const visibility = document.getElementById("visibility") as HTMLSelectElement;
 
+				const tag_selector = document.getElementById("tagSelector") as HTMLSelectElement;
+
 				// get module data
 				const modules = getModuleInput(item);
 
@@ -39,6 +41,17 @@ export const TodoEditForm = ({ item, updateItem, setOpen, deleteItem, addModule 
 				setOpen(false);
 			}}
 			addModule={addModule}
+			tags={tags}
+			saveTags={(tagIDs: string[]) => {
+				updateItem(
+					{
+						...item,
+						tags: tagIDs
+					},
+					[]
+				);
+				setOpen(false);
+			}}
 		/>
 	);
 };

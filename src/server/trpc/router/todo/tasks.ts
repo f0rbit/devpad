@@ -25,8 +25,15 @@ const user_owns_task = async (user_id: string, task_id: string) => {
 const update_item_input = z.object({
 	title: z.string(),
 	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED),
-	visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE)
+	visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE),
+	tags: z.array(z.string()).optional(),
 });
+
+const create_item_input = z.object({
+	title: z.string(),
+	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED),
+	visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE),
+})
 
 const getDefaultData = (module: string) => {
 	switch (module as Module) {
@@ -71,11 +78,25 @@ export const taskRouter = router({
 		if (!owns) return null;
 		return (await ctx.prisma.task.update({
 			where: { id: input.id },
-			data: { ...input.item },
+			data: { 
+				...input.item,
+				tags: {
+					set: await ctx.prisma.taskTags.findMany({
+						where: {
+							id: {
+								in: input.item.tags
+							}
+						},
+						select: {
+							id: true
+						}
+					})
+				}
+			},
 			include: TaskInclude
 		})) as FetchedTask;
 	}),
-	create_item: protected_procedure.input(z.object({ item: update_item_input })).mutation(async ({ ctx, input }) => {
+	create_item: protected_procedure.input(z.object({ item: create_item_input })).mutation(async ({ ctx, input }) => {
 		return (await ctx.prisma.task.create({
 			data: { ...input.item, owner_id: ctx.session.user.id },
 			include: TaskInclude

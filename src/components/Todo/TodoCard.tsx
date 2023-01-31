@@ -58,7 +58,7 @@ type ItemInput = {
 	visibility: TASK_VISIBILITY;
 };
 
-const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTask; layout: string; set_item: (item: FetchedTask) => void }) => {
+const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: string; set_item: (item: FetchedTask) => void, tags: TaskTags[] | undefined }) => {
 	const update_item = trpc.tasks.update_item.useMutation();
 	const delete_item = trpc.tasks.delete_item.useMutation();
 	const add_module = trpc.tasks.add_module.useMutation();
@@ -124,7 +124,7 @@ const TodoCard = ({ initial_item, layout, set_item }: { initial_item: FetchedTas
 		<>
 			<div className="absolute">
 				<GenericModal open={editModalOpen} setOpen={setEditModalOpen}>
-					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} />
+					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} tags={tags} />
 				</GenericModal>
 			</div>
 			<div className={"group relative w-full rounded-md bg-gray-100 dark:bg-pad-gray-600 px-4 py-2 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>

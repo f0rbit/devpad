@@ -1,5 +1,5 @@
 import { Module, TaskPriority } from "@/types/page-link";
-import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { BaseSyntheticEvent, Dispatch, SetStateAction, useContext, useReducer, useState } from "react";
@@ -74,7 +74,7 @@ const ListRenderer = () => {
 										</div>
 									</div>
 								</div>
-								<RenderTasks data={getSortedData(data, selectedSection, searchQuery)} layout={layout} setItem={setItem} />
+								<RenderTasks data={getSortedData(data, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags}/>
 							</div>
 						</div>
 						<div className="fixed bottom-4 right-4">
@@ -101,9 +101,9 @@ const ListRenderer = () => {
 
 export default ListRenderer;
 
-const RenderTasks = ({ data, layout, setItem }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void }) => {
+const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void, tags: TaskTags[] | undefined }) => {
 	const renderData = (data: FetchedTask[]) => {
-		return data.map((item) => <TodoCard key={item.id} initial_item={item} layout={layout} set_item={setItem} />);
+		return data.map((item) => <TodoCard key={item.id} initial_item={item} layout={layout} set_item={setItem} tags={tags} />);
 	};
 
 	switch (layout) {

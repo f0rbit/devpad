@@ -10,7 +10,27 @@ import { ReactNode, useState } from "react";
 import DescriptionParser from "../Description/DescriptionParser";
 import { hoverExpandButton } from "@/components/Home/HomeButton";
 
-const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, addModule }: { item?: FetchedTask; title: string; onClick: any; buttonText: string; onDeleteClick?: () => void; addModule?: (module: Module) => void }) => {
+const GenericTodoEditForm = ({
+	item,
+	title,
+	onClick,
+	buttonText,
+	onDeleteClick,
+	addModule,
+	tags,
+	saveTags
+}: {
+	item?: FetchedTask;
+	title: string;
+	onClick: any;
+	buttonText: string;
+	onDeleteClick?: () => void;
+	addModule?: (module: Module) => void;
+	tags: TaskTags[] | undefined;
+	saveTags: (tags: string[]) => void;
+}) => {
+	const [showTagEditor, setShowTagEditor] = useState(false);
+
 	const edit_module = (module: Module) => {
 		if (!addModule) return;
 		var dom_element = document.getElementById("module-" + module);
@@ -22,8 +42,8 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 		}
 	};
 
-	const edit_tags = () => {
-		console.log("edit tags");
+	const toggleTags = () => {
+		setShowTagEditor(!showTagEditor);
 	};
 
 	const getModules = (module: Module): TaskModule[] => {
@@ -70,26 +90,7 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 					</div>
 				</div>
 
-				{item && (
-					<div className="basis-1/4 dark:text-white">
-						<div className="mb-2 text-center text-lg">Add Modules</div>
-						<div className="flex flex-col gap-1">
-							{Object.values(Module).map((module, index) => {
-								return (
-									<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 hover:bg-gray-200 dark:bg-pad-gray-300 py-1 px-2 dark:hover:bg-pad-gray-200" key={index} onClick={() => edit_module(module)}>
-										{ModuleIcon[module]}
-										<span>{module}</span>
-									</button>
-								);
-							})}
-							{/* Add a button for editing tags */}
-							<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 hover:bg-gray-200 dark:bg-pad-gray-300 py-1 px-2 dark:hover:bg-pad-gray-200" onClick={edit_tags}>
-								<Tag />
-								<span>tags</span>
-							</button>
-						</div>
-					</div>
-				)}
+				{item && (showTagEditor ? <TodoTagSelector item={item} tags={tags} saveTags={saveTags} edit_tags={toggleTags} /> : <ModuleButtons edit_module={edit_module} edit_tags={toggleTags} />)}
 			</div>
 			<div className="mt-4 mb-1 flex justify-center gap-2">
 				{onDeleteClick && (
@@ -112,6 +113,70 @@ const GenericTodoEditForm = ({ item, title, onClick, buttonText, onDeleteClick, 
 				>
 					{buttonText}
 				</button>
+			</div>
+		</div>
+	);
+};
+
+const ModuleButtons = ({ edit_module, edit_tags }: { edit_module: (module: Module) => void; edit_tags: () => void }) => {
+	return (
+		<div className="basis-1/4 dark:text-white">
+			<div className="mb-2 text-center text-lg">Add Modules</div>
+			<div className="flex flex-col gap-1">
+				{Object.values(Module).map((module, index) => {
+					return (
+						<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 py-1 px-2 hover:bg-gray-200 dark:bg-pad-gray-300 dark:hover:bg-pad-gray-200" key={index} onClick={() => edit_module(module)}>
+							{ModuleIcon[module]}
+							<span>{module}</span>
+						</button>
+					);
+				})}
+				{/* Add a button for editing tags */}
+				<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 py-1 px-2 hover:bg-gray-200 dark:bg-pad-gray-300 dark:hover:bg-pad-gray-200" onClick={edit_tags}>
+					<Tag />
+					<span>tags</span>
+				</button>
+			</div>
+		</div>
+	);
+};
+
+const TodoTagSelector = ({ item, tags, saveTags, edit_tags }: { item?: FetchedTask; tags: TaskTags[] | undefined, saveTags: (tags: string[]) => void, edit_tags: () => void }) => {
+	const [selectedTags, setSelectedTags] = useState<string[]>(item?.tags.map((tag) => tag.id) || []);
+
+	const selectTag = (id: string) => {
+		if (selectedTags.includes(id)) {
+			setSelectedTags(selectedTags.filter((tag) => tag !== id));
+		} else {
+			setSelectedTags([...selectedTags, id]);
+		}
+	};
+
+	if (!item) return <></>;
+	return (
+		<div className="basis-1/4 dark:text-white">
+			<div className="mb-2 text-center text-lg">Select Tags</div>
+			<div className="flex flex-col gap-1 h-full" id="tagSelector">
+				{tags?.map((tag, index) => {
+					return (
+						<div className="flex gap-2" key={index}>
+							<input type="checkbox" defaultChecked={selectedTags.includes(tag.id)} onChange={() => selectTag(tag.id)} />
+							<label>{tag.title}</label>
+						</div>
+					);
+				})}
+				<div className="mx-auto mt-auto">
+					<button
+						className="rounded-md bg-green-200 px-4 py-1 text-pad-gray-700 transition-all duration-300 hover:scale-110 hover:bg-green-300"
+						onClick={(e) => {
+							e.preventDefault();
+							saveTags(selectedTags);
+							edit_tags();
+						}}
+					>
+						Save Tags
+					</button>
+				</div>
 			</div>
 		</div>
 	);
@@ -224,7 +289,7 @@ const ItemDescription = ({ module }: { module: TaskModule }) => {
 				<div className="px-3">
 					<DescriptionParser description={data.description} />
 					<div className="absolute bottom-0 right-0">
-						<button className="m-1 rounded-md bg-gray-200 dark:bg-pad-gray-200 px-3 py-1 transition-all hover:scale-110" onClick={() => setEditing(!editing)}>
+						<button className="m-1 rounded-md bg-gray-200 px-3 py-1 transition-all hover:scale-110 dark:bg-pad-gray-200" onClick={() => setEditing(!editing)}>
 							{editing ? "Done" : "Edit"}
 						</button>
 					</div>
