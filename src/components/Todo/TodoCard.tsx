@@ -11,6 +11,7 @@ import { TODO_LAYOUT } from "./ListLayout";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Module } from "@/types/page-link";
 import { ModuleIcon } from "./ModuleIcon";
+import { isTemplateExpression } from "typescript";
 
 export const COLOURS = {
 	COMPLETED: {
@@ -66,7 +67,7 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = (status: TASK_PROGRESS) => {
-		const new_item = { ...initial_item, progress: status };
+		const new_item: ItemInput = { title: initial_item.id, visibility: initial_item.visibility, progress: status };
 		update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
 	};
 

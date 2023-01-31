@@ -26,8 +26,8 @@ const GenericTodoEditForm = ({
 	buttonText: string;
 	onDeleteClick?: () => void;
 	addModule?: (module: Module) => void;
-	tags: TaskTags[] | undefined;
-	saveTags: (tags: string[]) => void;
+	tags?: TaskTags[] | undefined;
+	saveTags?: (tags: string[]) => void;
 }) => {
 	const [showTagEditor, setShowTagEditor] = useState(false);
 
@@ -141,7 +141,7 @@ const ModuleButtons = ({ edit_module, edit_tags }: { edit_module: (module: Modul
 	);
 };
 
-const TodoTagSelector = ({ item, tags, saveTags, edit_tags }: { item?: FetchedTask; tags: TaskTags[] | undefined, saveTags: (tags: string[]) => void, edit_tags: () => void }) => {
+const TodoTagSelector = ({ item, tags, saveTags, edit_tags }: { item?: FetchedTask; tags: TaskTags[] | undefined, saveTags: ((tags: string[]) => void) | undefined, edit_tags: () => void }) => {
 	const [selectedTags, setSelectedTags] = useState<string[]>(item?.tags.map((tag) => tag.id) || []);
 
 	const selectTag = (id: string) => {
@@ -152,7 +152,7 @@ const TodoTagSelector = ({ item, tags, saveTags, edit_tags }: { item?: FetchedTa
 		}
 	};
 
-	if (!item) return <></>;
+	if (!item || !saveTags) return <></>;
 	return (
 		<div className="basis-1/4 dark:text-white">
 			<div className="mb-2 text-center text-lg">Select Tags</div>

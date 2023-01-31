@@ -29,7 +29,7 @@ const profile: NextPage = () => {
 					<div>
 						<button
 							onClick={() => {
-								localStorage.setItem("darkMode", document.getElementById("dark-mode")?.checked ? "true" : "false");
+								localStorage.setItem("darkMode", (document.getElementById("dark-mode") as HTMLInputElement)?.checked ? "true" : "false");
 							}}
 							className="rounded-md bg-pad-gray-400 px-4 py-2 hover:bg-pad-gray-500"
 						>
