@@ -48,7 +48,7 @@ export default function middleware(req: NextRequest) {
 	// Get hostname of request (e.g. demo.vercel.pub, demo.localhost:3000)
 	const hostname = req.headers.get("host") || "devpad-one.vercel.app";
 	console.log("hostname: " + hostname);
-	console.log("url", url);
+	console.log("url: " + url.pathname);
 
 	/*  You have to replace ".vercel.pub" with your own domain if you deploy this example under your domain.
       You can also use wildcard subdomains on .vercel.app links that are associated with your Vercel team slug
