@@ -61,9 +61,11 @@ export default function middleware(req: NextRequest) {
 			? hostname
 					.replace(`.devpad.local`, "")
 					.replace(`.platformize.vercel.app`, "")
+					.replace(".devpad-one.vercel.app", "")
 			: hostname
 					.replace(`.devpad.local:3000`, "")
-					.replace(".localhost:3000", "");
+					.replace(".localhost:3000", "")
+					.replace(".devpad-one.vercel.app", "");
 	// rewrites for app pages
 	// if (currentHost == "app") {
 	//   if (url.pathname === "/login" && (req.cookies.get("next-auth.session-token") || req.cookies.get("__Secure-next-auth.session-token"))) {
