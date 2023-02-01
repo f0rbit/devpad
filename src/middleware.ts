@@ -73,6 +73,12 @@ export default function middleware(req: NextRequest) {
 					.replace(".localhost:3000", "")
 
 	console.log("currentHost: " + currentHost); 
+	for (const skip of skips) {
+		if (url.pathname.includes(skip)) {
+			console.log("[skip] " + url.pathname);
+			return NextResponse.next();
+		}
+	}
 
 	for (const redirect of redirects) {
 		if (currentHost === redirect.subdomain) {
@@ -82,13 +88,8 @@ export default function middleware(req: NextRequest) {
 		}
 	}
 
-	for (const skip of skips) {
-		if (url.pathname.includes(skip)) {
-			console.log("[skip] " + url.pathname);
-			return NextResponse.next();
-		}
-	}
 	
+
 	// default
 	// rewrite root application to `/home` folder
 	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad.tools") {
