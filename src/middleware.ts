@@ -73,6 +73,7 @@ export default function middleware(req: NextRequest) {
 					.replace(".localhost:3000", "")
 
 	console.log("currentHost: " + currentHost); 
+
 	for (const skip of skips) {
 		if (url.pathname.includes(skip)) {
 			console.log("[skip] " + url.pathname);
@@ -87,8 +88,6 @@ export default function middleware(req: NextRequest) {
 			return NextResponse.rewrite(url);
 		}
 	}
-
-	
 
 	// default
 	// rewrite root application to `/home` folder
