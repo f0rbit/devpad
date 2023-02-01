@@ -10,11 +10,19 @@ export const config = {
 		 * 4. /examples (inside /public)
 		 * 5. all root files inside /public (e.g. /favicon.ico)
 		 */
-		"/((?!api|_next|fonts|examples|[\\w-]+\\.\\w+).*)",
+		"/((?!api/|_next/|fonts/|_static/|examples/|[\\w-]+\\.\\w+).*)",
 		// add additional route for only /
 		"/"
 	]
 };
+
+const skips = [
+	"api/",
+	"_next/",
+	"fonts/",
+	"_static/",
+	"examples/",
+]
 
 type AppRedirect = {
 	subdomain: string;
@@ -73,6 +81,14 @@ export default function middleware(req: NextRequest) {
 			return NextResponse.rewrite(url);
 		}
 	}
+
+	for (const skip of skips) {
+		if (url.pathname.includes(skip)) {
+			console.log("[skip] " + url.pathname);
+			return NextResponse.next();
+		}
+	}
+	
 	// default
 	// rewrite root application to `/home` folder
 	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad.tools") {
