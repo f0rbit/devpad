@@ -12,8 +12,8 @@ import { Module } from "@/types/page-link";
 const getBaseUrl = () => {
 	if (typeof window !== "undefined") return ""; // browser should use relative url
 	if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // SSR should use vercel url
-	if (process.env.RAILWAY_STATIC_URL) return `https://${process.env.RAILWAY_STATIC_URL}`; // SSR should use railway url
-	return `http://${process.env.RAILWAY_STATIC_URL}:${process.env.PORT ?? 3000}`; // dev SSR should use localhost
+	if (process.env.ROOT_DOMAIN) return `https://${process.env.ROOT_DOMAIN}`; // SSR should use railway url
+	return `http://${process.env.ROOT_DOMAIN}:${process.env.PORT ?? 3000}`; // dev SSR should use localhost
 };
 
 export const trpc = createTRPCNext<AppRouter>({

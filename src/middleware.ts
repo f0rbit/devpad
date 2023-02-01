@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripProtocols } from "./utils/functions";
 
 export const config = {
 	matcher: [
@@ -55,10 +54,9 @@ const redirects: AppRedirect[] = [
 export default function middleware(req: NextRequest) {
 	const url = req.nextUrl;
 
-	const stripped = stripProtocols(process.env.RAILWAY_STATIC_URL);
 
 	// Get hostname of request (e.g. demo.vercel.pub, demo.localhost:3000)
-	const hostname = req.headers.get("host") || stripped || "devpad.tools";
+	const hostname = req.headers.get("host") || process.env.ROOT_DOMAIN || "devpad.tools";
 	console.log("hostname: " + hostname);
 	console.log("url: " + url.pathname);
 
@@ -71,11 +69,11 @@ export default function middleware(req: NextRequest) {
 			? hostname
 					.replace(`.devpad.local`, "")
 					.replace(`.devpad.tools`, "")
-					.replace(stripped ?? "", "")
+					.replace("." + process.env.ROOT_DOMAIN ?? "", "")
 			: hostname
 					.replace(`.devpad.local:3000`, "")
 					.replace(".localhost:3000", "")
-					.replace(stripped ??  "", "")
+					.replace("." + process.env.ROOT_DOMAIN ??  "", "")
 
 	console.log("currentHost: " + currentHost); 
 
@@ -96,7 +94,7 @@ export default function middleware(req: NextRequest) {
 
 	// default
 	// rewrite root application to `/home` folder
-	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad.tools" || hostname === stripped) {
+	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad.tools" || hostname === process.env.ROOT_DOMAIN) {
 		url.pathname = `/home${url.pathname}`;
 		console.log("[default] redirecting to " + url.pathname);
 		return NextResponse.rewrite(url);

@@ -18,7 +18,7 @@ export const serverSchema = z.object({
 	),
 	GITHUB_CLIENT_ID: z.string(),
 	GITHUB_CLIENT_SECRET: z.string(),
-	RAILWAY_STATIC_URL: z.string()
+	ROOT_DOMAIN: z.string()
 });
 
 /**

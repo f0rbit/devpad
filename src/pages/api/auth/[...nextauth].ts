@@ -5,7 +5,6 @@ import GithubProvider from "next-auth/providers/github";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "../../../server/db/client";
 import { env } from "../../../env/server.mjs";
-import { stripProtocols } from "src/utils/functions";
 
 // const getDomainWithoutSubdomain = (url: any) => {
 // 	const urlParts = new URL(url).hostname.split(".");
@@ -16,7 +15,7 @@ import { stripProtocols } from "src/utils/functions";
 // 		.join(".");
 // };
 
-const useSecureCookies: boolean = env.RAILWAY_STATIC_URL.startsWith("https://");
+const useSecureCookies: boolean = env.NEXTAUTH_URL.startsWith("https://");
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
 // const hostName = getDomainWithoutSubdomain(process.env.RAILWAY_STATIC_URL);
 
@@ -29,7 +28,7 @@ const cookies = {
 			sameSite: "lax",
 			path: "/",
 			secure: useSecureCookies,
-			domain: "." + stripProtocols(process.env.RAILWAY_STATIC_URL) // add a . in front so that subdomains are included
+			domain: "." + env.ROOT_DOMAIN // add a . in front so that subdomains are included
 		}
 	}
 };
