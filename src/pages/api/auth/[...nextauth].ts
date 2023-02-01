@@ -28,7 +28,7 @@ const cookies = {
 			sameSite: "lax",
 			path: "/",
 			secure: useSecureCookies,
-			domain: ".devpad.local" // add a . in front so that subdomains are included
+			domain: ".devpad.tools" // add a . in front so that subdomains are included
 		}
 	}
 };
