@@ -3,7 +3,7 @@ import { Transition } from "@headlessui/react";
 import logo from "public/devpad-logo.png";
 import Link from "next/link";
 import Image, { StaticImageData } from "next/image";
-import HomeButton from "./HomeButton";
+import HomeButton, { hoverExpandButton } from "./HomeButton";
 import HoverLink from "../HoverLink";
 import { LoginContext } from "src/pages/_app";
 import { signOut, useSession } from "next-auth/react";
@@ -28,7 +28,7 @@ const NavLink = (name: string, large: boolean, dest: string) => {
 
 	return (
 		<Link href={dest}>
-			<a className={"link-hover font-medium"} href={dest}>
+			<a className={"link-hover"} href={dest}>
 				<HoverLink text={name} />
 			</a>
 		</Link>
@@ -68,9 +68,11 @@ const MobileLinks = ({ isOpen }: { isOpen: boolean }) => {
 			leaveTo="opacity-0 scale-95"
 		>
 			<div className="absolute w-full rounded-xl bg-pad-gray-900 md:hidden" id="mobile-menu">
-				<div className="flex flex-col items-center justify-center space-y-2 px-2 pt-2 pb-3 sm:px-3">
+				<div className="flex flex-col items-center justify-center space-y-2 px-2 pt-2 pb-3 sm:px-3 text-gray-400 dark:text-pad-gray-400">
 					{HOME_LINKS.map((l: PageLink, index: number) => l.title != "Login" && <div key={index}>{NavLink(l.title, true, l.destination)}</div>)}
-					<HomeButton text={"Login"} dest={"login"} />
+					<div className={hoverExpandButton}>
+						{NavLink("Login", true, "/")}
+					</div>
 				</div>
 			</div>
 		</Transition>
@@ -109,7 +111,7 @@ function HomeNavBar({ noicon }: { noicon: boolean }) {
 			<div className="relative z-50">
 				<div className="relative flex h-16 w-full flex-row flex-nowrap items-center justify-center">
 					<DevpadTitle noicon={noicon} />
-					<div className="absolute right-0 ml-10 hidden items-baseline space-x-4 md:flex lg:space-x-8">
+					<div className="absolute right-0 ml-10 hidden items-baseline space-x-4 md:flex lg:space-x-8 text-gray-400 dark:text-pad-gray-400" >
 						{HOME_LINKS.map((l: PageLink, index: number) => <div key={index}>{NavLink(l.title, false, l.destination)}</div>)}
 						<HomeButton text={"Get Started"} dest={"/get-started"} />
 					</div>
