@@ -1,9 +1,9 @@
 import { router, protected_procedure } from "@/server/trpc/trpc";
 import { z } from "zod";
 
-const user_owns_tag = async (user_id: string, tag_id: string) => {
-	if (!prisma) return false;
-	const user = await prisma.taskTags.findFirst({
+const user_owns_tag = async (ctx: any, user_id: string, tag_id: string) => {
+	if (!ctx.prisma) return false;
+	const user = await ctx.prisma.taskTags.findFirst({
 		where: {
 			id: tag_id,
 			owner_id: user_id
@@ -33,7 +33,7 @@ export const tagRouter = router({
 		.input(z.object({ id: z.string() }))
 		.mutation(async ({ ctx, input }) => {
 			// check that owner owns the tag
-			const owns = await user_owns_tag(ctx.session.user.id, input.id);
+			const owns = await user_owns_tag(ctx, ctx.session.user.id, input.id);
 			if (!owns) return false;
 			// delete the tag
 			await ctx.prisma.taskTags.delete({
@@ -51,7 +51,7 @@ export const tagRouter = router({
 		)
 		.mutation(async ({ ctx, input }) => {
 			// check that owner owns the tag
-			const owns = await user_owns_tag(ctx.session.user.id, input.id);
+			const owns = await user_owns_tag(ctx, ctx.session.user.id, input.id);
 			if (!owns) return null;
 			// update the tag
 			return await ctx.prisma.taskTags.update({

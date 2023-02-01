@@ -11,9 +11,9 @@ enum TASK_PRIORITY {
 	URGENT
 }
 
-const user_owns_task = async (user_id: string, task_id: string) => {
-	if (!prisma) return false;
-	const user = await prisma.task.findFirst({
+const user_owns_task = async (ctx: any ,user_id: string, task_id: string) => {
+	if (!ctx.prisma) return false;
+	const user = await ctx.prisma.task.findFirst({
 		where: {
 			id: task_id,
 			owner_id: user_id
@@ -74,7 +74,7 @@ export const taskRouter = router({
 		})) as FetchedTask[];
 	}),
 	update_item: protected_procedure.input(z.object({ id: z.string(), item: update_item_input })).mutation(async ({ ctx, input }) => {
-		const owns = await user_owns_task(ctx.session.user.id, input.id);
+		const owns = await user_owns_task(ctx, ctx.session.user.id, input.id);
 		if (!owns) return null;
 		return (await ctx.prisma.task.update({
 			where: { id: input.id },
@@ -110,7 +110,7 @@ export const taskRouter = router({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const owns = await user_owns_task(ctx.session.user.id, input.id);
+			const owns = await user_owns_task(ctx, ctx.session.user.id, input.id);
 			if (!owns) return false;
 			await ctx.prisma.task.update({
 				where: { id: input.id },
@@ -126,7 +126,7 @@ export const taskRouter = router({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const owns = await user_owns_task(ctx.session.user.id, input.task_id);
+			const owns = await user_owns_task(ctx, ctx.session.user.id, input.task_id);
 			if (!owns) return false;
 			await ctx.prisma.task.update({
 				where: { id: input.task_id },
@@ -165,7 +165,7 @@ export const taskRouter = router({
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
-			const owns = await user_owns_task(ctx.session.user.id, input.task_id);
+			const owns = await user_owns_task(ctx, ctx.session.user.id, input.task_id);
 			if (!owns) return false;
 			// update each module's data
 			for (const module_input of input.modules) {
