@@ -17,7 +17,8 @@ export const serverSchema = z.object({
 		process.env.VERCEL ? z.string() : z.string().url()
 	),
 	GITHUB_CLIENT_ID: z.string(),
-	GITHUB_CLIENT_SECRET: z.string()
+	GITHUB_CLIENT_SECRET: z.string(),
+	RAILWAY_STATIC_URL: z.string()
 });
 
 /**

@@ -15,9 +15,9 @@ const getDomainWithoutSubdomain = (url: any) => {
 		.join(".");
 };
 
-const useSecureCookies = env.NEXTAUTH_URL.startsWith("https://");
+const useSecureCookies = env.RAILWAY_STATIC_URL.startsWith("https://");
 const cookiePrefix = useSecureCookies ? "__Secure-" : "";
-const hostName = getDomainWithoutSubdomain(process.env.NEXTAUTH_URL);
+const hostName = getDomainWithoutSubdomain(process.env.RAILWAY_STATIC_URL);
 
 // Define how we want the session token to be stored in our browser
 const cookies = {
@@ -28,7 +28,7 @@ const cookies = {
 			sameSite: "lax",
 			path: "/",
 			secure: useSecureCookies,
-			domain: ".devpad.tools" // add a . in front so that subdomains are included
+			domain: "." + hostName // add a . in front so that subdomains are included
 		}
 	}
 };
