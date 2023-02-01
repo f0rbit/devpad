@@ -76,22 +76,26 @@ export const taskRouter = router({
 	update_item: protected_procedure.input(z.object({ id: z.string(), item: update_item_input })).mutation(async ({ ctx, input }) => {
 		const owns = await user_owns_task(ctx, ctx.session.user.id, input.id);
 		if (!owns) return null;
+		var tags: { set: {id: string}[] } | undefined = undefined;
+		if (input.item.tags) {
+			tags = {
+				set: await ctx.prisma.taskTags.findMany({
+					where: {
+						id: {
+							in: input.item.tags
+						}
+					},
+					select: {
+						id: true
+					}
+				})
+			};
+		}
 		return (await ctx.prisma.task.update({
 			where: { id: input.id },
 			data: { 
 				...input.item,
-				tags: {
-					set: await ctx.prisma.taskTags.findMany({
-						where: {
-							id: {
-								in: input.item.tags
-							}
-						},
-						select: {
-							id: true
-						}
-					})
-				}
+				tags
 			},
 			include: TaskInclude
 		})) as FetchedTask;

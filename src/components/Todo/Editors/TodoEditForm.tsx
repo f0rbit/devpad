@@ -22,8 +22,6 @@ export const TodoEditForm = ({ item, updateItem, setOpen, deleteItem, addModule,
 				const progress = document.getElementById("progress") as HTMLSelectElement;
 				const visibility = document.getElementById("visibility") as HTMLSelectElement;
 
-				const tag_selector = document.getElementById("tagSelector") as HTMLSelectElement;
-
 				// get module data
 				const modules = getModuleInput(item);
 
