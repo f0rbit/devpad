@@ -2,6 +2,7 @@ import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
 import TodoNavbar from "@/components/Todo/TodoNavbar";
 import { TaskTags } from "@prisma/client";
+import Head from "next/head";
 import React, { Context, useCallback, useContext, useEffect } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
 import { trpc } from "src/utils/trpc";
@@ -20,7 +21,7 @@ type TodoContextType = {
 
 export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
 
-const DashboardMainSection = ({ mobile, showList }: { mobile: boolean, showList: boolean }) => {
+const DashboardMainSection = ({ mobile, showList }: { mobile: boolean; showList: boolean }) => {
 	if (mobile) return showList ? <MainLinkSection expanded={false} /> : <ListRenderer />;
 	return (
 		<>
@@ -61,6 +62,9 @@ const Dashboard = () => {
 
 	return (
 		<TodoContext.Provider value={value}>
+			<Head>
+				<title>Todo | Dashboard</title>
+			</Head>
 			<div className="h-screen min-h-full overflow-hidden bg-gray-700 dark:bg-pad-gray-900">
 				<div>
 					<TodoNavbar />

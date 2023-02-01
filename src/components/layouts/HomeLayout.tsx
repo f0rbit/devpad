@@ -9,7 +9,6 @@ const HomeLayout = ({ title, children }: { title: string; children: ReactNode })
 		<div className="relative overflow-x-hidden">
 			<Head>
 				<title>{"devpad | " + title}</title>
-				<link rel="shortcut icon" href="/devpad-favicon.ico" />
 			</Head>
 			<main style={{ minHeight: "calc(100vh - 52px)" }}>
 				<CenteredContainer>

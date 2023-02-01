@@ -2,6 +2,7 @@ import CenteredContainer from "@/components/CenteredContainer";
 import InDevelopment from "@/components/layouts/InDevelopment";
 import { NextPage } from "next";
 import { useSession } from "next-auth/react";
+import Head from "next/head";
 
 const profile: NextPage = () => {
 	const { data: session, status } = useSession();
@@ -19,6 +20,9 @@ const profile: NextPage = () => {
 	return (
 		<div className="h-screen w-screen items-center">
 			<CenteredContainer>
+				<Head>
+					<title>Todo | Profile</title>
+				</Head>
 				<div className="mt-16 flex h-full flex-col items-center justify-center gap-4 align-middle">
 					<div>Status: {status}</div>
 					<pre>{JSON.stringify(session, null, 4)}</pre>
@@ -37,7 +41,7 @@ const profile: NextPage = () => {
 						</button>
 					</div>
 					<div className="flex flex-col">
-						<img src={session?.user?.image ?? ""} alt="Profile Picture" className="h-32 w-32 rounded-full mb-2  " />
+						<img src={session?.user?.image ?? ""} alt="Profile Picture" className="mb-2 h-32 w-32 rounded-full  " />
 						<div className="text-2xl font-bold">{session?.user?.name}</div>
 						<div className="font-light">{session?.user?.email}</div>
 					</div>
