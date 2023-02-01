@@ -64,15 +64,6 @@ export default function middleware(req: NextRequest) {
 					.replace(".localhost:3000", "")
 
 	console.log("currentHost: " + currentHost); 
-	// rewrites for app pages
-	// if (currentHost == "app") {
-	//   if (url.pathname === "/login" && (req.cookies.get("next-auth.session-token") || req.cookies.get("__Secure-next-auth.session-token"))) {
-	//     url.pathname = "/";
-	//     return NextResponse.redirect(url);
-	//   }
-	//   url.pathname = `/app${url.pathname}`;
-	//   return NextResponse.rewrite(url);
-	// }
 
 	for (const redirect of redirects) {
 		if (currentHost === redirect.subdomain) {
