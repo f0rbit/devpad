@@ -12,7 +12,7 @@ import { Module } from "@/types/page-link";
 const getBaseUrl = () => {
 	if (typeof window !== "undefined") return ""; // browser should use relative url
 	if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // SSR should use vercel url
-	return `http://devpad.local:${process.env.PORT ?? 3000}`; // dev SSR should use localhost
+	return `http://devpad.tools:${process.env.PORT ?? 3000}`; // dev SSR should use localhost
 };
 
 export const trpc = createTRPCNext<AppRouter>({

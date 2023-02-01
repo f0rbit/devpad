@@ -11,6 +11,8 @@ export const config = {
 		 * 5. all root files inside /public (e.g. /favicon.ico)
 		 */
 		"/((?!api|_next|fonts|examples|[\\w-]+\\.\\w+).*)",
+		// add additional route for only /
+		"/"
 	]
 };
 
@@ -45,7 +47,7 @@ export default function middleware(req: NextRequest) {
 	const url = req.nextUrl;
 
 	// Get hostname of request (e.g. demo.vercel.pub, demo.localhost:3000)
-	const hostname = req.headers.get("host") || "devpad-one.vercel.app";
+	const hostname = req.headers.get("host") || "devpad.tools";
 	console.log("hostname: " + hostname);
 	console.log("url: " + url.pathname);
 
@@ -57,7 +59,7 @@ export default function middleware(req: NextRequest) {
 		process.env.NODE_ENV === "production" && process.env.VERCEL === "1"
 			? hostname
 					.replace(`.devpad.local`, "")
-					.replace(`.devpad-one.vercel.app`, "")
+					.replace(`.devpad.tools`, "")
 			: hostname
 					.replace(`.devpad.local:3000`, "")
 					.replace(".localhost:3000", "")
@@ -73,7 +75,7 @@ export default function middleware(req: NextRequest) {
 	}
 	// default
 	// rewrite root application to `/home` folder
-	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad-one.vercel.app") {
+	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad.tools") {
 		url.pathname = `/home${url.pathname}`;
 		console.log("[default] redirecting to " + url.pathname);
 		return NextResponse.rewrite(url);
