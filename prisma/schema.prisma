@@ -49,6 +49,7 @@ model User {
   image         String?
   accounts      Account[]
   sessions      Session[]
+  projets       Project[]
 
   todo_tags  TaskTags[] // list of tags created by user
   todo_items Task[] // list of items owned by user
@@ -125,4 +126,33 @@ enum TASK_VISIBILITY {
   ARCHIVED
   DRAFT
   DELETED
+}
+
+model Project {
+  project_id String @db.Text
+  owner      User   @relation(fields: [owner_id], references: [id])
+  owner_id String
+  name     String 
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  description String? @db.Text
+  repo_url String? // url to repo
+  icon_url String? // url to icon
+  status PROJECT_STATUS @default(DEVELOPMENT)
+  deleted Boolean @default(false)
+  link_url String? // url to project
+  link_text String? // text to display for link
+
+  // unique owner & project_id
+  @@unique([owner_id, project_id])
+}
+
+enum PROJECT_STATUS {
+  DEVELOPMENT
+  RELEASED
+  STOPPED
+  LIVE
+  FINISHED
+  PAUSED
+  ABANDONED
 }
