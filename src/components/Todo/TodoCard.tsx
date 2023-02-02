@@ -70,7 +70,6 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 		update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
 	};
 
-	/** @todo implement the module update inside of the update item query, instead of chained calls. */
 	const updateItem = (item: ItemInput, modules: { type: string; data: string }[]) => {
 		update_item.mutate(
 			{ id: initial_item.id, item, modules },
@@ -120,10 +119,10 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} tags={tags} />
 				</GenericModal>
 			</div>
-			<div className={"group relative w-full rounded-md bg-gray-100 px-4 py-2 dark:bg-pad-gray-600 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
+			<div className={"group relative w-full rounded-md border-1 border-pad-gray-500 bg-gray-100 px-4 py-2 dark:bg-pad-gray-700 hover:dark:bg-pad-gray-600 transition-colors duration-300 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
 				<div className="inline-flex items-center gap-2 align-middle">
 					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
-					<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
+					<h1 className="text-neutral-200 text-2xl font-medium">{initial_item.title}</h1>
 				</div>
 				<EndTime endTime={getModuleData(initial_item, Module.END_DATE)} />
 				<TodoTags tags={initial_item?.tags} />

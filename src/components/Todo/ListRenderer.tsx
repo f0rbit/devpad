@@ -44,7 +44,7 @@ const ListRenderer = () => {
 			{ item },
 			{
 				onSuccess: (new_item) => {
-					setItems([ ...items, new_item ]);
+					setItems([...items, new_item]);
 				}
 			}
 		);
@@ -56,7 +56,7 @@ const ListRenderer = () => {
 		// items[index] = item;
 		// forceUpdate();
 		const otherItems = items.filter((i) => i.id !== item.id);
-		setItems([ ...otherItems, item ]);
+		setItems([...otherItems, item]);
 	};
 
 	return (
@@ -65,8 +65,8 @@ const ListRenderer = () => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-200 dark:bg-pad-gray-800">
-							<div className="w-full p-4 dark:text-neutral-400 text-gray-600">
-								<div className="mb-4 rounded-md p-2 font-bold dark:text-neutral-300 text-gray-800">
+							<div className="w-full p-4 text-gray-600 dark:text-neutral-400">
+								<div className="mb-4 rounded-md p-2 font-bold text-gray-800 dark:text-neutral-300">
 									<div className="flex flex-row items-center gap-4">
 										<div className="text-2xl font-bold">{selectedSection + " Items"}</div>
 										{/* <div>Layout: {layout}</div> */}
@@ -76,10 +76,10 @@ const ListRenderer = () => {
 										</div>
 									</div>
 								</div>
-								<RenderTasks data={getSortedData(items, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags}/>
+								<RenderTasks data={getSortedData(items, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags} />
 							</div>
 						</div>
-						<div className="fixed md:bottom-4 md:right-4 bottom-2 right-2">
+						<div className="fixed bottom-2 right-2 md:bottom-4 md:right-4">
 							<CreateButton onClick={() => setCreateModalOpen(true)} />
 							{/* This is the create todo item form */}
 							<div className="absolute">
@@ -103,7 +103,7 @@ const ListRenderer = () => {
 
 export default ListRenderer;
 
-const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void, tags: TaskTags[] | undefined }) => {
+const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
 	const renderData = (data: FetchedTask[]) => {
 		return data.map((item) => <TodoCard key={item.id} initial_item={item} layout={layout} set_item={setItem} tags={tags} />);
 	};
@@ -122,7 +122,7 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<str
 	return (
 		<div className="flex flex-row items-center gap-2">
 			{Object.values(TODO_LAYOUT).map((layout_type) => (
-				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md dark:bg-pad-gray-500 bg-gray-300 dark:text-neutral-300 text-gray-500 px-2 py-1 shadow-md">
+				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md bg-gray-300 px-2 py-1 text-gray-500 shadow-md dark:bg-pad-gray-500 dark:text-neutral-300">
 					<LayoutIcon layout={layout_type} />
 				</button>
 			))}
@@ -132,7 +132,7 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<str
 
 const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 	return (
-		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md dark:bg-pad-gray-500 px-2 py-1 align-middle text-sm shadow-md bg-gray-300 dark:text-neutral-300 text-gray-500">
+		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-gray-300 px-2 py-1 align-middle text-sm text-gray-500 shadow-md dark:bg-pad-gray-500 dark:text-neutral-300">
 			<Tag className="p-0.5" />
 			Edit
 		</button>
@@ -142,7 +142,7 @@ const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 const CreateButton = ({ onClick }: { onClick: () => void }) => {
 	return (
 		<button
-			className={hoverExpandButton}
+			className={`origin-bottom rounded-md border-1 border-pad-purple-300 bg-pad-purple-500 px-6 py-2 text-xl font-bold text-white transition-all duration-500 hover:border-pad-purple-200 hover:bg-pad-purple-400`}
 			onClick={(e) => {
 				e.preventDefault();
 				onClick();
