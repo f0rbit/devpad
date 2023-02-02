@@ -5,7 +5,7 @@ import { TaskTags } from "@prisma/client";
 import Head from "next/head";
 import React, { Context, useCallback, useContext, useEffect } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
-import { trpc } from "src/utils/trpc";
+import { FetchedTask, trpc } from "src/utils/trpc";
 
 type TodoContextType = {
 	showList: boolean;
@@ -17,6 +17,8 @@ type TodoContextType = {
 	setSearchQuery: Dispatch<SetStateAction<string>>;
 	tags: TaskTags[];
 	setTags: Dispatch<SetStateAction<TaskTags[] | undefined>>;
+	items: FetchedTask[];
+	setItems: Dispatch<SetStateAction<FetchedTask[] | undefined>>;
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
@@ -35,14 +37,18 @@ const Dashboard = () => {
 	const [showList, setShowList] = useState(true);
 	const [selectedSection, setSelectedSection] = useState("current");
 	const [searchQuery, setSearchQuery] = useState("");
-	const { data: temp_tags } = trpc.tags.get_tags.useQuery();
+	const { data } = trpc.data.getItemsAndTags.useQuery();
 	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
+	const [items, setItems] = useState(undefined as FetchedTask[] | undefined)
 
 	useEffect(() => {
-		if (temp_tags && !tags) {
-			setTags(temp_tags);
+		if (data?.tags && !tags) {
+			setTags(data?.tags);
 		}
-	}, [temp_tags, tags, setTags]);
+		if (data?.items && !items) {
+			setItems(data?.items);
+		}
+	}, [data, tags, setTags, items, setItems]);
 
 	const toggleList = useCallback(() => {
 		setShowList((prev) => !prev);
@@ -57,7 +63,9 @@ const Dashboard = () => {
 		searchQuery,
 		setSearchQuery,
 		tags: tags ?? [],
-		setTags
+		setTags,
+		items: items ?? [],
+		setItems
 	};
 
 	return (
