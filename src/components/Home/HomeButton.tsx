@@ -5,7 +5,7 @@ export const hoverExpandButton = "origin-bottom rounded-md bg-pad-purple-500 px-
 const HomeButton = ({ text, dest }: { text: string; dest: string }) => {
 	return (
 		<Link href={dest}>
-			<UnwrappedButton text={text} dest={dest} />
+			<button className={hoverExpandButton}>{text}</button>
 		</Link>
 	);
 };

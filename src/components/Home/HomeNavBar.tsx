@@ -28,9 +28,7 @@ const NavLink = (name: string, large: boolean, dest: string) => {
 
 	return (
 		<Link href={dest}>
-			<a className={"link-hover"} href={dest}>
-				<HoverLink text={name} />
-			</a>
+			<HoverLink text={name} />
 		</Link>
 	);
 };

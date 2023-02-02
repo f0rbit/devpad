@@ -12,10 +12,7 @@ const profile: NextPage = () => {
 		root?.classList?.remove("dark");
 		root?.classList?.add(localStorage.getItem("darkMode") === "true" ? "dark" : "light");
 		darkMode = localStorage.getItem("darkMode") === "true";
-		console.log(localStorage);
 	}
-
-	console.log({ darkMode });
 
 	return (
 		<div className="h-screen w-screen items-center">

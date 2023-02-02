@@ -126,7 +126,6 @@ export const TodoTagsEditor = ({ initial_tags, set_tags }: { initial_tags: TaskT
 			{
 				onSuccess: (data) => {
 					const oldTags = tags.filter((tag) => tag.id != "null");
-					console.log(data);
 					if (data) {
 						const newTags = [...oldTags, data];
 						setTags(newTags);

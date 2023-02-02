@@ -169,7 +169,6 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 			return sorted.filter((item) => {
 				// combine fields into one string
 				const fields = [item.title].join(" ");
-				console.log(fields);
 				// check if the searchQuery is in the fields
 				return fields.toLowerCase().includes(searchQuery.toLowerCase());
 			});
