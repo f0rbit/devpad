@@ -1,38 +1,38 @@
+import ErrorWrapper from "@/components/ErrorWrapper";
 import InDevelopment from "@/components/layouts/InDevelopment";
 import { GetServerSideProps, GetServerSidePropsResult, InferGetServerSidePropsType, NextPage, NextPageContext } from "next";
 import { getSession, useSession } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { ComponentProps, FunctionComponent } from "react";
+import React, { ComponentProps, FunctionComponent, useContext } from "react";
+import { trpc } from "src/utils/trpc";
+import { ProjectsContext } from "../_app";
 
-export const getServerSideProps: GetServerSideProps = async (context: any) => {
-	const { projectid } = context.query;
-	// get the session
-	const session = await getSession(context);
-	if (!session) {
-		return {
-			redirect: {
-				destination: "/login",
-				permanent: false,
-			},
-		};
+const ProjectPage: NextPage = () => {
+	const { projectid } = useRouter().query;
+	const { projects, fetched } = useContext(ProjectsContext);
+	
+	if (!fetched) {
+		return (
+			<div className="flex h-screen items-center justify-center">
+				<ErrorWrapper message="No Data" />
+				<Link href={"/"}>Go Back</Link>
+			</div>
+		);
 	}
-	// get the project
-	const project = { id: projectid }
-	return {
-		props: {
-			project,
-		},
-	}
-}
-
-const ProjectPage: NextPage = ({ project }: InferGetServerSidePropsType<typeof getServerSideProps>) => {
+	const project = projects.find((project) => project.project_id === projectid);
 	// get the session
-	const { data: session, status } = useSession();
-    
+    if (!project) {
+		return <div className="flex h-screen items-center w-screen justify-center">
+			<ErrorWrapper message="Project not found!"></ErrorWrapper>
+		</div>
+	}
+	console.log(project);
 	return (
 		<div className="flex h-screen items-center">
-			{JSON.stringify(session)}
-            {project.id}
+			<pre>
+            {JSON.stringify(project, null, 2)}
+			</pre>
 		</div>
 	);
 };

@@ -1,5 +1,6 @@
 // @ts-check
 import { env } from "./src/env/server.mjs";
+import { withSuperjson } from "next-superjson";
 
 /**
  * Don't be scared of the generics here.
@@ -13,7 +14,7 @@ function defineNextConfig(config) {
 	return config;
 }
 
-export default defineNextConfig({
+export default withSuperjson(defineNextConfig({
 	reactStrictMode: true,
 	swcMinify: true,
 	images: {
@@ -24,4 +25,4 @@ export default defineNextConfig({
 		locales: ["en"],
 		defaultLocale: "en"
 	}
-});
+}));
