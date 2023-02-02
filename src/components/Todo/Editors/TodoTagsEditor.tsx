@@ -102,9 +102,9 @@ const CancelChangesButton = ({ created, isChanged, resetValues }: { created: boo
 
 export const TodoTagsEditor = ({ initial_tags, set_tags }: { initial_tags: TaskTags[]; set_tags: any }) => {
 	const [tags, setTags] = useState(initial_tags);
-	const create_tag = trpc.tags.create_tag.useMutation();
-	const delete_tag = trpc.tags.delete_tag.useMutation();
-	const update_tag = trpc.tags.update_tag.useMutation();
+	const create_tag = trpc.tags.createTag.useMutation();
+	const delete_tag = trpc.tags.deleteTag.useMutation();
+	const update_tag = trpc.tags.updateTag.useMutation();
 
 	const createNewTag = () => {
 		// create a new tag

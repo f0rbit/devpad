@@ -21,14 +21,14 @@ function useForceUpdate() {
 }
 
 const ListRenderer = () => {
-	const { data } = trpc.tasks.get_tasks.useQuery();
+	const { items, setItems } = useContext(TodoContext);
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const [editTagsModalOpen, setEditTagsModalOpen] = useState(false);
-	const create_item = trpc.tasks.create_item.useMutation();
+	const create_item = trpc.tasks.createItem.useMutation();
 	const [layout, setLayout] = useState(TODO_LAYOUT.LIST);
 	const forceUpdate = useForceUpdate();
 
-	if (!data) {
+	if (!items) {
 		return <div>Loading...</div>;
 	}
 
@@ -44,22 +44,24 @@ const ListRenderer = () => {
 			{ item },
 			{
 				onSuccess: (new_item) => {
-					data.push(new_item);
+					setItems([ ...items, new_item ]);
 				}
 			}
 		);
 	};
 
 	const setItem = (item: FetchedTask) => {
-		const index = data?.findIndex((i) => i.id === item.id);
-		if (index === undefined) return;
-		data[index] = item;
-		forceUpdate();
+		// const index = items?.findIndex((i) => i.id === item.id);
+		// if (index === undefined) return;
+		// items[index] = item;
+		// forceUpdate();
+		const otherItems = items.filter((i) => i.id !== item.id);
+		setItems([ ...otherItems, item ]);
 	};
 
 	return (
 		<TodoContext.Consumer>
-			{({ selectedSection, searchQuery, tags, setTags }) => {
+			{({ selectedSection, searchQuery, tags, setTags, items, setItems }) => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-200 dark:bg-pad-gray-800">
@@ -74,7 +76,7 @@ const ListRenderer = () => {
 										</div>
 									</div>
 								</div>
-								<RenderTasks data={getSortedData(data, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags}/>
+								<RenderTasks data={getSortedData(items, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags}/>
 							</div>
 						</div>
 						<div className="fixed md:bottom-4 md:right-4 bottom-2 right-2">

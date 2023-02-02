@@ -14,7 +14,7 @@ export const router = t.router;
 /**
  * Unprotected procedure
  **/
-export const public_procedure = t.procedure;
+export const publicProcedure = t.procedure;
 
 /**
  * Reusable middleware to ensure
@@ -35,4 +35,4 @@ const isAuthed = t.middleware(({ ctx, next }) => {
 /**
  * Protected procedure
  **/
-export const protected_procedure = t.procedure.use(isAuthed);
+export const protectedProcedure = t.procedure.use(isAuthed);

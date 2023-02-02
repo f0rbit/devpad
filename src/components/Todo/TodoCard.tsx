@@ -59,32 +59,24 @@ type ItemInput = {
 	visibility: TASK_VISIBILITY;
 };
 
-const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: string; set_item: (item: FetchedTask) => void, tags: TaskTags[] | undefined }) => {
-	const update_item = trpc.tasks.update_item.useMutation();
-	const delete_item = trpc.tasks.delete_item.useMutation();
-	const add_module = trpc.tasks.add_module.useMutation();
-	const update_module = trpc.tasks.update_module.useMutation();
+const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: string; set_item: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
+	const update_item = trpc.tasks.updateItem.useMutation();
+	const delete_item = trpc.tasks.deleteItem.useMutation();
+	const add_module = trpc.tasks.addModule.useMutation();
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = (status: TASK_PROGRESS) => {
-		const new_item: ItemInput = { title: initial_item.id, visibility: initial_item.visibility, progress: status };
+		const new_item: ItemInput = { title: initial_item.title, visibility: initial_item.visibility, progress: status };
 		update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
 	};
 
 	/** @todo implement the module update inside of the update item query, instead of chained calls. */
 	const updateItem = (item: ItemInput, modules: { type: string; data: string }[]) => {
 		update_item.mutate(
-			{ id: initial_item.id, item },
+			{ id: initial_item.id, item, modules },
 			{
-				onSuccess: () => {
-					update_module.mutate(
-						{ modules: modules, task_id: initial_item.id },
-						{
-							onSuccess: (data) => {
-								set_item(data as FetchedTask);
-							}
-						}
-					);
+				onSuccess: (data) => {
+					set_item(data as FetchedTask);
 				}
 			}
 		);
@@ -128,7 +120,7 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} tags={tags} />
 				</GenericModal>
 			</div>
-			<div className={"group relative w-full rounded-md bg-gray-100 dark:bg-pad-gray-600 px-4 py-2 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
+			<div className={"group relative w-full rounded-md bg-gray-100 px-4 py-2 dark:bg-pad-gray-600 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
 				<div className="inline-flex items-center gap-2 align-middle">
 					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
 					<h1 className=" text-2xl font-medium">{initial_item.title}</h1>
@@ -136,7 +128,9 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 				<EndTime endTime={getModuleData(initial_item, Module.END_DATE)} />
 				<TodoTags tags={initial_item?.tags} />
 				<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
-				<div className={"text-gray-400 dark:text-pad-gray-400 duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle transition-opacity group-hover:opacity-100 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}>
+				<div
+					className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle text-gray-400 transition-opacity group-hover:opacity-100 dark:text-pad-gray-400 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}
+				>
 					<span title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
 						<VisiblityIcon visibility={initial_item.visibility} />
 					</span>
