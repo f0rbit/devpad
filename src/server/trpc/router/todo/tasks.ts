@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { FetchedTask, TaskInclude } from "src/utils/trpc";
 import { Module, TaskPriority } from "@/types/page-link";
-import { contextUserOwnsTask } from "src/utils/backend";
+import { contextUserOwnsTask, getDefaultModuleData } from "src/utils/backend";
 
 const updateItemInput = z.object({
 	title: z.string(),
@@ -17,37 +17,6 @@ const createItemInput = z.object({
 	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED),
 	visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE)
 });
-
-const getDefaultData = (module: string) => {
-	switch (module as Module) {
-		case Module.END_DATE:
-		case Module.START_DATE:
-			return {
-				date: new Date().toISOString()
-			};
-		case Module.PRIORITY:
-			return {
-				priority: TaskPriority.MEDIUM
-			};
-		case Module.CHECKLIST: {
-			return {
-				items: []
-			};
-		}
-		case Module.SUMMARY: {
-			return {
-				summary: ""
-			};
-		}
-		case Module.DESCRIPTION: {
-			return {
-				description: []
-			};
-		}
-		default:
-			return {};
-	}
-};
 
 export const taskRouter = router({
 	getTasks: protectedProcedure.query(async ({ ctx }) => {
@@ -139,7 +108,7 @@ export const taskRouter = router({
 		.input(
 			z.object({
 				task_id: z.string(),
-				module_id: z.string()
+				module_type: z.nativeEnum(Module)
 			})
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -154,12 +123,12 @@ export const taskRouter = router({
 							where: {
 								task_id_type: {
 									task_id: input.task_id,
-									type: input.module_id
+									type: input.module_type
 								}
 							},
 							create: {
-								type: input.module_id,
-								data: getDefaultData(input.module_id)
+								type: input.module_type,
+								data: getDefaultModuleData(input.module_type)
 							}
 						}
 					}

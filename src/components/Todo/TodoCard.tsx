@@ -101,7 +101,7 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 	const addModule = (module: Module) => {
 		// add the module to the item
 		add_module.mutate(
-			{ task_id: initial_item.id, module_id: module },
+			{ task_id: initial_item.id, module_type: module },
 			{
 				onSuccess: (data) => {
 					set_item(data as FetchedTask);
