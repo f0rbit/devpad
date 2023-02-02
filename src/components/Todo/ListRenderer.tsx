@@ -77,7 +77,7 @@ const ListRenderer = () => {
 								<RenderTasks data={getSortedData(data, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags}/>
 							</div>
 						</div>
-						<div className="fixed bottom-4 right-4">
+						<div className="fixed md:bottom-4 md:right-4 bottom-2 right-2">
 							<CreateButton onClick={() => setCreateModalOpen(true)} />
 							{/* This is the create todo item form */}
 							<div className="absolute">

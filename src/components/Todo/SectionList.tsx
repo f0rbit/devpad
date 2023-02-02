@@ -86,7 +86,7 @@ const GroupedLinks = () => {
 				return (
 					<div
 						key={index}
-						className="flex h-8 items-center justify-center rounded-md bg-gray-600 drop-shadow-md dark:bg-pad-gray-800"
+						className="px-2 flex h-8 items-center justify-center rounded-md bg-gray-600 drop-shadow-md dark:bg-pad-gray-800"
 					>
 						<SectionLink
 							link={link}
@@ -124,7 +124,7 @@ export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
 		<TodoContext.Consumer>
 			{({ tags }) => (
-				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-700 px-4 font-medium dark:bg-pad-gray-900 md:w-80">
+				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-700 px-4 font-medium dark:bg-pad-gray-900 md:w-80 text-gray-400 dark:text-pad-gray-400">
 					<SearchBox />
 					<FlatLinks />
 					<GroupedLinks />
