@@ -4,9 +4,9 @@ import Link from "next/link";
 
 export default function HomePage() {
 	return (
-		<>
+		<CenteredContainer>
 			<TitleInjector title="Home" />
-			<div className="mt-8 flex w-full flex-col justify-center gap-2 text-center text-[#d9d8e1]">
+			<div className="pt-8 flex w-full flex-col justify-center gap-2 text-center text-[#d9d8e1]">
 				<div className="text-3xl font-bold">Recent Projects</div>
 				<div className="h-96 w-full rounded-md border-1"></div>
 				<div className="flex flex-row justify-center gap-2">
@@ -18,6 +18,6 @@ export default function HomePage() {
 				<div className="text-3xl font-bold">Weekly Tasks</div>
 				<div className="h-96 w-full rounded-md border-1"></div>
 			</div>
-		</>
+		</CenteredContainer>
 	);
 }

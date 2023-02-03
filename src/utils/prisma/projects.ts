@@ -1,8 +1,10 @@
+import { getCurrentUser } from "../session";
 
-export async function getUserProjects(userID: string) {
+export async function getUserProjects() {
+	const user = await getCurrentUser();
     return await prisma?.project.findMany({
 		where: {
-			owner_id: userID
+			owner_id: user?.id
 		}
 	});
 }

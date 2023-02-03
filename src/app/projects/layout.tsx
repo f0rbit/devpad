@@ -8,10 +8,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
 				<div className="h-max border-b-1 border-b-[#5c5c65]">
 					<ProjectsBar />
 				</div>
-                <div style={{minHeight: "calc(100vh - 16rem)"}}>
-					<CenteredContainer>
-                    	{children}
-					</CenteredContainer>
+                <div className="h-full">
+                    {children}
                 </div>
 			</div>
 		</div>
