@@ -19,3 +19,8 @@ export enum TaskPriority {
 	HIGH,
 	URGENT,
 }
+
+export type ProjectRouteLink = {
+    text: string;
+    href: string;
+}
