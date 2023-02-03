@@ -57,8 +57,6 @@ export default function middleware(req: NextRequest) {
 
 	// Get hostname of request (e.g. demo.vercel.pub, demo.localhost:3000)
 	const hostname = req.headers.get("host") || process.env.ROOT_DOMAIN || "devpad.tools";
-	console.log("hostname: " + hostname);
-	console.log("url: " + url.pathname);
 
 	/*  You have to replace ".vercel.pub" with your own domain if you deploy this example under your domain.
       You can also use wildcard subdomains on .vercel.app links that are associated with your Vercel team slug
@@ -75,11 +73,9 @@ export default function middleware(req: NextRequest) {
 					.replace(".localhost:3000", "")
 					.replace("." + process.env.ROOT_DOMAIN ??  "", "")
 
-	console.log("currentHost: " + currentHost); 
 
 	for (const skip of skips) {
 		if (url.pathname.includes(skip)) {
-			console.log("[skip] " + url.pathname);
 			return NextResponse.next();
 		}
 	}
@@ -87,7 +83,6 @@ export default function middleware(req: NextRequest) {
 	for (const redirect of redirects) {
 		if (currentHost === redirect.subdomain) {
 			url.pathname = `/${redirect.target}${url.pathname}`;
-			console.log("[route] redirecting to " + url.pathname);
 			return NextResponse.rewrite(url);
 		}
 	}
@@ -96,7 +91,6 @@ export default function middleware(req: NextRequest) {
 	// rewrite root application to `/home` folder
 	if (hostname === "localhost:3000" || hostname === "devpad.local:3000" || hostname === "devpad.tools" || hostname === process.env.ROOT_DOMAIN) {
 		url.pathname = `/home${url.pathname}`;
-		console.log("[default] redirecting to " + url.pathname);
 		return NextResponse.rewrite(url);
 	}
 

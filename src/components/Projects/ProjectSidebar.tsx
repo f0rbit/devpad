@@ -40,7 +40,6 @@ export default function ProjectSidebar() {
 	const pathname = usePathname();
     // extract the first two strings of the path
     const path = pathname?.split("/").slice(0, 3).join("/");
-    console.log({ path, pathname });
 
 	return (
 		<div className="flex h-full justify-center pt-4 text-lg">

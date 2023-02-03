@@ -11,7 +11,6 @@ export async function ProjectsProvider({ children }: { children: React.ReactNode
         },
     });
 
-    console.log(projects);
 
 	return children as JSX.Element;
 }

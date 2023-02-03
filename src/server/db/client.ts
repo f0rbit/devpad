@@ -16,6 +16,4 @@ export const prisma =
 				: ["error"]
 	});
 
-if (env.NODE_ENV !== "production") {
-	global.prisma = prisma;
-}
+global.prisma = prisma;
