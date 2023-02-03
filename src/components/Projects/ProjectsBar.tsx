@@ -2,7 +2,6 @@ import { Bell, Home, Settings } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
 import { getSession } from "src/utils/session";
-import { PageTitle } from "./PageTitle";
 import { RouteLinks } from "./RouteLinks";
 import { UserSection } from "./UserSection";
 
