@@ -1,9 +1,10 @@
 import ErrorWrapper from "@/components/ErrorWrapper";
+import TitleInjector from "@/components/Projects/TitleInjector";
 import { Project } from "@prisma/client";
 import { getUserProject } from "src/utils/prisma/projects";
 import { getCurrentUser } from "src/utils/session";
 
-export default async function ProjectPage({ params }: { params: { projectid: string } }) {
+export default async function Page({ params }: { params: { projectid: string } }) {
 	const { projectid } = params;
 
 	const user = await getCurrentUser();
@@ -26,7 +27,8 @@ export default async function ProjectPage({ params }: { params: { projectid: str
 	}
 
 	return (
-		<div>
+		<div className="w-full h-full">
+			<TitleInjector title={project.name} />
 			<ProjectRenderer project={project} />
 		</div>
 	);

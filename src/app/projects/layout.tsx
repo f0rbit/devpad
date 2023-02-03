@@ -1,15 +1,18 @@
+import CenteredContainer from "@/components/CenteredContainer";
 import ProjectsBar from "@/components/Projects/ProjectsBar";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default async function Layout({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="flex h-full min-h-screen w-screen flex-row pr-4">
-			<div className="flex w-full flex-col bg-green-300">
-				<div className="h-max bg-teal-300">
-					<ProjectsBar title={"Home"} />
+		<div className="flex h-full min-h-screen w-screen flex-row">
+			<div className="flex w-full flex-col bg-[#2d2d30]">
+				<div className="h-max border-b-1 border-b-[#5c5c65]">
+					<ProjectsBar />
 				</div>
-                <section>
-                    {children}
-                </section>
+                <div style={{minHeight: "calc(100vh - 16rem)"}}>
+					<CenteredContainer>
+                    	{children}
+					</CenteredContainer>
+                </div>
 			</div>
 		</div>
 	);

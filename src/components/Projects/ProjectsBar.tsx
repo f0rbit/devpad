@@ -1,47 +1,41 @@
-"use client";
+import { Bell, Home, Settings } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { use } from "react";
+import { getSession } from "src/utils/session";
+import { PageTitle } from "./PageTitle";
+import { RouteLinks } from "./RouteLinks";
+import { UserSection } from "./UserSection";
 
-export default function ProjectsBar({ title }: { title: string }) {
+export default function ProjectsBar() {
+	const session = use(getSession());
 	return (
 		<nav>
-			<div className="flex h-16 flex-row items-center gap-4 bg-slate-600 px-4 text-3xl">
-				<div>🏠</div>
-				<div>{title}</div>
+			<div className="flex h-16 flex-row items-center gap-4 bg-[#323236] px-4 pr-8 text-3xl text-[#78777f]">
+				<div>
+					<Link href={"/"}>
+						<Home />
+					</Link>
+				</div>
+				<div id="title" className="font-bold text-[#d9d8e1] font-poppins">
+					Home
+				</div>
+				<div className="text-xl">{">"}</div>
 				<div className="text-base">
 					<RouteLinks />
 				</div>
 				<div className="mx-auto" />
-				<div>🔔</div>
-				<div>⚙</div>
-				<div>User</div>
+				<div>
+					<Bell />
+				</div>
+				<div>
+					<Link href={"settings"}>
+						<Settings />
+					</Link>
+				</div>
+				<div className="flex items-center">
+					<UserSection session={session} />
+				</div>
 			</div>
 		</nav>
 	);
 }
-
-const RouteLinks = () => {
-	const pathname = usePathname();
-	if (!pathname) return null;
-
-	const links = pathname.split("/").map((path, i) => ({
-		href: pathname
-			.split("/")
-			.slice(0, i + 1)
-			.join("/"),
-		text: i == 0 ? "home" : path ?? "?"
-	}));
-
-	return (
-		<>
-			{links.map((link, i) => (
-				<span key={i}>
-					<Link href={link.href}>
-						<span className="cursor-pointer text-blue-500 hover:underline">{link.text}</span>
-					</Link>
-					{i < links.length - 1 && <span key={i + 0.5}>/</span>}
-				</span>
-			))}
-		</>
-	);
-};

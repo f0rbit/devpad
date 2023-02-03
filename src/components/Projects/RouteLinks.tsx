@@ -1,0 +1,33 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+export const RouteLinks = () => {
+	const pathname = usePathname();
+	if (!pathname) return null;
+
+	const links = pathname.split("/").map((path, i) => ({
+		href: pathname
+			.split("/")
+			.slice(0, i + 1)
+			.join("/"),
+		text: path ?? "?"
+	}));
+
+	return (
+		<>
+			{links.map((link, i) => {
+				const final = i === links.length - 1;
+				return (
+					<span key={i} className="text-[#78777f] group">
+						<Link href={link.href}>
+							<span className={`cursor-pointer hover:underline ${final ? "text-[#a8a7b2] " : ""} hover:text-blue-300`}>{link.text}</span>
+						</Link>
+						{!final && <span className="group-hover:text-blue-400" key={i + 0.5}>/</span>}
+					</span>
+				);
+			})}
+		</>
+	);
+};

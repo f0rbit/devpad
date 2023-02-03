@@ -1,4 +1,5 @@
 import ErrorWrapper from "@/components/ErrorWrapper";
+import TitleInjector from "@/components/Projects/TitleInjector";
 import { Project } from "@prisma/client";
 import { NextPage } from "next";
 import { useSession } from "next-auth/react";
@@ -27,9 +28,10 @@ const ProjectPage = async () => {
 	}
 
 	return (
-		<div className="flex h-full min-h-screen flex-col items-center justify-center gap-8">
-			<div className="text-3xl">Projects</div>
-			<div className="grid w-[60%] grid-cols-3 p-2">
+		<div className="flex flex-col justify-center gap-8 mt-8">
+			<TitleInjector title="Projects" />
+			<div className="text-3xl text-center">Projects</div>
+			<div className="grid grid-cols-3 p-2">
 				{projects.map((project, index) => (
 					<ProjectCard project={project} key={index} />
 				))}

@@ -17,7 +17,7 @@ export default defineNextConfig({
 	reactStrictMode: true,
 	swcMinify: true,
 	images: {
-		domains: ["images.ctfassets.net"]
+		domains: ["images.ctfassets.net", "avatars.githubusercontent.com" ]
 	},
 	// Next.js i18n docs: https://nextjs.org/docs/advanced-features/i18n-routing
 	i18n: {
