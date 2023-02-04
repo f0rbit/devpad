@@ -64,11 +64,11 @@ const ListRenderer = () => {
 			{({ selectedSection, searchQuery, tags, setTags, items, setItems }) => {
 				return (
 					<>
-						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-200 dark:bg-pad-gray-800">
-							<div className="w-full p-4 text-gray-600 dark:text-neutral-400">
-								<div className="mb-4 rounded-md p-2 font-bold text-gray-800 dark:text-neutral-300">
+						<div className="scrollbar-hide h-full w-full overflow-auto bg-gray-200 dark:bg-base-accent-primary border-1 border-borders-primary">
+							<div className="w-full p-4">
+								<div className="mb-4 rounded-md p-2 font-bold">
 									<div className="flex flex-row items-center gap-4">
-										<div className="text-2xl font-bold">{selectedSection + " Items"}</div>
+										<div className="text-3xl font-bold text-base-text-secondary">{selectedSection + " Items"}</div>
 										{/* <div>Layout: {layout}</div> */}
 										<div className="ml-auto flex flex-row gap-4">
 											<LayoutSelectors setLayout={setLayout} />
@@ -122,7 +122,7 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<str
 	return (
 		<div className="flex flex-row items-center gap-2">
 			{Object.values(TODO_LAYOUT).map((layout_type) => (
-				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md bg-gray-300 px-2 py-1 text-gray-500 shadow-md dark:bg-pad-gray-500 dark:text-neutral-300">
+				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md bg-gray-300 px-3 py-1 text-gray-500 dark:bg-base-accent-secondary dark:hover:bg-base-accent-tertiary duration-500 transition-colors dark:text-base-text-subtlish border-1 border-borders-secondary">
 					<LayoutIcon layout={layout_type} />
 				</button>
 			))}
@@ -132,7 +132,7 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<str
 
 const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 	return (
-		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-gray-300 px-2 py-1 align-middle text-sm text-gray-500 shadow-md dark:bg-pad-gray-500 dark:text-neutral-300">
+		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-gray-300 px-3 py-1 align-middle text-sm text-gray-500 dark:bg-base-accent-secondary dark:hover:bg-base-accent-tertiary duration-500 transition-colors dark:text-base-text-subtlish border-1 border-borders-secondary">
 			<Tag className="p-0.5" />
 			Edit
 		</button>
@@ -142,7 +142,7 @@ const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 const CreateButton = ({ onClick }: { onClick: () => void }) => {
 	return (
 		<button
-			className={`origin-bottom rounded-md border-1 border-pad-purple-300 bg-pad-purple-500 px-6 py-2 text-xl font-bold text-white transition-all duration-500 hover:border-pad-purple-200 hover:bg-pad-purple-400`}
+			className={`origin-bottom rounded-md border-1 border-accent-btn-primary-hover bg-accent-btn-primary px-6 py-2 text-xl font-bold text-white transition-all duration-500 hover:bg-accent-btn-primary-hover`}
 			onClick={(e) => {
 				e.preventDefault();
 				onClick();

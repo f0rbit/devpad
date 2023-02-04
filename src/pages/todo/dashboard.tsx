@@ -73,7 +73,7 @@ const Dashboard = () => {
 			<Head>
 				<title>Todo | Dashboard</title>
 			</Head>
-			<div className="h-screen min-h-full overflow-hidden bg-gray-700 dark:bg-pad-gray-900">
+			<div className="h-screen min-h-full overflow-hidden bg-gray-700 dark:bg-base-bg-primary">
 				<div>
 					<TodoNavbar />
 				</div>

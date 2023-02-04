@@ -124,7 +124,7 @@ export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
 		<TodoContext.Consumer>
 			{({ tags }) => (
-				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-700 px-4 font-medium dark:bg-pad-gray-900 md:w-80 text-gray-400 dark:text-pad-gray-400">
+				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-700 px-4 font-medium dark:bg-base-bg-primary md:w-80 text-gray-400 dark:text-base-text-subtle">
 					<SearchBox />
 					<FlatLinks />
 					<GroupedLinks />

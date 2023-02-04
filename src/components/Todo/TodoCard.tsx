@@ -119,16 +119,16 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} tags={tags} />
 				</GenericModal>
 			</div>
-			<div className={"group relative w-full rounded-md border-1 border-pad-gray-500 bg-gray-100 px-4 py-2 dark:bg-pad-gray-700 hover:dark:bg-pad-gray-600 transition-colors duration-300 " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
+			<div className={"group relative w-full rounded-md border-1 border-borders-primary bg-gray-100 px-4 py-2 dark:bg-base-accent-primary hover:dark:bg-base-accent-secondary transition-colors duration-300 dark:text-base-text-subtle " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
 				<div className="inline-flex items-center gap-2 align-middle">
 					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
-					<h1 className="text-neutral-200 text-2xl font-medium">{initial_item.title}</h1>
+					<h1 className="text-base-text-secondary text-2xl font-medium">{initial_item.title}</h1>
 				</div>
 				<EndTime endTime={getModuleData(initial_item, Module.END_DATE)} />
 				<TodoTags tags={initial_item?.tags} />
 				<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
 				<div
-					className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle text-gray-400 transition-opacity group-hover:opacity-100 dark:text-pad-gray-400 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}
+					className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle text-gray-400 transition-opacity group-hover:opacity-50 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}
 				>
 					<span title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
 						<VisiblityIcon visibility={initial_item.visibility} />
