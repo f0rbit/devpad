@@ -7,27 +7,26 @@ import { getCurrentUser } from "src/utils/session";
 export default async function Page({ params }: { params: { projectid: string } }) {
 	const { projectid } = params;
 
-	const user = await getCurrentUser();
+	const { data, error } = await getUserProject(projectid);
 
-	if (!user)
+	if (error?.length > 0) {
 		return (
 			<div className="flex items-center justify-center">
-				<ErrorWrapper message="Obtaining Auth..." />
+				<ErrorWrapper message={error} />
 			</div>
 		);
-
-	const project = await getUserProject(user.id, projectid);
+	}
+	const project = data;
 
 	if (!project) {
 		return (
 			<div className="flex items-center justify-center">
-				<ErrorWrapper message="Project Not Found!" />
+				<ErrorWrapper message="Project not found" />
 			</div>
 		);
 	}
-
 	return (
-		<div className="w-full h-full pt-4">
+		<div className="h-full w-full pt-4">
 			<TitleInjector title={project.name} />
 			<div className="w-96">
 				<ProjectCard project={project} />

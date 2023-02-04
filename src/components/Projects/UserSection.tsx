@@ -23,9 +23,9 @@ export const UserSection = ({ session }: { session: Session | null }) => {
 const ProfileLinks = ({ session }: { session: Session | null }) => {
 	return (
 		<div className="absolute top-[120%] right-2 z-50">
-			<div className="w-40 rounded-md border-1 border-[#5c5c65] bg-[#323236] text-[#a8a7b2]">
+			<div className="w-40 rounded-md border-1 border-borders-primary bg-base-bg-primary text-base-text-subtlish">
 				<div className="flex flex-col gap-0 py-1 text-sm">
-					<div className="mb-1 border-b-1 border-b-[#5c5c65] px-3 pt-1 pb-2">
+					<div className="mb-1 border-b-1 border-b-borders-primary px-3 pt-1 pb-2">
 						<div className="truncate text-base" title={session?.user?.name ?? ""}>
 							{session?.user?.name}
 						</div>
@@ -34,13 +34,13 @@ const ProfileLinks = ({ session }: { session: Session | null }) => {
 						</div>
 					</div>
 					{/* <div className="border-b border-white"></div> */}
-					<div className="mx-1 flex flex-row items-center gap-3 rounded-md px-2 py-1 hover:cursor-pointer hover:bg-[#47474d]">
+					<div className="mx-1 flex flex-row items-center gap-3 rounded-md px-2 py-1 hover:cursor-pointer hover:bg-base-accent-primary">
 						<div>
 							<Moon className="w-5" />
 						</div>
 						<div>Change Theme</div>
 					</div>
-					<div className="mx-1 flex flex-row items-center gap-3 rounded-md px-2 py-1 font-bold text-red-400 hover:cursor-pointer hover:bg-[#47474d]" onClick={() => signOut()}>
+					<div className="mx-1 flex flex-row items-center gap-3 rounded-md px-2 py-1 font-bold text-red-400 hover:cursor-pointer hover:bg-base-accent-primary" onClick={() => signOut()}>
 						<div>
 							<LogOut className="w-5" />
 						</div>

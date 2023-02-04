@@ -47,9 +47,9 @@ export default function ProjectSidebar() {
 				{PROJECT_LINKS.map((link, index) => {
 					return (
 						<Link href={path + link.link} key={index}>
-							<div className="flex w-full flex-row items-center gap-4 rounded-md border-1 border-[#5c5c65] hover:bg-[#47474d] py-1 px-4 font-poppins">
-								<div className="rounded-full text-[#d9d8e1]">{link.icon}</div>
-								<div className="font-bold text-[#d9d8e1]">{link.name}</div>
+							<div className="flex w-full flex-row items-center gap-4 rounded-md border-1 border-borders-primary hover:bg-borders-primary transition-colors duration-500 py-1 px-4 font-poppins">
+								<div className="rounded-full text-base-text-secondary">{link.icon}</div>
+								<div className="font-bold text-base-text-secondary">{link.name}</div>
 							</div>
 						</Link>
 					);

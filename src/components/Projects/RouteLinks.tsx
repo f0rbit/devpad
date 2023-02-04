@@ -20,9 +20,9 @@ export const RouteLinks = () => {
 			{links.map((link, i) => {
 				const final = i === links.length - 1;
 				return (
-					<span key={i} className="text-[#78777f] group">
+					<span key={i} className="text-base-text-dark group">
 						<Link href={link.href}>
-							<span className={`cursor-pointer hover:underline ${final ? "text-[#a8a7b2] " : ""} hover:text-blue-300`}>{link.text}</span>
+							<span className={`cursor-pointer hover:underline ${final ? "text-base-text-subtle " : ""} hover:text-blue-300`}>{link.text}</span>
 						</Link>
 						{!final && <span className="group-hover:text-blue-400" key={i + 0.5}>/</span>}
 					</span>

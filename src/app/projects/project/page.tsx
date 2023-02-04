@@ -7,15 +7,17 @@ import { getUserProjects } from "src/utils/prisma/projects";
 import { getCurrentUser } from "src/utils/session";
 
 const ProjectPage = async () => {
-	const projects = await getUserProjects();
+	const { error, data } = await getUserProjects();
 
-	if (!projects) {
+	if (error?.length > 0) {
 		return (
-			<div className="flex h-screen items-center justify-center">
-				<ErrorWrapper message="No Projects" />
+			<div className="flex h-full items-center justify-center">
+				<ErrorWrapper message={error} />
 			</div>
 		);
 	}
+
+	const projects = data;
 
 	return (
 		<div className="flex flex-col justify-center gap-8 pt-8">
