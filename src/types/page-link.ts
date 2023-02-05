@@ -1,3 +1,5 @@
+import { PROJECT_STATUS } from "@prisma/client";
+
 export type PageLink = {
 	title: string;
 	destination: string;
@@ -24,3 +26,14 @@ export type ProjectRouteLink = {
     text: string;
     href: string;
 }
+
+export type CreateProjectType = {
+	name: string;
+	project_id: string;
+	description: string;
+	icon_url: string;
+	link_text: string;
+	link_url: string;
+	repo_url: string;
+	status: PROJECT_STATUS;
+};

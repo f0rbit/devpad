@@ -51,3 +51,14 @@ export const getDefaultModuleData = (module: Module) => {
 			return {};
 	}
 };
+
+
+export function getErrorMessage(error: any) {
+	var result = "Unknown error";
+	if (typeof error === "string") {
+		result = error.toUpperCase(); // works, `e` narrowed to string
+	} else if (error instanceof Error) {
+		result = error.message; // works, `e` narrowed to Error
+	}
+	return result;
+}

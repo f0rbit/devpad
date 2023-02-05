@@ -6,7 +6,11 @@
 input,
 textarea,
 select {
-	@apply rounded-md bg-pad-gray-300 px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-pad-purple-50;
+	/* @apply rounded-md bg-pad-gray-300 px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-pad-purple-50; */
+	/* disable default styling */
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
 }
 
 #edit-todo > label {
@@ -24,10 +28,10 @@ select {
 	scrollbar-width: none; /* Firefox */
 }
 
-input {
-	color-scheme: dark
-}
-
 html {
 	overflow-y: overlay;
+}
+
+#project-create input, textarea, select {
+	@apply bg-base-accent-primary focus:ring-2 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2
 }
