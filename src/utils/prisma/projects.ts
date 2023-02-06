@@ -9,7 +9,7 @@ export async function getUserProjects(): Promise<{ data: Project[]; error: strin
 	const user = await getCurrentUser();
 	if (!user || !user.id) return { data: [], error: "Not logged in!" };
 	try {
-		const projects = await prisma?.project.findMany({ where: { owner_id: user.id } });
+		const projects = await prisma?.project.findMany({ where: { owner_id: user.id, deleted: false } });
 		if (!projects) return { data: [], error: "No projects found!" };
 		return { data: projects, error: "" };
 	} catch (e: any) {
