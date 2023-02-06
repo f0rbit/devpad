@@ -1,12 +1,12 @@
 "use client";
 import { ProjectGoal } from "@prisma/client";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Cross, Pencil, Save, Trash, X } from "lucide-react";
 import { useState } from "react";
 import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
 import CenteredContainer from "../CenteredContainer";
 import ErrorWrapper from "../ErrorWrapper";
 
-export default function GoalCard({ goal, project_id, cancel, create }: { goal: ProjectGoal | null; project_id: string, cancel?: () => void, create?: (goal: ProjectGoal) => void }) {
+export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: ProjectGoal | null; project_id: string; cancel?: () => void; create?: (goal: ProjectGoal) => void, deleteCard?: (id: string) => void }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showTasks, setShowTasks] = useState(false);
 	const [editingGoal, setEditingGoal] = useState({
@@ -29,7 +29,7 @@ export default function GoalCard({ goal, project_id, cancel, create }: { goal: P
 		if (error) {
 			setError(error);
 		} else if (data) {
-			create?.(data)
+			create?.(data);
 		} else {
 			setError("Failed to create project");
 		}
@@ -39,10 +39,26 @@ export default function GoalCard({ goal, project_id, cancel, create }: { goal: P
 		console.log("save goal!");
 	}
 
+	async function deleteGoal() {
+		if (!goal?.id) {
+			setError("Invalid Goal ID: " + goal?.id ?? "null");
+			return;
+		}
+		const response = await fetch("/api/projects/goal/delete", { body: JSON.stringify({ goal_id: goal?.id }), method: "POST" });
+		const { success, error } = await (response.json() as Promise<{ success: boolean, error: string }>);
+		if (error) {
+			setError(error);
+		} else if (success) {
+			deleteCard?.(goal?.id);
+		} else {
+			setError("Failed to delete goal");
+		}
+	}
+
 	if (error) {
 		setTimeout(() => setError(""), 5000);
 		return (
-			<div className="w-96 flex justify-center items-center">
+			<div className="flex w-96 items-center justify-center">
 				<ErrorWrapper message={error} />
 			</div>
 		);
@@ -62,8 +78,8 @@ export default function GoalCard({ goal, project_id, cancel, create }: { goal: P
 							{showTasks ? <ChevronUp /> : <ChevronDown />}
 							Show Tasks
 						</button>
-						<button className="w-24 rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover" onClick={() => setIsEditing(!isEditing)}>
-							Edit
+						<button className="flex justify-center rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover" onClick={() => setIsEditing(!isEditing)}>
+							<Pencil className="w-4" />
 						</button>
 					</div>
 				</div>
@@ -95,23 +111,24 @@ export default function GoalCard({ goal, project_id, cancel, create }: { goal: P
 						/>
 					</div>
 					<div className="flex h-full w-full items-center justify-center gap-2 py-1">
-						
-							<button
-								className="w-24 rounded-md px-4 py-1 font-semibold hover:bg-base-accent-secondary border-1 border-borders-secondary"
-								onClick={() => {
-									if (cancel) cancel();
-									setIsEditing(false);
-									setEditingGoal({
-										name: goal?.name ?? "",
-										description: goal?.description ?? "",
-										target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
-									});
-								}}
-							>
-								Cancel
-							</button>
 						<button
-							className="w-24 rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover"
+							title="Cancel"
+							className="flex justify-center rounded-md border-1 border-borders-secondary px-4 py-1 font-semibold hover:bg-base-accent-secondary"
+							onClick={() => {
+								if (cancel) cancel();
+								setIsEditing(false);
+								setEditingGoal({
+									name: goal?.name ?? "",
+									description: goal?.description ?? "",
+									target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
+								});
+							}}
+						>
+							<X className="w-4" />
+						</button>
+						<button
+							title={isEditing ? "Save" : "Create"}
+							className="flex justify-center rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover"
 							onClick={() => {
 								if (isEditing) {
 									saveGoal();
@@ -120,11 +137,57 @@ export default function GoalCard({ goal, project_id, cancel, create }: { goal: P
 								}
 							}}
 						>
-							{isEditing ? "Save" : "Create"}
+							{isEditing ? <Save className="w-4" /> : "Create"}
 						</button>
+						<div className="relative">{isEditing && <DeleteGoalButton deleteGoal={deleteGoal} />}</div>
 					</div>
 				</div>
 			)}
 		</div>
+	);
+}
+
+function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
+	const [isDeleting, setIsDeleting] = useState(false);
+	return (
+		<>
+			<button
+				title="Delete"
+				className="flex justify-center rounded-md border-1 border-red-400 px-4 py-1 font-semibold text-red-400 transition-all duration-500 hover:border-red-300 hover:bg-red-400 hover:text-red-100"
+				onClick={() => {
+					setIsDeleting(!isDeleting);
+				}}
+			>
+				<Trash className="w-4" />
+			</button>
+			{isDeleting && (
+			<div className="absolute top-[120%] -right-[75%] flex flex-col gap-2 p-2 bg-base-accent-primary border-borders-secondary border-1 rounded-md">
+				<div className="flex flex-row items-center gap-2">
+					<div className="min-w-max text-base-text-subtle">Are you sure?</div>
+				</div>
+				<div className="flex h-full w-full items-center justify-center gap-2 py-1">
+					<button
+						title="Cancel"
+						className="flex justify-center rounded-md border-1 border-borders-secondary px-4 py-1 font-semibold hover:bg-base-accent-secondary"
+						onClick={() => {
+							setIsDeleting(false);
+						}}
+					>
+						<X className="w-4" />
+					</button>
+					<button
+						title="Delete"
+						className="flex justify-center rounded-md border-1 border-red-400 px-4 py-1 font-semibold text-red-400 transition-all duration-500 hover:border-red-300 hover:bg-red-400 hover:text-red-100"
+						onClick={() => {
+							deleteGoal();
+							setIsDeleting(false);
+						}}
+					>
+						<Trash className="w-4" />
+					</button>
+				</div>
+			</div>
+			)}
+		</>
 	);
 }

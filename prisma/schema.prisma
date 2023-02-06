@@ -131,6 +131,8 @@ model ProjectGoal {
   project     Project  @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
   target_time DateTime @default(now())
   items       Task[]
+  deleted     Boolean  @default(false)
+  finished_at DateTime?
 }
 
 model Action {
@@ -182,4 +184,7 @@ enum ACTION_TYPE {
   CREATE_MODULE
   UPDATE_MODULE
   DELETE_MODULE
+  CREATE_GOAL
+  UPDATE_GOAL
+  DELETE_GOAL
 }

@@ -11,10 +11,14 @@ export default function GoalRenderer({ goals: initial_goals, project_id }: { goa
         setGoals([...goals, goal]);
     }
 
+	function deleteGoal(id: string) {
+		setGoals(goals.filter(goal => goal.id !== id));
+	}
+
 	return (
 		<div className="flex h-max flex-row gap-2">
 			{goals.map((goal, index) => (
-				<GoalCard key={index} goal={goal} project_id={project_id} />
+				<GoalCard key={index} goal={goal} project_id={project_id} deleteCard={deleteGoal} />
 			))}
 			<GoalAdder project_id={project_id} addGoal={addGoal} />
 		</div>
