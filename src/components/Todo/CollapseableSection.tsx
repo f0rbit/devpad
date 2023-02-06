@@ -14,7 +14,7 @@ const CollapseableSection = ({
 }) => {
 	const [expanded, setExpanded] = useState(title == "Projects");
 	const { selectedSection } = useContext(TodoContext);
-
+	
 	return (
 		<div className="h-min">
 			<button

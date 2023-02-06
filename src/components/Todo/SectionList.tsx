@@ -1,3 +1,4 @@
+import { ProjectRouteLink } from "@/types/page-link";
 import { Search } from "lucide-react";
 import { useContext } from "react";
 import { TodoContext } from "src/pages/todo/dashboard";
@@ -121,16 +122,23 @@ const TagLinks = ({ expanded }: { expanded: boolean }) => {
 };
 
 export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
+
 	return (
 		<TodoContext.Consumer>
-			{({ tags }) => (
+			{({ tags, projects }) => (
+				
 				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-700 px-4 font-medium dark:bg-base-bg-primary md:w-80 text-gray-400 dark:text-base-text-subtle">
 					<SearchBox />
 					<FlatLinks />
 					<GroupedLinks />
 					<CollapseableSection
 						title={"Projects"}
-						links={projects}
+						links={projects.map((project) => {
+							return {
+							title: project.name,
+							description: project.project_id,
+							url: "projects/" + project.project_id.toLowerCase()
+						}})}
 						mobile={!expanded}
 					/>
 					<TagLinks expanded={expanded} />

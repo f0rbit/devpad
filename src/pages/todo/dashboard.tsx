@@ -1,7 +1,7 @@
 import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
 import TodoNavbar from "@/components/Todo/TodoNavbar";
-import { TaskTags } from "@prisma/client";
+import { Project, TaskTags } from "@prisma/client";
 import Head from "next/head";
 import React, { Context, useCallback, useContext, useEffect } from "react";
 import { Dispatch, SetStateAction, useState } from "react";
@@ -19,6 +19,7 @@ type TodoContextType = {
 	setTags: Dispatch<SetStateAction<TaskTags[] | undefined>>;
 	items: FetchedTask[];
 	setItems: Dispatch<SetStateAction<FetchedTask[] | undefined>>;
+	projects: Project[];
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
@@ -40,6 +41,7 @@ const Dashboard = () => {
 	const { data } = trpc.data.getItemsAndTags.useQuery();
 	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
 	const [items, setItems] = useState(undefined as FetchedTask[] | undefined)
+	const [projects, setProjects] = useState(undefined as Project[] | undefined);
 
 	useEffect(() => {
 		if (data?.tags && !tags) {
@@ -47,6 +49,9 @@ const Dashboard = () => {
 		}
 		if (data?.items && !items) {
 			setItems(data?.items);
+		}
+		if (data?.projects && !projects) {
+			setProjects(data?.projects);
 		}
 	}, [data, tags, setTags, items, setItems]);
 
@@ -65,7 +70,8 @@ const Dashboard = () => {
 		tags: tags ?? [],
 		setTags,
 		items: items ?? [],
-		setItems
+		setItems,
+		projects: projects ?? [],
 	};
 
 	return (
