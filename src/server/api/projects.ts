@@ -109,6 +109,7 @@ export async function getProjectGoals(project_id: string, session: Session): Pro
 
 export async function createProjectGoal(goal: { name: string; description: string; target_time: string; project_id: string }, session: Session): Promise<{ data: ProjectGoal | null; error: string | null }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project goal." };
+	if (!goal.name || goal.name.length <= 0) return { data: null, error: "You must declare a valid name." };
 	try {
 		const new_goal =
 			(await prisma?.projectGoal.create({

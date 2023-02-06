@@ -6,7 +6,7 @@ import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
 import CenteredContainer from "../CenteredContainer";
 import ErrorWrapper from "../ErrorWrapper";
 
-export default function GoalCard({ goal, project_id }: { goal: ProjectGoal | null; project_id: string }) {
+export default function GoalCard({ goal, project_id, cancel, create }: { goal: ProjectGoal | null; project_id: string, cancel?: () => void, create?: (goal: ProjectGoal) => void }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showTasks, setShowTasks] = useState(false);
 	const [editingGoal, setEditingGoal] = useState({
@@ -29,8 +29,7 @@ export default function GoalCard({ goal, project_id }: { goal: ProjectGoal | nul
 		if (error) {
 			setError(error);
 		} else if (data) {
-			// window.location.href = `/project/${project_id}`;
-			location?.reload();
+			create?.(data)
 		} else {
 			setError("Failed to create project");
 		}
@@ -41,15 +40,16 @@ export default function GoalCard({ goal, project_id }: { goal: ProjectGoal | nul
 	}
 
 	if (error) {
+		setTimeout(() => setError(""), 5000);
 		return (
-			<CenteredContainer>
+			<div className="w-96 flex justify-center items-center">
 				<ErrorWrapper message={error} />
-			</CenteredContainer>
+			</div>
 		);
 	}
 
 	return (
-		<div className="w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary">
+		<div className="w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
 			{isEditing == false && goal ? (
 				<div className="flex flex-col gap-2">
 					<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2">
@@ -69,7 +69,7 @@ export default function GoalCard({ goal, project_id }: { goal: ProjectGoal | nul
 				</div>
 			) : (
 				// this is the add goal card
-				<div className="flex flex-col gap-2 p-2">
+				<div className="flex flex-col gap-2 p-2 pb-0">
 					<input
 						type="text"
 						placeholder="Name"
@@ -95,10 +95,11 @@ export default function GoalCard({ goal, project_id }: { goal: ProjectGoal | nul
 						/>
 					</div>
 					<div className="flex h-full w-full items-center justify-center gap-2 py-1">
-						{isEditing && (
+						
 							<button
-								className="w-24 rounded-md bg-base-accent-secondary px-4 py-1 font-semibold hover:bg-base-accent-tertiary border-1 border-borders-secondary"
+								className="w-24 rounded-md px-4 py-1 font-semibold hover:bg-base-accent-secondary border-1 border-borders-secondary"
 								onClick={() => {
+									if (cancel) cancel();
 									setIsEditing(false);
 									setEditingGoal({
 										name: goal?.name ?? "",
@@ -109,7 +110,6 @@ export default function GoalCard({ goal, project_id }: { goal: ProjectGoal | nul
 							>
 								Cancel
 							</button>
-						)}
 						<button
 							className="w-24 rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover"
 							onClick={() => {

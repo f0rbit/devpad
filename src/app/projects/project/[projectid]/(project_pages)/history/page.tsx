@@ -1,6 +1,5 @@
 import CenteredContainer from "@/components/CenteredContainer";
 import ErrorWrapper from "@/components/ErrorWrapper";
-import InDevelopment from "@/components/layouts/InDevelopment";
 import { getProjectHistory } from "@/server/api/projects";
 import { getSession } from "src/utils/session";
 

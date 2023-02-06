@@ -1,6 +1,8 @@
 import CenteredContainer from "@/components/CenteredContainer";
 import ErrorWrapper from "@/components/ErrorWrapper";
+import GoalAdder from "@/components/Projects/GoalAdder";
 import GoalCard from "@/components/Projects/GoalCard";
+import GoalRenderer from "@/components/Projects/GoalRenderer";
 import { getProjectGoals } from "@/server/api/projects";
 import { getSession } from "src/utils/session";
 
@@ -24,14 +26,8 @@ export default async function GoalsPage({ params }: { params: { projectid: strin
 	}
 
 	return (
-		<div className="flex h-full w-full p-4">
-			{/* <pre>{JSON.stringify(data, null, 2)}</pre> */}
-			<div className="flex flex-row gap-2 h-max">
-				{data.map((project, index) => (
-					<GoalCard key={index} goal={project} project_id={projectid} />
-				))}
-				<GoalCard goal={null} project_id={projectid} />
-			</div>
+		<div className="flex h-full w-max p-4">
+			<GoalRenderer goals={data} project_id={projectid} />
 		</div>
 	);
 }

@@ -1,4 +1,3 @@
-import { PuffLoader } from "react-spinners";
 
 export default function loading() {
 	return (

@@ -5,7 +5,7 @@ export default function layout({ children }: { children: React.ReactNode }) {
             <div className="text-base-text-subtlish text-xl font-semibold">Goals</div>
             <div className="text-base-text-dark text-sm">Goals are a collection of tasks that should indicate a new milestone when completed</div>
         </div>
-        <div className="w-full h-full">
+        <div className="h-full overflow-x-auto scrollbar-hide" style={{width: "calc(100vw - 18rem)"}}>
             {children}
         </div>
     </div>;

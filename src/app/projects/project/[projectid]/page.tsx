@@ -10,7 +10,7 @@ export default async function Page({ params }: { params: { projectid: string } }
 
 	if (error?.length > 0) {
 		return (
-			<div className="flex items-center justify-center">
+			<div className="flex items-center justify-center h-full">
 				<ErrorWrapper message={error} />
 			</div>
 		);
@@ -19,7 +19,7 @@ export default async function Page({ params }: { params: { projectid: string } }
 
 	if (!project) {
 		return (
-			<div className="flex items-center justify-center">
+			<div className="flex items-center justify-center h-full">
 				<ErrorWrapper message="Project not found" />
 			</div>
 		);

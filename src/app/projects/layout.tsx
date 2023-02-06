@@ -1,4 +1,3 @@
-import CenteredContainer from "@/components/CenteredContainer";
 import ProjectsBar from "@/components/Projects/ProjectsBar";
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
