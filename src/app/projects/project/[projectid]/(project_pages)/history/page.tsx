@@ -11,7 +11,6 @@ export default async function HistoryPage({ params }: { params: { projectid: str
 		<CenteredContainer>
 			<ErrorWrapper message={"You must be signed in!"}/>
 		</CenteredContainer>
-
 	)
 	const { data, error } = await getProjectHistory(projectid, session);
 

@@ -1,5 +1,5 @@
 import { CreateProjectType } from "@/types/page-link";
-import { Action, ACTION_TYPE, Project } from "@prisma/client";
+import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
 import { createAction } from "src/utils/prisma/action";
@@ -91,5 +91,40 @@ export async function getUserProject(projectID: string): Promise<{ data: Project
 		return { data: project, error: "" };
 	} catch (e: any) {
 		return { error: getErrorMessage(e), data: null };
+	}
+}
+
+export async function getProjectGoals(project_id: string, session: Session): Promise<{ data: ProjectGoal[]; error: string }> {
+	if (!session?.user?.id) return { data: [], error: "You must be signed in to delete a project." };
+	if (!project_id) return { data: [], error: "You must declare a valid project_id." };
+	try {
+		const where = { owner_id: session?.user?.id, project_id };
+		const goals = await prisma?.projectGoal.findMany({ where });
+		if (!goals) return { data: [], error: "No goals found!" };
+		return { data: goals, error: "" };
+	} catch (e: any) {
+		return { error: getErrorMessage(e), data: [] };
+	}
+}
+
+export async function createProjectGoal(goal: { name: string; description: string; target_time: string; project_id: string }, session: Session): Promise<{ data: ProjectGoal | null; error: string | null }> {
+	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project goal." };
+	try {
+		const new_goal =
+			(await prisma?.projectGoal.create({
+				data: {
+					...goal,
+					target_time: new Date(goal.target_time),
+					owner_id: session?.user?.id,
+				}
+			})) ?? null;
+		if (!goal) return { data: null, error: "Project goal could not be created." };
+		// createAction({ description: `Created project goal ${goal.name}`, type: ACTION_TYPE.CREATE_PROJECT_GOAL, owner_id: session?.user?.id, data: { project_id } }); // writes na action as history
+		return { data: new_goal, error: null };
+	} catch (err) {
+		return {
+			data: null,
+			error: getErrorMessage(err)
+		};
 	}
 }

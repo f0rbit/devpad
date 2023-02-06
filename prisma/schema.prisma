@@ -1,32 +1,24 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  // NOTE: When using postgresql, mysql or sqlserver, uncomment the @db.Text annotations in model Account below
-  // Further reading:
-  // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
-  // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
   url      = env("DATABASE_URL")
 }
 
-// Necessary for Next auth
 model Account {
   id                String  @id @default(cuid())
   userId            String
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -42,18 +34,17 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  accounts      Account[]
-  sessions      Session[]
-  projets       Project[]
-
-  todo_tags      TaskTags[] // list of tags created by user
-  todo_items     Task[] // list of items owned by user
-  action_history Action[] // list of actions performed by user
+  id             String     @id @default(cuid())
+  name           String?
+  email          String?    @unique
+  emailVerified  DateTime?
+  image          String?
+  accounts       Account[]
+  action_history Action[]
+  projets        Project[]
+  sessions       Session[]
+  todo_items     Task[]
+  todo_tags      TaskTags[]
 }
 
 model VerificationToken {
@@ -64,37 +55,32 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// todo items
 model Task {
-  id         String          @id @default(uuid()) @db.Uuid
-  owner      User            @relation(fields: [owner_id], references: [id])
-  owner_id   String
-  title      String
-  created_at DateTime        @default(now())
-  updated_at DateTime        @updatedAt
-  progress   TASK_PROGRESS   @default(UNSTARTED)
-  visibility TASK_VISIBILITY @default(PRIVATE)
-
-  // relations
-  tags       TaskTags[]
-  templates  TemplateTask[]
-  modules    TaskModule[]
-  project    Project?       @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
-  project_id String?        @db.Text
-
-  // inheritance
-  parent    Task?   @relation("TaskToTask", fields: [parent_id], references: [id])
-  parent_id String? @db.Uuid
-  children  Task[]  @relation("TaskToTask")
+  id              String          @id @default(uuid()) @db.Uuid
+  owner_id        String
+  title           String
+  created_at      DateTime        @default(now())
+  updated_at      DateTime        @updatedAt
+  progress        TASK_PROGRESS   @default(UNSTARTED)
+  visibility      TASK_VISIBILITY @default(PRIVATE)
+  parent_id       String?         @db.Uuid
+  project_goal_id String?         @db.Uuid
+  owner           User            @relation(fields: [owner_id], references: [id])
+  parent          Task?           @relation("TaskToTask", fields: [parent_id], references: [id])
+  project_goal    ProjectGoal?    @relation(fields: [project_goal_id], references: [id])
+  children        Task[]          @relation("TaskToTask")
+  modules         TaskModule[]
+  templates       TemplateTask[]
+  tags            TaskTags[]
 }
 
 model TaskModule {
   id      String   @default(uuid()) @db.Uuid
-  task    Task     @relation(fields: [task_id], references: [id])
   task_id String   @db.Uuid
   type    String
   data    Json     @default("{}") @db.Json
   updated DateTime @updatedAt
+  task    Task     @relation(fields: [task_id], references: [id])
 
   @@unique([task_id, type])
 }
@@ -102,18 +88,60 @@ model TaskModule {
 model TemplateTask {
   id           String @id @default(uuid()) @db.Uuid
   title        String
-  reference    Task   @relation(fields: [reference_id], references: [id])
   reference_id String @db.Uuid
+  reference    Task   @relation(fields: [reference_id], references: [id])
 }
 
 model TaskTags {
   id       String @id @default(uuid()) @db.Uuid
-  owner    User   @relation(fields: [owner_id], references: [id])
   owner_id String
   title    String
   colour   String @default("#000000")
+  owner    User   @relation(fields: [owner_id], references: [id])
+  items    Task[]
+}
 
-  items Task[]
+model Project {
+  project_id  String
+  owner_id    String
+  name        String
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  description String?
+  repo_url    String?
+  icon_url    String?
+  status      PROJECT_STATUS @default(DEVELOPMENT)
+  deleted     Boolean        @default(false)
+  link_url    String?
+  link_text   String?
+  owner       User           @relation(fields: [owner_id], references: [id])
+  goals       ProjectGoal[]
+
+  @@unique([owner_id, project_id])
+}
+
+model ProjectGoal {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  project_id  String
+  owner_id    String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  description String?
+  project     Project  @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
+  target_time DateTime @default(now())
+  items       Task[]
+}
+
+model Action {
+  id          String      @id @default(uuid()) @db.Uuid
+  owner_id    String
+  type        ACTION_TYPE
+  description String
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  data        Json        @default("{}") @db.Json
+  owner       User        @relation(fields: [owner_id], references: [id])
 }
 
 enum TASK_PROGRESS {
@@ -122,7 +150,6 @@ enum TASK_PROGRESS {
   COMPLETED
 }
 
-// todo enums
 enum TASK_VISIBILITY {
   PUBLIC
   PRIVATE
@@ -130,27 +157,6 @@ enum TASK_VISIBILITY {
   ARCHIVED
   DRAFT
   DELETED
-}
-
-model Project {
-  project_id  String         @db.Text
-  owner       User           @relation(fields: [owner_id], references: [id])
-  owner_id    String
-  name        String
-  created_at  DateTime       @default(now())
-  updated_at  DateTime       @updatedAt
-  description String?        @db.Text
-  repo_url    String? // url to repo
-  icon_url    String? // url to icon
-  status      PROJECT_STATUS @default(DEVELOPMENT)
-  deleted     Boolean        @default(false)
-  link_url    String? // url to project
-  link_text   String? // text to display for link
-
-  tasks Task[] // list of tasks owned by project
-
-  // unique owner & project_id
-  @@unique([owner_id, project_id])
 }
 
 enum PROJECT_STATUS {
@@ -176,15 +182,4 @@ enum ACTION_TYPE {
   CREATE_MODULE
   UPDATE_MODULE
   DELETE_MODULE
-}
-
-model Action {
-  id          String      @id @default(uuid()) @db.Uuid
-  owner       User        @relation(fields: [owner_id], references: [id])
-  owner_id    String
-  type        ACTION_TYPE
-  description String      @db.Text 
-  created_at  DateTime    @default(now())
-  updated_at  DateTime    @updatedAt
-  data        Json        @default("{}") @db.Json
 }
