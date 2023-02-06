@@ -27,7 +27,7 @@ export async function createProject(project: CreateProjectType, session: Session
 		};
 	}
 }
-const PROJECT_ACTION = [ACTION_TYPE.CREATE_PROJECT, ACTION_TYPE.DELETE_PROJECT, ACTION_TYPE.UPDATE_PROJECT];
+const PROJECT_ACTION = [ACTION_TYPE.CREATE_PROJECT, ACTION_TYPE.DELETE_PROJECT, ACTION_TYPE.UPDATE_PROJECT, ACTION_TYPE.CREATE_GOAL, ACTION_TYPE.DELETE_GOAL, ACTION_TYPE.UPDATE_GOAL];
 export async function getProjectHistory(project_id: string, session: Session): Promise<{ data: Action[]; error: string }> {
 	if (!session?.user?.id) return { data: [], error: "You must be signed in to get project history." };
 	if (!project_id || project_id.length <= 0) return { data: [], error: "You must declare a valid project_id." };
@@ -120,7 +120,7 @@ export async function createProjectGoal(goal: { name: string; description: strin
 				}
 			})) ?? null;
 		if (!goal) return { data: null, error: "Project goal could not be created." };
-		createAction({ description: `Created project goal ${goal.name}`, type: ACTION_TYPE.CREATE_GOAL, owner_id: session?.user?.id, data: { project_id: goal.project_id } }); // writes na action as history
+		createAction({ description: `Created goal "${goal.name}"`, type: ACTION_TYPE.CREATE_GOAL, owner_id: session?.user?.id, data: { project_id: goal.project_id } }); // writes na action as history
 		return { data: new_goal, error: null };
 	} catch (err) {
 		return {
@@ -145,7 +145,7 @@ export async function deleteProjectGoal(goal_id: string, session: Session): Prom
 			select: { deleted: true, project_id: true, name: true }
 		})) ?? { deleted: false };
 		if (!deleted) return { success: false, error: "Project goal could not be deleted." };
-		createAction({ description: `Deleted project goal ${name}`, type: ACTION_TYPE.DELETE_GOAL, owner_id: session?.user?.id, data: { project_id } }); // writes an action as history
+		createAction({ description: `Deleted goal "${name}"`, type: ACTION_TYPE.DELETE_GOAL, owner_id: session?.user?.id, data: { project_id } }); // writes an action as history
 		return { success: true, error: null };
 	} catch (err) {
 		return { success: false, error: getErrorMessage(err) };

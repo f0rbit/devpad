@@ -15,8 +15,8 @@ export default function GoalAdder({ project_id, addGoal}: { project_id: string, 
             addGoal(goal);
         }} />
     } else {
-        return <div className="w-96 flex items-center justify-center text-base-text-dark">
-                <button onClick={() => setIsEditing(true)}><Plus /></button>
-        </div>
+        return <button className="w-96 min-h-[10rem] flex items-center justify-center text-base-text-dark border-borders-secondary border-1 rounded-md" onClick={() => setIsEditing(true)}>
+                <Plus />
+        </button>
     }
 } 

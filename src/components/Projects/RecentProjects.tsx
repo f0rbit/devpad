@@ -24,7 +24,7 @@ export default function RecentProjects() {
 					<ErrorWrapper message={error} />
 				</div>
 			)}
-			<div className="grid h-52 grid-cols-3 gap-2 p-2">
+			<div className="grid min-h-[13rem] h-max grid-cols-3 gap-2 p-2">
 				<div className="origin-right scale-90">
 					<RecentProject project={projects[1]} />
 				</div>

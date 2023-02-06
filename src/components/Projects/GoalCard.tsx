@@ -1,9 +1,9 @@
 "use client";
 import { ProjectGoal } from "@prisma/client";
-import { ChevronDown, ChevronUp, Cross, Pencil, Save, Trash, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
+import moment from "moment";
 import { useState } from "react";
-import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
-import CenteredContainer from "../CenteredContainer";
+import { dateToDateTime } from "src/utils/dates";
 import ErrorWrapper from "../ErrorWrapper";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: ProjectGoal | null; project_id: string; cancel?: () => void; create?: (goal: ProjectGoal) => void, deleteCard?: (id: string) => void }) {
@@ -70,7 +70,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 				<div className="flex flex-col gap-2">
 					<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2">
 						<div className="text-2xl font-semibold text-base-text-subtlish">{goal?.name}</div>
-						<div className="text-base text-base-text-subtle">{goal?.target_time ? dateToDateAndTime(new Date(goal?.target_time)).replace(" ", " @ ") : ""}</div>
+						<div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar()}</div>
 						<div className="text-sm text-base-text-subtle">{goal?.description ?? "null"}</div>
 					</div>
 					<div className="flex items-center justify-center gap-2">
@@ -106,7 +106,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 							type="datetime-local"
 							placeholder="Due Date"
 							className="w-full rounded-md border-1 border-borders-secondary bg-base-accent-secondary py-1 px-2 text-base-text-secondary placeholder-base-text-dark"
-							onChange={(e) => setEditingGoal({ ...editingGoal, target_time: e.target.valueAsDate ?? new Date() })}
+							onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value)})}
 							defaultValue={dateToDateTime(editingGoal.target_time)}
 						/>
 					</div>
