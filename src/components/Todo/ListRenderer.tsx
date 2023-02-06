@@ -208,11 +208,11 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 					return tags.includes(tag);
 				});
 			} else if (selectedSection.startsWith("projects/")) {
-				const project_id = selectedSection.split("/")[1];
-				if (!project_id) return [];
-				return sorted.filter((item) => {
-					return item.project_id === project_id;
-				});
+				// const project_id = selectedSection.split("/")[1];
+				// if (!project_id) return [];
+				// return sorted.filter((item) => {
+				// 	return item.project_id === project_id;
+				// });
 			}
 			return sorted;
 	}
