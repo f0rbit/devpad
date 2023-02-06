@@ -105,6 +105,9 @@ export default ListRenderer;
 
 const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
 	const renderData = (data: FetchedTask[]) => {
+		if (data.length <= 0) {
+			return <div className="text-base-text-subtle text-center">No items found</div>;
+		}
 		return data.map((item) => <TodoCard key={item.id} initial_item={item} layout={layout} set_item={setItem} tags={tags} />);
 	};
 
@@ -203,6 +206,12 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 					// get titles of tags
 					const tags = item.tags.map((tag) => tag.title.toLowerCase());
 					return tags.includes(tag);
+				});
+			} else if (selectedSection.startsWith("projects/")) {
+				const project_id = selectedSection.split("/")[1];
+				if (!project_id) return [];
+				return sorted.filter((item) => {
+					return item.project_id === project_id;
 				});
 			}
 			return sorted;

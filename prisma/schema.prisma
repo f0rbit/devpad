@@ -78,10 +78,14 @@ model Task {
   tags      TaskTags[]
   templates TemplateTask[]
   modules   TaskModule[]
+  project   Project?        @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
+  project_id String?        @db.Text
+  
   // inheritance
   parent    Task?          @relation("TaskToTask", fields: [parent_id], references: [id])
   parent_id String?        @db.Uuid
   children  Task[]         @relation("TaskToTask")
+
 }
 
 model TaskModule {
@@ -142,6 +146,8 @@ model Project {
   deleted Boolean @default(false)
   link_url String? // url to project
   link_text String? // text to display for link
+
+  tasks Task[] // list of tasks owned by project
 
   // unique owner & project_id
   @@unique([owner_id, project_id])
