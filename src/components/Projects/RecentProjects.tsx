@@ -1,19 +1,12 @@
+import { getUserProjects } from "@/server/api/projects";
 import { Project } from "@prisma/client";
 import Link from "next/link";
 import { use } from "react";
-import { getUserProjects } from "src/utils/prisma/projects";
 import ErrorWrapper from "../ErrorWrapper";
 import { ProjectCard } from "./ProjectCard";
 
 export default function RecentProjects() {
-	const { data, error } = use(getUserProjects());
-	// if (error?.length > 0) {
-	// 	return (
-	// 		<div className="flex h-full items-center justify-center">
-	// 			<ErrorWrapper message={error} />
-	// 		</div>
-	// 	);
-	// }
+	const { data, error } = use(getUserProjects({ includeDeleted: false }));
 
 	const projects = data.sort((a, b) => b.updated_at.valueOf() - a.updated_at.valueOf()).slice(0, 3);
 

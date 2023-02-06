@@ -1,5 +1,4 @@
-import { router, protectedProcedure as protectedProcedure } from "@/server/trpc/trpc";
-import { PROJECT_STATUS } from "@prisma/client";
+import { protectedProcedure, router } from "@/server/trpc/trpc";
 import { z } from "zod";
 
 export const projectsRouter = router({
@@ -15,26 +14,5 @@ export const projectsRouter = router({
 				}
 			}
 		});
-	}),
-	createProject: protectedProcedure
-		.input(
-			z.object({
-				project_id: z.string(),
-				status: z.nativeEnum(PROJECT_STATUS),
-				name: z.string(),
-				description: z.string().optional(),
-				link_url: z.string().optional(),
-				link_text: z.string().optional(),
-				icon_url: z.string().optional(),
-				repo_url: z.string().optional()
-			})
-		)
-		.mutation(async ({ ctx, input }) => {
-			return await ctx.prisma.project.create({
-				data: {
-					...input,
-					owner_id: ctx.session.user.id
-				}
-			});
-		})
+	})
 });

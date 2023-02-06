@@ -2,10 +2,10 @@ import CenteredContainer from "@/components/CenteredContainer";
 import ErrorWrapper from "@/components/ErrorWrapper";
 import ProjectCreator from "@/components/Projects/ProjectCreator";
 import TitleInjector from "@/components/Projects/TitleInjector";
-import { getUserProjects } from "src/utils/prisma/projects";
+import { getUserProjects } from "@/server/api/projects";
 
-export default async function HomePage() {
-	const { data, error} = await getUserProjects();
+export default async function CreateProjectPage() {
+	const { data, error} = await getUserProjects({ includeDeleted: true });
 
 	if (error?.length > 0) {
 		return (
@@ -14,18 +14,6 @@ export default async function HomePage() {
 			</div>
 		);
 	}
-
-	// async function createProject(project: CreateProjectType) {
-	// 	const owner_id = (await getCurrentUser())?.id;
-	// 	if (!owner_id) return null;
-	// 	return (await prisma?.project.create({
-	// 		data: {
-	// 			...project,
-	// 			owner_id: owner_id,
-
-	// 		}
-	// 	}))?.project_id ?? null;
-	// }
 
 	return (
 		<CenteredContainer>

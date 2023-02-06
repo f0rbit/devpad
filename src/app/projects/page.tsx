@@ -1,10 +1,6 @@
 import CenteredContainer from "@/components/CenteredContainer";
-import ErrorWrapper from "@/components/ErrorWrapper";
-import { ProjectCard } from "@/components/Projects/ProjectCard";
 import RecentProjects from "@/components/Projects/RecentProjects";
 import TitleInjector from "@/components/Projects/TitleInjector";
-import Link from "next/link";
-import { getUserProjects } from "src/utils/prisma/projects";
 
 export default async function HomePage() {
 	return (

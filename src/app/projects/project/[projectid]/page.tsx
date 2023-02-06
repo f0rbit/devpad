@@ -1,8 +1,7 @@
 import ErrorWrapper from "@/components/ErrorWrapper";
 import { ProjectCard } from "@/components/Projects/ProjectCard";
 import TitleInjector from "@/components/Projects/TitleInjector";
-import { getUserProject } from "src/utils/prisma/projects";
-import { getCurrentUser } from "src/utils/session";
+import { getUserProject } from "@/server/api/projects";
 
 export default async function Page({ params }: { params: { projectid: string } }) {
 	const { projectid } = params;

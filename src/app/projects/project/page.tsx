@@ -2,12 +2,11 @@ import CenteredContainer from "@/components/CenteredContainer";
 import ErrorWrapper from "@/components/ErrorWrapper";
 import { ProjectCard } from "@/components/Projects/ProjectCard";
 import TitleInjector from "@/components/Projects/TitleInjector";
+import { getUserProjects } from "@/server/api/projects";
 import Link from "next/link";
-import { getUserProjects } from "src/utils/prisma/projects";
-import { getCurrentUser } from "src/utils/session";
 
 const ProjectPage = async () => {
-	const { error, data } = await getUserProjects();
+	const { error, data } = await getUserProjects({ includeDeleted: false });
 
 	if (error?.length > 0) {
 		return (

@@ -51,8 +51,9 @@ model User {
   sessions      Session[]
   projets       Project[]
 
-  todo_tags  TaskTags[] // list of tags created by user
-  todo_items Task[] // list of items owned by user
+  todo_tags      TaskTags[] // list of tags created by user
+  todo_items     Task[] // list of items owned by user
+  action_history Action[] // list of actions performed by user
 }
 
 model VerificationToken {
@@ -75,17 +76,16 @@ model Task {
   visibility TASK_VISIBILITY @default(PRIVATE)
 
   // relations
-  tags      TaskTags[]
-  templates TemplateTask[]
-  modules   TaskModule[]
-  project   Project?        @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
+  tags       TaskTags[]
+  templates  TemplateTask[]
+  modules    TaskModule[]
+  project    Project?       @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
   project_id String?        @db.Text
-  
-  // inheritance
-  parent    Task?          @relation("TaskToTask", fields: [parent_id], references: [id])
-  parent_id String?        @db.Uuid
-  children  Task[]         @relation("TaskToTask")
 
+  // inheritance
+  parent    Task?   @relation("TaskToTask", fields: [parent_id], references: [id])
+  parent_id String? @db.Uuid
+  children  Task[]  @relation("TaskToTask")
 }
 
 model TaskModule {
@@ -133,19 +133,19 @@ enum TASK_VISIBILITY {
 }
 
 model Project {
-  project_id String @db.Text
-  owner      User   @relation(fields: [owner_id], references: [id])
-  owner_id String
-  name     String 
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  description String? @db.Text
-  repo_url String? // url to repo
-  icon_url String? // url to icon
-  status PROJECT_STATUS @default(DEVELOPMENT)
-  deleted Boolean @default(false)
-  link_url String? // url to project
-  link_text String? // text to display for link
+  project_id  String         @db.Text
+  owner       User           @relation(fields: [owner_id], references: [id])
+  owner_id    String
+  name        String
+  created_at  DateTime       @default(now())
+  updated_at  DateTime       @updatedAt
+  description String?        @db.Text
+  repo_url    String? // url to repo
+  icon_url    String? // url to icon
+  status      PROJECT_STATUS @default(DEVELOPMENT)
+  deleted     Boolean        @default(false)
+  link_url    String? // url to project
+  link_text   String? // text to display for link
 
   tasks Task[] // list of tasks owned by project
 
@@ -161,4 +161,30 @@ enum PROJECT_STATUS {
   FINISHED
   PAUSED
   ABANDONED
+}
+
+enum ACTION_TYPE {
+  CREATE_TASK
+  UPDATE_TASK
+  DELETE_TASK
+  CREATE_PROJECT
+  UPDATE_PROJECT
+  DELETE_PROJECT
+  CREATE_TAG
+  UPDATE_TAG
+  DELETE_TAG
+  CREATE_MODULE
+  UPDATE_MODULE
+  DELETE_MODULE
+}
+
+model Action {
+  id          String      @id @default(uuid()) @db.Uuid
+  owner       User        @relation(fields: [owner_id], references: [id])
+  owner_id    String
+  type        ACTION_TYPE
+  description String      @db.Text 
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+  data        Json        @default("{}") @db.Json
 }
