@@ -13,7 +13,7 @@ export default function HomeButton() {
 
 
 	return (
-		<Link href ={link}>
+		<Link href ={link} title={link == "/" ? "Home" : "Back"}>
 			{link == "/" ? <Home /> : <CornerDownLeft />}
 		</Link>
 	);

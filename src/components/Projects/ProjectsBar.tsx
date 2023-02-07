@@ -1,11 +1,12 @@
 "use client"
+import ApplicationSelector from "@/components/ApplicationSelector";
 import HomeButton from "@/components/Projects/HomeButton";
 import { RouteLinks } from "@/components/Projects/RouteLinks";
 import { UserSection } from "@/components/Projects/UserSection";
-import { Bell, Menu, Settings } from "lucide-react";
+import { Bell, Settings, SidebarClose, SidebarOpen } from "lucide-react";
 import { Session } from "next-auth";
 import Link from "next/link";
-import React, { useContext } from "react";
+import { useContext } from "react";
 import { SidebarContext } from "../layouts/BaseLayout";
 
 export default function ProjectsBar({ session } : { session: Session | null}) {
@@ -28,15 +29,19 @@ export default function ProjectsBar({ session } : { session: Session | null}) {
 				</div>
 
 				<div className="mx-auto" />
-				<div>
+				<ApplicationSelector />
+				{/* <div>
+					<Boxes />
+				</div> */}
+				<div title="Notifications">
 					<Bell />
 				</div>
-				<div>
+				<div title="Settings">
 					<Link href={"settings"}>
 						<Settings />
 					</Link>
 				</div>
-				<div className="flex items-center">
+				<div className="flex items-center" title="User Section">
 					<UserSection session={session} />
 				</div>
 			</div>
@@ -47,8 +52,8 @@ export default function ProjectsBar({ session } : { session: Session | null}) {
 const MenuButton = () => {
 	const { open, setOpen } = useContext(SidebarContext);
 	return (
-		<button onClick={() => setOpen(!open)}>
-			<Menu />
+		<button onClick={() => setOpen(!open)} className="pt-0.5" title={open ? "Close Sidebar" : "Open Sidebar"}>
+			{open ? <SidebarClose /> : <SidebarOpen />}
 		</button>
 	);
 };
