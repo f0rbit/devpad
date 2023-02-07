@@ -34,6 +34,10 @@ export default async function HistoryPage({ params }: { params: { projectid: str
 	);
 }
 
+function sleep(ms: number) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const HistoryRenderer = ({ data }: { data: Action[] }) => {
 	return (
 		<div className="relative border-l-4 border-borders-secondary">
