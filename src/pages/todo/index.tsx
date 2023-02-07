@@ -1,10 +1,10 @@
+import BaseLayout, { SidebarContext } from "@/components/layouts/BaseLayout";
 import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
-import TodoNavbar from "@/components/Todo/TodoNavbar";
 import { Project, TaskTags } from "@prisma/client";
+import { useSession } from "next-auth/react";
 import Head from "next/head";
-import React, { Context, useCallback, useContext, useEffect } from "react";
-import { Dispatch, SetStateAction, useState } from "react";
+import React, { Context, Dispatch, SetStateAction, useCallback, useContext, useEffect, useState } from "react";
 import { FetchedTask, trpc } from "src/utils/trpc";
 
 type TodoContextType = {
@@ -24,11 +24,12 @@ type TodoContextType = {
 
 export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
 
-const DashboardMainSection = ({ mobile, showList }: { mobile: boolean; showList: boolean }) => {
-	if (mobile) return showList ? <MainLinkSection expanded={false} /> : <ListRenderer />;
+const DashboardMainSection = ({ mobile }: { mobile: boolean }) => {
+	const { open } = useContext(SidebarContext);
+	if (mobile) return open ? <MainLinkSection expanded={false} /> : <ListRenderer />;
 	return (
 		<>
-			{showList && <MainLinkSection expanded={true} />}
+			{open && <MainLinkSection expanded={true} />}
 			<ListRenderer />
 		</>
 	);
@@ -40,8 +41,9 @@ const Dashboard = () => {
 	const [searchQuery, setSearchQuery] = useState("");
 	const { data } = trpc.data.getItemsAndTags.useQuery();
 	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
-	const [items, setItems] = useState(undefined as FetchedTask[] | undefined)
+	const [items, setItems] = useState(undefined as FetchedTask[] | undefined);
 	const [projects, setProjects] = useState(undefined as Project[] | undefined);
+	const { data: session } = useSession();
 
 	useEffect(() => {
 		if (data?.tags && !tags) {
@@ -71,7 +73,7 @@ const Dashboard = () => {
 		setTags,
 		items: items ?? [],
 		setItems,
-		projects: projects ?? [],
+		projects: projects ?? []
 	};
 
 	return (
@@ -79,19 +81,16 @@ const Dashboard = () => {
 			<Head>
 				<title>Todo | Dashboard</title>
 			</Head>
-			<div className="h-screen min-h-full overflow-hidden bg-gray-700 dark:bg-base-bg-primary">
-				<div>
-					<TodoNavbar />
-				</div>
+			<BaseLayout session={session}>
 				<div className="block h-full w-full md:hidden">
-					<DashboardMainSection mobile={true} showList={showList} />
+					<DashboardMainSection mobile={true}/>
 				</div>
 				<div className="hidden h-full w-full md:block">
 					<div className="flex h-full w-full flex-row">
-						<DashboardMainSection mobile={false} showList={showList} />
+						<DashboardMainSection mobile={false} />
 					</div>
 				</div>
-			</div>
+			</BaseLayout>
 		</TodoContext.Provider>
 	);
 };

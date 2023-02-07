@@ -6,7 +6,12 @@ import { usePathname } from "next/navigation";
 export default function HomeButton() {
     const path = usePathname();
 
-    const link = path == "/projects" ? "/" : "/projects";
+	// if path is only one level deep, then the home button should link to the root
+	// if path is more than one level deep, then the home button should link to the parent directory
+	
+	const link = !path ? "/" : path.split("/").length > 2 ? path.split("/").slice(0, -1).join("/") : "/";
+
+
 	return (
 		<Link href ={link}>
 			<Home />
