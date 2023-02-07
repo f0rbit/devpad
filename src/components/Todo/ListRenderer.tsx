@@ -68,7 +68,7 @@ const ListRenderer = () => {
 							<div className="w-full p-4">
 								<div className="mb-4 rounded-md p-2 font-bold">
 									<div className="flex flex-row items-center gap-4">
-										<div className="text-3xl font-bold text-base-text-secondary">{selectedSection + " Items"}</div>
+										<div className="text-3xl font-bold text-base-text-secondary capitalize">{selectedSection + " Items"}</div>
 										{/* <div>Layout: {layout}</div> */}
 										<div className="ml-auto flex flex-row gap-4">
 											<LayoutSelectors setLayout={setLayout} />

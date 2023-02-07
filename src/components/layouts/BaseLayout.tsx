@@ -11,7 +11,7 @@ export const SidebarContext = React.createContext({
 });
 
 export default function BaseLayout({ children, session }: { children: React.ReactNode, session: Session | null}) {
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState(true);
 	return (
 		<div className="flex h-full min-h-screen w-screen flex-row">
 			<div className="flex w-full flex-col bg-base-bg-primary">
