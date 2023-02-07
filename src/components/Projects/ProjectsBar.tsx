@@ -11,7 +11,7 @@ export default function ProjectsBar() {
 		<nav>
 			<div className="flex h-16 flex-row items-center gap-4 bg-base-bg-primary px-4 pr-8 text-2xl text-base-text-subtle">
 				<div>
-					<Link href={"/"}>
+					<Link href={"/projects"}>
 						<Home />
 					</Link>
 				</div>

@@ -36,10 +36,10 @@ export default function RecentProjects() {
 				</div>
 			</div>
 			<div className="flex flex-row justify-center gap-2 text-lg font-semibold">
-				<Link href={"/project"}>
+				<Link href={"projects/project"}>
 					<button className="rounded-xl bg-accent-btn-secondary px-4 py-0.5 hover:bg-accent-btn-secondary-hover">View All</button>
 				</Link>
-				<Link href={"/create"}>
+				<Link href={"projects/create"}>
 					<button className="rounded-xl bg-accent-btn-secondary px-4 py-0.5 hover:bg-accent-btn-secondary-hover">Create New</button>
 				</Link>
 			</div>
@@ -50,7 +50,7 @@ export default function RecentProjects() {
 const RecentProject = ({ project }: { project: Project | undefined }) => {
 	if (project) {
 		return (
-			<Link href={"/project/" + project.project_id}>
+			<Link href={"projects/project/" + project.project_id}>
 				<ProjectCard project={project} />
 			</Link>
 		);

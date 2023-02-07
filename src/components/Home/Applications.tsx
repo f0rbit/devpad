@@ -6,7 +6,6 @@ import UniTimetable from "@/public/app_photos/mytimetable.png";
 import JobManagerIcon from "@/public/app_photos/job-manager.png";
 import Image, { StaticImageData } from "next/image";
 import { Application, ApplicationVersion } from "@/types/applications";
-import { getSubDomain } from "src/utils/functions";
 
 const getIcon = (path: StaticImageData, alt: string) => {
 	return <Image src={path} width={96} height={96} alt={alt} />;
@@ -20,7 +19,7 @@ const APPLICATIONS: Application[] = [
 		title: "TODO",
 		description: "Automatically import TODOs from github source code. Set urgency and dates for deadlines. Apply tags in different scopes and groupings. Log changes and generate a timeline history.",
 		images: [TrelloBoardPhoto],
-		link: getSubDomain("todo")
+		link: "/todo"
 	},
 	{
         index: 1,
@@ -29,7 +28,7 @@ const APPLICATIONS: Application[] = [
 		title: "Project Organiser",
 		description: "Manages multiple TODO items at once. Schedule times for goals and achievements. Keep track of project versioning. In-built project progress tracker and history viewer",
 		images: [ProjectManagerPhoto],
-		link: getSubDomain("projects")
+		link: "/projects"
 	},
 	{
         index: 2,
@@ -39,7 +38,7 @@ const APPLICATIONS: Application[] = [
 		description:
 			"This application manages repetitive schedules and assignments, for a Job or for Education. Schedule repeated meetings/classes, schedule time off and breaks. Track classes and meetings, write down notes in a built-in notepad and link to projects and todo items.",
 		images: [UniTimetable],
-		link: getSubDomain("manager")
+		link: "/manager"
 	},
 	{
         index: 3,
@@ -48,7 +47,7 @@ const APPLICATIONS: Application[] = [
 		title: "Calendar",
 		description: "Schedule meetings, keep track of birthdays. Schedule reminders, and remind you before the reminder. Hold ideas for birthday gifts and setup automatic birthday reminders. Keep a hold of tickets and scheduled event information",
 		images: [],
-		link: getSubDomain("calendar")
+		link: "/calendar"
 	},
 	{
         index: 4,
@@ -58,7 +57,7 @@ const APPLICATIONS: Application[] = [
 		description:
 			"Offers a comprehensive timeline. Shows a history of TODO completions, keep track of commitment and visual feedback on staying on track. See upcoming project & job dates, go back in time and see your history. Store life events and link files and images. See all your git commits together, and configure a custom media timeline.",
 		images: [],
-		link: getSubDomain("diary")
+		link: "/diary"
 	}
 ];
 

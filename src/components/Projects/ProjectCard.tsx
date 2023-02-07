@@ -1,5 +1,4 @@
 import { Project } from "@prisma/client";
-import Link from "next/link";
 
 export const ProjectCard = ({ project }: { project: Project }) => {
 	if (!project) return <></>;

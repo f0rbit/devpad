@@ -28,7 +28,6 @@ export default async function HistoryPage({ params }: { params: { projectid: str
 
 	return (
 		<div className="flex h-full w-full justify-center pt-4">
-			{/* <pre>{JSON.stringify(data, null, 2)}</pre> */}
 			<HistoryRenderer data={data} />
 		</div>
 	);

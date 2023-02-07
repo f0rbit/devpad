@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import SectionLink, { SectionLinkType } from "./SectionItem";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { hoverLinkClass } from "../HoverLink";
-import { TodoContext } from "src/pages/todo/dashboard";
+import { TodoContext } from "src/pages/todo";
 const CollapseableSection = ({
 	title,
 	links,

@@ -1,7 +1,7 @@
 import { ProjectRouteLink } from "@/types/page-link";
 import { Search } from "lucide-react";
 import { useContext } from "react";
-import { TodoContext } from "src/pages/todo/dashboard";
+import { TodoContext } from "src/pages/todo";
 import CollapseableSection from "./CollapseableSection";
 import { SearchBox } from "./SearchBox";
 import SectionLink, { SectionLinkType } from "./SectionItem";

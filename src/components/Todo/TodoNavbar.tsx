@@ -1,6 +1,6 @@
 import { Home, Menu, Search } from "lucide-react";
 import { useContext } from "react";
-import { TodoContext } from "src/pages/todo/dashboard";
+import { TodoContext } from "src/pages/todo";
 import HoverLink, { hoverLinkClass } from "../HoverLink";
 
 const TodoNavbar = () => {

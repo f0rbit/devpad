@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { TodoContext } from "src/pages/todo/dashboard";
+import { TodoContext } from "src/pages/todo";
 
 export const SearchBox = () => {
 	return (

@@ -3,7 +3,7 @@ import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import React, { BaseSyntheticEvent, Dispatch, SetStateAction, useContext, useReducer, useState } from "react";
-import { TodoContext } from "src/pages/todo/dashboard";
+import { TodoContext } from "src/pages/todo";
 import { FetchedTask, getModuleData, getTaskModule, trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
 import { hoverExpandButton } from "../Home/HomeButton";
