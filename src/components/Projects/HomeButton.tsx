@@ -1,5 +1,5 @@
 "use client"
-import { Home } from "lucide-react";
+import { CornerDownLeft, Home } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -14,7 +14,7 @@ export default function HomeButton() {
 
 	return (
 		<Link href ={link}>
-			<Home />
+			{link == "/" ? <Home /> : <CornerDownLeft />}
 		</Link>
 	);
 }

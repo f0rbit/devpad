@@ -11,18 +11,18 @@ import { SidebarContext } from "../layouts/BaseLayout";
 export default function ProjectsBar({ session } : { session: Session | null}) {
 	return (
 		<nav>
-			<div className="flex h-16 flex-row items-center gap-4 bg-base-bg-primary px-[1vw] text-2xl text-base-text-subtle">
+			<div className="flex h-16 flex-row items-center gap-4 bg-base-bg-primary px-4 text-2xl text-base-text-subtle">
 				<MenuButton />
 				<div>
 					<HomeButton />
 				</div>
 				
-				<div className="flex flex-row items-center ">
-					<div id="title" className="text-xl font-bold text-base-text-secondary text-center truncate">
+				<div className="flex-row items-center gap-1 hidden md:flex ">
+					<div id="title" className="text-xl font-bold text-base-text-secondary text-center">
 						Home
 					</div>
-					<div className="text-xl hidden md:contents">{">"}</div>
-					<div className="text-base hidden md:contents">
+					<div className="text-xl hidden md:block">{">"}</div>
+					<div className="text-base hidden md:block">
 						<RouteLinks />
 					</div>
 				</div>
