@@ -12,6 +12,7 @@ import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Module } from "@/types/page-link";
 import { ModuleIcon } from "./ModuleIcon";
 import { isTemplateExpression } from "typescript";
+import moment from "moment";
 
 export const COLOURS = {
 	COMPLETED: {
@@ -119,7 +120,7 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} tags={tags} />
 				</GenericModal>
 			</div>
-			<div className={"group relative w-full rounded-md border-1 border-borders-primary bg-gray-100 px-4 py-2 dark:bg-base-accent-primary hover:dark:bg-base-accent-secondary transition-colors duration-300 dark:text-base-text-subtle " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
+			<div className={"group relative w-full rounded-md border-1 border-borders-primary bg-gray-100 px-4 py-2 dark:bg-base-bg-primary hover:dark:bg-base-accent-primary transition-colors duration-300 dark:text-base-text-subtle " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
 				<div className="inline-flex items-center gap-2 align-middle">
 					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
 					<h1 className="text-base-text-secondary text-2xl font-medium">{initial_item.title}</h1>
@@ -153,11 +154,10 @@ const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
 	if (!endTime || !endTime.date) return <></>;
 	const { date: timestamp } = endTime;
 	const date = new Date(timestamp);
-	const options: Intl.DateTimeFormatOptions = { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" };
 	return (
 		<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 			<CalendarClock className="min-w-5 w-5" />
-			<span>{date.toLocaleDateString(undefined, options).replaceAll(", ", " @ ")}</span>
+			<span>{moment(date).calendar()}</span>
 		</div>
 	);
 };
