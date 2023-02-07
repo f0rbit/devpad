@@ -4,7 +4,6 @@ import { getProjectHistory } from "@/server/api/projects";
 import { Action, ACTION_TYPE } from "@prisma/client";
 import { Flag, Unlink } from "lucide-react";
 import moment from "moment";
-import { dateToDateAndTime } from "src/utils/dates";
 import { getSession } from "src/utils/session";
 
 export default async function HistoryPage({ params }: { params: { projectid: string } }) {
@@ -33,10 +32,6 @@ export default async function HistoryPage({ params }: { params: { projectid: str
 	);
 }
 
-function sleep(ms: number) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 const HistoryRenderer = ({ data }: { data: Action[] }) => {
 	return (
 		<div className="relative border-l-4 border-borders-secondary">
@@ -46,16 +41,13 @@ const HistoryRenderer = ({ data }: { data: Action[] }) => {
 					<>
 						<div className="absolute -left-[22px] -mt-0.5 flex origin-top scale-75 items-center justify-center rounded-full bg-base-bg-primary p-1">
 							<div className={" rounded-full px-2 py-1 " + color}>
-								{/* <Flag className="w-4"/> */}
 								{icon}
 							</div>
 						</div>
 						<div className="pl-6">
 							<div>
 								<div className="text-lg font-semibold text-base-text-primary">{action.description}</div>
-								{/* <div>{action.type}</div> */}
 								<div className="text-base-text-subtle">{moment(action.created_at).calendar()}</div>
-								{/* <pre>{JSON.stringify(action.data)}</pre> */}
 							</div>
 						</div>
 					</>
