@@ -45,7 +45,7 @@ export default function ProjectCreator({ projects }: { projects: Project[] }) {
 	}
 
 	return (
-		<div id="project-create" className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-4">
+		<div className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-4 styled-input">
 			<div className="flex w-full flex-row items-center gap-2">
 				<div className="flex w-full flex-row items-center gap-2">
 					<label htmlFor="project-id" className="w-max min-w-[7rem]">

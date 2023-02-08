@@ -5,6 +5,7 @@ import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
+import TodoCreator from "../common/TodoCreator";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: ProjectGoal | null; project_id: string; cancel?: () => void; create?: (goal: ProjectGoal) => void, deleteCard?: (id: string) => void }) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -65,7 +66,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 	}
 
 	return (
-		<div className="w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
+		<div className="w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2 relative">
 			{isEditing == false && goal ? (
 				<div className="flex flex-col gap-2">
 					<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2">
@@ -78,7 +79,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 							{showTasks ? <ChevronUp /> : <ChevronDown />}
 							Show Tasks
 						</button>
-						<button className="flex justify-center rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover" onClick={() => setIsEditing(!isEditing)}>
+						<button className="rounded-md px-4 py-0.5 primary-btn-outline" onClick={() => setIsEditing(!isEditing)}>
 							<Pencil className="w-4" />
 						</button>
 					</div>
@@ -128,7 +129,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						</button>
 						<button
 							title={isEditing ? "Save" : "Create"}
-							className="flex justify-center rounded-md bg-accent-btn-primary px-4 py-1 font-semibold hover:bg-accent-btn-primary-hover"
+							className="rounded-md px-4 py-1 font-semibold primary-btn-outline"
 							onClick={() => {
 								if (isEditing) {
 									saveGoal();
@@ -143,6 +144,10 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 					</div>
 				</div>
 			)}
+			{showTasks && 
+			<div className="absolute top-[105%] w-full">
+				<TodoCreator onCreate={(item) => console.log(item)}/>
+			</div>}
 		</div>
 	);
 }

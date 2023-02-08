@@ -32,6 +32,10 @@ html {
 	overflow-y: overlay;
 }
 
-#project-create input, textarea, select {
+.styled-input input, textarea, select {
 	@apply bg-base-accent-primary focus:ring-2 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2
+}
+
+.primary-btn-outline {
+	@apply border-1 border-accent-btn-primary hover:bg-accent-btn-primary text-accent-btn-primary hover:text-base-text-primary hover:border-accent-btn-primary-hover duration-300 transition-all
 }
