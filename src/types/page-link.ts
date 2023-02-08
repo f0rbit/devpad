@@ -1,5 +1,4 @@
-import { ProjectGoal, PROJECT_STATUS, Task, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { FetchedTask } from "src/utils/trpc";
+import { Prisma, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask } from "@prisma/client";
 
 export type PageLink = {
 	title: string;
@@ -41,11 +40,41 @@ export type CreateProjectType = {
 
 export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
 
+type CreateModuleOptions = {
+	type: Module;
+	data: any;
+}
+
 export type CreateItemOptions = {
 	title: string;
-	summary: string;
-	due_date: Date | null;
 	visibility?: TASK_VISIBILITY;
 	progress?: TASK_PROGRESS;
 	goal_id?: string;
+	modules: CreateModuleOptions[]
+};
+
+export const TaskInclude = {
+	tags: true,
+	templates: true,
+	modules: true,
+	parent: true,
+	children: true
+};
+
+export type FetchedTask = Task & {
+	tags: TaskTags[];
+	templates: TemplateTask[];
+	modules: TaskModule[];
+	parent: Task;
+	children: Task[];
+};
+
+export const getTaskModule = (task: FetchedTask, module_type: Module) => {
+	return task.modules?.find((module) => module.type === module_type);
+};
+
+export const getModuleData = (task: FetchedTask, module_type: Module) => {
+	const module = getTaskModule(task, module_type);
+	if (!module) return null;
+	return module.data as any;
 };

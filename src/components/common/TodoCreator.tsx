@@ -1,13 +1,14 @@
 "use client";
 
-import { CreateItemOptions } from "@/types/page-link";
-import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { CreateItemOptions, Module } from "@/types/page-link";
+import { Prisma, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { CalendarClock, ChevronDown, ChevronRight, Newspaper, Type } from "lucide-react";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
 import StatusIcon from "../Todo/StatusIcon";
 import { COLOURS } from "../Todo/TodoCard";
 import VisiblityIcon from "../Todo/VisibilityIcon";
+
 
 
 type TodoCreatorProps = {
@@ -20,8 +21,31 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 		summary: "",
 		due_date: null,
 		goal_id: undefined,
+		modules: []
 	} as CreateItemOptions);
 	const [expandedOptions, setExpandedOptions] = useState(false);
+
+	function updateModule(module: Module, data: any) {
+		// update item modules, either adding or updating
+		const modules = item.modules;
+		const index = modules.findIndex((m) => m.type == module);
+		if (index == -1) {
+			modules.push({ type: module, data });
+		}
+		else {
+			modules[index] = { type: module, data };
+		}
+		setItem({ ...item, modules });
+
+	}
+
+	function getModule(module: Module) {
+		const modules = item.modules;
+		const index = modules.findIndex((m) => m.type == module);
+		return modules[index]?.data?.valueOf() as any;
+	}
+
+	console.log(item.modules);
 
 	return (
 		<div className="styled-input flex flex-col items-center justify-center gap-1 rounded-md border-1 border-borders-secondary pt-1 pb-2">
@@ -32,6 +56,7 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 					<input
 						type="text"
 						placeholder="Title"
+						defaultValue={item?.title}
 						className="flex-1 rounded-md border-1 border-borders-secondary p-2 text-base-text-primary"
 						onChange={(e) => {
 							setItem({ ...item, title: e.target.value });
@@ -44,14 +69,16 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 						type="text"
 						placeholder="Summary"
 						className="flex-1 rounded-md border-1 border-borders-secondary p-2"
+						defaultValue={getModule(Module.SUMMARY)?.summary ?? undefined}
 						onChange={(e) => {
-							setItem({ ...item, summary: e.target.value });
+							// setItem({ ...item, summary: e.target.value });
+							updateModule(Module.SUMMARY, { summary: e.target.value });
 						}}
 					/>
 				</div>
 				<div className="flex flex-row items-center gap-2">
 					<CalendarClock className="w-5" />
-					<input type="datetime-local" className="flex-1 rounded-md border-1 border-borders-secondary p-2" defaultValue={dateToDateTime(item?.due_date) ?? undefined} onChange={(e) => setItem({ ...item, due_date: new Date(e.target.value) })} />
+					<input type="datetime-local" className="flex-1 rounded-md border-1 border-borders-secondary p-2" defaultValue={getModule(Module.END_DATE)?.date ?? undefined} onChange={(e) => updateModule(Module.END_DATE, { "date": dateToDateTime(new Date(e.target.value)) })} />
 				</div>
 				<div className="w-ful flex items-center justify-center text-base-text-subtle">
 					<button className="flex flex-row items-center 	 justify-center gap-1 transition-all duration-300" onClick={() => setExpandedOptions(!expandedOptions)}>

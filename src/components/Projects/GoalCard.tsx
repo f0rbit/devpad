@@ -1,12 +1,11 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
-import { CreateItemOptions, FetchedGoal } from "@/types/page-link";
+import { CreateItemOptions, FetchedGoal, FetchedTask } from "@/types/page-link";
 import { Task } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import { FetchedTask } from "src/utils/trpc";
 import TodoCreator from "../common/TodoCreator";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: FetchedGoal | null; project_id: string; cancel?: () => void; create?: (goal: FetchedGoal) => void; deleteCard?: (id: string) => void }) {
@@ -18,7 +17,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
 	});
 	const [error, setError] = useState("");
-	const [tasks, setTasks] = useState(goal?.tasks as Task[]);
+	const [tasks, setTasks] = useState(goal?.tasks as FetchedTask[]);
 
 	async function createGoal() {
 		const goal = {
@@ -169,7 +168,10 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 				</div>
 			)}
 			{showTasks && (
-				<div className="absolute top-[105%] w-full">
+				<div className="absolute top-[105%] w-full flex flex-col gap-2">
+					{goal?.tasks.map((task, index) => <div key={index}>
+						<pre>{JSON.stringify(task, null, 2)}</pre>
+						</div>)}
 					<TodoCreator onCreate={createTask} />
 				</div>
 			)}

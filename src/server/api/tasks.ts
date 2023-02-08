@@ -1,7 +1,6 @@
-import { CreateItemOptions } from "@/types/page-link";
+import { CreateItemOptions, FetchedTask, TaskInclude } from "@/types/page-link";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
-import { FetchedTask, TaskInclude } from "src/utils/trpc";
 
 export async function createTask(task: CreateItemOptions, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
@@ -14,6 +13,7 @@ export async function createTask(task: CreateItemOptions, session: Session): Pro
                 visibility: task?.visibility,
                 progress: task?.progress,
                 project_goal_id: task.goal_id,
+				modules: { createMany: { data: task.modules } }
 			},
             include: TaskInclude
 		})) ?? { fetchedTask: null };

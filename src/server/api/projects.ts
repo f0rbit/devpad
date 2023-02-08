@@ -1,4 +1,4 @@
-import { CreateProjectType, FetchedGoal } from "@/types/page-link";
+import { CreateProjectType, FetchedGoal, TaskInclude } from "@/types/page-link";
 import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
@@ -100,7 +100,7 @@ export async function getProjectGoals(project_id: string, session: Session): Pro
 	if (!project_id) return { data: [], error: "You must declare a valid project_id." };
 	try {
 		const where = { owner_id: session?.user?.id, project_id, deleted: false };
-		const goals = (await prisma?.projectGoal.findMany({ where, include: { tasks: true } })) as FetchedGoal[];
+		const goals = (await prisma?.projectGoal.findMany({ where, include: { tasks: { include: TaskInclude }} })) as FetchedGoal[];
 		if (!goals) return { data: [], error: "No goals found!" };
 		return { data: goals, error: "" };
 	} catch (e: any) {
