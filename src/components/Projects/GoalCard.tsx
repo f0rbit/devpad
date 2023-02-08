@@ -1,12 +1,13 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
-import { FetchedGoal } from "@/types/page-link";
+import { CreateItemOptions, FetchedGoal } from "@/types/page-link";
 import { Task } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import TodoCreator, { CreateItemOptions } from "../common/TodoCreator";
+import { FetchedTask } from "src/utils/trpc";
+import TodoCreator from "../common/TodoCreator";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: FetchedGoal | null; project_id: string; cancel?: () => void; create?: (goal: FetchedGoal) => void; deleteCard?: (id: string) => void }) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -38,10 +39,26 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		}
 	}
 
-	function createTask(task: CreateItemOptions) {
+	console.log(tasks);
+
+	async function createTask(task: CreateItemOptions) {
+		console.log("CREATING", task);
 		// run a fetch to create the task
 		// then add it to the tasks array
+		task.goal_id = goal?.id;
+
+		const response = await fetch("/api/tasks/create", { body: JSON.stringify(task), method: "POST" });
+		const { data, error } = await (response.json() as Promise<{ data: FetchedTask | null; error: string }>);
+		if (error) {
+			setError(error);
+		} else if (data) {
+			setTasks([...tasks, data]);
+		} else {
+			setError("failed to create task");
+		}
+
 	}
+
 
 	async function saveGoal() {
 		console.log("save goal!");

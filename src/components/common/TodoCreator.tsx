@@ -1,5 +1,6 @@
 "use client";
 
+import { CreateItemOptions } from "@/types/page-link";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { CalendarClock, ChevronDown, ChevronRight, Newspaper, Type } from "lucide-react";
 import { useState } from "react";
@@ -8,20 +9,18 @@ import StatusIcon from "../Todo/StatusIcon";
 import { COLOURS } from "../Todo/TodoCard";
 import VisiblityIcon from "../Todo/VisibilityIcon";
 
-export type CreateItemOptions = {
-	title: string;
-	summary: string;
-	due_date: Date | null;
-	visibility?: TASK_VISIBILITY;
-	progress?: TASK_PROGRESS;
-};
 
 type TodoCreatorProps = {
 	onCreate: (item: CreateItemOptions) => void;
 };
 
 export default function TodoCreator({ onCreate }: TodoCreatorProps) {
-	const [item, setItem] = useState({} as CreateItemOptions);
+	const [item, setItem] = useState({
+		title: "",
+		summary: "",
+		due_date: null,
+		goal_id: undefined,
+	} as CreateItemOptions);
 	const [expandedOptions, setExpandedOptions] = useState(false);
 
 	return (

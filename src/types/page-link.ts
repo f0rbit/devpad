@@ -1,4 +1,5 @@
-import { ProjectGoal, PROJECT_STATUS, Task } from "@prisma/client";
+import { ProjectGoal, PROJECT_STATUS, Task, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { FetchedTask } from "src/utils/trpc";
 
 export type PageLink = {
 	title: string;
@@ -38,4 +39,13 @@ export type CreateProjectType = {
 	status: PROJECT_STATUS;
 };
 
-export type FetchedGoal = ProjectGoal & { tasks: Task[] };
+export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
+
+export type CreateItemOptions = {
+	title: string;
+	summary: string;
+	due_date: Date | null;
+	visibility?: TASK_VISIBILITY;
+	progress?: TASK_PROGRESS;
+	goal_id?: string;
+};
