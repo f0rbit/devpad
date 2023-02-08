@@ -1,4 +1,3 @@
-import { useContext } from "react";
 import { TodoContext } from "src/pages/todo";
 import { hoverClass, hoverLinkClass } from "../HoverLink";
 

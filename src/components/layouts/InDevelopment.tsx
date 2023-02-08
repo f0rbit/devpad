@@ -1,4 +1,4 @@
-import ErrorWrapper from "@/components/ErrorWrapper";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 
 const InDevelopment = ({ message }: { message?: string }) => {
 	return (

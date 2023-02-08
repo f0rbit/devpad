@@ -1,12 +1,10 @@
 import { Module, TaskPriority } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
-import { useSession } from "next-auth/react";
-import React, { BaseSyntheticEvent, Dispatch, SetStateAction, useContext, useReducer, useState } from "react";
+import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { TodoContext } from "src/pages/todo";
-import { FetchedTask, getModuleData, getTaskModule, trpc } from "src/utils/trpc";
+import { FetchedTask, getModuleData, trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
-import { hoverExpandButton } from "../Home/HomeButton";
 import TodoCreateForm from "./Editors/TodoCreateForm";
 import { TodoTagsEditor } from "./Editors/TodoTagsEditor";
 import { LayoutIcon, TODO_LAYOUT } from "./ListLayout";

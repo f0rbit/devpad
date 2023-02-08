@@ -1,18 +1,16 @@
+import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
+import { Module } from "@/types/page-link";
+import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
+import moment from "moment";
 import { useState } from "react";
 import { FetchedTask, getModuleData, trpc } from "src/utils/trpc";
-import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
+import GenericModal from "../GenericModal";
 import { hoverLinkClass } from "../HoverLink";
+import { TODO_LAYOUT } from "./ListLayout";
+import StatusIcon from "./StatusIcon";
 import TodoTag from "./TodoTag";
 import VisiblityIcon from "./VisibilityIcon";
-import StatusIcon from "./StatusIcon";
-import GenericModal from "../GenericModal";
-import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
-import { TODO_LAYOUT } from "./ListLayout";
-import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { Module } from "@/types/page-link";
-import { ModuleIcon } from "./ModuleIcon";
-import { isTemplateExpression } from "typescript";
-import moment from "moment";
 
 export const COLOURS = {
 	COMPLETED: {

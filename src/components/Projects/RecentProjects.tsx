@@ -2,7 +2,7 @@ import { getUserProjects } from "@/server/api/projects";
 import { Project } from "@prisma/client";
 import Link from "next/link";
 import { use } from "react";
-import ErrorWrapper from "../ErrorWrapper";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { ProjectCard } from "./ProjectCard";
 
 export default function RecentProjects() {
@@ -37,10 +37,10 @@ export default function RecentProjects() {
 			</div>
 			<div className="flex flex-row justify-center gap-2 text-lg font-semibold">
 				<Link href={"projects/project"}>
-					<button className="rounded-xl bg-accent-btn-secondary px-4 py-0.5 hover:bg-accent-btn-secondary-hover">View All</button>
+					<button className="rounded-md border-1 border-accent-btn-primary px-4 py-0.5 hover:bg-accent-btn-primary text-accent-btn-primary hover:text-base-text-primary hover:border-accent-btn-primary-hover">View All</button>
 				</Link>
 				<Link href={"projects/create"}>
-					<button className="rounded-xl bg-accent-btn-secondary px-4 py-0.5 hover:bg-accent-btn-secondary-hover">Create New</button>
+					<button className="rounded-md border-1 border-accent-btn-primary px-4 py-0.5 hover:bg-accent-btn-primary text-accent-btn-primary hover:text-base-text-primary hover:border-accent-btn-primary-hover">Create New</button>
 				</Link>
 			</div>
 		</div>

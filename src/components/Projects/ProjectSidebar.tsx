@@ -37,10 +37,15 @@ const PROJECT_LINKS: ProjectLink[] = [
 
 export default function ProjectSidebar() {
 	const { open } = useContext(SidebarContext)
-	const pathname = usePathname();
+	const pathname = usePathname()
+
 	if (!open) return <></>;
+
 	// extract the first two strings of the path
 	const path = pathname?.split("/").slice(0, 4).join("/");
+	// get the last string of the path
+	var last = pathname?.split("/").at(4);
+	last = last ? "/" + last : "";
 	
 
 	return (
@@ -48,9 +53,10 @@ export default function ProjectSidebar() {
 			<div className="flex h-full justify-center pt-4 text-lg">
 				<div className="flex w-full flex-col gap-4 px-8">
 					{PROJECT_LINKS.map((link, index) => {
+						{console.log(link.link)}
 						return (
 							<Link href={path + link.link} key={index}>
-								<div className="flex w-full flex-row items-center gap-4 rounded-md border-1 border-borders-primary py-1 px-4 font-poppins transition-colors duration-500 hover:bg-borders-primary">
+								<div className={"flex w-full flex-row items-center gap-4 rounded-md border-1 border-borders-primary py-1 px-4 font-poppins transition-colors duration-500 " + (link.link == last ? "bg-accent-btn-primary hover:bg-accent-btn-primary-hover" : "hover:bg-borders-primary")}>
 									<div className="text-base-text-secondary">{link.icon}</div>
 									<div className="font-bold text-base-text-secondary">{link.name}</div>
 								</div>

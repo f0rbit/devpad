@@ -1,6 +1,6 @@
-import { Module, TaskPriority } from "@/types/page-link";
+import { Module } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { FetchedTask, getModuleData } from "src/utils/trpc";
+import { FetchedTask } from "src/utils/trpc";
 import GenericTodoUpdateForm from "./GenericTodoUpdateForm";
 
 export const TodoEditForm = ({ item, updateItem, setOpen, deleteItem, addModule, tags }: { item: FetchedTask; updateItem: any; setOpen: any; deleteItem: any; addModule: (module: Module) => void, tags: TaskTags[] | undefined }) => {

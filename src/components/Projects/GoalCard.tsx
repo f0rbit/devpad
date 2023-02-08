@@ -4,7 +4,7 @@ import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import ErrorWrapper from "../ErrorWrapper";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: ProjectGoal | null; project_id: string; cancel?: () => void; create?: (goal: ProjectGoal) => void, deleteCard?: (id: string) => void }) {
 	const [isEditing, setIsEditing] = useState(false);

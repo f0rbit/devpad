@@ -1,4 +1,4 @@
-import CenteredContainer from "@/components/CenteredContainer";
+import CenteredContainer from "@/components/common/CenteredContainer";
 import RecentProjects from "@/components/Projects/RecentProjects";
 import TitleInjector from "@/components/Projects/TitleInjector";
 

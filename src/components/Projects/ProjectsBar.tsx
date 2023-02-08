@@ -1,5 +1,5 @@
 "use client"
-import ApplicationSelector from "@/components/ApplicationSelector";
+import ApplicationSelector from "@/components/common/ApplicationSelector";
 import HomeButton from "@/components/Projects/HomeButton";
 import { RouteLinks } from "@/components/Projects/RouteLinks";
 import { UserSection } from "@/components/Projects/UserSection";

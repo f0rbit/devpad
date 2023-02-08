@@ -1,14 +1,13 @@
-import { dateToDateAndTime, dateToDateTime } from "src/utils/dates";
 import { COLOURS } from "@/components/Todo/TodoCard";
-import { ArrowLeft, ArrowRight, BoxSelect, Calendar, CalendarCheck2, CalendarX2, Eye, Flag, Newspaper, Tag, Tags, Type } from "lucide-react";
-import TodoTag from "../TodoTag";
-import { FetchedTask, getTaskModule } from "src/utils/trpc";
 import { Module, TaskPriority } from "@/types/page-link";
-import { ModuleIcon } from "../ModuleIcon";
 import { TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { ReactNode, useState } from "react";
+import { BoxSelect, Eye, Tag, Tags, Type } from "lucide-react";
+import { useState } from "react";
+import { dateToDateTime } from "src/utils/dates";
+import { FetchedTask } from "src/utils/trpc";
 import DescriptionParser from "../Description/DescriptionParser";
-import { hoverExpandButton } from "@/components/Home/HomeButton";
+import { ModuleIcon } from "../ModuleIcon";
+import TodoTag from "../TodoTag";
 
 const GenericTodoEditForm = ({
 	item,

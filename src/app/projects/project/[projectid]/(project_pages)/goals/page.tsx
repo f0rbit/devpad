@@ -1,5 +1,5 @@
-import CenteredContainer from "@/components/CenteredContainer";
-import ErrorWrapper from "@/components/ErrorWrapper";
+import CenteredContainer from "@/components/common/CenteredContainer";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 import GoalAdder from "@/components/Projects/GoalAdder";
 import GoalCard from "@/components/Projects/GoalCard";
 import GoalRenderer from "@/components/Projects/GoalRenderer";

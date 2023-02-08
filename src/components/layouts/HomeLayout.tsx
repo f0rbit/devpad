@@ -1,8 +1,8 @@
 import Head from "next/head";
 import { ReactNode } from "react";
-import CenteredContainer from "@/components/CenteredContainer";
+import CenteredContainer from "@/components/common/CenteredContainer";
 import HomeNavBar from "../Home/HomeNavBar";
-import LoginDialog from "../LoginModal";
+import LoginDialog from "@/components/LoginModal";
 
 const HomeLayout = ({ title, children }: { title: string; children: ReactNode }) => {
 	return (

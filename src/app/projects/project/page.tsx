@@ -1,5 +1,5 @@
-import CenteredContainer from "@/components/CenteredContainer";
-import ErrorWrapper from "@/components/ErrorWrapper";
+import CenteredContainer from "@/components/common/CenteredContainer";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { ProjectCard } from "@/components/Projects/ProjectCard";
 import TitleInjector from "@/components/Projects/TitleInjector";
 import { getUserProjects } from "@/server/api/projects";

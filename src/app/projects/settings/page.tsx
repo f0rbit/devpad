@@ -1,4 +1,4 @@
-import CenteredContainer from "@/components/CenteredContainer";
+import CenteredContainer from "@/components/common/CenteredContainer";
 import TitleInjector from "@/components/Projects/TitleInjector";
 
 export default function HomePage() {

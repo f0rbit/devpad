@@ -1,4 +1,4 @@
-import ErrorWrapper from "@/components/ErrorWrapper";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { ProjectCard } from "@/components/Projects/ProjectCard";
 import TitleInjector from "@/components/Projects/TitleInjector";
 import { getUserProject } from "@/server/api/projects";

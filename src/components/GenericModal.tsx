@@ -1,5 +1,5 @@
-import React, { Dispatch, Fragment, ReactNode, SetStateAction } from "react";
 import { Dialog, Transition } from "@headlessui/react";
+import { Dispatch, Fragment, ReactNode, SetStateAction } from "react";
 
 function GenericModal({ children, open, setOpen }: { children: ReactNode; open: boolean; setOpen: Dispatch<SetStateAction<boolean>> }) {
 	return (

@@ -1,5 +1,5 @@
-import CenteredContainer from "@/components/CenteredContainer";
-import ErrorWrapper from "@/components/ErrorWrapper";
+import CenteredContainer from "@/components/common/CenteredContainer";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { getProjectHistory } from "@/server/api/projects";
 import { Action, ACTION_TYPE } from "@prisma/client";
 import { Flag, Unlink } from "lucide-react";

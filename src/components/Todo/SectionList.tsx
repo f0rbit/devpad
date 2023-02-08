@@ -1,6 +1,4 @@
-import { ProjectRouteLink } from "@/types/page-link";
 import { TaskTags } from "@prisma/client";
-import { Search } from "lucide-react";
 import { useContext } from "react";
 import { TodoContext } from "src/pages/todo";
 import CollapseableSection from "./CollapseableSection";
@@ -31,24 +29,6 @@ const links: SectionLinkType[] = [
 		description: "Urgent tasks",
 		icon: "🚨",
 		url: "urgent"
-	}
-];
-
-const projects: SectionLinkType[] = [
-	{
-		title: "Project 1",
-		description: "Project 1",
-		url: "projects/project_1"
-	},
-	{
-		title: "Project 2",
-		description: "Project 2",
-		url: "projects/project_2"
-	},
-	{
-		title: "Project 3",
-		description: "Project 3",
-		url: "projects/project_3"
 	}
 ];
 

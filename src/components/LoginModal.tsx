@@ -2,7 +2,7 @@ import { Dialog } from "@headlessui/react";
 import { useContext } from "react";
 import { LoginContext } from "src/pages/_app";
 import GenericModal from "./GenericModal";
-import LoginButton from "./LoginButton";
+import LoginButton from "./common/LoginButton";
 
 const LoginModal = () => {
 	const { loginOpen, setLoginOpen } = useContext(LoginContext);

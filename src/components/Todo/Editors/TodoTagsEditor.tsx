@@ -1,5 +1,5 @@
 import { TaskTags } from "@prisma/client";
-import { Check, Cross, Edit2, Plus, Save, TimerReset, Trash2, Undo2, X } from "lucide-react";
+import { Check, Plus, Save, Trash2, Undo2, X } from "lucide-react";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
 

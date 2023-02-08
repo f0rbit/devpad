@@ -47,18 +47,19 @@ module.exports = {
 					"text-primary": "#dadde8",
 				},
 				"accent": {
-					"btn-primary": "#755cdd",
-					"btn-primary-hover": "#8068e3",
-					"btn-secondary": "#6f69ef",
-					"btn-secondary-hover": "#7771f5" ,
-					"btn-tertiary": "#3b3170",
-					"btn-tertiary-hover": "#453982",
+					"btn-primary": "#9355d9",
+					"btn-primary-hover": "#a264e8",
+					"btn-secondary": "#755cdd",
+					"btn-secondary-hover": "#8068e3",
+					"btn-tertiary": "#6f69ef",
+					"btn-tertiary-hover": "#7771f5" ,
+					"btn-four": "#3b3170",
+					"btn-four-hover": "#453982",
 				},
 				"borders": {
 					"primary": "#2a2c3b",
 					"secondary": "#35374a",
 					"tertiary": "#373b57",
-					
 				}
 			},
 			borderWidth: {

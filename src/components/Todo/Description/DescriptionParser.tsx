@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
-import { JSONValue } from "superjson/dist/types";
 
 type CheckListItem = {
 	description: string;

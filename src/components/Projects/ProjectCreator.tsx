@@ -3,8 +3,8 @@
 import { Project, PROJECT_STATUS } from "@prisma/client";
 import { AlertTriangle, Check } from "lucide-react";
 import { useState } from "react";
-import CenteredContainer from "../CenteredContainer";
-import ErrorWrapper from "../ErrorWrapper";
+import CenteredContainer from "@/components/common/CenteredContainer";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
 
 export default function ProjectCreator({ projects }: { projects: Project[] }) {
 	const [error, setError] = useState("");

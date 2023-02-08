@@ -4,7 +4,7 @@ import { Boxes } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import APPLICATIONS from "./Home/Applications";
+import APPLICATIONS from "../Home/Applications";
 
 export default function ApplicationSelector() {
     const [open, setOpen] = useState(false);
@@ -12,8 +12,6 @@ export default function ApplicationSelector() {
 
     // get the first part of the path
     const dir = "/" + path?.split("/")[1];
-
-    console.log(dir);
     
     return (
         <div className="relative flex">

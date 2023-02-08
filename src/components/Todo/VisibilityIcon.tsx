@@ -1,5 +1,5 @@
 import { TASK_VISIBILITY } from "@prisma/client";
-import { Lock, Unlock, EyeOff, Archive, FileEdit } from "lucide-react";
+import { Archive, EyeOff, FileEdit, Lock, Unlock } from "lucide-react";
 
 const VisiblityIcon = ({ visibility }: { visibility: TASK_VISIBILITY }) => {
 	switch (visibility) {
