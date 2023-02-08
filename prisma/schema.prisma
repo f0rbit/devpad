@@ -121,17 +121,17 @@ model Project {
 }
 
 model ProjectGoal {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
   name        String
   project_id  String
   owner_id    String
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
   description String?
-  project     Project  @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
-  target_time DateTime @default(now())
-  items       Task[]
-  deleted     Boolean  @default(false)
+  project     Project   @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
+  target_time DateTime  @default(now())
+  tasks       Task[]
+  deleted     Boolean   @default(false)
   finished_at DateTime?
 }
 

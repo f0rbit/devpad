@@ -1,4 +1,5 @@
-export const dateToDateTime = (date: Date) => {
+export const dateToDateTime = (date: Date | null) => {
+	if (!date) return null;
 	return date
 		.toLocaleString("sv-SE", {
 			year: "numeric",

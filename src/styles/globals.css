@@ -33,7 +33,7 @@ html {
 }
 
 .styled-input input, textarea, select {
-	@apply bg-base-accent-primary focus:ring-2 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2
+	@apply bg-base-accent-primary focus:ring-1 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2
 }
 
 .primary-btn-outline {

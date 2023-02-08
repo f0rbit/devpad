@@ -1,4 +1,4 @@
-import { PROJECT_STATUS } from "@prisma/client";
+import { ProjectGoal, PROJECT_STATUS, Task } from "@prisma/client";
 
 export type PageLink = {
 	title: string;
@@ -37,3 +37,5 @@ export type CreateProjectType = {
 	repo_url: string;
 	status: PROJECT_STATUS;
 };
+
+export type FetchedGoal = ProjectGoal & { tasks: Task[] };

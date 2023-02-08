@@ -1,13 +1,14 @@
 "use client";
-import { ProjectGoal } from "@prisma/client";
+import ErrorWrapper from "@/components/common/ErrorWrapper";
+import { FetchedGoal } from "@/types/page-link";
+import { Task } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import ErrorWrapper from "@/components/common/ErrorWrapper";
-import TodoCreator from "../common/TodoCreator";
+import TodoCreator, { CreateItemOptions } from "../common/TodoCreator";
 
-export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: ProjectGoal | null; project_id: string; cancel?: () => void; create?: (goal: ProjectGoal) => void, deleteCard?: (id: string) => void }) {
+export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: FetchedGoal | null; project_id: string; cancel?: () => void; create?: (goal: FetchedGoal) => void; deleteCard?: (id: string) => void }) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showTasks, setShowTasks] = useState(false);
 	const [editingGoal, setEditingGoal] = useState({
@@ -16,6 +17,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
 	});
 	const [error, setError] = useState("");
+	const [tasks, setTasks] = useState(goal?.tasks as Task[]);
 
 	async function createGoal() {
 		const goal = {
@@ -26,7 +28,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		};
 
 		const response = await fetch("/api/projects/goal/create", { body: JSON.stringify(goal), method: "POST" });
-		const { data, error } = await (response.json() as Promise<{ data: ProjectGoal | null; error: string }>);
+		const { data, error } = await (response.json() as Promise<{ data: FetchedGoal | null; error: string }>);
 		if (error) {
 			setError(error);
 		} else if (data) {
@@ -34,6 +36,11 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		} else {
 			setError("Failed to create project");
 		}
+	}
+
+	function createTask(task: CreateItemOptions) {
+		// run a fetch to create the task
+		// then add it to the tasks array
 	}
 
 	async function saveGoal() {
@@ -46,7 +53,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 			return;
 		}
 		const response = await fetch("/api/projects/goal/delete", { body: JSON.stringify({ goal_id: goal?.id }), method: "POST" });
-		const { success, error } = await (response.json() as Promise<{ success: boolean, error: string }>);
+		const { success, error } = await (response.json() as Promise<{ success: boolean; error: string }>);
 		if (error) {
 			setError(error);
 		} else if (success) {
@@ -66,7 +73,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 	}
 
 	return (
-		<div className="w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2 relative">
+		<div className="relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
 			{isEditing == false && goal ? (
 				<div className="flex flex-col gap-2">
 					<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2">
@@ -79,7 +86,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 							{showTasks ? <ChevronUp /> : <ChevronDown />}
 							Show Tasks
 						</button>
-						<button className="rounded-md px-4 py-0.5 primary-btn-outline" onClick={() => setIsEditing(!isEditing)}>
+						<button className="primary-btn-outline rounded-md px-4 py-0.5" onClick={() => setIsEditing(!isEditing)}>
 							<Pencil className="w-4" />
 						</button>
 					</div>
@@ -107,8 +114,8 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 							type="datetime-local"
 							placeholder="Due Date"
 							className="w-full rounded-md border-1 border-borders-secondary bg-base-accent-secondary py-1 px-2 text-base-text-secondary placeholder-base-text-dark"
-							onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value)})}
-							defaultValue={dateToDateTime(editingGoal.target_time)}
+							onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value) })}
+							defaultValue={dateToDateTime(editingGoal.target_time) ?? undefined}
 						/>
 					</div>
 					<div className="flex h-full w-full items-center justify-center gap-2 py-1">
@@ -129,7 +136,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						</button>
 						<button
 							title={isEditing ? "Save" : "Create"}
-							className="rounded-md px-4 py-1 font-semibold primary-btn-outline"
+							className="primary-btn-outline rounded-md px-4 py-1 font-semibold"
 							onClick={() => {
 								if (isEditing) {
 									saveGoal();
@@ -144,10 +151,11 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 					</div>
 				</div>
 			)}
-			{showTasks && 
-			<div className="absolute top-[105%] w-full">
-				<TodoCreator onCreate={(item) => console.log(item)}/>
-			</div>}
+			{showTasks && (
+				<div className="absolute top-[105%] w-full">
+					<TodoCreator onCreate={createTask} />
+				</div>
+			)}
 		</div>
 	);
 }
@@ -166,32 +174,32 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 				<Trash className="w-4" />
 			</button>
 			{isDeleting && (
-			<div className="absolute top-[120%] -right-[75%] flex flex-col gap-2 p-2 bg-base-accent-primary border-borders-secondary border-1 rounded-md">
-				<div className="flex flex-row items-center gap-2">
-					<div className="min-w-max text-base-text-subtle">Are you sure?</div>
+				<div className="absolute top-[120%] -right-[75%] flex flex-col gap-2 rounded-md border-1 border-borders-secondary bg-base-accent-primary p-2">
+					<div className="flex flex-row items-center gap-2">
+						<div className="min-w-max text-base-text-subtle">Are you sure?</div>
+					</div>
+					<div className="flex h-full w-full items-center justify-center gap-2 py-1">
+						<button
+							title="Cancel"
+							className="flex justify-center rounded-md border-1 border-borders-secondary px-4 py-1 font-semibold hover:bg-base-accent-secondary"
+							onClick={() => {
+								setIsDeleting(false);
+							}}
+						>
+							<X className="w-4" />
+						</button>
+						<button
+							title="Delete"
+							className="flex justify-center rounded-md border-1 border-red-400 px-4 py-1 font-semibold text-red-400 transition-all duration-500 hover:border-red-300 hover:bg-red-400 hover:text-red-100"
+							onClick={() => {
+								deleteGoal();
+								setIsDeleting(false);
+							}}
+						>
+							<Trash className="w-4" />
+						</button>
+					</div>
 				</div>
-				<div className="flex h-full w-full items-center justify-center gap-2 py-1">
-					<button
-						title="Cancel"
-						className="flex justify-center rounded-md border-1 border-borders-secondary px-4 py-1 font-semibold hover:bg-base-accent-secondary"
-						onClick={() => {
-							setIsDeleting(false);
-						}}
-					>
-						<X className="w-4" />
-					</button>
-					<button
-						title="Delete"
-						className="flex justify-center rounded-md border-1 border-red-400 px-4 py-1 font-semibold text-red-400 transition-all duration-500 hover:border-red-300 hover:bg-red-400 hover:text-red-100"
-						onClick={() => {
-							deleteGoal();
-							setIsDeleting(false);
-						}}
-					>
-						<Trash className="w-4" />
-					</button>
-				</div>
-			</div>
 			)}
 		</>
 	);
