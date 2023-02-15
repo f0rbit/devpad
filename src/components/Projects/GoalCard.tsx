@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
+import TaskCard from "../common/TaskCard";
 import TodoCreator from "../common/TodoCreator";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: FetchedGoal | null; project_id: string; cancel?: () => void; create?: (goal: FetchedGoal) => void; deleteCard?: (id: string) => void }) {
@@ -51,6 +52,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		if (error) {
 			setError(error);
 		} else if (data) {
+			console.log({ data });
 			setTasks([...tasks, data]);
 		} else {
 			setError("failed to create task");
@@ -169,9 +171,10 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 			)}
 			{showTasks && (
 				<div className="absolute top-[105%] w-full flex flex-col gap-2">
-					{goal?.tasks.map((task, index) => <div key={index}>
-						<pre>{JSON.stringify(task, null, 2)}</pre>
-						</div>)}
+					{tasks?.map((task, index) => <div key={index}>
+						{/* <pre>{JSON.stringify(task, null, 2)}</pre> */}
+						<TaskCard task={task} />
+					</div>)}
 					<TodoCreator onCreate={createTask} />
 				</div>
 			)}

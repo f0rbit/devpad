@@ -1,11 +1,12 @@
 import BaseLayout, { SidebarContext } from "@/components/layouts/BaseLayout";
 import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
+import { FetchedTask } from "@/types/page-link";
 import { Project, TaskTags } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
 import React, { Context, Dispatch, SetStateAction, useCallback, useContext, useEffect, useState } from "react";
-import { FetchedTask, trpc } from "src/utils/trpc";
+import { trpc } from "src/utils/trpc";
 
 type TodoContextType = {
 	showList: boolean;

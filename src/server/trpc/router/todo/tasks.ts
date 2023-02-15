@@ -1,8 +1,7 @@
 import { router, protectedProcedure } from "@/server/trpc/trpc";
 import { z } from "zod";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { FetchedTask, TaskInclude } from "src/utils/trpc";
-import { Module, TaskPriority } from "@/types/page-link";
+import { FetchedTask, Module, TaskInclude, TaskPriority } from "@/types/page-link";
 import { contextUserOwnsTask, getDefaultModuleData } from "src/utils/backend";
 
 const updateItemInput = z.object({

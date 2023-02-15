@@ -1,22 +1,14 @@
-import { Module, TaskPriority } from "@/types/page-link";
+import { FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { TodoContext } from "src/pages/todo";
-import { FetchedTask, getModuleData, trpc } from "src/utils/trpc";
+import { trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
 import TodoCreateForm from "./Editors/TodoCreateForm";
 import { TodoTagsEditor } from "./Editors/TodoTagsEditor";
 import { LayoutIcon, TODO_LAYOUT } from "./ListLayout";
 import TodoCard from "./TodoCard";
-
-//create your forceUpdate hook
-function useForceUpdate() {
-	const [value, setValue] = useState(0); // integer state
-	return () => setValue((value) => value + 1); // update state to force render
-	// An function that increment 👆🏻 the previous state like here
-	// is better than directly setting `value + 1`
-}
 
 const ListRenderer = () => {
 	const { items, setItems } = useContext(TodoContext);
@@ -24,7 +16,6 @@ const ListRenderer = () => {
 	const [editTagsModalOpen, setEditTagsModalOpen] = useState(false);
 	const create_item = trpc.tasks.createItem.useMutation();
 	const [layout, setLayout] = useState(TODO_LAYOUT.LIST);
-	const forceUpdate = useForceUpdate();
 
 	if (!items) {
 		return <div>Loading...</div>;
@@ -202,7 +193,7 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 				if (!tag) return [];
 				return sorted.filter((item) => {
 					// get titles of tags
-					const tags = item.tags.map((tag) => tag.title.toLowerCase());
+					const tags = item.tags?.map((tag) => tag.title.toLowerCase());
 					return tags.includes(tag);
 				});
 			} else if (selectedSection.startsWith("projects/")) {

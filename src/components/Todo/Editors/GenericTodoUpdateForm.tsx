@@ -1,10 +1,9 @@
 import { COLOURS } from "@/components/Todo/TodoCard";
-import { Module, TaskPriority } from "@/types/page-link";
+import { FetchedTask, Module, TaskPriority } from "@/types/page-link";
 import { TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { BoxSelect, Eye, Tag, Tags, Type } from "lucide-react";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import { FetchedTask } from "src/utils/trpc";
 import DescriptionParser from "../Description/DescriptionParser";
 import { ModuleIcon } from "../ModuleIcon";
 import TodoTag from "../TodoTag";
@@ -188,7 +187,7 @@ const ItemEndDate = ({ module }: { module: any }) => {
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="End Time">
 			{ModuleIcon[module.type as Module]}
-			<input type="datetime-local" name="end_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value} />
+			<input type="datetime-local" name="end_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value ?? undefined} />
 		</div>
 	);
 };
@@ -200,7 +199,7 @@ const ItemStartDate = ({ module }: { module: any }) => {
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="Start Time">
 			{ModuleIcon[module.type as Module]}
-			<input type="datetime-local" name="start_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value} />
+			<input type="datetime-local" name="start_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value ?? undefined} />
 		</div>
 	);
 };

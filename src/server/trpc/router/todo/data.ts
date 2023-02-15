@@ -1,5 +1,5 @@
 import { router, protectedProcedure as protectedProcedure } from "@/server/trpc/trpc";
-import { FetchedTask, TaskInclude } from "src/utils/trpc";
+import { FetchedTask, TaskInclude } from "@/types/page-link";
 
 export const dataRouter = router({
 	getItemsAndTags: protectedProcedure.query(async ({ ctx }) => {

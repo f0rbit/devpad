@@ -1,10 +1,10 @@
 import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
-import { Module } from "@/types/page-link";
+import { FetchedTask, getModuleData, Module } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
-import { FetchedTask, getModuleData, trpc } from "src/utils/trpc";
+import { trpc } from "src/utils/trpc";
 import GenericModal from "../GenericModal";
 import { hoverLinkClass } from "../HoverLink";
 import { TODO_LAYOUT } from "./ListLayout";
@@ -35,13 +35,13 @@ const getNextStatus = (status: TASK_PROGRESS) => {
 	}
 };
 
-const TodoStatus = ({ status, update_progress, id }: { status: TASK_PROGRESS; update_progress: any; id: string }) => {
+export const TodoStatus = ({ status, update_progress, id }: { status: TASK_PROGRESS; update_progress?: (status: TASK_PROGRESS) => void; id: string }) => {
 	const next_status = getNextStatus(status);
 	return (
 		<button
 			onClick={(e) => {
 				e.preventDefault();
-				update_progress(next_status);
+				update_progress?.(next_status);
 			}}
 			title={"Change status to " + next_status}
 		>
@@ -148,7 +148,7 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 	);
 };
 
-const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
+export const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
 	if (!endTime || !endTime.date) return <></>;
 	const { date: timestamp } = endTime;
 	const date = new Date(timestamp);
@@ -176,7 +176,7 @@ const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
 	);
 };
 
-const SummaryText = ({ module }: { module: { summary: string } }) => {
+export const SummaryText = ({ module }: { module: { summary: string } }) => {
 	if (!module || !module.summary) return <></>;
 	return (
 		<div className="flex items-center gap-2 align-middle">
