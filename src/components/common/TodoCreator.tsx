@@ -8,8 +8,7 @@ import { dateToDateTime } from "src/utils/dates";
 import StatusIcon from "../Todo/StatusIcon";
 import { COLOURS } from "../Todo/TodoCard";
 import VisiblityIcon from "../Todo/VisibilityIcon";
-
-
+import PrimaryButton from "./PrimaryButton";
 
 type TodoCreatorProps = {
 	onCreate: (item: CreateItemOptions) => void;
@@ -31,12 +30,10 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 		const index = modules.findIndex((m) => m.type == module);
 		if (index == -1) {
 			modules.push({ type: module, data });
-		}
-		else {
+		} else {
 			modules[index] = { type: module, data };
 		}
 		setItem({ ...item, modules });
-
 	}
 
 	function getModule(module: Module) {
@@ -45,13 +42,11 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 		return modules[index]?.data?.valueOf() as any;
 	}
 
-	console.log(item.modules);
-
 	return (
 		<div className="styled-input flex flex-col items-center justify-center gap-1 rounded-md border-1 border-borders-secondary pt-1 pb-2">
 			<div className="mb-2 w-full border-b-1 border-b-borders-secondary pb-1 text-center font-semibold text-base-text-primary">New Task</div>
 			<div className="flex w-full flex-col gap-2 px-2 text-base-text-subtlish">
-				<div className="flex flex-row items-center gap-2">
+				<div className="flex flex-row items-center gap-2 ">
 					<Type className="w-5" />
 					<input
 						type="text"
@@ -78,7 +73,12 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 				</div>
 				<div className="flex flex-row items-center gap-2">
 					<CalendarClock className="w-5" />
-					<input type="datetime-local" className="flex-1 rounded-md border-1 border-borders-secondary p-2" defaultValue={getModule(Module.END_DATE)?.date ?? undefined} onChange={(e) => updateModule(Module.END_DATE, { "date": dateToDateTime(new Date(e.target.value)) })} />
+					<input
+						type="datetime-local"
+						className="flex-1 rounded-md border-1 border-borders-secondary p-2"
+						defaultValue={getModule(Module.END_DATE)?.date ?? undefined}
+						onChange={(e) => updateModule(Module.END_DATE, { date: dateToDateTime(new Date(e.target.value)) })}
+					/>
 				</div>
 				<div className="w-ful flex items-center justify-center text-base-text-subtle">
 					<button className="flex flex-row items-center 	 justify-center gap-1 transition-all duration-300" onClick={() => setExpandedOptions(!expandedOptions)}>
@@ -93,9 +93,9 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 				)}
 				{expandedOptions && <ProgressSelector select={(progress) => setItem({ ...item, progress })} selected={item.progress} />}
 				<div className="flex flex-row items-center justify-center gap-2">
-					<button className="primary-btn-outline rounded-md px-4 py-1" onClick={() => onCreate(item)}>
+					<PrimaryButton onClick={() => onCreate(item)} style="font-semibold">
 						Create
-					</button>
+					</PrimaryButton>
 				</div>
 			</div>
 		</div>

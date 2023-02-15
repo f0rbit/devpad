@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use } from "react";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { ProjectCard } from "./ProjectCard";
+import PrimaryButton from "../common/PrimaryButton";
 
 export default function RecentProjects() {
 	const { data, error } = use(getUserProjects({ includeDeleted: false }));
@@ -37,10 +38,14 @@ export default function RecentProjects() {
 			</div>
 			<div className="flex flex-row justify-center gap-2 text-lg font-semibold">
 				<Link href={"projects/project"}>
-					<button className="rounded-md border-1 border-accent-btn-primary px-4 py-0.5 hover:bg-accent-btn-primary text-accent-btn-primary hover:text-base-text-primary hover:border-accent-btn-primary-hover">View All</button>
+					<PrimaryButton>
+						View All
+					</PrimaryButton>
 				</Link>
 				<Link href={"projects/create"}>
-					<button className="rounded-md border-1 border-accent-btn-primary px-4 py-0.5 hover:bg-accent-btn-primary text-accent-btn-primary hover:text-base-text-primary hover:border-accent-btn-primary-hover">Create New</button>
+					<PrimaryButton>
+						Create New
+					</PrimaryButton>
 				</Link>
 			</div>
 		</div>

@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
+import PrimaryButton from "../common/PrimaryButton";
 import TaskCard from "../common/TaskCard";
 import TodoCreator from "../common/TodoCreator";
 
@@ -91,7 +92,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 	}
 
 	return (
-		<div className="relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
+		<div className="styled-input relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
 			{isEditing == false && goal ? (
 				<div className="flex flex-col gap-2">
 					<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2">
@@ -103,10 +104,10 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						<button className="flex flex-row gap-2 rounded-md border-1 border-borders-secondary py-1 px-4 hover:bg-base-accent-secondary" onClick={() => setShowTasks(!showTasks)}>
 							{showTasks ? <ChevronUp /> : <ChevronDown />}
 							Show Tasks
-						</button>
-						<button className="primary-btn-outline rounded-md px-4 py-0.5" onClick={() => setIsEditing(!isEditing)}>
+						</button>	
+						<PrimaryButton onClick={() => setIsEditing(!isEditing)}>
 							<Pencil className="w-4" />
-						</button>
+						</PrimaryButton>
 					</div>
 				</div>
 			) : (
@@ -152,7 +153,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						>
 							<X className="w-4" />
 						</button>
-						<button
+						{/* <button
 							title={isEditing ? "Save" : "Create"}
 							className="primary-btn-outline rounded-md px-4 py-1 font-semibold"
 							onClick={() => {
@@ -164,7 +165,10 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 							}}
 						>
 							{isEditing ? <Save className="w-4" /> : "Create"}
-						</button>
+						</button> */}
+						<PrimaryButton onClick={() => { isEditing ? saveGoal() : createGoal() }} title={isEditing ? "Save" : "Create"} style="font-semibold">
+							{isEditing ? <Save className="w-4" /> : "Create"}
+						</PrimaryButton>
 						<div className="relative">{isEditing && <DeleteGoalButton deleteGoal={deleteGoal} />}</div>
 					</div>
 				</div>
