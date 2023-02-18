@@ -1,7 +1,7 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { CreateItemOptions, FetchedGoal, FetchedTask } from "@/types/page-link";
-import { Task } from "@prisma/client";
+import { Task, TASK_VISIBILITY } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
@@ -40,8 +40,6 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		}
 	}
 
-	console.log(tasks);
-
 	async function createTask(task: CreateItemOptions) {
 		console.log("CREATING", task);
 		// run a fetch to create the task
@@ -59,7 +57,6 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 			setError("failed to create task");
 		}
 	}
-
 
 	async function saveGoal() {
 		console.log("save goal!");
@@ -103,7 +100,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						<button className="flex flex-row gap-2 rounded-md border-1 border-borders-secondary py-1 px-4 hover:bg-base-accent-secondary" onClick={() => setShowTasks(!showTasks)}>
 							{showTasks ? <ChevronUp /> : <ChevronDown />}
 							Show Tasks
-						</button>	
+						</button>
 						<PrimaryButton onClick={() => setIsEditing(!isEditing)}>
 							<Pencil className="w-4" />
 						</PrimaryButton>
@@ -165,7 +162,13 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						>
 							{isEditing ? <Save className="w-4" /> : "Create"}
 						</button> */}
-						<PrimaryButton onClick={() => { isEditing ? saveGoal() : createGoal() }} title={isEditing ? "Save" : "Create"} style="font-semibold">
+						<PrimaryButton
+							onClick={() => {
+								isEditing ? saveGoal() : createGoal();
+							}}
+							title={isEditing ? "Save" : "Create"}
+							style="font-semibold"
+						>
 							{isEditing ? <Save className="w-4" /> : "Create"}
 						</PrimaryButton>
 						<div className="relative">{isEditing && <DeleteGoalButton deleteGoal={deleteGoal} />}</div>
@@ -173,11 +176,15 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 				</div>
 			)}
 			{showTasks && (
-				<div className="absolute top-[105%] w-full flex flex-col gap-2">
-					{tasks?.map((task, index) => <div key={index}>
-						{/* <pre>{JSON.stringify(task, null, 2)}</pre> */}
-						<TaskCard task={task} />
-					</div>)}
+				<div className="absolute top-[105%] flex w-full flex-col gap-2">
+					{tasks
+						?.filter((task) => task.visibility != TASK_VISIBILITY.ARCHIVED && task.visibility != TASK_VISIBILITY.DELETED)
+						?.map((task, index) => (
+							<div key={index}>
+								{/* <pre>{JSON.stringify(task, null, 2)}</pre> */}
+								<TaskCard task={task} />
+							</div>
+						))}
 					<TodoCreator onCreate={createTask} />
 				</div>
 			)}

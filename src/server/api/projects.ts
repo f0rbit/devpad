@@ -94,13 +94,12 @@ export async function getUserProject(projectID: string): Promise<{ data: Project
 	}
 }
 
-
 export async function getProjectGoals(project_id: string, session: Session): Promise<{ data: FetchedGoal[]; error: string }> {
 	if (!session?.user?.id) return { data: [], error: "You must be signed in to delete a project." };
 	if (!project_id) return { data: [], error: "You must declare a valid project_id." };
 	try {
 		const where = { owner_id: session?.user?.id, project_id, deleted: false };
-		const goals = (await prisma?.projectGoal.findMany({ where, include: { tasks: { include: TaskInclude }} })) as FetchedGoal[];
+		const goals = (await prisma?.projectGoal.findMany({ where, include: { tasks: { include: TaskInclude } } })) as FetchedGoal[];
 		if (!goals) return { data: [], error: "No goals found!" };
 		return { data: goals, error: "" };
 	} catch (e: any) {
