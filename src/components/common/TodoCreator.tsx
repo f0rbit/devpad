@@ -22,12 +22,13 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 	const [expandedOptions, setExpandedOptions] = useState(false);
 
 	function updateModule(module: Module, data: any) {
+		console.log({ module, data });
 		// update item modules, either adding or updating
 		const modules = item.modules;
 		const index = modules?.findIndex((m) => m.type == module);
 		if (index == -1) {
-			modules?.push({ type: module, data });
-		} else if (modules && index) {
+			modules.push({ type: module, data });
+		} else {
 			modules[index] = { type: module, data };
 		}
 		setItem({ ...item, modules });
@@ -35,12 +36,8 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 
 	function getModule(module: Module): any | null {
 		const modules = item.modules;
-		const index = modules?.findIndex((m) => m.type == module);
-		if (modules && index) {
-			return modules[index]?.data?.valueOf() as any;
-		} else {
-			return null;
-		}
+		const index = modules.findIndex((m) => m.type == module);
+		return modules[index]?.data.valueOf() as any;		
 	}
 
 	return (

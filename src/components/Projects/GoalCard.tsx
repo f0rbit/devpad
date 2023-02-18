@@ -19,7 +19,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
 	});
 	const [error, setError] = useState("");
-	const [tasks, setTasks] = useState(goal?.tasks as FetchedTask[]);
+	const [tasks, setTasks] = useState((goal?.tasks ?? []) as FetchedTask[]);
 
 	async function createGoal() {
 		const goal = {

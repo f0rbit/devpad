@@ -17,7 +17,7 @@ function GenericModal({ children, open, setOpen }: { children: ReactNode; open: 
 			>
 				<Dialog onClose={() => setOpen(false)} className="fixed top-0 z-50 h-screen w-screen bg-transparent" aria-hidden={true}>
 					<div className="relative inset-0 flex h-full w-full items-center  justify-center p-4">
-						<Dialog.Panel className="z-51 w-max rounded-md dark:bg-pad-gray-700 bg-gray-100 p-4">{children}</Dialog.Panel>
+						<Dialog.Panel className="z-51 w-max rounded-md dark:bg-base-bg-primary bg-gray-100 p-4">{children}</Dialog.Panel>
 					</div>
 				</Dialog>
 			</Transition>
