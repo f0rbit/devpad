@@ -1,5 +1,4 @@
-import CenteredContainer from "@/components/CenteredContainer";
-import InDevelopment from "@/components/layouts/InDevelopment";
+import CenteredContainer from "@/components/common/CenteredContainer";
 import { NextPage } from "next";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
