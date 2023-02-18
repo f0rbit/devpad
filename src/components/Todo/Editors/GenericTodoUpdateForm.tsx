@@ -4,7 +4,7 @@ import { BoxSelect, Eye, Tag, Tags, Type } from "lucide-react";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
 import DescriptionParser from "../Description/DescriptionParser";
-import { ModuleIcon } from "../ModuleIcon";
+import ModuleIcon from "../ModuleIcon";
 import TodoTag from "../TodoTag";
 
 const GenericTodoEditForm = ({
@@ -123,7 +123,8 @@ const ModuleButtons = ({ edit_module, edit_tags }: { edit_module: (module: Modul
 				{Object.values(Module).map((module, index) => {
 					return (
 						<button className="flex w-full flex-row items-center gap-2 rounded-md bg-gray-300 py-1 px-2 hover:bg-gray-200 dark:bg-pad-gray-300 dark:hover:bg-pad-gray-200" key={index} onClick={() => edit_module(module)}>
-							{ModuleIcon[module]}
+							{/* {ModuleIcon[module]} */}
+							<ModuleIcon module={module} />
 							<span>{module}</span>
 						</button>
 					);
@@ -185,7 +186,7 @@ const ItemEndDate = ({ module }: { module: any }) => {
 	const value = dateToDateTime(new Date(date));
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="End Time">
-			{ModuleIcon[module.type as Module]}
+			<ModuleIcon module={module.type as Module} />
 			<input type="datetime-local" name="end_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value ?? undefined} />
 		</div>
 	);
@@ -197,7 +198,7 @@ const ItemStartDate = ({ module }: { module: any }) => {
 	const value = dateToDateTime(new Date(date));
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="Start Time">
-			{ModuleIcon[module.type as Module]}
+			<ModuleIcon module={module.type as Module} />
 			<input type="datetime-local" name="start_date" id={`module-${module.id}`} className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" defaultValue={value ?? undefined} />
 		</div>
 	);
@@ -243,7 +244,7 @@ const ItemPriority = ({ module }: { module: TaskModule }) => {
 
 	return (
 		<span className="flex w-full flex-row items-center gap-2 align-middle">
-			{ModuleIcon[module.type as Module]}
+			<ModuleIcon module={module.type as Module} />
 			<select name="priority" id={`module-${module.id}`} defaultValue={priority} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Priority">
 				<option value={TaskPriority.LOW}>Low</option>
 				<option value={TaskPriority.MEDIUM}>Medium</option>
@@ -260,7 +261,7 @@ const ItemSummary = ({ module }: { module: TaskModule }) => {
 	// module should be of type Summary
 	return (
 		<div className="inline-flex w-full items-center gap-2">
-			{ModuleIcon[module.type as Module]}
+			<ModuleIcon module={module.type as Module} />
 			<input className="w-full rounded-md bg-transparent px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none" placeholder="Summary" defaultValue={data.summary ?? ""} id={`module-${module.id}`} name="summary" />
 		</div>
 	);
@@ -273,7 +274,7 @@ const ItemDescription = ({ module }: { module: TaskModule }) => {
 	// module should be of type Description
 	return (
 		<div className="relative inline-flex min-h-[6rem] w-full gap-2">
-			{ModuleIcon[module.type as Module]}
+			<ModuleIcon module={module.type as Module} />
 			{editing ? (
 				<textarea
 					className="scrollbar-hide w-full rounded-md bg-transparent bg-pad-gray-600 px-3 py-1 focus:bg-pad-gray-300 focus:font-mono focus:outline-none"
