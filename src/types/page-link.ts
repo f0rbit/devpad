@@ -1,4 +1,5 @@
 import { Prisma, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask } from "@prisma/client";
+import { z } from "zod";
 
 export type PageLink = {
 	title: string;
@@ -40,18 +41,35 @@ export type CreateProjectType = {
 
 export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
 
-type CreateModuleOptions = {
-	type: Module;
-	data: any;
-}
+// type CreateModuleOptions = {
+// 	type: Module;
+// 	data: any;
+// }
 
-export type CreateItemOptions = {
-	title: string;
-	visibility?: TASK_VISIBILITY;
-	progress?: TASK_PROGRESS;
-	goal_id?: string;
-	modules: CreateModuleOptions[]
-};
+export const createModuleInput = z.object({
+	type: z.nativeEnum(Module),
+	data: z.any()
+})
+
+export type CreateModuleOptions = z.infer<typeof createModuleInput>
+
+// export type CreateItemOptions = {
+// 	title: string;
+// 	visibility?: TASK_VISIBILITY;
+// 	progress?: TASK_PROGRESS;
+// 	goal_id?: string;
+// 	modules: CreateModuleOptions[]
+// };
+
+export const createItemInput = z.object({
+	title: z.string(),
+	visibility: z.nativeEnum(TASK_VISIBILITY).default(TASK_VISIBILITY.PRIVATE).optional(),
+	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED).optional(),
+	goal_id: z.string().optional(),
+	modules: z.array(createModuleInput).default([]).optional()
+});
+
+export type CreateItemOptions = z.infer<typeof createItemInput>;
 
 export const TaskInclude = {
 	tags: true,

@@ -1,7 +1,7 @@
 "use client";
 
 import { CreateItemOptions, Module } from "@/types/page-link";
-import { Prisma, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { CalendarClock, ChevronDown, ChevronRight, Newspaper, Type } from "lucide-react";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
@@ -10,11 +10,8 @@ import { COLOURS } from "../Todo/TodoCard";
 import VisiblityIcon from "../Todo/VisibilityIcon";
 import PrimaryButton from "./PrimaryButton";
 
-type TodoCreatorProps = {
-	onCreate: (item: CreateItemOptions) => void;
-};
 
-export default function TodoCreator({ onCreate }: TodoCreatorProps) {
+export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemOptions) => void }) {
 	const [item, setItem] = useState({
 		title: "",
 		summary: "",
@@ -27,19 +24,23 @@ export default function TodoCreator({ onCreate }: TodoCreatorProps) {
 	function updateModule(module: Module, data: any) {
 		// update item modules, either adding or updating
 		const modules = item.modules;
-		const index = modules.findIndex((m) => m.type == module);
+		const index = modules?.findIndex((m) => m.type == module);
 		if (index == -1) {
-			modules.push({ type: module, data });
-		} else {
+			modules?.push({ type: module, data });
+		} else if (modules && index) {
 			modules[index] = { type: module, data };
 		}
 		setItem({ ...item, modules });
 	}
 
-	function getModule(module: Module) {
+	function getModule(module: Module): any | null {
 		const modules = item.modules;
-		const index = modules.findIndex((m) => m.type == module);
-		return modules[index]?.data?.valueOf() as any;
+		const index = modules?.findIndex((m) => m.type == module);
+		if (modules && index) {
+			return modules[index]?.data?.valueOf() as any;
+		} else {
+			return null;
+		}
 	}
 
 	return (

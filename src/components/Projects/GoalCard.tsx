@@ -58,7 +58,6 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		} else {
 			setError("failed to create task");
 		}
-
 	}
 
 

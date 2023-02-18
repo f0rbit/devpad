@@ -1,4 +1,4 @@
-import { FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
+import { CreateItemOptions, FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
@@ -14,30 +14,24 @@ const ListRenderer = () => {
 	const { items, setItems } = useContext(TodoContext);
 	const [createModalOpen, setCreateModalOpen] = useState(false);
 	const [editTagsModalOpen, setEditTagsModalOpen] = useState(false);
-	const create_item = trpc.tasks.createItem.useMutation();
+	const create_task = trpc.tasks.createTask.useMutation();
 	const [layout, setLayout] = useState(TODO_LAYOUT.LIST);
 
 	if (!items) {
 		return <div>Loading...</div>;
 	}
 
-	const createItem = async ({ title, progress, visibility, start_time, end_time }: { title: string; progress: TASK_PROGRESS; visibility: TASK_VISIBILITY; start_time: Date; end_time: Date }) => {
-		const item = {
-			title,
-			progress,
-			visibility,
-			start_time,
-			end_time
-		};
-		await create_item.mutate(
-			{ item },
-			{
-				onSuccess: (new_item) => {
-					setItems([...items, new_item]);
-				}
-			}
-		);
-	};
+
+	async function createTask(task: CreateItemOptions) {
+		const response = await create_task.mutateAsync({ item: task });
+		if (!response || response.error) {
+			/** @todo error handling */
+		} else if (response.data) {
+			setItems([...items, response.data ]);
+		} else {
+			/** @todo handle invalid data response */
+		}
+	}
 
 	const setItem = (item: FetchedTask) => {
 		// const index = items?.findIndex((i) => i.id === item.id);
@@ -73,7 +67,7 @@ const ListRenderer = () => {
 							{/* This is the create todo item form */}
 							<div className="absolute">
 								<GenericModal open={createModalOpen} setOpen={setCreateModalOpen}>
-									<TodoCreateForm createItem={createItem} setOpen={setCreateModalOpen} />
+									<TodoCreateForm createItem={createTask} setOpen={setCreateModalOpen} />
 								</GenericModal>
 							</div>
 						</div>

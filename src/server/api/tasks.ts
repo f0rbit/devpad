@@ -13,7 +13,7 @@ export async function createTask(task: CreateItemOptions, session: Session): Pro
                 visibility: task?.visibility,
                 progress: task?.progress,
                 project_goal_id: task.goal_id,
-				modules: { createMany: { data: task.modules } }
+				modules: { createMany: { data: task.modules ?? [] } }
 			},
             include: TaskInclude
 		})) ?? { fetchedTask: null };

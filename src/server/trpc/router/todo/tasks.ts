@@ -1,8 +1,9 @@
 import { router, protectedProcedure } from "@/server/trpc/trpc";
 import { z } from "zod";
 import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { FetchedTask, Module, TaskInclude, TaskPriority } from "@/types/page-link";
+import { createItemInput, FetchedTask, Module, TaskInclude, TaskPriority } from "@/types/page-link";
 import { contextUserOwnsTask, getDefaultModuleData } from "src/utils/backend";
+import { createTask } from "@/server/api/tasks";
 
 const updateItemInput = z.object({
 	title: z.string(),
@@ -11,11 +12,13 @@ const updateItemInput = z.object({
 	tags: z.array(z.string()).optional()
 });
 
-const createItemInput = z.object({
+/** @deprecated - use createItemInput instead */
+const createOldItemInput = z.object({
 	title: z.string(),
 	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED),
 	visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE)
 });
+
 
 export const taskRouter = router({
 	getTasks: protectedProcedure.query(async ({ ctx }) => {
@@ -82,11 +85,14 @@ export const taskRouter = router({
 				include: TaskInclude
 			})) as FetchedTask;
 		}),
-	createItem: protectedProcedure.input(z.object({ item: createItemInput })).mutation(async ({ ctx, input }) => {
+	createItem: protectedProcedure.input(z.object({ item: createOldItemInput })).mutation(async ({ ctx, input }) => {
 		return (await ctx.prisma.task.create({
 			data: { ...input.item, owner_id: ctx.session.user.id },
 			include: TaskInclude
 		})) as FetchedTask;
+	}),
+	createTask: protectedProcedure.input(z.object({ item: createItemInput })).mutation(async ({ ctx, input }) => {
+		return createTask(input.item, ctx.session);
 	}),
 	deleteItem: protectedProcedure
 		.input(
