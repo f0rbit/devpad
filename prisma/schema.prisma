@@ -75,7 +75,6 @@ model Task {
 }
 
 model TaskModule {
-  id      String   @default(uuid()) @db.Uuid
   task_id String   @db.Uuid
   type    String
   data    Json     @default("{}") @db.Json

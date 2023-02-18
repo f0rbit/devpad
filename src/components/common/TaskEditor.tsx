@@ -6,6 +6,7 @@ import ModuleIcon from "../Todo/ModuleIcon";
 
 export default function TaskEditor({ task: initial_task }: { task: FetchedTask }) {
     const [task, setTask] = useState(initial_task);
+    console.log(task);
 
     return <div className="max-h-[60vh] scrollbar-hide overflow-y-auto text-base-text-primary">
         <div className="styled-input flex flex-row w-[56rem] max-w-[85wvw] h-full">
@@ -65,14 +66,17 @@ function ModuleButton({ task, setTask, module } : { task: FetchedTask, setTask: 
 
     function remove() {
         // remove this module from the task
-
+        setTask({ ...task, modules: task.modules.filter((task_module) => task_module.type != module) });
     }
 
     function add() {
         // add the module to the task with the default values
-        // we can't just add the module to the task because we need the id of the module
-        
-        
+        setTask({ ...task, modules: [...task.modules, {
+            data: getDefaultModuleData(module),
+            task_id: task.id,
+            type: module,
+            updated: new Date()
+        }] });
     }
 
     return <div className={`relative group flex flex-row gap-2 border-1 rounded-md border-borders-primary  px-2 py-1 ${(selected) ? "bg-base-accent-primary" : "hover:bg-base-accent-secondary"}`}>
