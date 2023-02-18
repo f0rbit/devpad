@@ -86,7 +86,7 @@ const ListRenderer = () => {
 
 export default ListRenderer;
 
-const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: string; setItem: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
+const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: TODO_LAYOUT; setItem: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
 	const renderData = (data: FetchedTask[]) => {
 		if (data.length <= 0) {
 			return <div className="text-base-text-subtle text-center">No items found</div>;
@@ -104,7 +104,7 @@ const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; lay
 	}
 };
 
-const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<string>> }) => {
+const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<TODO_LAYOUT>> }) => {
 	return (
 		<div className="flex flex-row items-center gap-2">
 			{Object.values(TODO_LAYOUT).map((layout_type) => (

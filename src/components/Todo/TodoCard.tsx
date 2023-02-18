@@ -5,6 +5,7 @@ import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
+import TaskCard from "../common/TaskCard";
 import GenericModal from "../GenericModal";
 import { hoverLinkClass } from "../HoverLink";
 import { TODO_LAYOUT } from "./ListLayout";
@@ -58,7 +59,7 @@ type ItemInput = {
 	visibility: TASK_VISIBILITY;
 };
 
-const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: string; set_item: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
+const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: TODO_LAYOUT; set_item: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
 	const update_item = trpc.tasks.updateItem.useMutation();
 	const delete_item = trpc.tasks.deleteItem.useMutation();
 	const add_module = trpc.tasks.addModule.useMutation();
@@ -118,32 +119,15 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 					<TodoEditForm item={initial_item} updateItem={updateItem} setOpen={setEditModalOpen} deleteItem={deleteCard} addModule={addModule} tags={tags} />
 				</GenericModal>
 			</div>
-			<div className={"group relative w-full rounded-md border-1 border-borders-primary bg-gray-100 px-4 py-2 dark:bg-base-bg-primary hover:dark:bg-base-accent-primary transition-colors duration-300 dark:text-base-text-subtle " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")}>
-				<div className="inline-flex items-center gap-2 align-middle">
-					<TodoStatus status={initial_item.progress} update_progress={setItemStatus} id={initial_item.id} />
-					<h1 className="text-base-text-secondary text-2xl font-medium">{initial_item.title}</h1>
-				</div>
-				<EndTime endTime={getModuleData(initial_item, Module.END_DATE)} />
-				<TodoTags tags={initial_item?.tags} />
-				<SummaryText module={getModuleData(initial_item, Module.SUMMARY)} />
-				<div
-					className={"duration-400 absolute right-2 flex flex-row items-center justify-center gap-2 align-middle text-gray-400 transition-opacity group-hover:opacity-50 md:opacity-0 " + (layout == "GRID" ? "bottom-2" : "bottom-[25%]")}
-				>
-					<span title={initial_item.visibility[0]?.toUpperCase() + initial_item.visibility.toLowerCase().substring(1)}>
-						<VisiblityIcon visibility={initial_item.visibility} />
-					</span>
-					<button
-						className={hoverLinkClass}
-						title="Edit"
-						onClick={(e) => {
-							e.preventDefault();
-							setEditModalOpen(true);
-						}}
-					>
-						<Edit2 className="" />
-					</button>
-				</div>
-			</div>
+			<TaskCard
+				task={initial_item}
+				layout={layout}
+				onEdit={(e) => {
+					e.preventDefault();
+					setEditModalOpen(true);
+				}}
+				setItemStatus={setItemStatus}
+			/>
 		</>
 	);
 };
@@ -160,7 +144,7 @@ export const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
 	);
 };
 
-const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
+export const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
 	if (!tags || tags.length <= 0) return <></>;
 	return (
 		<div className="flex items-center gap-2 align-middle">

@@ -9,6 +9,7 @@ import { dateToDateTime } from "src/utils/dates";
 import PrimaryButton from "../common/PrimaryButton";
 import TaskCard from "../common/TaskCard";
 import TodoCreator from "../common/TodoCreator";
+import { TODO_LAYOUT } from "../Todo/ListLayout";
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: FetchedGoal | null; project_id: string; cancel?: () => void; create?: (goal: FetchedGoal) => void; deleteCard?: (id: string) => void }) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -36,14 +37,11 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 		} else if (data) {
 			create?.(data);
 		} else {
-			setError("Failed to create project");
+			setError("Failed to create goal");
 		}
 	}
 
 	async function createTask(task: CreateItemOptions) {
-		console.log("CREATING", task);
-		// run a fetch to create the task
-		// then add it to the tasks array
 		task.goal_id = goal?.id;
 
 		const response = await fetch("/api/tasks/create", { body: JSON.stringify(task), method: "POST" });
@@ -149,19 +147,6 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						>
 							<X className="w-4" />
 						</button>
-						{/* <button
-							title={isEditing ? "Save" : "Create"}
-							className="primary-btn-outline rounded-md px-4 py-1 font-semibold"
-							onClick={() => {
-								if (isEditing) {
-									saveGoal();
-								} else {
-									createGoal();
-								}
-							}}
-						>
-							{isEditing ? <Save className="w-4" /> : "Create"}
-						</button> */}
 						<PrimaryButton
 							onClick={() => {
 								isEditing ? saveGoal() : createGoal();
@@ -180,10 +165,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 					{tasks
 						?.filter((task) => task.visibility != TASK_VISIBILITY.ARCHIVED && task.visibility != TASK_VISIBILITY.DELETED)
 						?.map((task, index) => (
-							<div key={index}>
-								{/* <pre>{JSON.stringify(task, null, 2)}</pre> */}
-								<TaskCard task={task} />
-							</div>
+							<TaskCard task={task} layout={TODO_LAYOUT.GRID} onEdit={() => {}} setItemStatus={() => {}} key={index} />
 						))}
 					<TodoCreator onCreate={createTask} />
 				</div>
