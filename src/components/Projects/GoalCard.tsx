@@ -1,11 +1,13 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { CreateItemOptions, FetchedGoal, FetchedTask } from "@/types/page-link";
-import { Task, TASK_VISIBILITY } from "@prisma/client";
+import { Task, TaskTags, TASK_VISIBILITY } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
+import DeleteButton from "../common/DeleteButton";
+import GenericButton from "../common/GenericButton";
 import PrimaryButton from "../common/PrimaryButton";
 import TaskCard from "../common/TaskCard";
 import TaskEditor from "../common/TaskEditor";
@@ -13,7 +15,17 @@ import TodoCreator from "../common/TodoCreator";
 import GenericModal from "../GenericModal";
 import { TODO_LAYOUT } from "../Todo/ListLayout";
 
-export default function GoalCard({ goal, project_id, cancel, create, deleteCard }: { goal: FetchedGoal | null; project_id: string; cancel?: () => void; create?: (goal: FetchedGoal) => void; deleteCard?: (id: string) => void }) {
+type GoalCardProps = {
+	goal: FetchedGoal | null;
+	project_id: string;
+	tags: TaskTags[];
+	cancel?: () => void;
+	create?: (goal: FetchedGoal) => void;
+	deleteCard?: (id: string) => void;
+}
+
+
+export default function GoalCard({ goal, project_id, cancel, create, deleteCard, tags }: GoalCardProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showTasks, setShowTasks] = useState(false);
 	const [editingGoal, setEditingGoal] = useState({
@@ -97,7 +109,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 						if (!open) setEditingTask(null);
 					}}
 				>
-					{editingTask && <TaskEditor task={editingTask} />}
+					{editingTask && <TaskEditor task={editingTask} tags={tags} />}
 				</GenericModal>
 			</div>
 			<div className="styled-input relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
@@ -146,9 +158,9 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 							/>
 						</div>
 						<div className="flex h-full w-full items-center justify-center gap-2 py-1">
-							<button
+							<GenericButton
 								title="Cancel"
-								className="flex justify-center rounded-md border-1 border-borders-secondary px-4 py-1 font-semibold hover:bg-base-accent-secondary"
+								style="flex justify-center font-semibold"
 								onClick={() => {
 									if (cancel) cancel();
 									setIsEditing(false);
@@ -160,7 +172,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard 
 								}}
 							>
 								<X className="w-4" />
-							</button>
+							</GenericButton>
 							<PrimaryButton
 								onClick={() => {
 									isEditing ? saveGoal() : createGoal();
@@ -195,15 +207,15 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 	const [isDeleting, setIsDeleting] = useState(false);
 	return (
 		<>
-			<button
+			<DeleteButton
 				title="Delete"
-				className="flex justify-center rounded-md border-1 border-red-400 px-4 py-1 font-semibold text-red-400 transition-all duration-500 hover:border-red-300 hover:bg-red-400 hover:text-red-100"
+				style="flex justify-center"
 				onClick={() => {
 					setIsDeleting(!isDeleting);
 				}}
 			>
 				<Trash className="w-4" />
-			</button>
+			</DeleteButton>
 			{isDeleting && (
 				<div className="absolute top-[120%] -right-[75%] flex flex-col gap-2 rounded-md border-1 border-borders-secondary bg-base-accent-primary p-2">
 					<div className="flex flex-row items-center gap-2">

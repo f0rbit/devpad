@@ -28,6 +28,7 @@ export async function createProject(project: CreateProjectType, session: Session
 	}
 }
 const PROJECT_ACTION = [ACTION_TYPE.CREATE_PROJECT, ACTION_TYPE.DELETE_PROJECT, ACTION_TYPE.UPDATE_PROJECT, ACTION_TYPE.CREATE_GOAL, ACTION_TYPE.DELETE_GOAL, ACTION_TYPE.UPDATE_GOAL];
+
 export async function getProjectHistory(project_id: string, session: Session): Promise<{ data: Action[]; error: string }> {
 	if (!session?.user?.id) return { data: [], error: "You must be signed in to get project history." };
 	if (!project_id || project_id.length <= 0) return { data: [], error: "You must declare a valid project_id." };

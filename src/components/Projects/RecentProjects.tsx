@@ -5,6 +5,7 @@ import { use } from "react";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { ProjectCard } from "./ProjectCard";
 import PrimaryButton from "../common/PrimaryButton";
+import GenericButton from "../common/GenericButton";
 
 export default function RecentProjects() {
 	const { data, error } = use(getUserProjects({ includeDeleted: false }));
@@ -38,9 +39,9 @@ export default function RecentProjects() {
 			</div>
 			<div className="flex flex-row justify-center gap-2 text-lg font-semibold">
 				<Link href={"projects/project"}>
-					<PrimaryButton>
+					<GenericButton>
 						View All
-					</PrimaryButton>
+					</GenericButton>
 				</Link>
 				<Link href={"projects/create"}>
 					<PrimaryButton>

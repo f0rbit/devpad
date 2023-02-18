@@ -18,6 +18,7 @@ export default function GoalAdder({ project_id, addGoal }: { project_id: string;
 					setIsEditing(false);
 					addGoal(goal);
 				}}
+				tags={[]}
 			/>
 		);
 	} else {

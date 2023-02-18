@@ -4,6 +4,7 @@ import GoalAdder from "@/components/Projects/GoalAdder";
 import GoalCard from "@/components/Projects/GoalCard";
 import GoalRenderer from "@/components/Projects/GoalRenderer";
 import { getProjectGoals } from "@/server/api/projects";
+import { getUserTags } from "@/server/api/tags";
 import { getSession } from "src/utils/session";
 
 export default async function GoalsPage({ params }: { params: { projectid: string } }) {
@@ -15,7 +16,10 @@ export default async function GoalsPage({ params }: { params: { projectid: strin
 				<ErrorWrapper message={"You must be signed in!"} />
 			</CenteredContainer>
 		);
-	const { data, error } = await getProjectGoals(projectid, session);
+	const { data: project_data, error: project_error } = await getProjectGoals(projectid, session);
+	const { data: tags_data, error: tags_error } = await getUserTags(session);
+
+	const error = project_error ?? tags_error;
 
 	if (error?.length > 0) {
 		return (
@@ -27,7 +31,7 @@ export default async function GoalsPage({ params }: { params: { projectid: strin
 
 	return (
 		<div className="flex h-full w-max p-4">
-			<GoalRenderer goals={data} project_id={projectid} />
+			<GoalRenderer goals={project_data} project_id={projectid} tags={tags_data} />
 		</div>
 	);
 }

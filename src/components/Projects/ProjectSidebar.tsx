@@ -4,6 +4,7 @@ import { BookOpen, Map, Milestone, Scroll, Trash } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useContext, useState } from "react";
+import DeleteButton from "../common/DeleteButton";
 import { SidebarContext } from "../layouts/BaseLayout";
 
 type ProjectLink = {
@@ -64,7 +65,7 @@ export default function ProjectSidebar() {
 						);
 					})}
 					<div className="mt-auto mb-4">
-						<DeleteButton project_id={pathname?.split("/").at(2)}/>
+						<DeleteProjectButton project_id={pathname?.split("/").at(2)}/>
 					</div>
 				</div>
 			</div>
@@ -72,7 +73,7 @@ export default function ProjectSidebar() {
 	);
 }
 
-function DeleteButton({ project_id }: { project_id: string | undefined }) {
+function DeleteProjectButton({ project_id }: { project_id: string | undefined }) {
 	const [expanded, setExpanded] = useState(false);
 	const [error, setError] = useState("");
 	
@@ -96,10 +97,10 @@ function DeleteButton({ project_id }: { project_id: string | undefined }) {
 
 	return (
 		<div className="relative">
-			<button className="flex w-full flex-row items-center gap-4 rounded-md border-1 border-red-400 py-1 px-4 font-poppins text-red-400 transition-colors duration-500 hover:border-red-300 hover:bg-red-400 hover:text-red-100" onClick={() => setExpanded(!expanded)}>
+			<DeleteButton style="flex w-full flex-row items-center gap-4" onClick={() => setExpanded(!expanded)} title="Delete Project">
 				<Trash />
 				<div className="font-bold">Delete</div>
-			</button>
+			</DeleteButton>
 			{expanded && (
 				<div className="absolute bottom-[120%] left-0 w-max rounded-md border-1 border-borders-primary bg-base-bg-primary p-4 text-base">
 					<div className="font-bold text-base-text-secondary">Are you sure?</div>
