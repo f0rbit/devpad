@@ -5,8 +5,7 @@ import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { CalendarClock, ChevronDown, ChevronRight, Newspaper, Type } from "lucide-react";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import StatusIcon from "../Todo/StatusIcon";
-import { COLOURS } from "../Todo/TodoCard";
+import { TaskStatus } from "../Todo/StatusIcon";
 import VisiblityIcon from "../Todo/VisibilityIcon";
 import PrimaryButton from "./PrimaryButton";
 
@@ -129,9 +128,7 @@ function ProgressSelector({ select, selected }: { select: (progress: TASK_PROGRE
 					key={index}
 					title={progress}
 				>
-					<div className={COLOURS[progress]?.colour + " fill-current"}>
-						<StatusIcon status={progress} />
-					</div>
+					<TaskStatus status={progress} />	
 				</button>
 			))}
 		</div>

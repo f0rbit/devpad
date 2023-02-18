@@ -1,4 +1,3 @@
-import { COLOURS } from "@/components/Todo/TodoCard";
 import { FetchedTask, Module, TaskPriority } from "@/types/page-link";
 import { TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { BoxSelect, Eye, Tag, Tags, Type } from "lucide-react";
@@ -209,13 +208,13 @@ const TodoProgress = ({ progress }: { progress: TASK_PROGRESS | undefined }) => 
 		<span className="flex w-full flex-row items-center gap-2 align-middle">
 			<BoxSelect className="flex-none" />
 			<select name="progress" id="progress" defaultValue={progress} className="w-full bg-transparent py-1 focus:bg-pad-gray-300" title="Status">
-				<option value="UNSTARTED" className={COLOURS.UNSTARTED.colour}>
+				<option value="UNSTARTED">
 					Not Started
 				</option>
-				<option value="IN_PROGRESS" className={COLOURS.IN_PROGRESS.colour}>
+				<option value="IN_PROGRESS">
 					In Progress
 				</option>
-				<option value="COMPLETED" className={COLOURS.COMPLETED.colour}>
+				<option value="COMPLETED">
 					Done
 				</option>
 			</select>

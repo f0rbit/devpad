@@ -1,7 +1,7 @@
 import { TASK_PROGRESS } from "@prisma/client";
 import { CheckSquare, MoreHorizontal, Square } from "lucide-react";
 
-const StatusIcon = ({ status }: { status: TASK_PROGRESS }) => {
+function StatusIcon({ status }: { status: TASK_PROGRESS }) {
 	switch (status) {
 		case TASK_PROGRESS.COMPLETED:
 			return <CheckSquare className="w-5" />;
@@ -17,4 +17,20 @@ const StatusIcon = ({ status }: { status: TASK_PROGRESS }) => {
 	}
 };
 
-export default StatusIcon;
+export function TaskStatus ({ status }: { status: TASK_PROGRESS}) {
+	return <div className={getStatusColour(status) + " fill-current"}>
+		<StatusIcon status={status} />
+	</div>
+}
+
+
+function getStatusColour(status: TASK_PROGRESS) {
+	switch (status) {
+		case TASK_PROGRESS.COMPLETED:
+			return "text-green-300";
+		case TASK_PROGRESS.IN_PROGRESS:
+			return "text-pad-purple-500";
+		case TASK_PROGRESS.UNSTARTED:
+			return "text-neutral-400";
+	}
+}

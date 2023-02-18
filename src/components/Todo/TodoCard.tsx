@@ -1,57 +1,11 @@
 import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
-import { FetchedTask, getModuleData, Module } from "@/types/page-link";
+import { FetchedTask, Module } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
-import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
-import moment from "moment";
 import { useState } from "react";
 import { trpc } from "src/utils/trpc";
 import TaskCard from "../common/TaskCard";
 import GenericModal from "../GenericModal";
-import { hoverLinkClass } from "../HoverLink";
 import { TODO_LAYOUT } from "./ListLayout";
-import StatusIcon from "./StatusIcon";
-import TodoTag from "./TodoTag";
-import VisiblityIcon from "./VisibilityIcon";
-
-export const COLOURS = {
-	COMPLETED: {
-		colour: "text-green-300"
-	},
-	UNSTARTED: {
-		colour: "text-neutral-400"
-	},
-	IN_PROGRESS: {
-		colour: "text-pad-purple-500"
-	}
-};
-
-const getNextStatus = (status: TASK_PROGRESS) => {
-	switch (status) {
-		case "COMPLETED":
-			return TASK_PROGRESS.COMPLETED;
-		case "UNSTARTED":
-			return TASK_PROGRESS.IN_PROGRESS;
-		case "IN_PROGRESS":
-			return TASK_PROGRESS.COMPLETED;
-	}
-};
-
-export const TodoStatus = ({ status, update_progress, id }: { status: TASK_PROGRESS; update_progress?: (status: TASK_PROGRESS) => void; id: string }) => {
-	const next_status = getNextStatus(status);
-	return (
-		<button
-			onClick={(e) => {
-				e.preventDefault();
-				update_progress?.(next_status);
-			}}
-			title={"Change status to " + next_status}
-		>
-			<div className={COLOURS[status]?.colour + " fill-current"}>
-				<StatusIcon status={status} />
-			</div>
-		</button>
-	);
-};
 
 type ItemInput = {
 	title: string;
@@ -132,45 +86,6 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 	);
 };
 
-export const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
-	if (!endTime || !endTime.date) return <></>;
-	const { date: timestamp } = endTime;
-	const date = new Date(timestamp);
-	return (
-		<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
-			<CalendarClock className="min-w-5 w-5" />
-			<span>{moment(date).calendar()}</span>
-		</div>
-	);
-};
 
-export const TodoTags = ({ tags }: { tags: TaskTags[] }) => {
-	if (!tags || tags.length <= 0) return <></>;
-	return (
-		<div className="flex items-center gap-2 align-middle">
-			<span>
-				<Tags className="w-5" />
-			</span>
-			<span className="flex flex-wrap gap-1">
-				{tags.map((tag, index) => {
-					return <TodoTag key={index} tag={tag} />;
-				})}
-			</span>
-		</div>
-	);
-};
-
-export const SummaryText = ({ module }: { module: { summary: string } }) => {
-	if (!module || !module.summary) return <></>;
-	return (
-		<div className="flex items-center gap-2 align-middle">
-			<span>
-				<Newspaper className="w-5" />
-			</span>
-
-			<span className="font-mono text-sm">{module.summary}</span>
-		</div>
-	);
-};
 
 export default TodoCard;
