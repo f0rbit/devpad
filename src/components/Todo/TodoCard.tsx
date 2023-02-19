@@ -19,24 +19,24 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = async (status: TASK_PROGRESS) => {
-		// const new_item: ItemInput = { title: initial_item.title, visibility: initial_item.visibility, progress: status };
-		// update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
-		const data = await updateItem.mutateAsync({ item: { ...initial_item, progress: status }});
-		if (data.error) {
-			console.error(data.error);
-		} else if (data.data) {
-			// data.data is the item as a FetchedTask
-			set_item(data.data);
-		}
+		saveTask({ ... initial_item, progress: status });
 	};
 
 	async function saveTask(task: LoadedTask) {
+		task.network_status = { error: "", loading: true };
+		set_item(task);
 		const data = await updateItem.mutateAsync({ item: task });
 		if (data.error) {
-			console.error(data.error);
-		} else if (data.data) {
+			task.network_status = { error: data.error, loading: false };
+			set_item(task);
+		} else if (data.data) {	
+			const item = data.data as LoadedTask;
 			// data.data is the item as a FetchedTask
-			set_item(data.data);
+			item.network_status = { error: "", loading: false };
+			set_item(item);
+			setTimeout(() => {
+				set_item({ ...item, network_status: undefined } as LoadedTask);
+			}, 2000);
 		}
 	}
 

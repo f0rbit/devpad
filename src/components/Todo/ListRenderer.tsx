@@ -34,10 +34,6 @@ const ListRenderer = () => {
 	}
 
 	const setItem = (item: FetchedTask) => {
-		// const index = items?.findIndex((i) => i.id === item.id);
-		// if (index === undefined) return;
-		// items[index] = item;
-		// forceUpdate();
 		const otherItems = items.filter((i) => i.id !== item.id);
 		setItems([...otherItems, item]);
 	};
