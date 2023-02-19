@@ -1,4 +1,3 @@
-import TodoEditForm from "@/components/Todo/Editors/TodoEditForm";
 import { FetchedTask, LoadedTask, Module } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { useState } from "react";
@@ -15,15 +14,20 @@ type ItemInput = {
 };
 
 const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: TODO_LAYOUT; set_item: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
-	const update_item = trpc.tasks.updateOldItem.useMutation();
 	const deleteItem = trpc.tasks.deleteItem.useMutation();
-	// const add_module = trpc.tasks.addModule.useMutation();
 	const updateItem = trpc.tasks.updateItem.useMutation();
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
-	const setItemStatus = (status: TASK_PROGRESS) => {
-		const new_item: ItemInput = { title: initial_item.title, visibility: initial_item.visibility, progress: status };
-		update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
+	const setItemStatus = async (status: TASK_PROGRESS) => {
+		// const new_item: ItemInput = { title: initial_item.title, visibility: initial_item.visibility, progress: status };
+		// update_item.mutate({ item: new_item, id: initial_item.id }, { onSuccess: (data) => set_item(data as FetchedTask) });
+		const data = await updateItem.mutateAsync({ item: { ...initial_item, progress: status }});
+		if (data.error) {
+			console.error(data.error);
+		} else if (data.data) {
+			// data.data is the item as a FetchedTask
+			set_item(data.data);
+		}
 	};
 
 	async function saveTask(task: LoadedTask) {
