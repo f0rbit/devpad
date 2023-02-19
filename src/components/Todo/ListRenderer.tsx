@@ -43,7 +43,7 @@ const ListRenderer = () => {
 			{({ selectedSection, searchQuery, tags, setTags, items, setItems, projects }) => {
 				return (
 					<>
-						<div className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-borders-primary">
+						<div style={{maxHeight: "calc(100vh - 65px)"}}className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-borders-primary">
 							<div className="w-full p-4">
 								<div className="mb-4 rounded-md p-2 font-bold">
 									<div className="flex flex-row items-center gap-4">

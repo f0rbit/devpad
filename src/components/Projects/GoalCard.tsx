@@ -2,7 +2,7 @@
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { CreateItemOptions, FetchedGoal, FetchedTask, LoadedTask } from "@/types/page-link";
 import { TaskTags, TASK_VISIBILITY } from "@prisma/client";
-import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
@@ -35,6 +35,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 	const [error, setError] = useState("");
 	const [tasks, setTasks] = useState((goal?.tasks ?? []) as LoadedTask[]);
 	const [editingTask, setEditingTask] = useState(null as FetchedTask | null);
+	const [showTaskCreator, setShowTaskCreator] = useState(false);
 
 	async function createGoal() {
 		const goal = {
@@ -58,6 +59,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 	async function createTask(task: CreateItemOptions) {
 		task.goal_id = goal?.id;
 		task.project_id = project_id;
+		setShowTaskCreator(false);
 		const response = await fetch("/api/tasks/create", { body: JSON.stringify(task), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: FetchedTask | null; error: string }>);
 		if (error) {
@@ -242,7 +244,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 									key={index}
 								/>
 							))}
-						<TodoCreator onCreate={createTask} />
+						{showTaskCreator ? <TodoCreator onCreate={createTask} /> : <GenericButton title="Add Task" onClick={() => setShowTaskCreator(true)} style="flex justify-center items-center py-4"><Plus /></GenericButton> }
 					</div>
 				)}
 			</div>

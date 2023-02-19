@@ -31,6 +31,6 @@ function getStatusColour(status: TASK_PROGRESS) {
 		case TASK_PROGRESS.IN_PROGRESS:
 			return "text-pad-purple-500";
 		case TASK_PROGRESS.UNSTARTED:
-			return "text-neutral-400";
+			return "text-base-text-subtle";
 	}
 }
