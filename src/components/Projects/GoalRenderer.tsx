@@ -16,9 +16,12 @@ export default function GoalRenderer({ goals: initial_goals, project_id, tags }:
 		setGoals(goals.filter((goal) => goal.id !== id));
 	}
 
+	// sort goals by target time
+	const sorted_goals = goals.sort((a, b) => new Date(a.target_time).valueOf() -  new Date(b.target_time).valueOf());
+
 	return (
 		<div className="flex h-max flex-row gap-2">
-			{goals.map((goal, index) => (
+			{sorted_goals.map((goal, index) => (
 				<GoalCard key={index} goal={goal} project_id={project_id} deleteCard={deleteGoal} tags={tags} />
 			))}
 			<GoalAdder project_id={project_id} addGoal={addGoal} />
