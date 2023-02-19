@@ -38,7 +38,7 @@ const TodoTagEditCard = ({ tag, createTag, updateTag, deleteTag }: TodoTagEditCa
 	// add controls for editing the tag
 
 	return (
-		<div className="edit-todo flex flex-row gap-2">
+		<div className="styled-input flex flex-row gap-2">
 			<div className="flex gap-2">
 				<input
 					type="text"
