@@ -57,7 +57,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 
 	async function createTask(task: CreateItemOptions) {
 		task.goal_id = goal?.id;
-		
+
 		const response = await fetch("/api/tasks/create", { body: JSON.stringify(task), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: FetchedTask | null; error: string }>);
 		if (error) {
@@ -72,7 +72,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 
 	async function saveTask(task: LoadedTask) {
 		// update local ui first
-		task.network_status = { loading: true, error: ""};
+		task.network_status = { loading: true, error: "" };
 		setTasks(tasks.map((t) => (t.id == task.id ? task : t)));
 		// update task in database
 		const response = await fetch("/api/tasks/update", { body: JSON.stringify(task), method: "POST" });
@@ -97,8 +97,9 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 
 	async function deleteTask(task: FetchedTask) {
 		const id = task.id;
+		task.visibility = TASK_VISIBILITY.DELETED;
 		// update local ui first
-		setTasks(tasks.filter((t) => t.id != id));
+		setTasks(tasks.map((t) => (t.id == id ? task : t)));
 		// delete task with id from database
 		const response = await fetch("/api/tasks/delete", { body: JSON.stringify({ id }), method: "POST" });
 		const { success, error } = await (response.json() as Promise<{ success: boolean; error: string }>);

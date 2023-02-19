@@ -27,7 +27,8 @@ export const taskRouter = router({
 			include: TaskInclude
 		})) as FetchedTask[];
 	}),
-	updateItem: protectedProcedure
+
+	updateOldItem: protectedProcedure
 		.input(
 			z.object({
 				id: z.string(),
@@ -85,6 +86,7 @@ export const taskRouter = router({
 				include: TaskInclude
 			})) as FetchedTask;
 		}),
+
 	createItem: protectedProcedure.input(z.object({ item: createOldItemInput })).mutation(async ({ ctx, input }) => {
 		return (await ctx.prisma.task.create({
 			data: { ...input.item, owner_id: ctx.session.user.id },

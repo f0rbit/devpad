@@ -17,7 +17,7 @@ import VisibilitySelector from "./tasks/VisibilitySelector";
 
 type TaskEditorProps = { 
     task: FetchedTask; 
-    tags: TaskTags[]; 
+    tags: TaskTags[] | undefined; 
     deleteTask: (task: FetchedTask) => void;
     saveTask: (task: FetchedTask) => void; 
     close: () => void 
@@ -197,7 +197,7 @@ enum RIGHT_MODE {
 	TAGS = "TAGS"
 }
 
-function RightSidebar({ task, setTask, tags }: { task: FetchedTask; setTask: Dispatch<SetStateAction<FetchedTask>>; tags: TaskTags[] }) {
+function RightSidebar({ task, setTask, tags }: { task: FetchedTask; setTask: Dispatch<SetStateAction<FetchedTask>>; tags: TaskTags[] | undefined }) {
 	const [mode, setMode] = useState(RIGHT_MODE.MODULES);
 
 	function ModeButton({ mode: this_mode }: { mode: RIGHT_MODE }) {
@@ -263,10 +263,10 @@ function ModuleButton({ task, setTask, module }: { task: FetchedTask; setTask: D
 	);
 }
 
-function TagsSelector({ tags, task, setTask }: { tags: TaskTags[]; task: FetchedTask; setTask: Dispatch<SetStateAction<FetchedTask>> }) {
+function TagsSelector({ tags, task, setTask }: { tags: TaskTags[] | undefined; task: FetchedTask; setTask: Dispatch<SetStateAction<FetchedTask>> }) {
 	return (
 		<div className="flex flex-col gap-1">
-			{tags.map((tag, index) => (
+			{tags?.map((tag, index) => (
 				<TagButton key={index} tag={tag} task={task} setTask={setTask} />
 			))}
 		</div>
