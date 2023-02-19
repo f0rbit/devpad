@@ -1,6 +1,6 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
-import { CreateItemOptions, FetchedGoal, FetchedTask } from "@/types/page-link";
+import { CreateItemOptions, FetchedGoal, FetchedTask, LoadedTask } from "@/types/page-link";
 import { Task, TaskTags, TASK_VISIBILITY } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
@@ -22,8 +22,7 @@ type GoalCardProps = {
 	cancel?: () => void;
 	create?: (goal: FetchedGoal) => void;
 	deleteCard?: (id: string) => void;
-}
-
+};
 
 export default function GoalCard({ goal, project_id, cancel, create, deleteCard, tags }: GoalCardProps) {
 	const [isEditing, setIsEditing] = useState(false);
@@ -34,7 +33,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
 	});
 	const [error, setError] = useState("");
-	const [tasks, setTasks] = useState((goal?.tasks ?? []) as FetchedTask[]);
+	const [tasks, setTasks] = useState((goal?.tasks ?? []) as LoadedTask[]);
 	const [editingTask, setEditingTask] = useState(null as FetchedTask | null);
 
 	async function createGoal() {
@@ -58,7 +57,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 
 	async function createTask(task: CreateItemOptions) {
 		task.goal_id = goal?.id;
-
+		
 		const response = await fetch("/api/tasks/create", { body: JSON.stringify(task), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: FetchedTask | null; error: string }>);
 		if (error) {
@@ -68,6 +67,47 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 			setTasks([...tasks, data]);
 		} else {
 			setError("failed to create task");
+		}
+	}
+
+	async function saveTask(task: LoadedTask) {
+		// update local ui first
+		task.network_status = { loading: true, error: ""};
+		setTasks(tasks.map((t) => (t.id == task.id ? task : t)));
+		// update task in database
+		const response = await fetch("/api/tasks/update", { body: JSON.stringify(task), method: "POST" });
+		const { data, error } = await (response.json() as Promise<{ data: LoadedTask | null; error: string }>);
+		if (error) {
+			task.network_status = { loading: false, error };
+			setError(error);
+		} else if (data) {
+			// replace task in local ui with received task from db (should be the same)
+			data.network_status = { loading: false, error: "" };
+			setTasks(tasks.map((t) => (t.id == data.id ? data : t)));
+			setTimeout(() => {
+				// if there are fast updates, then this will break.
+				data.network_status = undefined;
+				setTasks(tasks.map((t) => (t.id == data.id ? data : t)));
+			}, 2000);
+		} else {
+			task.network_status = { loading: false, error: "Failed to save task" };
+			setError("failed to save task");
+		}
+	}
+
+	async function deleteTask(task: FetchedTask) {
+		const id = task.id;
+		// update local ui first
+		setTasks(tasks.filter((t) => t.id != id));
+		// delete task with id from database
+		const response = await fetch("/api/tasks/delete", { body: JSON.stringify({ id }), method: "POST" });
+		const { success, error } = await (response.json() as Promise<{ success: boolean; error: string }>);
+		if (error) {
+			setError(error);
+		} else if (success) {
+			// do nothing as the task has already been removed from the local ui
+		} else {
+			setError("Failed to delete task");
 		}
 	}
 
@@ -109,7 +149,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 						if (!open) setEditingTask(null);
 					}}
 				>
-					{editingTask && <TaskEditor task={editingTask} tags={tags} />}
+					{editingTask && <TaskEditor task={editingTask} tags={tags} close={() => setEditingTask(null)} saveTask={saveTask} deleteTask={deleteTask} />}
 				</GenericModal>
 			</div>
 			<div className="styled-input relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
@@ -191,9 +231,15 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 						{tasks
 							?.filter((task) => task.visibility != TASK_VISIBILITY.ARCHIVED && task.visibility != TASK_VISIBILITY.DELETED)
 							?.map((task, index) => (
-								<TaskCard task={task} layout={TODO_LAYOUT.GRID} onEdit={() => {
-									setEditingTask(task);
-								}} setItemStatus={() => {}} key={index} />
+								<TaskCard
+									task={task}
+									layout={TODO_LAYOUT.GRID}
+									onEdit={() => {
+										setEditingTask(task);
+									}}
+									setItemStatus={() => {}}
+									key={index}
+								/>
 							))}
 						<TodoCreator onCreate={createTask} />
 					</div>

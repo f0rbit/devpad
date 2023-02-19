@@ -8,6 +8,8 @@ import { dateToDateTime } from "src/utils/dates";
 import { TaskStatus } from "../Todo/StatusIcon";
 import VisiblityIcon from "../Todo/VisibilityIcon";
 import PrimaryButton from "./PrimaryButton";
+import ProgressSelector from "./tasks/ProgressSelector";
+import VisibilitySelector from "./tasks/VisibilitySelector";
 
 
 export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemOptions) => void }) {
@@ -99,38 +101,3 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 	);
 }
 
-function VisibilitySelector({ select, selected }: { select: (visibility: TASK_VISIBILITY) => void; selected?: TASK_VISIBILITY }) {
-	const selectable = Object.values(TASK_VISIBILITY).filter((visibility) => visibility != TASK_VISIBILITY.DELETED && visibility != TASK_VISIBILITY.ARCHIVED);
-	return (
-		<div className="flex flex-row items-center justify-center gap-2">
-			{selectable.map((visibility, index) => (
-				<button
-					className={"flex w-full items-center justify-center rounded-md border-1 border-borders-primary px-4 py-1 " + (selected == visibility ? "border-borders-secondary bg-base-accent-secondary" : "")}
-					onClick={() => select(visibility)}
-					key={index}
-					title={visibility}
-				>
-					<VisiblityIcon visibility={visibility} />
-				</button>
-			))}
-		</div>
-	);
-}
-
-function ProgressSelector({ select, selected }: { select: (progress: TASK_PROGRESS) => void; selected?: TASK_PROGRESS }) {
-	const selectable = Object.values(TASK_PROGRESS);
-	return (
-		<div className="flex flex-row items-center justify-center gap-2">
-			{selectable.map((progress, index) => (
-				<button
-					className={"flex w-full items-center justify-center rounded-md border-1 border-borders-primary px-4 py-1 " + (selected == progress ? "border-borders-secondary bg-base-accent-secondary" : "")}
-					onClick={() => select(progress)}
-					key={index}
-					title={progress}
-				>
-					<TaskStatus status={progress} />	
-				</button>
-			))}
-		</div>
-	);
-}

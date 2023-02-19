@@ -17,10 +17,10 @@ export enum Module {
 }
 
 export enum TaskPriority {
-	LOW,
-	MEDIUM,
-	HIGH,
-	URGENT,
+	LOW = "LOW",
+	MEDIUM = "MEDIUM",
+	HIGH = "HIGH",
+	URGENT = "URGENT",
 }
 
 export type ProjectRouteLink = {
@@ -96,3 +96,10 @@ export const getModuleData = (task: FetchedTask, module_type: Module) => {
 	if (!module) return null;
 	return module.data as any;
 };
+
+export type LoadingStatus = {
+	loading: boolean;
+	error: string;
+};
+
+export type LoadedTask = FetchedTask & { network_status?: LoadingStatus };

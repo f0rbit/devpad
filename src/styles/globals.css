@@ -30,6 +30,7 @@ select {
 
 html {
 	overflow-y: overlay;
+	color-scheme: light dark;
 }
 
 .styled-input input, textarea, select {

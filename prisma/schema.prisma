@@ -79,7 +79,7 @@ model TaskModule {
   type    String
   data    Json     @default("{}") @db.Json
   updated DateTime @updatedAt
-  task    Task     @relation(fields: [task_id], references: [id])
+  task    Task     @relation(fields: [task_id], references: [id], onDelete: Cascade)
 
   @@unique([task_id, type])
 }

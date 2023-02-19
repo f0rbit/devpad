@@ -1,4 +1,4 @@
-import { createTask } from "@/server/api/tasks";
+import { updateTask } from "@/server/api/tasks";
 import { getServerAuthSession } from "@/server/common/get-server-auth-session";
 import { NextApiRequest, NextApiResponse } from "next";
 
@@ -8,7 +8,7 @@ const create_task = async (req: NextApiRequest, res: NextApiResponse) => {
         res.send({ error: "You must be signed in to access this route." });
         return;
     }
-    const { data, error } = await createTask(JSON.parse(req.body), session);
+    const { data, error } = await updateTask(JSON.parse(req.body), session);
     res.send({ data, error });
 };
 

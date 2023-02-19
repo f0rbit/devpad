@@ -1,4 +1,4 @@
-import { FetchedTask, getModuleData, Module } from "@/types/page-link";
+import { FetchedTask, getModuleData, LoadedTask, Module } from "@/types/page-link";
 import { TaskTags, TASK_PROGRESS } from "@prisma/client";
 import { CalendarClock, Edit2, Newspaper, Tags } from "lucide-react";
 import moment from "moment";
@@ -8,9 +8,10 @@ import { TODO_LAYOUT } from "../Todo/ListLayout";
 import { TaskStatus } from "../Todo/StatusIcon";
 import TodoTag from "../Todo/TodoTag";
 import VisiblityIcon from "../Todo/VisibilityIcon";
+import NetworkStatus from "./NetworkStatus";
 
 type TaskCardProps = {
-	task: FetchedTask;
+	task: LoadedTask;
 	setItemStatus: (status: TASK_PROGRESS) => void;
 	onEdit: MouseEventHandler<HTMLButtonElement>;
 	layout: TODO_LAYOUT;
@@ -23,6 +24,9 @@ export default function TaskCard({ task, setItemStatus, onEdit, layout }: TaskCa
 				"group relative w-full rounded-md border-1 border-borders-primary px-4 py-2 transition-colors duration-300 dark:bg-base-bg-primary dark:text-base-text-subtle hover:dark:bg-base-accent-primary " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")
 			}
 		>
+			<div className="absolute top-0 right-0">
+				<NetworkStatus status={task.network_status} />
+			</div>
 			<div className="inline-flex items-center gap-2 align-middle">
 				<TodoStatus status={task.progress} update_progress={setItemStatus} id={task.id} />
 				<h1 className="text-2xl font-medium text-base-text-secondary">{task.title}</h1>
