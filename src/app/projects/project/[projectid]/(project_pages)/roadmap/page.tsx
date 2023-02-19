@@ -2,7 +2,7 @@ import InDevelopment from "@/components/layouts/InDevelopment";
 
 export default function RoadmapPage() {
 	return (
-		<div className="w-full h-full flex justify-center items-center">
+		<div className="flex h-full w-full items-center justify-center">
 			<InDevelopment message={"This section is still in development"} />
 		</div>
 	);

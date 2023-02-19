@@ -1,4 +1,5 @@
 import ErrorWrapper from "./ErrorWrapper";
+import GenericButton from "./GenericButton";
 
 export default function ErrorPage({error, reset}: {error: Error, reset: () => void}) {
     return (
@@ -6,7 +7,7 @@ export default function ErrorPage({error, reset}: {error: Error, reset: () => vo
             <ErrorWrapper message={error.name +": " + error.message} />
             <pre>{error.stack}</pre>
             <pre>{JSON.stringify(error.cause)}</pre>
-            <button className="bg-pad-gray-400 px-4 py-1 rounded-md border-pad-gray-300 border-1" onClick={() => reset()}>Retry</button>
+            <GenericButton onClick={() => reset()}>Retry</GenericButton>
         </div>
     );
 }

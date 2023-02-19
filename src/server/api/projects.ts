@@ -2,8 +2,8 @@ import { CreateProjectType, FetchedGoal, TaskInclude } from "@/types/page-link";
 import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
-import { createAction } from "src/utils/prisma/action";
 import { getCurrentUser } from "src/utils/session";
+import { createAction, getHistory } from "./action";
 
 export async function createProject(project: CreateProjectType, session: Session): Promise<{ data: string | null; error: string | null }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
@@ -25,26 +25,6 @@ export async function createProject(project: CreateProjectType, session: Session
 			data: null,
 			error: getErrorMessage(err)
 		};
-	}
-}
-const PROJECT_ACTION = [ACTION_TYPE.CREATE_PROJECT, ACTION_TYPE.DELETE_PROJECT, ACTION_TYPE.UPDATE_PROJECT, ACTION_TYPE.CREATE_GOAL, ACTION_TYPE.DELETE_GOAL, ACTION_TYPE.UPDATE_GOAL];
-
-export async function getProjectHistory(project_id: string, session: Session): Promise<{ data: Action[]; error: string }> {
-	if (!session?.user?.id) return { data: [], error: "You must be signed in to get project history." };
-	if (!project_id || project_id.length <= 0) return { data: [], error: "You must declare a valid project_id." };
-	try {
-		const actions = await prisma?.action.findMany({
-			where: {
-				owner_id: session?.user?.id,
-				type: { in: PROJECT_ACTION },
-				data: { equals: { project_id } }
-			},
-			orderBy: { created_at: "desc" }
-		});
-		if (!actions) return { data: [], error: "No actions found." };
-		return { data: actions, error: "" };
-	} catch (err) {
-		return { data: [], error: getErrorMessage(err) };
 	}
 }
 
@@ -94,6 +74,16 @@ export async function getUserProject(projectID: string): Promise<{ data: Project
 		return { error: getErrorMessage(e), data: null };
 	}
 }
+
+// project history
+
+export async function getProjectHistory(project_id: string, session: Session): Promise<{ data: Action[]; error: string }> {
+	if (!session?.user?.id) return { data: [], error: "You must be signed in to get project history." };
+	if (!project_id || project_id.length <= 0) return { data: [], error: "You must declare a valid project_id." };
+	return await getHistory(session?.user?.id, { path: ["project_id"], equals: project_id });
+}
+
+// project goals
 
 export async function getProjectGoals(project_id: string, session: Session): Promise<{ data: FetchedGoal[]; error: string }> {
 	if (!session?.user?.id) return { data: [], error: "You must be signed in to delete a project." };

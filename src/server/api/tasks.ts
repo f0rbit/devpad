@@ -1,9 +1,9 @@
 import { CreateItemOptions, FetchedTask, TaskInclude } from "@/types/page-link";
-import { Prisma, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { ACTION_TYPE, Prisma, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Session } from "next-auth";
 import { contextUserOwnsTask, getErrorMessage } from "src/utils/backend";
-import { StringLiteral } from "typescript";
 import { z } from "zod";
+import { createAction } from "./action";
 
 export async function createTask(task: CreateItemOptions, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
@@ -19,9 +19,10 @@ export async function createTask(task: CreateItemOptions, session: Session): Pro
 				modules: { createMany: { data: task.modules } }
 			},
             include: TaskInclude
-		})) ?? { fetchedTask: null };
+		})) ?? null;
 		if (!fetchedTask) return { data: null, error: "Project could not be created." };
-		// createAction({ description: `Created project ${project.name}`, type: ACTION_TYPE.CREATE_PROJECT, owner_id: session?.user?.id, data: { project_id } }); // writes na action as history
+		// @ts-ignore ignores the Date to string conversion error below
+		createAction({ description: `Created task ${fetchedTask.title}`, type: ACTION_TYPE.CREATE_TASK, owner_id: session?.user?.id, data: { task_id: fetchedTask?.id, project_id: task.project_id, task: fetchedTask } })
 		return { data: fetchedTask as FetchedTask, error: null };
 	} catch (err) {
 		return {
@@ -36,11 +37,15 @@ export async function deleteTask(id: string, session: Session): Promise<{ succes
 	if (!session?.user?.id) return { success: false, error: "You must be signed in to create a project." };
 	try {
 		if (!contextUserOwnsTask({ session, prisma }, id)) return { success: false, error: "You do not own this task." };
-		const deletedTask = await prisma?.task.delete({
+		const deletedTask = await prisma?.task.update({
 			where: { id: id },
-		});
+			data: { visibility: TASK_VISIBILITY.DELETED },
+			include: TaskInclude,
+		}) as FetchedTask;
+		// if the task has a project_goal_id, extract the project id from the goal
+		const project_id = deletedTask?.project_goal_id ? (await prisma?.projectGoal.findUnique({ where: { id: deletedTask?.project_goal_id }, select: { project_id: true } }))?.project_id : undefined;
 		if (!deletedTask) return { success: false, error: "Task could not be deleted." };
-		// createAction({ description: `Deleted project ${project.name}`, type: ACTION_TYPE.DELETE_PROJECT, owner_id: session?.user?.id, data: { project_id } }); // writes na action as history
+		createAction({ description: `Deleted task ${deletedTask.title}`, type: ACTION_TYPE.DELETE_TASK, owner_id: session?.user?.id, data: { task_id: deletedTask?.id, project_id }})
 		return { success: true, error: null };
 	} catch (err) {
 		return {

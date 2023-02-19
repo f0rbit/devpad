@@ -66,7 +66,9 @@ export const createItemInput = z.object({
 	visibility: z.nativeEnum(TASK_VISIBILITY).default(TASK_VISIBILITY.PRIVATE).optional(),
 	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED).optional(),
 	goal_id: z.string().optional(),
-	modules: z.array(createModuleInput)
+	modules: z.array(createModuleInput),
+	project_id: z.string().optional(),
+
 });
 
 export type CreateItemOptions = z.infer<typeof createItemInput>;

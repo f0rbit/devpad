@@ -57,7 +57,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 
 	async function createTask(task: CreateItemOptions) {
 		task.goal_id = goal?.id;
-
+		task.project_id = project_id;
 		const response = await fetch("/api/tasks/create", { body: JSON.stringify(task), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: FetchedTask | null; error: string }>);
 		if (error) {

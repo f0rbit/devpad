@@ -2,7 +2,7 @@ import CenteredContainer from "@/components/common/CenteredContainer";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { getProjectHistory } from "@/server/api/projects";
 import { Action, ACTION_TYPE } from "@prisma/client";
-import { Flag, Unlink } from "lucide-react";
+import { CheckSquare, Flag, Unlink } from "lucide-react";
 import moment from "moment";
 import { getSession } from "src/utils/session";
 
@@ -65,6 +65,12 @@ function getIcon(type: ACTION_TYPE) {
 			return { icon: <Flag className="w-4" />, color: "bg-base-bg-primary" };
 		case ACTION_TYPE.DELETE_GOAL:
 			return { icon: <Flag className="w-4" />, color: "bg-red-300" };
+		case ACTION_TYPE.CREATE_TASK:
+			return { icon: <CheckSquare className="w-4" />, color: "bg-green-200 text-green-600" };
+		case ACTION_TYPE.UPDATE_TASK:
+			return { icon: <CheckSquare className="w-4" />, color: "bg-base-bg-primary" };
+		case ACTION_TYPE.DELETE_TASK:
+			return { icon: <CheckSquare className="w-4" />, color: "bg-red-300" };
 		default:
 			return { icon: <Unlink />, color: "bg-base-bg-primary" };
 	}
