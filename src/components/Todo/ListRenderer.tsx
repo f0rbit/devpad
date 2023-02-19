@@ -1,5 +1,5 @@
-import { CreateItemOptions, FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
-import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { CreateItemOptions, FetchedGoal, FetchedProject, FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
+import { Project, TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { TodoContext } from "src/pages/todo";
@@ -40,7 +40,7 @@ const ListRenderer = () => {
 
 	return (
 		<TodoContext.Consumer>
-			{({ selectedSection, searchQuery, tags, setTags, items, setItems }) => {
+			{({ selectedSection, searchQuery, tags, setTags, items, setItems, projects }) => {
 				return (
 					<>
 						<div className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-borders-primary">
@@ -55,7 +55,7 @@ const ListRenderer = () => {
 										</div>
 									</div>
 								</div>
-								<RenderTasks data={getSortedData(items, selectedSection, searchQuery)} layout={layout} setItem={setItem} tags={tags} />
+								<RenderTasks data={getSortedData(items, selectedSection, searchQuery, projects)} layout={layout} setItem={setItem} tags={tags} />
 							</div>
 						</div>
 						<div className="fixed bottom-2 right-2 md:bottom-4 md:right-4">
@@ -135,7 +135,7 @@ const CreateButton = ({ onClick }: { onClick: () => void }) => {
 	);
 };
 
-function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery: string): FetchedTask[] {
+function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery: string, projects: FetchedProject[]): FetchedTask[] {
 	// remove all deleted
 	const sorted = data.filter((item) => item.visibility != TASK_VISIBILITY.DELETED);
 	switch (selectedSection) {
@@ -187,8 +187,10 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 					return tags.includes(tag);
 				});
 			} else if (selectedSection.startsWith("projects/")) {
-				// const project_id = selectedSection.split("/")[1];
-				// if (!project_id) return [];
+				const project_id = selectedSection.split("/")[1];
+				if (!project_id) return [];
+				const project = projects.find((project) => project.project_id == project_id);
+				return sorted.filter((item) => project?.goals.find((goal) => goal.id == item.project_goal_id));
 				// return sorted.filter((item) => {
 				// 	return item.project_id === project_id;
 				// });

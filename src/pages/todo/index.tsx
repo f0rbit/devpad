@@ -1,7 +1,7 @@
 import BaseLayout, { SidebarContext } from "@/components/layouts/BaseLayout";
 import ListRenderer from "@/components/Todo/ListRenderer";
 import { MainLinkSection } from "@/components/Todo/SectionList";
-import { FetchedTask } from "@/types/page-link";
+import { FetchedProject, FetchedTask } from "@/types/page-link";
 import { Project, TaskTags } from "@prisma/client";
 import { useSession } from "next-auth/react";
 import Head from "next/head";
@@ -20,7 +20,7 @@ type TodoContextType = {
 	setTags: Dispatch<SetStateAction<TaskTags[] | undefined>>;
 	items: FetchedTask[];
 	setItems: Dispatch<SetStateAction<FetchedTask[] | undefined>>;
-	projects: Project[];
+	projects: FetchedProject[];
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
@@ -43,7 +43,7 @@ const Dashboard = () => {
 	const { data } = trpc.data.getItemsAndTags.useQuery();
 	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
 	const [items, setItems] = useState(undefined as FetchedTask[] | undefined);
-	const [projects, setProjects] = useState(undefined as Project[] | undefined);
+	const [projects, setProjects] = useState(undefined as FetchedProject[] | undefined);
 	const { data: session } = useSession();
 
 	useEffect(() => {

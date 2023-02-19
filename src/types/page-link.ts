@@ -1,4 +1,4 @@
-import { Prisma, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask } from "@prisma/client";
+import { Prisma, Project, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask } from "@prisma/client";
 import { z } from "zod";
 
 export type PageLink = {
@@ -40,6 +40,8 @@ export type CreateProjectType = {
 };
 
 export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
+
+export type FetchedProject = Project & { goals: ProjectGoal[] };
 
 // type CreateModuleOptions = {
 // 	type: Module;
