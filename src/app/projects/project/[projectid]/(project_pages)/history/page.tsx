@@ -1,8 +1,9 @@
 import CenteredContainer from "@/components/common/CenteredContainer";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { getProjectHistory } from "@/server/api/projects";
+import { Questrial } from "@next/font/google";
 import { Action, ACTION_TYPE } from "@prisma/client";
-import { CheckSquare, Flag, Unlink } from "lucide-react";
+import { AlertCircle, Briefcase, CheckSquare, FileQuestion, Flag, Unlink } from "lucide-react";
 import moment from "moment";
 import { getSession } from "src/utils/session";
 
@@ -39,7 +40,7 @@ const HistoryRenderer = ({ data }: { data: Action[] }) => {
 				const { icon, color } = getIcon(action.type);
 				return (
 					<>
-						<div className="absolute -left-[22px] -mt-0.5 flex origin-top scale-75 items-center justify-center rounded-full bg-base-bg-primary p-1">
+						<div className="absolute -left-[26px] -mt-0.5 flex origin-top scale-75 items-center justify-center rounded-full bg-base-bg-primary p-1">
 							<div className={" rounded-full px-2 py-1 " + color}>
 								{icon}
 							</div>
@@ -58,20 +59,29 @@ const HistoryRenderer = ({ data }: { data: Action[] }) => {
 };
 
 function getIcon(type: ACTION_TYPE) {
+	const width = "w-6"
+	const create = "text-green-200";
+	const remove = "text-red-300";
 	switch (type) {
 		case ACTION_TYPE.CREATE_GOAL:
-			return { icon: <Flag className="w-4" />, color: "bg-green-200 text-green-600" };
+			return { icon: <Flag className={width} />, color: create };
 		case ACTION_TYPE.UPDATE_GOAL:
-			return { icon: <Flag className="w-4" />, color: "bg-base-bg-primary" };
+			return { icon: <Flag className={width} />, color: "" };
 		case ACTION_TYPE.DELETE_GOAL:
-			return { icon: <Flag className="w-4" />, color: "bg-red-300" };
+			return { icon: <Flag className={width} />, color: remove };
 		case ACTION_TYPE.CREATE_TASK:
-			return { icon: <CheckSquare className="w-4" />, color: "bg-green-200 text-green-600" };
+			return { icon: <CheckSquare className={width} />, color: create };
 		case ACTION_TYPE.UPDATE_TASK:
-			return { icon: <CheckSquare className="w-4" />, color: "bg-base-bg-primary" };
+			return { icon: <CheckSquare className={width} />, color: "" };
 		case ACTION_TYPE.DELETE_TASK:
-			return { icon: <CheckSquare className="w-4" />, color: "bg-red-300" };
+			return { icon: <CheckSquare className={width} />, color: remove };
+		case ACTION_TYPE.CREATE_PROJECT:
+			return { icon: <Briefcase className={width} />, color: create };
+		case ACTION_TYPE.UPDATE_PROJECT:
+			return { icon: <Briefcase className={width} />, color: "" };
+		case ACTION_TYPE.DELETE_PROJECT:
+			return { icon: <Briefcase className={width} />, color: remove };
 		default:
-			return { icon: <Unlink />, color: "bg-base-bg-primary" };
+			return { icon: <AlertCircle className={width} />, color: "" };
 	}
 }

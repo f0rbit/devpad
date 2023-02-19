@@ -1,7 +1,7 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { CreateItemOptions, FetchedGoal, FetchedTask, LoadedTask } from "@/types/page-link";
-import { Task, TaskTags, TASK_VISIBILITY } from "@prisma/client";
+import { TaskTags, TASK_VISIBILITY } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";

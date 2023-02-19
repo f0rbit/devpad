@@ -1,5 +1,5 @@
-import { CreateItemOptions, FetchedGoal, FetchedProject, FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
-import { Project, TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
+import { CreateItemOptions, FetchedProject, FetchedTask, getModuleData, Module, TaskPriority } from "@/types/page-link";
+import { TaskTags, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Tag } from "lucide-react";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { TodoContext } from "src/pages/todo";

@@ -1,26 +1,25 @@
 "use client";
 
 import { CreateItemOptions, Module } from "@/types/page-link";
-import { TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { CalendarClock, ChevronDown, ChevronRight, Newspaper, Type } from "lucide-react";
 import { useState } from "react";
 import { dateToDateTime } from "src/utils/dates";
-import { TaskStatus } from "../Todo/StatusIcon";
-import VisiblityIcon from "../Todo/VisibilityIcon";
 import PrimaryButton from "./PrimaryButton";
 import ProgressSelector from "./tasks/ProgressSelector";
 import VisibilitySelector from "./tasks/VisibilitySelector";
 
+const DEFAULT_ITEM: CreateItemOptions = {
+	title: "",
+	goal_id: undefined,
+	modules: []
+}
+
 
 export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemOptions) => void }) {
-	const [item, setItem] = useState({
-		title: "",
-		summary: "",
-		due_date: null,
-		goal_id: undefined,
-		modules: []
-	} as CreateItemOptions);
+	const [item, setItem] = useState(structuredClone(DEFAULT_ITEM) as CreateItemOptions);
 	const [expandedOptions, setExpandedOptions] = useState(false);
+
+	console.log(item);
 
 	function updateModule(module: Module, data: any) {
 		console.log({ module, data });
@@ -50,7 +49,7 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 					<input
 						type="text"
 						placeholder="Title"
-						defaultValue={item?.title}
+						value={item?.title}
 						className="flex-1 rounded-md border-1 border-borders-secondary p-2 text-base-text-primary"
 						onChange={(e) => {
 							setItem({ ...item, title: e.target.value });
@@ -63,7 +62,7 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 						type="text"
 						placeholder="Summary"
 						className="flex-1 rounded-md border-1 border-borders-secondary p-2"
-						defaultValue={getModule(Module.SUMMARY)?.summary ?? undefined}
+						value={getModule(Module.SUMMARY)?.summary ?? ""}
 						onChange={(e) => {
 							// setItem({ ...item, summary: e.target.value });
 							updateModule(Module.SUMMARY, { summary: e.target.value });
@@ -75,7 +74,7 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 					<input
 						type="datetime-local"
 						className="flex-1 rounded-md border-1 border-borders-secondary p-2"
-						defaultValue={getModule(Module.END_DATE)?.date ?? undefined}
+						value={getModule(Module.END_DATE)?.date ?? ""}
 						onChange={(e) => updateModule(Module.END_DATE, { date: dateToDateTime(new Date(e.target.value)) })}
 					/>
 				</div>
@@ -92,7 +91,10 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 				)}
 				{expandedOptions && <ProgressSelector select={(progress) => setItem({ ...item, progress })} selected={item.progress} />}
 				<div className="flex flex-row items-center justify-center gap-2">
-					<PrimaryButton onClick={() => onCreate(item)} style="font-semibold">
+					<PrimaryButton onClick={() => {
+						onCreate(item);
+						setItem(structuredClone(DEFAULT_ITEM));
+					}} style="font-semibold">
 						Create
 					</PrimaryButton>
 				</div>
