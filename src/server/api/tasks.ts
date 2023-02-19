@@ -79,6 +79,8 @@ export async function updateTask(task: UpdateTask, session: Session): Promise<{ 
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
 	try {
 		if (!contextUserOwnsTask({ session, prisma }, task.id)) return { data: null, error: "You do not own this task." };
+		const oldTask = await prisma?.task.findUnique({ where: { id: task.id }, include: TaskInclude }) as FetchedTask;
+		// do the update
 		const fetchedTask = (await prisma?.task.update({
 			where: { id: task.id },	
 			data: {
@@ -95,9 +97,11 @@ export async function updateTask(task: UpdateTask, session: Session): Promise<{ 
 				}
 			},
             include: TaskInclude
-		})) ?? { fetchedTask: null };
-		if (!fetchedTask) return { data: null, error: "Project could not be created." };
-		// createAction({ description: `Created project ${project.name}`, type: ACTION_TYPE.CREATE_PROJECT, owner_id: session?.user?.id, data: { project_id } }); // writes na action as history
+		})) ?? null;
+		if (!fetchedTask) return { data: null, error: "Task could not be updated." };
+		const project_id = fetchedTask?.project_goal_id ? (await prisma?.projectGoal.findUnique({ where: { id: fetchedTask?.project_goal_id }, select: { project_id: true } }))?.project_id : undefined;
+		// @ts-ignore ignores the Date to string conversion error below
+		createAction({ description: `Updated task ${fetchedTask.title}`, type: ACTION_TYPE.UPDATE_TASK, owner_id: session?.user?.id, data: { task_id: fetchedTask?.id, project_id, new_task: fetchedTask, old_task: oldTask }})
 		return { data: fetchedTask as FetchedTask, error: null };
 	} catch (err) {
 		return {
