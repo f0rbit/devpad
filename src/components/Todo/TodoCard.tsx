@@ -16,8 +16,9 @@ type ItemInput = {
 
 const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: FetchedTask; layout: TODO_LAYOUT; set_item: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
 	const update_item = trpc.tasks.updateOldItem.useMutation();
-	// const delete_item = trpc.tasks.deleteItem.useMutation();
+	const deleteItem = trpc.tasks.deleteItem.useMutation();
 	// const add_module = trpc.tasks.addModule.useMutation();
+	const updateItem = trpc.tasks.updateItem.useMutation();
 	const [editModalOpen, setEditModalOpen] = useState(false);
 
 	const setItemStatus = (status: TASK_PROGRESS) => {
@@ -26,11 +27,22 @@ const TodoCard = ({ initial_item, layout, set_item, tags }: { initial_item: Fetc
 	};
 
 	async function saveTask(task: LoadedTask) {
-
+		const data = await updateItem.mutateAsync({ item: task });
+		if (data.error) {
+			console.error(data.error);
+		} else if (data.data) {
+			// data.data is the item as a FetchedTask
+			set_item(data.data);
+		}
 	}
 
 	async function deleteTask(task: LoadedTask) {
-
+		const { success, error } = await deleteItem.mutateAsync({ id: task.id });
+		if (error) {
+			console.error(error);
+		} else if (success) {
+			set_item({ ...task, visibility: TASK_VISIBILITY.DELETED } as FetchedTask);
+		}
 	}
 
 	if (initial_item.visibility == TASK_VISIBILITY.DELETED) return null;

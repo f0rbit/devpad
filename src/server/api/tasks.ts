@@ -1,7 +1,9 @@
 import { CreateItemOptions, FetchedTask, TaskInclude } from "@/types/page-link";
-import { Prisma } from "@prisma/client";
+import { Prisma, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Session } from "next-auth";
 import { contextUserOwnsTask, getErrorMessage } from "src/utils/backend";
+import { StringLiteral } from "typescript";
+import { z } from "zod";
 
 export async function createTask(task: CreateItemOptions, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
@@ -48,7 +50,26 @@ export async function deleteTask(id: string, session: Session): Promise<{ succes
 	}
 }
 
-export async function updateTask(task: FetchedTask, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
+export type UpdateTask = z.infer<typeof updateTaskValidation>;
+
+export const updateTaskValidation = z.object({
+	id: z.string(),
+	title: z.string(),
+	visibility: z.nativeEnum(TASK_VISIBILITY).default(TASK_VISIBILITY.PRIVATE),
+	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED),
+	project_goal_id: z.string().nullish(),
+	owner_id: z.string(),
+	modules: z.array(z.object({
+		type: z.string(),
+		data: z.any()
+	})),
+	tags: z.array(z.object({
+		id: z.string()
+	}))
+});
+
+
+export async function updateTask(task: UpdateTask, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
 	if (!prisma) return { data: null, error: "Database not connected." };
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
 	try {
