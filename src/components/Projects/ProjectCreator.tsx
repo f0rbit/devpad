@@ -30,7 +30,7 @@ export default function ProjectCreator({ projects }: { projects: Project[] }) {
 		if (error) {
 			setError(error);
 		} else if (project_id) {
-			window.location.href = `projects/project/${project_id}`;
+			window.location.href = `/projects/project/${project_id}`;
 		} else {
 			setError("Failed to create project");
 		}
