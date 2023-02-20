@@ -233,6 +233,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 					<div className="absolute top-[105%] flex w-full flex-col gap-2">
 						{tasks
 							?.filter((task) => task.visibility != TASK_VISIBILITY.ARCHIVED && task.visibility != TASK_VISIBILITY.DELETED)
+							/** @todo sort by task end date, or recently updated */
 							?.map((task, index) => (
 								<TaskCard
 									task={task}
@@ -240,7 +241,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 									onEdit={() => {
 										setEditingTask(task);
 									}}
-									setItemStatus={() => {}}
+									setItemStatus={(status) => { saveTask({ ...task, progress: status })}}
 									key={index}
 								/>
 							))}
