@@ -22,7 +22,7 @@ export async function createTask(task: CreateItemOptions, session: Session): Pro
 		})) ?? null;
 		if (!fetchedTask) return { data: null, error: "Project could not be created." };
 		// @ts-ignore ignores the Date to string conversion error below
-		createAction({ description: `Created task ${fetchedTask.title}`, type: ACTION_TYPE.CREATE_TASK, owner_id: session?.user?.id, data: { task_id: fetchedTask?.id, project_id: task.project_id, task: fetchedTask } })
+		createAction({ description: `Created task "${fetchedTask.title}"`, type: ACTION_TYPE.CREATE_TASK, owner_id: session?.user?.id, data: { task_id: fetchedTask?.id, project_id: task.project_id, task: fetchedTask } })
 		return { data: fetchedTask as FetchedTask, error: null };
 	} catch (err) {
 		return {
@@ -45,7 +45,7 @@ export async function deleteTask(id: string, session: Session): Promise<{ succes
 		// if the task has a project_goal_id, extract the project id from the goal
 		const project_id = deletedTask?.project_goal_id ? (await prisma?.projectGoal.findUnique({ where: { id: deletedTask?.project_goal_id }, select: { project_id: true } }))?.project_id : undefined;
 		if (!deletedTask) return { success: false, error: "Task could not be deleted." };
-		createAction({ description: `Deleted task ${deletedTask.title}`, type: ACTION_TYPE.DELETE_TASK, owner_id: session?.user?.id, data: { task_id: deletedTask?.id, project_id }})
+		createAction({ description: `Deleted task "${deletedTask.title}"`, type: ACTION_TYPE.DELETE_TASK, owner_id: session?.user?.id, data: { task_id: deletedTask?.id, project_id }})
 		return { success: true, error: null };
 	} catch (err) {
 		return {
@@ -101,7 +101,7 @@ export async function updateTask(task: UpdateTask, session: Session): Promise<{ 
 		if (!fetchedTask) return { data: null, error: "Task could not be updated." };
 		const project_id = fetchedTask?.project_goal_id ? (await prisma?.projectGoal.findUnique({ where: { id: fetchedTask?.project_goal_id }, select: { project_id: true } }))?.project_id : undefined;
 		// @ts-ignore ignores the Date to string conversion error below
-		createAction({ description: `Updated task ${fetchedTask.title}`, type: ACTION_TYPE.UPDATE_TASK, owner_id: session?.user?.id, data: { task_id: fetchedTask?.id, project_id, new_task: fetchedTask, old_task: oldTask }})
+		createAction({ description: `Updated task "${fetchedTask.title}"`, type: ACTION_TYPE.UPDATE_TASK, owner_id: session?.user?.id, data: { task_id: fetchedTask?.id, project_id, new_task: fetchedTask, old_task: oldTask }})
 		return { data: fetchedTask as FetchedTask, error: null };
 	} catch (err) {
 		return {
