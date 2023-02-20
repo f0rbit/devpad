@@ -5,7 +5,9 @@ import { TaskTags, TASK_VISIBILITY } from "@prisma/client";
 import { ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
+import { getTasksProgress } from "src/utils/backend";
 import { dateToDateTime } from "src/utils/dates";
+import AcceptButton from "../common/AcceptButton";
 import DeleteButton from "../common/DeleteButton";
 import GenericButton from "../common/GenericButton";
 import PrimaryButton from "../common/PrimaryButton";
@@ -143,6 +145,8 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 		);
 	}
 
+	const progress = getTasksProgress(tasks);
+
 	return (
 		<>
 			<div className="fixed z-50">
@@ -171,6 +175,9 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 							<PrimaryButton onClick={() => setIsEditing(!isEditing)}>
 								<Pencil className="w-4" />
 							</PrimaryButton>
+							<div className="relative">
+								<ProgressIndicator progress={progress} />
+							</div>
 						</div>
 					</div>
 				) : (
@@ -241,11 +248,19 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 									onEdit={() => {
 										setEditingTask(task);
 									}}
-									setItemStatus={(status) => { saveTask({ ...task, progress: status })}}
+									setItemStatus={(status) => {
+										saveTask({ ...task, progress: status });
+									}}
 									key={index}
 								/>
 							))}
-						{showTaskCreator ? <TodoCreator onCreate={createTask} /> : <GenericButton title="Add Task" onClick={() => setShowTaskCreator(true)} style="flex justify-center items-center py-4"><Plus /></GenericButton> }
+						{showTaskCreator ? (
+							<TodoCreator onCreate={createTask} />
+						) : (
+							<GenericButton title="Add Task" onClick={() => setShowTaskCreator(true)} style="flex justify-center items-center py-4">
+								<Plus />
+							</GenericButton>
+						)}
 					</div>
 				)}
 			</div>
@@ -295,5 +310,42 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 				</div>
 			)}
 		</>
+	);
+}
+
+function ProgressIndicator({ progress }: { progress: number }) {
+	// progress is a value from 0 - 1
+	// returns a button where the border is filled up clockwise based on the progress
+	if (progress >= 1) {
+		return <AcceptButton title="Mark as Finished" onClick={() => {
+			console.log("Finish goal");
+		}}>Finish</AcceptButton>;
+	}
+	const radius = 15;
+	const width = 3;
+	const size = radius + 5;
+	const circumference = 2 * Math.PI * radius;
+	return (
+		<div x-data="scrollProgress" className="absolute -top-5 inline-flex items-center justify-center overflow-hidden ">
+			<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
+				<circle className="text-base-text-subtle" stroke-width={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
+				<circle
+					className="text-green-300"
+					stroke-width={width}
+					stroke-dasharray={circumference}
+					//   stroke-dashoffset="circumference - percent / 100 * circumference"
+					stroke-dashoffset={circumference - progress * circumference}
+					stroke-linecap="round"
+					stroke="currentColor"
+					fill="transparent"
+					r={radius}
+					cx={size}
+					cy={size}
+				/>
+			</svg>
+			<span className={"absolute text-sm " + (progress > 0 ? "text-green-300" : "text-base-text-subtlish")} style={{ scale: "0.7" }}>
+				{Math.floor(progress * 100)}%
+			</span>
+		</div>
 	);
 }

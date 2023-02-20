@@ -1,5 +1,6 @@
 import { Context } from "@/server/trpc/context";
-import { Module, TaskPriority } from "@/types/page-link";
+import { FetchedTask, LoadedTask, Module, TaskPriority } from "@/types/page-link";
+import { ProjectGoal, TASK_PROGRESS } from "@prisma/client";
 
 export const contextUserOwnsTag = async (ctx: Context, tagID: string) => {
 	if (!ctx.prisma) return false;
@@ -61,4 +62,31 @@ export function getErrorMessage(error: any) {
 		result = error.message; // works, `e` narrowed to Error
 	}
 	return result;
+}
+
+/**
+ * Returns the progress of a list of tasks, as a number between 0 and 1
+ */
+export function getTasksProgress(tasks: FetchedTask[]) {
+	const total = tasks.length;
+	return tasks.reduce((acc, task) => {
+		return acc + (getTaskProgress(task) / total);
+	}, 0);
+}
+
+/**
+ * Returns the progress as a number between 0 and 1,
+ * where 0 is unstarted and 1 is completed
+ */
+export function getTaskProgress(task: FetchedTask) {
+	/** @todo if the task has a checklist, then use that as progress */
+	switch (task.progress) {
+		case TASK_PROGRESS.COMPLETED:
+			return 1;
+		case TASK_PROGRESS.IN_PROGRESS:
+			return 0.5;
+		case TASK_PROGRESS.UNSTARTED:
+			return 0;
+		default: return 0;
+	}
 }
