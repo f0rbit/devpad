@@ -2,7 +2,7 @@
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { CreateItemOptions, FetchedGoal, FetchedTask, LoadedTask } from "@/types/page-link";
 import { TaskTags, TASK_VISIBILITY } from "@prisma/client";
-import { ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
 import moment from "moment";
 import { useState } from "react";
 import { getTasksProgress } from "src/utils/backend";
@@ -145,7 +145,8 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 		);
 	}
 
-	const progress = getTasksProgress(tasks);
+	const progress = tasks.length <= 0 ? 1 : getTasksProgress(tasks);
+	const finished = goal?.finished_at != null;
 
 	return (
 		<>
@@ -161,10 +162,11 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 			</div>
 			<div className="styled-input relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
 				{isEditing == false && goal ? (
-					<div className="flex flex-col gap-2">
-						<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2">
+					<div className="flex flex-col gap-2 h-full">
+						<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2 h-full">
 							<div className="text-2xl font-semibold text-base-text-subtlish">{goal?.name}</div>
-							<div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar()}</div>
+							{/* <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar()}</div> */}
+							<GoalTime goal={goal} />
 							<div className="text-sm text-base-text-subtle">{goal?.description ?? "null"}</div>
 						</div>
 						<div className="flex items-center justify-center gap-2">
@@ -175,9 +177,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 							<PrimaryButton onClick={() => setIsEditing(!isEditing)}>
 								<Pencil className="w-4" />
 							</PrimaryButton>
-							<div className="relative">
-								<ProgressIndicator progress={progress} />
-							</div>
+							{!finished && <ProgressIndicator progress={progress} />}
 						</div>
 					</div>
 				) : (
@@ -321,31 +321,44 @@ function ProgressIndicator({ progress }: { progress: number }) {
 			console.log("Finish goal");
 		}}>Finish</AcceptButton>;
 	}
-	const radius = 15;
+	const radius = 10;
 	const width = 3;
 	const size = radius + 5;
 	const circumference = 2 * Math.PI * radius;
 	return (
-		<div x-data="scrollProgress" className="absolute -top-5 inline-flex items-center justify-center overflow-hidden ">
-			<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
-				<circle className="text-base-text-subtle" stroke-width={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
-				<circle
-					className="text-green-300"
-					stroke-width={width}
-					stroke-dasharray={circumference}
-					//   stroke-dashoffset="circumference - percent / 100 * circumference"
-					stroke-dashoffset={circumference - progress * circumference}
-					stroke-linecap="round"
-					stroke="currentColor"
-					fill="transparent"
-					r={radius}
-					cx={size}
-					cy={size}
-				/>
-			</svg>
-			<span className={"absolute text-sm " + (progress > 0 ? "text-green-300" : "text-base-text-subtlish")} style={{ scale: "0.7" }}>
+		<div x-data="scrollProgress" className="flex justify-center items-center gap-1 border-borders-secondary border-1 rounded-md px-4 py-[1px]">
+				<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
+					<circle className="text-base-text-subtle" stroke-width={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
+					<circle
+						className="text-green-300"
+						stroke-width={width}
+						stroke-dasharray={circumference}
+						//   stroke-dashoffset="circumference - percent / 100 * circumference"
+						stroke-dashoffset={circumference - progress * circumference}
+						stroke-linecap="round"
+						stroke="currentColor"
+						fill="transparent"
+						r={radius}
+						cx={size}
+						cy={size}
+					/>
+				</svg>
+			
+			<span className={"text-sm " + (progress > 0 ? "text-green-300" : "text-base-text-subtlish")}>
 				{Math.floor(progress * 100)}%
 			</span>
 		</div>
 	);
+}
+
+
+function GoalTime({ goal }: { goal: FetchedGoal }) {
+	const finished = goal.finished_at != null;
+	if (finished) {
+		return <div className="flex flex-row gap-1 items-center">
+			<Check className="w-4 text-green-300 mt-0.5" />
+			<div className="text-base text-base-text-subtle">{moment(goal?.finished_at).calendar()}</div>
+		</div>
+	} 
+	return <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar()}</div>
 }
