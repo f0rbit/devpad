@@ -19,6 +19,8 @@ export default function GoalAdder({ project_id, addGoal }: { project_id: string;
 					addGoal(goal);
 				}}
 				tags={[]}
+				updateCard={() => {}}
+				finishProject={() => {}}
 			/>
 		);
 	} else {

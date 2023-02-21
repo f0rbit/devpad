@@ -34,5 +34,5 @@ html {
 }
 
 .styled-input input, textarea, select {
-	@apply bg-base-accent-primary focus:ring-1 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2 border-1 border-borders-primary
+	@apply w-full bg-base-accent-primary focus:ring-1 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2 border-1 border-borders-primary placeholder-base-text-dark
 }

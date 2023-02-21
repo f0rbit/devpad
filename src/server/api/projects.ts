@@ -1,4 +1,4 @@
-import { CreateProjectType, FetchedGoal, TaskInclude } from "@/types/page-link";
+import { CreateProjectType, FetchedGoal, FetchedProject, TaskInclude } from "@/types/page-link";
 import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
@@ -75,70 +75,44 @@ export async function getUserProject(projectID: string): Promise<{ data: Project
 	}
 }
 
+
+const GoalInclude = {
+	tasks: {
+		include: TaskInclude
+	}
+}
+
+const ProjectInclude = {
+	goals: {
+		include: GoalInclude
+	}
+}
+
+export async function getProject(projectID: string, session: Session): Promise<{ data: FetchedProject | null; error: string }> {
+	if (!session?.user?.id) return { data: null, error: "You must be signed in to get a project." };
+	if (!projectID || projectID.length <= 0) return { data: null, error: "You must declare a valid project_id." };
+	try {
+		const project =
+			(await prisma?.project.findUnique({
+				where: {
+					owner_id_project_id: {
+						owner_id: session?.user?.id,
+						project_id: projectID
+					}
+				},
+				include: ProjectInclude
+			})) ?? null;
+		if (!project) return { data: null, error: "Project not found!" };
+		return { data: project as FetchedProject, error: "" };
+	} catch (e: any) {
+		return { error: getErrorMessage(e), data: null };
+	}
+}
+
 // project history
 
 export async function getProjectHistory(project_id: string, session: Session): Promise<{ data: Action[]; error: string }> {
 	if (!session?.user?.id) return { data: [], error: "You must be signed in to get project history." };
 	if (!project_id || project_id.length <= 0) return { data: [], error: "You must declare a valid project_id." };
 	return await getHistory(session?.user?.id, { path: ["project_id"], equals: project_id });
-}
-
-// project goals
-
-export async function getProjectGoals(project_id: string, session: Session): Promise<{ data: FetchedGoal[]; error: string }> {
-	if (!session?.user?.id) return { data: [], error: "You must be signed in to delete a project." };
-	if (!project_id) return { data: [], error: "You must declare a valid project_id." };
-	try {
-		const where = { owner_id: session?.user?.id, project_id, deleted: false };
-		const goals = (await prisma?.projectGoal.findMany({ where, include: { tasks: { include: TaskInclude } } })) as FetchedGoal[];
-		if (!goals) return { data: [], error: "No goals found!" };
-		return { data: goals, error: "" };
-	} catch (e: any) {
-		return { error: getErrorMessage(e), data: [] };
-	}
-}
-
-export async function createProjectGoal(goal: { name: string; description: string; target_time: string; project_id: string }, session: Session): Promise<{ data: ProjectGoal | null; error: string | null }> {
-	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project goal." };
-	if (!goal.name || goal.name.length <= 0) return { data: null, error: "You must declare a valid name." };
-	try {
-		const new_goal =
-			(await prisma?.projectGoal.create({
-				data: {
-					...goal,
-					target_time: new Date(goal.target_time),
-					owner_id: session?.user?.id
-				}
-			})) ?? null;
-		if (!goal) return { data: null, error: "Project goal could not be created." };
-		createAction({ description: `Created goal "${goal.name}"`, type: ACTION_TYPE.CREATE_GOAL, owner_id: session?.user?.id, data: { project_id: goal.project_id } }); // writes na action as history
-		return { data: new_goal, error: null };
-	} catch (err) {
-		return {
-			data: null,
-			error: getErrorMessage(err)
-		};
-	}
-}
-
-export async function deleteProjectGoal(goal_id: string, session: Session): Promise<{ success: boolean; error: string | null }> {
-	if (!session?.user?.id) return { success: false, error: "You must be signed in to delete a project goal." };
-	if (!goal_id || goal_id.length <= 0) return { success: false, error: "You must declare a valid goal_id." };
-	try {
-		// check that the goal belongs to the user
-		const goal = await prisma?.projectGoal.findUnique({ where: { id: goal_id } });
-		if (!goal || goal.owner_id !== session?.user?.id) return { success: false, error: "You do not have permission to delete this goal." };
-		const { deleted, project_id, name } = (await prisma?.projectGoal.update({
-			where: {
-				id: goal_id
-			},
-			data: { deleted: true },
-			select: { deleted: true, project_id: true, name: true }
-		})) ?? { deleted: false };
-		if (!deleted) return { success: false, error: "Project goal could not be deleted." };
-		createAction({ description: `Deleted goal "${name}"`, type: ACTION_TYPE.DELETE_GOAL, owner_id: session?.user?.id, data: { project_id } }); // writes an action as history
-		return { success: true, error: null };
-	} catch (err) {
-		return { success: false, error: getErrorMessage(err) };
-	}
 }

@@ -1,5 +1,7 @@
 "use client";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
+import { UpdateGoal } from "@/server/api/goals";
+import { UpdateTask } from "@/server/api/tasks";
 import { CreateItemOptions, FetchedGoal, FetchedTask, LoadedTask } from "@/types/page-link";
 import { TaskTags, TASK_VISIBILITY } from "@prisma/client";
 import { ArrowRight, Check, ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
@@ -23,27 +25,32 @@ type GoalCardProps = {
 	tags: TaskTags[];
 	cancel?: () => void;
 	create?: (goal: FetchedGoal) => void;
-	deleteCard?: (id: string) => void;
+	updateCard(goal: FetchedGoal): void;
+	finishProject(version: string): void;
 };
 
-export default function GoalCard({ goal, project_id, cancel, create, deleteCard, tags }: GoalCardProps) {
+export default function GoalCard({ goal, project_id, cancel, create, updateCard, tags, finishProject }: GoalCardProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showTasks, setShowTasks] = useState(false);
 	const [editingGoal, setEditingGoal] = useState({
 		name: goal?.name ?? "",
 		description: goal?.description ?? "",
-		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
+		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date(),
+		target_version: goal?.target_version ?? null
 	});
 	const [error, setError] = useState("");
 	const [tasks, setTasks] = useState((goal?.tasks ?? []) as LoadedTask[]);
 	const [editingTask, setEditingTask] = useState(null as FetchedTask | null);
 	const [showTaskCreator, setShowTaskCreator] = useState(false);
 
+	console.log(tasks);
+
 	async function createGoal() {
 		const goal = {
 			name: editingGoal.name,
 			description: editingGoal.description,
 			target_time: editingGoal.target_time.toISOString(),
+			target_version: editingGoal.target_version,
 			project_id
 		};
 
@@ -75,11 +82,12 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 	}
 
 	async function saveTask(task: LoadedTask) {
+		console.log(task);
 		// update local ui first
 		task.network_status = { loading: true, error: "" };
 		setTasks(tasks.map((t) => (t.id == task.id ? task : t)));
 		// update task in database
-		const response = await fetch("/api/tasks/update", { body: JSON.stringify(task), method: "POST" });
+		const response = await fetch("/api/tasks/update", { body: JSON.stringify(task as UpdateTask), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: LoadedTask | null; error: string }>);
 		if (error) {
 			task.network_status = { loading: false, error };
@@ -116,8 +124,38 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 		}
 	}
 
+	async function finishGoal() {
+		if (!goal) {
+			setError("Invalid Goal object");
+			return;
+		}
+		const update_goal: UpdateGoal = {
+			...goal,
+			finished_at: new Date()
+		};
+		updateGoal(update_goal);
+		if (update_goal.target_version) finishProject(update_goal.target_version);
+	}
+
 	async function saveGoal() {
-		console.log("save goal!");
+		if (!goal?.id) {
+			setError("Invalid Goal ID: " + goal?.id ?? "null");
+			return;
+		}
+		const update_goal: UpdateGoal = {
+			...editingGoal,
+			id: goal.id
+		};
+		updateGoal(update_goal);
+	}
+	async function updateGoal(goal: UpdateGoal) {
+		const response = await fetch("/api/projects/goal/update", { body: JSON.stringify(goal), method: "POST" });
+		const { data, error } = await (response.json() as Promise<{ data: FetchedGoal | null; error: string }>);
+		if (error || !data) {
+			setError(error ?? "Failed to update goal");
+		} else {
+			updateCard(data);
+		}
 	}
 
 	async function deleteGoal() {
@@ -130,7 +168,7 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 		if (error) {
 			setError(error);
 		} else if (success) {
-			deleteCard?.(goal?.id);
+			updateCard({ ...goal, deleted: true });
 		} else {
 			setError("Failed to delete goal");
 		}
@@ -162,50 +200,38 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 			</div>
 			<div className="styled-input relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
 				{isEditing == false && goal ? (
-					<div className="flex flex-col gap-2 h-full">
-						<div className="flex flex-col gap-2 border-b-1 border-borders-secondary p-2 h-full">
-							<div className="text-2xl font-semibold text-base-text-subtlish">{goal?.name}</div>
-							{/* <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar()}</div> */}
+					<div className="flex h-full flex-col gap-2">
+						<div className="flex h-full flex-col gap-2 border-b-1 border-borders-secondary p-2">
+							<div className="flex flex-row items-center gap-2">
+								<div className="text-2xl font-semibold text-base-text-subtlish">{goal?.name}</div>
+								{goal.target_version && <VersionIndicator version={goal.target_version} />}
+							</div>
 							<GoalTime goal={goal} />
 							<div className="text-sm text-base-text-subtle">{goal?.description ?? "null"}</div>
 						</div>
 						<div className="flex items-center justify-center gap-2">
-							<button className="flex flex-row gap-2 rounded-md border-1 border-borders-secondary py-1 px-4 hover:bg-base-accent-secondary" onClick={() => setShowTasks(!showTasks)}>
-								{showTasks ? <ChevronUp /> : <ChevronDown />}
-								Show Tasks
-							</button>
-							<PrimaryButton onClick={() => setIsEditing(!isEditing)}>
-								<Pencil className="w-4" />
-							</PrimaryButton>
-							{!finished && <ProgressIndicator progress={progress} />}
+							<ShowTasks setShowTasks={setShowTasks} showTasks={showTasks} tasks={tasks} />
+							{!finished && <EditControls finishGoal={finishGoal} isEditing={isEditing} progress={progress} setIsEditing={setIsEditing} />}
 						</div>
 					</div>
 				) : (
 					// this is the add goal card
-					<div className="flex flex-col gap-2 p-2 pb-0">
-						<input
-							type="text"
-							placeholder="Name"
-							className="w-full rounded-md border-1 border-borders-secondary bg-base-accent-secondary py-1 px-2 text-base-text-secondary placeholder-base-text-dark"
-							onChange={(e) => setEditingGoal({ ...editingGoal, name: e.target.value })}
-							defaultValue={editingGoal.name}
-						/>
-						<input
-							type="text"
-							placeholder="Description"
-							className="w-full rounded-md border-1 border-borders-secondary bg-base-accent-secondary py-1 px-2 text-base-text-subtlish placeholder-base-text-dark"
-							onChange={(e) => setEditingGoal({ ...editingGoal, description: e.target.value })}
-							defaultValue={editingGoal.description}
-						/>
+					<div className="flex flex-col gap-1 p-2 pb-0">
+						<input type="text" placeholder="Name" className="text-base-text-secondary" onChange={(e) => setEditingGoal({ ...editingGoal, name: e.target.value })} defaultValue={editingGoal.name} />
+						<input type="text" placeholder="Description" className="text-base-text-subtlish" onChange={(e) => setEditingGoal({ ...editingGoal, description: e.target.value })} defaultValue={editingGoal.description} />
 						<div className="flex flex-row items-center gap-2">
 							<div className="min-w-max text-base-text-subtle">Target Date</div>
 							<input
 								type="datetime-local"
 								placeholder="Due Date"
-								className="w-full rounded-md border-1 border-borders-secondary bg-base-accent-secondary py-1 px-2 text-base-text-secondary placeholder-base-text-dark"
+								className=" text-base-text-secondary"
 								onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value) })}
 								defaultValue={dateToDateTime(editingGoal.target_time) ?? undefined}
 							/>
+						</div>
+						<div className="flex flex-row items-center gap-2">
+							<div className="min-w-max text-base-text-subtle">Target Version</div>
+							<input type="text" placeholder="Version" className="text-base-text-secondary" value={editingGoal.target_version ?? undefined} onChange={(e) => setEditingGoal({ ...editingGoal, target_version: e.target.value })} />
 						</div>
 						<div className="flex h-full w-full items-center justify-center gap-2 py-1">
 							<GenericButton
@@ -217,7 +243,8 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 									setEditingGoal({
 										name: goal?.name ?? "",
 										description: goal?.description ?? "",
-										target_time: goal?.target_time ? new Date(goal?.target_time) : new Date()
+										target_time: goal?.target_time ? new Date(goal?.target_time) : new Date(),
+										target_version: goal?.target_version ?? ""
 									});
 								}}
 							>
@@ -225,7 +252,12 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 							</GenericButton>
 							<PrimaryButton
 								onClick={() => {
-									isEditing ? saveGoal() : createGoal();
+									if (isEditing) {
+										saveGoal();
+										setIsEditing(false);
+									} else {
+										createGoal();
+									}
 								}}
 								title={isEditing ? "Save" : "Create"}
 								style="font-semibold"
@@ -264,6 +296,27 @@ export default function GoalCard({ goal, project_id, cancel, create, deleteCard,
 					</div>
 				)}
 			</div>
+		</>
+	);
+}
+
+function ShowTasks({ tasks, showTasks, setShowTasks }: { tasks: FetchedTask[]; showTasks: boolean; setShowTasks: (show: boolean) => void }) {
+	if (tasks.length <= 0) return <></>;
+	return (
+		<GenericButton style="flex flex-row gap-2 " onClick={() => setShowTasks(!showTasks)}>
+			{showTasks ? <ChevronUp /> : <ChevronDown />}
+			Show Tasks
+		</GenericButton>
+	);
+}
+
+function EditControls({ isEditing, setIsEditing, progress, finishGoal }: { isEditing: boolean; setIsEditing: (isEditing: boolean) => void; progress: number; finishGoal: () => void }) {
+	return (
+		<>
+			<PrimaryButton onClick={() => setIsEditing(!isEditing)}>
+				<Pencil className="w-4" />
+			</PrimaryButton>
+			<ProgressIndicator progress={progress} onFinish={finishGoal} />
 		</>
 	);
 }
@@ -313,52 +366,61 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 	);
 }
 
-function ProgressIndicator({ progress }: { progress: number }) {
+function ProgressIndicator({ progress, onFinish }: { progress: number; onFinish: () => void }) {
 	// progress is a value from 0 - 1
 	// returns a button where the border is filled up clockwise based on the progress
 	if (progress >= 1) {
-		return <AcceptButton title="Mark as Finished" onClick={() => {
-			console.log("Finish goal");
-		}}>Finish</AcceptButton>;
+		return (
+			<AcceptButton title="Mark as Finished" onClick={onFinish}>
+				Finish
+			</AcceptButton>
+		);
 	}
 	const radius = 10;
 	const width = 3;
 	const size = radius + 5;
 	const circumference = 2 * Math.PI * radius;
 	return (
-		<div x-data="scrollProgress" className="flex justify-center items-center gap-1 border-borders-secondary border-1 rounded-md px-4 py-[1px]">
-				<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
-					<circle className="text-base-text-subtle" stroke-width={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
-					<circle
-						className="text-green-300"
-						stroke-width={width}
-						stroke-dasharray={circumference}
-						//   stroke-dashoffset="circumference - percent / 100 * circumference"
-						stroke-dashoffset={circumference - progress * circumference}
-						stroke-linecap="round"
-						stroke="currentColor"
-						fill="transparent"
-						r={radius}
-						cx={size}
-						cy={size}
-					/>
-				</svg>
-			
-			<span className={"text-sm " + (progress > 0 ? "text-green-300" : "text-base-text-subtlish")}>
-				{Math.floor(progress * 100)}%
-			</span>
+		<div x-data="scrollProgress" className="flex items-center justify-center gap-1 rounded-md border-1 border-borders-secondary px-4 py-[1px]">
+			<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
+				<circle className="text-base-text-subtle" stroke-width={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
+				<circle
+					className="text-green-300"
+					stroke-width={width}
+					stroke-dasharray={circumference}
+					//   stroke-dashoffset="circumference - percent / 100 * circumference"
+					stroke-dashoffset={circumference - progress * circumference}
+					stroke-linecap="round"
+					stroke="currentColor"
+					fill="transparent"
+					r={radius}
+					cx={size}
+					cy={size}
+				/>
+			</svg>
+
+			<span className={"text-sm " + (progress > 0 ? "text-green-300" : "text-base-text-subtlish")}>{Math.floor(progress * 100)}%</span>
 		</div>
 	);
 }
 
-
 function GoalTime({ goal }: { goal: FetchedGoal }) {
 	const finished = goal.finished_at != null;
 	if (finished) {
-		return <div className="flex flex-row gap-1 items-center">
-			<Check className="w-4 text-green-300 mt-0.5" />
-			<div className="text-base text-base-text-subtle">{moment(goal?.finished_at).calendar()}</div>
+		return (
+			<div className="flex flex-row items-center gap-1">
+				<Check className="mt-0.5 w-4 text-green-300" />
+				<div className="text-base text-base-text-subtle">{moment(goal?.finished_at).calendar()}</div>
+			</div>
+		);
+	}
+	return <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar({ sameElse: "DD/MM/yyyy"})}</div>;
+}
+
+function VersionIndicator({ version, className }: { version: string; className?: string }) {
+	return (
+		<div className={"w-max origin-left scale-75 rounded-md border-1 border-accent-btn-primary px-2 " + className}>
+			<div className="font-mono text-sm text-accent-btn-primary">{version}</div>
 		</div>
-	} 
-	return <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar()}</div>
+	);
 }

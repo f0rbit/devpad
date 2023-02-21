@@ -1,38 +1,48 @@
 "use client";
-import { ProjectGoal, TaskTags } from "@prisma/client";
+import { TaskTags } from "@prisma/client";
 import { useState } from "react";
 import GoalAdder from "./GoalAdder";
 import GoalCard from "@/components/Projects/GoalCard";
-import { FetchedGoal } from "@/types/page-link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { FetchedGoal, FetchedProject } from "@/types/page-link";
+import { ChevronLeft } from "lucide-react";
 import GenericButton from "../common/GenericButton";
 
-export default function GoalRenderer({ goals: initial_goals, project_id, tags }: { goals: FetchedGoal[]; project_id: string, tags: TaskTags[] }) {
-	const [goals, setGoals] = useState(initial_goals);
+export default function GoalRenderer({ project: initial_project, tags }: { project: FetchedProject;  tags: TaskTags[] }) {
+	const [project, setProject] = useState(initial_project);
 	const [showPrevious, setShowPrevious] = useState(false);
 	
 	function addGoal(goal: FetchedGoal) {
-		setGoals([...goals, goal]);
+		setProject({ ...project, goals: [...project.goals, goal] });
 	}
 
-	function deleteGoal(id: string) {
-		setGoals(goals.filter((goal) => goal.id !== id));
+	function updateGoal(goal: FetchedGoal) {
+		// setGoals(goals.map((a) => (a.id === goal.id ? goal : a)));
+		setProject({ ...project, goals: project.goals.map((a) => (a.id === goal.id ? goal : a)) });
 	}
 
-	const previous_goals = goals.filter((a) => a.finished_at != null);
-	// sort previous goals by finished time
-	// @ts-ignore - ignore the date to string conversion error
+	async function finishProject(version: string) {
+		// update the current projects version
+		const update_project = {
+			...project,
+			current_version: version
+		}
+		// do some kind of fetch request
+
+		setProject(update_project);
+	}
+
+	const active_goals = project.goals.filter((goal) => goal.deleted == false);
+
+	const previous_goals = active_goals.filter((a) => a.finished_at != null) as (FetchedGoal & { finished_at: string })[];
 	previous_goals.sort((a, b) => new Date(b.finished_at).valueOf() - new Date(a.finished_at).valueOf());
 
-	const future_goals = goals.filter((a) => a.finished_at == null);
-
-
+	const future_goals = active_goals.filter((a) => a.finished_at == null);
 	// sort goals by target time
 	const sorted_goals = future_goals.sort((a, b) => new Date(a.target_time).valueOf() -  new Date(b.target_time).valueOf());
 
 	return (
 		<div className="flex h-max flex-row gap-2">
-			{showPrevious && previous_goals.map((goal, index) => <GoalCard key={index} goal={goal} project_id={project_id} deleteCard={deleteGoal} tags={tags} />)}
+			{showPrevious && previous_goals.map((goal, index) => <GoalCard key={index} goal={goal} project_id={project.project_id} tags={tags} updateCard={updateGoal} finishProject={finishProject} />)}
 			{previous_goals.length > 0 && (
 				<GenericButton
 					onClick={() => setShowPrevious(!showPrevious)}
@@ -43,9 +53,9 @@ export default function GoalRenderer({ goals: initial_goals, project_id, tags }:
 			)}
 
 			{sorted_goals.map((goal, index) => (
-				<GoalCard key={index} goal={goal} project_id={project_id} deleteCard={deleteGoal} tags={tags} />
+				<GoalCard key={index} goal={goal} project_id={project.project_id} tags={tags} updateCard={updateGoal} finishProject={finishProject} />
 			))}
-			<GoalAdder project_id={project_id} addGoal={addGoal} />
+			<GoalAdder project_id={project.project_id} addGoal={addGoal} />
 		</div>
 	);
 }

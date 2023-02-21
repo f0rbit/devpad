@@ -1,4 +1,4 @@
-import { deleteProjectGoal } from "@/server/api/projects";
+import { deleteProjectGoal } from "@/server/api/goals";
 import { getServerAuthSession } from "@/server/common/get-server-auth-session";
 import { NextApiRequest, NextApiResponse } from "next";
 

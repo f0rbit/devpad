@@ -41,7 +41,7 @@ export type CreateProjectType = {
 
 export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
 
-export type FetchedProject = Project & { goals: ProjectGoal[] };
+export type FetchedProject = Project & { goals: FetchedGoal[] };
 
 // type CreateModuleOptions = {
 // 	type: Module;
@@ -87,7 +87,7 @@ export type FetchedTask = Task & {
 	tags: TaskTags[];
 	templates: TemplateTask[];
 	modules: TaskModule[];
-	parent: Task;
+	parent: Task | null;
 	children: Task[];
 };
 
