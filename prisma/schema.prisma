@@ -101,37 +101,39 @@ model TaskTags {
 }
 
 model Project {
-  project_id  String
-  owner_id    String
-  name        String
-  created_at  DateTime       @default(now())
-  updated_at  DateTime       @updatedAt
-  description String?
-  repo_url    String?
-  icon_url    String?
-  status      PROJECT_STATUS @default(DEVELOPMENT)
-  deleted     Boolean        @default(false)
-  link_url    String?
-  link_text   String?
-  owner       User           @relation(fields: [owner_id], references: [id])
-  goals       ProjectGoal[]
+  project_id      String
+  owner_id        String
+  name            String
+  created_at      DateTime       @default(now())
+  updated_at      DateTime       @updatedAt
+  description     String?
+  repo_url        String?
+  icon_url        String?
+  status          PROJECT_STATUS @default(DEVELOPMENT)
+  deleted         Boolean        @default(false)
+  link_url        String?
+  link_text       String?
+  current_version String?
+  owner           User           @relation(fields: [owner_id], references: [id])
+  goals           ProjectGoal[]
 
   @@unique([owner_id, project_id])
 }
 
 model ProjectGoal {
-  id          String    @id @default(uuid()) @db.Uuid
-  name        String
-  project_id  String
-  owner_id    String
-  created_at  DateTime  @default(now())
-  updated_at  DateTime  @updatedAt
-  description String?
-  project     Project   @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
-  target_time DateTime  @default(now())
-  tasks       Task[]
-  deleted     Boolean   @default(false)
-  finished_at DateTime?
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String
+  project_id     String
+  owner_id       String
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
+  description    String?
+  project        Project   @relation(fields: [project_id, owner_id], references: [project_id, owner_id])
+  target_time    DateTime  @default(now())
+  tasks          Task[]
+  deleted        Boolean   @default(false)
+  finished_at    DateTime?
+  target_version String?
 }
 
 model Action {
