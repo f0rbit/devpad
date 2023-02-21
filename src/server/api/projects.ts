@@ -1,9 +1,50 @@
 import { CreateProjectType, FetchedGoal, FetchedProject, TaskInclude } from "@/types/page-link";
-import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task } from "@prisma/client";
+import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task, PROJECT_STATUS } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
 import { getCurrentUser } from "src/utils/session";
+import { optional, z } from "zod";
 import { createAction, getHistory } from "./action";
+
+const updateProjectValdiation = z.object({
+	project_id: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+	status: z.nativeEnum(PROJECT_STATUS),
+	current_version: z.string().nullable(),
+	deleted: z.boolean().optional().default(false),
+	icon_url: z.string().nullable(),
+	link_url: z.string().nullable(),
+	link_text: z.string().nullable(),
+	repo_url: z.string().nullable(),
+
+});
+
+export type UpdateProject = z.infer<typeof updateProjectValdiation>;
+
+export async function updateProject(project: UpdateProject, session: Session): Promise<{ data: FetchedProject | null; error: string | null }> {
+	if (!session?.user?.id) return { data: null, error: "You must be signed in to update a project." };
+	const where = { owner_id_project_id: { owner_id: session?.user?.id, project_id: project.project_id } };
+	try {
+		const old_project = await prisma?.project.findUnique({ where, include: ProjectInclude}) as FetchedProject | null;
+		if (!old_project) return { data: null, error: "Project could not be found." };
+		const updatedProject = (await prisma?.project.update({
+			where,
+			data: { ...project },
+			include: ProjectInclude
+		})) ?? null;
+		if (!updatedProject) return { data: null, error: "Project could not be updated." };
+		const new_project = updatedProject as FetchedProject;
+		// @ts-ignore - ignore date to string conversion errors
+		createAction({ description: `Updated project "${project.name}"`, type: ACTION_TYPE.UPDATE_PROJECT, owner_id: session?.user?.id, data: { project_id: project.project_id, new_project, old_project } }); // writes an action as history
+		return { data: new_project, error: null };
+	} catch (err) {
+		return {
+			data: null,
+			error: getErrorMessage(err)
+		};
+	}
+}
 
 export async function createProject(project: CreateProjectType, session: Session): Promise<{ data: string | null; error: string | null }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };

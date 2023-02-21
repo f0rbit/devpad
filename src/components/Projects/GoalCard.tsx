@@ -43,7 +43,6 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 	const [editingTask, setEditingTask] = useState(null as FetchedTask | null);
 	const [showTaskCreator, setShowTaskCreator] = useState(false);
 
-	console.log(tasks);
 
 	async function createGoal() {
 		const goal = {
@@ -183,7 +182,7 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 		);
 	}
 
-	const progress = tasks.length <= 0 ? 1 : getTasksProgress(tasks);
+	const progress = tasks.length <= 0 ? 1 : getTasksProgress(tasks.filter((task) => task.visibility != TASK_VISIBILITY.DELETED));
 	const finished = goal?.finished_at != null;
 
 	return (

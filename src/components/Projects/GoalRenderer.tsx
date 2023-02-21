@@ -6,6 +6,7 @@ import GoalCard from "@/components/Projects/GoalCard";
 import { FetchedGoal, FetchedProject } from "@/types/page-link";
 import { ChevronLeft } from "lucide-react";
 import GenericButton from "../common/GenericButton";
+import { UpdateProject } from "@/server/api/projects";
 
 export default function GoalRenderer({ project: initial_project, tags }: { project: FetchedProject;  tags: TaskTags[] }) {
 	const [project, setProject] = useState(initial_project);
@@ -22,13 +23,27 @@ export default function GoalRenderer({ project: initial_project, tags }: { proje
 
 	async function finishProject(version: string) {
 		// update the current projects version
-		const update_project = {
-			...project,
-			current_version: version
+		const update_project: UpdateProject = {
+			project_id: project.project_id,
+			current_version: version,
+			deleted: project.deleted,
+			description: project.description,
+			icon_url: project.icon_url,
+			link_text: project.link_text,
+			link_url: project.link_url,
+			name: project.name,
+			repo_url: project.repo_url,
+			status: project.status
 		}
 		// do some kind of fetch request
-
-		setProject(update_project);
+		const response = await fetch("/api/projects/update", { method: "POST", body: JSON.stringify(update_project) });
+		const { data, error } = await (response.json() as Promise<{ data: FetchedProject | null; error: string | null }>);
+		if (error || !data) {
+			console.error(error ?? "No data returned from server");
+			return;
+		} else {
+			setProject(data);
+		}
 	}
 
 	const active_goals = project.goals.filter((goal) => goal.deleted == false);
