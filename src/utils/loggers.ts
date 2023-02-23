@@ -50,4 +50,4 @@ const filestream = fs.createWriteStream("logs/output.log", { flags: "a" });
 // override the .write function to point to the pretty.write function
 filestream.write = pretty().write;
 
-export const logger = pino({ level: "info" }, pino.multistream([{ stream }, { stream: pretty({ colorize: true }) }, { stream: fs.createWriteStream("logs/output.log", { flags: "a" }) }]));
+export const logger = pino({ level: "info" }, pino.multistream([{ stream }, { stream: pretty({ colorize: true }) } ]));
