@@ -73,7 +73,6 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 		if (error) {
 			setError(error);
 		} else if (data) {
-			console.log({ data });
 			setTasks([...tasks, data]);
 		} else {
 			setError("failed to create task");
@@ -81,7 +80,6 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 	}
 
 	async function saveTask(task: LoadedTask) {
-		console.log(task);
 		// update local ui first
 		task.network_status = { loading: true, error: "" };
 		setTasks(tasks.map((t) => (t.id == task.id ? task : t)));
@@ -382,14 +380,14 @@ function ProgressIndicator({ progress, onFinish }: { progress: number; onFinish:
 	return (
 		<div x-data="scrollProgress" className="flex items-center justify-center gap-1 rounded-md border-1 border-borders-secondary px-4 py-[1px]">
 			<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
-				<circle className="text-base-text-subtle" stroke-width={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
+				<circle className="text-base-text-subtle" strokeWidth={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
 				<circle
 					className="text-green-300"
-					stroke-width={width}
-					stroke-dasharray={circumference}
+					strokeWidth={width}
+					strokeDasharray={circumference}
 					//   stroke-dashoffset="circumference - percent / 100 * circumference"
-					stroke-dashoffset={circumference - progress * circumference}
-					stroke-linecap="round"
+					strokeDashoffset={circumference - progress * circumference}
+					strokeLinecap="round"
 					stroke="currentColor"
 					fill="transparent"
 					r={radius}

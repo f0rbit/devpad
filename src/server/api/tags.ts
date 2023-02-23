@@ -1,6 +1,7 @@
 import { TaskTags } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
+import { logger } from "src/utils/loggers";
 
 export async function getUserTags(session: Session): Promise<{ data: TaskTags[]; error: string }> {
 	if (!session?.user?.id) return { data: [], error: "You must be signed in to create a project." };

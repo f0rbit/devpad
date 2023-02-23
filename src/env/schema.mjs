@@ -18,7 +18,9 @@ export const serverSchema = z.object({
 	),
 	GITHUB_CLIENT_ID: z.string(),
 	GITHUB_CLIENT_SECRET: z.string(),
-	ROOT_DOMAIN: z.string()
+	ROOT_DOMAIN: z.string(),
+	LOGFLARE_SOURCE: z.string(),
+	LOGFLARE_API_KEY: z.string()
 });
 
 /**

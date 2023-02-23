@@ -19,10 +19,8 @@ export default function TodoCreator({ onCreate }: { onCreate: (item: CreateItemO
 	const [item, setItem] = useState(structuredClone(DEFAULT_ITEM) as CreateItemOptions);
 	const [expandedOptions, setExpandedOptions] = useState(false);
 
-	console.log(item);
 
 	function updateModule(module: Module, data: any) {
-		console.log({ module, data });
 		// update item modules, either adding or updating
 		const modules = item.modules;
 		const index = modules?.findIndex((m) => m.type == module);

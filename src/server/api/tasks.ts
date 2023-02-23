@@ -2,10 +2,12 @@ import { CreateItemOptions, FetchedTask, TaskInclude } from "@/types/page-link";
 import { ACTION_TYPE, Prisma, TASK_PROGRESS, TASK_VISIBILITY } from "@prisma/client";
 import { Session } from "next-auth";
 import { contextUserOwnsTask, getErrorMessage } from "src/utils/backend";
+import { logger } from "src/utils/loggers";
 import { z } from "zod";
 import { createAction } from "./action";
 
 export async function createTask(task: CreateItemOptions, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
+	logger.debug("createTask", { task, session });
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
     /** @todo if the task has a goal_id, verify that the user owns that goal. */
 	try {
@@ -33,6 +35,7 @@ export async function createTask(task: CreateItemOptions, session: Session): Pro
 }
 
 export async function deleteTask(id: string, session: Session): Promise<{ success: boolean; error: string | null }> {
+	logger.debug("deleteTask", { id, session });
 	if (!prisma) return { success: false, error: "Database not connected." };
 	if (!session?.user?.id) return { success: false, error: "You must be signed in to create a project." };
 	try {
@@ -75,6 +78,7 @@ export const updateTaskValidation = z.object({
 
 
 export async function updateTask(task: UpdateTask, session: Session): Promise<{ data: FetchedTask | null; error: string | null }> {
+	logger.debug("updateTask", { task, session });
 	if (!prisma) return { data: null, error: "Database not connected." };
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
 	try {

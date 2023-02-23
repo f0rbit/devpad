@@ -2,6 +2,7 @@ import { CreateProjectType, FetchedGoal, FetchedProject, TaskInclude } from "@/t
 import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task, PROJECT_STATUS } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
+import { logger } from "src/utils/loggers";
 import { getCurrentUser } from "src/utils/session";
 import { optional, z } from "zod";
 import { createAction, getHistory } from "./action";
@@ -23,6 +24,7 @@ const updateProjectValdiation = z.object({
 export type UpdateProject = z.infer<typeof updateProjectValdiation>;
 
 export async function updateProject(project: UpdateProject, session: Session): Promise<{ data: FetchedProject | null; error: string | null }> {
+	logger.debug("updateProject", { project, session });
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to update a project." };
 	const where = { owner_id_project_id: { owner_id: session?.user?.id, project_id: project.project_id } };
 	try {
@@ -47,6 +49,7 @@ export async function updateProject(project: UpdateProject, session: Session): P
 }
 
 export async function createProject(project: CreateProjectType, session: Session): Promise<{ data: string | null; error: string | null }> {
+	logger.debug("createProject", { project, session });
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project." };
 	try {
 		const { project_id } = (await prisma?.project.create({
@@ -70,6 +73,7 @@ export async function createProject(project: CreateProjectType, session: Session
 }
 
 export async function deleteProject(project_id: string, session: Session): Promise<{ success: boolean; error: string | null }> {
+	logger.debug("deleteProject", { project_id, session });
 	if (!session?.user?.id) return { success: false, error: "You must be signed in to delete a project." };
 	if (!project_id || project_id.length <= 0) return { success: false, error: "You must declare a valid project_id." };
 	try {

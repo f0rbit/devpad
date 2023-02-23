@@ -2,6 +2,7 @@ import { FetchedGoal, TaskInclude } from "@/types/page-link";
 import { ACTION_TYPE, ProjectGoal } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
+import { logger } from "src/utils/loggers";
 import { finished } from "stream";
 import { z } from "zod";
 import { createAction } from "./action";
@@ -20,6 +21,7 @@ export async function getProjectGoals(project_id: string, session: Session): Pro
 }
 
 export async function createProjectGoal(goal: { name: string; description: string; target_time: string; project_id: string; target_version: string }, session: Session): Promise<{ data: ProjectGoal | null; error: string | null }> {
+	logger.debug("createProjectGoal", { goal, session });
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to create a project goal." };
 	if (!goal.name || goal.name.length <= 0) return { data: null, error: "You must declare a valid name." };
 	try {
@@ -54,6 +56,7 @@ export const updateGoalValidation = z.object({
 export type UpdateGoal = z.infer<typeof updateGoalValidation>;
 
 export async function updateProjectGoal(goal: UpdateGoal, session: Session): Promise<{ data: FetchedGoal | null; error: string | null }> {
+	logger.debug("updateProjectGoal", { goal, session });
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to update a project goal." };
 	if (!goal.id || goal.id.length <= 0) return { data: null, error: "You must declare a valid goal_id." };
 	try {
@@ -89,6 +92,7 @@ export async function updateProjectGoal(goal: UpdateGoal, session: Session): Pro
 }
 
 export async function deleteProjectGoal(goal_id: string, session: Session): Promise<{ success: boolean; error: string | null }> {
+	logger.debug("deleteProjectGoal", { goal_id, session });
 	if (!session?.user?.id) return { success: false, error: "You must be signed in to delete a project goal." };
 	if (!goal_id || goal_id.length <= 0) return { success: false, error: "You must declare a valid goal_id." };
 	try {

@@ -54,7 +54,6 @@ export default function ProjectSidebar() {
 			<div className="flex h-full justify-center pt-4 text-lg">
 				<div className="flex w-full flex-col gap-4 px-8">
 					{PROJECT_LINKS.map((link, index) => {
-						{console.log(link.link)}
 						return (
 							<Link href={path + link.link} key={index}>
 								<div className={"flex w-full flex-row items-center gap-4 rounded-md border-1 border-borders-primary py-1 px-4 font-poppins transition-colors duration-500 " + (link.link == last ? "bg-accent-btn-primary hover:bg-accent-btn-primary-hover" : "hover:bg-borders-primary")}>
