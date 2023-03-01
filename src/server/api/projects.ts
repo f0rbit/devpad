@@ -95,12 +95,12 @@ export async function deleteProject(project_id: string, session: Session): Promi
 	}
 }
 
-export async function getUserProjects({ includeDeleted }: { includeDeleted?: boolean }): Promise<{ data: Project[]; error: string }> {
+export async function getUserProjects({ includeDeleted }: { includeDeleted?: boolean }): Promise<{ data: FetchedProject[]; error: string }> {
 	const user = await getCurrentUser();
 	if (!user || !user.id) return { data: [], error: "Not logged in!" };
 	try {
 		const deleted = includeDeleted ? undefined : false;
-		const projects = await prisma?.project.findMany({ where: { owner_id: user.id, deleted } });
+		const projects = await prisma?.project.findMany({ where: { owner_id: user.id, deleted }, include: ProjectInclude });
 		if (!projects) return { data: [], error: "No projects found!" };
 		return { data: projects, error: "" };
 	} catch (e: any) {
@@ -108,11 +108,11 @@ export async function getUserProjects({ includeDeleted }: { includeDeleted?: boo
 	}
 }
 
-export async function getUserProject(projectID: string): Promise<{ data: Project | null; error: string }> {
+export async function getUserProject(projectID: string): Promise<{ data: FetchedProject | null; error: string }> {
 	const user = await getCurrentUser();
 	if (!user || !user.id) return { data: null, error: "Not logged in!" };
 	try {
-		const project = await prisma?.project.findUnique({ where: { owner_id_project_id: { owner_id: user.id, project_id: projectID } } });
+		const project = await prisma?.project.findUnique({ where: { owner_id_project_id: { owner_id: user.id, project_id: projectID } }, include: ProjectInclude });
 		if (!project) return { data: null, error: "Project not found!" };
 		return { data: project, error: "" };
 	} catch (e: any) {
@@ -130,6 +130,9 @@ const GoalInclude = {
 const ProjectInclude = {
 	goals: {
 		include: GoalInclude
+	},
+	owner: {
+		select: { image: true, name: true, id: true }
 	}
 }
 

@@ -41,7 +41,7 @@ export type CreateProjectType = {
 
 export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
 
-export type FetchedProject = Project & { goals: FetchedGoal[] };
+export type FetchedProject = Project & { goals: FetchedGoal[], owner: { name: string | null, id: string | null, image: string | null } };
 
 // type CreateModuleOptions = {
 // 	type: Module;

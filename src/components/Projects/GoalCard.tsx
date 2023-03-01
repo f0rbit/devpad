@@ -16,6 +16,7 @@ import PrimaryButton from "../common/PrimaryButton";
 import TaskCard from "../common/TaskCard";
 import TaskEditor from "../common/TaskEditor";
 import TodoCreator from "../common/TodoCreator";
+import VersionIndicator from "../common/VersionIndicator";
 import GenericModal from "../GenericModal";
 import { TODO_LAYOUT } from "../Todo/ListLayout";
 
@@ -414,10 +415,4 @@ function GoalTime({ goal }: { goal: FetchedGoal }) {
 	return <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar({ sameElse: "DD/MM/yyyy"})}</div>;
 }
 
-function VersionIndicator({ version, className }: { version: string; className?: string }) {
-	return (
-		<div className={"w-max origin-left scale-75 rounded-md border-1 border-accent-btn-primary px-2 " + className}>
-			<div className="font-mono text-sm text-accent-btn-primary">{version}</div>
-		</div>
-	);
-}
+
