@@ -35,7 +35,18 @@ export default function ProjectSpecification({ initial_project }: { initial_proj
 	if (editing) {
 		return (
 			<div>
-				<textarea placeholder="Detailed Specification" className="scrollbar-hide min-h-[12rem] font-mono text-base-text-subtlish" value={specification ?? undefined} onChange={(e) => setSpecification(e.target.value)}></textarea>
+				<textarea
+					placeholder="Detailed Specification"
+					className="scrollbar-hide min-h-[16rem] font-mono text-base-text-subtlish"
+					value={specification ?? undefined}
+					onChange={(e) => {
+						setSpecification(e.target.value);
+						const element = e.target;
+						element.style.height = "inherit";
+						element.style.height = element.scrollHeight + "px";
+						// el.style.height = el.scrollHeight >= el.clientHeight ? el.scrollHeight + "px" : "12rem";
+					}}
+				></textarea>
 				<div className="flex items-center justify-center gap-2">
 					<AcceptButton onClick={() => saveProject()}>Save</AcceptButton>
 					<GenericButton
@@ -53,7 +64,7 @@ export default function ProjectSpecification({ initial_project }: { initial_proj
 		if (project.specification && project.specification?.length > 0) {
 			return (
 				<div className="group relative h-full">
-					<div className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100">
+					<div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100">
 						<GenericButton onClick={() => setEditing(true)}>Edit</GenericButton>
 					</div>
 					<h3 className="mb-1 text-center text-xl text-base-text-secondary">Detailed Specification</h3>

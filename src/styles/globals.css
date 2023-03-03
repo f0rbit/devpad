@@ -38,31 +38,31 @@ html {
 }
 
 .markdown a {
-	@apply text-blue-300 hover:text-blue-200 hover:underline
+	@apply text-blue-300 hover:text-blue-200 hover:underline 
 }
 
 .markdown h1 {
-	@apply text-3xl font-semibold text-base-text-secondary
+	@apply text-3xl font-semibold text-base-text-secondary mt-4 mb-1
 }
 
 .markdown h2 {
-	@apply text-2xl font-semibold
+	@apply text-2xl font-semibold mt-4 mb-1
 }
 
 .markdown h3 {
-	@apply text-xl
+	@apply text-xl mt-4 mb-1
 }
 
 .markdown h4 {
-	@apply text-lg
-}
+	@apply text-lg mt-4 mb-1
+} 
 
 .markdown h5 {
-	@apply text-base
+	@apply text-base mt-4 mb-1
 }
 
 .markdown h6 {
-	@apply text-sm
+	@apply text-sm mt-4 mb-1
 }
 
 .markdown hr {

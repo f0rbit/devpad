@@ -45,7 +45,7 @@ export default async function Page({ params }: { params: { projectid: string } }
 		);
 	}
 	return (
-		<div className="pt-4" style={{ width: "calc(100vw - 18rem)" }}>
+		<div className="overflow-y-auto pt-4" style={{ width: "calc(100vw - 18rem)", maxHeight: "calc(100vh - 65px)" }}>
 			<TitleInjector title={project.name} />
 			<CenteredContainer>
 				<ProjectOverview project={data} history={history.data} />
@@ -56,7 +56,7 @@ export default async function Page({ params }: { params: { projectid: string } }
 
 function ProjectOverview({ project, history }: { project: FetchedProject; history: Action[] }) {
 	return (
-		<div className="flex w-full flex-col gap-2 px-4 ">
+		<div className="mb-4 flex w-full flex-col gap-2 px-4 ">
 			<div className="flex flex-row items-center justify-center gap-2">
 				<h1 className="text-3xl font-semibold text-base-text-primary">{project.name}</h1>
 				{project.current_version && <VersionIndicator version={project.current_version} />}
