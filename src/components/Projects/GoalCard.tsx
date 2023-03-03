@@ -4,12 +4,9 @@ import { UpdateGoal } from "@/server/api/goals";
 import { UpdateTask } from "@/server/api/tasks";
 import { CreateItemOptions, FetchedGoal, FetchedTask, LoadedTask } from "@/types/page-link";
 import { TaskTags, TASK_VISIBILITY } from "@prisma/client";
-import { ArrowRight, Check, ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
-import moment from "moment";
+import { ChevronDown, ChevronUp, Pencil, Plus, Save, Trash, X } from "lucide-react";
 import { useState } from "react";
 import { getTasksProgress } from "src/utils/backend";
-import { dateToDateTime } from "src/utils/dates";
-import AcceptButton from "../common/AcceptButton";
 import DeleteButton from "../common/DeleteButton";
 import GenericButton from "../common/GenericButton";
 import GoalInfo from "../common/goals/GoalInfo";
@@ -18,9 +15,10 @@ import PrimaryButton from "../common/PrimaryButton";
 import TaskCard from "../common/TaskCard";
 import TaskEditor from "../common/TaskEditor";
 import TodoCreator from "../common/TodoCreator";
-import VersionIndicator from "../common/VersionIndicator";
 import GenericModal from "../GenericModal";
 import { TODO_LAYOUT } from "../Todo/ListLayout";
+
+import DatePicker from "react-datepicker";
 
 type GoalCardProps = {
 	goal: FetchedGoal | null;
@@ -334,7 +332,17 @@ function GoalEditor({
 			<input type="text" placeholder="Description" className="text-base-text-subtlish" onChange={(e) => setEditingGoal({ ...editingGoal, description: e.target.value })} defaultValue={editingGoal.description} />
 			<div className="flex flex-row items-center gap-2">
 				<div className="min-w-max text-base-text-subtle">Target Date</div>
-				<input type="datetime-local" placeholder="Due Date" className=" text-base-text-secondary" onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value) })} defaultValue={dateToDateTime(editingGoal.target_time) ?? undefined} />
+				<div className="relative">
+					<DatePicker
+						wrapperClassName="devpad-date"
+						className="scrollbar-hide text-base-text-secondary"
+						showTimeSelect
+						selected={editingGoal.target_time}
+						onChange={(date) => setEditingGoal({ ...editingGoal, target_time: date ?? new Date() })}
+						timeFormat="h:mm aa"
+						dateFormat={"MMMM d, yyyy h:mm aa"}
+					/>
+				</div>
 			</div>
 			<div className="flex flex-row items-center gap-2">
 				<div className="min-w-max text-base-text-subtle">Target Version</div>
