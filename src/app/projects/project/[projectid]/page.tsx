@@ -2,11 +2,13 @@ import CenteredContainer from "@/components/common/CenteredContainer";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import GoalInfo from "@/components/common/goals/GoalInfo";
 import ProgressIndicator from "@/components/common/goals/ProgressIndicator";
+import HistoryAction from "@/components/common/history/HistoryAction";
 import VersionIndicator from "@/components/common/VersionIndicator";
 import TitleInjector from "@/components/Projects/TitleInjector";
 import { getProjectHistory, getUserProject } from "@/server/api/projects";
 import { FetchedGoal, FetchedProject } from "@/types/page-link";
 import { Action, TASK_VISIBILITY } from "@prisma/client";
+import moment from "moment";
 import { getTasksProgress } from "src/utils/backend";
 import { getSession } from "src/utils/session";
 
@@ -68,7 +70,7 @@ function ProjectOverview({ project, history }: { project: FetchedProject; histor
 			</div>
 			<div className="flex w-full flex-col gap-1">
 				<div className="text-center text-xl text-base-text-secondary">Recent Activity</div>
-				<div>
+				<div className="rounded-md border-1 border-borders-primary p-2">
 					<RecentActivity history={history} />
 				</div>
 			</div>
@@ -77,7 +79,30 @@ function ProjectOverview({ project, history }: { project: FetchedProject; histor
 }
 
 function RecentActivity({ history }: { history: Action[] }) {
-	return <pre>{JSON.stringify(history, null, 2)}</pre>;
+	// take the most recent 4 actions
+	const recent = history.sort((a, b) => new Date(b.created_at).valueOf() - new Date(a.created_at).valueOf());
+	const most_recent = recent.at(0);
+	if (recent.length == 0 || !most_recent) return <div className="text-center text-base-text-subtlish">No recent activity</div>;
+	// get the day of the most recent activity
+	const most_recent_day = new Date(most_recent.created_at);
+
+	// get the actions that are on the recent day, keeping them sorted by time
+	const recent_actions = recent.filter((a) => new Date(a.created_at).toDateString() == most_recent_day.toDateString());
+
+	return (
+		<div className="scrollbar-hide relative flex max-h-[16rem] flex-col justify-center gap-2 overflow-y-auto">
+			{recent_actions.map((action, key) => (
+				// <HistoryAction key={key} action={action} drawIcon={false} className="px-2" />
+				<div className="flex flex-row items-center gap-4">
+					<time dateTime={action.created_at.toUTCString()} className="w-max min-w-[10rem] text-right text-sm text-base-text-subtle">
+						{moment(action.created_at).calendar()}
+					</time>
+					<summary className="contents appearance-none text-lg text-base-text-secondary">{action.description}</summary>
+				</div>
+			))}
+		</div>
+	);
+	// return <pre>{JSON.stringify(history, null, 2)}</pre>;
 }
 
 function GoalsOverview({ goals }: { goals: FetchedGoal[] }) {
@@ -92,9 +117,14 @@ function GoalsOverview({ goals }: { goals: FetchedGoal[] }) {
 
 	return (
 		<div className="scrollbar-hide flex flex-row items-stretch gap-2 overflow-x-auto rounded-md border-1 border-borders-primary p-2">
-			{previous_goals?.length > 0 && <div>Completed Goals: {previous_goals.length}</div>}
+			{previous_goals?.length > 0 && (
+				<div className="flex min-w-[6rem] flex-col items-center justify-center rounded-md border-1 border-borders-secondary p-2 pt-0">
+					<h5 className="text-2xl font-bold text-base-text-subtlish">{previous_goals.length}</h5>
+					<caption className="text-sm text-base-text-subtle">Completed</caption>
+				</div>
+			)}
 			{sorted_goals?.map((goal, key) => (
-				<div key={key} className="h-full min-w-[24rem]">
+				<div key={key} className="h-full min-w-[24rem] rounded-md border-1 border-borders-secondary p-2 pt-0">
 					<GoalInfo goal={goal} />
 					<ProgressIndicator progress={goal.tasks.length <= 0 ? 1 : getTasksProgress(goal.tasks.filter((task) => task.visibility != TASK_VISIBILITY.DELETED))} />
 				</div>
