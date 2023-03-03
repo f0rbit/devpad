@@ -66,7 +66,7 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 		if (error) {
 			setError(error);
 		} else if (data) {
-			setTasks([...tasks, data]);
+			setTasks((tasks) => [...tasks, data]);
 		} else {
 			setError("failed to create task");
 		}
@@ -75,7 +75,7 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 	async function saveTask(task: LoadedTask) {
 		// update local ui first
 		task.network_status = { loading: true, error: "" };
-		setTasks(tasks.map((t) => (t.id == task.id ? task : t)));
+		setTasks((tasks) => tasks.map((t) => (t.id == task.id ? task : t)));
 		// update task in database
 		const response = await fetch("/api/tasks/update", { body: JSON.stringify(task as UpdateTask), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: LoadedTask | null; error: string }>);
@@ -85,11 +85,11 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 		} else if (data) {
 			// replace task in local ui with received task from db (should be the same)
 			data.network_status = { loading: false, error: "" };
-			setTasks(tasks.map((t) => (t.id == data.id ? data : t)));
+			setTasks((tasks) => tasks.map((t) => (t.id == data.id ? data : t)));
 			setTimeout(() => {
 				// if there are fast updates, then this will break.
 				data.network_status = undefined;
-				setTasks(tasks.map((t) => (t.id == data.id ? data : t)));
+				setTasks((tasks) => tasks.map((t) => (t.id == data.id ? data : t)));
 			}, 2000);
 		} else {
 			task.network_status = { loading: false, error: "Failed to save task" };
@@ -101,7 +101,7 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 		const id = task.id;
 		task.visibility = TASK_VISIBILITY.DELETED;
 		// update local ui first
-		setTasks(tasks.map((t) => (t.id == id ? task : t)));
+		setTasks((tasks) => tasks.map((t) => (t.id == id ? task : t)));
 		// delete task with id from database
 		const response = await fetch("/api/tasks/delete", { body: JSON.stringify({ id }), method: "POST" });
 		const { success, error } = await (response.json() as Promise<{ success: boolean; error: string }>);
