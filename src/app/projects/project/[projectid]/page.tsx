@@ -4,6 +4,7 @@ import GoalInfo from "@/components/common/goals/GoalInfo";
 import ProgressIndicator from "@/components/common/goals/ProgressIndicator";
 import HistoryAction from "@/components/common/history/HistoryAction";
 import VersionIndicator from "@/components/common/VersionIndicator";
+import ProjectSpecification from "@/components/Projects/ProjectSpecification";
 import TitleInjector from "@/components/Projects/TitleInjector";
 import { getProjectHistory, getUserProject } from "@/server/api/projects";
 import { FetchedGoal, FetchedProject } from "@/types/page-link";
@@ -61,7 +62,7 @@ function ProjectOverview({ project, history }: { project: FetchedProject; histor
 				{project.current_version && <VersionIndicator version={project.current_version} />}
 			</div>
 			<div className="text-center text-base-text-subtlish">{project.description}</div>
-			<textarea placeholder="Detailed Specification" className="scrollbar-hide h-48 text-base-text-subtlish"></textarea>
+			<ProjectSpecification project={project} />
 			<div className="flex w-full flex-col gap-1">
 				<div className="text-center text-xl text-base-text-secondary">Goals Overview</div>
 				<div>

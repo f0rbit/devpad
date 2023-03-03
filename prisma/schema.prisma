@@ -107,6 +107,7 @@ model Project {
   created_at      DateTime       @default(now())
   updated_at      DateTime       @updatedAt
   description     String?
+  specification   String?
   repo_url        String?
   icon_url        String?
   status          PROJECT_STATUS @default(DEVELOPMENT)
