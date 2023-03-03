@@ -35,27 +35,18 @@ type GoalCardProps = {
 export default function GoalCard({ goal, project_id, cancel, create, updateCard, tags, finishProject }: GoalCardProps) {
 	const [isEditing, setIsEditing] = useState(false);
 	const [showTasks, setShowTasks] = useState(false);
-	const [editingGoal, setEditingGoal] = useState({
-		name: goal?.name ?? "",
-		description: goal?.description ?? "",
-		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date(),
-		target_version: goal?.target_version ?? null
-	});
 	const [error, setError] = useState("");
 	const [tasks, setTasks] = useState((goal?.tasks ?? []) as LoadedTask[]);
 	const [editingTask, setEditingTask] = useState(null as FetchedTask | null);
 	const [showTaskCreator, setShowTaskCreator] = useState(false);
 
-	async function createGoal() {
-		const goal = {
-			name: editingGoal.name,
-			description: editingGoal.description,
-			target_time: editingGoal.target_time.toISOString(),
-			target_version: editingGoal.target_version,
+	async function createGoal(goal: EditingGoal) {
+		const create_goal = {
+			...goal,
 			project_id
 		};
 
-		const response = await fetch("/api/projects/goal/create", { body: JSON.stringify(goal), method: "POST" });
+		const response = await fetch("/api/projects/goal/create", { body: JSON.stringify(create_goal), method: "POST" });
 		const { data, error } = await (response.json() as Promise<{ data: FetchedGoal | null; error: string }>);
 		if (error) {
 			setError(error);
@@ -136,13 +127,13 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 		if (update_goal.target_version) finishProject(update_goal.target_version);
 	}
 
-	async function saveGoal() {
+	async function saveGoal(editing_goal: EditingGoal) {
 		if (!goal?.id) {
 			setError("Invalid Goal ID: " + goal?.id ?? "null");
 			return;
 		}
 		const update_goal: UpdateGoal = {
-			...editingGoal,
+			...editing_goal,
 			id: goal.id
 		};
 		updateGoal(update_goal);
@@ -202,63 +193,13 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 					<div className="flex h-full flex-col gap-2">
 						<GoalInfo goal={goal} />
 						<div className="flex items-center justify-center gap-2 border-t-1 border-borders-secondary pt-2">
-							<ShowTasks setShowTasks={setShowTasks} showTasks={showTasks} tasks={tasks} />
+							{!(finished && tasks.length == 0) && <ShowTasks setShowTasks={setShowTasks} showTasks={showTasks} tasks={tasks} />}
 							{!finished && <EditControls finishGoal={finishGoal} isEditing={isEditing} progress={progress} setIsEditing={setIsEditing} />}
 						</div>
 					</div>
 				) : (
 					// this is the add goal card
-					<div className="flex flex-col gap-1 p-2 pb-0">
-						<input type="text" placeholder="Name" className="text-base-text-secondary" onChange={(e) => setEditingGoal({ ...editingGoal, name: e.target.value })} defaultValue={editingGoal.name} />
-						<input type="text" placeholder="Description" className="text-base-text-subtlish" onChange={(e) => setEditingGoal({ ...editingGoal, description: e.target.value })} defaultValue={editingGoal.description} />
-						<div className="flex flex-row items-center gap-2">
-							<div className="min-w-max text-base-text-subtle">Target Date</div>
-							<input
-								type="datetime-local"
-								placeholder="Due Date"
-								className=" text-base-text-secondary"
-								onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value) })}
-								defaultValue={dateToDateTime(editingGoal.target_time) ?? undefined}
-							/>
-						</div>
-						<div className="flex flex-row items-center gap-2">
-							<div className="min-w-max text-base-text-subtle">Target Version</div>
-							<input type="text" placeholder="Version" className="text-base-text-secondary" value={editingGoal.target_version ?? undefined} onChange={(e) => setEditingGoal({ ...editingGoal, target_version: e.target.value })} />
-						</div>
-						<div className="flex h-full w-full items-center justify-center gap-2 py-1">
-							<GenericButton
-								title="Cancel"
-								style="flex justify-center font-semibold"
-								onClick={() => {
-									if (cancel) cancel();
-									setIsEditing(false);
-									setEditingGoal({
-										name: goal?.name ?? "",
-										description: goal?.description ?? "",
-										target_time: goal?.target_time ? new Date(goal?.target_time) : new Date(),
-										target_version: goal?.target_version ?? ""
-									});
-								}}
-							>
-								<X className="w-4" />
-							</GenericButton>
-							<PrimaryButton
-								onClick={() => {
-									if (isEditing) {
-										saveGoal();
-										setIsEditing(false);
-									} else {
-										createGoal();
-									}
-								}}
-								title={isEditing ? "Save" : "Create"}
-								style="font-semibold"
-							>
-								{isEditing ? <Save className="w-4" /> : "Create"}
-							</PrimaryButton>
-							<div className="relative">{isEditing && <DeleteGoalButton deleteGoal={deleteGoal} />}</div>
-						</div>
-					</div>
+					<GoalEditor createGoal={createGoal} deleteGoal={deleteGoal} goal={goal} isEditing={isEditing} saveGoal={saveGoal} setIsEditing={setIsEditing} cancel={cancel} />
 				)}
 				{showTasks && (
 					<div className="absolute top-[105%] flex w-full flex-col gap-2">
@@ -293,7 +234,6 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 }
 
 function ShowTasks({ tasks, showTasks, setShowTasks }: { tasks: FetchedTask[]; showTasks: boolean; setShowTasks: (show: boolean) => void }) {
-	if (tasks.length <= 0) return <></>;
 	return (
 		<GenericButton style="flex flex-row gap-2 " onClick={() => setShowTasks(!showTasks)}>
 			{showTasks ? <ChevronUp /> : <ChevronDown />}
@@ -327,7 +267,7 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 				<Trash className="w-4" />
 			</DeleteButton>
 			{isDeleting && (
-				<div className="absolute top-[120%] -right-[75%] flex flex-col gap-2 rounded-md border-1 border-borders-secondary bg-base-accent-primary p-2">
+				<div className="absolute top-[120%] -right-[75%] z-50 flex flex-col gap-2 rounded-md border-1 border-borders-secondary bg-base-accent-primary p-2">
 					<div className="flex flex-row items-center gap-2">
 						<div className="min-w-max text-base-text-subtle">Are you sure?</div>
 					</div>
@@ -355,5 +295,84 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 				</div>
 			)}
 		</>
+	);
+}
+
+type EditingGoal = {
+	name: string;
+	description: string;
+	target_time: Date;
+	target_version: string | null;
+};
+
+function GoalEditor({
+	goal,
+	cancel,
+	saveGoal,
+	createGoal,
+	deleteGoal,
+	isEditing,
+	setIsEditing
+}: {
+	goal: FetchedGoal | null;
+	cancel?: () => void;
+	saveGoal: (goal: EditingGoal) => void;
+	createGoal: (goal: EditingGoal) => void;
+	deleteGoal: () => void;
+	isEditing: boolean;
+	setIsEditing: (isEditing: boolean) => void;
+}) {
+	const [editingGoal, setEditingGoal] = useState<EditingGoal>({
+		name: goal?.name ?? "",
+		description: goal?.description ?? "",
+		target_time: goal?.target_time ? new Date(goal?.target_time) : new Date(),
+		target_version: goal?.target_version ?? null
+	});
+	return (
+		<div className="flex flex-col gap-1 p-2 pb-0">
+			<input type="text" placeholder="Name" className="text-base-text-secondary" onChange={(e) => setEditingGoal({ ...editingGoal, name: e.target.value })} defaultValue={editingGoal.name} />
+			<input type="text" placeholder="Description" className="text-base-text-subtlish" onChange={(e) => setEditingGoal({ ...editingGoal, description: e.target.value })} defaultValue={editingGoal.description} />
+			<div className="flex flex-row items-center gap-2">
+				<div className="min-w-max text-base-text-subtle">Target Date</div>
+				<input type="datetime-local" placeholder="Due Date" className=" text-base-text-secondary" onChange={(e) => setEditingGoal({ ...editingGoal, target_time: new Date(e.target.value) })} defaultValue={dateToDateTime(editingGoal.target_time) ?? undefined} />
+			</div>
+			<div className="flex flex-row items-center gap-2">
+				<div className="min-w-max text-base-text-subtle">Target Version</div>
+				<input type="text" placeholder="Version" className="text-base-text-secondary" value={editingGoal.target_version ?? undefined} onChange={(e) => setEditingGoal({ ...editingGoal, target_version: e.target.value })} />
+			</div>
+			<div className="flex h-full w-full items-center justify-center gap-2 py-1">
+				<GenericButton
+					title="Cancel"
+					style="flex justify-center font-semibold"
+					onClick={() => {
+						if (cancel) cancel();
+						setIsEditing(false);
+						setEditingGoal({
+							name: goal?.name ?? "",
+							description: goal?.description ?? "",
+							target_time: goal?.target_time ? new Date(goal?.target_time) : new Date(),
+							target_version: goal?.target_version ?? ""
+						});
+					}}
+				>
+					<X className="w-4" />
+				</GenericButton>
+				<PrimaryButton
+					onClick={() => {
+						if (isEditing) {
+							saveGoal(editingGoal);
+							setIsEditing(false);
+						} else {
+							createGoal(editingGoal);
+						}
+					}}
+					title={isEditing ? "Save" : "Create"}
+					style="font-semibold"
+				>
+					{isEditing ? <Save className="w-4" /> : "Create"}
+				</PrimaryButton>
+				<div className="relative">{isEditing && <DeleteGoalButton deleteGoal={deleteGoal} />}</div>
+			</div>
+		</div>
 	);
 }

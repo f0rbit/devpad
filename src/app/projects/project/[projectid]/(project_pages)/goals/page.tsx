@@ -28,7 +28,11 @@ export default async function GoalsPage({ params }: { params: { projectid: strin
 	}
 
 	if (!project) {
-		return <CenteredContainer><ErrorWrapper message={"Error fetching project"} /></CenteredContainer>
+		return (
+			<CenteredContainer>
+				<ErrorWrapper message={"Error fetching project"} />
+			</CenteredContainer>
+		);
 	}
 
 	return (

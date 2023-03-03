@@ -3,13 +3,11 @@ import ErrorWrapper from "@/components/common/ErrorWrapper";
 import GoalInfo from "@/components/common/goals/GoalInfo";
 import ProgressIndicator from "@/components/common/goals/ProgressIndicator";
 import VersionIndicator from "@/components/common/VersionIndicator";
-import GoalCard from "@/components/Projects/GoalCard";
-import { ProjectCard } from "@/components/Projects/ProjectCard";
 import TitleInjector from "@/components/Projects/TitleInjector";
 import { getProjectHistory, getUserProject } from "@/server/api/projects";
 import { FetchedGoal, FetchedProject } from "@/types/page-link";
 import { Action, TASK_VISIBILITY } from "@prisma/client";
-import { getTaskProgress, getTasksProgress } from "src/utils/backend";
+import { getTasksProgress } from "src/utils/backend";
 import { getSession } from "src/utils/session";
 
 export default async function Page({ params }: { params: { projectid: string } }) {

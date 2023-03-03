@@ -8,17 +8,17 @@ import { ChevronLeft } from "lucide-react";
 import GenericButton from "../common/GenericButton";
 import { UpdateProject } from "@/server/api/projects";
 
-export default function GoalRenderer({ project: initial_project, tags }: { project: FetchedProject;  tags: TaskTags[] }) {
+export default function GoalRenderer({ project: initial_project, tags }: { project: FetchedProject; tags: TaskTags[] }) {
 	const [project, setProject] = useState(initial_project);
 	const [showPrevious, setShowPrevious] = useState(false);
-	
+
 	function addGoal(goal: FetchedGoal) {
-		setProject({ ...project, goals: [...project.goals, goal] });
+		setProject((project) => ({ ...project, goals: [...project.goals, goal] }));
 	}
 
 	function updateGoal(goal: FetchedGoal) {
 		// setGoals(goals.map((a) => (a.id === goal.id ? goal : a)));
-		setProject({ ...project, goals: project.goals.map((a) => (a.id === goal.id ? goal : a)) });
+		setProject((project) => ({ ...project, goals: project.goals.map((a) => (a.id === goal.id ? goal : a)) }));
 	}
 
 	async function finishProject(version: string) {
@@ -34,7 +34,7 @@ export default function GoalRenderer({ project: initial_project, tags }: { proje
 			name: project.name,
 			repo_url: project.repo_url,
 			status: project.status
-		}
+		};
 		// do some kind of fetch request
 		const response = await fetch("/api/projects/update", { method: "POST", body: JSON.stringify(update_project) });
 		const { data, error } = await (response.json() as Promise<{ data: FetchedProject | null; error: string | null }>);
@@ -53,17 +53,14 @@ export default function GoalRenderer({ project: initial_project, tags }: { proje
 
 	const future_goals = active_goals.filter((a) => a.finished_at == null);
 	// sort goals by target time
-	const sorted_goals = future_goals.sort((a, b) => new Date(a.target_time).valueOf() -  new Date(b.target_time).valueOf());
+	const sorted_goals = future_goals.sort((a, b) => new Date(a.target_time).valueOf() - new Date(b.target_time).valueOf());
 
 	return (
 		<div className="flex h-max flex-row gap-2">
 			{showPrevious && previous_goals.map((goal, index) => <GoalCard key={index} goal={goal} project_id={project.project_id} tags={tags} updateCard={updateGoal} finishProject={finishProject} />)}
 			{previous_goals.length > 0 && (
-				<GenericButton
-					onClick={() => setShowPrevious(!showPrevious)}
-					title={showPrevious ? "Hide finished goals" : "Show finished goals"}
-				>
-					<ChevronLeft className="text-base-text-dark"/>
+				<GenericButton onClick={() => setShowPrevious(!showPrevious)} title={showPrevious ? "Hide finished goals" : "Show finished goals"}>
+					<ChevronLeft className="text-base-text-dark" />
 				</GenericButton>
 			)}
 
