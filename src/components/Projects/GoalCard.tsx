@@ -12,6 +12,8 @@ import { dateToDateTime } from "src/utils/dates";
 import AcceptButton from "../common/AcceptButton";
 import DeleteButton from "../common/DeleteButton";
 import GenericButton from "../common/GenericButton";
+import GoalInfo from "../common/goals/GoalInfo";
+import ProgressIndicator from "../common/goals/ProgressIndicator";
 import PrimaryButton from "../common/PrimaryButton";
 import TaskCard from "../common/TaskCard";
 import TaskEditor from "../common/TaskEditor";
@@ -43,7 +45,6 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 	const [tasks, setTasks] = useState((goal?.tasks ?? []) as LoadedTask[]);
 	const [editingTask, setEditingTask] = useState(null as FetchedTask | null);
 	const [showTaskCreator, setShowTaskCreator] = useState(false);
-
 
 	async function createGoal() {
 		const goal = {
@@ -199,15 +200,8 @@ export default function GoalCard({ goal, project_id, cancel, create, updateCard,
 			<div className="styled-input relative w-96 rounded-md border-1 border-borders-secondary bg-base-accent-primary pb-2">
 				{isEditing == false && goal ? (
 					<div className="flex h-full flex-col gap-2">
-						<div className="flex h-full flex-col gap-2 border-b-1 border-borders-secondary p-2">
-							<div className="flex flex-row items-center gap-2">
-								<div className="text-2xl font-semibold text-base-text-subtlish">{goal?.name}</div>
-								{goal.target_version && <VersionIndicator version={goal.target_version} />}
-							</div>
-							<GoalTime goal={goal} />
-							<div className="text-sm text-base-text-subtle">{goal?.description ?? "null"}</div>
-						</div>
-						<div className="flex items-center justify-center gap-2">
+						<GoalInfo goal={goal} />
+						<div className="flex items-center justify-center gap-2 border-t-1 border-borders-secondary pt-2">
 							<ShowTasks setShowTasks={setShowTasks} showTasks={showTasks} tasks={tasks} />
 							{!finished && <EditControls finishGoal={finishGoal} isEditing={isEditing} progress={progress} setIsEditing={setIsEditing} />}
 						</div>
@@ -363,56 +357,3 @@ function DeleteGoalButton({ deleteGoal }: { deleteGoal: () => void }) {
 		</>
 	);
 }
-
-function ProgressIndicator({ progress, onFinish }: { progress: number; onFinish: () => void }) {
-	// progress is a value from 0 - 1
-	// returns a button where the border is filled up clockwise based on the progress
-	if (progress >= 1) {
-		return (
-			<AcceptButton title="Mark as Finished" onClick={onFinish}>
-				Finish
-			</AcceptButton>
-		);
-	}
-	const radius = 10;
-	const width = 3;
-	const size = radius + 5;
-	const circumference = 2 * Math.PI * radius;
-	return (
-		<div x-data="scrollProgress" className="flex items-center justify-center gap-1 rounded-md border-1 border-borders-secondary px-4 py-[1px]">
-			<svg style={{ width: size * 2 + "px", height: size * 2 + "px" }}>
-				<circle className="text-base-text-subtle" strokeWidth={width} stroke="currentColor" fill="transparent" r={radius} cx={size} cy={size} />
-				<circle
-					className="text-green-300"
-					strokeWidth={width}
-					strokeDasharray={circumference}
-					//   stroke-dashoffset="circumference - percent / 100 * circumference"
-					strokeDashoffset={circumference - progress * circumference}
-					strokeLinecap="round"
-					stroke="currentColor"
-					fill="transparent"
-					r={radius}
-					cx={size}
-					cy={size}
-				/>
-			</svg>
-
-			<span className={"text-sm " + (progress > 0 ? "text-green-300" : "text-base-text-subtlish")}>{Math.floor(progress * 100)}%</span>
-		</div>
-	);
-}
-
-function GoalTime({ goal }: { goal: FetchedGoal }) {
-	const finished = goal.finished_at != null;
-	if (finished) {
-		return (
-			<div className="flex flex-row items-center gap-1">
-				<Check className="mt-0.5 w-4 text-green-300" />
-				<div className="text-base text-base-text-subtle">{moment(goal?.finished_at).calendar()}</div>
-			</div>
-		);
-	}
-	return <div className="text-base text-base-text-subtle">{moment(goal?.target_time).calendar({ sameElse: "DD/MM/yyyy"})}</div>;
-}
-
-
