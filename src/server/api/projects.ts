@@ -17,8 +17,7 @@ const updateProjectValdiation = z.object({
 	icon_url: z.string().nullable(),
 	link_url: z.string().nullable(),
 	link_text: z.string().nullable(),
-	repo_url: z.string().nullable(),
-
+	repo_url: z.string().nullable()
 });
 
 export type UpdateProject = z.infer<typeof updateProjectValdiation>;
@@ -28,13 +27,14 @@ export async function updateProject(project: UpdateProject, session: Session): P
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to update a project." };
 	const where = { owner_id_project_id: { owner_id: session?.user?.id, project_id: project.project_id } };
 	try {
-		const old_project = await prisma?.project.findUnique({ where, include: ProjectInclude}) as FetchedProject | null;
+		const old_project = (await prisma?.project.findUnique({ where, include: ProjectInclude })) as FetchedProject | null;
 		if (!old_project) return { data: null, error: "Project could not be found." };
-		const updatedProject = (await prisma?.project.update({
-			where,
-			data: { ...project },
-			include: ProjectInclude
-		})) ?? null;
+		const updatedProject =
+			(await prisma?.project.update({
+				where,
+				data: { ...project },
+				include: ProjectInclude
+			})) ?? null;
 		if (!updatedProject) return { data: null, error: "Project could not be updated." };
 		const new_project = updatedProject as FetchedProject;
 		// @ts-ignore - ignore date to string conversion errors
@@ -120,21 +120,20 @@ export async function getUserProject(projectID: string): Promise<{ data: Fetched
 	}
 }
 
-
-const GoalInclude = {
+export const GoalInclude = {
 	tasks: {
 		include: TaskInclude
 	}
-}
+};
 
-const ProjectInclude = {
+export const ProjectInclude = {
 	goals: {
 		include: GoalInclude
 	},
 	owner: {
 		select: { image: true, name: true, id: true }
 	}
-}
+};
 
 export async function getProject(projectID: string, session: Session): Promise<{ data: FetchedProject | null; error: string }> {
 	if (!session?.user?.id) return { data: null, error: "You must be signed in to get a project." };
