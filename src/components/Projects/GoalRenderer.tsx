@@ -7,6 +7,7 @@ import { FetchedGoal, FetchedProject } from "@/types/page-link";
 import { ChevronLeft } from "lucide-react";
 import GenericButton from "../common/GenericButton";
 import { UpdateProject } from "@/server/api/projects";
+import { extractUpdateFieldsFromProject } from "src/utils/backend";
 
 export default function GoalRenderer({ project: initial_project, tags }: { project: FetchedProject; tags: TaskTags[] }) {
 	const [project, setProject] = useState(initial_project);
@@ -24,16 +25,8 @@ export default function GoalRenderer({ project: initial_project, tags }: { proje
 	async function finishProject(version: string) {
 		// update the current projects version
 		const update_project: UpdateProject = {
-			project_id: project.project_id,
-			current_version: version,
-			deleted: project.deleted,
-			description: project.description,
-			icon_url: project.icon_url,
-			link_text: project.link_text,
-			link_url: project.link_url,
-			name: project.name,
-			repo_url: project.repo_url,
-			status: project.status
+			...extractUpdateFieldsFromProject(project),
+			current_version: version
 		};
 		// do some kind of fetch request
 		const response = await fetch("/api/projects/update", { method: "POST", body: JSON.stringify(update_project) });

@@ -62,7 +62,7 @@ function ProjectOverview({ project, history }: { project: FetchedProject; histor
 				{project.current_version && <VersionIndicator version={project.current_version} />}
 			</div>
 			<div className="text-center text-base-text-subtlish">{project.description}</div>
-			<ProjectSpecification project={project} />
+			<ProjectSpecification initial_project={project} />
 			<div className="flex w-full flex-col gap-1">
 				<div className="text-center text-xl text-base-text-secondary">Goals Overview</div>
 				<div>
@@ -71,7 +71,7 @@ function ProjectOverview({ project, history }: { project: FetchedProject; histor
 			</div>
 			<div className="flex w-full flex-col gap-1">
 				<div className="text-center text-xl text-base-text-secondary">Recent Activity</div>
-				<div className="rounded-md border-1 border-borders-primary p-2">
+				<div className="scrollbar-hide max-h-[16rem] overflow-y-auto rounded-md border-1 border-borders-primary p-2">
 					<RecentActivity history={history} />
 				</div>
 			</div>
@@ -85,16 +85,18 @@ function RecentActivity({ history }: { history: Action[] }) {
 	const most_recent = recent.at(0);
 	if (recent.length == 0 || !most_recent) return <div className="text-center text-base-text-subtlish">No recent activity</div>;
 	// get the day of the most recent activity
-	const most_recent_day = new Date(most_recent.created_at);
+	const most_recent_day = moment(most_recent.created_at);
+	console.log(most_recent_day);
 
 	// get the actions that are on the recent day, keeping them sorted by time
-	const recent_actions = recent.filter((a) => new Date(a.created_at).toDateString() == most_recent_day.toDateString());
+	const recent_actions = recent.filter((a) => moment(a.created_at).isSame(most_recent_day, "day"));
+	console.log({ recent_actions });
 
 	return (
-		<div className="scrollbar-hide relative flex max-h-[16rem] flex-col justify-center gap-2 overflow-y-auto">
+		<div className=" relative flex flex-col justify-center gap-2">
 			{recent_actions.map((action, key) => (
 				// <HistoryAction key={key} action={action} drawIcon={false} className="px-2" />
-				<div className="flex flex-row items-center gap-4">
+				<div className="flex flex-row items-center gap-4" key={key}>
 					<time dateTime={action.created_at.toUTCString()} className="w-max min-w-[10rem] text-right text-sm text-base-text-subtle">
 						{moment(action.created_at).calendar()}
 					</time>

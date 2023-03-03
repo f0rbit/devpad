@@ -1,5 +1,6 @@
+import { UpdateProject } from "@/server/api/projects";
 import { Context } from "@/server/trpc/context";
-import { FetchedTask, LoadedTask, Module, TaskPriority } from "@/types/page-link";
+import { FetchedProject, FetchedTask, LoadedTask, Module, TaskPriority } from "@/types/page-link";
 import { ProjectGoal, TASK_PROGRESS } from "@prisma/client";
 
 export const contextUserOwnsTag = async (ctx: Context, tagID: string) => {
@@ -53,7 +54,6 @@ export const getDefaultModuleData = (module: Module) => {
 	}
 };
 
-
 export function getErrorMessage(error: any) {
 	var result = "Unknown error";
 	if (typeof error === "string") {
@@ -70,7 +70,7 @@ export function getErrorMessage(error: any) {
 export function getTasksProgress(tasks: FetchedTask[]) {
 	const total = tasks.length;
 	return tasks.reduce((acc, task) => {
-		return acc + (getTaskProgress(task) / total);
+		return acc + getTaskProgress(task) / total;
 	}, 0);
 }
 
@@ -87,6 +87,23 @@ export function getTaskProgress(task: FetchedTask) {
 			return 0.5;
 		case TASK_PROGRESS.UNSTARTED:
 			return 0;
-		default: return 0;
+		default:
+			return 0;
 	}
+}
+
+export function extractUpdateFieldsFromProject(project: FetchedProject): UpdateProject {
+	return {
+		project_id: project.project_id,
+		current_version: project.current_version,
+		deleted: project.deleted,
+		description: project.description,
+		icon_url: project.icon_url,
+		link_text: project.link_text,
+		link_url: project.link_url,
+		name: project.name,
+		repo_url: project.repo_url,
+		status: project.status,
+		specification: project.specification
+	};
 }

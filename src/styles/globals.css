@@ -36,3 +36,40 @@ html {
 .styled-input input, textarea, select {
 	@apply w-full bg-base-accent-primary focus:ring-1 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2 border-1 border-borders-primary placeholder-base-text-dark
 }
+
+.markdown a {
+	@apply text-blue-300 hover:text-blue-200 hover:underline
+}
+
+.markdown h1 {
+	@apply text-3xl font-semibold text-base-text-secondary
+}
+
+.markdown h2 {
+	@apply text-2xl font-semibold
+}
+
+.markdown h3 {
+	@apply text-xl
+}
+
+.markdown h4 {
+	@apply text-lg
+}
+
+.markdown h5 {
+	@apply text-base
+}
+
+.markdown h6 {
+	@apply text-sm
+}
+
+.markdown hr {
+	@apply border-borders-secondary my-2 
+}
+
+
+.markdown ul, ol {
+	@apply list-disc list-inside ml-4
+}

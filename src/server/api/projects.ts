@@ -17,7 +17,8 @@ const updateProjectValdiation = z.object({
 	icon_url: z.string().nullable(),
 	link_url: z.string().nullable(),
 	link_text: z.string().nullable(),
-	repo_url: z.string().nullable()
+	repo_url: z.string().nullable(),
+	specification: z.string().nullable()
 });
 
 export type UpdateProject = z.infer<typeof updateProjectValdiation>;
