@@ -21,13 +21,12 @@ const ListRenderer = () => {
 		return <div>Loading...</div>;
 	}
 
-
 	async function createTask(task: CreateItemOptions) {
 		const response = await create_task.mutateAsync({ item: task });
 		if (!response || response.error) {
 			/** @todo error handling */
 		} else if (response.data) {
-			setItems([...items, response.data ]);
+			setItems([...items, response.data]);
 		} else {
 			/** @todo handle invalid data response */
 		}
@@ -43,11 +42,11 @@ const ListRenderer = () => {
 			{({ selectedSection, searchQuery, tags, setTags, items, setItems, projects }) => {
 				return (
 					<>
-						<div style={{maxHeight: "calc(100vh - 65px)"}}className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-borders-primary">
+						<div style={{ maxHeight: "calc(100vh - 65px)" }} className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-borders-primary">
 							<div className="w-full p-4">
 								<div className="mb-4 rounded-md p-2 font-bold">
 									<div className="flex flex-row items-center gap-4">
-										<div className="text-3xl font-bold text-base-text-secondary capitalize">{selectedSection + " Items"}</div>
+										<div className="text-3xl font-bold capitalize text-base-text-secondary">{selectedSection + " Items"}</div>
 										{/* <div>Layout: {layout}</div> */}
 										<div className="ml-auto flex flex-row gap-4">
 											<LayoutSelectors setLayout={setLayout} />
@@ -85,7 +84,7 @@ export default ListRenderer;
 const RenderTasks = ({ data, layout, setItem, tags }: { data: FetchedTask[]; layout: TODO_LAYOUT; setItem: (item: FetchedTask) => void; tags: TaskTags[] | undefined }) => {
 	const renderData = (data: FetchedTask[]) => {
 		if (data.length <= 0) {
-			return <div className="text-base-text-subtle text-center">No items found</div>;
+			return <div className="text-center text-base-text-subtle">No items found</div>;
 		}
 		return data.map((item) => <TodoCard key={item.id} initial_item={item} layout={layout} set_item={setItem} tags={tags} />);
 	};
@@ -104,7 +103,11 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<TOD
 	return (
 		<div className="flex flex-row items-center gap-2">
 			{Object.values(TODO_LAYOUT).map((layout_type) => (
-				<button key={layout_type} onClick={() => setLayout(layout_type)} className="rounded-md bg-gray-300 px-3 py-1 text-gray-500 dark:bg-base-accent-secondary dark:hover:bg-base-accent-tertiary duration-500 transition-colors dark:text-base-text-subtlish border-1 border-borders-secondary">
+				<button
+					key={layout_type}
+					onClick={() => setLayout(layout_type)}
+					className="rounded-md border-1 border-borders-secondary bg-gray-300 px-3 py-1 text-gray-500 transition-colors duration-500 dark:bg-base-accent-secondary dark:text-base-text-subtlish dark:hover:bg-base-accent-tertiary"
+				>
 					<LayoutIcon layout={layout_type} />
 				</button>
 			))}
@@ -114,7 +117,10 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<TOD
 
 const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 	return (
-		<button onClick={onClick} className="flex flex-nowrap items-center justify-center gap-2 rounded-md bg-gray-300 px-3 py-1 align-middle text-sm text-gray-500 dark:bg-base-accent-secondary dark:hover:bg-base-accent-tertiary duration-500 transition-colors dark:text-base-text-subtlish border-1 border-borders-secondary">
+		<button
+			onClick={onClick}
+			className="flex flex-nowrap items-center justify-center gap-2 rounded-md border-1 border-borders-secondary bg-gray-300 px-3 py-1 align-middle text-sm text-gray-500 transition-colors duration-500 dark:bg-base-accent-secondary dark:text-base-text-subtlish dark:hover:bg-base-accent-tertiary"
+		>
 			<Tag className="p-0.5" />
 			Edit
 		</button>
@@ -176,7 +182,29 @@ function getSortedData(data: FetchedTask[], selectedSection: string, searchQuery
 				if (!priority || !priority["priority"]) return false;
 				return priority["priority"] == TaskPriority.URGENT;
 			});
-
+		case "todo":
+			// filter out all completed tasks
+			// sort by end date
+			// don't show tasks who's start date hasnt been yet
+			return sorted
+				.filter((item) => {
+					const start = getModuleData(item, Module.START_DATE);
+					if (!start) return true;
+					return new Date(start["date"]).getTime() < new Date().getTime();
+				})
+				.filter((item) => {
+					return item.progress != TASK_PROGRESS.COMPLETED;
+				})
+				.sort((a, b) => {
+					const a_end = getModuleData(a, Module.END_DATE);
+					const b_end = getModuleData(b, Module.END_DATE);
+					const bad_a_end = !a_end || !a_end["date"];
+					const bad_b_end = !b_end || !b_end["date"];
+					if (bad_a_end && bad_b_end) return a.updated_at < b.updated_at ? -1 : 1;
+					if (bad_a_end) return 1;
+					if (bad_b_end) return -1;
+					return new Date(a_end["date"]) > new Date(b_end["date"]) ? 1 : -1;
+				});
 		default:
 			if (selectedSection.startsWith("tags/")) {
 				const tag = selectedSection.split("/")[1];

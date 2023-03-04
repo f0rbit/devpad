@@ -38,7 +38,7 @@ const DashboardMainSection = ({ mobile }: { mobile: boolean }) => {
 
 const Dashboard = () => {
 	const [showList, setShowList] = useState(true);
-	const [selectedSection, setSelectedSection] = useState("current");
+	const [selectedSection, setSelectedSection] = useState("todo");
 	const [searchQuery, setSearchQuery] = useState("");
 	const { data } = trpc.data.getItemsAndTags.useQuery();
 	const [tags, setTags] = useState(undefined as TaskTags[] | undefined);
@@ -84,7 +84,7 @@ const Dashboard = () => {
 			</Head>
 			<BaseLayout session={session}>
 				<div className="block h-full w-full md:hidden">
-					<DashboardMainSection mobile={true}/>
+					<DashboardMainSection mobile={true} />
 				</div>
 				<div className="hidden h-full w-full md:block">
 					<div className="flex h-full w-full flex-row">

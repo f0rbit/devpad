@@ -7,6 +7,12 @@ import SectionLink, { SectionLinkType } from "./SectionItem";
 
 const links: SectionLinkType[] = [
 	{
+		title: "Todo",
+		description: "Incomplete tasks",
+		icon: "📋",
+		url: "todo"
+	},
+	{
 		title: "Current",
 		description: "Current tasks",
 		icon: "⏱",
