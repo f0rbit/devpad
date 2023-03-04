@@ -332,17 +332,15 @@ function GoalEditor({
 			<input type="text" placeholder="Description" className="text-base-text-subtlish" onChange={(e) => setEditingGoal({ ...editingGoal, description: e.target.value })} defaultValue={editingGoal.description} />
 			<div className="flex flex-row items-center gap-2">
 				<div className="min-w-max text-base-text-subtle">Target Date</div>
-				<div className="relative">
-					<DatePicker
-						wrapperClassName="devpad-date"
-						className="scrollbar-hide text-base-text-secondary"
-						showTimeSelect
-						selected={editingGoal.target_time}
-						onChange={(date) => setEditingGoal({ ...editingGoal, target_time: date ?? new Date() })}
-						timeFormat="h:mm aa"
-						dateFormat={"MMMM d, yyyy h:mm aa"}
-					/>
-				</div>
+				<DatePicker
+					wrapperClassName="devpad-date"
+					className="scrollbar-hide text-base-text-secondary"
+					showTimeSelect
+					selected={editingGoal.target_time}
+					onChange={(date) => setEditingGoal({ ...editingGoal, target_time: date ?? new Date() })}
+					timeFormat="h:mm aa"
+					dateFormat={"MMMM d, yyyy h:mm aa"}
+				/>
 			</div>
 			<div className="flex flex-row items-center gap-2">
 				<div className="min-w-max text-base-text-subtle">Target Version</div>

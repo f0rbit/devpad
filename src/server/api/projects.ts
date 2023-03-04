@@ -33,7 +33,10 @@ export async function updateProject(project: UpdateProject, session: Session): P
 		const updatedProject =
 			(await prisma?.project.update({
 				where,
-				data: { ...project },
+				data: {
+					...project,
+					updated_at: new Date()
+				},
 				include: ProjectInclude
 			})) ?? null;
 		if (!updatedProject) return { data: null, error: "Project could not be updated." };

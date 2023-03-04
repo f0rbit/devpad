@@ -14,13 +14,14 @@ import PrimaryButton from "./PrimaryButton";
 import PrioritySelector from "./tasks/PrioritySelector";
 import ProgressSelector from "./tasks/ProgressSelector";
 import VisibilitySelector from "./tasks/VisibilitySelector";
+import DatePicker from "react-datepicker";
 
-type TaskEditorProps = { 
-    task: FetchedTask; 
-    tags: TaskTags[] | undefined; 
-    deleteTask: (task: FetchedTask) => void;
-    saveTask: (task: FetchedTask) => void; 
-    close: () => void 
+type TaskEditorProps = {
+	task: FetchedTask;
+	tags: TaskTags[] | undefined;
+	deleteTask: (task: FetchedTask) => void;
+	saveTask: (task: FetchedTask) => void;
+	close: () => void;
 };
 
 export default function TaskEditor({ task: initial_task, tags, deleteTask, saveTask, close }: TaskEditorProps) {
@@ -54,7 +55,7 @@ export default function TaskEditor({ task: initial_task, tags, deleteTask, saveT
 				<div className="flex w-full basis-3/4 flex-col gap-1 py-1">
 					<div className="inline-flex w-full items-center gap-2">
 						<Type />
-						<input type="text" className="w-full rounded-md text-xl" placeholder="Title" defaultValue={task?.title} name="title" id="title" onChange={(e) => setTask({ ...task, title: e.target.value })}/>
+						<input type="text" className="w-full rounded-md text-xl" placeholder="Title" defaultValue={task?.title} name="title" id="title" onChange={(e) => setTask({ ...task, title: e.target.value })} />
 					</div>
 					{getModules(Module.SUMMARY).map((module, index) => (
 						<ItemSummary module={module} key={index} setModuleData={setModuleData} />
@@ -92,9 +93,23 @@ export default function TaskEditor({ task: initial_task, tags, deleteTask, saveT
 				</div>
 			</div>
 			<div className="flex flex-row justify-center gap-2 font-semibold">
-				<DeleteButton onClick={() => { deleteTask(task); close() }}>Delete</DeleteButton>
+				<DeleteButton
+					onClick={() => {
+						deleteTask(task);
+						close();
+					}}
+				>
+					Delete
+				</DeleteButton>
 				<GenericButton onClick={() => close()}>Cancel</GenericButton>
-				<PrimaryButton onClick={() => { saveTask(task); close() }}>Save</PrimaryButton>
+				<PrimaryButton
+					onClick={() => {
+						saveTask(task);
+						close();
+					}}
+				>
+					Save
+				</PrimaryButton>
 			</div>
 		</div>
 	);
@@ -119,7 +134,15 @@ const ItemEndDate = ({ module, setModuleData }: { module: TaskModule; setModuleD
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="End Time">
 			<ModuleIcon module={module.type as Module} />
-			<input type="datetime-local" name="end_date" className="w-full rounded-md" defaultValue={value ?? undefined} onChange={(e) => setModuleData(module.type as Module, { date: new Date(e.target.value) })} />
+			<DatePicker
+				wrapperClassName="devpad-date"
+				className="scrollbar-hide text-base-text-secondary"
+				showTimeSelect
+				selected={date ? new Date(date) : null}
+				onChange={(date) => setModuleData(Module.END_DATE, { date })}
+				timeFormat="h:mm aa"
+				dateFormat={"MMMM d, yyyy h:mm aa"}
+			/>
 		</div>
 	);
 };
@@ -131,7 +154,15 @@ const ItemStartDate = ({ module, setModuleData }: { module: TaskModule; setModul
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="Start Time">
 			<ModuleIcon module={module.type as Module} />
-			<input type="datetime-local" name="start_date" className="w-full rounded-md" defaultValue={value ?? undefined} onChange={(e) => setModuleData(module.type as Module, { date: new Date(e.target.value) })} />
+			<DatePicker
+				wrapperClassName="devpad-date"
+				className="scrollbar-hide text-base-text-secondary"
+				showTimeSelect
+				selected={date ? new Date(date) : null}
+				onChange={(date) => setModuleData(Module.START_DATE, { date })}
+				timeFormat="h:mm aa"
+				dateFormat={"MMMM d, yyyy h:mm aa"}
+			/>
 		</div>
 	);
 };

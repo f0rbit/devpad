@@ -1,5 +1,5 @@
 .react-datepicker {
-    @apply flex bg-base-accent-primary border-1  border-borders-secondary text-base-text-subtlish
+    @apply flex bg-base-accent-primary border-1  border-borders-secondary text-base-text-subtlish font-sans
 }
 
 /* For Webkit-based browsers (Chrome, Safari and Opera) */
