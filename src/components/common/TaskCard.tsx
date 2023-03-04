@@ -21,7 +21,8 @@ export default function TaskCard({ task, setItemStatus, onEdit, layout }: TaskCa
 	return (
 		<div
 			className={
-				"group relative w-full rounded-md border-1 border-borders-primary px-4 py-2 transition-colors duration-300 dark:bg-base-bg-primary dark:text-base-text-subtle hover:dark:bg-base-accent-primary " + (layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")
+				"group relative w-full rounded-md border-1 border-gray-300 bg-gray-100 px-4 py-2 text-base-text-subtle transition-colors duration-300 hover:bg-gray-50 dark:border-borders-primary dark:bg-base-bg-primary hover:dark:bg-base-accent-primary " +
+				(layout == TODO_LAYOUT.LIST ? "flex flex-wrap gap-4" : "")
 			}
 		>
 			<div className="absolute top-0 right-0">
@@ -29,7 +30,7 @@ export default function TaskCard({ task, setItemStatus, onEdit, layout }: TaskCa
 			</div>
 			<div className="inline-flex items-center gap-2 align-middle">
 				<TodoStatus status={task.progress} update_progress={setItemStatus} id={task.id} />
-				<h1 className="text-2xl font-medium text-base-text-secondary">{task.title}</h1>
+				<h1 className="text-2xl font-medium text-base-text-dark dark:text-base-text-secondary">{task.title}</h1>
 			</div>
 			<EndTime endTime={getModuleData(task, Module.END_DATE)} />
 			<TodoTags tags={task?.tags} />
@@ -45,7 +46,6 @@ export default function TaskCard({ task, setItemStatus, onEdit, layout }: TaskCa
 		</div>
 	);
 }
-
 
 const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
 	if (!endTime || !endTime.date) return <></>;

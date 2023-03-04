@@ -4,6 +4,8 @@ import { Tag } from "lucide-react";
 import { Dispatch, SetStateAction, useContext, useState } from "react";
 import { TodoContext } from "src/pages/todo";
 import { trpc } from "src/utils/trpc";
+import GenericButton from "../common/GenericButton";
+import PrimaryButton from "../common/PrimaryButton";
 import GenericModal from "../GenericModal";
 import TodoCreateForm from "./Editors/TodoCreateForm";
 import { TodoTagsEditor } from "./Editors/TodoTagsEditor";
@@ -42,13 +44,13 @@ const ListRenderer = () => {
 			{({ selectedSection, searchQuery, tags, setTags, items, setItems, projects }) => {
 				return (
 					<>
-						<div style={{ maxHeight: "calc(100vh - 65px)" }} className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-borders-primary">
+						<div style={{ maxHeight: "calc(100vh - 65px)" }} className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-gray-300 dark:border-borders-primary">
 							<div className="w-full p-4">
 								<div className="mb-4 rounded-md p-2 font-bold">
 									<div className="flex flex-row items-center gap-4">
-										<div className="text-3xl font-bold capitalize text-base-text-secondary">{selectedSection + " Items"}</div>
-										{/* <div>Layout: {layout}</div> */}
+										<div className="text-3xl font-bold capitalize text-base-text-dark dark:text-base-text-secondary">{selectedSection + " Items"}</div>
 										<div className="ml-auto flex flex-row gap-4">
+											<CreateButton onClick={() => setCreateModalOpen(true)} />
 											<LayoutSelectors setLayout={setLayout} />
 											<TagEditButton onClick={() => setEditTagsModalOpen(true)} />
 										</div>
@@ -58,7 +60,6 @@ const ListRenderer = () => {
 							</div>
 						</div>
 						<div className="fixed bottom-2 right-2 md:bottom-4 md:right-4">
-							<CreateButton onClick={() => setCreateModalOpen(true)} />
 							{/* This is the create todo item form */}
 							<div className="absolute">
 								<GenericModal open={createModalOpen} setOpen={setCreateModalOpen}>
@@ -103,13 +104,9 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<TOD
 	return (
 		<div className="flex flex-row items-center gap-2">
 			{Object.values(TODO_LAYOUT).map((layout_type) => (
-				<button
-					key={layout_type}
-					onClick={() => setLayout(layout_type)}
-					className="rounded-md border-1 border-borders-secondary bg-gray-300 px-3 py-1 text-gray-500 transition-colors duration-500 dark:bg-base-accent-secondary dark:text-base-text-subtlish dark:hover:bg-base-accent-tertiary"
-				>
+				<GenericButton key={layout_type} onClick={() => setLayout(layout_type)}>
 					<LayoutIcon layout={layout_type} />
-				</button>
+				</GenericButton>
 			))}
 		</div>
 	);
@@ -117,27 +114,18 @@ const LayoutSelectors = ({ setLayout }: { setLayout: Dispatch<SetStateAction<TOD
 
 const TagEditButton = ({ onClick }: { onClick: () => void }) => {
 	return (
-		<button
-			onClick={onClick}
-			className="flex flex-nowrap items-center justify-center gap-2 rounded-md border-1 border-borders-secondary bg-gray-300 px-3 py-1 align-middle text-sm text-gray-500 transition-colors duration-500 dark:bg-base-accent-secondary dark:text-base-text-subtlish dark:hover:bg-base-accent-tertiary"
-		>
+		<GenericButton onClick={onClick} style="flex flex-nowrap items-center justify-center gap-2 align-middle text-sm ">
 			<Tag className="p-0.5" />
 			Edit
-		</button>
+		</GenericButton>
 	);
 };
 
 const CreateButton = ({ onClick }: { onClick: () => void }) => {
 	return (
-		<button
-			className={`origin-bottom rounded-md border-1 border-accent-btn-primary-hover bg-accent-btn-primary px-6 py-2 text-xl font-bold text-white transition-all duration-500 hover:bg-accent-btn-primary-hover`}
-			onClick={(e) => {
-				e.preventDefault();
-				onClick();
-			}}
-		>
+		<PrimaryButton style="" onClick={onClick}>
 			Create
-		</button>
+		</PrimaryButton>
 	);
 };
 

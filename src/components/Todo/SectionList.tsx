@@ -60,7 +60,7 @@ const GroupedLinks = () => {
 		<div className="mt-4 mb-2 grid grid-cols-2 gap-2 md:hidden">
 			{links.map((link, index) => {
 				return (
-					<div key={index} className="flex h-8 items-center justify-center rounded-md bg-gray-600 px-2 drop-shadow-md dark:bg-pad-gray-800">
+					<div key={index} className="flex h-8 items-center justify-center rounded-md bg-gray-400 px-2 drop-shadow-md dark:bg-pad-gray-800">
 						<SectionLink link={link} mobile={true} selected={selectedSection == link.url} />
 					</div>
 				);
@@ -89,7 +89,7 @@ export const MainLinkSection = ({ expanded }: { expanded: boolean }) => {
 	return (
 		<TodoContext.Consumer>
 			{({ tags, projects }) => (
-				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-700 px-4 pt-4 font-medium text-gray-400 dark:bg-base-bg-primary dark:text-base-text-subtle md:w-80">
+				<div className="flex h-full w-full flex-none flex-col gap-1 bg-gray-100 px-4 pt-4 font-medium text-base-text-subtle dark:bg-base-bg-primary dark:text-base-text-subtle md:w-80">
 					<SearchBox />
 					<FlatLinks />
 					<GroupedLinks />
