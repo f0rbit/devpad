@@ -7,7 +7,9 @@ export default function ProgressSelector({ select, selected }: { select: (progre
 		<div className="flex flex-row items-center justify-center gap-2">
 			{selectable.map((progress, index) => (
 				<button
-					className={"flex w-full items-center justify-center rounded-md border-1 border-borders-primary px-4 py-1 " + (selected == progress ? "border-borders-secondary bg-base-accent-secondary" : "")}
+					className={
+						"flex w-full items-center justify-center rounded-md border-1 border-gray-300 bg-gray-100 px-4 py-1 dark:border-borders-primary dark:bg-none " + (selected == progress ? "bg-white dark:border-borders-secondary dark:bg-base-accent-secondary" : "")
+					}
 					onClick={() => select(progress)}
 					key={index}
 					title={progress}

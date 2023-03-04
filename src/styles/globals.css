@@ -34,7 +34,7 @@ html {
 }
 
 .styled-input input, textarea, select {
-	@apply w-full bg-base-accent-primary focus:ring-1 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2 border-1 border-borders-primary placeholder-base-text-dark
+	@apply w-full bg-gray-50 dark:bg-base-accent-primary focus:ring-1 focus:ring-accent-btn-primary outline-none rounded-md py-1 px-2 border-1 border-gray-300 dark:border-borders-primary placeholder-base-text-dark
 }
 
 .markdown a {

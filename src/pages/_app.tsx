@@ -1,5 +1,7 @@
 // src/pages/_app.tsx
 import "../styles/globals.css";
+import "react-datepicker/dist/react-datepicker.css";
+import "../styles/datepicker.css";
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
 import type { AppType } from "next/app";

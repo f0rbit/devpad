@@ -50,7 +50,7 @@ export default function TaskEditor({ task: initial_task, tags, deleteTask, saveT
 	}
 
 	return (
-		<div className="scrollbar-hide max-h-[60vh] overflow-y-auto text-base-text-primary">
+		<div className="scrollbar-hide max-h-[60vh] overflow-y-auto text-base-text-dark dark:text-base-text-primary">
 			<div className="styled-input flex h-full w-[56rem] max-w-[85wvw] flex-row gap-2">
 				<div className="flex w-full basis-3/4 flex-col gap-1 py-1">
 					<div className="inline-flex w-full items-center gap-2">
@@ -134,15 +134,7 @@ const ItemEndDate = ({ module, setModuleData }: { module: TaskModule; setModuleD
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="End Time">
 			<ModuleIcon module={module.type as Module} />
-			<DatePicker
-				wrapperClassName="devpad-date"
-				className="scrollbar-hide text-base-text-secondary"
-				showTimeSelect
-				selected={date ? new Date(date) : null}
-				onChange={(date) => setModuleData(Module.END_DATE, { date })}
-				timeFormat="h:mm aa"
-				dateFormat={"MMMM d, yyyy h:mm aa"}
-			/>
+			<DatePicker wrapperClassName="devpad-date" className="scrollbar-hide" showTimeSelect selected={date ? new Date(date) : null} onChange={(date) => setModuleData(Module.END_DATE, { date })} timeFormat="h:mm aa" dateFormat={"MMMM d, yyyy h:mm aa"} />
 		</div>
 	);
 };
@@ -154,15 +146,7 @@ const ItemStartDate = ({ module, setModuleData }: { module: TaskModule; setModul
 	return (
 		<div className="inline-flex w-full items-center gap-2" title="Start Time">
 			<ModuleIcon module={module.type as Module} />
-			<DatePicker
-				wrapperClassName="devpad-date"
-				className="scrollbar-hide text-base-text-secondary"
-				showTimeSelect
-				selected={date ? new Date(date) : null}
-				onChange={(date) => setModuleData(Module.START_DATE, { date })}
-				timeFormat="h:mm aa"
-				dateFormat={"MMMM d, yyyy h:mm aa"}
-			/>
+			<DatePicker wrapperClassName="devpad-date" className="scrollbar-hide" showTimeSelect selected={date ? new Date(date) : null} onChange={(date) => setModuleData(Module.START_DATE, { date })} timeFormat="h:mm aa" dateFormat={"MMMM d, yyyy h:mm aa"} />
 		</div>
 	);
 };
@@ -233,7 +217,12 @@ function RightSidebar({ task, setTask, tags }: { task: FetchedTask; setTask: Dis
 
 	function ModeButton({ mode: this_mode }: { mode: RIGHT_MODE }) {
 		return (
-			<button onClick={() => setMode(this_mode)} className={"w-full border-b-1 p-0.5 font-semibold capitalize " + (mode == this_mode ? "border-accent-btn-primary hover:border-accent-btn-primary-hover" : "border-borders-secondary hover:border-borders-tertiary")}>
+			<button
+				onClick={() => setMode(this_mode)}
+				className={
+					"w-full border-b-1 p-0.5 font-semibold capitalize " + (mode == this_mode ? "border-accent-btn-primary hover:border-accent-btn-primary-hover" : "border-gray-300 hover:border-gray-500 dark:border-borders-secondary dark:hover:border-borders-tertiary")
+				}
+			>
 				{this_mode.toLowerCase()}
 			</button>
 		);
@@ -286,7 +275,7 @@ function ModuleButton({ task, setTask, module }: { task: FetchedTask; setTask: D
 	}
 
 	return (
-		<div className={`group relative flex flex-row gap-2 rounded-md border-1 border-borders-primary  px-2 py-1 ${selected ? "bg-base-accent-primary" : "hover:bg-base-accent-secondary"}`}>
+		<div className={`group relative flex flex-row gap-2 rounded-md border-1 border-gray-300 px-2  py-1 dark:border-borders-primary ${selected ? "bg-white dark:bg-base-accent-primary" : "hover:bg-gray-50 dark:hover:bg-base-accent-secondary"}`}>
 			<ModuleIcon module={module} className="w-5" />
 			<div className="capitalize">{module.replaceAll("_", " ")}</div>
 			<button className="absolute right-2 hidden group-hover:flex">{selected ? <Trash className="w-4 hover:text-red-300" onClick={remove} /> : <Plus className="w-4 hover:text-green-200" onClick={add} />}</button>
@@ -326,7 +315,7 @@ function TagButton({ tag, task, setTask }: { tag: TaskTags; task: FetchedTask; s
 				backgroundColor: selected && colourStyle.backgroundColor,
 				color: selected && colourStyle.color
 			}}
-			className={`group relative flex flex-row items-center gap-2 rounded-md border-1 border-borders-primary px-2  py-1 text-sm ${selected ? "bg-base-accent-primary" : "hover:bg-base-accent-secondary"}`}
+			className={`group relative flex flex-row items-center gap-2 rounded-md border-1 border-gray-300 px-2 py-1  text-sm dark:border-borders-primary ${selected ? "bg-white dark:bg-base-accent-primary" : "hover:bg-gray-50 dark:hover:bg-base-accent-secondary"}`}
 		>
 			<div className="capitalize">{tag.title}</div>
 			<button className="absolute right-2 hidden group-hover:flex">{selected ? <Trash className="w-4 hover:text-red-300" onClick={remove} /> : <Plus className="w-4 hover:text-green-200" onClick={add} />}</button>

@@ -1,5 +1,5 @@
 .react-datepicker {
-    @apply flex bg-base-accent-primary border-1  border-borders-secondary text-base-text-subtlish font-sans
+    @apply flex bg-gray-100 dark:bg-base-accent-primary border-1  border-gray-300 dark:border-borders-secondary text-base-text-subtlish font-sans
 }
 
 /* For Webkit-based browsers (Chrome, Safari and Opera) */
@@ -18,19 +18,19 @@
 }
 
 .react-datepicker__header {
-    @apply bg-base-accent-secondary border-b-borders-secondary
+    @apply bg-white border-gray-300 dark:bg-base-accent-secondary dark:border-b-borders-secondary
 }
 
 .react-datepicker__current-month, .react-datepicker-time__header, .react-datepicker-year-header {
-    @apply text-base-text-secondary
+    @apply text-base-text-dark dark:text-base-text-secondary
 }
 
 .react-datepicker__time-container {
-    @apply border-borders-secondary border-l-1
+    @apply border-gray-300 dark:border-borders-secondary border-l-1
 }
 
 .react-datepicker__time-container .react-datepicker__time {
-    @apply bg-base-accent-primary
+    @apply bg-gray-100 dark:bg-base-accent-primary
 }
 
 .react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box ul.react-datepicker__time-list li.react-datepicker__time-list-item, .react-datepicker__day-name, .react-datepicker__day, .react-datepicker__time-name {
