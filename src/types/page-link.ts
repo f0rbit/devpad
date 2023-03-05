@@ -1,4 +1,4 @@
-import { Prisma, Project, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask } from "@prisma/client";
+import { Prisma, Project, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask, UniversityClass, Work } from "@prisma/client";
 import { z } from "zod";
 
 export type PageLink = {
@@ -13,20 +13,20 @@ export enum Module {
 	START_DATE = "start_date",
 	END_DATE = "end_date",
 	PRIORITY = "priority",
-	DESCRIPTION = "description",
+	DESCRIPTION = "description"
 }
 
 export enum TaskPriority {
 	LOW = "LOW",
 	MEDIUM = "MEDIUM",
 	HIGH = "HIGH",
-	URGENT = "URGENT",
+	URGENT = "URGENT"
 }
 
 export type ProjectRouteLink = {
-    text: string;
-    href: string;
-}
+	text: string;
+	href: string;
+};
 
 export type CreateProjectType = {
 	name: string;
@@ -41,7 +41,7 @@ export type CreateProjectType = {
 
 export type FetchedGoal = ProjectGoal & { tasks: FetchedTask[] };
 
-export type FetchedProject = Project & { goals: FetchedGoal[], owner: { name: string | null, id: string | null, image: string | null } };
+export type FetchedProject = Project & { goals: FetchedGoal[]; owner: { name: string | null; id: string | null; image: string | null } };
 
 // type CreateModuleOptions = {
 // 	type: Module;
@@ -51,9 +51,9 @@ export type FetchedProject = Project & { goals: FetchedGoal[], owner: { name: st
 export const createModuleInput = z.object({
 	type: z.nativeEnum(Module),
 	data: z.any()
-})
+});
 
-export type CreateModuleOptions = z.infer<typeof createModuleInput>
+export type CreateModuleOptions = z.infer<typeof createModuleInput>;
 
 // export type CreateItemOptions = {
 // 	title: string;
@@ -69,8 +69,7 @@ export const createItemInput = z.object({
 	progress: z.nativeEnum(TASK_PROGRESS).default(TASK_PROGRESS.UNSTARTED).optional(),
 	goal_id: z.string().optional(),
 	modules: z.array(createModuleInput),
-	project_id: z.string().optional(),
-
+	project_id: z.string().optional()
 });
 
 export type CreateItemOptions = z.infer<typeof createItemInput>;
@@ -107,3 +106,42 @@ export type LoadingStatus = {
 };
 
 export type LoadedTask = FetchedTask & { network_status?: LoadingStatus };
+
+export type ParsedClass = Omit<UniversityClass, "weights" | "schedule"> & { weights: AssessmentWeights; schedule: ScheduledClasses };
+
+export type FetchedWork = Work & { classes: ParsedClass[] };
+
+export const assessmentWeightValidator = z
+	.array(
+		z.object({
+			name: z.string(),
+			weight: z.number().min(0).max(1),
+			hurdle: z.boolean().optional()
+		})
+	)
+	.default([]);
+
+export type AssessmentWeights = z.infer<typeof assessmentWeightValidator>;
+
+type ArrayElement<ArrayType extends readonly unknown[]> = ArrayType extends readonly (infer ElementType)[] ? ElementType : never;
+
+export enum ScheduleRepeat {
+	WEEKLY = "weekly",
+	FORTNIGHTLY = "fortnightly",
+	TRIWEEKLY = "triweekly"
+}
+
+const scheduleObject = z.object({
+	day: z.literal("Monday").or(z.literal("Tuesday")).or(z.literal("Wednesday")).or(z.literal("Thursday")).or(z.literal("Friday")),
+	start_time: z.string(),
+	end_time: z.string(),
+	type: z.string(),
+	room: z.string(),
+	repeat: z.nativeEnum(ScheduleRepeat).optional().default(ScheduleRepeat.WEEKLY)
+});
+
+export type ScheduledClass = z.infer<typeof scheduleObject>;
+
+export const scheduleValidator = z.array(scheduleObject).nullable();
+
+export type ScheduledClasses = ScheduledClass[] | null;

@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "ProjectGoal" ADD COLUMN     "target_time" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

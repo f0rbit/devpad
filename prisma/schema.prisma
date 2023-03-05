@@ -41,10 +41,11 @@ model User {
   image          String?
   accounts       Account[]
   action_history Action[]
-  projets        Project[]
+  projects       Project[]
   sessions       Session[]
   todo_items     Task[]
   todo_tags      TaskTags[]
+  work_items     Work[]
 }
 
 model VerificationToken {
@@ -146,6 +147,48 @@ model Action {
   updated_at  DateTime    @updatedAt
   data        Json        @default("{}") @db.Json
   owner       User        @relation(fields: [owner_id], references: [id])
+}
+
+model Work {
+  work_id     String
+  owner_id    String
+  name        String
+  created_at  DateTime  @default(now())
+  updated_at  DateTime  @updatedAt
+  owner       User      @relation(fields: [owner_id], references: [id])
+  description String?
+  type        WORK_TYPE @default(GENERIC)
+
+  start_date DateTime?
+  end_date   DateTime?
+
+  classes UniversityClass[]
+
+  @@unique([owner_id, work_id])
+}
+
+model UniversityClass {
+  class_id         String
+  name             String
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  description      String?
+  class_department String?
+  class_number     String?
+  schedule         Json?    @db.Json
+  weights          Json?    @db.Json
+
+  Work     Work?   @relation(fields: [owner_id, work_id], references: [owner_id, work_id])
+  work_id  String
+  owner_id String?
+
+  @@unique([work_id, class_id])
+}
+
+enum WORK_TYPE {
+  GENERIC
+  UNIVERSITY
+  WORK
 }
 
 enum TASK_PROGRESS {

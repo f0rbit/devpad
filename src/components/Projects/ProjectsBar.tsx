@@ -3,7 +3,7 @@ import ApplicationSelector from "@/components/common/ApplicationSelector";
 import HomeButton from "@/components/Projects/HomeButton";
 import { RouteLinks } from "@/components/Projects/RouteLinks";
 import { UserSection } from "@/components/Projects/UserSection";
-import { Bell, Settings, SidebarClose, SidebarOpen } from "lucide-react";
+import { Bell, ChevronRight, Settings, SidebarClose, SidebarOpen } from "lucide-react";
 import { Session } from "next-auth";
 import Link from "next/link";
 import { useContext } from "react";
@@ -22,7 +22,9 @@ export default function ProjectsBar({ session }: { session: Session | null }) {
 					<div id="title" className="text-center text-xl font-bold text-base-text-subtle dark:text-base-text-secondary">
 						Home
 					</div>
-					<div className="hidden text-xl md:block">{">"}</div>
+					<div className="hidden text-xl md:block">
+						<ChevronRight className="w-5" />
+					</div>
 					<div className="hidden text-base md:block">
 						<RouteLinks />
 					</div>
