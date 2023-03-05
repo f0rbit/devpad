@@ -21,6 +21,7 @@ type TodoContextType = {
 	items: FetchedTask[];
 	setItems: Dispatch<SetStateAction<FetchedTask[] | undefined>>;
 	projects: FetchedProject[];
+	loading: boolean;
 };
 
 export const TodoContext: Context<TodoContextType> = React.createContext({} as TodoContextType);
@@ -45,6 +46,7 @@ const Dashboard = () => {
 	const [items, setItems] = useState(undefined as FetchedTask[] | undefined);
 	const [projects, setProjects] = useState(undefined as FetchedProject[] | undefined);
 	const { data: session } = useSession();
+	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
 		if (data?.tags && !tags) {
@@ -56,6 +58,7 @@ const Dashboard = () => {
 		if (data?.projects && !projects) {
 			setProjects(data?.projects);
 		}
+		if (data) setLoading(false);
 	}, [data, tags, setTags, items, setItems]);
 
 	const toggleList = useCallback(() => {
@@ -74,7 +77,8 @@ const Dashboard = () => {
 		setTags,
 		items: items ?? [],
 		setItems,
-		projects: projects ?? []
+		projects: projects ?? [],
+		loading: loading
 	};
 
 	return (

@@ -41,7 +41,7 @@ const ListRenderer = () => {
 
 	return (
 		<TodoContext.Consumer>
-			{({ selectedSection, searchQuery, tags, setTags, items, setItems, projects }) => {
+			{({ selectedSection, searchQuery, tags, setTags, items, setItems, projects, loading }) => {
 				return (
 					<>
 						<div style={{ maxHeight: "calc(100vh - 65px)" }} className="scrollbar-hide h-full w-full overflow-auto border-l-1 border-gray-300 dark:border-borders-primary">
@@ -56,7 +56,7 @@ const ListRenderer = () => {
 										</div>
 									</div>
 								</div>
-								<RenderTasks data={getSortedData(items, selectedSection, searchQuery, projects)} layout={layout} setItem={setItem} tags={tags} />
+								{loading ? <div className="text-center text-base-text-subtle">Loading...</div> : <RenderTasks data={getSortedData(items, selectedSection, searchQuery, projects)} layout={layout} setItem={setItem} tags={tags} />}
 							</div>
 						</div>
 						<div className="fixed bottom-2 right-2 md:bottom-4 md:right-4">
