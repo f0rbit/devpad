@@ -1,4 +1,4 @@
-import { Prisma, Project, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask, UniversityClass, Work } from "@prisma/client";
+import { Prisma, Project, ProjectGoal, PROJECT_STATUS, Task, TaskModule, TaskTags, TASK_PROGRESS, TASK_VISIBILITY, TemplateTask, UniversityAssignment, UniversityClass, Work } from "@prisma/client";
 import { z } from "zod";
 
 export type PageLink = {
@@ -107,7 +107,9 @@ export type LoadingStatus = {
 
 export type LoadedTask = FetchedTask & { network_status?: LoadingStatus };
 
-export type ParsedClass = Omit<UniversityClass, "weights" | "schedule"> & { weights: AssessmentWeights; schedule: ScheduledClasses };
+export type FetchedClass = UniversityClass & { assignments: UniversityAssignment[] };
+
+export type ParsedClass = Omit<FetchedClass, "weights" | "schedule"> & { weights: AssessmentWeights; schedule: ScheduledClasses };
 
 export type FetchedWork = Work & { classes: ParsedClass[] };
 

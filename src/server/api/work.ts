@@ -1,15 +1,17 @@
-import { assessmentWeightValidator, FetchedWork, scheduleValidator } from "@/types/page-link";
+import { assessmentWeightValidator, FetchedClass, FetchedWork, ParsedClass, scheduleValidator } from "@/types/page-link";
 import { UniversityClass, Work } from "@prisma/client";
 import { Session } from "next-auth";
 import { decode } from "punycode";
 import { getErrorMessage } from "src/utils/backend";
 import { getCurrentUser } from "src/utils/session";
 
+const WorkInclude = { classes: { include: { assignments: true } } };
+
 export async function getAllUserWork(): Promise<{ data: FetchedWork[]; error: string }> {
 	const user = await getCurrentUser();
 	if (!user || !user.id) return { data: [], error: "Not logged in!" };
 	try {
-		const projects = await prisma?.work.findMany({ where: { owner_id: user.id }, include: { classes: true } });
+		const projects = await prisma?.work.findMany({ where: { owner_id: user.id }, include: WorkInclude });
 		if (!projects) return { data: [], error: "No work jobs found!" };
 		return { data: projects.map((work) => decodeWork(work)), error: "" };
 	} catch (e: any) {
@@ -17,7 +19,7 @@ export async function getAllUserWork(): Promise<{ data: FetchedWork[]; error: st
 	}
 }
 
-export function decodeWork(work: Work & { classes: UniversityClass[] }): FetchedWork {
+export function decodeWork(work: Work & { classes: FetchedClass[] }): FetchedWork {
 	return {
 		...work,
 		classes: work.classes?.map((class_) => {
@@ -41,9 +43,7 @@ export async function getUserWork(work_id: string, session?: Session): Promise<{
 					work_id
 				}
 			},
-			include: {
-				classes: true
-			}
+			include: WorkInclude
 		});
 		if (!work) return { data: null, error: "Work Job not found!" };
 		return { data: decodeWork(work), error: "" };

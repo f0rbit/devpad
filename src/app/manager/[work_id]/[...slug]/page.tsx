@@ -149,7 +149,7 @@ function AssignmentOverview({ university_class }: { university_class: ParsedClas
 		<div className="relative my-2 mt-4 flex flex-col gap-4">
 			<h2 className="text-center text-2xl font-semibold text-base-text-primary">Assignments</h2>
 			<div className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-2 pb-2 pr-2">
-				<Assignments assignments={assignments} />
+				<Assignments assignments={university_class.assignments} />
 			</div>
 		</div>
 	);
