@@ -9,7 +9,7 @@ function GoalTime({ goal }: { goal: FetchedGoal }) {
 		return (
 			<div className="flex flex-row items-center gap-1">
 				<Check className="mt-0.5 w-4 text-green-300" />
-				<div className="text-base text-base-text-subtle">{moment(goal?.finished_at).calendar()}</div>
+				<div className="text-base text-base-text-subtle">{moment(goal?.finished_at).calendar({ sameElse: "DD/MM/yyyy" })}</div>
 			</div>
 		);
 	}

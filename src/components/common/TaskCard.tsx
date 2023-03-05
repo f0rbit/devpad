@@ -54,7 +54,7 @@ const EndTime = ({ endTime }: { endTime: { date: Date } }) => {
 	return (
 		<div className="flex flex-wrap items-center gap-2 align-middle text-sm">
 			<CalendarClock className="min-w-5 w-5" />
-			<span>{moment(date).calendar()}</span>
+			<span>{moment(date).calendar({ sameElse: "DD/MM/yyyy" })}</span>
 		</div>
 	);
 };

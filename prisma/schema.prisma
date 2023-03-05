@@ -73,6 +73,9 @@ model Task {
   modules         TaskModule[]
   templates       TemplateTask[]
   tags            TaskTags[]
+
+  linked_assignment UniversityAssignment? @relation(fields: [assignment_id], references: [assignment_id])
+  assignment_id     String?               @db.Uuid
 }
 
 model TaskModule {
@@ -178,11 +181,34 @@ model UniversityClass {
   schedule         Json?    @db.Json
   weights          Json?    @db.Json
 
-  Work     Work?   @relation(fields: [owner_id, work_id], references: [owner_id, work_id])
+  work     Work?  @relation(fields: [owner_id, work_id], references: [owner_id, work_id])
   work_id  String
-  owner_id String?
+  owner_id String
 
-  @@unique([work_id, class_id])
+  assignments UniversityAssignment[]
+
+  @@unique([work_id, class_id, owner_id])
+}
+
+model UniversityAssignment {
+  assignment_id String   @id @default(uuid()) @db.Uuid
+  name          String
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  description   String?
+  due_date      DateTime
+
+  weight      Float
+  result      Float?
+  finished_at DateTime?
+  group       String? // group is like quizzes, assignments, exam, etc
+
+  parent_class UniversityClass? @relation(fields: [owner_id, work_id, class_id], references: [owner_id, work_id, class_id])
+  class_id     String
+  work_id      String
+  owner_id     String?
+
+  tasks Task[]
 }
 
 enum WORK_TYPE {

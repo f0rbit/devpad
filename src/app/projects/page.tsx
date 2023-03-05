@@ -52,7 +52,7 @@ function WeeklyTasks({ projects }: { projects: FetchedProject[] }) {
 									<div className="flex h-max max-w-[24rem] flex-col justify-start gap-1 text-left text-base-text-subtlish">
 										{tasks.map((task) => (
 											<div key={task.id} className="flex flex-row items-center gap-2 text-left">
-												<div className="w-max min-w-[6rem] text-xs text-base-text-subtle">{moment(getDueDate(task)).calendar()}</div>
+												<div className="w-max min-w-[6rem] text-xs text-base-text-subtle">{moment(getDueDate(task)).calendar({ sameElse: "DD/MM/yyyy" })}</div>
 												<div>{task.title}</div>
 											</div>
 										))}

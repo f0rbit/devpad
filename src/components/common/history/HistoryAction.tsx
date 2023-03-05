@@ -13,7 +13,7 @@ export default function HistoryAction({ action, drawIcon, className }: { action:
 			)}
 			<div className={className}>
 				<div className="text-lg font-semibold text-base-text-primary">{action.description}</div>
-				<div className="text-base-text-subtle">{moment(action.created_at).calendar()}</div>
+				<div className="text-base-text-subtle">{moment(action.created_at).calendar({ sameElse: "DD/MM/yyyy" })}</div>
 			</div>
 		</>
 	);

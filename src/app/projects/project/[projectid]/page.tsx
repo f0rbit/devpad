@@ -98,7 +98,7 @@ function RecentActivity({ history }: { history: Action[] }) {
 				// <HistoryAction key={key} action={action} drawIcon={false} className="px-2" />
 				<div className="flex flex-row items-center gap-4" key={key}>
 					<time dateTime={action.created_at.toUTCString()} className="w-max min-w-[10rem] text-right text-sm text-base-text-subtle">
-						{moment(action.created_at).calendar()}
+						{moment(action.created_at).calendar({ sameElse: "DD/MM/yyyy" })}
 					</time>
 					<summary className="contents appearance-none text-lg text-base-text-secondary">{action.description}</summary>
 				</div>
