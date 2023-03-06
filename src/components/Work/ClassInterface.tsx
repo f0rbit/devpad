@@ -74,6 +74,23 @@ export function AssignmentOverview({ data, update }: { data: ParsedClass; update
 		return { error: null };
 	}
 
+	function finishAssignment(assignment: UniversityAssignment) {
+		if (!update) return;
+
+		update({
+			...data,
+			assignments: data.assignments.map((a) => {
+				if (a.assignment_id === assignment.assignment_id) {
+					return {
+						...a,
+						finished_at: new Date()
+					};
+				}
+				return a;
+			})
+		});
+	}
+
 	const { assignments } = data;
 
 	return (
@@ -87,13 +104,23 @@ export function AssignmentOverview({ data, update }: { data: ParsedClass; update
 				)}
 			</div>
 			<div className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-2 pb-2 pr-2">
-				<Assignments assignments={assignments} deleteAssignment={editing && update ? deleteAssignment : undefined} create={update ? addAssignment : undefined} />
+				<Assignments assignments={assignments} deleteAssignment={editing && update ? deleteAssignment : undefined} create={update ? addAssignment : undefined} finish={editing && update ? finishAssignment : undefined} />
 			</div>
 		</div>
 	);
 }
 
-export function Assignments({ assignments, deleteAssignment, create }: { assignments: UniversityAssignment[]; deleteAssignment?: (assignment: UniversityAssignment) => void; create?: (assignment: CreateAssignmentType) => Promise<{ error: string | null }> }) {
+export function Assignments({
+	assignments,
+	deleteAssignment,
+	create,
+	finish
+}: {
+	assignments: UniversityAssignment[];
+	deleteAssignment?: (assignment: UniversityAssignment) => void;
+	create?: (assignment: CreateAssignmentType) => Promise<{ error: string | null }>;
+	finish?: (assignment: UniversityAssignment) => void;
+}) {
 	async function createAssignment(data: CreateAssignmentType) {
 		if (!create) return { error: "Create function not provided" };
 		if (!data.weight || data.weight < 0 || data.weight > 1) {
@@ -117,6 +144,7 @@ export function Assignments({ assignments, deleteAssignment, create }: { assignm
 					<div className="relative w-full max-w-[30%] rounded-md border-1 border-borders-primary bg-base-accent-primary py-2 pl-2 pr-4">
 						<div className="-mt-1 flex flex-col gap-0">
 							<div className="flex flex-row items-center gap-2 text-lg font-medium text-base-text-secondary ">
+								{assignment.finished_at && <Check className="w-5 text-green-200" />}
 								<span>{assignment.name}</span>
 								<span className="text-sm text-base-text-dark">{assignment.weight * 100 + "%"}</span>
 							</div>
@@ -125,11 +153,18 @@ export function Assignments({ assignments, deleteAssignment, create }: { assignm
 						<div>
 							<div className="text-sm text-base-text-subtlish">{moment(assignment.due_date).calendar({ sameElse: "DD/MM/yyyy" })}</div>
 						</div>
-						{deleteAssignment && (
-							<DeleteButton style="absolute right-[-2px] scale-75 bottom-[1px] flex justify-center items-center" onClick={() => deleteAssignment(assignment)}>
-								<Trash className="w-5" />
-							</DeleteButton>
-						)}
+						<div className="absolute right-[-2px] bottom-[1px] flex scale-75 flex-row gap-2">
+							{finish && (
+								<AcceptButton style="flex justify-center items-center" onClick={() => finish(assignment)}>
+									<Check className="w-5" />
+								</AcceptButton>
+							)}
+							{deleteAssignment && (
+								<DeleteButton style="flex justify-center items-center" onClick={() => deleteAssignment(assignment)}>
+									<Trash className="w-5" />
+								</DeleteButton>
+							)}
+						</div>
 					</div>
 				))}
 			{deleteAssignment && <AssignmentCreator create={createAssignment} />}

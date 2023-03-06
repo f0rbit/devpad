@@ -36,11 +36,20 @@ export async function updateUniversityClass(university_class: ParsedClass, sessi
 					updated_at: new Date(),
 					schedule: university_class.schedule as Prisma.JsonArray,
 					assignments: {
-						connectOrCreate: university_class.assignments?.map((assignment) => ({
+						upsert: university_class.assignments?.map((assignment) => ({
 							where: {
 								assignment_id: assignment.assignment_id == "new" ? randomUUID() : assignment.assignment_id
 							},
 							create: {
+								name: assignment.name,
+								due_date: assignment.due_date,
+								weight: assignment.weight,
+								description: assignment.description,
+								finished_at: assignment.finished_at,
+								group: assignment.group,
+								result: assignment.result
+							},
+							update: {
 								name: assignment.name,
 								due_date: assignment.due_date,
 								weight: assignment.weight,
