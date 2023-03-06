@@ -1,6 +1,6 @@
 "use client";
 
-import { ParsedClass } from "@/types/page-link";
+import { ParsedClass, UpdateUniversityClassAssignment } from "@/types/page-link";
 import { UniversityAssignment } from "@prisma/client";
 import { Check, Cross, Pencil, Plus, Save, Trash, X } from "lucide-react";
 import moment from "moment";
@@ -13,35 +13,45 @@ import AcceptButton from "../common/AcceptButton";
 export default function ClassInterface({ initial_class }: { initial_class: ParsedClass }) {
 	const [data, setData] = useState(initial_class);
 
+	async function updateClass(data: ParsedClass) {
+		setData(data);
+		// do a fetch to the update
+		const response = await fetch("/api/classes/update", { body: JSON.stringify(data), method: "POST" });
+		const { data: result, error } = await (response.json() as Promise<{ data: ParsedClass | null; error: string }>);
+		if (error || !result) {
+			console.error(error ?? "An unknown error occurred.");
+		} else {
+			setData(result);
+		}
+	}
+
 	return (
 		<div>
-			<AssignmentOverview data={data} setData={setData} />
+			<AssignmentOverview data={data} update={updateClass} />
 			<div>Readings</div>
 			<div>Work Todo</div>
 		</div>
 	);
 }
 
-export function AssignmentOverview({ data, setData }: { data: ParsedClass; setData?: Dispatch<SetStateAction<ParsedClass>> }) {
+export function AssignmentOverview({ data, update }: { data: ParsedClass; update?: (data: ParsedClass) => Promise<void> }) {
 	const [editing, setEditing] = useState(false);
 
 	function deleteAssignment(assignment: UniversityAssignment) {
-		if (!setData) return;
+		if (!update) return;
 		const id = assignment.assignment_id;
 
-		setData((data) => ({
+		update({
 			...data,
 			assignments: data.assignments.filter((a) => a.assignment_id !== id)
-		}));
+		});
 	}
 
 	async function addAssignment(assignment: CreateAssignmentType): Promise<{ error: string | null }> {
-		if (!setData) return { error: "No data setter provided." };
-		const new_assignment: UniversityAssignment = {
+		if (!update) return { error: "No data setter provided." };
+
+		const temp_assignment: UniversityAssignment = {
 			assignment_id: "new",
-			class_id: data.class_id,
-			created_at: new Date(),
-			updated_at: new Date(),
 			due_date: assignment.date,
 			weight: assignment.weight ?? 0,
 			name: assignment.name,
@@ -49,14 +59,17 @@ export function AssignmentOverview({ data, setData }: { data: ParsedClass; setDa
 			result: null,
 			finished_at: null,
 			group: null,
+			class_id: data.class_id,
+			created_at: new Date(),
+			updated_at: new Date(),
 			owner_id: data.owner_id,
 			work_id: data.work_id
 		};
 
-		setData((data) => ({
+		update({
 			...data,
-			assignments: [...data.assignments, new_assignment]
-		}));
+			assignments: [...data.assignments, temp_assignment]
+		});
 
 		return { error: null };
 	}
@@ -67,14 +80,14 @@ export function AssignmentOverview({ data, setData }: { data: ParsedClass; setDa
 		<div className="relative my-2 mt-4 flex flex-col gap-4">
 			<div className="flex flex-row justify-center gap-2">
 				<h2 className="text-center text-2xl font-semibold text-base-text-primary">Assignments</h2>
-				{setData && (
+				{update && (
 					<GenericButton style="absolute right-0" onClick={() => setEditing(!editing)}>
 						{editing ? <Check className="w-5" /> : <Pencil className="w-5" />}
 					</GenericButton>
 				)}
 			</div>
 			<div className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-2 pb-2 pr-2">
-				<Assignments assignments={assignments} deleteAssignment={editing && setData ? deleteAssignment : undefined} create={setData ? addAssignment : undefined} />
+				<Assignments assignments={assignments} deleteAssignment={editing && update ? deleteAssignment : undefined} create={update ? addAssignment : undefined} />
 			</div>
 		</div>
 	);
@@ -93,36 +106,37 @@ export function Assignments({ assignments, deleteAssignment, create }: { assignm
 			return { error: "Date must be valid" };
 		}
 
-		// do the request
-		const response = await create(data);
-		return response;
+		return await create(data);
 	}
 
 	return (
 		<div className="flex flex-wrap justify-center gap-2 ">
-			{assignments.map((assignment) => (
-				<div className="relative w-full max-w-[30%] rounded-md border-1 border-borders-primary bg-base-accent-primary py-2 pl-2 pr-4">
-					<div className="-mt-1 flex flex-col gap-0">
-						<div className="flex flex-row items-center gap-2 text-lg font-medium text-base-text-secondary ">
-							<span>{assignment.name}</span>
-							<span className="text-sm text-base-text-dark">{assignment.weight * 100 + "%"}</span>
+			{assignments
+				.sort((a, b) => new Date(a.due_date).valueOf() - new Date(b.due_date).valueOf())
+				.map((assignment) => (
+					<div className="relative w-full max-w-[30%] rounded-md border-1 border-borders-primary bg-base-accent-primary py-2 pl-2 pr-4">
+						<div className="-mt-1 flex flex-col gap-0">
+							<div className="flex flex-row items-center gap-2 text-lg font-medium text-base-text-secondary ">
+								<span>{assignment.name}</span>
+								<span className="text-sm text-base-text-dark">{assignment.weight * 100 + "%"}</span>
+							</div>
+							<div className="text-sm text-base-text-subtle">{assignment.description}</div>
 						</div>
-						<div className="text-sm text-base-text-subtle">{assignment.description}</div>
+						<div>
+							<div className="text-sm text-base-text-subtlish">{moment(assignment.due_date).calendar({ sameElse: "DD/MM/yyyy" })}</div>
+						</div>
+						{deleteAssignment && (
+							<DeleteButton style="absolute right-[-2px] scale-75 bottom-[1px] flex justify-center items-center" onClick={() => deleteAssignment(assignment)}>
+								<Trash className="w-5" />
+							</DeleteButton>
+						)}
 					</div>
-					<div>
-						<div className="text-sm text-base-text-subtlish">{moment(assignment.due_date).calendar({ sameElse: "DD/MM/yyyy" })}</div>
-					</div>
-					{deleteAssignment && (
-						<DeleteButton style="absolute right-[-2px] scale-75 bottom-[1px] flex justify-center items-center" onClick={() => deleteAssignment(assignment)}>
-							<Trash className="w-5" />
-						</DeleteButton>
-					)}
-				</div>
-			))}
+				))}
 			{deleteAssignment && <AssignmentCreator create={createAssignment} />}
 		</div>
 	);
 }
+
 type CreateAssignmentType = {
 	name: string;
 	description: string;

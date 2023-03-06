@@ -147,3 +147,15 @@ export type ScheduledClass = z.infer<typeof scheduleObject>;
 export const scheduleValidator = z.array(scheduleObject).nullable();
 
 export type ScheduledClasses = ScheduledClass[] | null;
+
+export type UpdateUniversityClassAssignment = {
+	assignment_id: string | null | undefined;
+	name: string;
+	due_date: Date;
+	weight: number;
+	description: string | null;
+	finished_at: Date | null;
+	group: string | null | undefined;
+	result: number | null;
+	tasks?: Prisma.TaskUncheckedCreateNestedManyWithoutLinked_assignmentInput | Prisma.TaskCreateNestedManyWithoutLinked_assignmentInput | undefined;
+};

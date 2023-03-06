@@ -20,15 +20,14 @@ export async function getAllUserWork(): Promise<{ data: FetchedWork[]; error: st
 }
 
 export function decodeWork(work: Work & { classes: FetchedClass[] }): FetchedWork {
+	return { ...work, classes: work.classes?.map(decodeClass) };
+}
+
+export function decodeClass(university_class: FetchedClass) {
 	return {
-		...work,
-		classes: work.classes?.map((class_) => {
-			return {
-				...class_,
-				weights: assessmentWeightValidator.parse(class_.weights),
-				schedule: scheduleValidator.parse(class_.schedule)
-			};
-		})
+		...university_class,
+		weights: assessmentWeightValidator.parse(university_class.weights),
+		schedule: scheduleValidator.parse(university_class.schedule)
 	};
 }
 
