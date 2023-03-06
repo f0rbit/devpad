@@ -1,10 +1,11 @@
 import CenteredContainer from "@/components/common/CenteredContainer";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import GenericButton from "@/components/common/GenericButton";
+import { AssignmentOverview, Assignments } from "@/components/Work/ClassInterface";
 import WeeklySchedule from "@/components/Work/WeeklySchedule";
 import { getUserWork } from "@/server/api/work";
 import { FetchedWork, ScheduledClass, ScheduledClasses } from "@/types/page-link";
-import { WORK_TYPE } from "@prisma/client";
+import { UniversityAssignment, WORK_TYPE } from "@prisma/client";
 import Link from "next/link";
 import { getSession } from "src/utils/session";
 
@@ -69,6 +70,20 @@ function UniversityPage({ data }: { data: FetchedWork }) {
 		);
 	}) as ScheduledClass[];
 
+	const assignments = data.classes.flatMap((university_class) => {
+		return (
+			university_class.assignments?.map((assignment) => {
+				return {
+					...assignment,
+					class_id: university_class.class_id,
+					class_name: university_class.name,
+					class_department: university_class.class_department,
+					class_number: university_class.class_number
+				};
+			}) ?? []
+		);
+	}) as UniversityAssignment[];
+
 	return (
 		<>
 			<div className="my-4 flex flex-col items-center justify-center gap-1">
@@ -99,6 +114,16 @@ function UniversityPage({ data }: { data: FetchedWork }) {
 					<h2 className="text-center text-2xl font-semibold text-base-text-primary">Schedule</h2>
 					<div className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-2 pb-2 pr-2">
 						<WeeklySchedule classes={schedule} />
+					</div>
+				</div>
+			)}
+			{assignments && (
+				<div className="relative my-2 mt-4 flex flex-col gap-4">
+					<div className="flex flex-row justify-center gap-2">
+						<h2 className="text-center text-2xl font-semibold text-base-text-primary">Assignments</h2>
+					</div>
+					<div className="flex flex-col gap-2 rounded-md border-1 border-borders-primary p-2 pb-2 pr-2">
+						<Assignments assignments={assignments} />
 					</div>
 				</div>
 			)}

@@ -28,6 +28,17 @@ select {
 	scrollbar-width: none; /* Firefox */
 }
 
+
+.arrows-hide input::-webkit-outer-spin-button,input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+.arrows-hide input[type=number] {
+  -moz-appearance: textfield;
+}
+
 html {
 	overflow-y: overlay;
 	color-scheme: light dark;
