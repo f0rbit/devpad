@@ -46,6 +46,7 @@ model User {
   todo_items     Task[]
   todo_tags      TaskTags[]
   work_items     Work[]
+  api_keys       APIKey[]
 }
 
 model VerificationToken {
@@ -54,6 +55,14 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model APIKey {
+  id              String  @id @default(cuid())
+  owner_id        String
+  hash            String
+
+  owner           User    @relation(fields: [owner_id], references: [id])
 }
 
 model Task {
