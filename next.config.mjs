@@ -24,7 +24,6 @@ export default defineNextConfig({
 		defaultLocale: "en"
 	},
 	experimental: {
-		appDir: true,
 		swcPlugins: [["next-superjson-plugin", {}]]
 	}
 })
