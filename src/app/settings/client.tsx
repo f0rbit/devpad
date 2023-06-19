@@ -24,9 +24,7 @@ export function SettingsPage({ initial_tags, user_id }: { initial_tags: APIKey[]
 		<>
 			<h1 className="mb-2 text-center text-3xl font-bold text-base-text-secondary">Settings</h1>
 			<pre>{JSON.stringify(tags, null, 2)}</pre>
-			<form action={newKey}>
-				<GenericButton>Generate Key</GenericButton>
-			</form>
+			<GenericButton formAction={newKey}>Generate Key</GenericButton>
 		</>
 	);
 }
