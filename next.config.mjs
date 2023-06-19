@@ -16,16 +16,15 @@ export default defineNextConfig({
 	reactStrictMode: true,
 	swcMinify: true,
 	images: {
-		domains: ["images.ctfassets.net", "avatars.githubusercontent.com" ]
+		domains: ["images.ctfassets.net", "avatars.githubusercontent.com"]
 	},
-	// Next.js i18n docs: https://nextjs.org/docs/advanced-features/i18n-routing
 	i18n: {
 		locales: ["en"],
 		defaultLocale: "en"
 	},
 	experimental: {
-		appDir: true,
-		swcPlugins: [["next-superjson-plugin", {}]]
+		swcPlugins: [["next-superjson-plugin", {}]],
+		serverActions: true
 	}
 })
 
