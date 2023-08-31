@@ -15,7 +15,7 @@ export function LoadingSpinner({ className }: { className?: string }) {
 
 export function LoadingSpinnerContainer() {
 	return (
-		<div className="flex h-[90vh] w-full items-center justify-center">
+		<div className="flex h-full w-full items-center justify-center">
 			<LoadingSpinner className="fill-blue-600 text-gray-200 dark:text-gray-600 mr-2" />
 		</div>
 	);
