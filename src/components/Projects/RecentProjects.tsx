@@ -1,8 +1,5 @@
-import { getUserProjects } from "@/server/api/projects";
 import { Project } from "@prisma/client";
 import Link from "next/link";
-import { use } from "react";
-import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { ProjectCard } from "./ProjectCard";
 import PrimaryButton from "../common/PrimaryButton";
 import GenericButton from "../common/GenericButton";

@@ -1,4 +1,4 @@
-export default function GenericButton({ children, style, title, onClick }: { children: React.ReactNode; style?: string; title?: string; onClick?: () => void }) {
+export default function GenericButton({ children, style, title, onClick, formAction }: { children: React.ReactNode; style?: string; title?: string; onClick?: () => void, formAction?: any }) {
 	return (
 		<button
 			className={
@@ -7,6 +7,7 @@ export default function GenericButton({ children, style, title, onClick }: { chi
 			}
 			onClick={onClick}
 			title={title}
+			formAction={formAction ?? undefined}
 		>
 			{children}
 		</button>
