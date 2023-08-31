@@ -127,6 +127,7 @@ model Project {
   deleted         Boolean        @default(false)
   link_url        String?
   link_text       String?
+  visibility      TASK_VISIBILITY  @default(PRIVATE)
   current_version String?
   owner           User           @relation(fields: [owner_id], references: [id])
   goals           ProjectGoal[]
