@@ -1,7 +1,7 @@
 import { UpdateProject } from "@/server/api/projects";
 import { Context } from "@/server/trpc/context";
 import { FetchedProject, FetchedTask, LoadedTask, Module, TaskPriority } from "@/types/page-link";
-import { ProjectGoal, TASK_PROGRESS } from "@prisma/client";
+import { Project, ProjectGoal, TASK_PROGRESS } from "@prisma/client";
 
 export const contextUserOwnsTag = async (ctx: Context, tagID: string) => {
 	if (!ctx.prisma) return false;
@@ -92,7 +92,7 @@ export function getTaskProgress(task: FetchedTask) {
 	}
 }
 
-export function extractUpdateFieldsFromProject(project: FetchedProject): UpdateProject {
+export function extractUpdateFieldsFromProject(project: FetchedProject | Project): UpdateProject {
 	return {
 		project_id: project.project_id,
 		current_version: project.current_version,
@@ -104,6 +104,7 @@ export function extractUpdateFieldsFromProject(project: FetchedProject): UpdateP
 		name: project.name,
 		repo_url: project.repo_url,
 		status: project.status,
-		specification: project.specification
+		specification: project.specification,
+        visibility: project.visibility
 	};
 }

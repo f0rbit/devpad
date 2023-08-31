@@ -7,6 +7,7 @@ import CenteredContainer from "@/components/common/CenteredContainer";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
 import { FetchedProject } from "@/types/page-link";
 import { UpdateProject } from "@/server/api/projects";
+import { extractUpdateFieldsFromProject } from "src/utils/backend";
 
 const DEFAULT_PROJECT = {
     project_id: "",
@@ -20,17 +21,9 @@ const DEFAULT_PROJECT = {
     visibility: TASK_VISIBILITY.PRIVATE as TASK_VISIBILITY
 }
 
-function getEditableProject(project: Project | undefined): UpdateProject {
-    if (!project) return DEFAULT_PROJECT;
-    const update_project = { ...project } as UpdateProject & { goals?: any, owner?: any };
-    delete update_project['goals'];
-    delete update_project['owner']
-    return update_project;
-}
-
 export default function ProjectCreator({ projects, mode }: { projects: Project[], mode: "create" | "edit" }) {
     const [error, setError] = useState("");
-    const [project, setProject] = useState(mode == "create" ? DEFAULT_PROJECT : getEditableProject(projects[0]));
+    const [project, setProject] = useState(mode == "create" || !projects[0] ? DEFAULT_PROJECT : extractUpdateFieldsFromProject(projects[0]));
 
     async function submitCreate() {
         const newProject = {
