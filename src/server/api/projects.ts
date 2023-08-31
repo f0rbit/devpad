@@ -1,5 +1,5 @@
 import { CreateProjectType, FetchedGoal, FetchedProject, TaskInclude } from "@/types/page-link";
-import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task, PROJECT_STATUS } from "@prisma/client";
+import { Action, ACTION_TYPE, Project, Prisma, ProjectGoal, Task, PROJECT_STATUS, TASK_VISIBILITY } from "@prisma/client";
 import { Session } from "next-auth";
 import { getErrorMessage } from "src/utils/backend";
 import { logger } from "src/utils/loggers";
@@ -12,13 +12,14 @@ const updateProjectValdiation = z.object({
 	name: z.string(),
 	description: z.string().nullable(),
 	status: z.nativeEnum(PROJECT_STATUS),
-	current_version: z.string().nullable(),
-	deleted: z.boolean().optional().default(false),
+	current_version: z.string().optional().nullable(),
+	deleted: z.boolean().default(false).optional(),
 	icon_url: z.string().nullable(),
 	link_url: z.string().nullable(),
 	link_text: z.string().nullable(),
 	repo_url: z.string().nullable(),
-	specification: z.string().nullable()
+	specification: z.string().optional().nullable(),
+    visibility: z.nativeEnum(TASK_VISIBILITY).optional().default(TASK_VISIBILITY.PRIVATE)
 });
 
 export type UpdateProject = z.infer<typeof updateProjectValdiation>;

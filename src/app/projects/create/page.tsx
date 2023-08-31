@@ -19,7 +19,7 @@ export default async function CreateProjectPage() {
 		<CenteredContainer>
 			<TitleInjector title="Create Project" />
 			<div className="flex w-full flex-col justify-center gap-2 pt-8 text-center text-base-text-secondary">
-				<ProjectCreator projects={data} data-superjson />
+				<ProjectCreator projects={data} data-superjson mode="create" />
 			</div>
 		</CenteredContainer>
 	);

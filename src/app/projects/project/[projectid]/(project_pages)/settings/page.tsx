@@ -1,5 +1,6 @@
 import CenteredContainer from "@/components/common/CenteredContainer";
 import ErrorWrapper from "@/components/common/ErrorWrapper";
+import ProjectCreator from "@/components/Projects/ProjectCreator";
 import { getProject } from "@/server/api/projects";
 import { getUserTags } from "@/server/api/tags";
 import { Newspaper } from "lucide-react";
@@ -36,19 +37,10 @@ export default async function RoadmapPage({ params }: { params: { projectid: str
 	}
 
 	return (
-		<div className="flex h-full w-max p-4">
-			<pre>{JSON.stringify(project, null, 2)}</pre>
-            <CenteredContainer>
-                <div className="styled-input flex flex-col items-center justify-center gap-1 rounded-md border-1 border-borders-secondary pt-1 pb-2">
-                    <div className="mb-2 w-full border-b-1 border-b-borders-secondary pb-1 text-center font-semibold text-base-text-primary">Project Settings</div>
-                    <div className="flex w-full flex-col gp-2 px-2 text-base-text-subtlish">
-                        <div className="flex flex-row items-center gap-2">
-                            <Newspaper className="w-5" />
-                            <input type="text" placeholder="Description" className="flex-1 rounded-md border-1 border-borders-secondary p-2" />
-                        </div>
-                    </div>
-                </div>
-            </CenteredContainer>
-		</div>
+		<CenteredContainer>
+            <div className="flex w-full flex-col justify-center gap-2 pt-8 text-center text-base-text-secondary">
+				<ProjectCreator projects={[ project ]} data-superjson mode="edit" />
+			</div>
+		</CenteredContainer>
 	);
 }

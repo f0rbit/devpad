@@ -6,6 +6,7 @@ import HistoryAction from "@/components/common/history/HistoryAction";
 import VersionIndicator from "@/components/common/VersionIndicator";
 import ProjectSpecification from "@/components/Projects/ProjectSpecification";
 import TitleInjector from "@/components/Projects/TitleInjector";
+import VisiblityIcon from "@/components/Todo/VisibilityIcon";
 import { getProjectHistory, getUserProject } from "@/server/api/projects";
 import { FetchedGoal, FetchedProject } from "@/types/page-link";
 import { Action, TASK_VISIBILITY } from "@prisma/client";
@@ -60,6 +61,9 @@ function ProjectOverview({ project, history }: { project: FetchedProject; histor
 			<div className="flex flex-row items-center justify-center gap-2">
 				<h1 className="text-3xl font-semibold text-base-text-primary">{project.name}</h1>
 				{project.current_version && <VersionIndicator version={project.current_version} />}
+                <div className="flex w-5" title={project.visibility}>
+                    <VisiblityIcon visibility={project.visibility} />
+                </div>
 			</div>
 			<div className="text-center text-base-text-subtlish">{project.description}</div>
 			<ProjectSpecification initial_project={project} />
