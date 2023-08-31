@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Map, Milestone, Scroll, Trash } from "lucide-react";
+import { BookOpen, Map, Milestone, Scroll, Settings, Trash } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useContext, useState } from "react";
@@ -33,7 +33,12 @@ const PROJECT_LINKS: ProjectLink[] = [
 		name: "History",
 		link: "/history",
 		icon: <Scroll />
-	}
+	},
+    {
+        name: "Settings",
+        link: "/settings",
+        icon: <Settings />
+    }
 ];
 
 export default function ProjectSidebar() {
@@ -47,10 +52,10 @@ export default function ProjectSidebar() {
 	// get the last string of the path
 	var last = pathname?.split("/").at(4);
 	last = last ? "/" + last : "";
-	
+
 
 	return (
-        <div className="min-w-[18rem] max-w-[18rem] border-r-borders-primary border-r-1">
+		<div className="min-w-[18rem] max-w-[18rem] border-r-borders-primary border-r-1">
 			<div className="flex h-full justify-center pt-4 text-lg">
 				<div className="flex w-full flex-col gap-4 px-8">
 					{PROJECT_LINKS.map((link, index) => {
@@ -64,7 +69,7 @@ export default function ProjectSidebar() {
 						);
 					})}
 					<div className="mt-auto mb-4">
-						<DeleteProjectButton project_id={pathname?.split("/").at(2)}/>
+						<DeleteProjectButton project_id={pathname?.split("/").at(2)} />
 					</div>
 				</div>
 			</div>
@@ -75,7 +80,7 @@ export default function ProjectSidebar() {
 function DeleteProjectButton({ project_id }: { project_id: string | undefined }) {
 	const [expanded, setExpanded] = useState(false);
 	const [error, setError] = useState("");
-	
+
 	async function deleteProject() {
 		if (!project_id) return;
 		// send request off to api to delete the project
