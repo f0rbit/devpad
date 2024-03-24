@@ -3,7 +3,7 @@ interface Props {
 	title: string;
 }
 
-const dark_mode = true;
+const dark_mode = false;
 
 const { title } = Astro.props;
 ---
@@ -37,10 +37,13 @@ const { title } = Astro.props;
 		background: var(--bg-primary);
 		color: var(--text-primary);
 		margin: unset;
-		font-family: sans-serif;
 	}
 
 	main {
+		width: 50vw;
+	}
+
+	body {
 		width: 100vw;
 		height: 100vh;
 		overflow: hidden;
