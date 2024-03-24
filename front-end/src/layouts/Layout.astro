@@ -3,11 +3,13 @@ interface Props {
 	title: string;
 }
 
+const dark_mode = true;
+
 const { title } = Astro.props;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang="en" class={dark_mode ? "dark" : ""}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="description" content="Astro description" />
@@ -20,32 +22,36 @@ const { title } = Astro.props;
 		<slot />
 	</body>
 </html>
+
 <style is:global>
 	:root {
-		--accent: 136, 58, 234;
-		--accent-light: 224, 204, 250;
-		--accent-dark: 49, 10, 101;
-		--accent-gradient: linear-gradient(
-			45deg,
-			rgb(var(--accent)),
-			rgb(var(--accent-light)) 30%,
-			white 60%
-		);
+		--bg-primary: oklch(97.61% 0.01 82.46);
+		--text-primary: black;
 	}
-	html {
-		font-family: system-ui, sans-serif;
-		background: #13151a;
-		background-size: 224px;
+	
+	html.dark {
+		--bg-primary: oklch(21.55% 0.014 278.77);
+		--text-primary: white;
 	}
-	code {
-		font-family:
-			Menlo,
-			Monaco,
-			Lucida Console,
-			Liberation Mono,
-			DejaVu Sans Mono,
-			Bitstream Vera Sans Mono,
-			Courier New,
-			monospace;
+	body {
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		margin: unset;
+		font-family: sans-serif;
 	}
+
+	main {
+		width: 100vw;
+		height: 100vh;
+		overflow: hidden;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+	}
+
+	h1, h2, h3, h4, h5, h6, p {
+		appearance: none;
+		margin: unset;
+	}
+
 </style>
