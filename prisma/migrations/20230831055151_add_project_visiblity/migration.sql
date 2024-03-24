@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "Project" ADD COLUMN     "visibility" "TASK_VISIBILITY" NOT NULL DEFAULT 'PRIVATE';
