@@ -3,7 +3,8 @@
   "module": "index.ts",
   "type": "module",
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/express": "^4.17.21"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
