@@ -1,0 +1,36 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const codebases = ["forbit-astro", "dev-blog", "devpad", "media-timeline"];
+const tasks = [
+	{ title: "redesign devpad", due: "in 2 hours", project: "devpad", priority: "urgent" },
+	{ title: "add likes", due: "in 21 hours", project: "dev-blog", priority: "normal" },
+	{ title: "implement twitter API", due: "in 2 days", project: "media-timeline", priority: "normal" }
+];
+---
+
+<Layout title="Welcome to Astro.">
+	<main>
+			<h1>todo tracker</h1>
+		<section>
+			<h2>codebases</h2>
+			{codebases.map((c) => <a href=`/todo/${c}`>{c}</a>)}
+		</section>
+		<section>
+			<h2>upcoming tasks</h2>
+			<ul>
+			{tasks.map((t) => <li>
+				<div><a>{t.title}</a><span> - {t.due}</span></div>
+				<div><span>{t.project}</span><span>,</span><span> {t.priority}</span></div>
+			</li>)}
+			</ul>
+		</section>
+	</main>
+</Layout>
+
+
+<style>
+section {
+	display: flex;
+	flex-direction: column;
+}
+</style>
