@@ -1,10 +1,10 @@
 # Pages
-- [ ] Landing Page
-    - [ ] Explore
+- [x] Landing Page
+    - [x] Explore
     - [ ] Api docs
     - [ ] Login
 - [ ] Project Manager
-    - [ ] View all projects
+    - [x] View all projects
     - [ ] Sub-project pages
 - [ ] Todo Tracker
     - [ ] Add codebase
@@ -21,9 +21,9 @@
     - [ ] Bun backend
         - [ ] ExpressJS as router
         - [ ] Auth middleware
-    - [ ] Database setup
-        - [ ] SQLite file (low memory impact)
-        - [ ] Drizzle ORM (low CPU impact)
+    - [x] Database setup
+        - [x] SQLite file (low memory impact)
+        - [x] Drizzle ORM (low CPU impact)
 - [ ] Deployment
     - [ ] Railway.app
     - [ ] Localhost environment
