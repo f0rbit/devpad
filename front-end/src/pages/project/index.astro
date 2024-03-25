@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+const codebases = ["forbit-astro", "dev-blog", "devpad", "media-timeline"];
+---
+
+<Layout title="Welcome to Astro.">
+	<main>
+		<h1>projects</h1>
+		<section>
+			{codebases.map((c) => <a href=`/todo/${c}`>{c}</a>)}
+		</section>
+	</main>
+</Layout>
+
+
+<style>
+section {
+	display: flex;
+	flex-direction: column;
+}
+</style>
