@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, int, foreignKey } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, int, foreignKey, unique } from "drizzle-orm/sqlite-core";
 
 /** @todo relations */
 
@@ -42,9 +42,9 @@ export const task_module = sqliteTable("task_module", {
   type: text("string").notNull(), // type of module
   data: text("data", { mode: "json" }).notNull().default({}),
   updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
-
-  // unique restraint [task_id, type]
-});
+}, (table) => ({
+  task_module_unique: unique().on(table.task_id, table.type)
+}));
 
 export const task_tag = sqliteTable("task_tag", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -67,9 +67,9 @@ export const project = sqliteTable("project", {
   link_text: text("link_text"),
   visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
   current_version: text("current_version"),
-
-  // unique constraint on [owner_id, project_id]
-});
+}, (table) => ({
+  project_unique: unique().on(table.owner_id, table.project_id)
+}));
 
 export const project_goal = sqliteTable("project_goal", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
