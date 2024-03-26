@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { sqliteTable, text, integer, int } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, int, foreignKey } from "drizzle-orm/sqlite-core";
 
 /** @todo relations */
 
@@ -29,11 +29,13 @@ export const task = sqliteTable("task", {
   title: text("title").notNull(),
   progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] }),
   visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
-  parent_id: text("parent_id"), // references task.id
+  parent_id: text("parent_id"),
   goal_id: text("goal_id"),
   created_at: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
-});
+}, (table) => ({
+  parent_ref: foreignKey({ columns: [table.parent_id], foreignColumns: [table.id], name: "parent_ref" })
+}));
 
 export const task_module = sqliteTable("task_module", {
   task_id: text("task_id").notNull().references(() => task.id),
