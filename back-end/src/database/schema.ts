@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { sql, relations } from "drizzle-orm";
 import { sqliteTable, text, integer, int, foreignKey, unique } from "drizzle-orm/sqlite-core";
 
 /** @todo relations */
@@ -52,6 +52,27 @@ export const task_tag = sqliteTable("task_tag", {
   title: text("title").notNull(),
   colour: text("colour").notNull().default("#000000"),
 });
+
+export const task_to_tags = sqliteTable("task_to_tags", {
+  task_id: text("task_id").notNull().references(() => task.id),
+  tag_id: text("tag_id").notNull().references(() => task_tag.id),
+}, (table) => ({
+  task_tags_unique: unique().on(table.task_id, table.tag_id)
+}));
+
+// declare many-to-many relationships for task <-> tag
+export const task_relations = relations(task, ({ many }) => ({
+  task_to_tags: many(task_to_tags),
+}));
+
+export const tag_relations = relations(task_tag, ({ many }) => ({
+  task_to_tags: many(task_to_tags)
+}));
+
+export const task_to_tags_relations = relations(task_to_tags, ({ one }) => ({
+  task: one(task, { fields: [task_to_tags.task_id], references: [task.id] }),
+  task_tag: one(task_tag, { fields: [task_to_tags.tag_id], references: [task_tag.id] })
+}));
 
 export const project = sqliteTable("project", {
   project_id: text("project_id").notNull(),
