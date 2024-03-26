@@ -1,13 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { sqliteTable, text, integer, int, foreignKey, unique } from "drizzle-orm/sqlite-core";
-
-/** @todo relations */
-
-export const movies = sqliteTable("movies", {
-  id: integer("id").primaryKey(),
-  title: text("name"),
-  releaseYear: integer("release_year"),
-});
+import { sqliteTable, text, int, foreignKey, unique } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -40,7 +32,7 @@ export const task = sqliteTable("task", {
 export const task_module = sqliteTable("task_module", {
   task_id: text("task_id").notNull().references(() => task.id),
   type: text("string").notNull(), // type of module
-  data: text("data", { mode: "json" }).notNull().default({}),
+  data: text("data", { mode: "json" }).notNull().default("{}"),
   updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
 }, (table) => ({
   task_module_unique: unique().on(table.task_id, table.type)
