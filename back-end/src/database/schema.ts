@@ -1,12 +1,19 @@
 import { sql, relations } from "drizzle-orm";
-import { sqliteTable, text, int, foreignKey, unique } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, int, foreignKey, unique, integer } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  github_id: integer("github_id"),
   name: text("name"),
   email: text("email").unique(),
   email_verified: text("email_verified"), // timestamp
   image_url: text("image_url")
+});
+
+export const session = sqliteTable("session", {
+  id: text("id").notNull().primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id),
+  expiresAt: integer("expires_at").notNull()
 });
 
 export const api_key = sqliteTable("api_key", {
