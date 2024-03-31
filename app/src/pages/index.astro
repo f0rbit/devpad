@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 
-const blah = Astro.locals;
+const user = Astro.locals.user;
 ---
 
 <Layout title="Welcome to Astro.">
@@ -12,9 +12,20 @@ const blah = Astro.locals;
 		<nav>
 			<a href="/explore">explore</a>
 			<a>api</a>
-			<a>login</a>
+			{
+				!user ? (
+					<a href="api/auth/login">login</a>
+				) : (
+					<>
+						<>
+							<a href="api/auth/logout">logout</a>
+							<br />
+						</>
+						recent projects...
+					</>
+				)
+			}
 		</nav>
-		<pre>{JSON.stringify(blah, null, 2)}</pre>
 	</main>
 </Layout>
 

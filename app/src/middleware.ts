@@ -1,23 +1,35 @@
+import { lucia } from "./server/lucia";
+import { verifyRequestOrigin } from "lucia";
 import { defineMiddleware } from "astro:middleware";
 
-const { API_URL } = import.meta.env;
-
 export const onRequest = defineMiddleware(async (context, next) => {
-	console.log("API_URL: " + API_URL);
-	// make a fetch request to API session
-	const request = await fetch(API_URL + "/auth/session");
-	if (!request || !request.ok) {
-		console.error("couldn't fetch session");
+	if (context.request.method !== "GET") {
+		const originHeader = context.request.headers.get("Origin");
+		const hostHeader = context.request.headers.get("Host");
+		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
+			return new Response(null, {
+				status: 403
+			});
+		}
+	}
+
+	const sessionId = context.cookies.get(lucia.sessionCookieName)?.value ?? null;
+	if (!sessionId) {
 		context.locals.user = null;
+		context.locals.session = null;
 		return next();
 	}
 
-	try {
-		const response = await request.json();
-		context.locals.user = response.user as User;
-	} catch (err) {
-		console.error(err);
-		context.locals.user = null;
+	const { session, user } = await lucia.validateSession(sessionId);
+	if (session && session.fresh) {
+		const sessionCookie = lucia.createSessionCookie(session.id);
+		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 	}
+	if (!session) {
+		const sessionCookie = lucia.createBlankSessionCookie();
+		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+	}
+	context.locals.session = session;
+	context.locals.user = user;
 	return next();
 });
