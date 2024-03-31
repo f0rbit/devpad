@@ -17,11 +17,12 @@ const user = Astro.locals.user;
 					<a href="api/auth/login">login</a>
 				) : (
 					<>
-						<>
-							<a href="api/auth/logout">logout</a>
-							<br />
-						</>
-						recent projects...
+						<a href="api/auth/logout">logout</a>
+						<br />
+						<div style="display: flex; flex-direction: column">
+							<a href="/project">project manager</a>
+							<a href="/todo">todo tracker</a>
+						</div>
 					</>
 				)
 			}
