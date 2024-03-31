@@ -1,5 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
+
+const blah = Astro.locals;
 ---
 
 <Layout title="Welcome to Astro.">
@@ -12,6 +14,7 @@ import Layout from "../layouts/Layout.astro";
 			<a>api</a>
 			<a>login</a>
 		</nav>
+		<pre>{JSON.stringify(blah, null, 2)}</pre>
 	</main>
 </Layout>
 

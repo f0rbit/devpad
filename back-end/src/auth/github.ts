@@ -35,6 +35,7 @@ github_router.get("/callback", async (req, res) => {
 		res.status(400).end();
 		return;
 	}
+	const HOME_URL = import.meta.env.HOME_URL!;
 	try {
 		const tokens = await github.validateAuthorizationCode(code);
 		const githubUserResponse = await fetch("https://api.github.com/user", {
@@ -48,13 +49,13 @@ github_router.get("/callback", async (req, res) => {
 		if (existingUser && existingUser[0]) {
 			const session = await lucia.createSession(existingUser[0].id, {});
 			res.appendHeader("Set-Cookie", lucia.createSessionCookie(session.id).serialize())
-			return res.redirect("/");
+			return res.redirect(HOME_URL);
 		}
 
 		const new_user = await db.insert(user).values({ github_id: githubUser.id, name: githubUser.login }).returning({ user_id: user.id });
 		const session = await lucia.createSession(new_user[0].user_id, {});
 		res.appendHeader("Set-Cookie", lucia.createSessionCookie(session.id).serialize())
-		return res.redirect("/");
+		return res.redirect(HOME_URL);
 	} catch (e) {
 		console.error(e);
 		if (e instanceof OAuth2RequestError && e.message === "bad_verification_code") {

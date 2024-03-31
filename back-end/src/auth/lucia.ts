@@ -41,3 +41,7 @@ interface DatabaseUserAttributes {
 
 export const auth_router = express.Router();
 auth_router.use("/github", github_router);
+
+auth_router.get("/session", (_, res) => {
+	res.json({ session: res.locals.session, user: res.locals.user });	
+});
