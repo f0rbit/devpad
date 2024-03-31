@@ -1,0 +1,97 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+<script>
+	async function create_project() {
+		console.log('hi from client');
+		// extract elements from form
+
+		// submit POST request
+
+		// if error, display error
+		// otherwise goto new project
+	}
+
+	document.getElementById("create")?.addEventListener('click', create_project);
+</script>
+
+<Layout title="Create Project">
+	<main>
+		<h1>create project</h1>
+			<div>
+				<label for="project_id">project id</label>
+				<input type="text" id="project_id" />
+				<label for="status">status</label>
+				<select id="status">
+					<option>development</option>
+					<option>released</option>
+					<option>stopped</option>
+					<option>live</option>
+					<option>finished</option>
+					<option>paused</option>
+					<option>abandoned</option>
+				</select>
+			</div>
+			<div>
+				<label for="name">name</label>
+				<input type="text" id="name" />
+				<label for="icon-url">icon url</label>
+				<input type="text" id="icon-url" />
+			</div>
+			<div>
+				<label for="description">description</label>
+				<input type="text" id="description" />
+			</div>
+			<div>
+				<label for="link-text">link text</label>
+				<input type="text" id="link-text" />
+				<label for="link-url">link url</label>
+				<input type="text" id="link-url" />
+			</div>
+			<div>
+				<label for="github-url">github url</label>
+				<input type="text" id="github-url" />
+				<label for="visibility">visibility</label>
+				<select>
+					<option>public</option>
+					<option>private</option>
+					<option>hidden</option>
+					<option>archived</option>
+					<option>draft</option>
+					<option>deleted</option>
+				</select>
+			</div>
+			<div>
+				<a href="/project">back</a>
+				<a href="#" id="create">create</a>
+			</div>
+	</main>
+</Layout>
+
+<style>
+	main div {
+		display: flex;
+		width: 100%;
+		flex-direction: row;
+		gap: 5px;
+	}
+	main {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	main label {
+		width: max-content;
+		white-space: nowrap;
+	}
+
+	main > div > label:first-child {
+		min-width: 5rem;
+	}
+	main input[type='text'] {
+		width: 100%;
+	}
+</style>
+
+

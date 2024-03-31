@@ -1,14 +1,27 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-const codebases = ["forbit-astro", "dev-blog", "devpad", "media-timeline"];
+import { getUserProjects } from '../../server/projects';
+const user = Astro.locals.user;
+
+const projects = user ? await getUserProjects(user.id) : [];
+const codebases = projects.map((p) => p.project_id);
 ---
 
-<Layout title="Welcome to Astro.">
+<Layout title="Project Manager">
 	<main>
+	{user ?
+	(<>
 		<h1>projects</h1>
 		<section>
-			{codebases.map((c) => <a href=`/todo/${c}`>{c}</a>)}
+			{codebases.map((c) => <a href=`/project/${c}`>{c}</a>)}
 		</section>
+		<br />
+		<a href="/project/create">+ add</a>
+		</>)
+	: (<>
+		<p>You must be logged in</p>
+		<a href="api/auth/login">login</a>
+	</>)}
 	</main>
 </Layout>
 
