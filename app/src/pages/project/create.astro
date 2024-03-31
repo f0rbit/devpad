@@ -3,13 +3,44 @@ import Layout from "../../layouts/Layout.astro";
 ---
 <script>
 	async function create_project() {
-		console.log('hi from client');
+		document.getElementById("error")!.innerText = "";
+		const get_value = (id: string) => {
+			return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
+		}
 		// extract elements from form
+		const project_id = get_value("project_id") ?? null;
+		const status = get_value("status") ?? "development";
+		const name = get_value("name") ?? project_id;
+		const icon_url = get_value("icon_url") ?? null;
+		const description = get_value("description") ?? null;
+		const link_text = get_value("link_text") ?? null;
+		const link_url = get_value("link_url") ?? null;
+		const github_url = get_value("github_url") ?? null;
+		const visiblity = get_value("visibility") ?? "private";
+
 
 		// submit POST request
+		const body = JSON.stringify({ project_id, status, name, icon_url, description, link_text, link_url, github_url, visiblity });
+		const method = "PATCH";
+		const url = "/api/project/upsert";
+		const response = await fetch(url, { method, body });
 
 		// if error, display error
+		if (!response || !response.ok) {
+			document.getElementById("error")!.innerText = "Error submitting request";
+			return;
+		}
+
 		// otherwise goto new project
+		try {
+			// TODO: zod validation on client side
+			const result = await response.json() as any;
+			window.location.href = `/project/${result.project_id}`;
+		} catch (err) {
+			document.getElementById("error")!.innerText = "Error parsing result";
+			console.error(err);
+			return;
+		}
 	}
 
 	document.getElementById("create")?.addEventListener('click', create_project);
@@ -20,7 +51,7 @@ import Layout from "../../layouts/Layout.astro";
 		<h1>create project</h1>
 			<div>
 				<label for="project_id">project id</label>
-				<input type="text" id="project_id" />
+				<input type="text" id="project_id" required />
 				<label for="status">status</label>
 				<select id="status">
 					<option>development</option>
@@ -35,7 +66,7 @@ import Layout from "../../layouts/Layout.astro";
 			<div>
 				<label for="name">name</label>
 				<input type="text" id="name" />
-				<label for="icon-url">icon url</label>
+				<label for="icon_url">icon url</label>
 				<input type="text" id="icon-url" />
 			</div>
 			<div>
@@ -43,16 +74,16 @@ import Layout from "../../layouts/Layout.astro";
 				<input type="text" id="description" />
 			</div>
 			<div>
-				<label for="link-text">link text</label>
-				<input type="text" id="link-text" />
-				<label for="link-url">link url</label>
-				<input type="text" id="link-url" />
+				<label for="link_text">link text</label>
+				<input type="text" id="link_text" />
+				<label for="link_url">link url</label>
+				<input type="text" id="link_url" />
 			</div>
 			<div>
-				<label for="github-url">github url</label>
-				<input type="text" id="github-url" />
+				<label for="github_url">github url</label>
+				<input type="text" id="github_url" />
 				<label for="visibility">visibility</label>
-				<select>
+				<select id="visiblity">
 					<option>public</option>
 					<option>private</option>
 					<option>hidden</option>
@@ -64,6 +95,9 @@ import Layout from "../../layouts/Layout.astro";
 			<div>
 				<a href="/project">back</a>
 				<a href="#" id="create">create</a>
+			</div>
+		<div>
+				<p id="error"></p>
 			</div>
 	</main>
 </Layout>
