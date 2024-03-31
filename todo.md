@@ -2,7 +2,7 @@
 - [x] Landing Page
     - [x] Explore
     - [ ] Api docs
-    - [ ] Login
+    - [x] Login
 - [ ] Project Manager
     - [x] View all projects
     - [ ] Sub-project pages
@@ -15,12 +15,10 @@
         - [ ] In Progress
 
 # Implementation
-- [ ] Setup tech stack
-    - [ ] Astro frontend
-        - [ ] Github auth
-    - [ ] Bun backend
-        - [ ] ExpressJS as router
-        - [ ] Auth middleware
+- [x] Setup tech stack
+    - [x] Astro SSR
+        - [x] Github auth
+        - [x] Auth middleware
     - [x] Database setup
         - [x] SQLite file (low memory impact)
         - [x] Drizzle ORM (low CPU impact)
