@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const upsert_user = z.object({
+export const upsert_project = z.object({
 	project_id: z.string(),
 	owner_id: z.string(),
 	name: z.string(),
@@ -17,4 +17,4 @@ export const upsert_user = z.object({
 });
 
 
-export type UpsertUser = z.infer<typeof upsert_user>;
+export type UpsertProject = z.infer<typeof upsert_project>;

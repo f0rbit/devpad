@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { upsert_user } from "../../../server/types";
+import { upsert_project } from "../../../server/types";
 import { db } from "../../../../database/db";
 import { project } from "../../../../database/schema";
 
@@ -13,21 +13,21 @@ export async function PATCH(context: APIContext) {
 	const body = await context.request.json();
 
 	// validate project contents using zod & return error if anything missing
-	const parsed = upsert_user.safeParse(body);
+	const parsed = upsert_project.safeParse(body);
 	if (!parsed.success) {
 		console.warn(parsed.error);
 		return new Response(parsed.error.message, { status: 400 });
 	}
-	const upsert_project = parsed.data;
+	const { data } = parsed;
 
 	// assert that the owner_id of upsert_project is same as logged in user
-	if (upsert_project.owner_id != context.locals.user.id) {
+	if (data.owner_id != context.locals.user.id) {
 		return new Response(null, { status: 401 });
 	}
 
 	try {
 		// perform db upsert
-		const new_project = await db.insert(project).values(upsert_project).onConflictDoUpdate({ target: [project.owner_id, project.project_id], set: upsert_project }).returning();
+		const new_project = await db.insert(project).values(data).onConflictDoUpdate({ target: [project.owner_id, project.project_id], set: data }).returning();
 
 		if (new_project.length != 1) throw new Error(`Project upsert returned incorrect rows (${new_project.length}`);
 		// return the project data

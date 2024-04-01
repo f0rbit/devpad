@@ -6,7 +6,7 @@ export async function getUserProjects(user_id: string) {
 	return await db.select().from(project).where(eq(project.owner_id, user_id));
 }
 
-export async function getProject(user_id: string, project_id: string) {
+export async function getProject(user_id: string | null, project_id: string | undefined | null) {
 	if (!user_id) return { project: null, error: "No user ID" };
 	if (!project_id) return { project: null, error: "No project ID" };
 
