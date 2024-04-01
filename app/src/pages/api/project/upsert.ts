@@ -12,14 +12,13 @@ export async function PATCH(context: APIContext) {
 	// extract the form contents from the input
 	const body = await context.request.json();
 
+	// validate project contents using zod & return error if anything missing
 	const parsed = upsert_user.safeParse(body);
 	if (!parsed.success) {
 		console.warn(parsed.error);
 		return new Response(parsed.error.message, { status: 400 });
 	}
 	const upsert_project = parsed.data;
-	// validate project contents using zod & return error if anything missing
-	console.log({ upsert_project });
 
 	// assert that the owner_id of upsert_project is same as logged in user
 	if (upsert_project.owner_id != context.locals.user.id) {
