@@ -21,7 +21,7 @@ const user = Astro.locals.user;
 		const link_text = get_value("link_text") ?? null;
 		const link_url = get_value("link_url") ?? null;
 		const github_url = get_value("github_url") ?? null;
-		const visiblity = get_value("visibility") ?? "private";
+		const visibility = get_value("visibility") ?? "private";
 
 		const owner_id = document.querySelector("main")?.dataset?.user ?? null;
 
@@ -35,7 +35,7 @@ const user = Astro.locals.user;
 			link_text,
 			link_url,
 			github_url,
-			visiblity: visiblity.toUpperCase(),
+			visibility: visiblity.toUpperCase(),
 			owner_id,
 		});
 		const method = "PATCH";
@@ -100,7 +100,7 @@ const user = Astro.locals.user;
 			<label for="github_url">github url</label>
 			<input type="text" id="github_url" />
 			<label for="visibility">visibility</label>
-			<select id="visiblity">
+			<select id="visibility">
 				<option>public</option>
 				<option>private</option>
 				<option>hidden</option>

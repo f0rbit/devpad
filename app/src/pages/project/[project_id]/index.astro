@@ -1,0 +1,43 @@
+---
+import Layout from "../../../layouts/Layout.astro";
+import { getProject } from "../../../server/projects";
+
+const { project_id } = Astro.params;
+
+const user = Astro.locals.user;
+
+// want to fetch the project from db
+const { project, error } = await getProject(user?.id ?? null, project_id);
+---
+
+<Layout title={`Project - ${project_id}`}>
+{error ? <p>Error: {error}</p> : (
+	<main>
+	<h2>{project_id}</h2>
+
+	<section>
+		<nav>
+			<a href={`/project/${project_id}`}>overview</a>
+			<a href={`/project/${project_id}/settings`}>settings</a>
+			<a href={`/project/${project_id}/specification`}>specification</a>
+			<a href={`/project/${project_id}/goals`}>goals</a>
+		</nav>
+		<p>{project.description}</p>
+		{project.repo_url && <a href={project.repo_url}>{project.repo_url}</a>}
+		<p><span>{project.status?.toLowerCase()}</span><span>, </span>{project.visibility?.toLowerCase()}<span></p>
+	</section>
+	<pre>{JSON.stringify(project,null,2)}</pre>
+	<br />
+	<a href="/project">back</a>
+	</main>
+)}
+</Layout>
+
+
+<style>
+main {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+</style>
