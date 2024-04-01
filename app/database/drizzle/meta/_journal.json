@@ -15,6 +15,13 @@
       "when": 1711696995689,
       "tag": "0001_dry_komodo",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1711970243849,
+      "tag": "0002_acoustic_the_watchers",
+      "breakpoints": true
     }
   ]
 }

@@ -13,7 +13,8 @@ export const user = sqliteTable("user", {
 export const session = sqliteTable("session", {
   id: text("id").notNull().primaryKey(),
   userId: text("user_id").notNull().references(() => user.id),
-  expiresAt: integer("expires_at").notNull()
+  expiresAt: integer("expires_at").notNull(),
+  access_token: text("access_token")
 });
 
 export const api_key = sqliteTable("api_key", {
@@ -38,7 +39,7 @@ export const task = sqliteTable("task", {
 
 export const task_module = sqliteTable("task_module", {
   task_id: text("task_id").notNull().references(() => task.id),
-  type: text("string").notNull(), // type of module
+  type: text("type").notNull(), // type of module
   data: text("data", { mode: "json" }).notNull().default("{}"),
   updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
 }, (table) => ({

@@ -28,10 +28,10 @@ export async function GET(context: APIContext): Promise<Response> {
 		const githubUser: GitHubUser = await githubUserResponse.json();
 
 		const existingUser = await db.select().from(user).where(eq(user.github_id, githubUser.id));
-		// Replace this with your own DB clie
+		// Replace this with your own DB client
 
 		if (existingUser && existingUser[0]) {
-			const session = await lucia.createSession(existingUser[0].id, {});
+			const session = await lucia.createSession(existingUser[0].id, { access_token: tokens.accessToken });
 			const sessionCookie = lucia.createSessionCookie(session.id);
 			context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 			return context.redirect("/");
@@ -39,7 +39,7 @@ export async function GET(context: APIContext): Promise<Response> {
 
 		const new_user = await db.insert(user).values({ github_id: githubUser.id, name: githubUser.login }).returning({ user_id: user.id });
 
-		const session = await lucia.createSession(new_user[0].user_id, {});
+		const session = await lucia.createSession(new_user[0].user_id, { access_token: tokens.accessToken });
 		const sessionCookie = lucia.createSessionCookie(session.id);
 		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 		return context.redirect("/");

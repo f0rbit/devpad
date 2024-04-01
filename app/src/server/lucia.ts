@@ -17,6 +17,11 @@ export const lucia = new Lucia(adapter, {
 			githubId: attributes.github_id,
 			username: attributes.username
 		};
+	},
+	getSessionAttributes: (attributes) => {
+		return {
+			access_token: attributes.access_token
+		}
 	}
 });
 
@@ -24,6 +29,7 @@ declare module "lucia" {
 	interface Register {
 		Lucia: typeof lucia;
 		DatabaseUserAttributes: DatabaseUserAttributes;
+		DatabaseSessionAttributes: { access_token: string };
 	}
 }
 
