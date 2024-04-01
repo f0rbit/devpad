@@ -1,0 +1,28 @@
+---
+import ProjectSettings from "../../../components/ProjectSettings.astro";
+import Layout from "../../../layouts/Layout.astro";
+import { getProject } from "../../../server/projects";
+
+const { project_id } = Astro.params;
+
+const user = Astro.locals.user;
+
+const { project, error } = await getProject(user?.id ?? null, project_id);
+---
+
+<Layout title={`Project - ${project_id}`}>
+	{error ? <p>Error: {error}</p> : (
+	<main>
+		<h2>Settings</h2>
+		<ProjectSettings project={project} back={`/project/${project_id}`} />
+		</main>
+	)}
+</Layout>
+
+<style>
+	main {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+</style>

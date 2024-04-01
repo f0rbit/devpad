@@ -22,11 +22,10 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 			<a href={`/project/${project_id}/specification`}>specification</a>
 			<a href={`/project/${project_id}/goals`}>goals</a>
 		</nav>
-		<p>{project.description}</p>
-		{project.repo_url && <a href={project.repo_url}>{project.repo_url}</a>}
-		<p><span>{project.status?.toLowerCase()}</span><span>, </span>{project.visibility?.toLowerCase()}<span></p>
+		<p>{project!.description}</p>
+		{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
+		<p><span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></p>
 	</section>
-	<pre>{JSON.stringify(project,null,2)}</pre>
 	<br />
 	<a href="/project">back</a>
 	</main>
