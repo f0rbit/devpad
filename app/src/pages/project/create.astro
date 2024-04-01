@@ -2,12 +2,20 @@
 import ProjectSettings from "../../components/ProjectSettings.astro";
 import Layout from "../../layouts/Layout.astro";
 
+const session = Astro.locals.session;
+
+const repos = await fetch("https://api.github.com/user/repos", { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${session?.access_token}` }});
+
+const repos_result = await repos.json();
+
 ---
 
 <Layout title="Create Project">
 	<main>
 		<h1>create project</h1>
 		<ProjectSettings project={null} back={"/project"} />
+		<br />
+		<pre>{JSON.stringify(repos_result.map((r) => r.full_name), null, 2)}</pre>
 	</main>
 </Layout>
 
