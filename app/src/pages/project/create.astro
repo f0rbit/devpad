@@ -1,9 +1,11 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+
 const user = Astro.locals.user;
 ---
 
 <script>
+	import type { UpsertUser } from "../../server/types";
 	async function create_project() {
 		document.getElementById("error")!.innerText = "";
 		const get_value = (id: string) => {
@@ -28,16 +30,18 @@ const user = Astro.locals.user;
 		// submit POST request
 		const body = JSON.stringify({
 			project_id,
-			status: status.toUpperCase(),
+			status: status.toUpperCase() as UpsertUser['status'],
 			name,
 			icon_url,
 			description,
 			link_text,
 			link_url,
 			github_url,
-			visibility: visiblity.toUpperCase(),
+			visibility: visibility.toUpperCase() as UpsertUser['visibility'],
 			owner_id,
-		});
+			deleted: false
+		} as UpsertUser);
+
 		const method = "PATCH";
 		const url = "/api/project/upsert";
 		const response = await fetch(url, { method, body });
@@ -50,7 +54,6 @@ const user = Astro.locals.user;
 
 		// otherwise goto new project
 		try {
-			// TODO: zod validation on client side
 			const result = (await response.json()) as any;
 			window.location.href = `/project/${result.project_id}`;
 		} catch (err) {
