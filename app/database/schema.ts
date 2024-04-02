@@ -81,6 +81,7 @@ export const project = sqliteTable("project", {
   description: text("description"),
   specification: text("specification"),
   repo_url: text("repo_url"),
+  repo_id: integer("repo_id"),
   icon_url: text("icon_url"),
   status: text("status", { enum: ["DEVELOPMENT", "PAUSED", "RELEASED", "LIVE", "FINISHED", "ABANDONED", "STOPPED"] }).notNull().default("DEVELOPMENT"),
   deleted: int("deleted", { mode: "boolean" }),

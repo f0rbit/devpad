@@ -7,6 +7,7 @@ export const upsert_project = z.object({
 	description: z.string(),
 	specification: z.string().optional().nullable(),
 	repo_url: z.string().optional().nullable(),
+	repo_id: z.number().optional().nullable(),
 	icon_url: z.string().optional().nullable(),
 	status: z.union([ z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED") ]),
 	deleted: z.boolean().optional().nullable().default(false),

@@ -21,7 +21,7 @@ const repos_result = await repos.json();
 	</main>
 
 	<datalist id='repo-list'>
-		{repos_result.map((r: any) => <option data-repoid={r.id} value={r.name}></option>)}	
+		{repos_result.map((r: any) => <option value={r.name}></option>)}	
 	</datalist>
 </Layout>
 
@@ -30,6 +30,10 @@ const repos_result = await repos.json();
 	function import_project() {
 		const project_name = event.target.value;
 		const project_data = repos_result?.find((p) => p.name == project_name);
+		if (!project_data) {
+			clear_data();
+			return;
+		}
 		// fill in input fields with data from github project 
 		document.getElementById("project_id").value = project_data['name'];
 		document.getElementById("name").value = project_data['name'];
@@ -38,10 +42,11 @@ const repos_result = await repos.json();
 
 		document.getElementById("github_url").value = project_data['html_url'];
 		document.getElementById("github_url").disabled = true;
+		document.getElementById("github_repo_id").value = Number(project_data['id']);
 	}
 
 	function clear_data() {
-		["project-importer", "project_id", "name", "description", "visibility", "github_url"].forEach((id) => {
+		["project-importer", "project_id", "name", "description", "visibility", "github_url", "github_repo_id"].forEach((id) => {
 			document.getElementById(id).value = "";
 			document.getElementById(id).disabled = false;
 		});

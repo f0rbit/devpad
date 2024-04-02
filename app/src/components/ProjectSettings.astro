@@ -45,6 +45,7 @@ const mode = project ? "edit" : "create";
 	<div>
 		<label for="github_url">github url</label>
 		<input type="text" id="github_url" value={project?.repo_url ?? ""}/>
+		<input type="number" id="github_repo_id" value={project?.repo_id ?? ""} style="display: none;" />
 		<label for="visibility">visibility</label>
 		<select id="visibility" value={project?.visibility ?? "private"}>
 			<option>public</option>
@@ -83,6 +84,7 @@ const mode = project ? "edit" : "create";
 		const link_text = get_value("link_text") ?? null;
 		const link_url = get_value("link_url") ?? null;
 		const github_url = get_value("github_url") ?? null;
+		const github_repo_id = get_value("github_repo_id") ?? null;
 		const visibility = get_value("visibility") ?? "private";
 
 		const owner_id = document.getElementById("project-settings")?.dataset?.user ?? null;
@@ -97,6 +99,7 @@ const mode = project ? "edit" : "create";
 			link_text,
 			link_url,
 			github_url,
+			github_repo_id: github_repo_id ? Number(github_repo_id) : null,
 			visibility: visibility.toUpperCase() as UpsertProject['visibility'],
 			owner_id,
 			deleted: false
@@ -123,7 +126,7 @@ const mode = project ? "edit" : "create";
 		}
 	}
 
-	document.getElementById("create")?.addEventListener("click", create_project);
+	document.getElementById("submit")?.addEventListener("click", create_project);
 </script>
 
 <style scoped>
