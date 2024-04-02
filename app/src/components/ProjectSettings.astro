@@ -98,8 +98,8 @@ const mode = project ? "edit" : "create";
 			description,
 			link_text,
 			link_url,
-			github_url,
-			github_repo_id: github_repo_id ? Number(github_repo_id) : null,
+			repo_url: github_url,
+			repo_id: github_repo_id ? Number(github_repo_id) : null,
 			visibility: visibility.toUpperCase() as UpsertProject['visibility'],
 			owner_id,
 			deleted: false
