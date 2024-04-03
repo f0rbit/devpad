@@ -26,10 +26,34 @@ export async function PATCH(context: APIContext) {
 	}
 
 	try {
+
+		// the new_project is imported from github and doesn't have a specification, import it from the README
+		if (data.repo_id && data.repo_url && !data.specification) {
+			// we need to get OWNER and REPO from the repo_url
+			const slices = data.repo_url.split("/");
+			const repo = slices.at(-1);
+			const owner = slices.at(-2);
+			if (!context?.locals?.session?.access_token) throw new Error("Linking a github repo without access token");
+			const access_token = context.locals.session.access_token;
+			console.log({ repo, owner, access_token });
+			const readme_response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: { "Accept": "application/vnd.github.raw+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
+			if (!readme_response || !readme_response.ok) {
+				console.warn(`Code ${readme_response.status} - ${readme_response.statusText}`);
+				throw new Error("Error fetching readme");
+			}
+			try {
+				data.specification = (await readme_response.text()) ?? null;
+			} catch (err) {
+				console.log(`Error reading raw text: ${err} - ${readme_response.status} ${readme_response.statusText}`);
+				throw err;
+			}
+		}
+
 		// perform db upsert
 		const new_project = await db.insert(project).values(data).onConflictDoUpdate({ target: [project.owner_id, project.project_id], set: data }).returning();
 
 		if (new_project.length != 1) throw new Error(`Project upsert returned incorrect rows (${new_project.length}`);
+
 		// return the project data
 		return new Response(JSON.stringify(new_project[0]));
 	} catch (err) {
