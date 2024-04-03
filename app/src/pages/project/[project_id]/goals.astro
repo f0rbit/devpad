@@ -1,0 +1,13 @@
+---
+import Layout from "../../../layouts/Layout.astro"
+import { getProject } from "../../../server/projects"
+
+const { project_id } = Astro.params;
+---
+
+<Layout title={"Project Goals"}>
+	<main>
+	<h2>under development</h2>
+	<a href={`/project/${project_id}`}>back</a>
+	</main>
+</Layout>
