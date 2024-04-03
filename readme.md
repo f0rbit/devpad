@@ -17,5 +17,5 @@ This project is a set of tools for development and project management. Originall
     - API for exporting to external data sources
 
 ## Design Goals
-Hyper-minimalist user interface. If something is there, it needs a clear purpose, otherwise it's clutter an uneccesary.
+Hyper-minimalist user interface. If something is there, it needs a clear purpose, otherwise it's clutter and unneccesary.
 This will also help new users, as the interface shouldn't be overwhelming. And I think it has a nice artistic taste and fulfills a niche within the digital ocean.
