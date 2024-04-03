@@ -13,7 +13,7 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 <Layout title={`Project - ${project_id}`}>
 	{error ? <p>Error: {error}</p> : (
 	<main>
-		<h2>Settings</h2>
+		<h2>settings</h2>
 		<ProjectSettings project={project} back={`/project/${project_id}`} />
 		</main>
 	)}
