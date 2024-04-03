@@ -4,7 +4,8 @@ import { getUserProjects } from '../../server/projects';
 const user = Astro.locals.user;
 
 const projects = user ? await getUserProjects(user.id) : [];
-const codebases = projects.map((p) => p.project_id);
+const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
+const deleted = projects.filter((p) => p.visibility == "DELETED");
 ---
 
 <Layout title="Project Manager">
@@ -17,6 +18,11 @@ const codebases = projects.map((p) => p.project_id);
 		</section>
 		<br />
 		<a href="/project/create">+ add</a>
+		{deleted.length > 0 ? <details><summary>{deleted.length} deleted projects</summary>{deleted.map((p) => (
+		<div>
+			<span>{p.project_id} - </span><span><a href='#'>restore</a></span>
+		</div>
+		))}</details> : <></>}
 		</>)
 	: (<>
 		<p>You must be logged in</p>
