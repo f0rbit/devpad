@@ -11,7 +11,7 @@ export default defineConfig({
 	vite: {
 		build: {
 			rollupOptions: {
-				external: ["bun", "bun:*"],
+				external: ["bun", "bun:sqlite"],
 			}
 		}
 	}
