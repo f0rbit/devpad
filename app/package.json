@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@astrojs/check": "^0.5.10",
-    "@astrojs/cloudflare": "^10.0.1",
+    "@astrojs/node": "^8.2.5",
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@types/bun": "^1.0.12",
     "arctic": "^1.5.0",
