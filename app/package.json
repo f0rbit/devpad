@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
-    "start": "bun dist/server/entry.mjs",
-    "build": "astro check && astro build && bun database/migrate.ts",
+    "start": "DATABASE_FILE=/data bun dist/server/entry.mjs",
+    "build": "astro check && astro build && DATABASE_FILE=/data bun database/migrate.ts",
     "preview": "astro preview",
     "astro": "astro"
   },
