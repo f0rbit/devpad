@@ -28,6 +28,7 @@ export async function GET(context: APIContext): Promise<Response> {
 		const githubUser: GitHubUser = await githubUserResponse.json();
 
 		const existingUser = await db.select().from(user).where(eq(user.github_id, githubUser.id));
+
 		// Replace this with your own DB client
 
 		if (existingUser && existingUser[0]) {

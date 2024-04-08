@@ -6,14 +6,14 @@ const { project_id } = Astro.params;
 
 const user = Astro.locals.user;
 
-const { project, error } = await getProject(user?.id ?? null, project_id);
+const { project } = await getProject(user?.id ?? null, project_id);
 ---
 
 <Layout title={`Project Specification - ${project_id}`}>
 	<main>
 		<h2>specification</h2>
 
-		<p>{project.specification}</p>
+		<p>{project?.specification}</p>
 
 		<a href={`/project/${project_id}`}>back</a>
 	</main>

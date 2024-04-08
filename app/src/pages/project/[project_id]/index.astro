@@ -11,25 +11,24 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 ---
 
 <Layout title={`Project - ${project_id}`}>
-{error ? <p>Error: {error}</p> : (
+{error ? <p>Error: {error}</p> : 
 	<main>
-	<h2>{project_id}</h2>
-
-	<section>
-		<nav>
-			<a href={`/project/${project_id}`}>overview</a>
-			<a href={`/project/${project_id}/settings`}>settings</a>
-			<a href={`/project/${project_id}/specification`}>specification</a>
-			<a href={`/project/${project_id}/goals`}>goals</a>
-		</nav>
-		<p>{project!.description}</p>
-		{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
-		<p><span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></p>
-	</section>
-	<br />
-	<a href="/project">back</a>
+		<h2>{project_id}</h2>
+		<section>
+			<nav>
+				<a href={`/project/${project_id}`}>overview</a>
+				<a href={`/project/${project_id}/settings`}>settings</a>
+				<a href={`/project/${project_id}/specification`}>specification</a>
+				<a href={`/project/${project_id}/goals`}>goals</a>
+			</nav>
+			<p>{project!.description}</p>
+			{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
+			<p><span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></p>
+		</section>
+		<br />
+		<a href="/project">back</a>
 	</main>
-)}
+}
 </Layout>
 
 

@@ -2,6 +2,7 @@
 import ProjectSettings from "../../../components/ProjectSettings.astro";
 import Layout from "../../../layouts/Layout.astro";
 import { getProject } from "../../../server/projects";
+import type { UpsertProject } from "../../../server/types";
 
 const { project_id } = Astro.params;
 
@@ -14,7 +15,7 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 	{error ? <p>Error: {error}</p> : (
 	<main>
 		<h2>settings</h2>
-		<ProjectSettings project={project} back={`/project/${project_id}`} />
+		<ProjectSettings project={project as UpsertProject} back={`/project/${project_id}`} />
 		</main>
 	)}
 </Layout>
@@ -25,4 +26,4 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 		flex-direction: column;
 		gap: 2px;
 	}
-</style>
+
