@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "bunx --bun astro dev",
     "start": "bun dist/server/entry.mjs",
 		"migrate": "bun database/migrate.ts",
     "build": "astro check && astro build",
