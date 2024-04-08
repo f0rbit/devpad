@@ -1,5 +1,5 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import PageLayout from '../../layouts/PageLayout.astro';
 const codebases = ["forbit-astro", "dev-blog", "devpad", "media-timeline"];
 const tasks = [
 	{ title: "redesign devpad", due: "in 2 hours", project: "devpad", priority: "urgent" },
@@ -8,7 +8,7 @@ const tasks = [
 ];
 ---
 
-<Layout title="Welcome to Astro.">
+<PageLayout title="Welcome to Astro.">
 	<main>
 			<h1>todo tracker</h1>
 		<section>
@@ -25,7 +25,7 @@ const tasks = [
 			</ul>
 		</section>
 	</main>
-</Layout>
+</PageLayout>
 
 
 <style>

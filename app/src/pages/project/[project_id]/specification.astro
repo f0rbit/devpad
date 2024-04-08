@@ -1,5 +1,5 @@
 ---
-import Layout from "../../../layouts/Layout.astro"
+import PageLayout from "../../../layouts/PageLayout.astro"
 import { getProject } from "../../../server/projects"
 
 const { project_id } = Astro.params;
@@ -9,7 +9,7 @@ const user = Astro.locals.user;
 const { project } = await getProject(user?.id ?? null, project_id);
 ---
 
-<Layout title={`Project Specification - ${project_id}`}>
+<PageLayout title={`Project Specification - ${project_id}`}>
 	<main>
 		<h2>specification</h2>
 
@@ -17,4 +17,4 @@ const { project } = await getProject(user?.id ?? null, project_id);
 
 		<a href={`/project/${project_id}`}>back</a>
 	</main>
-</Layout>
+</PageLayout>

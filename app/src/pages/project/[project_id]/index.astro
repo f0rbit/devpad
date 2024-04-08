@@ -1,6 +1,6 @@
 ---
-import Layout from "../../../layouts/Layout.astro";
 import { getProject } from "../../../server/projects";
+import PageLayout from "../../../layouts/PageLayout.astro";
 
 const { project_id } = Astro.params;
 
@@ -10,7 +10,7 @@ const user = Astro.locals.user;
 const { project, error } = await getProject(user?.id ?? null, project_id);
 ---
 
-<Layout title={`Project - ${project_id}`}>
+<PageLayout title={`Project - ${project_id}`}>
 {error ? <p>Error: {error}</p> : 
 	<main>
 		<h2>{project_id}</h2>
@@ -29,7 +29,7 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 		<a href="/project">back</a>
 	</main>
 }
-</Layout>
+</PageLayout>
 
 
 <style>

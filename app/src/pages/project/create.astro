@@ -1,6 +1,6 @@
 ---
 import ProjectSettings from "../../components/ProjectSettings.astro";
-import Layout from "../../layouts/Layout.astro";
+import PageLayout from "../../layouts/PageLayout.astro";
 
 const session = Astro.locals.session;
 
@@ -9,7 +9,7 @@ const repos = await fetch("https://api.github.com/user/repos?sort=updated&per_pa
 const repos_result = await repos.json();
 ---
 
-<Layout title="Create Project">
+<PageLayout title="Create Project">
 	<main>
 		<h1>create project</h1>
 		<h3>import project</h3>
@@ -23,7 +23,7 @@ const repos_result = await repos.json();
 	<datalist id='repo-list'>
 		{repos_result.map((r: any) => <option value={r.name}></option>)}	
 	</datalist>
-</Layout>
+</PageLayout>
 
 <script define:vars={{ repos_result }}>
 
