@@ -1,0 +1,17 @@
+---
+import PageLayout from "../layouts/PageLayout.astro"
+const user = Astro.locals.user
+---
+
+{user ? (
+	<PageLayout title="Welcome back!">
+		<h1>Welcome back, {user.name}!</h1>
+		<p>Here's your dashboard...</p>
+		<pre>{JSON.stringify(user, null, 2)}</pre>
+	</PageLayout>
+) : (
+	<PageLayout title="Welcome!">
+		<h1>Welcome!</h1>
+		<p>Sign in to access your dashboard...</p>
+	</PageLayout>
+)}
