@@ -15,8 +15,12 @@ const repos_result = await repos.json();
 		<h3>import project</h3>
 			<input id='project-importer' type="text" list="repo-list" />
 			<a id='importer-clear' href="#">clear</a>
-		<h3>--- or ---</h3>
-		<ProjectSettings project={null} back={"/project"} />
+		<br />
+		<br />
+		<h3>settings</h3>
+		<div style="max-width: 50vw"> 
+			<ProjectSettings project={null} back={"/project"} />
+		</div>
 		<br />
 	</main>
 
