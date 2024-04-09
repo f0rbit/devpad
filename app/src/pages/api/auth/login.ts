@@ -4,7 +4,7 @@ import { github } from "../../../server/github";
 
 export async function GET(context: APIContext): Promise<Response> {
 	const state = generateState();
-	const url = await github.createAuthorizationURL(state, { scopes: ["repo"] });
+	const url = await github.createAuthorizationURL(state, { scopes: ["repo", "contents:read"] });
 
 	context.cookies.set("github_oauth_state", state, {
 		path: "/",
