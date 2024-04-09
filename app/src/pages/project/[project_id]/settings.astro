@@ -15,7 +15,9 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 	{error ? <p>Error: {error}</p> : (
 	<main>
 		<h2>settings</h2>
-		<ProjectSettings project={project as UpsertProject} back={`/project/${project_id}`} />
+		<div style="max-width: 50vw">
+			<ProjectSettings project={project as UpsertProject} back={`/project/${project_id}`} />
+		</div>
 		</main>
 	)}
 </PageLayout>
@@ -26,4 +28,5 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 		flex-direction: column;
 		gap: 2px;
 	}
+</style>
 
