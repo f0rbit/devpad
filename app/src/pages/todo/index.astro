@@ -1,11 +1,15 @@
 ---
 import PageLayout from '../../layouts/PageLayout.astro';
-const codebases = ["forbit-astro", "dev-blog", "devpad", "media-timeline"];
+import { getUserProjects } from '../../server/projects';
 const tasks = [
 	{ title: "redesign devpad", due: "in 2 hours", project: "devpad", priority: "urgent" },
 	{ title: "add likes", due: "in 21 hours", project: "dev-blog", priority: "normal" },
 	{ title: "implement twitter API", due: "in 2 days", project: "media-timeline", priority: "normal" }
 ];
+
+const user = Astro.locals.user;
+const projects = user ? await getUserProjects(user.id) : [];
+const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
 ---
 
 <PageLayout title="Welcome to Astro.">
