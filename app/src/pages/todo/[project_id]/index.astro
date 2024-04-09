@@ -1,0 +1,41 @@
+---
+import { getProject } from "../../../server/projects";
+import PageLayout from "../../../layouts/PageLayout.astro";
+
+const { project_id } = Astro.params;
+const user = Astro.locals.user;
+
+const { project, error } = await getProject(user?.id ?? null, project_id);
+---
+
+<PageLayout title={`Codebase - ${project_id}`}>
+{error ? <p>Error: {error}</p> :
+	<main>
+		<h2>{project.name}</h2>
+		<button style="width: 50px">Scan</button>
+		<br />
+		<br />
+		<p>Output: </p>
+		<pre id='output'>0</pre>
+	</main>
+	}
+</PageLayout>
+
+<style>
+main {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+</style>
+
+<script define:vars={{ project_id }}>
+document.querySelector('button').addEventListener('click', async () => {
+	const response = await fetch(`/api/todo/scan?project_id=${project_id}`, { method: "POST" });
+	if (!response.ok) {
+		document.getElementById('output').innerText = 'Error: ' + response.statusText;
+	}
+	const data = await response.text();
+	document.getElementById('output').innerText = data;
+});
+</script>
