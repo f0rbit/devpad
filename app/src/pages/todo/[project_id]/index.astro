@@ -12,7 +12,8 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 {error ? <p>Error: {error}</p> :
 	<main>
 		<h2>{project?.name}</h2>
-		<button style="width: 50px">Scan</button>
+		<button class='scan' style="width: 50px">Scan</button>
+		<button class='test' style="width: 50px">Test</button>
 		<br />
 		<br />
 		<p>Output: </p>
@@ -30,12 +31,29 @@ main {
 </style>
 
 <script define:vars={{ project_id }}>
-document.querySelector('button').addEventListener('click', async () => {
+const output = document.getElementById("output");
+if (!output) throw new Error("Output element not found");
+document.querySelector('button.scan')?.addEventListener('click', async () => {
 	const response = await fetch(`/api/todo/scan?project_id=${project_id}`, { method: "POST" });
 	if (!response.ok) {
-		document.getElementById('output').innerText = 'Error: ' + response.statusText;
+		output.innerText = 'Error: ' + response.statusText;
 	}
 	const data = await response.text();
-	document.getElementById('output').innerText = data;
+	output.innerText = data;
+});
+
+document.querySelector('button.test')?.addEventListener('click', async () => {
+	const response = await fetch(`/api/todo/test`, { method: "POST" });
+	if (!response.ok) {
+		output.innerText = 'Error: ' + response.statusText;
+	}
+	const reader = response.body.getReader();
+
+output.innerText = '';
+while (true) {
+  const {value, done} = await reader.read();
+  if (done) break;
+	output.innerText += String.fromCharCode(...value);
+}
 });
 </script>
