@@ -70,6 +70,15 @@ export async function POST(context: APIContext) {
 	// await $`unzip ${repo_path} -d ${unzipped_path}`
 	// call ^ using child_process 
 	child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
+	const config_path = "../todo-config.json"; // TODO: grab this from user config from 1. project config, 2. user config, 3. default config
+
+	// generate the todo-tracker parse
+	child_process.execSync("../todo-tracker parse " + unzipped_path + " " + config_path + " > " + unzipped_path + "/new-output.json");
+
+	// for now, lets return response of the new-output.json file
+	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
+
+	return new Response(output_file, { status: 200 });
 
 	return new Response(`cloned repo to ${unzipped_path}`, { status: 200 });
 }
