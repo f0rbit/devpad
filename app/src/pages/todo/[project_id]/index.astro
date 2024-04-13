@@ -40,12 +40,24 @@ document.querySelector('button.scan')?.addEventListener('click', async () => {
 	}
 	output.innerText = '';
 	const reader = response.body.getReader();
-	// TODO: we want to create a new stream and write each line split by \n from the response.
 
-	while (true) {
-		const {value, done} = await reader.read();
-		if (done) break;
-		output.innerText = String.fromCharCode(...value);
+	const read_data = async function* () {
+		let done = false;
+		while (!done) {
+			const { done: d, value: v } = await reader.read();
+			done = d;
+			const value = new TextDecoder().decode(v);
+			const lines = value.split('\n');
+			for (const line of lines) {
+				if (line.length > 1) yield line;
+			}
+		}
 	}
+
+	for await (const line of read_data()) {
+		output.innerText = line;
+		await new Promise(resolve => setTimeout(resolve, 100));
+	}
+	
 });
 </script>

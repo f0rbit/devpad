@@ -76,7 +76,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 		yield "error fetching repo from github\n";
 		return;
 	}
-
+	yield "loading repo into memory\n";
 	const zip = await clone.arrayBuffer();
 
 	const repo_path = `/tmp/${folder_id}.zip`;
@@ -95,7 +95,8 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	// generate the todo-tracker parse
 	yield "scanning repo\n";
 	child_process.execSync("../todo-tracker parse " + unzipped_path + " " + config_path + " > " + unzipped_path + "/new-output.json");
-
+	
+	yield "saving output\n"
 	// for now, lets return response of the new-output.json file
 	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
 	yield "done\n";
