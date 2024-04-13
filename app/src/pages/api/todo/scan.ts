@@ -31,7 +31,7 @@ export async function POST(context: APIContext) {
 
 	// now we want to invoke some more complex behaviour.
 	// using the access_token from the session we want to clone the repo and then scan it using ../todo-tracker binary
-	
+
 	const access_token = context.locals.session?.access_token;
 
 	if (!access_token) {
@@ -44,41 +44,61 @@ export async function POST(context: APIContext) {
 		return new Response("project isn't linked to a repo", { status: 400 });
 	}
 
+	const repo_url = project_data.repo_url;
+	if (!repo_url) {
+		return new Response("no repo url", { status: 400 });
+	}
+
+	return new Response(new ReadableStream({
+		async start(controller) {
+			for await (const chunk of scan_repo(repo_url, access_token, folder_id)) {
+				controller.enqueue(chunk);
+			}
+			controller.close();
+		},
+	}), { status: 200 });
+}
+
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string) {
+	yield "";
+	yield "starting\n";
 	// we need to get OWNER and REPO from the repo_url
-	const slices = project_data.repo_url.split("/");
+	const slices = repo_url.split("/");
 	const repo = slices.at(-1);
 	const owner = slices.at(-2);
 
-	console.log({ access_token, repo, owner });
 
+	yield "cloning repo\n";
 	// clone the repo into a temp folder
 	const clone = await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball`, { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
-	console.log("cloning response", { status: clone.status, text: clone.statusText });
+
 	if (!clone.ok) {
-		return new Response("error fetching repo from github", { status: 500 });
+		yield "error fetching repo from github\n";
+		return;
 	}
 
 	const zip = await clone.arrayBuffer();
 
 	const repo_path = `/tmp/${folder_id}.zip`;
-
+	yield "writing repo to disk\n";
 	await Bun.write(repo_path, zip);
-	
+
 	const unzipped_path = `/tmp/${folder_id}`;
 
 	// call shell 'unzip'
 	// await $`unzip ${repo_path} -d ${unzipped_path}`
 	// call ^ using child_process 
+	yield "decompressing repo\n";
 	child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
 	const config_path = "../todo-config.json"; // TODO: grab this from user config from 1. project config, 2. user config, 3. default config
 
 	// generate the todo-tracker parse
+	yield "scanning repo\n";
 	child_process.execSync("../todo-tracker parse " + unzipped_path + " " + config_path + " > " + unzipped_path + "/new-output.json");
 
 	// for now, lets return response of the new-output.json file
 	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
-
-	return new Response(output_file, { status: 200 });
-
-	return new Response(`cloned repo to ${unzipped_path}`, { status: 200 });
+	yield "done\n";
+	return;
 }
+

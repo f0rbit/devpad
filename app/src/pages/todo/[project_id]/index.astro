@@ -13,7 +13,6 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 	<main>
 		<h2>{project?.name}</h2>
 		<button class='scan' style="width: 50px">Scan</button>
-		<button class='test' style="width: 50px">Test</button>
 		<br />
 		<br />
 		<p>Output: </p>
@@ -31,6 +30,7 @@ main {
 </style>
 
 <script define:vars={{ project_id }}>
+
 const output = document.getElementById("output");
 if (!output) throw new Error("Output element not found");
 document.querySelector('button.scan')?.addEventListener('click', async () => {
@@ -38,22 +38,14 @@ document.querySelector('button.scan')?.addEventListener('click', async () => {
 	if (!response.ok) {
 		output.innerText = 'Error: ' + response.statusText;
 	}
-	const data = await response.text();
-	output.innerText = data;
-});
-
-document.querySelector('button.test')?.addEventListener('click', async () => {
-	const response = await fetch(`/api/todo/test`, { method: "POST" });
-	if (!response.ok) {
-		output.innerText = 'Error: ' + response.statusText;
-	}
+	output.innerText = '';
 	const reader = response.body.getReader();
+	// TODO: we want to create a new stream and write each line split by \n from the response.
 
-output.innerText = '';
-while (true) {
-  const {value, done} = await reader.read();
-  if (done) break;
-	output.innerText += String.fromCharCode(...value);
-}
+	while (true) {
+		const {value, done} = await reader.read();
+		if (done) break;
+		output.innerText = String.fromCharCode(...value);
+	}
 });
 </script>
