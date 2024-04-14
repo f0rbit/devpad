@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { db } from "../../../../database/db";
 import { and, eq } from "drizzle-orm";
-import { project } from "../../../../database/schema";
+import { project, tracker_result } from "../../../../database/schema";
 import child_process from "child_process";
 
 
@@ -51,7 +51,7 @@ export async function POST(context: APIContext) {
 
 	return new Response(new ReadableStream({
 		async start(controller) {
-			for await (const chunk of scan_repo(repo_url, access_token, folder_id)) {
+			for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id)) {
 				controller.enqueue(chunk);
 			}
 			controller.close();
@@ -59,7 +59,7 @@ export async function POST(context: APIContext) {
 	}), { status: 200 });
 }
 
-async function* scan_repo(repo_url: string, access_token: string, folder_id: string) {
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string) {
 	yield "";
 	yield "starting\n";
 	// we need to get OWNER and REPO from the repo_url
@@ -99,6 +99,14 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	yield "saving output\n"
 	// for now, lets return response of the new-output.json file
 	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
+
+	yield "saving scan\n";
+
+	await db.insert(tracker_result).values({
+		project_id: project_id,
+		data: output_file,
+	});
+
 	yield "done\n";
 	return;
 }
