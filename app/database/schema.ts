@@ -123,3 +123,10 @@ export const action = sqliteTable("action", {
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
+
+export const tracker_result = sqliteTable("tracker-result", {
+	id: integer("id").primaryKey({ autoIncrement: true }),
+	project_id: text("project_id").notNull().references(() => project.project_id),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	data: text("data", { mode: "json" }).notNull(),
+});
