@@ -119,6 +119,23 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	yield "finding existing scan\n";
 	const new_id = new_tracker[0].id;
 	const old_id = await db.select().from(tracker_result).where(and(and(eq(tracker_result.project_id, project_id), eq(tracker_result.user_id, user_id)), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
+	
+	var old_data = [];
+	if (old_id.length == 1 && old_id[0].data) {
+		old_data = JSON.parse(old_id[0].data as string);
+	}
+
+	// write old data to old-output.json
+	yield "writing old data\n";
+	await Bun.write(unzipped_path + "/old-output.json", JSON.stringify(old_data));
+
+	// run diff script and write to diff-output.json
+	yield "running diff\n";
+	child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json`);
+
+	// read diff-output.json
+	yield "reading diff\n";
+	const diff = await Bun.file(unzipped_path + "/diff-output.json").text();
 
 	yield "saving update\n";
 	await db.insert(todo_updates).values({
@@ -126,6 +143,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 		user_id: user_id,
 		new_id: new_id,
 		old_id: old_id[0]?.id ?? null,
+		data: diff,
 	}).returning();
 
 
