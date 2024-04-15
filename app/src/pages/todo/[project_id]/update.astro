@@ -5,7 +5,7 @@ import { getProject, getRecentUpdate } from "../../../server/projects.ts";
 const { project_id } = Astro.params;
 const user = Astro.locals.user;
 
-const project = (await getProject(user?.id ?? null, project_id)) ?? null;
+const { project, _ } = (await getProject(user?.id ?? null, project_id)) ?? null;
 
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
@@ -13,7 +13,5 @@ const update = await getRecentUpdate(project);
 ---
 
 <TodoLayout title={`Codebase - ${project_id} - Update`}>
-<pre>
-	{JSON.stringify(update, null, 2)}
-</pre>
+<pre>{JSON.stringify(update, null, 2)}</pre>
 </TodoLayout>
