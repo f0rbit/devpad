@@ -33,7 +33,7 @@ export async function getRecentUpdate(project: any) {
 	}
 
 	// get the most recent entry from todo_updates table
-	const updates = await db.select().from(todo_updates).where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.user_id, user_id))).orderBy(desc(todo_updates.created_at)).limit(1);
+	const updates = await db.select().from(todo_updates).where(and(and(eq(todo_updates.project_id, project_id), eq(todo_updates.user_id, user_id)), eq(todo_updates.status, "PENDING"))).orderBy(desc(todo_updates.created_at)).limit(1);
 
 	if (!updates || !updates[0]) {
 		if (DEBUG_THIS) console.error("No updates found");
