@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1711451397637,
-      "tag": "0000_classy_enchantress",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1711696995689,
-      "tag": "0001_dry_komodo",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1711970243849,
-      "tag": "0002_acoustic_the_watchers",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1712053406449,
-      "tag": "0003_square_mister_fear",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1713096872706,
-      "tag": "0004_glamorous_satana",
+      "when": 1713172891008,
+      "tag": "0000_puzzling_taskmaster",
       "breakpoints": true
     }
   ]

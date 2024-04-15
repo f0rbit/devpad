@@ -1,1 +1,0 @@
-ALTER TABLE project ADD `repo_id` integer;

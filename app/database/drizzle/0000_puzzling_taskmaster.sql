@@ -23,6 +23,7 @@ CREATE TABLE `project` (
 	`description` text,
 	`specification` text,
 	`repo_url` text,
+	`repo_id` integer,
 	`icon_url` text,
 	`status` text DEFAULT 'DEVELOPMENT' NOT NULL,
 	`deleted` integer,
@@ -46,6 +47,14 @@ CREATE TABLE `project_goal` (
 	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `session` (
+	`id` text PRIMARY KEY NOT NULL,
+	`user_id` text NOT NULL,
+	`expires_at` integer NOT NULL,
+	`access_token` text,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `task` (
 	`id` text NOT NULL,
 	`title` text NOT NULL,
@@ -61,7 +70,7 @@ CREATE TABLE `task` (
 --> statement-breakpoint
 CREATE TABLE `task_module` (
 	`task_id` text NOT NULL,
-	`string` text NOT NULL,
+	`type` text NOT NULL,
 	`data` text DEFAULT '{}' NOT NULL,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP),
 	FOREIGN KEY (`task_id`) REFERENCES `task`(`id`) ON UPDATE no action ON DELETE no action
@@ -82,8 +91,33 @@ CREATE TABLE `task_to_tags` (
 	FOREIGN KEY (`tag_id`) REFERENCES `task_tag`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `todo_updates` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`project_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`old_id` integer,
+	`new_id` integer NOT NULL,
+	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`old_id`) REFERENCES `tracker_result`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`new_id`) REFERENCES `tracker_result`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
+CREATE TABLE `tracker_result` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`project_id` text NOT NULL,
+	`user_id` text NOT NULL,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`data` text NOT NULL,
+	`accepted` integer DEFAULT false NOT NULL,
+	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+);
+--> statement-breakpoint
 CREATE TABLE `user` (
 	`id` text PRIMARY KEY NOT NULL,
+	`github_id` integer,
 	`name` text,
 	`email` text,
 	`email_verified` text,
@@ -91,6 +125,6 @@ CREATE TABLE `user` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `project_owner_id_project_id_unique` ON `project` (`owner_id`,`project_id`);--> statement-breakpoint
-CREATE UNIQUE INDEX `task_module_task_id_string_unique` ON `task_module` (`task_id`,`string`);--> statement-breakpoint
+CREATE UNIQUE INDEX `task_module_task_id_type_unique` ON `task_module` (`task_id`,`type`);--> statement-breakpoint
 CREATE UNIQUE INDEX `task_to_tags_task_id_tag_id_unique` ON `task_to_tags` (`task_id`,`tag_id`);--> statement-breakpoint
 CREATE UNIQUE INDEX `user_email_unique` ON `user` (`email`);
