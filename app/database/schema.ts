@@ -129,4 +129,22 @@ export const tracker_result = sqliteTable("tracker-result", {
 	project_id: text("project_id").notNull().references(() => project.project_id),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	data: text("data", { mode: "json" }).notNull(),
+	accepted: integer("accepted", { mode: "boolean" }).notNull().default(false),
 });
+
+export const todo_updates = sqliteTable("todo_updates", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+	project_id: text("project_id").notNull().references(() => project.project_id),
+	user_id: text("user_id").notNull().references(() => user.id),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	old_id: integer("old_id").references(() => tracker_result.id),
+	new_id: integer("new_id").notNull().references(() => tracker_result.id),
+}, (table) => ({
+	todo_updates_unique: unique().on(table.old_id, table.new_id),
+}));
+
+export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
+	old: one(tracker_result, { fields: [todo_updates.old_id], references: [tracker_result.id] }),
+	new: one(tracker_result, { fields: [todo_updates.new_id], references: [tracker_result.id] })
+}));
+
