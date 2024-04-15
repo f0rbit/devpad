@@ -1,5 +1,5 @@
 import { db } from "../../database/db";
-import { project, todo_updates } from "../../database/schema";
+import { project, todo_updates, tracker_result } from "../../database/schema";
 import { and, desc, eq } from "drizzle-orm";
 
 export async function getUserProjects(user_id: string) {
@@ -21,14 +21,24 @@ export async function getProject(user_id: string | null, project_id: string | un
 }
 
 export async function getRecentUpdate(project: any) {
-	const { user_id, project_id }: { user_id: string, project_id: string } = project;
-	if (!user_id) return null;
-	if (!project_id) return null;
+	const DEBUG_THIS = true;
+	const { owner_id: user_id, project_id }: { owner_id: string, project_id: string } = project;
+	if (!user_id) {
+		if (DEBUG_THIS) console.error("No owner_id ID");
+		return null;
+	}
+	if (!project_id) {
+		if (DEBUG_THIS) console.error("No project ID");
+		return null;
+	}
 
 	// get the most recent entry from todo_updates table
 	const updates = await db.select().from(todo_updates).where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.user_id, user_id))).orderBy(desc(todo_updates.created_at)).limit(1);
 
-	if (!updates || !updates[0]) return null;
+	if (!updates || !updates[0]) {
+		if (DEBUG_THIS) console.error("No updates found");
+		return null;
+	}
 
 	const update = updates[0] as any;
 	update.old_data = null;
@@ -36,11 +46,11 @@ export async function getRecentUpdate(project: any) {
 
 	// we need to append old and new data if they exist
 	if (update.old_id) {
-		const old = await db.select().from(todo_updates).where(eq(todo_updates.id, update.old_id));
+		const old = await db.select().from(tracker_result).where(eq(tracker_result.id, update.old_id));
 		if (old && old[0]) update.old_data = old[0];
 	}
 	if (update.new_id) {
-		const new_ = await db.select().from(todo_updates).where(eq(todo_updates.id, update.new_id));
+		const new_ = await db.select().from(tracker_result).where(eq(tracker_result.id, update.new_id));
 		if (new_ && new_[0]) update.new_data = new_[0];
 	}
 
