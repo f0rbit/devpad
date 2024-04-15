@@ -98,6 +98,8 @@ CREATE TABLE `todo_updates` (
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`old_id` integer,
 	`new_id` integer NOT NULL,
+	`data` text NOT NULL,
+	`accepted` integer DEFAULT false NOT NULL,
 	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`old_id`) REFERENCES `tracker_result`(`id`) ON UPDATE no action ON DELETE no action,

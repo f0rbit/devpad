@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "3ed3fac8-9e48-4296-a37d-aa504c6cef79",
-  "prevId": "f1792601-d8ef-4a9b-a454-d82cce920723",
+  "id": "fed41d1c-c6c0-4c48-bb58-09af384d3a6d",
+  "prevId": "021f43ad-049a-46cb-a163-25aa942e79c5",
   "tables": {
     "action": {
       "name": "action",
@@ -704,8 +704,16 @@
           "name": "data",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'PENDING'"
         }
       },
       "indexes": {},
