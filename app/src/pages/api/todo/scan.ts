@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { db } from "../../../../database/db";
-import { and, eq } from "drizzle-orm";
-import { project, tracker_result } from "../../../../database/schema";
+import { and, desc, eq } from "drizzle-orm";
+import { project, todo_updates, tracker_result } from "../../../../database/schema";
 import child_process from "child_process";
 
 
@@ -51,7 +51,7 @@ export async function POST(context: APIContext) {
 
 	return new Response(new ReadableStream({
 		async start(controller) {
-			for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id)) {
+			for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id, user_id)) {
 				controller.enqueue(chunk);
 			}
 			controller.close();
@@ -59,7 +59,7 @@ export async function POST(context: APIContext) {
 	}), { status: 200 });
 }
 
-async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string) {
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string, user_id: string) {
 	yield "";
 	yield "starting\n";
 	// we need to get OWNER and REPO from the repo_url
@@ -102,10 +102,32 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 
 	yield "saving scan\n";
 
-	await db.insert(tracker_result).values({
+	const new_tracker = await db.insert(tracker_result).values({
 		project_id: project_id,
+		user_id: user_id,
 		data: output_file,
-	});
+	}).returning();
+
+	if (new_tracker.length != 1) {
+		yield "error saving scan\n";
+		return;
+	}
+
+	// then we want to create a todo_update record
+	// for new_id we use the id of the new insert ^^
+	// and for old_id we want to the most recent tracker_result with 'accepted' as true
+	yield "finding existing scan\n";
+	const new_id = new_tracker[0].id;
+	const old_id = await db.select().from(tracker_result).where(and(and(eq(tracker_result.project_id, project_id), eq(tracker_result.user_id, user_id)), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
+
+	yield "saving update\n";
+	await db.insert(todo_updates).values({
+		project_id: project_id,
+		user_id: user_id,
+		new_id: new_id,
+		old_id: old_id[0]?.id ?? null,
+	}).returning();
+
 
 	yield "done\n";
 	return;
