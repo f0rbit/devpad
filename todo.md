@@ -3,9 +3,9 @@
     - [x] Explore
     - [ ] Api docs
     - [x] Login
-- [ ] Project Manager
+- [x] Project Manager
     - [x] View all projects
-    - [ ] Sub-project pages
+    - [x] Sub-project pages
 - [ ] Todo Tracker
     - [x] Add codebase
     - [ ] View tasks
@@ -36,6 +36,6 @@
 - [ ] Project management
     - [ ] Move projects over from old devpad to new
     - [ ] Add API token support
-- [ ] Integrate todo-tracker
-    - [ ] Use Go binary
-    - [ ] Build system to clone github repo & run command
+- [x] Integrate todo-tracker
+    - [x] Use Go binary
+    - [x] Build system to clone github repo & run command
