@@ -140,6 +140,7 @@ export const todo_updates = sqliteTable("todo_updates", {
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	old_id: integer("old_id").references(() => tracker_result.id),
 	new_id: integer("new_id").notNull().references(() => tracker_result.id),
+	data: text("data", { mode: "json" }),
 });
 
 export const update_tracker_relations = relations(todo_updates, ({ one }) => ({

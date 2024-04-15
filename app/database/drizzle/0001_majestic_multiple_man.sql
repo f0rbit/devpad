@@ -1,0 +1,1 @@
+ALTER TABLE todo_updates ADD `data` text;
