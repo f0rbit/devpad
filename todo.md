@@ -7,7 +7,7 @@
     - [x] View all projects
     - [ ] Sub-project pages
 - [ ] Todo Tracker
-    - [ ] Add codebase
+    - [x] Add codebase
     - [ ] View tasks
         - [ ] View all
         - [ ] By priority

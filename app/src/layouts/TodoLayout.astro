@@ -1,0 +1,51 @@
+---
+import { getProject } from "../server/projects";
+import PageLayout from "./PageLayout.astro";
+
+interface Props {
+	title: string;
+}
+
+const { project_id } = Astro.params;
+const { title } = Astro.props;
+const user = Astro.locals.user;
+
+const sub_pages = [
+	{ name: "info", href: "/" },
+	{ name: "update", href: "/update" },
+	{ name: "config", href: "/config" },
+	{ name: "tasks", href: "/tasks" },
+];
+
+const { project, error } = (await getProject(user?.id ?? null, project_id)) ?? null;
+---
+
+<PageLayout title={title}>
+	{
+		error ? (
+			<section id="error">
+				<p>Couldn't find project with id {project_id}</p>
+			</section>
+		) : (
+			<main>
+				<h2>{project?.name}</h2>
+				<nav>
+					{sub_pages.map(({ name, href }) => (
+						<a href={`/todo/${project_id}${href}`}>{name}</a>
+					))}
+				</nav>
+				<br />
+				<section id="content">
+					<slot />
+				</section>
+			</main>
+		)
+	}
+</PageLayout>
+
+<style>
+	nav {
+		display: flex;
+		gap: 5px;
+	}
+</style>
