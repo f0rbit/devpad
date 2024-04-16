@@ -19,7 +19,7 @@ const { project, error } = await getProject(user?.id ?? null, project_id);
 				<a href={`/project/${project_id}`}>overview</a>
 				<a href={`/project/${project_id}/settings`}>settings</a>
 				<a href={`/project/${project_id}/specification`}>specification</a>
-				<a href={`/project/${project_id}/goals`}>goals</a>
+				<a href={`/project/${project_id}/tasks`}>tasks</a>
 			</nav>
 			<p>{project!.description}</p>
 			{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}

@@ -1,9 +1,9 @@
 ---
 import { eq } from "drizzle-orm";
-import { db } from "../../../../database/db";
-import { todo_updates } from "../../../../database/schema";
-import TodoLayout from "../../../layouts/TodoLayout.astro";
-import { getProject, getRecentUpdate } from "../../../server/projects.ts";
+import { db } from "../../../../../database/db";
+import { todo_updates } from "../../../../../database/schema";
+import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
+import PageLayout from "../../../../layouts/PageLayout.astro";
 
 const { project_id } = Astro.params;
 const user = Astro.locals.user;
@@ -28,7 +28,13 @@ const updates = project_uuid
 const update_id = update?.id ?? null;
 ---
 
-<TodoLayout title={`Codebase - ${project_id} - Update`}>
+<PageLayout title={`Codebase - ${project_id} - Update`}>
+	<h2>tasks</h2>
+		<a href={`/project/${project_id}`}>back</a>
+		<a href={`/project/${project_id}/tasks`}>tasks</a>
+		<a href={`/project/${project_id}/tasks/update`}>update</a>
+		<a href={`/project/${project_id}/tasks/config`}>config</a>
+		<br />
 	<pre>{update?.data}</pre>
 	<a href="#" id="approve">Approve</a>
 	<a href="#" id="reject">Reject</a>
@@ -55,4 +61,4 @@ const update_id = update?.id ?? null;
 			location.reload();
 		});
 	</script>
-</TodoLayout>
+</PageLayout>

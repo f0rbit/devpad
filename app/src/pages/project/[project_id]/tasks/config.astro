@@ -1,0 +1,12 @@
+---
+import PageLayout from "../../../../layouts/PageLayout.astro"
+
+const { project_id } = Astro.params;
+---
+
+<PageLayout title={"Project Config"}>
+	<main>
+	<h2>under development</h2>
+	<a href={`/project/${project_id}/tasks`}>back</a>
+	</main>
+</PageLayout>
