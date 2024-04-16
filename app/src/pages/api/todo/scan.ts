@@ -12,7 +12,7 @@ export async function POST(context: APIContext) {
 		return new Response("invalid auth", { status: 401 });
 	}
 
-	const { id: user_id, github_id } = context.locals.user;
+	const { github_id } = context.locals.user;
 
 	const project_id = context.url.searchParams.get("project_id");
 
@@ -20,8 +20,10 @@ export async function POST(context: APIContext) {
 		return new Response("no project id", { status: 400 });
 	}
 
+	console.log(project_id);
+
 	// check that user owns the project
-	const project_query = await db.select().from(project).where(and(eq(project.project_id, project_id), eq(project.owner_id, user_id)));
+	const project_query = await db.select().from(project).where(and(eq(project.id, project_id)));
 
 	if (project_query.length != 1) {
 		return new Response("project not found", { status: 404 });
@@ -51,7 +53,7 @@ export async function POST(context: APIContext) {
 
 	return new Response(new ReadableStream({
 		async start(controller) {
-			for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id, user_id)) {
+			for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id)) {
 				controller.enqueue(chunk);
 			}
 			controller.close();
@@ -59,7 +61,7 @@ export async function POST(context: APIContext) {
 	}), { status: 200 });
 }
 
-async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string, user_id: string) {
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string) {
 	yield "";
 	yield "starting\n";
 	// we need to get OWNER and REPO from the repo_url
@@ -104,7 +106,6 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 
 	const new_tracker = await db.insert(tracker_result).values({
 		project_id: project_id,
-		user_id: user_id,
 		data: output_file,
 	}).returning();
 
@@ -118,7 +119,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	// and for old_id we want to the most recent tracker_result with 'accepted' as true
 	yield "finding existing scan\n";
 	const new_id = new_tracker[0].id;
-	const old_id = await db.select().from(tracker_result).where(and(and(eq(tracker_result.project_id, project_id), eq(tracker_result.user_id, user_id)), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
+	const old_id = await db.select().from(tracker_result).where(and(eq(tracker_result.project_id, project_id), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
 	
 	var old_data = [];
 	if (old_id.length == 1 && old_id[0].data) {
@@ -140,7 +141,6 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	yield "saving update\n";
 	await db.insert(todo_updates).values({
 		project_id: project_id,
-		user_id: user_id,
 		new_id: new_id,
 		old_id: old_id[0]?.id ?? null,
 		data: diff,

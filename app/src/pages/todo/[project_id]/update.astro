@@ -7,6 +7,8 @@ const user = Astro.locals.user;
 
 const { project } = (await getProject(user?.id ?? null, project_id)) ?? null;
 
+const project_uuid = project?.id ?? null;
+
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(project);
@@ -20,10 +22,10 @@ const update_id = update?.id ?? null;
 	<a href="#" id="reject">Reject</a>
 </TodoLayout>
 
-<script is:inline define:vars={{ project_id, update_id }}>
+<script is:inline define:vars={{ project_uuid, update_id }}>
 	document.getElementById("approve")?.addEventListener("click", async (e) => {
 		e.preventDefault();
-		await fetch(`/api/project/scan?project_id=${project_id}`, {
+		await fetch(`/api/project/scan?project_id=${project_uuid}`, {
 			method: "POST",
 			body: JSON.stringify({ approved: true, id: update_id }),
 		});
@@ -32,7 +34,7 @@ const update_id = update?.id ?? null;
 
 	document.getElementById("reject")?.addEventListener("click", async (e) => {
 		e.preventDefault();
-		await fetch(`/api/project/scan?project_id=${project_id}`, {
+		await fetch(`/api/project/scan?project_id=${project_uuid}`, {
 			method: "POST",
 			body: JSON.stringify({ approved: false, id: update_id }),
 		});

@@ -17,6 +17,7 @@ CREATE TABLE `api_key` (
 );
 --> statement-breakpoint
 CREATE TABLE `project` (
+	`id` text PRIMARY KEY NOT NULL,
 	`project_id` text NOT NULL,
 	`owner_id` text NOT NULL,
 	`name` text NOT NULL,
@@ -44,7 +45,7 @@ CREATE TABLE `project_goal` (
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`finished_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `session` (
@@ -94,14 +95,12 @@ CREATE TABLE `task_to_tags` (
 CREATE TABLE `todo_updates` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`project_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`old_id` integer,
 	`new_id` integer NOT NULL,
 	`data` text NOT NULL,
-	`accepted` integer DEFAULT false NOT NULL,
-	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
+	`status` text DEFAULT 'PENDING' NOT NULL,
+	FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`old_id`) REFERENCES `tracker_result`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`new_id`) REFERENCES `tracker_result`(`id`) ON UPDATE no action ON DELETE no action
 );
@@ -109,12 +108,10 @@ CREATE TABLE `todo_updates` (
 CREATE TABLE `tracker_result` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`project_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`data` text NOT NULL,
 	`accepted` integer DEFAULT false NOT NULL,
-	FOREIGN KEY (`project_id`) REFERENCES `project`(`project_id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `user` (

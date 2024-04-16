@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "021f43ad-049a-46cb-a163-25aa942e79c5",
+  "id": "d71fb35c-c87c-4232-9bc7-bfa9d9349a51",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "action": {
@@ -125,6 +125,13 @@
     "project": {
       "name": "project",
       "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
         "project_id": {
           "name": "project_id",
           "type": "text",
@@ -319,15 +326,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "project_goal_project_id_project_project_id_fk": {
-          "name": "project_goal_project_id_project_project_id_fk",
+        "project_goal_project_id_project_id_fk": {
+          "name": "project_goal_project_id_project_id_fk",
           "tableFrom": "project_goal",
           "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
           "columnsTo": [
-            "project_id"
+            "id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
@@ -671,13 +678,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -707,36 +707,23 @@
           "notNull": true,
           "autoincrement": false
         },
-        "accepted": {
-          "name": "accepted",
-          "type": "integer",
+        "status": {
+          "name": "status",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": false
+          "default": "'PENDING'"
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "todo_updates_project_id_project_project_id_fk": {
-          "name": "todo_updates_project_id_project_project_id_fk",
+        "todo_updates_project_id_project_id_fk": {
+          "name": "todo_updates_project_id_project_id_fk",
           "tableFrom": "todo_updates",
           "tableTo": "project",
           "columnsFrom": [
             "project_id"
-          ],
-          "columnsTo": [
-            "project_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "todo_updates_user_id_user_id_fk": {
-          "name": "todo_updates_user_id_user_id_fk",
-          "tableFrom": "todo_updates",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
           ],
           "columnsTo": [
             "id"
@@ -791,13 +778,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -824,25 +804,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "tracker_result_project_id_project_project_id_fk": {
-          "name": "tracker_result_project_id_project_project_id_fk",
+        "tracker_result_project_id_project_id_fk": {
+          "name": "tracker_result_project_id_project_id_fk",
           "tableFrom": "tracker_result",
           "tableTo": "project",
           "columnsFrom": [
             "project_id"
-          ],
-          "columnsTo": [
-            "project_id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "tracker_result_user_id_user_id_fk": {
-          "name": "tracker_result_user_id_user_id_fk",
-          "tableFrom": "tracker_result",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
           ],
           "columnsTo": [
             "id"

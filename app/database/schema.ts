@@ -75,6 +75,7 @@ export const task_to_tags_relations = relations(task_to_tags, ({ one }) => ({
 }));
 
 export const project = sqliteTable("project", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   project_id: text("project_id").notNull(),
   owner_id: text("owner_id").notNull(),
   name: text("name").notNull(),
@@ -96,7 +97,7 @@ export const project = sqliteTable("project", {
 export const project_goal = sqliteTable("project_goal", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
-  project_id: text("project_id").references(() => project.project_id),
+  project_id: text("project_id").references(() => project.id),
   description: text("description"),
   target_time: text("target_time").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   deleted: int("deleted", { mode: "boolean" }),
@@ -126,8 +127,7 @@ export const action = sqliteTable("action", {
 
 export const tracker_result = sqliteTable("tracker_result", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
-	project_id: text("project_id").notNull().references(() => project.project_id),
-	user_id: text("user_id").notNull().references(() => user.id),
+	project_id: text("project_id").notNull().references(() => project.id),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	data: text("data", { mode: "json" }).notNull(),
 	accepted: integer("accepted", { mode: "boolean" }).notNull().default(false),
@@ -135,8 +135,7 @@ export const tracker_result = sqliteTable("tracker_result", {
 
 export const todo_updates = sqliteTable("todo_updates", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-	project_id: text("project_id").notNull().references(() => project.project_id),
-	user_id: text("user_id").notNull().references(() => user.id),
+	project_id: text("project_id").notNull().references(() => project.id),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	old_id: integer("old_id").references(() => tracker_result.id),
 	new_id: integer("new_id").notNull().references(() => tracker_result.id),

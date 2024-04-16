@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1713185725091,
-      "tag": "0000_red_shinko_yamashiro",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1713186076655,
-      "tag": "0001_colossal_abomination",
+      "when": 1713262189675,
+      "tag": "0000_tired_gabe_jones",
       "breakpoints": true
     }
   ]

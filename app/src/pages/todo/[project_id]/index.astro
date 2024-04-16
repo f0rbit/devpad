@@ -9,7 +9,8 @@ const { project_id } = Astro.params;
 const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
-const scans = (project?.project_id ? await db.select().from(tracker_result).where(eq(tracker_result.project_id, project.project_id)) : []) ?? [];
+const project_uuid = project?.id ?? null;
+const scans = (project_uuid ? await db.select().from(tracker_result).where(eq(tracker_result.project_id, project_uuid)) : []) ?? [];
 ---
 
 <TodoLayout title={`Codebase - ${project_id}`}>
@@ -24,7 +25,7 @@ const scans = (project?.project_id ? await db.select().from(tracker_result).wher
 		<section id='scans' style="overflow: auto">
 			{scans.map(scan => (
 				<details>
-					<summary>{new Date(scan.created_at).toString()} - {scan.id}</summary>
+					<summary>{new Date(scan.created_at).toString()} - {scan.id} - {scan.accepted ? "accepted" : "not accepted"}</summary>
 					<pre>{scan.data}</pre>
 				</details>
 			))}
@@ -41,12 +42,12 @@ main {
 }
 </style>
 
-<script define:vars={{ project_id }}>
+<script is:inline define:vars={{ project_uuid }}>
 
 const output = document.getElementById("output");
 if (!output) throw new Error("Output element not found");
 document.querySelector('button.scan')?.addEventListener('click', async () => {
-	const response = await fetch(`/api/todo/scan?project_id=${project_id}`, { method: "POST" });
+	const response = await fetch(`/api/todo/scan?project_id=${project_uuid}`, { method: "POST" });
 	if (!response.ok) {
 		output.innerText = 'Error: ' + response.statusText;
 	}

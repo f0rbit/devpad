@@ -22,18 +22,18 @@ export async function getProject(user_id: string | null, project_id: string | un
 
 export async function getRecentUpdate(project: any) {
 	const DEBUG_THIS = true;
-	const { owner_id: user_id, project_id }: { owner_id: string, project_id: string } = project;
+	const { owner_id: user_id, id }: { owner_id: string, id: string } = project;
 	if (!user_id) {
 		if (DEBUG_THIS) console.error("No owner_id ID");
 		return null;
 	}
-	if (!project_id) {
+	if (!id) {
 		if (DEBUG_THIS) console.error("No project ID");
 		return null;
 	}
 
 	// get the most recent entry from todo_updates table
-	const updates = await db.select().from(todo_updates).where(and(and(eq(todo_updates.project_id, project_id), eq(todo_updates.user_id, user_id)), eq(todo_updates.status, "PENDING"))).orderBy(desc(todo_updates.created_at)).limit(1);
+	const updates = await db.select().from(todo_updates).where(and(eq(todo_updates.project_id, id), eq(todo_updates.status, "PENDING"))).orderBy(desc(todo_updates.created_at)).limit(1);
 
 	if (!updates || !updates[0]) {
 		if (DEBUG_THIS) console.error("No updates found");

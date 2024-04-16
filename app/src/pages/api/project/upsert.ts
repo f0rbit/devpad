@@ -1,7 +1,9 @@
 import type { APIContext } from "astro";
-import { upsert_project } from "../../../server/types";
+import { upsert_project, type UpsertProject } from "../../../server/types";
 import { db } from "../../../../database/db";
 import { project } from "../../../../database/schema";
+
+type CompleteUpsertProject = Omit<UpsertProject, "id"> & { id: string };
 
 export async function PATCH(context: APIContext) {
 	// first we need to validate that the user is logged in
@@ -49,8 +51,12 @@ export async function PATCH(context: APIContext) {
 			}
 		}
 
+		if (!data.id) {
+			data.id = crypto.randomUUID();
+		}
+		const insert = data as CompleteUpsertProject;
 		// perform db upsert
-		const new_project = await db.insert(project).values(data).onConflictDoUpdate({ target: [project.owner_id, project.project_id], set: data }).returning();
+		const new_project = await db.insert(project).values(insert).onConflictDoUpdate({ target: [project.id], set: insert }).returning();
 
 		if (new_project.length != 1) throw new Error(`Project upsert returned incorrect rows (${new_project.length}`);
 

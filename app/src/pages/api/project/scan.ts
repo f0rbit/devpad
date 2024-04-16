@@ -35,14 +35,14 @@ export async function POST(context: APIContext) {
 	const { approved, id: update_id } = parsed.data;
 
 	// check that the user owns the project
-	const project_query = await db.select().from(project).where(and(eq(project.project_id, project_id), eq(project.owner_id, user_id)));
+	const project_query = await db.select().from(project).where(and(eq(project.id, project_id), eq(project.owner_id, user_id)));
 
 	if (project_query.length != 1) {
 		return new Response("project not found", { status: 404 });
 	}
 
 	// check that there is an update with the given id
-	const update_query = await db.select().from(todo_updates).where(and(and(eq(todo_updates.user_id, user_id), eq(todo_updates.project_id, project_id), eq(todo_updates.id, update_id))));
+	const update_query = await db.select().from(todo_updates).where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.id, update_id)));
 
 	if (update_query.length != 1) {
 		return new Response("update not found", { status: 404 });
