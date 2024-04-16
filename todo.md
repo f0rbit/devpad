@@ -47,5 +47,5 @@
 - [ ] render diff
 - [ ] if all tasks are "SAME", don't create new update
 - [ ] on approve > create tasks
-- [ ] move project scanning to projects page
+- [x] move project scanning to projects page
 - [ ] create an interface for actually generating the tasks
