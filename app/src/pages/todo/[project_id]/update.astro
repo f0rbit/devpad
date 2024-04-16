@@ -1,14 +1,15 @@
 ---
 import { eq } from "drizzle-orm";
 import { db } from "../../../../database/db";
-import { project, todo_updates } from "../../../../database/schema";
+import { todo_updates } from "../../../../database/schema";
 import TodoLayout from "../../../layouts/TodoLayout.astro";
 import { getProject, getRecentUpdate } from "../../../server/projects.ts";
 
 const { project_id } = Astro.params;
 const user = Astro.locals.user;
 
-const { project: found_project } = (await getProject(user?.id ?? null, project_id)) ?? null;
+const { project: found_project } =
+	(await getProject(user?.id ?? null, project_id)) ?? null;
 
 const project_uuid = found_project?.id ?? null;
 
@@ -17,7 +18,12 @@ const project_uuid = found_project?.id ?? null;
 const update = await getRecentUpdate(found_project);
 
 // get all updates as well
-const updates = project_uuid ? await db.select().from(todo_updates).where(eq(project.id, project_uuid)) : [];
+const updates = project_uuid
+	? await db
+			.select()
+			.from(todo_updates)
+			.where(eq(todo_updates.project_id, project_uuid))
+	: [];
 
 const update_id = update?.id ?? null;
 ---
@@ -28,25 +34,25 @@ const update_id = update?.id ?? null;
 	<a href="#" id="reject">Reject</a>
 	<br />
 	<h3>All Updates</h3>
-	<pre>{JSON.stringify(updates, null, 2)}</pre
+	<pre>{JSON.stringify(updates, null, 2)}</pre>
+
+	<script is:inline define:vars={{ project_uuid, update_id }}>
+		document.getElementById("approve")?.addEventListener("click", async (e) => {
+			e.preventDefault();
+			await fetch(`/api/project/scan?project_id=${project_uuid}`, {
+				method: "POST",
+				body: JSON.stringify({ approved: true, id: update_id }),
+			});
+			location.reload();
+		});
+
+		document.getElementById("reject")?.addEventListener("click", async (e) => {
+			e.preventDefault();
+			await fetch(`/api/project/scan?project_id=${project_uuid}`, {
+				method: "POST",
+				body: JSON.stringify({ approved: false, id: update_id }),
+			});
+			location.reload();
+		});
+	</script>
 </TodoLayout>
-
-<script is:inline define:vars={{ project_uuid, update_id }}>
-	document.getElementById("approve")?.addEventListener("click", async (e) => {
-		e.preventDefault();
-		await fetch(`/api/project/scan?project_id=${project_uuid}`, {
-			method: "POST",
-			body: JSON.stringify({ approved: true, id: update_id }),
-		});
-		location.reload();
-	});
-
-	document.getElementById("reject")?.addEventListener("click", async (e) => {
-		e.preventDefault();
-		await fetch(`/api/project/scan?project_id=${project_uuid}`, {
-			method: "POST",
-			body: JSON.stringify({ approved: false, id: update_id }),
-		});
-		location.reload();
-	});
-</script>
