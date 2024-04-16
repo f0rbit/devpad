@@ -1,17 +1,23 @@
 ---
+import { eq } from "drizzle-orm";
+import { db } from "../../../../database/db";
+import { project, todo_updates } from "../../../../database/schema";
 import TodoLayout from "../../../layouts/TodoLayout.astro";
 import { getProject, getRecentUpdate } from "../../../server/projects.ts";
 
 const { project_id } = Astro.params;
 const user = Astro.locals.user;
 
-const { project } = (await getProject(user?.id ?? null, project_id)) ?? null;
+const { project: found_project } = (await getProject(user?.id ?? null, project_id)) ?? null;
 
-const project_uuid = project?.id ?? null;
+const project_uuid = found_project?.id ?? null;
 
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
-const update = await getRecentUpdate(project);
+const update = await getRecentUpdate(found_project);
+
+// get all updates as well
+const updates = project_uuid ? await db.select().from(todo_updates).where(eq(project.id, project_uuid)) : [];
 
 const update_id = update?.id ?? null;
 ---
@@ -20,6 +26,9 @@ const update_id = update?.id ?? null;
 	<pre>{update?.data}</pre>
 	<a href="#" id="approve">Approve</a>
 	<a href="#" id="reject">Reject</a>
+	<br />
+	<h3>All Updates</h3>
+	<pre>{JSON.stringify(updates, null, 2)}</pre
 </TodoLayout>
 
 <script is:inline define:vars={{ project_uuid, update_id }}>
