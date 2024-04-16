@@ -1,23 +1,18 @@
 import type { APIContext } from "astro";
-import { z } from "zod";
 import { db } from "../../../../database/db";
+import { and, desc, eq } from "drizzle-orm";
 import { project, todo_updates, tracker_result } from "../../../../database/schema";
-import { and, eq } from "drizzle-orm";
-
-const request_schema = z.object({
-	id: z.number(),
-	approved: z.boolean()
-});
+import child_process from "child_process";
 
 
-// should have ?project_id=<project-id>
+// will have ?project_id=<id> query parameter
 
 export async function POST(context: APIContext) {
-	if (!context.locals.user) {
-		return new Response(null, { status: 401 });
+	if (!context.locals.user || !context.locals.user.id || !context.locals.user.github_id) {
+		return new Response("invalid auth", { status: 401 });
 	}
 
-	const { id: user_id } = context.locals.user;
+	const { github_id } = context.locals.user;
 
 	const project_id = context.url.searchParams.get("project_id");
 
@@ -25,37 +20,134 @@ export async function POST(context: APIContext) {
 		return new Response("no project id", { status: 400 });
 	}
 
-	const body = await context.request.json();
+	console.log(project_id);
 
-	const parsed = request_schema.safeParse(body);
-	if (!parsed.success) {
-		console.warn(parsed.error);
-		return new Response(parsed.error.message, { status: 400 });
-	}
-	const { approved, id: update_id } = parsed.data;
-
-	// check that the user owns the project
-	const project_query = await db.select().from(project).where(and(eq(project.id, project_id), eq(project.owner_id, user_id)));
+	// check that user owns the project
+	const project_query = await db.select().from(project).where(and(eq(project.id, project_id)));
 
 	if (project_query.length != 1) {
 		return new Response("project not found", { status: 404 });
 	}
 
-	// check that there is an update with the given id
-	const update_query = await db.select().from(todo_updates).where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.id, update_id)));
+	const project_data = project_query[0];
 
-	if (update_query.length != 1) {
-		return new Response("update not found", { status: 404 });
+	// now we want to invoke some more complex behaviour.
+	// using the access_token from the session we want to clone the repo and then scan it using ../todo-tracker binary
+
+	const access_token = context.locals.session?.access_token;
+
+	if (!access_token) {
+		return new Response("invalid access token", { status: 401 });
 	}
 
-	// take the new_id from the update_query and set it's status to approved
-	const update_data = update_query[0];
-	const new_id = update_data.new_id;
+	const folder_id = github_id + "-" + crypto.randomUUID();
 
-	await db.update(tracker_result).set({ accepted: approved }).where(eq(tracker_result.id, new_id));
+	if (!project_data.repo_id || !project_data.repo_url) {
+		return new Response("project isn't linked to a repo", { status: 400 });
+	}
 
-	// then we want to execute the update
-	await db.update(todo_updates).set({ status: approved ? "ACCEPTED" : "REJECTED" }).where(eq(todo_updates.id, update_id));
+	const repo_url = project_data.repo_url;
+	if (!repo_url) {
+		return new Response("no repo url", { status: 400 });
+	}
 
-	return new Response(null, { status: 200 });
+	return new Response(new ReadableStream({
+		async start(controller) {
+			for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id)) {
+				controller.enqueue(chunk);
+			}
+			controller.close();
+		},
+	}), { status: 200 });
 }
+
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string) {
+	yield "";
+	yield "starting\n";
+	// we need to get OWNER and REPO from the repo_url
+	const slices = repo_url.split("/");
+	const repo = slices.at(-1);
+	const owner = slices.at(-2);
+
+
+	yield "cloning repo\n";
+	// clone the repo into a temp folder
+	const clone = await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball`, { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
+
+	if (!clone.ok) {
+		yield "error fetching repo from github\n";
+		return;
+	}
+	yield "loading repo into memory\n";
+	const zip = await clone.arrayBuffer();
+
+	const repo_path = `/tmp/${folder_id}.zip`;
+	yield "writing repo to disk\n";
+	await Bun.write(repo_path, zip);
+
+	const unzipped_path = `/tmp/${folder_id}`;
+
+	// call shell 'unzip'
+	// await $`unzip ${repo_path} -d ${unzipped_path}`
+	// call ^ using child_process 
+	yield "decompressing repo\n";
+	child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
+	const config_path = "../todo-config.json"; // TODO: grab this from user config from 1. project config, 2. user config, 3. default config
+
+	// generate the todo-tracker parse
+	yield "scanning repo\n";
+	child_process.execSync("../todo-tracker parse " + unzipped_path + " " + config_path + " > " + unzipped_path + "/new-output.json");
+	
+	yield "saving output\n"
+	// for now, lets return response of the new-output.json file
+	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
+
+	yield "saving scan\n";
+
+	const new_tracker = await db.insert(tracker_result).values({
+		project_id: project_id,
+		data: output_file,
+	}).returning();
+
+	if (new_tracker.length != 1) {
+		yield "error saving scan\n";
+		return;
+	}
+
+	// then we want to create a todo_update record
+	// for new_id we use the id of the new insert ^^
+	// and for old_id we want to the most recent tracker_result with 'accepted' as true
+	yield "finding existing scan\n";
+	const new_id = new_tracker[0].id;
+	const old_id = await db.select().from(tracker_result).where(and(eq(tracker_result.project_id, project_id), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
+	
+	var old_data = [];
+	if (old_id.length == 1 && old_id[0].data) {
+		old_data = JSON.parse(old_id[0].data as string);
+	}
+
+	// write old data to old-output.json
+	yield "writing old data\n";
+	await Bun.write(unzipped_path + "/old-output.json", JSON.stringify(old_data));
+
+	// run diff script and write to diff-output.json
+	yield "running diff\n";
+	child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json`);
+
+	// read diff-output.json
+	yield "reading diff\n";
+	const diff = await Bun.file(unzipped_path + "/diff-output.json").text();
+
+	yield "saving update\n";
+	await db.insert(todo_updates).values({
+		project_id: project_id,
+		new_id: new_id,
+		old_id: old_id[0]?.id ?? null,
+		data: diff,
+	}).returning();
+
+
+	yield "done\n";
+	return;
+}
+

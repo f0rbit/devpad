@@ -30,35 +30,33 @@ const update_id = update?.id ?? null;
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
 	<h2>tasks</h2>
-		<a href={`/project/${project_id}`}>back</a>
-		<a href={`/project/${project_id}/tasks`}>tasks</a>
-		<a href={`/project/${project_id}/tasks/update`}>update</a>
-		<a href={`/project/${project_id}/tasks/config`}>config</a>
-		<br />
+	<a href={`/project/${project_id}`}>back</a>
+	<a href={`/project/${project_id}/tasks`}>tasks</a>
+	<a href={`/project/${project_id}/tasks/update`}>update</a>
+	<a href={`/project/${project_id}/tasks/config`}>config</a>
+	<br />
 	<pre>{update?.data}</pre>
 	<a href="#" id="approve">Approve</a>
 	<a href="#" id="reject">Reject</a>
 	<br />
 	<h3>All Updates</h3>
 	<pre>{JSON.stringify(updates, null, 2)}</pre>
-
-	<script is:inline define:vars={{ project_uuid, update_id }}>
-		document.getElementById("approve")?.addEventListener("click", async (e) => {
-			e.preventDefault();
-			await fetch(`/api/project/scan?project_id=${project_uuid}`, {
-				method: "POST",
-				body: JSON.stringify({ approved: true, id: update_id }),
-			});
-			location.reload();
-		});
-
-		document.getElementById("reject")?.addEventListener("click", async (e) => {
-			e.preventDefault();
-			await fetch(`/api/project/scan?project_id=${project_uuid}`, {
-				method: "POST",
-				body: JSON.stringify({ approved: false, id: update_id }),
-			});
-			location.reload();
-		});
-	</script>
 </PageLayout>
+
+<script is:inline define:vars={{ project_uuid, update_id }}>
+	const url = `/api/project/scan_status?project_id=${project_uuid}`;
+	const accept = async (approve) => {
+		if (event) event.preventDefault();
+		await fetch(url, {
+			method: "POST",
+			body: JSON.stringify({ approved: approve, id: update_id }),
+		});
+		location.reload();
+	};
+	document
+		.getElementById("approve")
+		?.addEventListener("click", () => accept(true));
+	document
+		.getElementById("reject")
+		?.addEventListener("click", () => accept(false));
+</script>
