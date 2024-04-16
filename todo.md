@@ -39,3 +39,13 @@
 - [x] Integrate todo-tracker
     - [x] Use Go binary
     - [x] Build system to clone github repo & run command
+
+
+# todo tracker integration
+- [ ] remove old scanned repos
+- [ ] add config modification
+- [ ] render diff
+- [ ] if all tasks are "SAME", don't create new update
+- [ ] on approve > create tasks
+- [ ] move project scanning to projects page
+- [ ] create an interface for actually generating the tasks
