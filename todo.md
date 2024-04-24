@@ -1,4 +1,4 @@
-# Pages
+# pages
 - [x] Landing Page
     - [x] Explore
     - [ ] Api docs
@@ -14,7 +14,7 @@
         - [ ] By recent
         - [ ] In Progress
 
-# Implementation
+# implementation
 - [x] Setup tech stack
     - [x] Astro SSR
         - [x] Github auth
@@ -32,7 +32,7 @@
     - [ ] 70% backend coverage
     - [ ] Some crucial tests for frontend interactions
 
-# Features
+# features
 - [ ] Project management
     - [ ] Move projects over from old devpad to new
     - [ ] Add API token support
@@ -49,3 +49,34 @@
 - [ ] on approve > create tasks
 - [x] move project scanning to projects page
 - [ ] create an interface for actually generating the tasks
+
+# tasks
+- [ ] create tables for structure
+    - [x] project
+    - [ ] milestone
+    - [ ] goal
+    - [ ] task
+    - [ ] checklist
+- [ ] implement MVP for first release
+    - [ ] tasks
+        - [ ] add checklist
+        - [ ] add description
+        - [ ] set start date
+        - [ ] set end date
+        - [ ] tag management
+        - [ ] add a summary
+        - [ ] set a priority
+        - [ ] set visiblity
+            - [ ] NESTED
+            - [ ] PUBLIC
+            - [ ] PRIVATE
+            - [ ] ARCHIVED
+            - [ ] DELETED
+            - [ ] HIDDEN
+            - [ ] DRAFT
+    - [ ] checklist
+        - [ ] easy interface for adding/removing items
+        - [ ] convert to tasks easily
+        - [ ] relationship with parent task
+        - [ ] figure out nested checklists
+        - [ ] converting from nested checklist to task
