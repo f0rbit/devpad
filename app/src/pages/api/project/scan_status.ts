@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { db } from "../../../../database/db";
-import { project, todo_updates, tracker_result } from "../../../../database/schema";
+import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
 import { and, eq } from "drizzle-orm";
 
 const request_schema = z.object({
@@ -56,6 +56,41 @@ export async function POST(context: APIContext) {
 
 	// then we want to execute the update
 	await db.update(todo_updates).set({ status: approved ? "ACCEPTED" : "REJECTED" }).where(eq(todo_updates.id, update_id));
+
+	if (approved) {
+		// update all the tasks within the update and codebase_task table
+		// TODO: add typesafety to this, either infer datatype from schema or use zod validator
+		const codebase_items = JSON.parse(update_query[0].data as string) as any[];
+		console.log(codebase_items);
+		// we want to group into 'upserts', 'deletes'
+		const upserts = codebase_items.filter((item) => item.type == "NEW" || item.type == "UPDATE" || item.type == "SAME" || item.type == "MOVE");
+		const deletes = codebase_items.filter((item) => item.type == "DELETE");
+
+		// run the upserts
+		const upsert_item = async (item: any) => {
+			const id = item.id;
+			const type = item.tag;
+			const text = item.data.new?.text;
+			const line = item.data.new?.line;
+			const file = item.data.new?.file;
+			// TODO: figure out how to get the context attribute down here
+
+			const values = { id, type, text, line, file, recent_scan_id: new_id };
+
+			await db.insert(codebase_tasks).values(values).onConflictDoUpdate({ target: [codebase_tasks.id], set: values });
+		};
+
+		await Promise.all(upserts.map(upsert_item));
+
+		// run the deletes
+		const delete_item = async (item: any) => {
+			const id = item.id;
+
+			await db.delete(codebase_tasks).where(eq(codebase_tasks.id, id));
+		};
+
+		await Promise.all(deletes.map(delete_item));
+	}
 
 	return new Response(null, { status: 200 });
 }
