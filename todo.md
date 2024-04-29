@@ -80,3 +80,10 @@
         - [ ] relationship with parent task
         - [ ] figure out nested checklists
         - [ ] converting from nested checklist to task
+    - [ ] linking tasks to codebases
+        - [ ] each task should have 'codebase_info'
+        - [ ] new table stores following information
+            - [ ] tag (note, todo, bug, fixme)
+            - [ ] text from the line of code
+            - [ ] file name
+            - [ ] line number inside file
