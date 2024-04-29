@@ -1,5 +1,5 @@
 import { sql, relations } from "drizzle-orm";
-import { sqliteTable, text, int, foreignKey, unique, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, int, unique, integer, primaryKey } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
 	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -22,20 +22,6 @@ export const api_key = sqliteTable("api_key", {
 	owner_id: text("owner_id").references(() => user.id),
 	hash: text("hash")
 });
-
-export const task = sqliteTable("task", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-	owner_id: text("id").notNull().references(() => user.id),
-	title: text("title").notNull(),
-	progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] }),
-	visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
-	parent_id: text("parent_id"),
-	goal_id: text("goal_id"),
-	created_at: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
-}, (table) => ({
-	parent_ref: foreignKey({ columns: [table.parent_id], foreignColumns: [table.id], name: "parent_ref" })
-}));
 
 export const project = sqliteTable("project", {
 	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -75,8 +61,9 @@ const ACTIONS = [
 	"CREATE_TASK", "UPDATE_TASK", "DELETE_TASK",
 	"CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT",
 	"CREATE_TAG", "UPDATE_TAG", "DELETE_TAG",
-	"CREATE_MODULE", "UPDATE_MODULE", "DELETE_MODULE",
-	"CREATE_GOAL", "UPDATE_GOAL", "DELETE_GOAL"
+	"CREATE_GOAL", "UPDATE_GOAL", "DELETE_GOAL",
+	"CREATE_MILESTONE", "UPDATE_MILESTONE", "DELETE_MILESTONE",
+	"CREATE_CHECKLIST", "UPDATE_CHECKLIST", "DELETE_CHECKLIST",
 ] as const;
 
 export const action = sqliteTable("action", {
@@ -110,5 +97,162 @@ export const todo_updates = sqliteTable("todo_updates", {
 export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
 	old: one(tracker_result, { fields: [todo_updates.old_id], references: [tracker_result.id] }),
 	new: one(tracker_result, { fields: [todo_updates.new_id], references: [tracker_result.id] })
+}));
+
+export const milestone = sqliteTable("milestone", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	project_id: text("project_id").notNull().references(() => project.id),
+	name: text("name").notNull(),
+	description: text("description"),
+	target_time: text("target_time"),
+	deleted: int("deleted", { mode: "boolean" }),
+	target_version: text("target_version"),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	finished_at: text("finished_at"),
+	after_id: text("after_id"),
+});
+
+export const goal = sqliteTable("goal", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	milestone_id: text("milestone_id").notNull().references(() => milestone.id),
+	name: text("name").notNull(),
+	description: text("description"),
+	target_time: text("target_time"),
+	deleted: int("deleted", { mode: "boolean" }),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	finished_at: text("finished_at"),
+});
+
+export const task = sqliteTable("task", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	owner_id: text("id").notNull().references(() => user.id),
+	title: text("title").notNull(),
+	progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] }),
+	visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
+	goal_id: text("goal_id").references(() => goal.id),
+	description: text("description"),
+	start_time: text("start_time"),
+	end_time: text("end_time"),
+	summary: text("summary"),
+	priority: text("priority", { enum: ["LOW", "MEDIUM", "HIGH"] }),
+	created_at: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
+});
+
+export const checklist = sqliteTable("checklist", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	task_id: text("task_id").notNull().references(() => task.id),
+	name: text("name").notNull(),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	deleted: int("deleted", { mode: "boolean" }),
+});
+
+export const checklist_item = sqliteTable("checklist_item", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	checklist_id: text("checklist_id").notNull().references(() => checklist.id),
+	parent_id: text("parent_id"),
+	name: text("name").notNull(),
+	checked: int("checked", { mode: "boolean" }).notNull().default(false),
+});
+
+export const tag = sqliteTable("tag", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	owner_id: text("owner_id").notNull().references(() => user.id),
+	title: text("title").notNull(),
+	color: text("color"),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	deleted: int("deleted", { mode: "boolean" }),
+});
+
+export const task_tag = sqliteTable("task_tag", {
+	task_id: text("task_id").notNull().references(() => task.id),
+	tag_id: text("tag_id").notNull().references(() => tag.id),
+	primary: int("primary", { mode: "boolean" }).notNull().default(false),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+}, (table) => ({
+	task_tag_unique: primaryKey({ columns: [table.task_id, table.tag_id] })
+}));
+
+
+// relations
+
+export const user_relations = relations(user, ({ many }) => ({
+	sessions: many(session),
+	api_keys: many(api_key),
+	actions: many(action),
+	tasks: many(task),
+	tags: many(tag)
+}));
+
+export const session_relations = relations(session, ({ one }) => ({
+	user: one(user, { fields: [session.userId], references: [user.id] })
+}));
+
+export const api_key_relations = relations(api_key, ({ one }) => ({
+	owner: one(user, { fields: [api_key.owner_id], references: [user.id] })
+}));
+
+export const project_relations = relations(project, ({ one, many }) => ({
+	owner: one(user, { fields: [project.owner_id], references: [user.id] }),
+	project_goals: many(project_goal),
+	tracker_results: many(tracker_result),
+	milestones: many(milestone),
+	todo_updates: many(todo_updates)
+}));
+
+export const project_goal_relations = relations(project_goal, ({ one }) => ({
+	project: one(project, { fields: [project_goal.project_id], references: [project.id] })
+}));
+
+export const action_relations = relations(action, ({ one }) => ({
+	owner: one(user, { fields: [action.owner_id], references: [user.id] })
+}));
+
+export const tracker_result_relations = relations(tracker_result, ({ one }) => ({
+	project: one(project, { fields: [tracker_result.project_id], references: [project.id] })
+}));
+
+export const todoUpdatesRelations = relations(todo_updates, ({ one }) => ({
+	project: one(project, { fields: [todo_updates.project_id], references: [project.id] }),
+	oldTrackerResult: one(tracker_result, { fields: [todo_updates.old_id], references: [tracker_result.id] }),
+	newTrackerResult: one(tracker_result, { fields: [todo_updates.new_id], references: [tracker_result.id] })
+}));
+
+export const milestone_relations = relations(milestone, ({ one, many }) => ({
+	project: one(project, { fields: [milestone.project_id], references: [project.id] }),
+	goals: many(goal)
+}));
+
+export const goal_relations = relations(goal, ({ one }) => ({
+	milestone: one(milestone, { fields: [goal.milestone_id], references: [milestone.id] })
+}));
+
+export const task_relations = relations(task, ({ one, many }) => ({
+	owner: one(user, { fields: [task.owner_id], references: [user.id] }),
+	goal: one(goal, { fields: [task.goal_id], references: [goal.id] }),
+	checklists: many(checklist)
+}));
+
+export const checklist_relations = relations(checklist, ({ one, many }) => ({
+	task: one(task, { fields: [checklist.task_id], references: [task.id] }),
+	items: many(checklist_item)
+}));
+
+export const checklist_item_relations = relations(checklist_item, ({ one }) => ({
+	checklist: one(checklist, { fields: [checklist_item.checklist_id], references: [checklist.id] })
+}));
+
+export const tag_relations = relations(tag, ({ one }) => ({
+	owner: one(user, { fields: [tag.owner_id], references: [user.id] })
+}));
+
+export const task_tag_relations = relations(task_tag, ({ one }) => ({
+	task: one(task, { fields: [task_tag.task_id], references: [task.id] }),
+	tag: one(tag, { fields: [task_tag.tag_id], references: [tag.id] })
 }));
 
