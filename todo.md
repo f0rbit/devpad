@@ -46,7 +46,9 @@
 - [ ] add config modification
 - [ ] render diff
 - [ ] if all tasks are "SAME", don't create new update
-- [ ] on approve > create tasks
+- [x] on approve > create tasks
+    - [x] currently modifies codebase_tasks
+    - [ ] we want to cross-check with current tasks in project and update if necessary
 - [x] move project scanning to projects page
 - [ ] create an interface for actually generating the tasks
 
@@ -83,13 +85,13 @@
         - [ ] relationship with parent task
         - [ ] figure out nested checklists
         - [ ] converting from nested checklist to task
-    - [ ] linking tasks to codebases
-        - [ ] each task should have 'codebase_info'
-        - [ ] new table stores following information
-            - [ ] tag (note, todo, bug, fixme)
-            - [ ] text from the line of code
-            - [ ] file name
-            - [ ] line number inside file
+    - [x] linking tasks to codebases
+        - [x] each task should have 'codebase_info'
+        - [x] new table stores following information
+            - [x] tag (note, todo, bug, fixme)
+            - [x] text from the line of code
+            - [x] file name
+            - [x] line number inside file
 
 ## structure of project/tasks relationship
 project > milestone > goal > task > checklists
