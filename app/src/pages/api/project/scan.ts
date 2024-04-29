@@ -1,7 +1,7 @@
 import type { APIContext } from "astro";
 import { db } from "../../../../database/db";
 import { and, desc, eq } from "drizzle-orm";
-import { project, todo_updates, tracker_result } from "../../../../database/schema";
+import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
 import child_process from "child_process";
 
 
@@ -121,22 +121,33 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	const new_id = new_tracker[0].id;
 	const old_id = await db.select().from(tracker_result).where(and(eq(tracker_result.project_id, project_id), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
 	
-	var old_data = [];
+	var old_data = [] as any[];
 	if (old_id.length == 1 && old_id[0].data) {
-		old_data = JSON.parse(old_id[0].data as string);
+		// fetch all the codebase tasks from the old_id
+		const existing_tasks = await db.select().from(codebase_tasks).where(eq(codebase_tasks.recent_scan_id, old_id[0].id));
+		old_data = existing_tasks;
 	}
 
 	// write old data to old-output.json
 	yield "writing old data\n";
 	await Bun.write(unzipped_path + "/old-output.json", JSON.stringify(old_data));
 
+	console.log("running diff");
 	// run diff script and write to diff-output.json
 	yield "running diff\n";
-	child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json`);
+	try {
+		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json`);	
+	} catch (e) {
+		console.error(e);
+		yield "error running diff\n";
+		return;
+	}
 
 	// read diff-output.json
 	yield "reading diff\n";
 	const diff = await Bun.file(unzipped_path + "/diff-output.json").text();
+
+	console.log("inserting diff", diff);
 
 	yield "saving update\n";
 	await db.insert(todo_updates).values({
