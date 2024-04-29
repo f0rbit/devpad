@@ -136,6 +136,7 @@ export const task = sqliteTable("task", {
 	start_time: text("start_time"),
 	end_time: text("end_time"),
 	summary: text("summary"),
+	codebase_task_id: text("codebase_task_id").references(() => codebase_tasks.id),
 	priority: text("priority", { enum: ["LOW", "MEDIUM", "HIGH"] }),
 	created_at: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
@@ -156,6 +157,19 @@ export const checklist_item = sqliteTable("checklist_item", {
 	parent_id: text("parent_id"),
 	name: text("name").notNull(),
 	checked: int("checked", { mode: "boolean" }).notNull().default(false),
+});
+
+export const codebase_tasks = sqliteTable("codebase_tasks", {
+	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	branch: text("branch"),
+	commit: text("commit"),
+	type: text("type"),
+	text: text("text"),
+	file_name: text("file_name"),
+	line_number: text("line_number"),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	deleted: int("deleted", { mode: "boolean" }),
 });
 
 export const tag = sqliteTable("tag", {
@@ -235,6 +249,7 @@ export const goal_relations = relations(goal, ({ one }) => ({
 export const task_relations = relations(task, ({ one, many }) => ({
 	owner: one(user, { fields: [task.owner_id], references: [user.id] }),
 	goal: one(goal, { fields: [task.goal_id], references: [goal.id] }),
+	codebase_task: one(codebase_tasks, { fields: [task.codebase_task_id], references: [codebase_tasks.id] }),
 	checklists: many(checklist)
 }));
 

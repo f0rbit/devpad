@@ -35,6 +35,19 @@ CREATE TABLE `checklist_item` (
 	FOREIGN KEY (`checklist_id`) REFERENCES `checklist`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
+CREATE TABLE `codebase_tasks` (
+	`id` text PRIMARY KEY NOT NULL,
+	`branch` text,
+	`commit` text,
+	`type` text,
+	`text` text,
+	`file_name` text,
+	`line_number` text,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`deleted` integer
+);
+--> statement-breakpoint
 CREATE TABLE `goal` (
 	`id` text PRIMARY KEY NOT NULL,
 	`milestone_id` text NOT NULL,
@@ -125,11 +138,13 @@ CREATE TABLE `task` (
 	`start_time` text,
 	`end_time` text,
 	`summary` text,
+	`codebase_task_id` text,
 	`priority` text,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP),
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP),
 	FOREIGN KEY (`id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`goal_id`) REFERENCES `goal`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`goal_id`) REFERENCES `goal`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`codebase_task_id`) REFERENCES `codebase_tasks`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `task_tag` (
