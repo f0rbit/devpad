@@ -53,10 +53,10 @@
 # tasks
 - [ ] create tables for structure
     - [x] project
-    - [ ] milestone
-    - [ ] goal
-    - [ ] task
-    - [ ] checklist
+    - [x] milestone
+    - [x] goal
+    - [x] task
+    - [x] checklist
 - [ ] implement MVP for first release
     - [ ] tasks
         - [ ] add checklist
