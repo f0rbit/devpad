@@ -41,11 +41,14 @@ CREATE TABLE `codebase_tasks` (
 	`commit` text,
 	`type` text,
 	`text` text,
-	`file_name` text,
-	`line_number` text,
+	`file` text,
+	`line` integer,
+	`context` text,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`deleted` integer
+	`deleted` integer,
+	`recent_scan_id` integer,
+	FOREIGN KEY (`recent_scan_id`) REFERENCES `tracker_result`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `goal` (

@@ -161,15 +161,18 @@ export const checklist_item = sqliteTable("checklist_item", {
 
 export const codebase_tasks = sqliteTable("codebase_tasks", {
 	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	// TODO: need to implement branch & commit
 	branch: text("branch"),
 	commit: text("commit"),
 	type: text("type"),
 	text: text("text"),
-	file_name: text("file_name"),
-	line_number: text("line_number"),
+	file: text("file"),
+	line: integer("line"),
+	context: text("context", { mode: "json" }),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	deleted: int("deleted", { mode: "boolean" }),
+	recent_scan_id: integer("recent_scan_id").references(() => tracker_result.id),
 });
 
 export const tag = sqliteTable("tag", {

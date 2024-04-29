@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "9c70e536-2fc3-4f9e-92d4-87f20a825204",
+  "id": "9127baec-6df6-4085-a553-c1f615233798",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "action": {
@@ -286,15 +286,22 @@
           "notNull": false,
           "autoincrement": false
         },
-        "file_name": {
-          "name": "file_name",
+        "file": {
+          "name": "file",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
-        "line_number": {
-          "name": "line_number",
+        "line": {
+          "name": "line",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "context": {
+          "name": "context",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -322,10 +329,31 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "recent_scan_id": {
+          "name": "recent_scan_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "codebase_tasks_recent_scan_id_tracker_result_id_fk": {
+          "name": "codebase_tasks_recent_scan_id_tracker_result_id_fk",
+          "tableFrom": "codebase_tasks",
+          "tableTo": "tracker_result",
+          "columnsFrom": [
+            "recent_scan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
