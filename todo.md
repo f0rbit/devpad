@@ -64,6 +64,9 @@
         - [ ] set start date
         - [ ] set end date
         - [ ] tag management
+            - [ ] tags are scoped per-user
+            - [ ] any task the user owns can be assigned to any tag the user owns
+            - [ ] tags should have a 'colour' field & title
         - [ ] add a summary
         - [ ] set a priority
         - [ ] set visiblity
@@ -87,3 +90,10 @@
             - [ ] text from the line of code
             - [ ] file name
             - [ ] line number inside file
+
+## structure of project/tasks relationship
+project > milestone > goal > task > checklists
+basically each project can have multiple milestones, these milestones will be associated with a 'version' string, that when the user marks a milestone as complete will update the project.
+each milestone is comprised of multiple goals, which are essentially just grouped tasks. goals can have their own due dates but no start dates, and the due dates are optional. goals have a title & summary. goals will have a 'completed' date field which would indicate when the user marked the goal as completed.
+tasks are made of many different fields, outlined above. They also contain links to checklists. This is a complex relationship as a checklist's can be nested within other checklists, but the root checklist will be linked to only 1 task. A task can have multiple checklist instances however.
+
