@@ -98,20 +98,6 @@ CREATE TABLE `project` (
 	`config_json` text
 );
 --> statement-breakpoint
-CREATE TABLE `project_goal` (
-	`id` text PRIMARY KEY NOT NULL,
-	`name` text NOT NULL,
-	`project_id` text,
-	`description` text,
-	`target_time` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`deleted` integer,
-	`target_version` text,
-	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	`finished_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
-	FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON UPDATE no action ON DELETE no action
-);
---> statement-breakpoint
 CREATE TABLE `session` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
@@ -134,19 +120,21 @@ CREATE TABLE `tag` (
 CREATE TABLE `task` (
 	`id` text NOT NULL,
 	`title` text NOT NULL,
-	`progress` text,
-	`visibility` text,
+	`progress` text DEFAULT 'UNSTARTED' NOT NULL,
+	`visibility` text DEFAULT 'PRIVATE' NOT NULL,
 	`goal_id` text,
+	`project_id` text,
 	`description` text,
 	`start_time` text,
 	`end_time` text,
 	`summary` text,
 	`codebase_task_id` text,
-	`priority` text,
+	`priority` text DEFAULT 'LOW' NOT NULL,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP),
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP),
 	FOREIGN KEY (`id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`goal_id`) REFERENCES `goal`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`codebase_task_id`) REFERENCES `codebase_tasks`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint

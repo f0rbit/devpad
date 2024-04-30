@@ -1,8 +1,8 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
 import { db } from "../../../../database/db";
-import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
-import { and, eq } from "drizzle-orm";
+import { codebase_tasks, project, task, todo_updates, tracker_result } from "../../../../database/schema";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 const request_schema = z.object({
 	id: z.number(),
@@ -60,8 +60,13 @@ export async function POST(context: APIContext) {
 	if (approved) {
 		// update all the tasks within the update and codebase_task table
 		// TODO: add typesafety to this, either infer datatype from schema or use zod validator
-		const codebase_items = JSON.parse(update_query[0].data as string) as any[];
-		console.log(codebase_items);
+		let codebase_items: any[];
+		try {
+			codebase_items = JSON.parse(update_query[0].data as string) as any[];
+		} catch (e) {
+			console.error(e);
+			return new Response("error parsing update data", { status: 500 });
+		}
 		// we want to group into 'upserts', 'deletes'
 		const upserts = codebase_items.filter((item) => item.type == "NEW" || item.type == "UPDATE" || item.type == "SAME" || item.type == "MOVE");
 		const deletes = codebase_items.filter((item) => item.type == "DELETE");
@@ -80,7 +85,13 @@ export async function POST(context: APIContext) {
 			await db.insert(codebase_tasks).values(values).onConflictDoUpdate({ target: [codebase_tasks.id], set: values });
 		};
 
-		await Promise.all(upserts.map(upsert_item));
+		try {
+			await Promise.all(upserts.map(upsert_item));
+		} catch (e) {
+			console.error(e);
+			return new Response("error upserting tasks", { status: 500 });
+		}
+
 
 		// run the deletes
 		const delete_item = async (item: any) => {
@@ -89,7 +100,45 @@ export async function POST(context: APIContext) {
 			await db.delete(codebase_tasks).where(eq(codebase_tasks.id, id));
 		};
 
-		await Promise.all(deletes.map(delete_item));
+		try {
+			await Promise.all(deletes.map(delete_item));
+		} catch (e) {
+			console.error(e);
+			return new Response("error deleting tasks", { status: 500 });
+		}
+
+		try {
+			// update any tasks that have codebase_task_id that were deleted to null
+			if (deletes.length > 0) {
+				await db.update(task).set({ codebase_task_id: null }).where(inArray(task.codebase_task_id, deletes.map((item) => item.id)));
+			}
+
+			// then we want to check if there are any codebase_tasks that don't have an associated task
+			let found_tasks = [] as any[];
+			if (upserts.length > 0) {
+				found_tasks = await db.select().from(task).where(inArray(task.codebase_task_id, upserts.map((item) => item.id)));
+			}
+			const found_ids = found_tasks.map((task) => task.codebase_task_id);
+			const missing_tasks = upserts.filter((item) => !found_ids.includes(item.id));
+
+			// if there are any, we want to create a task for them
+			if (missing_tasks.length > 0) {
+				const values = missing_tasks.map((item) => ({ codebase_task_id: item.id, project_id, title: item.data.new.text, owner_id: user_id }));
+				console.log("inserting tasks", values);
+				await db.insert(task).values(values);
+			}
+
+			const update_tasks = found_ids.filter(Boolean) as string[];
+			if (found_ids.length > 0) {
+				// update the updated_at field of all found tasks
+				await db.update(task).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.codebase_task_id, update_tasks));
+			}
+
+		} catch (e) {
+			console.error(e);
+			return new Response("error updating tasks", { status: 500 });
+		}
+
 	}
 
 	return new Response(null, { status: 200 });

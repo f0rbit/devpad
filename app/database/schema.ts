@@ -2,7 +2,7 @@ import { sql, relations } from "drizzle-orm";
 import { sqliteTable, text, int, unique, integer, primaryKey } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "user_" + crypto.randomUUID()),
 	github_id: integer("github_id"),
 	name: text("name"),
 	email: text("email").unique(),
@@ -18,13 +18,13 @@ export const session = sqliteTable("session", {
 });
 
 export const api_key = sqliteTable("api_key", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "api_key" + crypto.randomUUID()),
 	owner_id: text("owner_id").references(() => user.id),
 	hash: text("hash")
 });
 
 export const project = sqliteTable("project", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "project_" + crypto.randomUUID()),
 	project_id: text("project_id").notNull(),
 	owner_id: text("owner_id").notNull(),
 	name: text("name").notNull(),
@@ -44,19 +44,6 @@ export const project = sqliteTable("project", {
 	project_unique: unique().on(table.owner_id, table.project_id)
 }));
 
-export const project_goal = sqliteTable("project_goal", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-	name: text("name").notNull(),
-	project_id: text("project_id").references(() => project.id),
-	description: text("description"),
-	target_time: text("target_time").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-	deleted: int("deleted", { mode: "boolean" }),
-	target_version: text("target_version"),
-	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-	finished_at: text("finished_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-});
-
 const ACTIONS = [
 	"CREATE_TASK", "UPDATE_TASK", "DELETE_TASK",
 	"CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT",
@@ -67,7 +54,7 @@ const ACTIONS = [
 ] as const;
 
 export const action = sqliteTable("action", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "action_" + crypto.randomUUID()),
 	owner_id: text("owner_id").references(() => user.id),
 	type: text("type", { enum: ACTIONS }).notNull(),
 	description: text("description").notNull(),
@@ -100,7 +87,7 @@ export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
 }));
 
 export const milestone = sqliteTable("milestone", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "milestone_" + crypto.randomUUID()),
 	project_id: text("project_id").notNull().references(() => project.id),
 	name: text("name").notNull(),
 	description: text("description"),
@@ -114,7 +101,7 @@ export const milestone = sqliteTable("milestone", {
 });
 
 export const goal = sqliteTable("goal", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "goal_" + crypto.randomUUID()),
 	milestone_id: text("milestone_id").notNull().references(() => milestone.id),
 	name: text("name").notNull(),
 	description: text("description"),
@@ -126,24 +113,25 @@ export const goal = sqliteTable("goal", {
 });
 
 export const task = sqliteTable("task", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "task_" + crypto.randomUUID()),
 	owner_id: text("id").notNull().references(() => user.id),
 	title: text("title").notNull(),
-	progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] }),
-	visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
+	progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] }).notNull().default("UNSTARTED"),
+	visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }).notNull().default("PRIVATE"),
 	goal_id: text("goal_id").references(() => goal.id),
+	project_id: text("project_id").references(() => project.id),
 	description: text("description"),
 	start_time: text("start_time"),
 	end_time: text("end_time"),
 	summary: text("summary"),
 	codebase_task_id: text("codebase_task_id").references(() => codebase_tasks.id),
-	priority: text("priority", { enum: ["LOW", "MEDIUM", "HIGH"] }),
+	priority: text("priority", { enum: ["LOW", "MEDIUM", "HIGH"] }).notNull().default("LOW"),
 	created_at: text("created_at").default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`)
 });
 
 export const checklist = sqliteTable("checklist", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "checklist_" + crypto.randomUUID()),
 	task_id: text("task_id").notNull().references(() => task.id),
 	name: text("name").notNull(),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -152,7 +140,7 @@ export const checklist = sqliteTable("checklist", {
 });
 
 export const checklist_item = sqliteTable("checklist_item", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "checklist-item_" + crypto.randomUUID()),
 	checklist_id: text("checklist_id").notNull().references(() => checklist.id),
 	parent_id: text("parent_id"),
 	name: text("name").notNull(),
@@ -160,7 +148,7 @@ export const checklist_item = sqliteTable("checklist_item", {
 });
 
 export const codebase_tasks = sqliteTable("codebase_tasks", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "codebase-task_" + crypto.randomUUID()),
 	// TODO: need to implement branch & commit
 	branch: text("branch"),
 	commit: text("commit"),
@@ -176,7 +164,7 @@ export const codebase_tasks = sqliteTable("codebase_tasks", {
 });
 
 export const tag = sqliteTable("tag", {
-	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+	id: text("id").primaryKey().$defaultFn(() => "tag_" + crypto.randomUUID()),
 	owner_id: text("owner_id").notNull().references(() => user.id),
 	title: text("title").notNull(),
 	color: text("color"),
@@ -216,14 +204,9 @@ export const api_key_relations = relations(api_key, ({ one }) => ({
 
 export const project_relations = relations(project, ({ one, many }) => ({
 	owner: one(user, { fields: [project.owner_id], references: [user.id] }),
-	project_goals: many(project_goal),
 	tracker_results: many(tracker_result),
 	milestones: many(milestone),
 	todo_updates: many(todo_updates)
-}));
-
-export const project_goal_relations = relations(project_goal, ({ one }) => ({
-	project: one(project, { fields: [project_goal.project_id], references: [project.id] })
 }));
 
 export const action_relations = relations(action, ({ one }) => ({
