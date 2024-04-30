@@ -114,7 +114,7 @@ export const goal = sqliteTable("goal", {
 
 export const task = sqliteTable("task", {
 	id: text("id").primaryKey().$defaultFn(() => "task_" + crypto.randomUUID()),
-	owner_id: text("id").notNull().references(() => user.id),
+	owner_id: text("owner_id").notNull().references(() => user.id),
 	title: text("title").notNull(),
 	progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] }).notNull().default("UNSTARTED"),
 	visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }).notNull().default("PRIVATE"),
