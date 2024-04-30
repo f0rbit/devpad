@@ -48,7 +48,7 @@
 - [ ] if all tasks are "SAME", don't create new update
 - [x] on approve > create tasks
     - [x] currently modifies codebase_tasks
-    - [ ] we want to cross-check with current tasks in project and update if necessary
+    - [x] we want to cross-check with current tasks in project and update if necessary
 - [x] move project scanning to projects page
 - [ ] create an interface for actually generating the tasks
 
