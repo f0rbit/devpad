@@ -51,9 +51,6 @@ export async function PATCH(context: APIContext) {
 			}
 		}
 
-		if (!data.id) {
-			data.id = crypto.randomUUID();
-		}
 		const insert = data as CompleteUpsertProject;
 		// perform db upsert
 		const new_project = await db.insert(project).values(insert).onConflictDoUpdate({ target: [project.id], set: insert }).returning();

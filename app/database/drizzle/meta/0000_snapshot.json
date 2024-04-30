@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "972e49d9-2600-4cd6-9a4d-5c96ef73e0a9",
+  "id": "b6740d1d-f12a-409d-8008-f2beb17beaf8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "action": {
@@ -809,6 +809,13 @@
         "id": {
           "name": "id",
           "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -912,12 +919,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "task_id_user_id_fk": {
-          "name": "task_id_user_id_fk",
+        "task_owner_id_user_id_fk": {
+          "name": "task_owner_id_user_id_fk",
           "tableFrom": "task",
           "tableTo": "user",
           "columnsFrom": [
-            "id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"

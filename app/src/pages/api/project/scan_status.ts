@@ -57,6 +57,7 @@ export async function POST(context: APIContext) {
 	// then we want to execute the update
 	await db.update(todo_updates).set({ status: approved ? "ACCEPTED" : "REJECTED" }).where(eq(todo_updates.id, update_id));
 
+	// TODO: extract this to function that throws errors on failure
 	if (approved) {
 		// update all the tasks within the update and codebase_task table
 		// TODO: add typesafety to this, either infer datatype from schema or use zod validator

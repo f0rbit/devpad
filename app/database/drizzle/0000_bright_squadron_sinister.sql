@@ -118,7 +118,8 @@ CREATE TABLE `tag` (
 );
 --> statement-breakpoint
 CREATE TABLE `task` (
-	`id` text NOT NULL,
+	`id` text PRIMARY KEY NOT NULL,
+	`owner_id` text NOT NULL,
 	`title` text NOT NULL,
 	`progress` text DEFAULT 'UNSTARTED' NOT NULL,
 	`visibility` text DEFAULT 'PRIVATE' NOT NULL,
@@ -132,7 +133,7 @@ CREATE TABLE `task` (
 	`priority` text DEFAULT 'LOW' NOT NULL,
 	`created_at` text DEFAULT (CURRENT_TIMESTAMP),
 	`updated_at` text DEFAULT (CURRENT_TIMESTAMP),
-	FOREIGN KEY (`id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
+	FOREIGN KEY (`owner_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`goal_id`) REFERENCES `goal`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`project_id`) REFERENCES `project`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`codebase_task_id`) REFERENCES `codebase_tasks`(`id`) ON UPDATE no action ON DELETE no action
