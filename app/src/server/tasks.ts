@@ -21,3 +21,18 @@ export async function getUserTasks(user_id: string) {
 
 	return tasks;
 }
+
+export async function getProjectTasks(project_id: string) {
+	const tasks = await db.select().from(task).leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id)).where(eq(task.project_id, project_id));
+
+	// get all tags for each task
+	const task_ids = tasks.map((t: any) => t.id);
+	if (task_ids.length) {
+		const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
+		tasks.forEach((t: any) => {
+			t.tags = tags.filter((tag: any) => tag.task_id === t.id);
+		});
+	}
+
+	return tasks;
+}
