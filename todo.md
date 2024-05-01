@@ -9,7 +9,7 @@
 - [ ] Todo Tracker
     - [x] Add codebase
     - [ ] View tasks
-        - [ ] View all
+        - [x] View all
         - [ ] By priority
         - [ ] By recent
         - [ ] In Progress
