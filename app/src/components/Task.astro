@@ -1,0 +1,25 @@
+---
+interface Props {
+	task: any;
+	project: any;
+}
+
+const { task: fetched_task, project } = Astro.props;
+const { task } = fetched_task;
+---
+
+<div>
+	<div>
+		<span class="lowercase" >{task.progress}</span> - <span><a href={`/todo/${task.id}`}>{task.title}</a></span>
+	</div>
+	<div>
+		<span>{project.name}</span>, <span class="lowercase">{task.priority} priority</span>
+	</div>
+</div>
+
+
+<style>
+	.lowercase {
+		text-transform: lowercase;
+	}
+</style>

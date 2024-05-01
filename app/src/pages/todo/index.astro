@@ -1,10 +1,15 @@
 ---
 import PageLayout from '../../layouts/PageLayout.astro';
+import Task from "../../components/Task.astro";
 import { getUserProjects } from '../../server/projects';
 import { getUserTasks } from '../../server/tasks';
 
 const user = Astro.locals.user;
 const projects = user ? await getUserProjects(user.id) : [];
+const project_map = {} as any;
+for (const p of projects) {
+	project_map[p.id] = p;
+}
 const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
 const tasks = user ? await getUserTasks(user.id) : [];
 ---
@@ -19,9 +24,12 @@ const tasks = user ? await getUserTasks(user.id) : [];
 		<section>
 			<h2>upcoming tasks</h2>
 			<ul>
-			{tasks.map((t) => <li>
-				<pre>{JSON.stringify(t, null, 2)}</pre>
-			</li>)}
+			{tasks.map((t) => {
+				const project = project_map[t.task.project_id as any];
+				return <li>
+						<Task task={t} project={project} />
+				</li>
+			})}
 			</ul>
 		</section>
 	</main>
