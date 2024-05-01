@@ -1,15 +1,12 @@
 ---
 import PageLayout from '../../layouts/PageLayout.astro';
 import { getUserProjects } from '../../server/projects';
-const tasks = [
-	{ title: "redesign devpad", due: "in 2 hours", project: "devpad", priority: "urgent" },
-	{ title: "add likes", due: "in 21 hours", project: "dev-blog", priority: "normal" },
-	{ title: "implement twitter API", due: "in 2 days", project: "media-timeline", priority: "normal" }
-];
+import { getUserTasks } from '../../server/tasks';
 
 const user = Astro.locals.user;
 const projects = user ? await getUserProjects(user.id) : [];
 const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
+const tasks = user ? await getUserTasks(user.id) : [];
 ---
 
 <PageLayout title="Welcome to Astro.">
@@ -23,8 +20,7 @@ const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p
 			<h2>upcoming tasks</h2>
 			<ul>
 			{tasks.map((t) => <li>
-				<div><a>{t.title}</a><span> - {t.due}</span></div>
-				<div><span>{t.project}</span><span>,</span><span> {t.priority}</span></div>
+				<pre>{JSON.stringify(t, null, 2)}</pre>
 			</li>)}
 			</ul>
 		</section>
