@@ -53,7 +53,7 @@
 - [ ] create an interface for actually generating the tasks
 
 # tasks
-- [ ] create tables for structure
+- [x] create tables for structure
     - [x] project
     - [x] milestone
     - [x] goal
