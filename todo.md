@@ -50,7 +50,7 @@
     - [x] currently modifies codebase_tasks
     - [x] we want to cross-check with current tasks in project and update if necessary
 - [x] move project scanning to projects page
-- [ ] create an interface for actually generating the tasks
+- [x] create an interface for actually generating the tasks
 
 # tasks
 - [x] create tables for structure
@@ -62,23 +62,23 @@
 - [ ] implement MVP for first release
     - [ ] tasks
         - [ ] add checklist
-        - [ ] add description
-        - [ ] set start date
-        - [ ] set end date
+        - [x] add description
+        - [x] set start date
+        - [x] set end date
         - [ ] tag management
             - [ ] tags are scoped per-user
             - [ ] any task the user owns can be assigned to any tag the user owns
             - [ ] tags should have a 'colour' field & title
-        - [ ] add a summary
-        - [ ] set a priority
-        - [ ] set visiblity
+        - [x] add a summary
+        - [x] set a priority
+        - [x] set visiblity
             - [ ] NESTED
-            - [ ] PUBLIC
-            - [ ] PRIVATE
-            - [ ] ARCHIVED
-            - [ ] DELETED
-            - [ ] HIDDEN
-            - [ ] DRAFT
+            - [x] PUBLIC
+            - [x] PRIVATE
+            - [x] ARCHIVED
+            - [x] DELETED
+            - [x] HIDDEN
+            - [x] DRAFT
     - [ ] checklist
         - [ ] easy interface for adding/removing items
         - [ ] convert to tasks easily
