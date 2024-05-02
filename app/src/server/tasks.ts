@@ -36,3 +36,19 @@ export async function getProjectTasks(project_id: string) {
 
 	return tasks;
 }
+
+export async function getTask(todo_id: string) {
+	const todo = await db.select().from(task).leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id)).where(eq(task.id, todo_id));
+	if (!todo || todo.length != 1) {
+		return null;
+	}
+	// TODO: typesafety
+	const found: any = todo[0];
+
+	const tags = await db.select().from(task_tag).where(eq(task_tag.task_id, found.id));
+	found.tags = tags;
+	found.codebase_task = found.codebase_tasks;
+	delete found.codebase_tasks;
+
+	return found;
+}

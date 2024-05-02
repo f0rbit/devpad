@@ -27,7 +27,7 @@ const tasks = user ? await getUserTasks(user.id) : [];
 			{tasks.map((t) => {
 				const project = project_map[t.task.project_id as any];
 				return <li>
-						<Task task={t} project={project} from="todo" />
+						<Task task={t} project={project} from="/todo" />
 				</li>
 			})}
 			</ul>
