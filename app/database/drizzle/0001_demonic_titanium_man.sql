@@ -1,0 +1,1 @@
+ALTER TABLE `task_tag` DROP COLUMN `primary`;
