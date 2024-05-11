@@ -1,0 +1,156 @@
+---
+import type { UpsertProject } from "../server/types";
+
+interface Props {
+	project: UpsertProject | null;
+	back: string,
+}
+
+const user = Astro.locals.user;
+const { project, back } = Astro.props;
+const mode = project ? "edit" : "create"; 
+---
+
+<section id="project-settings" data-user={user?.id ?? null}>
+	<div>
+		<label for="project_id">project id</label>
+		<input type="text" id="project_id" value={project?.project_id ?? ""} required />
+		<label for="status">status</label>
+		<select id="status" value={project?.status ?? "development"}>
+			<option>development</option>
+			<option>released</option>
+			<option>stopped</option>
+			<option>live</option>
+			<option>finished</option>
+			<option>paused</option>
+			<option>abandoned</option>
+		</select>
+	</div>
+	<div>
+		<label for="name">name</label>
+		<input type="text" id="name" value={project?.name ?? ""} />
+		<label for="icon_url">icon url</label>
+		<input type="text" id="icon-url" value={project?.icon_url ?? ""}/>
+	</div>
+	<div>
+		<label for="description">description</label>
+		<input type="text" id="description" value={project?.description ?? ""}/>
+	</div>
+	<div>
+		<label for="link_text">link text</label>
+		<input type="text" id="link_text" value={project?.link_text ?? ""}/>
+		<label for="link_url">link url</label>
+		<input type="text" id="link_url" value={project?.link_url ?? ""}/>
+	</div>
+	<div>
+		<label for="github_url">github url</label>
+		<input type="text" id="github_url" value={project?.repo_url ?? ""}/>
+		<input type="number" id="github_repo_id" value={project?.repo_id ?? ""} style="display: none;" />
+		<label for="visibility">visibility</label>
+		<select id="visibility" value={project?.visibility ?? "private"}>
+			<option>public</option>
+			<option>private</option>
+			<option>hidden</option>
+			<option>archived</option>
+			<option>draft</option>
+			<option>deleted</option>
+		</select>
+	</div>
+	<div>
+		<a href={back}>back</a>
+		<a href="#" id="submit">{mode == "create" ? "create" : "save"}</a>
+	</div>
+	<div>
+		<p id="error"></p>
+	</div>
+</section>
+
+<script>
+	import type { UpsertProject } from "../server/types";
+	async function create_project() {
+		document.getElementById("error")!.innerText = "";
+		const get_value = (id: string) => {
+			return (
+				(document.getElementById(id) as HTMLInputElement | undefined)?.value ??
+				null
+			);
+		};
+		// extract elements from form
+		const project_id = get_value("project_id") ?? null;
+		const status = get_value("status") ?? "development";
+		const name = get_value("name") ?? project_id;
+		const icon_url = get_value("icon_url") ?? null;
+		const description = get_value("description") ?? null;
+		const link_text = get_value("link_text") ?? null;
+		const link_url = get_value("link_url") ?? null;
+		const github_url = get_value("github_url") ?? null;
+		const github_repo_id = get_value("github_repo_id") ?? null;
+		const visibility = get_value("visibility") ?? "private";
+
+		const owner_id = document.getElementById("project-settings")?.dataset?.user ?? null;
+
+		// submit POST request
+		const body = JSON.stringify({
+			project_id,
+			status: status.toUpperCase() as UpsertProject['status'],
+			name,
+			icon_url,
+			description,
+			link_text,
+			link_url,
+			repo_url: github_url,
+			repo_id: github_repo_id ? Number(github_repo_id) : null,
+			visibility: visibility.toUpperCase() as UpsertProject['visibility'],
+			owner_id,
+			deleted: false
+		} as UpsertProject);
+
+		const method = "PATCH";
+		const url = "/api/project/upsert";
+		const response = await fetch(url, { method, body });
+
+		// if error, display error
+		if (!response || !response.ok) {
+			document.getElementById("error")!.innerText = "Error submitting request";
+			return;
+		}
+
+		// otherwise goto new project
+		try {
+			const result = (await response.json()) as any;
+			window.location.href = `/project/${result.project_id}`;
+		} catch (err) {
+			document.getElementById("error")!.innerText = "Error parsing result";
+			console.error(err);
+			return;
+		}
+	}
+
+	document.getElementById("submit")?.addEventListener("click", create_project);
+</script>
+
+<style scoped>
+	section div {
+		display: flex;
+		width: 100%;
+		flex-direction: row;
+		gap: 5px;
+	}
+	section {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	section label {
+		width: max-content;
+		white-space: nowrap;
+	}
+
+	section > div > label:first-child {
+		min-width: 5rem;
+	}
+	section input[type="text"] {
+		width: 100%;
+	}
+</style>

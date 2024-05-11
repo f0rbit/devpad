@@ -1,0 +1,40 @@
+---
+import PageLayout from '../../layouts/PageLayout.astro';
+import { getUserProjects } from '../../server/projects';
+const user = Astro.locals.user;
+
+const projects = user ? await getUserProjects(user.id) : [];
+const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
+const deleted = projects.filter((p) => p.visibility == "DELETED");
+---
+
+<PageLayout title="Project Manager">
+	<main>
+	{user ?
+	(<>
+		<h1>projects</h1>
+		<section>
+			{codebases.map((c) => <a href=`/project/${c}`>{c}</a>)}
+		</section>
+		<br />
+		<a href="/project/create">+ add</a>
+		{deleted.length > 0 ? <details><summary>{deleted.length} deleted projects</summary>{deleted.map((p) => (
+		<div>
+			<span>{p.project_id} - </span><span><a href='#'>restore</a></span>
+		</div>
+		))}</details> : <></>}
+		</>)
+	: (<>
+		<p>You must be logged in</p>
+		<a href="api/auth/login">login</a>
+	</>)}
+	</main>
+</PageLayout>
+
+
+<style>
+section {
+	display: flex;
+	flex-direction: column;
+}
+</style>

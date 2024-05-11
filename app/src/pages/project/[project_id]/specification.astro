@@ -1,0 +1,24 @@
+---
+import remarkHtml from "remark-html";
+import { remark } from "remark";
+import PageLayout from "../../../layouts/PageLayout.astro"
+import { getProject } from "../../../server/projects"
+
+const { project_id } = Astro.params;
+
+const user = Astro.locals.user;
+
+const { project } = await getProject(user?.id ?? null, project_id);
+
+const parsed = project?.specification ? await remark().use(remarkHtml).process(project?.specification ?? "no specification") : null;
+---
+
+<PageLayout title={`Project Specification - ${project_id}`}>
+	<main>
+		<h2>specification</h2>
+		<a href={`/project/${project_id}`}>back</a>
+		<br />
+		<br />
+		<article style="max-width: 50vw">{parsed ?? "no specification"}</article>
+	</main>
+</PageLayout>

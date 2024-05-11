@@ -1,0 +1,37 @@
+---
+import Layout from "../layouts/Layout.astro";
+const user = Astro.locals.user;
+---
+
+<Layout title="Welcome to Astro.">
+	<main>
+		<h1>devpad</h1>
+		<p>for developers.</p>
+		<br />
+		<nav>
+			<a href="/explore">explore</a>
+			<a>api</a>
+			{
+				!user ? (
+					<a href="api/auth/login">login</a>
+				) : (
+					<>
+						<a href="api/auth/logout">logout</a>
+						<br />
+						<div style="display: flex; flex-direction: column">
+							<a href="/project">project manager</a>
+							<a href="/todo">todo tracker</a>
+						</div>
+					</>
+				)
+			}
+		</nav>
+	</main>
+</Layout>
+
+<style>
+	nav {
+		display: flex;
+		flex-direction: column;
+	}
+</style>

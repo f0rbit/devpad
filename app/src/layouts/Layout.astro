@@ -1,0 +1,46 @@
+---
+interface Props {
+	title: string;
+}
+
+const dark_mode = false;
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" class={dark_mode ? "dark" : ""}>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content="Astro description" />
+		<meta name="viewport" content="width=device-width" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+	</head>
+	<slot />
+
+
+	<style is:global>
+		:root {
+			--bg-primary: white;
+			--text-primary: black;
+		}
+
+		html.dark {
+			--bg-primary: oklch(21.55% 0.014 278.77);
+			--text-primary: white;
+		}
+
+		h1,
+		h2,
+		h3,
+		h4,
+		h5,
+		h6,
+		p {
+			appearance: none;
+			margin: unset;
+		}
+	</style>
+</html>

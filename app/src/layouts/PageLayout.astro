@@ -1,0 +1,50 @@
+---
+import Layout from "./Layout.astro";
+interface Props {
+	title: string;
+}
+const user = Astro.locals.user;
+
+const { title } = Astro.props;
+
+const pages = [
+	{ name: "home", href: "/" },
+	{ name: "projects", href: "/project" },
+	{ name: "tasks", href: "/todo" },
+	{ name: "account", href: "/account" },
+];
+
+// if not logged in, insert 'explore' at position 1
+if (!user) {
+	pages.splice(1, 0, { name: "explore", href: "/explore" });
+}
+---
+
+<Layout title={title}>
+	<body>
+		<nav>
+			{pages.map((p) => <a href={p.href}>{p.name}</a>)}
+		</nav>
+		<br />
+		<slot />
+	</body>
+</Layout>
+
+<style>
+	body {
+		background: var(--bg-primary);
+		color: var(--text-primary);
+		margin: unset;
+	}
+
+	body {
+		width: calc(100% - 2em);
+		height: 100%;
+		padding: 1em;
+	}
+
+	nav {
+		display: flex;
+		gap: 5px;
+	}
+</style>

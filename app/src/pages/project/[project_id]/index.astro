@@ -1,0 +1,39 @@
+---
+import { getProject } from "../../../server/projects";
+import PageLayout from "../../../layouts/PageLayout.astro";
+
+const { project_id } = Astro.params;
+
+const user = Astro.locals.user;
+
+// want to fetch the project from db
+const { project, error } = await getProject(user?.id ?? null, project_id);
+---
+
+<PageLayout title={`Project - ${project_id}`}>
+{error ? <p>Error: {error}</p> : 
+	<main>
+		<h2>{project_id}</h2>
+		<section>
+			<nav>
+				<a href={`/project/${project_id}`}>overview</a>
+				<a href={`/project/${project_id}/settings`}>settings</a>
+				<a href={`/project/${project_id}/specification`}>specification</a>
+				<a href={`/project/${project_id}/tasks`}>tasks</a>
+			</nav>
+			<p>{project!.description}</p>
+			{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
+			<p><span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></p>
+		</section>
+	</main>
+}
+</PageLayout>
+
+
+<style>
+main {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+</style>
