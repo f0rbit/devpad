@@ -19,7 +19,7 @@ const tasks = user ? await getUserTasks(user.id) : [];
 			<h1>todo tracker</h1>
 		<section>
 			<h2>codebases</h2>
-			{codebases.map((c) => <a href=`/todo/${c}`>{c}</a>)}
+			{codebases.map((c) => <a href=`/project/${c}/tasks`>{c}</a>)}
 		</section>
 		<section>
 			<h2>upcoming tasks</h2>

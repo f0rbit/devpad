@@ -1,0 +1,40 @@
+---
+interface Props {
+	update: any;
+}
+
+const { update } = Astro.props;
+---
+
+<div>
+	{
+		update.map((u: any) => {
+			const { data } = u;
+			return (
+				<div>
+					<h4 style="display: flex; flex-direction: row; gap: 5px;">
+						{u.id}
+						{u.tag}
+						{u.type}
+					</h4>
+					<div style="padding-left: 3ch;">
+						<div class="item old">
+							<h5>Old</h5>
+							<p>{data.old?.text}</p>
+							<code>
+								{data.old?.file} - {data.old?.line}
+							</code>
+						</div>
+						<div class="item new">
+							<h5>New</h5>
+							<p>{data.new?.text}</p>
+							<code>
+								{data.new?.file} - {data.new?.line}
+							</code>
+						</div>
+					</div>
+				</div>
+			);
+		})
+	}
+</div>

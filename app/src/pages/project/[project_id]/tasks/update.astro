@@ -1,8 +1,9 @@
 ---
 import { db } from "../../../../../database/db";
-import { todo_updates, tracker_result } from "../../../../../database/schema";
+import { todo_updates } from "../../../../../database/schema";
 import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import PageLayout from "../../../../layouts/PageLayout.astro";
+import UpdateDiff from "../../../../components/UpdateDiff.astro";
 import { eq } from "drizzle-orm";
 
 const { project_id } = Astro.params;
@@ -25,14 +26,8 @@ const updates = project_uuid
 			.where(eq(todo_updates.project_id, project_uuid))
 	: [];
 
-const tracker_results = project_id
-	? await db
-			.select()
-			.from(tracker_result)
-			.where(eq(tracker_result.project_id, found_project?.id ?? ""))
-	: [];
-
 const update_id = update?.id ?? null;
+const update_data = update?.data ? JSON.parse(update.data) : null;
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
@@ -42,18 +37,33 @@ const update_id = update?.id ?? null;
 	<a href={`/project/${project_id}/tasks/update`}>update</a>
 	<a href={`/project/${project_id}/tasks/config`}>config</a>
 	<br />
-	<pre>{update?.data}</pre>
-	<a href="#" id="approve">Approve</a>
-	<a href="#" id="reject">Reject</a>
+	{
+		update_data ? (
+			<>
+				<UpdateDiff update={update_data} />
+				<a href="#" id="approve">
+					Approve
+				</a>
+				<a href="#" id="reject">
+					Reject
+				</a>
+			</>
+		) : (
+			<p>No updates</p>
+		)
+	}
+
 	<br />
 	<h3>All Updates</h3>
-	<pre>{JSON.stringify({ todo_updates: updates.map((u) => { 
-		u.data = JSON.parse(u.data as string);
-		return u;
-	}), tracker_results: tracker_results.map((t) => {
-		t.data = JSON.parse(t.data as string);
-		return t;
-	}).reverse()}, null, 2)}</pre>
+	<ul>
+		{
+			updates.map((u: any) => (
+				<li>
+					{u.created_at} - {u.status}
+				</li>
+			))
+		}
+	</ul>
 </PageLayout>
 
 <script is:inline define:vars={{ project_uuid, update_id }}>

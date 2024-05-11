@@ -176,7 +176,6 @@ export const tag = sqliteTable("tag", {
 export const task_tag = sqliteTable("task_tag", {
 	task_id: text("task_id").notNull().references(() => task.id),
 	tag_id: text("tag_id").notNull().references(() => tag.id),
-	primary: int("primary", { mode: "boolean" }).notNull().default(false),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 }, (table) => ({
