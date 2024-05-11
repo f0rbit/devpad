@@ -44,7 +44,7 @@
 # todo tracker integration
 - [ ] remove old scanned repos
 - [ ] add config modification
-- [ ] render diff
+- [x] render diff
 - [ ] if all tasks are "SAME", don't create new update
 - [x] on approve > create tasks
     - [x] currently modifies codebase_tasks
