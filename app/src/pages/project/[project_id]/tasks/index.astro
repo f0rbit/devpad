@@ -2,7 +2,7 @@
 import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import { getProject } from "../../../../server/projects";
-import Task from "../../../../components/Task.astro";
+import { TaskCard } from "../../../../components/solid/TaskCard";
 
 const { project_id } = Astro.params;
 const user = Astro.locals.user;
@@ -25,7 +25,7 @@ const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
 			{
 				tasks.map((task: any) => (
 					<li>
-						<Task task={task} project={project} from={`/project/${project_id}/tasks`} />
+						<TaskCard task={task} project={project} from={`/project/${project_id}/tasks`} />
 					</li>
 				))
 			}
