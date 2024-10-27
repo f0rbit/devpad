@@ -1,8 +1,8 @@
 ---
-import PageLayout from '../../layouts/PageLayout.astro';
-import Task from "../../components/Task.astro";
-import { getUserProjects } from '../../server/projects';
-import { getUserTasks } from '../../server/tasks';
+import PageLayout from "../../layouts/PageLayout.astro";
+import { getUserProjects } from "../../server/projects";
+import { getUserTasks } from "../../server/tasks";
+import { TaskSorter } from "../../components/solid/TaskSorter";
 
 const user = Astro.locals.user;
 const projects = user ? await getUserProjects(user.id) : [];
@@ -12,33 +12,28 @@ for (const p of projects) {
 }
 const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
 const tasks = user ? await getUserTasks(user.id) : [];
+
 ---
 
 <PageLayout title="Welcome to Astro.">
 	<main>
-			<h1>todo tracker</h1>
+		<h1>todo tracker</h1>
 		<section>
 			<h2>codebases</h2>
-			{codebases.map((c) => <a href=`/project/${c}/tasks`>{c}</a>)}
+			{codebases.map((c) => <a href={`/project/${c}/tasks`}>{c}</a>)}
 		</section>
 		<section>
 			<h2>upcoming tasks</h2>
 			<ul>
-			{tasks.map((t) => {
-				const project = project_map[t.task.project_id as any];
-				return <li>
-						<Task task={t} project={project} from="/todo" />
-				</li>
-			})}
+				<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"priority"} from={"/todo"}>
 			</ul>
 		</section>
 	</main>
 </PageLayout>
 
-
 <style>
-section {
-	display: flex;
-	flex-direction: column;
-}
+	section {
+		display: flex;
+		flex-direction: column;
+	}
 </style>
