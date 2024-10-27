@@ -25,7 +25,7 @@ const repos_result = await repos.json();
 	</main>
 
 	<datalist id='repo-list'>
-		{repos_result.map((r: any) => <option value={r.name}></option>)}	
+		{repos_result.map((r: any) => <option value={r.name}>{r.name}</option>)}	
 	</datalist>
 </PageLayout>
 
