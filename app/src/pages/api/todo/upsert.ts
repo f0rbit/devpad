@@ -3,7 +3,7 @@ import { task } from "../../../../database/schema";
 import { db } from "../../../../database/db";
 import { upsert_todo, type UpsertTodo } from "../../../server/types";
 
-type CompleteUpsertTodo = Omit<UpsertTodo, "todo_id"> & { id: string };
+type CompleteUpsertTodo = Omit<UpsertTodo, "todo_id"> & { id: string, updated_at: string };
 
 export async function PUT(context: APIContext) {
 	if (!context.locals.user) {
@@ -25,6 +25,7 @@ export async function PUT(context: APIContext) {
 
 	try {
 		const insert = data as CompleteUpsertTodo;
+		insert.updated_at = new Date().toISOString();
 		console.log("inserting id: " + insert.id);
 
 		const new_todo = await db.insert(task).values(insert).onConflictDoUpdate({ target: [task.id], set: insert }).returning();
