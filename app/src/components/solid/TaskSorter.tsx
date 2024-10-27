@@ -43,7 +43,9 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
 		<div>
 			<select value={selectedOption()} onChange={(e) => setSelectedOption(e.target.value as SortOption)}>
 				{options.map((option) => (
-					<option value={option}>{option}</option>
+					<option value={option} selected={option === selectedOption()}>
+						{option}
+					</option>
 				))}
 			</select>
 			<div>
