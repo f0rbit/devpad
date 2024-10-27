@@ -1,34 +1,34 @@
 {
-  "name": "devpad-frontend",
-  "type": "module",
-  "version": "0.0.1",
-  "scripts": {
-    "dev": "bunx --bun astro dev",
-    "start": "bun dist/server/entry.mjs",
-    "migrate": "bun database/migrate.ts",
+	"name": "devpad-frontend",
+	"type": "module",
+	"version": "0.0.1",
+	"scripts": {
+		"dev": "bunx --bun astro dev",
+		"start": "bun dist/server/entry.mjs",
+		"migrate": "bun database/migrate.ts",
 		"schema": "bunx drizzle-kit generate:sqlite --schema=./database/schema.ts --out=./database/drizzle",
-    "build": "astro check && astro build",
-    "preview": "astro preview",
-    "astro": "astro"
-  },
-  "dependencies": {
-    "@astrojs/check": "^0.5.10",
-    "@astrojs/node": "^8.2.5",
-    "@lucia-auth/adapter-drizzle": "^1.0.7",
-    "@types/bun": "^1.0.12",
-    "arctic": "^1.5.0",
-    "astro": "^4.5.9",
-    "drizzle-orm": "^0.30.6",
-    "lucia": "^3.1.1",
-    "oslo": "^1.2.0",
-    "prettier": "^3.2.5",
-    "prettier-plugin-astro": "^0.13.0",
-    "remark": "^15.0.1",
-    "remark-html": "^16.0.1",
-    "typescript": "^5.4.3",
-    "zod": "^3.22.4"
-  },
-  "devDependencies": {
-    "drizzle-kit": "^0.20.14"
-  }
+		"build": "astro check && astro build",
+		"preview": "astro preview",
+		"astro": "astro"
+	},
+	"dependencies": {
+		"@astrojs/check": "^0.5.10",
+		"@astrojs/node": "^8.2.5",
+		"@lucia-auth/adapter-drizzle": "^1.0.7",
+		"@types/bun": "^1.0.12",
+		"arctic": "^1.5.0",
+		"astro": "^4.5.9",
+		"drizzle-orm": "^0.30.6",
+		"lucia": "^3.1.1",
+		"oslo": "^1.2.0",
+		"prettier": "^3.2.5",
+		"prettier-plugin-astro": "^0.13.0",
+		"remark": "^15.0.1",
+		"remark-html": "^16.0.1",
+		"typescript": "^5.4.3",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.20.14"
+	}
 }
