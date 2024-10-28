@@ -3,7 +3,7 @@ import { db } from "../../../../database/db";
 import { and, desc, eq } from "drizzle-orm";
 import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
 import child_process from "child_process";
-
+import { readdir } from "node:fs/promises";
 
 // will have ?project_id=<id> query parameter
 
@@ -93,14 +93,19 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	yield "decompressing repo\n";
 	child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
 	const config_path = "../todo-config.json"; // TODO: grab this from user config from 1. project config, 2. user config, 3. default config
+	
+	// the unzipped folder will have a folder inside it with the repo contents, we need that pathname for the parsing task
+	const files = await readdir(unzipped_path);
+	const folder_path = `${unzipped_path}/${files[0]}`;
+
 
 	// generate the todo-tracker parse
 	yield "scanning repo\n";
-	child_process.execSync("../todo-tracker parse " + unzipped_path + " " + config_path + " > " + unzipped_path + "/new-output.json");
+	child_process.execSync(`../todo-tracker parse ${folder_path} ${config_path} > ${unzipped_path}/new-output.json`);
 	
 	yield "saving output\n"
 	// for now, lets return response of the new-output.json file
-	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
+	const output_file = await (Bun.file(`${unzipped_path}/new-output.json`).text());
 
 	yield "saving scan\n";
 
