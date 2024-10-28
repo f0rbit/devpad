@@ -6,13 +6,13 @@
 - [x] Project Manager
     - [x] View all projects
     - [x] Sub-project pages
-- [ ] Todo Tracker
+- [x] Todo Tracker
     - [x] Add codebase
-    - [ ] View tasks
+    - [x] View tasks
         - [x] View all
-        - [ ] By priority
-        - [ ] By recent
-        - [ ] In Progress
+        - [x] By priority
+        - [x] By recent
+        - [x] In Progress
 
 # implementation
 - [x] Setup tech stack
@@ -92,6 +92,7 @@
             - [x] text from the line of code
             - [x] file name
             - [x] line number inside file
+- [ ] store state of task sorting in URL
 
 ## structure of project/tasks relationship
 project > milestone > goal > task > checklists
