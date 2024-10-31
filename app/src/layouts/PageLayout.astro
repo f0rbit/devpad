@@ -18,33 +18,23 @@ const pages = [
 if (!user) {
 	pages.splice(1, 0, { name: "explore", href: "/explore" });
 }
+
+// get the active page (excluding home)
+const search_pages = pages.filter((p) => p.href != "/");
+const active = search_pages.find((p) => Astro.url.pathname.startsWith(p.href))?.name ?? "home";
 ---
 
 <Layout title={title}>
 	<body>
-		<nav>
-			{pages.map((p) => <a href={p.href}>{p.name}</a>)}
-		</nav>
-		<br />
-		<slot />
+		<div id="container">
+			<header>
+				<h5>devpad</h5>
+				<nav>
+					{pages.map((p) => <a href={p.href} class={active == p.name ? 'active' : ''}>{p.name}</a>)}
+				</nav>
+			</header>
+			<br />
+			<slot />
+		</div>
 	</body>
 </Layout>
-
-<style>
-	body {
-		background: var(--bg-primary);
-		color: var(--text-primary);
-		margin: unset;
-	}
-
-	body {
-		width: calc(100% - 2em);
-		height: 100%;
-		padding: 1em;
-	}
-
-	nav {
-		display: flex;
-		gap: 5px;
-	}
-</style>

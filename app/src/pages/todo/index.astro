@@ -17,23 +17,16 @@ const tasks = user ? await getUserTasks(user.id) : [];
 
 <PageLayout title="Welcome to Astro.">
 	<main>
-		<h1>todo tracker</h1>
 		<section>
-			<h2>codebases</h2>
-			{codebases.map((c) => <a href={`/project/${c}/tasks`}>{c}</a>)}
-		</section>
-		<section>
-			<h2>upcoming tasks</h2>
+			<h3>codebases</h3>
 			<ul>
-				<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"priority"} from={"/todo"}>
+				{codebases.map((c) => <li><a href={`/project/${c}/tasks`}>{c}</a></li>)}
 			</ul>
+		</section>
+		<br />
+		<section>
+			<h3>upcoming tasks</h3>
+			<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"priority"} from={"/todo"}>
 		</section>
 	</main>
 </PageLayout>
-
-<style>
-	section {
-		display: flex;
-		flex-direction: column;
-	}
-</style>

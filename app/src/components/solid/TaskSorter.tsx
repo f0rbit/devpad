@@ -48,7 +48,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
 					</option>
 				))}
 			</select>
-			<div>
+			<ul>
 				{sortedTasks().map((task) => {
 					const project = project_map[task.task.project_id!];
 					if (project == null) return null;
@@ -59,7 +59,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
 						</li>
 					);
 				})}
-			</div>
+			</ul>
 		</div>
 	);
 }

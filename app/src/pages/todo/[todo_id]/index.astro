@@ -6,10 +6,14 @@ const { todo_id } = Astro.params;
 const user = Astro.locals.user;
 
 if (!todo_id) {
-	return Astro.response.redirect("/todo");
+	return Astro.redirect("/todo");
 }
 
-const { task, codebase_task, tags } = await getTask(todo_id);
+const { task } = await getTask(todo_id) ?? { task: null };
+
+if (!task) {
+	return Astro.redirect("/todo");
+}
 
 if (!user || task.owner_id !== user.id) {
 	return Astro.response.redirect("/todo");
@@ -58,14 +62,6 @@ const from = Astro.url.searchParams.get('from')! || '';
 		</div>
 	</main>
 </PageLayout>
-
-<style>
-.editor {
-	display: grid;
-	gap: 2px;
-	max-width: 28rem;
-}
-</style>
 
 <script>
 	const saveButton = document.getElementById('save-button');

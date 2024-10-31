@@ -9,16 +9,10 @@ const keys = user ? await getAPIKeys(user.id) : [];
 {
 	user ? (
 		<PageLayout title="Welcome back!">
-			<h1>Welcome back, {user.name}!</h1>
-			<br />
 			<div>
-				<h2>Your API keys</h2>
-				<p>
-					These are your API keys. Keep them secret! You can use them to access
-					your data from the API.
-				</p>
+				<h3>api keys</h3>
 				{keys.length === 0 ? (
-					<p>You don't have any keys yet.</p>
+					<p>you don't have any api keys yet</p>
 				) : (
 					<ul>
 						{keys.map((key) => (
