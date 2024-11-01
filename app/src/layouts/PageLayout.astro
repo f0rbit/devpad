@@ -12,7 +12,7 @@ const pages = [
 	{ name: "projects", href: "/project" },
 	{ name: "tasks", href: "/todo" },
 	{ name: "account", href: "/account" },
-	{ name: "login", href: "/api/auth/login" }
+	{ name: "login", href: "/api/auth/login" },
 ];
 
 if (user) {
@@ -32,7 +32,13 @@ const active = search_pages.find((p) => Astro.url.pathname.startsWith(p.href))?.
 			<header>
 				<h5>devpad</h5>
 				<nav>
-					{pages.map((p) => <a href={p.href} class={active == p.name ? 'active' : ''}>{p.name}</a>)}
+					{
+						pages.map((p) => (
+							<a href={p.href} class={active == p.name ? "active" : ""}>
+								{p.name}
+							</a>
+						))
+					}
 				</nav>
 			</header>
 			<br />

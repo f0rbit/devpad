@@ -9,7 +9,7 @@ if (!todo_id) {
 	return Astro.redirect("/todo");
 }
 
-const { task } = await getTask(todo_id) ?? { task: null };
+const { task } = (await getTask(todo_id)) ?? { task: null };
 
 if (!task) {
 	return Astro.redirect("/todo");
@@ -19,7 +19,7 @@ if (!user || task.owner_id !== user.id) {
 	return Astro.response.redirect("/todo");
 }
 
-const from = Astro.url.searchParams.get('from')! || '';
+const from = Astro.url.searchParams.get("from")! || "";
 ---
 
 <PageLayout title={"Editing Task"}>
@@ -34,7 +34,7 @@ const from = Astro.url.searchParams.get('from')! || '';
 			<label for="description">Description</label>
 			<textarea id="description" name="description">{task.description}</textarea>
 			<label for="progress">Progress</label>
-			<select id="progress" name="progress" value={task.progress}> 
+			<select id="progress" name="progress" value={task.progress}>
 				<option value="UNSTARTED">Not Started</option>
 				<option value="IN_PROGRESS">In Progress</option>
 				<option value="COMPLETED">Completed</option>
@@ -58,34 +58,33 @@ const from = Astro.url.searchParams.get('from')! || '';
 				<option value="MEDIUM" selected={task.priority === "MEDIUM"}>Medium</option>
 				<option value="HIGH" selected={task.priority === "HIGH"}>High</option>
 			</select>
-			<a href="#" id='save-button'>save</a>
+			<a href="#" id="save-button">save</a>
 		</div>
 	</main>
 </PageLayout>
 
 <script>
-	const saveButton = document.getElementById('save-button');
+	const saveButton = document.getElementById("save-button");
 	const get_value = (id: string) => {
-			return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
-		};
-	saveButton!.addEventListener('click', async () => {
-		const title = get_value('title') ?? "";
-		const summary = get_value('summary') ?? null;
-		const description = get_value('description') ?? null;
-		const progress = get_value('progress') ?? "UNSTARTED";
-		const visibility = get_value('visibility') ?? "PRIVATE";
-		const start_time = get_value('start_time') ?? null;
-		const end_time = get_value('end_time') ?? null;
-		const priority = get_value('priority') ?? "LOW";
+		return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
+	};
+	saveButton!.addEventListener("click", async () => {
+		const title = get_value("title") ?? "";
+		const summary = get_value("summary") ?? null;
+		const description = get_value("description") ?? null;
+		const progress = get_value("progress") ?? "UNSTARTED";
+		const visibility = get_value("visibility") ?? "PRIVATE";
+		const start_time = get_value("start_time") ?? null;
+		const end_time = get_value("end_time") ?? null;
+		const priority = get_value("priority") ?? "LOW";
 
-
-		const owner_id = document.querySelector('.editor')?.getAttribute('data-user-id') ?? null;
-		const todo_id = document.querySelector('.editor')?.getAttribute('data-todo-id') ?? null;
+		const owner_id = document.querySelector(".editor")?.getAttribute("data-user-id") ?? null;
+		const todo_id = document.querySelector(".editor")?.getAttribute("data-todo-id") ?? null;
 
 		const response = await fetch(`/api/todo/upsert`, {
-			method: 'PUT',
+			method: "PUT",
 			headers: {
-				'Content-Type': 'application/json'
+				"Content-Type": "application/json",
 			},
 			body: JSON.stringify({
 				id: todo_id,
@@ -97,16 +96,14 @@ const from = Astro.url.searchParams.get('from')! || '';
 				start_time,
 				end_time,
 				priority,
-				owner_id
-			})
+				owner_id,
+			}),
 		});
 
 		if (response.ok) {
-			alert('Task updated');
+			alert("Task updated");
 		} else {
-			alert('Failed to update task');
+			alert("Failed to update task");
 		}
-
 	});
 </script>
-

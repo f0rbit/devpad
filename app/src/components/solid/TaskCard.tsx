@@ -1,4 +1,3 @@
-
 interface Props {
 	task: any;
 	project: any;
@@ -12,7 +11,10 @@ export const TaskCard = (props: Props) => {
 	return (
 		<div>
 			<div>
-				<span class="lowercase">{task.progress}</span> - <span><a href={`/todo/${task.id}?from=${from}`}>{task.title}</a></span>
+				<span class="lowercase">{task.progress}</span> -{" "}
+				<span>
+					<a href={`/todo/${task.id}?from=${from}`}>{task.title}</a>
+				</span>
 			</div>
 			<div>
 				<span>{project?.name}</span>, <span class="lowercase">{task.priority} priority</span>

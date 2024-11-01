@@ -17,9 +17,10 @@ const keys = user ? await getAPIKeys(user.id) : [];
 					<ul>
 						{keys.map((key) => (
 							<li>
-								<code>{key.hash}</code>
-								{" "}
-								<a data-keyid={key.id} class='delete-key'>&times;</a>
+								<code>{key.hash}</code>{" "}
+								<a data-keyid={key.id} class="delete-key">
+									&times;
+								</a>
 							</li>
 						))}
 					</ul>
