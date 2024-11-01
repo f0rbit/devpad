@@ -9,6 +9,15 @@ const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
 
+if (!project) {
+	return {
+		error: {
+			status: 404,
+			message: "Project not found",
+		},
+	};
+}
+
 const project_uuid = project?.id ?? null;
 
 const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
