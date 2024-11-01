@@ -12,11 +12,13 @@ const pages = [
 	{ name: "projects", href: "/project" },
 	{ name: "tasks", href: "/todo" },
 	{ name: "account", href: "/account" },
+	{ name: "login", href: "/api/auth/login" }
 ];
 
-// if not logged in, insert 'explore' at position 1
-if (!user) {
-	pages.splice(1, 0, { name: "explore", href: "/explore" });
+if (user) {
+	pages.splice(4, 1);
+} else {
+	pages.splice(3, 1);
 }
 
 // get the active page (excluding home)
@@ -36,5 +38,10 @@ const active = search_pages.find((p) => Astro.url.pathname.startsWith(p.href))?.
 			<br />
 			<slot />
 		</div>
+		<br />
+		<br />
+		<footer>
+			<p>© 2024 devpad</p>
+		</footer>
 	</body>
 </Layout>

@@ -1,30 +1,33 @@
 ---
-import Layout from "../layouts/Layout.astro";
-const user = Astro.locals.user;
+import PageLayout from "../layouts/PageLayout.astro";
 ---
 
-<Layout title="Welcome to Astro.">
-	<main>
-		<h1>devpad</h1>
-		<p>for developers.</p>
-		<br />
-		<nav>
-			<a href="/explore">explore</a>
-			<a>api</a>
-			{
-				!user ? (
-					<a href="api/auth/login">login</a>
-				) : (
-					<>
-						<a href="api/auth/logout">logout</a>
-						<br />
-						<div style="display: flex; flex-direction: column">
-							<a href="/project">project manager</a>
-							<a href="/todo">todo tracker</a>
-						</div>
-					</>
-				)
-			}
-		</nav>
-	</main>
-</Layout>
+<PageLayout title="Welcome to Astro.">
+	<p>tools for developers</p>
+	<br />
+	<div class="flex-col">
+		<section>
+			<h3 class="flex-row">todo tracker <span class="version-tag">v2.2</span></h3>
+			<p class="description">
+				keep track of your in-code todo notes across github projects, assign priority, due dates, descriptions & checklists to each task, and link it back to the destination in your codebase
+			</p>
+			<a href="/todo">get started</a>
+		</section>
+		<section>
+			<h3 class="flex-row">project manager<span class="version-tag">v1.0</span></h3>
+			<p class="description">
+				manage your side projects & link github repo for easy integration with todo-tracker. manage groups of tasks under 'goals', build a development roadmap, and view recent activity for
+				each project
+			</p>
+			<a href="/project">get started</a>
+		</section>
+		<section>
+			<h3 class="flex-row">task calendar</h3>
+			<p class="description">
+				view upcoming deadlines for todo tasks, project milestones and other defined deliverables. schedule blocks of work for each project & write a report after completion that can be viewed
+				from the project manager
+			</p>
+			<a>get started</a>
+		</section>
+	</div>
+</PageLayout>

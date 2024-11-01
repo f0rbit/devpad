@@ -3,8 +3,8 @@
 	--text-primary: black;
 	--text-link: #59565f;
 	--hover-filter: brightness(50%);
-	--text-secondary: gray;
-	--text-tertiary: lightgray;
+	--text-secondary: #545059;
+	--text-tertiary: #8c8a9a;
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
 }
 
@@ -12,11 +12,15 @@
 	:root {
 		--bg-primary: oklch(21.55% 0.014 278.77);
 		--text-primary: white;
-		--text-secondary: lightgray;
-		--text-tertiary: gray;
+		--text-secondary: #cbcad5;
+		--text-tertiary: #b0adba;
 		--text-link: #989aa6;
 		--hover-filter: brightness(150%);
 	}
+}
+
+* {
+	box-sizing: border-box;
 }
 
 section {
@@ -51,6 +55,7 @@ body {
 
 body {
 	width: calc(100% - 2em);
+	min-height: 100vh;
 	height: 100%;
 	padding: 1em;
 	display: flex;
@@ -63,7 +68,7 @@ nav {
 	gap: 10px;
 }
 
-#container {
+#container, footer {
 	max-width: 100%;
 	width: 800px;
 }
@@ -94,7 +99,7 @@ h1,h2,h3,h4,h5,h6 {
 a {
 	text-decoration: none;
 	color: var(--text-link);
-	transition: filter 0.1s;
+	transition: filter 0.15s;
 }
 
 a.active {
@@ -133,4 +138,43 @@ h6 {
 	display: grid;
 	gap: 2px;
 	max-width: 28rem;
+}
+
+p.description {
+	color: var(--text-tertiary);
+}
+
+.flex-col {
+	display: flex;
+	flex-direction: column;
+	gap: 24px;
+}
+
+.flex-col > section {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.version-tag {
+	font-size: small;
+	font-family: monospace;
+	border: 1px solid var(--text-tertiary);
+	border-radius: 2px;
+	padding: 2px 4px;
+}
+
+.flex-row {
+	display: flex;
+	flex-direction: row;
+	gap: 4px;
+	align-items: center;
+}
+
+footer {
+	margin-top: auto;
+	display: flex;
+	justify-content: left;
+	align-items: center;
+	gap: 10px;
 }
