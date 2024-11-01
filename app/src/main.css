@@ -169,7 +169,7 @@ p.description {
 }
 
 .version-tag {
-	font-size: small;
+	font-size: x-small;
 	font-family: monospace;
 	border: 1px solid var(--text-tertiary);
 	border-radius: 2px;
