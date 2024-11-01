@@ -6,6 +6,12 @@
 	--text-secondary: #545059;
 	--text-tertiary: #8c8a9a;
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
+
+	--input-background: #f9f8fb;
+	--input-border: #e1e2ea;
+	--input-placeholder: #a0a0a0;
+	--input-text: var(--text-primary);
+	--input-focus: var(--text-tertiary);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -16,6 +22,12 @@
 		--text-tertiary: #b0adba;
 		--text-link: #989aa6;
 		--hover-filter: brightness(150%);
+
+		--input-background: #2d2b34;
+		--input-border: #444053;
+		--input-placeholder: #6b6b6b;
+		--input-text: var(--text-primary);
+		--input-focus: var(--text-link);
 	}
 }
 
@@ -70,7 +82,7 @@ nav {
 
 #container, footer {
 	max-width: 100%;
-	width: 800px;
+	width: 700px;
 }
 
 nav {
@@ -177,4 +189,23 @@ footer {
 	justify-content: left;
 	align-items: center;
 	gap: 10px;
+}
+
+
+input[type="text"], select, textarea {
+	font-family: inherit;
+	border: 1px solid var(--input-border);
+	border-radius: 4px;
+	background: var(--input-background);
+	color: var(--input-text);
+	padding: 2px 2px 2px 5px;
+}
+
+input[type="text"]::placeholder, select::placeholder, textarea::placeholder {
+	color: var(--input-placeholder);
+}
+
+input[type="text"]:focus, select:focus, textarea:focus {
+	outline: none;
+	border: 1px solid var(--input-focus);
 }
