@@ -1,6 +1,7 @@
 import { createEffect, createSignal } from "solid-js";
-import type { Project, Task as TaskType } from "../../server/tasks";
+import type { Task as TaskType } from "../../server/tasks";
 import { TaskCard } from "./TaskCard";
+import type { Project } from "../../server/projects";
 
 const options = ["recent", "priority", "progress"] as const;
 
@@ -48,11 +49,10 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
 					</option>
 				))}
 			</select>
-			<ul>
+			<ul class="flex-col" style={{gap: "9px"}}>
 				{sortedTasks().map((task) => {
 					const project = project_map[task.task.project_id!];
 					if (project == null) return null;
-					console.log({ task, project, from });
 					return (
 						<li>
 							<TaskCard task={task} project={project} from={from} />

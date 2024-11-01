@@ -39,8 +39,6 @@ export async function getProjectTasks(project_id: string) {
 	return tasks;
 }
 
-export type Project = Awaited<ReturnType<typeof getProjectTasks>>[0];
-
 export async function getTask(todo_id: string) {
 	const todo = await db.select().from(task).leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id)).where(eq(task.id, todo_id));
 	if (!todo || todo.length != 1) {
