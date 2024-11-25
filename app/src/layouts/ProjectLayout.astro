@@ -1,0 +1,19 @@
+---
+interface Props {
+	project_id: string;
+}
+
+const { project_id } = Astro.props;
+---
+
+<main>
+	<h2>{project_id}</h2>
+	<nav>
+		<a href={`/project/${project_id}`}>overview</a>
+		<a href={`/project/${project_id}/settings`}>settings</a>
+		<a href={`/project/${project_id}/specification`}>specification</a>
+		<a href={`/project/${project_id}/tasks`}>tasks</a>
+	</nav>
+	<br />
+	<slot />
+</main>

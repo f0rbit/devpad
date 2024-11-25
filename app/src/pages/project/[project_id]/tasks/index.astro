@@ -3,36 +3,30 @@ import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import { getProject } from "../../../../server/projects";
 import { TaskCard } from "../../../../components/solid/TaskCard";
+import ProjectLayout from "../../../../layouts/ProjectLayout.astro";
 
 const { project_id } = Astro.params;
+if (!project_id) return { error: { status: 404, message: "Project not found" } };
 const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
+if (error) return { error: { status: 500, message: error } };
+if (!project) return { error: { status: 404, message: "Project not found" } };
 
-if (!project) {
-	return {
-		error: {
-			status: 404,
-			message: "Project not found",
-		},
-	};
-}
+const project_uuid = project.id;
 
-const project_uuid = project?.id ?? null;
-
-const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
+const tasks = await getProjectTasks(project_uuid);
 ---
 
 <PageLayout title={"Project Tasks"}>
-	<main>
-		<h3>tasks</h3>
-		<a href={`/project/${project_id}`}>back</a>
+	<ProjectLayout project_id={project_id}>
+		<h4>project tasks</h4>
 		<a href={`/project/${project_id}/tasks`}>tasks</a>
 		<a href={`/project/${project_id}/tasks/update`}>update</a>
 		<a href={`/project/${project_id}/tasks/config`}>config</a>
 		<br />
 		{
-			project?.repo_id && (
+			project.repo_id && (
 				<>
 					<br />
 					<a href="#" id="update-check">
@@ -52,7 +46,7 @@ const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
 				))
 			}
 		</ul>
-	</main>
+	</ProjectLayout>
 
 	<script is:inline define:vars={{ project_uuid }}>
 		function hook_check() {
