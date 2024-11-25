@@ -1,0 +1,19 @@
+---
+import ProjectLayout from "./ProjectLayout.astro";
+
+interface Props {
+	project_id: string;
+}
+
+const { project_id } = Astro.props;
+---
+
+<ProjectLayout project_id={project_id}>
+	<h4>project tasks</h4>
+	<a href={`/project/${project_id}/tasks`}>tasks</a>
+	<a href={`/project/${project_id}/tasks/update`}>update</a>
+	<a href={`/project/${project_id}/tasks/config`}>config</a>
+	<br />
+	<br />
+	<slot />
+</ProjectLayout>

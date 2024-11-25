@@ -5,65 +5,59 @@ import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import UpdateDiff from "../../../../components/UpdateDiff.astro";
 import { eq } from "drizzle-orm";
+import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
+if (!project_id) return { error: { status: 404, message: "Project not found" } };
 const user = Astro.locals.user;
 
-const { project: found_project } =
-	(await getProject(user?.id ?? null, project_id)) ?? null;
+const { project: found_project, error } = (await getProject(user?.id ?? null, project_id)) ?? null;
+if (error) return { error: { status: 500, message: error } };
+if (!found_project) return { error: { status: 404, message: "Project not found" } };
 
-const project_uuid = found_project?.id ?? null;
+const project_uuid = found_project.description;
 
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(found_project);
 
 // get all updates as well
-const updates = project_uuid
-	? await db
-			.select()
-			.from(todo_updates)
-			.where(eq(todo_updates.project_id, project_uuid))
-	: [];
+const updates = project_uuid ? await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_uuid)) : [];
 
 const update_id = update?.id ?? null;
 const update_data = update?.data ? JSON.parse(update.data) : null;
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
-	<h2>tasks</h2>
-	<a href={`/project/${project_id}`}>back</a>
-	<a href={`/project/${project_id}/tasks`}>tasks</a>
-	<a href={`/project/${project_id}/tasks/update`}>update</a>
-	<a href={`/project/${project_id}/tasks/config`}>config</a>
-	<br />
-	{
-		update_data ? (
-			<>
-				<UpdateDiff update={update_data} />
-				<a href="#" id="approve">
-					Approve
-				</a>
-				<a href="#" id="reject">
-					Reject
-				</a>
-			</>
-		) : (
-			<p>No updates</p>
-		)
-	}
-
-	<br />
-	<h3>All Updates</h3>
-	<ul>
+	<ProjectTasksLayout project_id={project_id}>
 		{
-			updates.map((u: any) => (
-				<li>
-					{u.created_at} - {u.status}
-				</li>
-			))
+			update_data ? (
+				<>
+					<UpdateDiff update={update_data} />
+					<a href="#" id="approve">
+						Approve
+					</a>
+					<a href="#" id="reject">
+						Reject
+					</a>
+				</>
+			) : (
+				<p>No updates</p>
+			)
 		}
-	</ul>
+
+		<br />
+		<h3>All Updates</h3>
+		<ul>
+			{
+				updates.map((u: any) => (
+					<li>
+						{u.created_at} - {u.status}
+					</li>
+				))
+			}
+		</ul>
+	</ProjectTasksLayout>
 </PageLayout>
 
 <script is:inline define:vars={{ project_uuid, update_id }}>
@@ -76,10 +70,6 @@ const update_data = update?.data ? JSON.parse(update.data) : null;
 		});
 		location.reload();
 	};
-	document
-		.getElementById("approve")
-		?.addEventListener("click", () => accept(true));
-	document
-		.getElementById("reject")
-		?.addEventListener("click", () => accept(false));
+	document.getElementById("approve")?.addEventListener("click", () => accept(true));
+	document.getElementById("reject")?.addEventListener("click", () => accept(false));
 </script>

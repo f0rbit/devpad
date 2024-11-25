@@ -3,7 +3,7 @@ import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import { getProject } from "../../../../server/projects";
 import { TaskCard } from "../../../../components/solid/TaskCard";
-import ProjectLayout from "../../../../layouts/ProjectLayout.astro";
+import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
 if (!project_id) return { error: { status: 404, message: "Project not found" } };
@@ -19,16 +19,10 @@ const tasks = await getProjectTasks(project_uuid);
 ---
 
 <PageLayout title={"Project Tasks"}>
-	<ProjectLayout project_id={project_id}>
-		<h4>project tasks</h4>
-		<a href={`/project/${project_id}/tasks`}>tasks</a>
-		<a href={`/project/${project_id}/tasks/update`}>update</a>
-		<a href={`/project/${project_id}/tasks/config`}>config</a>
-		<br />
+	<ProjectTasksLayout project_id={project_id}>
 		{
 			project.repo_id && (
 				<>
-					<br />
 					<a href="#" id="update-check">
 						check for updates
 					</a>
@@ -46,7 +40,7 @@ const tasks = await getProjectTasks(project_uuid);
 				))
 			}
 		</ul>
-	</ProjectLayout>
+	</ProjectTasksLayout>
 
 	<script is:inline define:vars={{ project_uuid }}>
 		function hook_check() {
