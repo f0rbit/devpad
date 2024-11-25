@@ -31,6 +31,17 @@ const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
 		<a href={`/project/${project_id}/tasks/update`}>update</a>
 		<a href={`/project/${project_id}/tasks/config`}>config</a>
 		<br />
+		{
+			project?.repo_id && (
+				<>
+					<br />
+					<a href="#" id="update-check">
+						check for updates
+					</a>
+					<p id="output" />
+				</>
+			)
+		}
 		<br />
 		<ul>
 			{
@@ -39,17 +50,6 @@ const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
 						<TaskCard task={task} project={project} from={`/project/${project_id}/tasks`} />
 					</li>
 				))
-			}
-			<br />
-			{
-				project?.repo_id && (
-					<>
-						<a href="#" id="update-check">
-							check for updates
-						</a>
-						<p id="output" />
-					</>
-				)
 			}
 		</ul>
 	</main>
@@ -61,10 +61,7 @@ const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
 			const output = document.getElementById("output");
 			if (!output) throw new Error("Output element not found");
 			update_check.addEventListener("click", async () => {
-				const response = await fetch(
-					`/api/project/scan?project_id=${project_uuid}`,
-					{ method: "POST" },
-				);
+				const response = await fetch(`/api/project/scan?project_id=${project_uuid}`, { method: "POST" });
 				if (!response.ok) {
 					output.innerText = "Error: " + response.statusText;
 					return;
