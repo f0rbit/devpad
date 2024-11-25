@@ -10,20 +10,12 @@ const project_map = {} as any;
 for (const p of projects) {
 	project_map[p.id] = p;
 }
-const codebases = projects.filter((p) => p.visibility != "DELETED").map((p) => p.project_id);
 const tasks = user ? await getUserTasks(user.id) : [];
 
 ---
 
 <PageLayout title="Welcome to Astro.">
 	<main>
-		<section>
-			<h3>codebases</h3>
-			<ul>
-				{codebases.map((c) => <li><a href={`/project/${c}/tasks`}>{c}</a></li>)}
-			</ul>
-		</section>
-		<br />
 		<section>
 			<h3>upcoming tasks</h3>
 			<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"priority"} from={"/todo"}>
