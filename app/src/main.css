@@ -201,6 +201,9 @@ footer {
 	gap: 10px;
 }
 
+h1 > input[type="text"], h2 > input[type="text"], h3 > input[type="text"], h4 > input[type="text"], h5 > input[type="text"], h6 > input[type="text"] {
+	font-size: medium;
+}
 
 input[type="text"], select, textarea {
 	font-family: inherit;
