@@ -96,7 +96,7 @@ const { update } = Astro.props;
 								<ChevronDown class="down-arrow" />
 								<span>Context</span>
 							</summary>
-							{(old_context && new_context) && <div style="height: 5px" />}
+							<div style="height: 5px" />
 							{old_context && <Code code={old_context} class="old" lang={old_filetype} />}
 							{(old_context && new_context) && <div style="height: 5px" />}
 							{new_context && <Code code={new_context} class="new" lang={new_filetype}/>}
