@@ -199,6 +199,12 @@ input[type="text"], select, textarea {
 	background: var(--input-background);
 	color: var(--input-text);
 	padding: 2px 2px 2px 5px;
+	font-size: smaller;
+}
+
+select {
+	-webkit-appearance: none;
+	padding-right: 12px;
 }
 
 input[type="text"]::placeholder, select::placeholder, textarea::placeholder {
