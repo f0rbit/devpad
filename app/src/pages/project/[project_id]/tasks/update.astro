@@ -15,7 +15,7 @@ const { project: found_project, error } = (await getProject(user?.id ?? null, pr
 if (error) return { error: { status: 500, message: error } };
 if (!found_project) return { error: { status: 404, message: "Project not found" } };
 
-const project_uuid = found_project.description;
+const project_uuid = found_project.id;
 
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
