@@ -12,6 +12,12 @@
 	--input-placeholder: #a0a0a0;
 	--input-text: var(--text-primary);
 	--input-focus: var(--text-tertiary);
+
+	--item-red: oklch(0.95 0.05 20);
+	--item-green: oklch(0.95 0.05 150);
+
+	--item-red-border: color-mix(in srgb, var(--item-red) 90%, var(--text-primary) 10%);
+	--item-green-border: color-mix(in srgb, var(--item-green) 90%, var(--text-primary) 10%);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +34,9 @@
 		--input-placeholder: #6b6b6b;
 		--input-text: var(--text-primary);
 		--input-focus: var(--text-link);
+
+		--item-red: oklch(0.35 0.05 20);
+		--item-green: oklch(0.35 0.05 150);
 	}
 }
 
@@ -108,18 +117,19 @@ h1,h2,h3,h4,h5,h6 {
 	color: var(--text-primary);
 }
 
-a {
+a, .label-modal {
 	text-decoration: none;
 	color: var(--text-link);
 	transition: filter 0.15s;
+	cursor: pointer;
 }
 
-a.active {
+a.active, input:checked + .label-modal {
 	color: var(--text-primary);
 	text-decoration: underline;
 }
 
-a:hover {
+a:hover, .label-modal:hover {
 	filter: var(--hover-filter);
 }
 
@@ -245,3 +255,23 @@ input[type="text"]:focus, select:focus, textarea:focus {
 .priority-high {
 	color: color-mix(in srgb, var(--text-secondary) 70%, red);
 }
+
+code > pre {
+	background: var(--input-background);
+	border: 1px solid var(--input-border);
+	border-radius: 4px;
+	padding: 5px;
+	overflow-x: auto;
+	width: 100%;
+	margin: unset;
+}
+
+details > summary {
+	cursor: pointer;
+	display: flex; /* this removes the marker from list-style */
+}
+
+details > summary::-webkit-details-marker, details > summary::marker {
+	display: none;
+}
+

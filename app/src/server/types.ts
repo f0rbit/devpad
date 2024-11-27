@@ -39,3 +39,22 @@ export const upsert_todo = z.object({
 export type UpsertTodo = z.infer<typeof upsert_todo>;
 
 
+export type UpdateData = {
+	id: string;
+	tag: "todo" | "bug" | "note" | "error";
+	type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
+	data: {
+		old: {
+			text: string,
+			line: number,
+			file: string
+		},
+		new: {
+			text: string,
+			line: number,
+			file: string
+		}
+	}
+}
+
+

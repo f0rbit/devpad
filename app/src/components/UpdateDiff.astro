@@ -1,36 +1,75 @@
 ---
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import type { UpdateData } from "../server/types";
+import ChevronDown from "lucide-solid/icons/chevron-down";
 interface Props {
-	update: any;
+	update: UpdateData[];
 }
 
 const { update } = Astro.props;
 ---
 
-<div>
+<div class="flex-col">
 	{
-		update.map((u: any) => {
+		update.map((u) => {
 			const { data } = u;
+
+			const title = u.id; // for now just use id, ideally we would cross-fetch the task title if linked
+
+			// format <path>:<line>
+			let path = "unknown:?";
+			if (data.new?.file) {
+				path = data.new.file;
+				if (data.new.line) {
+					path += ":" + data.new.line;
+				}
+			} else if (data.old?.file) {
+				path = data.old.file;
+				if (data.old.line) {
+					path += ":" + data.old.line;
+				}
+			}
+
 			return (
-				<div>
-					<h4 style="display: flex; flex-direction: row; gap: 5px;">
-						{u.id}
-						{u.tag}
-						{u.type}
-					</h4>
-					<div style="padding-left: 3ch;">
-						<div class="item old">
-							<h5>Old</h5>
-							<p>{data.old?.text}</p>
+				<div class="flex-col" style="gap: 2px;">
+					<h5 style="display: flex; flex-direction: row; gap: 5px;">
+						{u.type} - {title}
+					</h5>
+					<div class="flex-row">
+						<span>{u.tag}</span> - <code>{path}</code>
+					</div>
+					<div style="padding-left: 0ch; gap: 3px;" class="flex-col">
+						{data.old && (
+							<div class="item old">
+								<code>{data.old.text}</code>
+							</div>
+						)}
+						{data.new && (
+							<div class="item new">
+								<code>{data.new.text}</code>
+							</div>
+						)}
+					</div>
+					<div style="position: relative">
+						<details>
+							<summary style="width: max-content" class="flex-row label-modal">
+								<ChevronUp class="up-arrow" />
+								<ChevronDown class="down-arrow" />
+								<span>Context</span>
+							</summary>
 							<code>
-								{data.old?.file} - {data.old?.line}
+								<pre style="margin-top: 4px">contenxt asd asd asd</pre>
 							</code>
-						</div>
-						<div class="item new">
-							<h5>New</h5>
-							<p>{data.new?.text}</p>
-							<code>
-								{data.new?.file} - {data.new?.line}
-							</code>
+						</details>
+						<div class="button-container flex-row">
+							<input type="radio" name={u.id} id={`${u.id}-approve`} style="display: none" />
+							<label class="label-modal" for={`${u.id}-approve`}>
+								Approve
+							</label>
+							<input type="radio" name={u.id} id={`${u.id}-reject`} style="display: none" />
+							<label class="label-modal" for={`${u.id}-reject`}>
+								Reject
+							</label>
 						</div>
 					</div>
 				</div>
@@ -38,3 +77,43 @@ const { update } = Astro.props;
 		})
 	}
 </div>
+
+<style scoped>
+	.item {
+		border: 1px solid var(--input-border);
+		border-radius: 5px;
+		padding: 5px 10px;
+	}
+
+	.item.old {
+		background-color: var(--item-red);
+		border-color: var(--item-red-border);
+	}
+
+	.item.new {
+		background-color: var(--item-green);
+		border-color: var(--item-green-border);
+	}
+
+	.button-container {
+		position: absolute;
+		right: 0;
+		top: 0;
+	}
+
+	.up-arrow {
+		display: none;
+	}
+
+	.down-arrow {
+		display: unset;
+	}
+
+	details[open] .up-arrow {
+		display: unset;
+	}
+
+	details[open] .down-arrow {
+		display: none;
+	}
+</style>
