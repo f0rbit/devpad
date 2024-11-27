@@ -20,10 +20,6 @@ const project_uuid = found_project.id;
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(found_project);
-
-// get all updates as well
-const updates = project_uuid ? await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_uuid)) : [];
-
 const update_id = update?.id ?? null;
 const update_data = update?.data ? JSON.parse(update.data) : null;
 ---
@@ -45,18 +41,6 @@ const update_data = update?.data ? JSON.parse(update.data) : null;
 				<p>No updates</p>
 			)
 		}
-
-		<br />
-		<h3>All Updates</h3>
-		<ul>
-			{
-				updates.map((u: any) => (
-					<li>
-						{u.created_at} - {u.status}
-					</li>
-				))
-			}
-		</ul>
 	</ProjectTasksLayout>
 </PageLayout>
 

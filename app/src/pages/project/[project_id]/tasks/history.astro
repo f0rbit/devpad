@@ -1,0 +1,41 @@
+---
+/** 
+ * @idea this should track changes to all tasks, not just scans. scan history should be able to be inspected to see breakdown
+ * of changes and what we accepted/rejected
+ */
+import { db } from "../../../../../database/db";
+import { todo_updates } from "../../../../../database/schema";
+import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
+import PageLayout from "../../../../layouts/PageLayout.astro";
+import { eq } from "drizzle-orm";
+import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
+
+const { project_id } = Astro.params;
+if (!project_id) return { error: { status: 404, message: "Project not found" } };
+const user = Astro.locals.user;
+
+const { project: found_project, error } = (await getProject(user?.id ?? null, project_id)) ?? null;
+if (error) return { error: { status: 500, message: error } };
+if (!found_project) return { error: { status: 404, message: "Project not found" } };
+
+const project_uuid = found_project.id;
+
+// get all updates as well
+/** @todo functionalise this */
+const updates = project_uuid ? await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_uuid)) : [];
+---
+
+<PageLayout title={`Codebase - ${project_id} - Update`}>
+	<ProjectTasksLayout project_id={project_id}>
+		<h3>Updates</h3>
+		<ul>
+			{
+				updates.map((u: any) => (
+					<li>
+						{u.created_at} - {u.status}
+					</li>
+				))
+			}
+		</ul>
+	</ProjectTasksLayout>
+</PageLayout>
