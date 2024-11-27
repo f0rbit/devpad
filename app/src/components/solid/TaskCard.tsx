@@ -1,7 +1,7 @@
 import type { Project } from "../../server/projects";
 import type { Task } from "../../server/tasks";
 
-import { CalendarClock } from "lucide-solid";
+import CalendarClock from "lucide-solid/icons/calendar-clock";
 
 interface Props {
 	task: Task;
