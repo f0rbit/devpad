@@ -2,6 +2,7 @@
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import type { UpdateData } from "../server/types";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import { Code } from "astro:components";
 interface Props {
 	update: UpdateData[];
 }
@@ -56,6 +57,18 @@ const { update } = Astro.props;
 				old_context = build_context(data.old.context);
 			}
 
+			/** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
+			let old_filetype = "" as any;
+			let new_filetype = "" as any;
+			if (data.new?.file) {
+				const parts = data.new.file.split(".");
+				new_filetype = parts[parts.length - 1];
+			}
+			if (data.old?.file) {
+				const parts = data.old.file.split(".");
+				old_filetype = parts[parts.length - 1];
+			}
+
 			return (
 				<div class="flex-col" style="gap: 2px;">
 					<h5 style="display: flex; flex-direction: row; gap: 5px;">
@@ -76,19 +89,17 @@ const { update } = Astro.props;
 							</div>
 						)}
 					</div>
-					<div style="position: relative">
-						{(old_context || new_context) && <details>
+					<div style="position: relative; padding-top: 2px">
+						{(old_context || new_context) && <details class="flex-col">
 							<summary style="width: max-content" class="flex-row label-modal">
 								<ChevronUp class="up-arrow" />
 								<ChevronDown class="down-arrow" />
 								<span>Context</span>
 							</summary>
-							{old_context && <code class="old">
-								<pre style="margin-top: 4px">{old_context}</pre>
-							</code>}
-							{new_context && <code class="new">
-								<pre style="margin-top: 4px">{new_context}</pre>
-							</code>}
+							{(old_context && new_context) && <div style="height: 5px" />}
+							{old_context && <Code code={old_context} class="old" lang={old_filetype} />}
+							{(old_context && new_context) && <div style="height: 5px" />}
+							{new_context && <Code code={new_context} class="new" lang={new_filetype}/>}
 						</details>}
 						<div class="button-container flex-row">
 							<input type="radio" name={u.id} id={`${u.id}-approve`} style="display: none" />
@@ -124,21 +135,28 @@ const { update } = Astro.props;
 		border-color: var(--item-green-border);
 	}
 
-	code.new > pre {
-		background-color: var(--item-green);
-		border-color: var(--item-green-border);
+	.astro-code {
+		border: 1px solid var(--input-border);
+		border-radius: 5px;
+		padding: 5px 10px;
+		margin: unset;
 	}
 
-	code.old > pre {
-		background-color: var(--item-red);
-		border-color: var(--item-red-border);
+	.astro-code.new {
+		background-color: var(--item-green) !important;
+		border-color: var(--item-green-border) !important;
+	}
+
+	.astro-code.old {
+		background-color: var(--item-red) !important;
+		border-color: var(--item-red-border) !important;
 	}
 	
 
 	.button-container {
 		position: absolute;
-		right: 0;
-		top: 0;
+		right: 2px;
+		top: 2px;
 	}
 
 	.up-arrow {
