@@ -2,10 +2,11 @@ import type { APIContext } from "astro";
 import { db } from "../../../../database/db";
 import { and, desc, eq } from "drizzle-orm";
 import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
-import child_process from "child_process";
+import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
 
 // will have ?project_id=<id> query parameter
+/** @todo capture stderr/stdout on the child processes */
 
 export async function POST(context: APIContext) {
 	if (!context.locals.user || !context.locals.user.id || !context.locals.user.github_id) {
@@ -141,7 +142,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	// run diff script and write to diff-output.json
 	yield "running diff\n";
 	try {
-		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json`);	
+		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json 2> ${unzipped_path}/err.out`);
 	} catch (e) {
 		console.error(e);
 		yield "error running diff\n";
