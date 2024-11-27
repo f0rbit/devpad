@@ -133,6 +133,13 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 		// fetch all the codebase tasks from the old_id
 		const existing_tasks = await db.select().from(codebase_tasks).where(eq(codebase_tasks.recent_scan_id, old_id[0].id));
 		old_data = existing_tasks;
+
+		// rename field 'type' to 'tag' in old_data
+		old_data = old_data.map((item) => {
+			item.tag = item.type;
+			delete item.type;
+			return item;
+		});
 	}
 
 	// write old data to old-output.json
