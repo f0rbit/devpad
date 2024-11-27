@@ -47,12 +47,14 @@ export type UpdateData = {
 		old: {
 			text: string,
 			line: number,
-			file: string
+			file: string,
+			context?: string[]
 		},
 		new: {
 			text: string,
 			line: number,
-			file: string
+			file: string,
+			context?: string[]
 		}
 	}
 }

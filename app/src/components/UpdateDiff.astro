@@ -30,6 +30,32 @@ const { update } = Astro.props;
 				}
 			}
 
+
+			const build_context = (context: string[]) => {
+				if (!context) return null;
+				const min_whitespace = context.reduce((acc, line) => {
+					if (line.trim() === "") return acc;
+					const whitespace = line.match(/^\s*/);
+					if (whitespace) {
+						return Math.min(acc, whitespace[0].length);
+					}
+					return acc;
+				}, Infinity);
+
+				return context.map((line) => line.slice(min_whitespace)).join("\n");
+			};
+
+
+			let old_context = null;
+			let new_context = null;
+
+			if (data.new?.context) {
+				new_context = build_context(data.new.context);
+			}
+			if (data.old?.context) {
+				old_context = build_context(data.old.context);
+			}
+
 			return (
 				<div class="flex-col" style="gap: 2px;">
 					<h5 style="display: flex; flex-direction: row; gap: 5px;">
@@ -51,16 +77,19 @@ const { update } = Astro.props;
 						)}
 					</div>
 					<div style="position: relative">
-						<details>
+						{(old_context || new_context) && <details>
 							<summary style="width: max-content" class="flex-row label-modal">
 								<ChevronUp class="up-arrow" />
 								<ChevronDown class="down-arrow" />
 								<span>Context</span>
 							</summary>
-							<code>
-								<pre style="margin-top: 4px">contenxt asd asd asd</pre>
-							</code>
-						</details>
+							{old_context && <code class="old">
+								<pre style="margin-top: 4px">{old_context}</pre>
+							</code>}
+							{new_context && <code class="new">
+								<pre style="margin-top: 4px">{new_context}</pre>
+							</code>}
+						</details>}
 						<div class="button-container flex-row">
 							<input type="radio" name={u.id} id={`${u.id}-approve`} style="display: none" />
 							<label class="label-modal" for={`${u.id}-approve`}>
@@ -94,6 +123,17 @@ const { update } = Astro.props;
 		background-color: var(--item-green);
 		border-color: var(--item-green-border);
 	}
+
+	code.new > pre {
+		background-color: var(--item-green);
+		border-color: var(--item-green-border);
+	}
+
+	code.old > pre {
+		background-color: var(--item-red);
+		border-color: var(--item-red-border);
+	}
+	
 
 	.button-container {
 		position: absolute;
