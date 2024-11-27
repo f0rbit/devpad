@@ -15,7 +15,7 @@ const { update } = Astro.props;
 		update.map((u) => {
 			const { data } = u;
 
-			const title = u.id; // for now just use id, ideally we would cross-fetch the task title if linked
+			const title = null; // for now just use id, ideally we would cross-fetch the task title if linked
 
 			// format <path>:<line>
 			let path = "unknown:?";
@@ -71,8 +71,11 @@ const { update } = Astro.props;
 
 			return (
 				<div class="flex-col" style="gap: 2px;">
-					<h5 style="display: flex; flex-direction: row; gap: 5px;">
-						{u.type} - {title}
+					<h5 class="flex-row">
+						{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
+						<span>{u.type}</span>
+						<span> - </span>
+						{title ? <span>{title}</span>: <input type='text' placeholder='Enter title' style="width: 50ch" />}
 					</h5>
 					<div class="flex-row">
 						<span>{u.tag}</span> - <code>{path}</code>
