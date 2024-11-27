@@ -7,7 +7,7 @@ import { db } from "../../../../../database/db";
 import { todo_updates } from "../../../../../database/schema";
 import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import PageLayout from "../../../../layouts/PageLayout.astro";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
@@ -22,7 +22,7 @@ const project_uuid = found_project.id;
 
 // get all updates as well
 /** @todo functionalise this */
-const updates = project_uuid ? await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_uuid)) : [];
+const updates = project_uuid ? await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_uuid)).orderBy(desc(todo_updates.created_at)) : [];
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
