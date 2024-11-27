@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../../../../database/db";
 import { codebase_tasks, project, task, todo_updates, tracker_result } from "../../../../database/schema";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import type { UpdateData } from "../../../server/types";
 
 const request_schema = z.object({
 	id: z.number(),
@@ -61,9 +62,9 @@ export async function POST(context: APIContext) {
 	if (approved) {
 		// update all the tasks within the update and codebase_task table
 		// TODO: add typesafety to this, either infer datatype from schema or use zod validator
-		let codebase_items: any[];
+		let codebase_items: UpdateData[];
 		try {
-			codebase_items = JSON.parse(update_query[0].data as string) as any[];
+			codebase_items = JSON.parse(update_query[0].data as string) as UpdateData[];
 		} catch (e) {
 			console.error(e);
 			return new Response("error parsing update data", { status: 500 });
@@ -79,9 +80,9 @@ export async function POST(context: APIContext) {
 			const text = item.data.new?.text;
 			const line = item.data.new?.line;
 			const file = item.data.new?.file;
-			// TODO: figure out how to get the context attribute down here
+			const context = item.data.new?.context;
 
-			const values = { id, type, text, line, file, recent_scan_id: new_id };
+			const values = { id, type, text, line, file, recent_scan_id: new_id, context };
 
 			await db.insert(codebase_tasks).values(values).onConflictDoUpdate({ target: [codebase_tasks.id], set: values });
 		};
