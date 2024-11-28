@@ -1,10 +1,7 @@
 ---
-import { db } from "../../../../../database/db";
-import { todo_updates } from "../../../../../database/schema";
 import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import PageLayout from "../../../../layouts/PageLayout.astro";
-import UpdateDiff from "../../../../components/UpdateDiff.astro";
-import { eq } from "drizzle-orm";
+import UpdateDiffList from "../../../../components/UpdateDiffList.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
@@ -21,7 +18,7 @@ const project_uuid = found_project.id;
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(found_project);
 const update_id = update?.id ?? null;
-const update_data = update?.data ? JSON.parse(update.data) : null;
+const update_data = update?.data ? (typeof update.data == 'string' ? JSON.parse(update.data) : update.data) : null;
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
@@ -29,7 +26,7 @@ const update_data = update?.data ? JSON.parse(update.data) : null;
 		{
 			update_data ? (
 				<>
-					<UpdateDiff update={update_data} />
+					<UpdateDiffList items={update_data} />
 					<a href="#" id="approve">
 						Approve
 					</a>

@@ -1,0 +1,25 @@
+---
+import type { UpdateData } from "../server/types";
+import UpdateDiff from "./UpdateDiff.astro";
+interface Props {
+	items: UpdateData[];
+}
+
+const { items } = Astro.props;
+
+const { same = [], others = [] } = Object.groupBy(items, (u) => (u.type === "SAME" ? "same" : "others"));
+---
+
+<div class="flex-col">
+	{
+		same.length > 0 && (
+			<>
+				<h2>Same</h2>
+				{same.map((item) => (
+					<UpdateDiff update={item} />
+				))}
+			</>
+		)
+	}
+	{others.length > 0 && others.map((item) => <UpdateDiff update={item} />)}
+</div>

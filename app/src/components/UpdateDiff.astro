@@ -1,125 +1,119 @@
 ---
-import ChevronUp from "lucide-solid/icons/chevron-up";
-import type { UpdateData } from "../server/types";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import { Code } from "astro:components";
+import type { UpdateData } from "../server/types";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import Code from "astro/components/Code.astro";
+
 interface Props {
-	update: UpdateData[];
+	update: UpdateData;
 }
 
 const { update } = Astro.props;
+const { data } = update;
+
+/** @todo get title from linked task? */
+const title: string | null = null;
+
+// format <path>:<line>
+let path = "unknown:?";
+if (data.new?.file) {
+	path = data.new.file;
+	if (data.new.line) {
+		path += ":" + data.new.line;
+	}
+} else if (data.old?.file) {
+	path = data.old.file;
+	if (data.old.line) {
+		path += ":" + data.old.line;
+	}
+}
+
+const build_context = (context: string[]) => {
+	if (!context) return null;
+	const min_whitespace = context.reduce((acc, line) => {
+		if (line.trim() === "") return acc;
+		const whitespace = line.match(/^\s*/);
+		if (whitespace) {
+			return Math.min(acc, whitespace[0].length);
+		}
+		return acc;
+	}, Infinity);
+
+	return context.map((line) => line.slice(min_whitespace)).join("\n");
+};
+
+let old_context = null;
+let new_context = null;
+
+if (data.new?.context) {
+	new_context = build_context(data.new.context);
+}
+if (data.old?.context) {
+	old_context = build_context(data.old.context);
+}
+
+/** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
+let old_filetype = "" as any;
+let new_filetype = "" as any;
+if (data.new?.file) {
+	const parts = data.new.file.split(".");
+	new_filetype = parts[parts.length - 1];
+}
+if (data.old?.file) {
+	const parts = data.old.file.split(".");
+	old_filetype = parts[parts.length - 1];
+}
 ---
 
-<div class="flex-col">
-	{
-		update.map((u) => {
-			const { data } = u;
-
-			/** @todo get title from linked task? */
-			const title: string | null = null;
-
-			// format <path>:<line>
-			let path = "unknown:?";
-			if (data.new?.file) {
-				path = data.new.file;
-				if (data.new.line) {
-					path += ":" + data.new.line;
-				}
-			} else if (data.old?.file) {
-				path = data.old.file;
-				if (data.old.line) {
-					path += ":" + data.old.line;
-				}
-			}
-
-			const build_context = (context: string[]) => {
-				if (!context) return null;
-				const min_whitespace = context.reduce((acc, line) => {
-					if (line.trim() === "") return acc;
-					const whitespace = line.match(/^\s*/);
-					if (whitespace) {
-						return Math.min(acc, whitespace[0].length);
-					}
-					return acc;
-				}, Infinity);
-
-				return context.map((line) => line.slice(min_whitespace)).join("\n");
-			};
-
-			let old_context = null;
-			let new_context = null;
-
-			if (data.new?.context) {
-				new_context = build_context(data.new.context);
-			}
-			if (data.old?.context) {
-				old_context = build_context(data.old.context);
-			}
-
-			/** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
-			let old_filetype = "" as any;
-			let new_filetype = "" as any;
-			if (data.new?.file) {
-				const parts = data.new.file.split(".");
-				new_filetype = parts[parts.length - 1];
-			}
-			if (data.old?.file) {
-				const parts = data.old.file.split(".");
-				old_filetype = parts[parts.length - 1];
-			}
-
-			return (
-				<div class="flex-col" style="gap: 2px;">
-					<h5 class="flex-row">
-						{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
-						<span>{u.type}</span>
-						<span> - </span>
-						{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" />}
-					</h5>
-					<div class="flex-row">
-						<span>{u.tag}</span> - <code>{path}</code>
-					</div>
-					<div style="padding-left: 0ch; gap: 3px;" class="flex-col">
-						{data.old && (
-							<div class="item old">
-								<code>{data.old.text}</code>
-							</div>
-						)}
-						{data.new && (
-							<div class="item new">
-								<code>{data.new.text}</code>
-							</div>
-						)}
-					</div>
-					<div style="position: relative; padding-top: 2px">
-						{(old_context || new_context) && (
-							<details class="flex-col">
-								<summary style="width: max-content" class="flex-row label-modal">
-									<ChevronUp class="up-arrow" />
-									<ChevronDown class="down-arrow" />
-									<span>Context</span>
-								</summary>
-								<div style="height: 5px" />
-								{old_context && <Code code={old_context} class="old" lang={old_filetype} />}
-								{old_context && new_context && <div style="height: 5px" />}
-								{new_context && <Code code={new_context} class="new" lang={new_filetype} />}
-							</details>
-						)}
-						<div class="button-container flex-row">
-							<input type="radio" name={u.id} id={`${u.id}-approve`} style="display: none" />
-							<label class="label-modal" for={`${u.id}-approve`}>
-								Approve
-							</label>
-							<input type="radio" name={u.id} id={`${u.id}-reject`} style="display: none" />
-							<label class="label-modal" for={`${u.id}-reject`}>
-								Reject
-							</label>
-						</div>
-					</div>
+<div class="flex-col" style="gap: 2px;">
+	<h5 class="flex-row">
+		{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
+		<span>{update.type}</span>
+		<span> - </span>
+		{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" />}
+	</h5>
+	<div class="flex-row">
+		<span>{update.tag}</span> - <code>{path}</code>
+	</div>
+	<div style="padding-left: 0ch; gap: 3px;" class="flex-col">
+		{
+			data.old && (
+				<div class="item old">
+					<code>{data.old.text}</code>
 				</div>
-			);
-		})
-	}
+			)
+		}
+		{
+			data.new && (
+				<div class="item new">
+					<code>{data.new.text}</code>
+				</div>
+			)
+		}
+	</div>
+	<div style="position: relative; padding-top: 2px">
+		{
+			(old_context || new_context) && (
+				<details class="flex-col">
+					<summary style="width: max-content" class="flex-row label-modal">
+						<ChevronUp class="up-arrow" />
+						<ChevronDown class="down-arrow" />
+						<span>Context</span>
+					</summary>
+					<div style="height: 5px" />
+					{old_context && <Code code={old_context} class="old" lang={old_filetype} />}
+					{old_context && new_context && <div style="height: 5px" />}
+					{new_context && <Code code={new_context} class="new" lang={new_filetype} />}
+				</details>
+			)
+		}
+		<div class="button-container flex-row">
+			<input type="radio" name={update.id} id={`${update.id}-approve`} style="display: none" />
+			<label class="label-modal" for={`${update.id}-approve`}> Approve </label>
+			<input type="radio" name={update.id} id={`${update.id}-reject`} style="display: none" />
+			<label class="label-modal" for={`${update.id}-reject`}> Reject </label>
+		</div>
+	</div>
 </div>
 
 <style scoped>
