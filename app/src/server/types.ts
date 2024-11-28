@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { todo_updates, tracker_result } from "../../database/schema";
 
 export const upsert_project = z.object({
 	id: z.string().optional().nullable(),
@@ -59,4 +60,5 @@ export type UpdateData = {
 	}
 }
 
-
+export type TodoUpdate = typeof todo_updates.$inferSelect;
+export type TrackerResult = typeof tracker_result.$inferSelect;
