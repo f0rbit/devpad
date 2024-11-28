@@ -100,3 +100,29 @@ basically each project can have multiple milestones, these milestones will be as
 each milestone is comprised of multiple goals, which are essentially just grouped tasks. goals can have their own due dates but no start dates, and the due dates are optional. goals have a title & summary. goals will have a 'completed' date field which would indicate when the user marked the goal as completed.
 tasks are made of many different fields, outlined above. They also contain links to checklists. This is a complex relationship as a checklist's can be nested within other checklists, but the root checklist will be linked to only 1 task. A task can have multiple checklist instances however.
 
+
+## feature todo
+- [ ] history
+	- [ ] project history
+		- [ ] modifications to spec
+		- [ ] modifications to settings
+		- [ ] scan accepts
+		- [ ] updates to tasks
+	- [ ] task history
+		- [ ] data updates
+		- [ ] status updates
+		- [ ] scan results
+	- [ ] user history
+		- [ ] project added
+		- [ ] project deleted
+		- [ ] created task
+		- [ ] deleted task
+	- [ ] history page
+		- [ ] project history under project
+		- [ ] tasks under task
+		- [ ] account under account
+- [ ] task management
+	- [ ] better edit screen
+	- [ ] support for modules
+	- [ ] link to codebase scan
+
