@@ -1,6 +1,8 @@
 ---
+import ChevronUp from "lucide-solid/icons/chevron-up";
 import type { UpdateData } from "../server/types";
 import UpdateDiff from "./UpdateDiff.astro";
+import ChevronDown from "lucide-solid/icons/chevron-down";
 interface Props {
 	items: UpdateData[];
 }
@@ -13,13 +15,48 @@ const { same = [], others = [] } = Object.groupBy(items, (u) => (u.type === "SAM
 <div class="flex-col">
 	{
 		same.length > 0 && (
-			<>
-				<h2>Same</h2>
-				{same.map((item) => (
-					<UpdateDiff update={item} />
-				))}
-			</>
+			<details>
+				<summary class="flex-row">
+					<ChevronUp class="up-arrow" />
+					<ChevronDown class="down-arrow" />
+					<span>{same.length} tasks were the same</span>
+				</summary>
+				<br />
+				<div class="flex-col">
+					{same.map((item) => (
+						<UpdateDiff update={item} />
+					))}
+				</div>
+			</details>
 		)
 	}
 	{others.length > 0 && others.map((item) => <UpdateDiff update={item} />)}
 </div>
+
+<style scoped>
+	summary {
+		justify-content: center;
+	}
+
+	details {
+		border: 1px solid var(--input-border);
+		border-radius: 3px;
+		padding: 5px 20px;
+	}
+
+	.up-arrow {
+		display: none;
+	}
+
+	.down-arrow {
+		display: unset;
+	}
+
+	details[open] .up-arrow {
+		display: unset;
+	}
+
+	details[open] .down-arrow {
+		display: none;
+	}
+</style>
