@@ -122,7 +122,7 @@ tasks are made of many different fields, outlined above. They also contain links
 		- [ ] tasks under task
 		- [ ] account under account
 - [ ] task management
-	- [ ] better edit screen
+	- [x] better edit screen
 	- [ ] support for modules
 	- [ ] link to codebase scan
 
