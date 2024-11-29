@@ -24,14 +24,14 @@
 	:root {
 		--bg-primary: oklch(21.55% 0.014 278.77);
 		--text-primary: oklch(1 0 0);
-		--text-secondary: oklch(84.31% 0.0152 290.25);
-		--text-tertiary: oklch(75.41% 0.0187 296.52);
-		--text-link: oklch(68.8% 0.017 278);
+		--text-secondary: oklch(85% 0.02 290);
+		--text-tertiary: oklch(75% 0.02 290);
+		--text-link: oklch(65% 0.02 290);
 		--hover-filter: brightness(150%);
 
-		--input-background: oklch(29.49% 0.0164 295.56);
-		--input-border: oklch(38.31% 0.0323 294.48);
-		--input-placeholder: oklch(52.78% 0 0);
+		--input-background: oklch(27% 0.02 290);
+		--input-border: oklch(32% 0.02 290);
+		--input-placeholder: oklch(45% 0.03 290);
 		--input-text: var(--text-primary);
 		--input-focus: var(--text-link);
 
