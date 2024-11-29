@@ -205,7 +205,7 @@ h1 > input[type="text"], h2 > input[type="text"], h3 > input[type="text"], h4 > 
 	font-size: medium;
 }
 
-input[type="text"], select, textarea {
+input[type="text"], select, textarea, input[type="datetime-local"] {
 	font-family: inherit;
 	border: 1px solid var(--input-border);
 	border-radius: 4px;
