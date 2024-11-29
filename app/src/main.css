@@ -1,15 +1,15 @@
 :root {
 	--bg-primary: white;
 	--text-primary: black;
-	--text-link: #59565f;
+	--text-link: oklch(45.92% 0.0149 300.97);
 	--hover-filter: brightness(50%);
-	--text-secondary: #545059;
-	--text-tertiary: #8c8a9a;
+	--text-secondary: oklch(43.83% 0.0154 305.74);
+	--text-tertiary: oklch(64.04% 0.0237 291.45);
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
 
-	--input-background: #f9f8fb;
-	--input-border: #e1e2ea;
-	--input-placeholder: #a0a0a0;
+	--input-background: oklch(98.07% 0.0041 301.43);
+	--input-border: oklch(91.43% 0.0109 280.46);
+	--input-placeholder: oklch(70.58% 0 0);
 	--input-text: var(--text-primary);
 	--input-focus: var(--text-tertiary);
 
@@ -23,15 +23,15 @@
 @media (prefers-color-scheme: dark) {
 	:root {
 		--bg-primary: oklch(21.55% 0.014 278.77);
-		--text-primary: white;
-		--text-secondary: #cbcad5;
-		--text-tertiary: #b0adba;
-		--text-link: #989aa6;
+		--text-primary: oklch(1 0 0);
+		--text-secondary: oklch(84.31% 0.0152 290.25);
+		--text-tertiary: oklch(75.41% 0.0187 296.52);
+		--text-link: oklch(68.8% 0.017 278);
 		--hover-filter: brightness(150%);
 
-		--input-background: #2d2b34;
-		--input-border: #444053;
-		--input-placeholder: #6b6b6b;
+		--input-background: oklch(29.49% 0.0164 295.56);
+		--input-border: oklch(38.31% 0.0323 294.48);
+		--input-placeholder: oklch(52.78% 0 0);
 		--input-text: var(--text-primary);
 		--input-focus: var(--text-link);
 
