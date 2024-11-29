@@ -156,12 +156,6 @@ h6 {
 	font-size: medium;
 }
 
-.editor {
-	display: grid;
-	gap: 2px;
-	max-width: 28rem;
-}
-
 p.description {
 	color: var(--text-tertiary);
 }
@@ -276,4 +270,11 @@ details > summary {
 
 details > summary::-webkit-details-marker, details > summary::marker {
 	display: none;
+}
+
+
+details.boxed {
+	border: 1px solid var(--input-border);
+	border-radius: 3px;
+	padding: 5px 20px;
 }

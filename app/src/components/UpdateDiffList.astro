@@ -15,7 +15,7 @@ const { same = [], others = [] } = Object.groupBy(items, (u) => (u.type === "SAM
 <div class="flex-col">
 	{
 		same.length > 0 && (
-			<details>
+			<details class="boxed">
 				<summary class="flex-row">
 					<ChevronUp class="up-arrow" />
 					<ChevronDown class="down-arrow" />
@@ -36,12 +36,6 @@ const { same = [], others = [] } = Object.groupBy(items, (u) => (u.type === "SAM
 <style scoped>
 	summary {
 		justify-content: center;
-	}
-
-	details {
-		border: 1px solid var(--input-border);
-		border-radius: 3px;
-		padding: 5px 20px;
 	}
 
 	.up-arrow {
