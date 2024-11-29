@@ -37,7 +37,6 @@ export async function PATCH(context: APIContext) {
 			const owner = slices.at(-2);
 			if (!context?.locals?.session?.access_token) throw new Error("Linking a github repo without access token");
 			const access_token = context.locals.session.access_token;
-			console.log({ repo, owner, access_token });
 			const readme_response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: { "Accept": "application/vnd.github.raw+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
 			if (!readme_response || !readme_response.ok) {
 				console.warn(`Code ${readme_response.status} - ${readme_response.statusText}`);

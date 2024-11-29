@@ -26,13 +26,10 @@ export async function PUT(context: APIContext) {
 	try {
 		const insert = data as CompleteUpsertTodo;
 		insert.updated_at = new Date().toISOString();
-		console.log("inserting id: " + insert.id);
 
 		const new_todo = await db.insert(task).values(insert).onConflictDoUpdate({ target: [task.id], set: insert }).returning();
 
 		if (new_todo.length != 1) throw new Error(`Todo upsert returned incorrect rows (${new_todo.length}`);
-
-		console.log("new todo: ", new_todo[0]);
 
 		return new Response(JSON.stringify(new_todo[0]), { status: 200 });
 	} catch (err) {

@@ -126,7 +126,6 @@ export async function POST(context: APIContext) {
 			// if there are any, we want to create a task for them
 			if (missing_tasks.length > 0) {
 				const values = missing_tasks.map((item) => ({ codebase_task_id: item.id, project_id, title: item.data.new.text, owner_id: user_id }));
-				console.log("inserting tasks", values);
 				await db.insert(task).values(values);
 			}
 

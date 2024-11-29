@@ -20,8 +20,6 @@ export const TaskCard = (props: Props) => {
 	const project_name = project?.name || "No project";
 	const priority_class = `priority-${task.priority?.toLowerCase() ?? "low"}`;
 
-	console.log(task);
-
 	return (
 		<div>
 			<div style={{"font-size": "small"}}>
