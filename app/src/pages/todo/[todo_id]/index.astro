@@ -45,7 +45,7 @@ const from = Astro.url.searchParams.get("from")! || "";
 			<label for="end_time">End Time</label>
 			<input type="datetime-local" id="end_time" name="end_time" value={task.end_time} />
 		</div>
-		<details class="boxed flex-col">
+		<details class="boxed">
 			<summary class="flex-row" style="font-size: smaller;">
 				<ChevronUp class="up-arrow" />
 				<ChevronDown class="down-arrow" />
