@@ -1,15 +1,15 @@
 :root {
-	--bg-primary: oklch(1 0 0);
-	--text-primary: oklch(0 0 0);
+	--bg-primary: oklch(99% 0.02 290);
+	--text-primary: oklch(1% 0.02 290);
 	--text-link: oklch(45.92% 0.0149 300.97);
 	--hover-filter: brightness(50%);
-	--text-secondary: oklch(43.83% 0.0154 305.74);
-	--text-tertiary: oklch(64.04% 0.0237 291.45);
+	--text-secondary: oklch(25% 0.02 290);
+	--text-tertiary: oklch(35% 0.02 290);
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
 
-	--input-background: oklch(98.07% 0.0041 301.43);
-	--input-border: oklch(91.43% 0.0109 280.46);
-	--input-placeholder: oklch(70.58% 0 0);
+	--input-background: oklch(96% 0.01 290);
+	--input-border: oklch(91% 0.01 290);
+	--input-placeholder: oklch(70% 0.03 290);
 	--input-text: var(--text-primary);
 	--input-focus: var(--text-tertiary);
 
@@ -22,11 +22,11 @@
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--bg-primary: oklch(21.55% 0.014 278.77);
+		--bg-primary: oklch(21% 0.015 280);
 		--text-primary: oklch(1 0 0);
 		--text-secondary: oklch(85% 0.02 290);
 		--text-tertiary: oklch(75% 0.02 290);
-		--text-link: oklch(65% 0.02 290);
+		--text-link: oklch(70% 0.035 280);
 		--hover-filter: brightness(150%);
 
 		--input-background: oklch(27% 0.02 290);
