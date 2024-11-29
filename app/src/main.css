@@ -1,6 +1,6 @@
 :root {
-	--bg-primary: white;
-	--text-primary: black;
+	--bg-primary: oklch(1 0 0);
+	--text-primary: oklch(0 0 0);
 	--text-link: oklch(45.92% 0.0149 300.97);
 	--hover-filter: brightness(50%);
 	--text-secondary: oklch(43.83% 0.0154 305.74);
