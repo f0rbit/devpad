@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { todo_updates, tracker_result } from "../../database/schema";
+import type { Task } from "./tasks";
 
 export const upsert_project = z.object({
 	id: z.string().optional().nullable(),
@@ -11,11 +12,11 @@ export const upsert_project = z.object({
 	repo_url: z.string().optional().nullable(),
 	repo_id: z.number().optional().nullable(),
 	icon_url: z.string().optional().nullable(),
-	status: z.union([ z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED") ]),
+	status: z.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")]),
 	deleted: z.boolean().optional().nullable().default(false),
 	link_url: z.string().optional().nullable(),
 	link_text: z.string().optional().nullable(),
-	visibility: z.union([ z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED") ]),
+	visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]),
 	current_version: z.string().optional()
 });
 
@@ -28,11 +29,11 @@ export const upsert_todo = z.object({
 	title: z.string(),
 	summary: z.string().optional().nullable(),
 	description: z.string().optional().nullable(),
-	progress: z.union([ z.literal("UNSTARTED"), z.literal("IN_PROGRESS"), z.literal("COMPLETED") ]),
-	visibility: z.union([ z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED") ]),
+	progress: z.union([z.literal("UNSTARTED"), z.literal("IN_PROGRESS"), z.literal("COMPLETED")]),
+	visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]),
 	start_time: z.string().optional().nullable(),
 	end_time: z.string().optional().nullable(),
-	priority: z.union([ z.literal("LOW"), z.literal("MEDIUM"), z.literal("HIGH") ]),
+	priority: z.union([z.literal("LOW"), z.literal("MEDIUM"), z.literal("HIGH")]),
 	owner_id: z.string(),
 	project_id: z.string().optional().nullable(),
 });
@@ -57,7 +58,8 @@ export type UpdateData = {
 			file: string,
 			context?: string[]
 		}
-	}
+	};
+	task?: Task;
 }
 
 export type TodoUpdate = typeof todo_updates.$inferSelect;

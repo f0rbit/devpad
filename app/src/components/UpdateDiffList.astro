@@ -1,15 +1,27 @@
 ---
+import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
+import type { Task } from "../server/tasks";
 import type { UpdateData } from "../server/types";
 import UpdateDiff from "./UpdateDiff.astro";
-import ChevronDown from "lucide-solid/icons/chevron-down";
+
 interface Props {
 	items: UpdateData[];
+	tasks: Record<string, Task>; //key is codebase_tasks.id
 }
 
 const { items } = Astro.props;
 
-const { same = [], others = [] } = Object.groupBy(items, (u) => (u.type === "SAME" ? "same" : "others"));
+// append .task to each item if found within tasks map
+const mapped_items = items.map((item) => {
+	const task = Astro.props.tasks[item.id];
+	if (task) {
+		item.task = task;
+	}
+	return item;
+});
+
+const { same = [], others = [] } = Object.groupBy(mapped_items, (u) => (u.type === "SAME" ? "same" : "others"));
 ---
 
 <div class="flex-col">

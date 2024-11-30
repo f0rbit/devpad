@@ -1,18 +1,18 @@
 ---
-import ChevronDown from "lucide-solid/icons/chevron-down";
-import type { UpdateData } from "../server/types";
-import ChevronUp from "lucide-solid/icons/chevron-up";
 import Code from "astro/components/Code.astro";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import type { Task } from "../server/tasks";
+import type { UpdateData } from "../server/types";
 
 interface Props {
-	update: UpdateData;
+	update: UpdateData & { task?: Task };
 }
 
 const { update } = Astro.props;
 const { data } = update;
 
-/** @todo get title from linked task? */
-const title: string | null = null;
+const title: string | null = update?.task?.task?.title ?? null;
 
 // format <path>:<line>
 let path = "unknown:?";

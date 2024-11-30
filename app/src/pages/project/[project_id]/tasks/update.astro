@@ -1,8 +1,9 @@
 ---
-import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
-import PageLayout from "../../../../layouts/PageLayout.astro";
 import UpdateDiffList from "../../../../components/UpdateDiffList.astro";
+import PageLayout from "../../../../layouts/PageLayout.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
+import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
+import { getProjectTasks, type Task } from "../../../../server/tasks";
 
 const { project_id } = Astro.params;
 if (!project_id) return { error: { status: 404, message: "Project not found" } };
@@ -14,11 +15,22 @@ if (!found_project) return { error: { status: 404, message: "Project not found" 
 
 const project_uuid = found_project.id;
 
+const project_tasks = await getProjectTasks(project_uuid);
+// build a map of task.codebases_tasks.id -> task
+const codebase_task_map = project_tasks.reduce(
+	(acc, task) => {
+		if (!task.codebase_tasks) return acc;
+		acc[task.codebase_tasks.id] = task;
+		return acc;
+	},
+	{} as Record<string, Task>
+);
+
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(found_project);
 const update_id = update?.id ?? null;
-const update_data = update?.data ? (typeof update.data == 'string' ? JSON.parse(update.data) : update.data) : null;
+const update_data = update?.data ? (typeof update.data == "string" ? JSON.parse(update.data) : update.data) : null;
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
@@ -26,7 +38,7 @@ const update_data = update?.data ? (typeof update.data == 'string' ? JSON.parse(
 		{
 			update_data ? (
 				<>
-					<UpdateDiffList items={update_data} />
+					<UpdateDiffList items={update_data} tasks={codebase_task_map} />
 					<a href="#" id="approve">
 						Approve
 					</a>
