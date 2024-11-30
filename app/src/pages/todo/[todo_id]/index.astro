@@ -3,6 +3,7 @@ import { getTask } from "../../../server/tasks";
 import PageLayout from "../../../layouts/PageLayout.astro";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import LinkedCode from "../../../components/LinkedCode.astro";
 
 const { todo_id } = Astro.params;
 const user = Astro.locals.user;
@@ -11,14 +12,14 @@ if (!todo_id) {
 	return Astro.redirect("/todo");
 }
 
-const { task } = (await getTask(todo_id)) ?? { task: null };
+const { task, codebase_tasks } = (await getTask(todo_id)) ?? { task: null };
 
 if (!task) {
 	return Astro.redirect("/todo");
 }
 
 if (!user || task.owner_id !== user.id) {
-	return Astro.response.redirect("/todo");
+	return Astro.redirect("/todo");
 }
 
 const from = Astro.url.searchParams.get("from")! || "";
@@ -74,6 +75,16 @@ const from = Astro.url.searchParams.get("from")! || "";
 		<br />
 		<a href={from.length > 0 ? from : "/todo"}>back</a>
 		<a href="#" id="save-button">save</a>
+		<br />
+		<br />
+		{
+			codebase_tasks && (
+				<>
+					<h5>linked code</h5>
+					<LinkedCode code={codebase_tasks} />
+				</>
+			)
+		}
 	</main>
 </PageLayout>
 
@@ -128,7 +139,6 @@ const from = Astro.url.searchParams.get("from")! || "";
 		gap: 5px;
 		grid-template-columns: 1fr 3fr;
 		padding: 7px 0px;
-
 	}
 
 	summary {
