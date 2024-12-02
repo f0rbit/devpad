@@ -4,6 +4,9 @@ import PageLayout from "../../../layouts/PageLayout.astro";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import LinkedCode from "../../../components/LinkedCode.astro";
+import Loader from "lucide-solid/icons/loader";
+import Check from "lucide-solid/icons/check";
+import X from "lucide-solid/icons/x";
 
 const { todo_id } = Astro.params;
 const user = Astro.locals.user;
@@ -75,8 +78,12 @@ const from = Astro.url.searchParams.get("from")! || "";
 		<br />
 		<a href={from.length > 0 ? from : "/todo"}>back</a>
 		<a href="#" id="save-button">save</a>
+		<Loader id="spinner" class="icon hidden" />
+		<Check id="success-icon" class="icon hidden" />
+		<X id="error-icon" class="icon hidden" />
 		<br />
 		<br />
+		<div id="response" class="response"></div>
 		{
 			codebase_tasks && (
 				<>
@@ -90,10 +97,23 @@ const from = Astro.url.searchParams.get("from")! || "";
 
 <script>
 	const saveButton = document.getElementById("save-button");
+	const spinner = document.getElementById("spinner")!;
+	const successIcon = document.getElementById("success-icon")!;
+	const errorIcon = document.getElementById("error-icon")!;
+
 	const get_value = (id: string) => {
 		return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
 	};
+
+	const toggleIcons = (showSpinner: boolean, showSuccess: boolean, showError: boolean) => {
+		spinner.classList.toggle("hidden", !showSpinner);
+		successIcon.classList.toggle("hidden", !showSuccess);
+		errorIcon.classList.toggle("hidden", !showError);
+	};
+
 	saveButton!.addEventListener("click", async () => {
+		toggleIcons(true, false, false);
+
 		const title = get_value("title") ?? "";
 		const summary = get_value("summary") ?? null;
 		const description = get_value("description") ?? null;
@@ -125,11 +145,18 @@ const from = Astro.url.searchParams.get("from")! || "";
 			}),
 		});
 
+		// fake an 80ms second delay
+		await new Promise((resolve) => setTimeout(resolve, 80));
+
 		if (response.ok) {
-			alert("Task updated");
+			toggleIcons(false, true, false);
 		} else {
-			alert("Failed to update task");
+			toggleIcons(false, false, true);
 		}
+
+		setTimeout(() => {
+			toggleIcons(false, false, false);
+		}, 5000);
 	});
 </script>
 
@@ -159,5 +186,22 @@ const from = Astro.url.searchParams.get("from")! || "";
 
 	details[open] .down-arrow {
 		display: none;
+	}
+
+	.icon {
+		margin-left: 10px;
+		vertical-align: middle;
+	}
+
+	.hidden {
+		display: none;
+	}
+
+	#success-icon {
+		color: oklch(from var(--item-green) 0.8 0.15 h )
+	}
+
+	#error-icon {
+		color: oklch(from var(--item-red) 0.8 0.15 h)
 	}
 </style>
