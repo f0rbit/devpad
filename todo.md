@@ -22,11 +22,11 @@
     - [x] Database setup
         - [x] SQLite file (low memory impact)
         - [x] Drizzle ORM (low CPU impact)
-- [ ] Deployment
-    - [ ] Railway.app
-    - [ ] Localhost environment
-    - [ ] Reproduceable in github actions
+- [x] Deployment
+    - [x] Railway.app
+    - [x] Localhost environment
 - [ ] Testing
+    - [ ] Reproduceable in github actions
     - [ ] Can test locally
     - [ ] Can test in github actions
     - [ ] 70% backend coverage
