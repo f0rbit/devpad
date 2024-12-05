@@ -89,7 +89,7 @@ const mode = project ? "edit" : "create";
 
 		// submit POST request
 		const body = JSON.stringify({
-			id: pid,
+			id: pid ?? undefined,
 			project_id,
 			status: status.toUpperCase() as UpsertProject["status"],
 			name,
