@@ -33,12 +33,11 @@ COPY ../app/ .
 RUN rm -f ./.env.example
 COPY ../deployment/.en[v] .
 
-RUN bun run migrate
-
-
 # Install dependencies and build the project
 RUN bun install
 RUN bun run build
+
+RUN bun run migrate
 
 WORKDIR /server
 

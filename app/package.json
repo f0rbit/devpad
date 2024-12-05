@@ -9,7 +9,8 @@
 		"schema": "bunx drizzle-kit generate:sqlite --schema=./database/schema.ts --out=./database/drizzle",
 		"build": "bun --bun astro check && bun --bun astro build",
 		"preview": "bun --bun astro preview",
-		"astro": "astro"
+		"astro": "astro",
+		"push": "bunx --bun drizzle-kit push:sqlite"
 	},
 	"dependencies": {
 		"@astrojs/check": "^0.5.10",
@@ -32,6 +33,7 @@
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
+		"@libsql/client": "^0.14.0",
 		"drizzle-kit": "^0.20.14"
 	}
 }
