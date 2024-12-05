@@ -11,18 +11,10 @@ COPY ../app/ .
 RUN bun install
 RUN bun run build
 
-# Use a base image with Caddy installed
-FROM caddy:latest
+WORKDIR /server
 
-# Copy the built files and Caddyfile
-COPY --from=builder /app/dist /srv
-COPY ../deployment/Caddyfile /etc/caddy/Caddyfile
+COPY ../deployment/ .
 
-# Copy the Bun server files
-COPY --from=builder /app /app
+RUN bun install
 
-# Expose the port Caddy will serve on
-EXPOSE 80
-
-# Start both Caddy and Bun server
-CMD ["sh", "-c", "caddy run & bun start"]
+CMD ["bun", "index.ts"]
