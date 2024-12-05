@@ -2,10 +2,12 @@ import type { APIContext } from "astro";
 import { db } from "../../../../database/db";
 import { and, desc, eq } from "drizzle-orm";
 import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
-import child_process from "child_process";
-
+import child_process from "node:child_process";
+import { readdir } from "node:fs/promises";
 
 // will have ?project_id=<id> query parameter
+/** @todo capture stderr/stdout on the child processes */
+/** @todo store context in db */
 
 export async function POST(context: APIContext) {
 	if (!context.locals.user || !context.locals.user.id || !context.locals.user.github_id) {
@@ -94,13 +96,18 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
 	const config_path = "../todo-config.json"; // TODO: grab this from user config from 1. project config, 2. user config, 3. default config
 
+	// the unzipped folder will have a folder inside it with the repo contents, we need that pathname for the parsing task
+	const files = await readdir(unzipped_path);
+	const folder_path = `${unzipped_path}/${files[0]}`;
+
+
 	// generate the todo-tracker parse
 	yield "scanning repo\n";
-	child_process.execSync("../todo-tracker parse " + unzipped_path + " " + config_path + " > " + unzipped_path + "/new-output.json");
-	
+	child_process.execSync(`../todo-tracker parse ${folder_path} ${config_path} > ${unzipped_path}/new-output.json`);
+
 	yield "saving output\n"
 	// for now, lets return response of the new-output.json file
-	const output_file = await (Bun.file(unzipped_path + "/new-output.json").text());
+	const output_file = await (Bun.file(`${unzipped_path}/new-output.json`).text());
 
 	yield "saving scan\n";
 
@@ -120,12 +127,19 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	yield "finding existing scan\n";
 	const new_id = new_tracker[0].id;
 	const old_id = await db.select().from(tracker_result).where(and(eq(tracker_result.project_id, project_id), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
-	
+
 	var old_data = [] as any[];
 	if (old_id.length == 1 && old_id[0].data) {
 		// fetch all the codebase tasks from the old_id
 		const existing_tasks = await db.select().from(codebase_tasks).where(eq(codebase_tasks.recent_scan_id, old_id[0].id));
 		old_data = existing_tasks;
+
+		// rename field 'type' to 'tag' in old_data
+		old_data = old_data.map((item) => {
+			item.tag = item.type;
+			delete item.type;
+			return item;
+		});
 	}
 
 	// write old data to old-output.json
@@ -136,7 +150,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	// run diff script and write to diff-output.json
 	yield "running diff\n";
 	try {
-		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json`);	
+		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json 2> ${unzipped_path}/err.out`);
 	} catch (e) {
 		console.error(e);
 		yield "error running diff\n";
@@ -147,8 +161,16 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 	yield "reading diff\n";
 	const diff = await Bun.file(unzipped_path + "/diff-output.json").text();
 
-	console.log("inserting diff", diff);
-
+	yield "ignoring old updates\n";
+	// update any old todo_updates that had status == "PENDING" to status == "IGNORED"
+	try {
+		await db.update(todo_updates).set({ status: "IGNORED" }).where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.status, "PENDING")));
+	} catch (e) {
+		console.error(e);
+		yield "error ignoring old updates\n";
+		return;
+	}
+	
 	yield "saving update\n";
 	await db.insert(todo_updates).values({
 		project_id: project_id,

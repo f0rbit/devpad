@@ -1,116 +1,220 @@
 ---
 import { getTask } from "../../../server/tasks";
 import PageLayout from "../../../layouts/PageLayout.astro";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import LinkedCode from "../../../components/LinkedCode.astro";
+import Loader from "lucide-solid/icons/loader";
+import Check from "lucide-solid/icons/check";
+import X from "lucide-solid/icons/x";
 
 const { todo_id } = Astro.params;
 const user = Astro.locals.user;
 
 if (!todo_id) {
-	return Astro.response.redirect("/todo");
+    return Astro.redirect("/todo");
 }
 
-const { task, codebase_task, tags } = await getTask(todo_id);
+const { task, codebase_tasks } = (await getTask(todo_id)) ?? { task: null };
+
+if (!task) {
+    return Astro.redirect("/todo");
+}
 
 if (!user || task.owner_id !== user.id) {
-	return Astro.response.redirect("/todo");
+    return Astro.redirect("/todo");
 }
 
-const from = Astro.url.searchParams.get('from')! || '';
+const from = Astro.url.searchParams.get("from")! || "";
 ---
 
 <PageLayout title={"Editing Task"}>
-	<main>
-		<h1>Edit Task</h1>
-		<a href={from.length > 0 ? from : "/todo"}>back</a>
-		<div class="editor" data-todo-id={todo_id} data-user-id={user.id}>
-			<label for="title">Title</label>
-			<input type="text" id="title" name="title" value={task.title.trim()} />
-			<label for="summary">Summary</label>
-			<input type="text" id="summary" name="summary" value={task.summary} />
-			<label for="description">Description</label>
-			<textarea id="description" name="description">{task.description}</textarea>
-			<label for="progress">Progress</label>
-			<select id="progress" name="progress" value={task.progress}> 
-				<option value="UNSTARTED">Not Started</option>
-				<option value="IN_PROGRESS">In Progress</option>
-				<option value="COMPLETED">Completed</option>
-			</select>
-			<label for="visibility">Visibility</label>
-			<select id="visibility" name="visibility" value={task.visibility}>
-				<option value="PUBLIC">Public</option>
-				<option value="PRIVATE">Private</option>
-				<option value="HIDDEN">Hidden</option>
-				<option value="ARCHIVED">Archived</option>
-				<option value="DRAFT">Draft</option>
-				<option value="DELETED">Deleted</option>
-			</select>
-			<label for="start_time">Start Time</label>
-			<input type="datetime-local" id="start_time" name="start_time" value={task.start_time} />
-			<label for="end_time">End Time</label>
-			<input type="datetime-local" id="end_time" name="end_time" value={task.end_time} />
-			<label for="priority">Priority</label>
-			<select id="priority" name="priority">
-				<option value="LOW" selected={task.priority === "LOW"}>Low</option>
-				<option value="MEDIUM" selected={task.priority === "MEDIUM"}>Medium</option>
-				<option value="HIGH" selected={task.priority === "HIGH"}>High</option>
-			</select>
-			<a href="#" id='save-button'>save</a>
-		</div>
-	</main>
+    <main>
+        <h4>task editor</h4>
+        <br />
+        <div class="editor" data-todo-id={todo_id} data-user-id={user.id}>
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" value={task.title.trim()} />
+            <label for="summary">Summary</label>
+            <input type="text" id="summary" name="summary" value={task.summary} />
+            <label for="description">Description</label>
+            <textarea id="description" name="description">{task.description}</textarea>
+            <label for="progress">Progress</label>
+            <select id="progress" name="progress" value={task.progress}>
+                <option value="UNSTARTED">Not Started</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="COMPLETED">Completed</option>
+            </select>
+
+            <label for="end_time">End Time</label>
+            <input type="datetime-local" id="end_time" name="end_time" value={task.end_time} />
+        </div>
+        <details class="boxed">
+            <summary class="flex-row" style="font-size: smaller;">
+                <ChevronUp class="up-arrow" />
+                <ChevronDown class="down-arrow" />
+                More Options
+            </summary>
+            <div class="editor">
+                <label for="start_time">Start Time</label>
+                <input type="datetime-local" id="start_time" name="start_time" value={task.start_time} />
+                <label for="visibility">Visibility</label>
+                <select id="visibility" name="visibility" value={task.visibility}>
+                    <option value="PUBLIC">Public</option>
+                    <option value="PRIVATE">Private</option>
+                    <option value="HIDDEN">Hidden</option>
+                    <option value="ARCHIVED">Archived</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="DELETED">Deleted</option>
+                </select>
+                <label for="priority">Priority</label>
+                <select id="priority" name="priority">
+                    <option value="LOW" selected={task.priority === "LOW"}>Low</option>
+                    <option value="MEDIUM" selected={task.priority === "MEDIUM"}>Medium</option>
+                    <option value="HIGH" selected={task.priority === "HIGH"}>High</option>
+                </select>
+            </div>
+        </details>
+        <br />
+        <a href={from.length > 0 ? from : "/todo"}>back</a>
+        <a href="#" id="save-button">save</a>
+        <Loader id="spinner" class="icon hidden" />
+        <Check id="success-icon" class="icon hidden" />
+        <X id="error-icon" class="icon hidden" />
+        <br />
+        <br />
+        <div id="response" class="response"></div>
+        {
+            codebase_tasks && (
+                <>
+                    <h5>linked code</h5>
+                    <LinkedCode code={codebase_tasks} />
+                </>
+            )
+        }
+    </main>
 </PageLayout>
 
-<style>
-.editor {
-	display: grid;
-	gap: 2px;
-	max-width: 28rem;
-}
-</style>
-
 <script>
-	const saveButton = document.getElementById('save-button');
-	const get_value = (id: string) => {
-			return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
-		};
-	saveButton!.addEventListener('click', async () => {
-		const title = get_value('title') ?? "";
-		const summary = get_value('summary') ?? null;
-		const description = get_value('description') ?? null;
-		const progress = get_value('progress') ?? "UNSTARTED";
-		const visibility = get_value('visibility') ?? "PRIVATE";
-		const start_time = get_value('start_time') ?? null;
-		const end_time = get_value('end_time') ?? null;
-		const priority = get_value('priority') ?? "LOW";
+    const saveButton = document.getElementById("save-button");
+    const spinner = document.getElementById("spinner")!;
+    const successIcon = document.getElementById("success-icon")!;
+    const errorIcon = document.getElementById("error-icon")!;
 
+    const get_value = (id: string) => {
+        return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
+    };
 
-		const owner_id = document.querySelector('.editor')?.getAttribute('data-user-id') ?? null;
-		const todo_id = document.querySelector('.editor')?.getAttribute('data-todo-id') ?? null;
+    const toggleIcons = (showSpinner: boolean, showSuccess: boolean, showError: boolean) => {
+        spinner.classList.toggle("hidden", !showSpinner);
+        successIcon.classList.toggle("hidden", !showSuccess);
+        errorIcon.classList.toggle("hidden", !showError);
+    };
 
-		const response = await fetch(`/api/todo/upsert`, {
-			method: 'PUT',
-			headers: {
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				id: todo_id,
-				title,
-				summary,
-				description,
-				progress,
-				visibility,
-				start_time,
-				end_time,
-				priority,
-				owner_id
-			})
-		});
+    saveButton!.addEventListener("click", async () => {
+        toggleIcons(true, false, false);
 
-		if (response.ok) {
-			alert('Task updated');
-		} else {
-			alert('Failed to update task');
-		}
+        const title = get_value("title") ?? "";
+        const summary = get_value("summary") ?? null;
+        const description = get_value("description") ?? null;
+        const progress = get_value("progress") ?? "UNSTARTED";
+        const visibility = get_value("visibility") ?? "PRIVATE";
+        const start_time = get_value("start_time") ?? null;
+        const end_time = get_value("end_time") ?? null;
+        const priority = get_value("priority") ?? "LOW";
 
-	});
+        const owner_id = document.querySelector(".editor")?.getAttribute("data-user-id") ?? null;
+        const todo_id = document.querySelector(".editor")?.getAttribute("data-todo-id") ?? null;
+
+        const response = await fetch(`/api/todo/upsert`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                id: todo_id,
+                title,
+                summary,
+                description,
+                progress,
+                visibility,
+                start_time,
+                end_time,
+                priority,
+                owner_id,
+            }),
+        });
+
+        // fake an 80ms second delay
+        await new Promise((resolve) => setTimeout(resolve, 80));
+
+        if (response.ok) {
+            toggleIcons(false, true, false);
+        } else {
+            toggleIcons(false, false, true);
+        }
+
+        setTimeout(() => {
+            toggleIcons(false, false, false);
+        }, 5000);
+    });
 </script>
 
+<style scoped>
+    .editor {
+        display: grid;
+        gap: 5px;
+        grid-template-columns: 1fr 3fr;
+        padding: 7px 0px;
+    }
+
+    summary {
+        justify-content: center;
+    }
+
+    .up-arrow {
+        display: none;
+    }
+
+    .down-arrow {
+        display: unset;
+    }
+
+    details[open] .up-arrow {
+        display: unset;
+    }
+
+    details[open] .down-arrow {
+        display: none;
+    }
+
+    .icon {
+        margin-left: 10px;
+        vertical-align: middle;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    #spinner {
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    #success-icon {
+        color: oklch(from var(--item-green) 0.8 0.15 h )
+    }
+
+    #error-icon {
+        color: oklch(from var(--item-red) 0.8 0.15 h)
+    }
+</style>

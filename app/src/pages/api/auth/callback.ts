@@ -12,10 +12,7 @@ export async function GET(context: APIContext): Promise<Response> {
 	const state = context.url.searchParams.get("state");
 	const storedState = context.cookies.get("github_oauth_state")?.value ?? null;
 	if (!code || !state || !storedState || state !== storedState) {
-		console.log("no code, state or stored state");
-		return new Response(null, {
-			status: 400
-		});
+		return new Response(null, { status: 400 });
 	}
 
 	try {
@@ -49,13 +46,9 @@ export async function GET(context: APIContext): Promise<Response> {
 		// the specific error message depends on the provider
 		if (e instanceof OAuth2RequestError) {
 			// invalid code
-			return new Response(null, {
-				status: 400
-			});
+			return new Response(null, { status: 400 });
 		}
-		return new Response(null, {
-			status: 500
-		});
+		return new Response(null, { status: 500 });
 	}
 }
 

@@ -1,0 +1,33 @@
+---
+interface Props {
+	project_id: string;
+}
+
+const { project_id } = Astro.props;
+
+// get the active page
+const pages = [
+	{ name: "overview", href: `/project/${project_id}` },
+	{ name: "settings", href: `/project/${project_id}/settings` },
+	{ name: "specification", href: `/project/${project_id}/specification` },
+	{ name: "tasks", href: `/project/${project_id}/tasks` },
+];
+
+const search_pages = pages.filter((p) => p.name != "overview");
+const active = search_pages.find((p) => Astro.url.pathname.startsWith(p.href))?.name ?? "overview";
+---
+
+<main>
+	<h3>{project_id}</h3>
+	<nav>
+		{
+			pages.map((p) => (
+				<a href={p.href} class={active == p.name ? "active" : ""}>
+					{p.name}
+				</a>
+			))
+		}
+	</nav>
+	<br />
+	<slot />
+</main>

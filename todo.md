@@ -6,13 +6,13 @@
 - [x] Project Manager
     - [x] View all projects
     - [x] Sub-project pages
-- [ ] Todo Tracker
+- [x] Todo Tracker
     - [x] Add codebase
-    - [ ] View tasks
+    - [x] View tasks
         - [x] View all
-        - [ ] By priority
-        - [ ] By recent
-        - [ ] In Progress
+        - [x] By priority
+        - [x] By recent
+        - [x] In Progress
 
 # implementation
 - [x] Setup tech stack
@@ -92,10 +92,37 @@
             - [x] text from the line of code
             - [x] file name
             - [x] line number inside file
+- [ ] store state of task sorting in URL
 
 ## structure of project/tasks relationship
 project > milestone > goal > task > checklists
 basically each project can have multiple milestones, these milestones will be associated with a 'version' string, that when the user marks a milestone as complete will update the project.
 each milestone is comprised of multiple goals, which are essentially just grouped tasks. goals can have their own due dates but no start dates, and the due dates are optional. goals have a title & summary. goals will have a 'completed' date field which would indicate when the user marked the goal as completed.
 tasks are made of many different fields, outlined above. They also contain links to checklists. This is a complex relationship as a checklist's can be nested within other checklists, but the root checklist will be linked to only 1 task. A task can have multiple checklist instances however.
+
+
+## feature todo
+- [ ] history
+	- [ ] project history
+		- [ ] modifications to spec
+		- [ ] modifications to settings
+		- [ ] scan accepts
+		- [ ] updates to tasks
+	- [ ] task history
+		- [ ] data updates
+		- [ ] status updates
+		- [ ] scan results
+	- [ ] user history
+		- [ ] project added
+		- [ ] project deleted
+		- [ ] created task
+		- [ ] deleted task
+	- [ ] history page
+		- [ ] project history under project
+		- [ ] tasks under task
+		- [ ] account under account
+- [ ] task management
+	- [x] better edit screen
+	- [ ] support for modules
+	- [ ] link to codebase scan
 

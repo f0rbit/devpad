@@ -4,33 +4,34 @@ import PageLayout from "../../layouts/PageLayout.astro";
 
 const session = Astro.locals.session;
 
-const repos = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${session?.access_token}` }});
+const repos = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", { headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${session?.access_token}` } });
 
 const repos_result = await repos.json();
 ---
 
 <PageLayout title="Create Project">
 	<main>
-		<h1>create project</h1>
-		<h3>import project</h3>
-			<input id='project-importer' type="text" list="repo-list" />
-			<a id='importer-clear' href="#">clear</a>
+		<h3>create project</h3>
+		<p class="description" style="font-size: smaller">enter project details or import via github. importing via github allows for searching codebase for tasks automatically.</p>
+		<br />
+		<h5 class="flex-row">github import</h5>
+		<input id="project-importer" type="text" list="repo-list" class="big" />
+		<a id="importer-clear" href="#">clear</a>
 		<br />
 		<br />
-		<h3>settings</h3>
-		<div style="max-width: 50vw"> 
+		<h5>settings</h5>
+		<div style="max-width: 50vw">
 			<ProjectSettings project={null} back={"/project"} />
 		</div>
 		<br />
 	</main>
 
-	<datalist id='repo-list'>
-		{repos_result.map((r: any) => <option value={r.name}></option>)}	
+	<datalist id="repo-list">
+		{repos_result.map((r: any) => <option value={r.name}>{r.name}</option>)}
 	</datalist>
 </PageLayout>
 
 <script define:vars={{ repos_result }}>
-
 	function import_project() {
 		const project_name = event.target.value;
 		const project_data = repos_result?.find((p) => p.name == project_name);
@@ -38,15 +39,15 @@ const repos_result = await repos.json();
 			clear_data();
 			return;
 		}
-		// fill in input fields with data from github project 
-		document.getElementById("project_id").value = project_data['name'];
-		document.getElementById("name").value = project_data['name'];
-		document.getElementById("description").value = project_data['description'];
-		document.getElementById("visibility").value = project_data['visibility'];
+		// fill in input fields with data from github project
+		document.getElementById("project_id").value = project_data["name"];
+		document.getElementById("name").value = project_data["name"];
+		document.getElementById("description").value = project_data["description"];
+		document.getElementById("visibility").value = project_data["visibility"];
 
-		document.getElementById("github_url").value = project_data['html_url'];
+		document.getElementById("github_url").value = project_data["html_url"];
 		document.getElementById("github_url").disabled = true;
-		document.getElementById("github_repo_id").value = Number(project_data['id']);
+		document.getElementById("github_repo_id").value = Number(project_data["id"]);
 	}
 
 	function clear_data() {
@@ -56,8 +57,6 @@ const repos_result = await repos.json();
 		});
 	}
 
-	document.getElementById("project-importer").addEventListener('change', import_project);
-	document.getElementById("importer-clear").addEventListener('click', clear_data);
+	document.getElementById("project-importer").addEventListener("change", import_project);
+	document.getElementById("importer-clear").addEventListener("click", clear_data);
 </script>
-
-

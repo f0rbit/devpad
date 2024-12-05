@@ -3,30 +3,22 @@ import ProjectSettings from "../../../components/ProjectSettings.astro";
 import { getProject } from "../../../server/projects";
 import PageLayout from "../../../layouts/PageLayout.astro";
 import type { UpsertProject } from "../../../server/types";
+import ProjectLayout from "../../../layouts/ProjectLayout.astro";
 
 const { project_id } = Astro.params;
+
+if (!project_id) return { error: { status: 404, message: "Project not found" } };
 
 const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
+
+if (error) return { error: { status: 500, message: error } };
 ---
 
 <PageLayout title={`Project - ${project_id}`}>
-	{error ? <p>Error: {error}</p> : (
-	<main>
-		<h2>settings</h2>
-		<div style="max-width: 50vw">
-			<ProjectSettings project={project as UpsertProject} back={`/project/${project_id}`} />
-		</div>
-		</main>
-	)}
+	<ProjectLayout project_id={project_id} />
+	<div style="max-width: 50vw">
+		<ProjectSettings project={project as UpsertProject} back={`/project/${project_id}`} />
+	</div>
 </PageLayout>
-
-<style>
-	main {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-</style>
-

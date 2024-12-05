@@ -1,0 +1,68 @@
+---
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import type { Task } from "../server/tasks";
+import type { UpdateData } from "../server/types";
+import UpdateDiff from "./UpdateDiff.astro";
+
+interface Props {
+	items: UpdateData[];
+	tasks: Record<string, Task>; //key is codebase_tasks.id
+}
+
+const { items } = Astro.props;
+
+// append .task to each item if found within tasks map
+const mapped_items = items.map((item) => {
+	const task = Astro.props.tasks[item.id];
+	if (task) {
+		item.task = task;
+	}
+	return item;
+});
+
+const { same = [], others = [] } = Object.groupBy(mapped_items, (u) => (u.type === "SAME" ? "same" : "others"));
+---
+
+<div class="flex-col">
+	{
+		same.length > 0 && (
+			<details class="boxed">
+				<summary class="flex-row">
+					<ChevronUp class="up-arrow" />
+					<ChevronDown class="down-arrow" />
+					<span>{same.length} tasks were the same</span>
+				</summary>
+				<br />
+				<div class="flex-col">
+					{same.map((item) => (
+						<UpdateDiff update={item} />
+					))}
+				</div>
+			</details>
+		)
+	}
+	{others.length > 0 && others.map((item) => <UpdateDiff update={item} />)}
+</div>
+
+<style scoped>
+	summary {
+		justify-content: center;
+	}
+
+	.up-arrow {
+		display: none;
+	}
+
+	.down-arrow {
+		display: unset;
+	}
+
+	details[open] .up-arrow {
+		display: unset;
+	}
+
+	details[open] .down-arrow {
+		display: none;
+	}
+</style>

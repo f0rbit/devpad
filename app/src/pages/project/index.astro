@@ -12,29 +12,27 @@ const deleted = projects.filter((p) => p.visibility == "DELETED");
 	<main>
 	{user ?
 	(<>
-		<h1>projects</h1>
 		<section>
-			{codebases.map((c) => <a href=`/project/${c}`>{c}</a>)}
-		</section>
+		<h3>projects</h3>
+		<ul>
+		{codebases.map((c) => <li><a href={`project/${c}`}>{c}</a></li>	)}
+		</ul>
 		<br />
+		</section>
 		<a href="/project/create">+ add</a>
-		{deleted.length > 0 ? <details><summary>{deleted.length} deleted projects</summary>{deleted.map((p) => (
-		<div>
-			<span>{p.project_id} - </span><span><a href='#'>restore</a></span>
-		</div>
-		))}</details> : <></>}
+		{deleted.length > 0 ?
+		<details>
+			<summary>{deleted.length} deleted projects</summary>
+			{deleted.map((p) => (
+				<div>
+					<span>{p.project_id} - </span><span><a href='#'>restore</a></span>
+				</div>
+			))}
+		</details> : <></>}
 		</>)
-	: (<>
+	: <>
 		<p>You must be logged in</p>
 		<a href="api/auth/login">login</a>
-	</>)}
+	</>}
 	</main>
 </PageLayout>
-
-
-<style>
-section {
-	display: flex;
-	flex-direction: column;
-}
-</style>

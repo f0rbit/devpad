@@ -1,10 +1,13 @@
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "../../database/db";
 import { project, todo_updates, tracker_result } from "../../database/schema";
-import { and, desc, eq } from "drizzle-orm";
+import type { TodoUpdate, TrackerResult } from "./types";
 
 export async function getUserProjects(user_id: string) {
 	return await db.select().from(project).where(eq(project.owner_id, user_id));
 }
+
+export type Project = Awaited<ReturnType<typeof getUserProjects>>[0];
 
 export async function getProject(user_id: string | null, project_id: string | undefined | null) {
 	if (!user_id) return { project: null, error: "No user ID" };
@@ -20,9 +23,9 @@ export async function getProject(user_id: string | null, project_id: string | un
 	}
 }
 
-export async function getRecentUpdate(project: any) {
+export async function getRecentUpdate(project: Project) {
 	const DEBUG_THIS = true;
-	const { owner_id: user_id, id }: { owner_id: string, id: string } = project;
+	const { owner_id: user_id, id } = project;
 	if (!user_id) {
 		if (DEBUG_THIS) console.error("No owner_id ID");
 		return null;
@@ -40,7 +43,7 @@ export async function getRecentUpdate(project: any) {
 		return null;
 	}
 
-	const update = updates[0] as any;
+	const update = updates[0] as TodoUpdate & { old_data: TrackerResult | null, new_data: TrackerResult | null };
 	update.old_data = null;
 	update.new_data = null;
 

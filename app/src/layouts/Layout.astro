@@ -5,6 +5,8 @@ interface Props {
 
 const dark_mode = false;
 
+import "../main.css";
+
 const { title } = Astro.props;
 ---
 
@@ -15,32 +17,10 @@ const { title } = Astro.props;
 		<meta name="description" content="Astro description" />
 		<meta name="viewport" content="width=device-width" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="stylesheet" href="https://use.typekit.net/jmv8pmn.css" />
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 	</head>
 	<slot />
 
-
-	<style is:global>
-		:root {
-			--bg-primary: white;
-			--text-primary: black;
-		}
-
-		html.dark {
-			--bg-primary: oklch(21.55% 0.014 278.77);
-			--text-primary: white;
-		}
-
-		h1,
-		h2,
-		h3,
-		h4,
-		h5,
-		h6,
-		p {
-			appearance: none;
-			margin: unset;
-		}
-	</style>
 </html>

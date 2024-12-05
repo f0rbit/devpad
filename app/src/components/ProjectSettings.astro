@@ -3,15 +3,15 @@ import type { UpsertProject } from "../server/types";
 
 interface Props {
 	project: UpsertProject | null;
-	back: string,
+	back: string;
 }
 
 const user = Astro.locals.user;
 const { project, back } = Astro.props;
-const mode = project ? "edit" : "create"; 
+const mode = project ? "edit" : "create";
 ---
 
-<section id="project-settings" data-user={user?.id ?? null}>
+<section id="project-settings" data-user={user?.id ?? null} data-pid={project?.id ?? null}>
 	<div>
 		<label for="project_id">project id</label>
 		<input type="text" id="project_id" value={project?.project_id ?? ""} required />
@@ -30,21 +30,21 @@ const mode = project ? "edit" : "create";
 		<label for="name">name</label>
 		<input type="text" id="name" value={project?.name ?? ""} />
 		<label for="icon_url">icon url</label>
-		<input type="text" id="icon-url" value={project?.icon_url ?? ""}/>
+		<input type="text" id="icon-url" value={project?.icon_url ?? ""} />
 	</div>
 	<div>
 		<label for="description">description</label>
-		<input type="text" id="description" value={project?.description ?? ""}/>
+		<input type="text" id="description" value={project?.description ?? ""} />
 	</div>
 	<div>
 		<label for="link_text">link text</label>
-		<input type="text" id="link_text" value={project?.link_text ?? ""}/>
+		<input type="text" id="link_text" value={project?.link_text ?? ""} />
 		<label for="link_url">link url</label>
-		<input type="text" id="link_url" value={project?.link_url ?? ""}/>
+		<input type="text" id="link_url" value={project?.link_url ?? ""} />
 	</div>
 	<div>
 		<label for="github_url">github url</label>
-		<input type="text" id="github_url" value={project?.repo_url ?? ""}/>
+		<input type="text" id="github_url" value={project?.repo_url ?? ""} />
 		<input type="number" id="github_repo_id" value={project?.repo_id ?? ""} style="display: none;" />
 		<label for="visibility">visibility</label>
 		<select id="visibility" value={project?.visibility ?? "private"}>
@@ -70,10 +70,7 @@ const mode = project ? "edit" : "create";
 	async function create_project() {
 		document.getElementById("error")!.innerText = "";
 		const get_value = (id: string) => {
-			return (
-				(document.getElementById(id) as HTMLInputElement | undefined)?.value ??
-				null
-			);
+			return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
 		};
 		// extract elements from form
 		const project_id = get_value("project_id") ?? null;
@@ -88,11 +85,13 @@ const mode = project ? "edit" : "create";
 		const visibility = get_value("visibility") ?? "private";
 
 		const owner_id = document.getElementById("project-settings")?.dataset?.user ?? null;
+		const pid = document.getElementById("project-settings")?.dataset?.pid ?? null;
 
 		// submit POST request
 		const body = JSON.stringify({
+			id: pid,
 			project_id,
-			status: status.toUpperCase() as UpsertProject['status'],
+			status: status.toUpperCase() as UpsertProject["status"],
 			name,
 			icon_url,
 			description,
@@ -100,9 +99,9 @@ const mode = project ? "edit" : "create";
 			link_url,
 			repo_url: github_url,
 			repo_id: github_repo_id ? Number(github_repo_id) : null,
-			visibility: visibility.toUpperCase() as UpsertProject['visibility'],
+			visibility: visibility.toUpperCase() as UpsertProject["visibility"],
 			owner_id,
-			deleted: false
+			deleted: false,
 		} as UpsertProject);
 
 		const method = "PATCH";
@@ -130,11 +129,15 @@ const mode = project ? "edit" : "create";
 </script>
 
 <style scoped>
+	label {
+		font-size: smaller;
+	}
 	section div {
 		display: flex;
 		width: 100%;
 		flex-direction: row;
 		gap: 5px;
+		align-items: center;
 	}
 	section {
 		display: flex;

@@ -2,46 +2,45 @@
 import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import { getProject } from "../../../../server/projects";
-import Task from "../../../../components/Task.astro";
+import { TaskCard } from "../../../../components/solid/TaskCard";
+import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
+if (!project_id) return { error: { status: 404, message: "Project not found" } };
 const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
+if (error) return { error: { status: 500, message: error } };
+if (!project) return { error: { status: 404, message: "Project not found" } };
 
-const project_uuid = project?.id ?? null;
+const project_uuid = project.id;
 
-const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
+const tasks = await getProjectTasks(project_uuid);
 ---
 
 <PageLayout title={"Project Tasks"}>
-	<main>
-		<h2>tasks</h2>
-		<a href={`/project/${project_id}`}>back</a>
-		<a href={`/project/${project_id}/tasks`}>tasks</a>
-		<a href={`/project/${project_id}/tasks/update`}>update</a>
-		<a href={`/project/${project_id}/tasks/config`}>config</a>
+	<ProjectTasksLayout project_id={project_id}>
+		{
+			project.repo_id && (
+				<>
+					<a href="#" id="update-check">
+						check for updates
+					</a>
+					<p id="output" />
+				</>
+			)
+		}
+		<br />
 		<ul>
 			{
 				tasks.map((task: any) => (
 					<li>
-						<Task task={task} project={project} from={`/project/${project_id}/tasks`} />
+						<TaskCard task={task} project={project} from={`/project/${project_id}/tasks`} />
 					</li>
 				))
 			}
-			<br />
-			{
-				project?.repo_id && (
-					<>
-						<a href="#" id="update-check">
-							check for updates
-						</a>
-						<p id="output" />
-					</>
-				)
-			}
 		</ul>
-	</main>
+	</ProjectTasksLayout>
 
 	<script is:inline define:vars={{ project_uuid }}>
 		function hook_check() {
@@ -50,10 +49,7 @@ const tasks = project_uuid ? await getProjectTasks(project_uuid) : [];
 			const output = document.getElementById("output");
 			if (!output) throw new Error("Output element not found");
 			update_check.addEventListener("click", async () => {
-				const response = await fetch(
-					`/api/project/scan?project_id=${project_uuid}`,
-					{ method: "POST" },
-				);
+				const response = await fetch(`/api/project/scan?project_id=${project_uuid}`, { method: "POST" });
 				if (!response.ok) {
 					output.innerText = "Error: " + response.statusText;
 					return;

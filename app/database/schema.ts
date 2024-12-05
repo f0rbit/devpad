@@ -78,7 +78,7 @@ export const todo_updates = sqliteTable("todo_updates", {
 	old_id: integer("old_id").references(() => tracker_result.id),
 	new_id: integer("new_id").notNull().references(() => tracker_result.id),
 	data: text("data", { mode: "json" }).notNull(),
-	status: text("status", { enum: ["PENDING", "ACCEPTED", "REJECTED"] }).notNull().default("PENDING")
+	status: text("status", { enum: ["PENDING", "ACCEPTED", "REJECTED", "IGNORED"] }).notNull().default("PENDING")
 });
 
 export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
