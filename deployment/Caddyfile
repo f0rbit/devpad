@@ -1,0 +1,11 @@
+{
+    auto_https off
+}
+
+:80 {
+    root * /srv/client
+    file_server
+
+    reverse_proxy /api/* localhost:3000
+    reverse_proxy /server/* localhost:3000
+}

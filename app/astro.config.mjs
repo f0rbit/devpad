@@ -9,12 +9,5 @@ export default defineConfig({
   adapter: node({
     mode: "standalone"
   }),
-  vite: {
-    build: {
-      rollupOptions: {
-        external: ["bun", "bun:sqlite"]
-      }
-    }
-  },
   integrations: [solidJs()]
 });
