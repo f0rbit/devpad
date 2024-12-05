@@ -4,12 +4,13 @@
 	"version": "0.0.1",
 	"scripts": {
 		"dev": "bunx --bun astro dev",
-		"start": "bun dist/server/entry.mjs",
+		"start": "bun --bun dist/server/entry.mjs",
 		"migrate": "bun database/migrate.ts",
 		"schema": "bunx drizzle-kit generate:sqlite --schema=./database/schema.ts --out=./database/drizzle",
-		"build": "astro check && astro build",
-		"preview": "astro preview",
-		"astro": "astro"
+		"build": "bun --bun astro check && bun --bun astro build",
+		"preview": "bun --bun astro preview",
+		"astro": "astro",
+		"push": "bunx --bun drizzle-kit push:sqlite"
 	},
 	"dependencies": {
 		"@astrojs/check": "^0.5.10",
@@ -32,6 +33,7 @@
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
+		"@libsql/client": "^0.14.0",
 		"drizzle-kit": "^0.20.14"
 	}
 }

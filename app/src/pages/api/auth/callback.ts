@@ -29,9 +29,9 @@ export async function GET(context: APIContext): Promise<Response> {
 		// Replace this with your own DB client
 
 		if (existingUser && existingUser[0]) {
-			const session = await lucia.createSession(existingUser[0].id, { access_token: tokens.accessToken });
+		const session = await lucia.createSession(existingUser[0].id, { access_token: tokens.accessToken });
 			const sessionCookie = lucia.createSessionCookie(session.id);
-			context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
 			return context.redirect("/");
 		}
 
@@ -40,6 +40,7 @@ export async function GET(context: APIContext): Promise<Response> {
 		const session = await lucia.createSession(new_user[0].user_id, { access_token: tokens.accessToken });
 		const sessionCookie = lucia.createSessionCookie(session.id);
 		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+
 		return context.redirect("/");
 	} catch (e) {
 		console.error(e);

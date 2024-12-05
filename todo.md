@@ -22,11 +22,11 @@
     - [x] Database setup
         - [x] SQLite file (low memory impact)
         - [x] Drizzle ORM (low CPU impact)
-- [ ] Deployment
-    - [ ] Railway.app
-    - [ ] Localhost environment
-    - [ ] Reproduceable in github actions
+- [x] Deployment
+    - [x] Railway.app
+    - [x] Localhost environment
 - [ ] Testing
+    - [ ] Reproduceable in github actions
     - [ ] Can test locally
     - [ ] Can test in github actions
     - [ ] 70% backend coverage
@@ -125,4 +125,5 @@ tasks are made of many different fields, outlined above. They also contain links
 	- [x] better edit screen
 	- [ ] support for modules
 	- [ ] link to codebase scan
-
+- [ ] on failed scan, add a "failed" row to history
+	- [ ] write out metadata so we can see if things failed

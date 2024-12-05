@@ -7,14 +7,7 @@ import solidJs from "@astrojs/solid-js";
 export default defineConfig({
   output: "server",
   adapter: node({
-    mode: "standalone"
+    mode: "middleware",
   }),
-  vite: {
-    build: {
-      rollupOptions: {
-        external: ["bun", "bun:sqlite"]
-      }
-    }
-  },
   integrations: [solidJs()]
 });
