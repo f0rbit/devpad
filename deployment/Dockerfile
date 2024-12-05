@@ -30,6 +30,7 @@ WORKDIR /app
 
 # Copy the application files
 COPY ../app/ .
+RUN rm -f ./.env.example
 COPY ../deployment/.en[v] .
 
 RUN bun run migrate
