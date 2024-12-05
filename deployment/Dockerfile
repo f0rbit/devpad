@@ -37,8 +37,6 @@ COPY ../deployment/.en[v] .
 RUN bun install
 RUN bun run build
 
-RUN bun run migrate
-
 WORKDIR /server
 
 COPY ../deployment/ .
