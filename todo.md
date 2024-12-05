@@ -125,4 +125,5 @@ tasks are made of many different fields, outlined above. They also contain links
 	- [x] better edit screen
 	- [ ] support for modules
 	- [ ] link to codebase scan
-
+- [ ] on failed scan, add a "failed" row to history
+	- [ ] write out metadata so we can see if things failed
