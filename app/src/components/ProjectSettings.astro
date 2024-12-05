@@ -11,7 +11,7 @@ const { project, back } = Astro.props;
 const mode = project ? "edit" : "create";
 ---
 
-<section id="project-settings" data-user={user?.id ?? null}>
+<section id="project-settings" data-user={user?.id ?? null} data-pid={project?.id ?? null}>
 	<div>
 		<label for="project_id">project id</label>
 		<input type="text" id="project_id" value={project?.project_id ?? ""} required />
@@ -85,9 +85,11 @@ const mode = project ? "edit" : "create";
 		const visibility = get_value("visibility") ?? "private";
 
 		const owner_id = document.getElementById("project-settings")?.dataset?.user ?? null;
+		const pid = document.getElementById("project-settings")?.dataset?.pid ?? null;
 
 		// submit POST request
 		const body = JSON.stringify({
+			id: pid,
 			project_id,
 			status: status.toUpperCase() as UpsertProject["status"],
 			name,
