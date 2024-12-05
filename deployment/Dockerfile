@@ -30,7 +30,8 @@ WORKDIR /app
 
 # Copy the application files
 COPY ../app/ .
-COPY ../deployment/.env .
+COPY ../deployment/.en[v] .
+
 
 # Install dependencies and build the project
 RUN bun install
