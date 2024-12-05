@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy the application files
 COPY ../app/ .
+COPY ../deployment/.env .
 
 # Install dependencies and build the project
 RUN bun install
