@@ -32,6 +32,8 @@ WORKDIR /app
 COPY ../app/ .
 COPY ../deployment/.en[v] .
 
+RUN bun run migrate
+
 
 # Install dependencies and build the project
 RUN bun install
