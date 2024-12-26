@@ -40,6 +40,7 @@ export const project = sqliteTable("project", {
   visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
   current_version: text("current_version"),
   config_json: text("config_json", { mode: "json" }),
+  scan_branch: text("scan_branch"),
 }, (table) => ({
   project_unique: unique().on(table.owner_id, table.project_id)
 }));

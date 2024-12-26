@@ -15,6 +15,13 @@
       "when": 1715415857240,
       "tag": "0001_demonic_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1735255473926,
+      "tag": "0002_bright_sprite",
+      "breakpoints": true
     }
   ]
 }
