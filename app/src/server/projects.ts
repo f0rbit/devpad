@@ -23,6 +23,18 @@ export async function getProject(user_id: string | null, project_id: string | un
 	}
 }
 
+export async function getProjectById(project_id: string) {
+    if (!project_id) return { project: null, error: "No project ID" };
+    try {
+        const search = await db.select().from(project).where(eq(project.id, project_id));
+        if (!search || !search[0]) return { project: null, error: "Couldn't find project" };
+        return { project: search[0], error: null };
+    } catch (err) {
+        console.error(err);
+        return { project: null, error: "Internal Server Error" };
+    }
+}
+
 export async function getRecentUpdate(project: Project) {
 	const DEBUG_THIS = true;
 	const { owner_id: user_id, id } = project;
