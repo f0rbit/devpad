@@ -8,7 +8,8 @@ import { getProjectById } from "../../../server/projects";
 
 const schema = z.object({
   id: z.string(),
-  config: ConfigSchema
+  config: ConfigSchema,
+  scan_branch: z.string().optional()
 });
 
 export async function PATCH(context: APIContext) {
@@ -35,7 +36,9 @@ export async function PATCH(context: APIContext) {
   if (found.owner_id != context.locals.user.id) return new Response("Unauthorized", { status: 401 });
 
   try {
-    const values = { id: data.id, config_json: data.config };
+    const values = { id: data.id, config_json: data.config, scan_branch: data.scan_branch };
+    if (!data.scan_branch) delete values.scan_branch;
+
     // perform db update
     const new_project = await db.update(project).set(values).where(eq(project.id, data.id)).returning();
 

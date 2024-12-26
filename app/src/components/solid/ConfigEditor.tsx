@@ -4,17 +4,24 @@ import X from "lucide-solid/icons/x";
 import { createSignal, For, Index } from "solid-js";
 import { z } from "zod";
 import { ConfigSchema } from "../../server/types";
+import GitBranch from "lucide-solid/icons/git-branch";
 
 type Config = z.infer<typeof ConfigSchema>;
 
 /** @todo element to select from a couple default configs for different languages */
 
-const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
+const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Config, id: string, branches: any[] | null, scan_branch: string | undefined | null }) => {
   /** @todo change this from any - has to represent the nested signal for matches */
   const [tags, setTags] = createSignal<any>([]);
   const [ignorePaths, setIgnorePaths] = createSignal<Config["ignore"]>(config?.ignore ?? []);
   const [tagError, setTagError] = createSignal("");
   const [pathError, setPathError] = createSignal("");
+  const [selectedBranch, setSelectedBranch] = createSignal<number | null>(branches?.length ? 0 : null);
+
+  if (scan_branch) {
+   const idx = branches?.findIndex((branch) => branch.name === scan_branch);
+    if (idx != null) setSelectedBranch(idx);
+  }
 
   if (config?.tags) {
     // we need to create signals for matches as well
@@ -130,8 +137,9 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
     const cleaned_tags = config.tags.filter((tag) => tag.name != "" && tag.match.length > 0).map((tag) => ({ name: tag.name, match: tag.match.filter((match) => match != "") }));
     const cleaned_ignore = config.ignore.filter((path) => path != "");
     const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore };
+    const scan_branch = !branches || selectedBranch() == null ? undefined : branches[selectedBranch()!]?.name ?? undefined;
 
-    const body = { id, config: cleaned_config };
+    const body = { id, config: cleaned_config, scan_branch };
     fetch("/api/project/save_config", {
       method: "PATCH",
       headers: {
@@ -150,12 +158,32 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
         console.error("Error saving config:", error);
         alert("Error saving config.");
       });
-
   };
 
 
+  console.log(branches);
+
   return (
     <div>
+      {/* section to pick branch */}
+      {branches != null ? (
+      <div class="flex-col" style="gap: 6px; margin-bottom: 20px">
+        <div class="flex-row" style="gap: 20px">
+          <h5>branch</h5>
+        </div>
+        <div class="flex-row" style="gap: 8px">
+          <GitBranch />
+          <select value={selectedBranch() ?? ""} onChange={(e) => setSelectedBranch(parseInt(e.target.value))}>
+            <For each={branches}>
+              {(branch, index) => (
+                <option value={index()} selected={index() === selectedBranch()}>{branch.name}</option>
+              )}
+            </For>
+          </select>
+          <p style="font-size: small">{selectedBranch() != null ? branches[selectedBranch()!].commit.message : ""}</p>
+        </div>
+      </div>
+      ) : null}
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
           <h5>tags</h5>
