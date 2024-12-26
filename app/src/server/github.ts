@@ -7,8 +7,18 @@ export const github = new GitHub(
 );
 
 
-export async function getRepo(owner: string, repo: string, access_token: string) {
-  return await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball`, { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
+function gh_headers(access_token: string) {
+  return {
+    "Accept": "application/vnd.github+json",
+    "Authorization": `Bearer ${access_token}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
+
+export async function getRepo(owner: string, repo: string, access_token: string, branch: string | null) {
+  let url = `https://api.github.com/repos/${owner}/${repo}/zipball`;
+  if (branch) url = `https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`;
+  return await fetch(url, { headers: gh_headers(access_token) });
 }
 
 
@@ -17,7 +27,7 @@ export async function getRepo(owner: string, repo: string, access_token: string)
  * @todo use octokit or use zod to validate types
  */
 export async function getBranches(owner: string, repo: string, access_token: string) {
-  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches`, { headers: gh_headers(access_token) });
   if (!response.ok) {
     throw new Error("error fetching branches");
   }
@@ -28,7 +38,7 @@ export async function getBranches(owner: string, repo: string, access_token: str
   }
   // fetch the commit details for each commit
   const commit_details = await Promise.all(Array.from(commits).map(async (commit) => {
-    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${commit}`, { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
+    const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${commit}`, { headers: gh_headers(access_token) });
     if (!response.ok) {
       throw new Error("error fetching commit details");
     }

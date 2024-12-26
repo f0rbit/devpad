@@ -57,7 +57,7 @@ export async function POST(context: APIContext) {
 
   return new Response(new ReadableStream({
     async start(controller) {
-      for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id)) {
+      for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id, project_data.scan_branch)) {
         controller.enqueue(chunk);
       }
       controller.close();
@@ -65,7 +65,7 @@ export async function POST(context: APIContext) {
   }), { status: 200 });
 }
 
-async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string) {
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string, branch: string | null) {
   yield "";
   yield "starting\n";
   // we need to get OWNER and REPO from the repo_url
@@ -80,7 +80,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 
   yield "cloning repo\n";
   // clone the repo into a temp folder
-  const clone = await getRepo(owner, repo, access_token);
+  const clone = await getRepo(owner, repo, access_token, branch);
 
   if (!clone.ok) {
     yield "error fetching repo from github\n";
@@ -101,6 +101,10 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   yield "decompressing repo\n";
   child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
 
+  // the unzipped folder will have a folder inside it with the repo contents, we need that pathname for the parsing task
+  const files = await readdir(unzipped_path);
+  const folder_path = `${unzipped_path}/${files[0]}`;
+
   // fetch project.config_json if available
   const { project: found, error: config_error } = await getProjectById(project_id);
   if (config_error) {
@@ -120,9 +124,8 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 
   // TODO: add handling for user-wide config & defaults based on project type??
 
-  // the unzipped folder will have a folder inside it with the repo contents, we need that pathname for the parsing task
-  const files = await readdir(unzipped_path);
-  const folder_path = `${unzipped_path}/${files[0]}`;
+
+  console.log("folder_path: ", folder_path);
 
   // generate the todo-tracker parse
   yield "scanning repo\n";
