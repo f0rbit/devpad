@@ -23,7 +23,7 @@ export async function POST(context: APIContext) {
     return new Response("no project id", { status: 400 });
   }
 
-  console.log(project_id);
+  console.log("running scan for project: ", project_id);
 
   // check that user owns the project
   const project_query = await db.select().from(project).where(and(eq(project.id, project_id)));
