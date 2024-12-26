@@ -1,3 +1,6 @@
+import Minus from "lucide-solid/icons/minus";
+import Plus from "lucide-solid/icons/plus";
+import X from "lucide-solid/icons/x";
 import { createSignal, For, Index } from "solid-js";
 import { z } from "zod";
 
@@ -13,12 +16,10 @@ const ConfigSchema = z.object({
 
 type Config = z.infer<typeof ConfigSchema>;
 
-/** @todo make prettier using tailwind & lucide icons */
-
-const TodoScannerConfig = () => {
-    /** @todo change this from any - has to represent the nested signal for matches */
-  const [tags, setTags] = createSignal<any>([]);
-  const [ignorePaths, setIgnorePaths] = createSignal<Config["ignore"]>([]);
+const TodoScannerConfig = ({ config }: { config: Config }) => {
+  /** @todo change this from any - has to represent the nested signal for matches */
+  const [tags, setTags] = createSignal<any>(config?.tags ?? []);
+  const [ignorePaths, setIgnorePaths] = createSignal<Config["ignore"]>(config?.ignore ?? []);
   const [tagError, setTagError] = createSignal("");
   const [pathError, setPathError] = createSignal("");
 
@@ -55,7 +56,7 @@ const TodoScannerConfig = () => {
 
   const removeMatch = (tagIndex: number, matchIndex: number) => {
     const updatedTags = [...tags()];
-    updatedTags[tagIndex].match.splice(matchIndex, 1);
+    updatedTags[tagIndex].setMatches([...updatedTags[tagIndex].matches().slice(0, matchIndex), ...updatedTags[tagIndex].matches().slice(matchIndex + 1)]);
     setTags(updatedTags);
     validateTags(updatedTags);
   };
@@ -64,6 +65,7 @@ const TodoScannerConfig = () => {
     const tagNames = new Set();
     const allMatches = new Set();
     for (const tag of tags) {
+      if (tag.name == "") continue; // empty tags will be ignored on export
       if (tagNames.has(tag.name)) {
         setTagError(`Tag name "${tag.name}" must be unique.`);
         return false;
@@ -71,6 +73,7 @@ const TodoScannerConfig = () => {
       tagNames.add(tag.name);
       const matches = typeof tag.matches === "function" ? tag.matches() : tag.match;
       for (const match of matches) {
+        if (match == "") continue; // empty matches will be ignored on export
         if (allMatches.has(match)) {
           setTagError(`Match "${match}" must be unique across tags.`);
           return false;
@@ -113,35 +116,51 @@ const TodoScannerConfig = () => {
   };
 
   const exportConfig = () => {
-    const mapped_tags = tags().map((tag) => ({ name: tag.name, match: tag.matches() }));
+    const mapped_tags = tags().map((tag: any) => ({ name: tag.name, match: tag.matches() }));
     if (!validateTags(mapped_tags) || !validateIgnorePaths(ignorePaths(), mapped_tags)) {
       alert("Please resolve validation errors before exporting.");
       return;
     }
     // remove tags.setMatches & convert tags.matches() to tag.match as string[]
-    const config = { tags: mapped_tags, ignore: ignorePaths() };
-    console.log("Exported Config:", JSON.stringify(config, null, 2))
+    const config = { tags: mapped_tags, ignore: ignorePaths() } as Config;
+
+    // clean up config, removing empty tags, empty matches within tags, and empty ignore paths
+    const cleaned_tags = config.tags.filter((tag) => tag.name != "" && tag.match.length > 0).map((tag) => ({ name: tag.name, match: tag.match.filter((match) => match != "") }));
+    const cleaned_ignore = config.ignore.filter((path) => path != "");
+    const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore };  
+        
+    console.log("Exported Config:", JSON.stringify(cleaned_config, null, 2))
   };
 
 
   return (
     <div>
-      <h2>Todo Scanner Config</h2>
-
-      <div>
-        <h3>Tags</h3>
+      <div class="flex-col" style="gap: 6px">
+        <div class="flex-row" style="gap: 20px">
+            <h4>tags</h4>
+            <a href="#" onClick={addTag} title="Add Tag" class="flex-row">
+                <Plus />
+                add tag
+            </a>
+        </div>
         <Index each={tags()}>
           {(tag, index) => (
-            <div>
+            <div class="flex-col" style="gap: 4px">
+            <div class="flex-row" style="gap: 10px">
               <input
                 type="text"
                 placeholder="Tag Name"
                 value={tag().name}
                 onInput={(e) => updateTag(index, "name", e.target.value)}
               />
+                <a href="#" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
+                    <X onClick={() => removeTag(index)} />
+                </a>
+            </div>
+            <div class="flex-col" style="border-left: 1px solid var(--input-border); padding-left: 10px; gap: 4px;">
               <For each={tag().matches()}>
   {(match, matchIndex) => (
-    <div>
+    <div class="flex-row" style="gap: 10px">
       <input
         type="text"
         placeholder="Match Pattern"
@@ -158,43 +177,57 @@ const TodoScannerConfig = () => {
           })
         }
       />
-      <button onClick={() => removeMatch(index, matchIndex())}>
-        Remove Match
-      </button>
+        <a href="#" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
+            <Minus onClick={() => removeMatch(index, matchIndex())} />
+        </a>
     </div>
   )}
 </For>
-              <button onClick={() => addMatch(index)}>Add Match</button>
-              <button onClick={() => removeTag(index)}>Remove Tag</button>
+        <a href="#" onClick={() => addMatch(index)} title="Add Match" class="flex-row" style="font-size: small">
+            <Plus onClick={() => addMatch(index)} />
+            add match
+        </a>
+    </div>
             </div>
           )}
         </Index>
-        <button onClick={addTag}>Add Tag</button>
         {tagError() && <p style={{ color: "red" }}>{tagError()}</p>}
       </div>
+    <br />
 
-      <div>
-        <h3>Ignore Paths</h3>
+      <div class="flex-col" style="gap: 6px">
+        <div class="flex-row" style="gap: 20px">
+            <h4>ignore paths</h4>
+            <a href="#" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
+                <Plus />
+                add path
+            </a>
+        </div>
         <For each={ignorePaths()}>
           {(path, index) => (
-            <div>
+            <div class="flex-row" style="gap: 4px">
               <input
                 type="text"
                 placeholder="Ignore Path"
                 value={path}
                 onChange={(e) => updateIgnorePath(index(), e.target.value)}
               />
-              <button onClick={() => removeIgnorePath(index())}>
-                Remove Path
-              </button>
+                <a href="#" onClick={() => removeIgnorePath(index())} title="Remove Path" class="flex-row">
+                    <Minus /> 
+                </a>
             </div>
           )}
         </For>
-        <button onClick={addIgnorePath}>Add Ignore Path</button>
         {pathError() && <p style={{ color: "red" }}>{pathError()}</p>}
       </div>
 
-      <button onClick={exportConfig}>Export Config</button>
+        <br />
+        <div class="flex-row" style="gap: 20px">
+            <a href="#" onClick={exportConfig} title="Export Config" class="flex-row">
+                save
+            </a>
+        </div>
+
     </div>
   );
 };

@@ -23,7 +23,7 @@ const parsed_config = typeof project.config_json === "string" ? JSON.parse(proje
 		<br />
         <a id="save-config" data-projectid={project?.id}>save</a>
 */}
-        <ConfigEditor client:load />
+        <ConfigEditor config={parsed_config} client:load />
 	</ProjectTasksLayout>
 </PageLayout>
 
