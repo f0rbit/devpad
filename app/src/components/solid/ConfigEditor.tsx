@@ -3,25 +3,27 @@ import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, Index } from "solid-js";
 import { z } from "zod";
-
-const ConfigSchema = z.object({
-  tags: z.array(
-    z.object({
-      name: z.string(),
-      match: z.array(z.string()),
-    })
-  ),
-  ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
-});
+import { ConfigSchema } from "../../server/types";
 
 type Config = z.infer<typeof ConfigSchema>;
 
-const TodoScannerConfig = ({ config }: { config: Config }) => {
+/** @todo element to select from a couple default configs for different languages */
+
+const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
   /** @todo change this from any - has to represent the nested signal for matches */
-  const [tags, setTags] = createSignal<any>(config?.tags ?? []);
+  const [tags, setTags] = createSignal<any>([]);
   const [ignorePaths, setIgnorePaths] = createSignal<Config["ignore"]>(config?.ignore ?? []);
   const [tagError, setTagError] = createSignal("");
   const [pathError, setPathError] = createSignal("");
+
+  if (config?.tags) {
+    // we need to create signals for matches as well
+    const tags = config.tags.map((tag) => {
+      const [matches, setMatches] = createSignal<string[]>(tag.match);
+      return { name: tag.name, matches, setMatches };
+      });
+      setTags(tags);
+  }
 
   const addTag = () => {
     const [matches, setMatches] = createSignal<string[]>([]);
@@ -115,7 +117,7 @@ const TodoScannerConfig = ({ config }: { config: Config }) => {
     }
   };
 
-  const exportConfig = () => {
+  const saveConfig = () => {
     const mapped_tags = tags().map((tag: any) => ({ name: tag.name, match: tag.matches() }));
     if (!validateTags(mapped_tags) || !validateIgnorePaths(ignorePaths(), mapped_tags)) {
       alert("Please resolve validation errors before exporting.");
@@ -127,9 +129,28 @@ const TodoScannerConfig = ({ config }: { config: Config }) => {
     // clean up config, removing empty tags, empty matches within tags, and empty ignore paths
     const cleaned_tags = config.tags.filter((tag) => tag.name != "" && tag.match.length > 0).map((tag) => ({ name: tag.name, match: tag.match.filter((match) => match != "") }));
     const cleaned_ignore = config.ignore.filter((path) => path != "");
-    const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore };  
+    const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore }; 
+
+    const body = { id, config: cleaned_config };
+    fetch("/api/project/save_config", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    })
+      .then((response) => {
+        if (response.ok) {
+          window.location.reload();
+        } else {
+          alert("Error saving config.");
+        }
+      })
+      .catch((error) => {
+        console.error("Error saving config:", error);
+        alert("Error saving config.");
+      });
         
-    console.log("Exported Config:", JSON.stringify(cleaned_config, null, 2))
   };
 
 
@@ -137,7 +158,7 @@ const TodoScannerConfig = ({ config }: { config: Config }) => {
     <div>
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
-            <h4>tags</h4>
+            <h5>tags</h5>
             <a href="#" onClick={addTag} title="Add Tag" class="flex-row">
                 <Plus />
                 add tag
@@ -197,7 +218,7 @@ const TodoScannerConfig = ({ config }: { config: Config }) => {
 
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
-            <h4>ignore paths</h4>
+            <h5>ignore paths</h5>
             <a href="#" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
                 <Plus />
                 add path
@@ -223,7 +244,7 @@ const TodoScannerConfig = ({ config }: { config: Config }) => {
 
         <br />
         <div class="flex-row" style="gap: 20px">
-            <a href="#" onClick={exportConfig} title="Export Config" class="flex-row">
+            <a href="#" onClick={saveConfig} title="Export Config" class="flex-row">
                 save
             </a>
         </div>

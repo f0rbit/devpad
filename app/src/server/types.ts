@@ -64,3 +64,13 @@ export type UpdateData = {
 
 export type TodoUpdate = typeof todo_updates.$inferSelect;
 export type TrackerResult = typeof tracker_result.$inferSelect;
+
+export const ConfigSchema = z.object({
+  tags: z.array(
+    z.object({
+      name: z.string(),
+      match: z.array(z.string()),
+    })
+  ),
+  ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
+});
