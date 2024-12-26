@@ -21,8 +21,8 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
     const tags = config.tags.map((tag) => {
       const [matches, setMatches] = createSignal<string[]>(tag.match);
       return { name: tag.name, matches, setMatches };
-      });
-      setTags(tags);
+    });
+    setTags(tags);
   }
 
   const addTag = () => {
@@ -34,14 +34,14 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
     });
   };
 
- const updateTag = (index: number, field: "name" | "match", value: any) => {
+  const updateTag = (index: number, field: "name" | "match", value: any) => {
     setTags((prev) => {
-        const updatedTags = [...prev];
-        updatedTags[index][field] = value;
-        return updatedTags;
-      });
-        validateTags(tags());
-};
+      const updatedTags = [...prev];
+      updatedTags[index][field] = value;
+      return updatedTags;
+    });
+    validateTags(tags());
+  };
 
   const removeTag = (index: number) => {
     const updatedTags = [...tags()];
@@ -106,7 +106,7 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
   };
 
   const validateIgnorePaths = (paths: Config["ignore"], t = tags()) => {
-        console.log({ tags: t, ignore: paths });
+    console.log({ tags: t, ignore: paths });
     try {
       ConfigSchema.parse({ tags: t, ignore: paths });
       setPathError("");
@@ -129,7 +129,7 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
     // clean up config, removing empty tags, empty matches within tags, and empty ignore paths
     const cleaned_tags = config.tags.filter((tag) => tag.name != "" && tag.match.length > 0).map((tag) => ({ name: tag.name, match: tag.match.filter((match) => match != "") }));
     const cleaned_ignore = config.ignore.filter((path) => path != "");
-    const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore }; 
+    const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore };
 
     const body = { id, config: cleaned_config };
     fetch("/api/project/save_config", {
@@ -150,7 +150,7 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
         console.error("Error saving config:", error);
         alert("Error saving config.");
       });
-        
+
   };
 
 
@@ -158,71 +158,71 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
     <div>
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
-            <h5>tags</h5>
-            <a href="#" onClick={addTag} title="Add Tag" class="flex-row">
-                <Plus />
-                add tag
-            </a>
+          <h5>tags</h5>
+          <a href="#" onClick={addTag} title="Add Tag" class="flex-row">
+            <Plus />
+            add tag
+          </a>
         </div>
         <Index each={tags()}>
           {(tag, index) => (
             <div class="flex-col" style="gap: 4px">
-            <div class="flex-row" style="gap: 10px">
-              <input
-                type="text"
-                placeholder="Tag Name"
-                value={tag().name}
-                onInput={(e) => updateTag(index, "name", e.target.value)}
-              />
+              <div class="flex-row" style="gap: 10px">
+                <input
+                  type="text"
+                  placeholder="Tag Name"
+                  value={tag().name}
+                  onInput={(e) => updateTag(index, "name", e.target.value)}
+                />
                 <a href="#" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
-                    <X onClick={() => removeTag(index)} />
+                  <X onClick={() => removeTag(index)} />
                 </a>
-            </div>
-            <div class="flex-col" style="border-left: 1px solid var(--input-border); padding-left: 10px; gap: 4px;">
-              <For each={tag().matches()}>
-  {(match, matchIndex) => (
-    <div class="flex-row" style="gap: 10px">
-      <input
-        type="text"
-        placeholder="Match Pattern"
-        value={match}
-        onChange={(e) =>
-          setTags((prev) => {
-            const updatedTags = [...prev];
-            updatedTags[index].setMatches([
-              ...updatedTags[index].matches().slice(0, matchIndex()),
-              e.target.value,
-              ...updatedTags[index].matches().slice(matchIndex() + 1),
-            ]);
-            return updatedTags;
-          })
-        }
-      />
-        <a href="#" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
-            <Minus onClick={() => removeMatch(index, matchIndex())} />
-        </a>
-    </div>
-  )}
-</For>
-        <a href="#" onClick={() => addMatch(index)} title="Add Match" class="flex-row" style="font-size: small">
-            <Plus onClick={() => addMatch(index)} />
-            add match
-        </a>
-    </div>
+              </div>
+              <div class="flex-col" style="border-left: 1px solid var(--input-border); padding-left: 10px; gap: 4px;">
+                <For each={tag().matches()}>
+                  {(match, matchIndex) => (
+                    <div class="flex-row" style="gap: 10px">
+                      <input
+                        type="text"
+                        placeholder="Match Pattern"
+                        value={match}
+                        onChange={(e) =>
+                          setTags((prev) => {
+                            const updatedTags = [...prev];
+                            updatedTags[index].setMatches([
+                              ...updatedTags[index].matches().slice(0, matchIndex()),
+                              e.target.value,
+                              ...updatedTags[index].matches().slice(matchIndex() + 1),
+                            ]);
+                            return updatedTags;
+                          })
+                        }
+                      />
+                      <a href="#" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
+                        <Minus onClick={() => removeMatch(index, matchIndex())} />
+                      </a>
+                    </div>
+                  )}
+                </For>
+                <a href="#" onClick={() => addMatch(index)} title="Add Match" class="flex-row" style="font-size: small">
+                  <Plus onClick={() => addMatch(index)} />
+                  add match
+                </a>
+              </div>
             </div>
           )}
         </Index>
         {tagError() && <p style={{ color: "red" }}>{tagError()}</p>}
       </div>
-    <br />
+      <br />
 
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
-            <h5>ignore paths</h5>
-            <a href="#" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
-                <Plus />
-                add path
-            </a>
+          <h5>ignore paths</h5>
+          <a href="#" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
+            <Plus />
+            add path
+          </a>
         </div>
         <For each={ignorePaths()}>
           {(path, index) => (
@@ -233,21 +233,21 @@ const TodoScannerConfig = ({ config, id }: { config: Config, id: string }) => {
                 value={path}
                 onChange={(e) => updateIgnorePath(index(), e.target.value)}
               />
-                <a href="#" onClick={() => removeIgnorePath(index())} title="Remove Path" class="flex-row">
-                    <Minus /> 
-                </a>
+              <a href="#" onClick={() => removeIgnorePath(index())} title="Remove Path" class="flex-row">
+                <Minus />
+              </a>
             </div>
           )}
         </For>
         {pathError() && <p style={{ color: "red" }}>{pathError()}</p>}
       </div>
 
-        <br />
-        <div class="flex-row" style="gap: 20px">
-            <a href="#" onClick={saveConfig} title="Export Config" class="flex-row">
-                save
-            </a>
-        </div>
+      <br />
+      <div class="flex-row" style="gap: 20px">
+        <a href="#" onClick={saveConfig} title="Export Config" class="flex-row">
+          save
+        </a>
+      </div>
 
     </div>
   );
