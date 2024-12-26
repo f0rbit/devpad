@@ -5,6 +5,7 @@ import { codebase_tasks, project, todo_updates, tracker_result } from "../../../
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
 import { getProjectById } from "../../../server/projects";
+import { getRepo } from "../../../server/github";
 
 // will have ?project_id=<id> query parameter
 /** @todo capture stderr/stdout on the child processes */
@@ -72,10 +73,14 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   const repo = slices.at(-1);
   const owner = slices.at(-2);
 
+  if (!owner || !repo) {
+    yield "error parsing repo url\n";
+    return;
+  }
 
   yield "cloning repo\n";
   // clone the repo into a temp folder
-  const clone = await fetch(`https://api.github.com/repos/${owner}/${repo}/zipball`, { headers: { "Accept": "application/vnd.github+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
+  const clone = await getRepo(owner, repo, access_token);
 
   if (!clone.ok) {
     yield "error fetching repo from github\n";
