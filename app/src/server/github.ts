@@ -42,11 +42,13 @@ export async function getBranches(owner: string, repo: string, access_token: str
     if (!response.ok) {
       throw new Error("error fetching commit details");
     }
-    return (await response.json() as any).commit;
+    return (await response.json() as any);
   }));
   // merge the commit details into the branches
   branches.forEach((branch: any, index: any) => {
-    branch.commit = commit_details[index];
+    branch.commit = commit_details[index].commit;
+    branch.commit.sha = commit_details[index].sha;
+    branch.commit.url = commit_details[index].url;
   });
 
   // sort branches by date
