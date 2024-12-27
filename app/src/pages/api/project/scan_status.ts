@@ -82,7 +82,12 @@ export async function POST(context: APIContext) {
       const file = item.data.new?.file;
       const context = item.data.new?.context;
 
-      const values = { id, type, text, line, file, recent_scan_id: new_id, context };
+      const branch = update_query[0].branch;
+      const commit_sha = update_query[0].commit_sha;
+      const commit_msg = update_query[0].commit_msg;
+      const commit_url = update_query[0].commit_url;
+
+      const values = { id, type, text, line, file, recent_scan_id: new_id, context, branch, commit_sha, commit_msg, commit_url, updated_at: sql`CURRENT_TIMESTAMP` };
 
       await db.insert(codebase_tasks).values(values).onConflictDoUpdate({ target: [codebase_tasks.id], set: values });
     };

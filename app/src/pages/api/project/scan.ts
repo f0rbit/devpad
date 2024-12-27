@@ -5,7 +5,7 @@ import { codebase_tasks, project, todo_updates, tracker_result } from "../../../
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
 import { getProjectById } from "../../../server/projects";
-import { getRepo } from "../../../server/github";
+import { getBranches, getRepo } from "../../../server/github";
 
 // will have ?project_id=<id> query parameter
 /** @todo capture stderr/stdout on the child processes */
@@ -197,12 +197,29 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
     return;
   }
 
+  const branch_info = {} as { branch?: string | null, commit_sha?: string | null, commit_msg?: string | null, commit_url?: string | null };
+  if (branch) {
+    // find the branch that we scanned
+    yield "fetching branch info\n";
+    const branches = await getBranches(owner, repo, access_token);
+    /** @todo type this properly */
+    const found = branches.find((b: any) => b.name === branch);
+    console.log(branch, branches, found);
+    if (found) {
+      branch_info.commit_sha = found.commit.sha;
+      branch_info.commit_msg = found.commit.message;
+      branch_info.branch = found.name;
+      branch_info.commit_url = found.commit.url;
+    }
+  }
+
   yield "saving update\n";
   await db.insert(todo_updates).values({
     project_id: project_id,
     new_id: new_id,
     old_id: old_id[0]?.id ?? null,
     data: diff,
+    ...branch_info,
   }).returning();
 
 
