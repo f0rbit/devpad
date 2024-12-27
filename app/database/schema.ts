@@ -79,7 +79,12 @@ export const todo_updates = sqliteTable("todo_updates", {
   old_id: integer("old_id").references(() => tracker_result.id),
   new_id: integer("new_id").notNull().references(() => tracker_result.id),
   data: text("data", { mode: "json" }).notNull(),
-  status: text("status", { enum: ["PENDING", "ACCEPTED", "REJECTED", "IGNORED"] }).notNull().default("PENDING")
+  status: text("status", { enum: ["PENDING", "ACCEPTED", "REJECTED", "IGNORED"] }).notNull().default("PENDING"),
+  /** @todo normalise to a commits table */
+  branch: text("branch"),
+  commit_sha: text("commit_sha"),
+  commit_msg: text("commit_msg"),
+  commit_url: text("commit_url"),
 });
 
 export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
@@ -150,9 +155,10 @@ export const checklist_item = sqliteTable("checklist_item", {
 
 export const codebase_tasks = sqliteTable("codebase_tasks", {
   id: text("id").primaryKey().$defaultFn(() => "codebase-task_" + crypto.randomUUID()),
-  // TODO: need to implement branch & commit
   branch: text("branch"),
-  commit: text("commit"),
+  commit_sha: text("commit_sha"),
+  commit_msg: text("commit_msg"),
+  commit_url: text("commit_url"),
   type: text("type"),
   text: text("text"),
   file: text("file"),

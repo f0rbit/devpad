@@ -22,6 +22,20 @@
       "when": 1735255473926,
       "tag": "0002_bright_sprite",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1735257494534,
+      "tag": "0003_gigantic_ultragirl",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1735258082706,
+      "tag": "0004_powerful_gunslinger",
+      "breakpoints": true
     }
   ]
 }
