@@ -71,12 +71,24 @@ const from = Astro.url.searchParams.get("from")! || "";
         />
         <label for="visibility">Visibility</label>
         <select id="visibility" name="visibility" value={task.visibility}>
-          <option value="PUBLIC" selected={task.visibility === "PUBLIC"}>Public</option>
-          <option value="PRIVATE" selected={task.visibility === "PRIVATE"}>Private</option>
-          <option value="HIDDEN" selected={task.visibility === "HIDDEN"}>Hidden</option>
-          <option value="ARCHIVED" selected={task.visibility === "ARCHIVED"}>Archived</option>
-          <option value="DRAFT" selected={task.visibility === "DRAFT"}>Draft</option>
-          <option value="DELETED" selected={task.visibility === "DELETED"}>Deleted</option>
+          <option value="PUBLIC" selected={task.visibility === "PUBLIC"}
+            >Public</option
+          >
+          <option value="PRIVATE" selected={task.visibility === "PRIVATE"}
+            >Private</option
+          >
+          <option value="HIDDEN" selected={task.visibility === "HIDDEN"}
+            >Hidden</option
+          >
+          <option value="ARCHIVED" selected={task.visibility === "ARCHIVED"}
+            >Archived</option
+          >
+          <option value="DRAFT" selected={task.visibility === "DRAFT"}
+            >Draft</option
+          >
+          <option value="DELETED" selected={task.visibility === "DELETED"}
+            >Deleted</option
+          >
         </select>
         <label for="priority">Priority</label>
         <select id="priority" name="priority">
@@ -241,4 +253,3 @@ const from = Astro.url.searchParams.get("from")! || "";
     color: oklch(from var(--item-red) 0.8 0.15 h);
   }
 </style>
-
