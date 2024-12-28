@@ -45,6 +45,7 @@ export function TagEditor({ tags }: { tags: Tag[] }) {
 
   return (
     <div class="flex-col" style="gap: 5px;">
+      {currentTags().length == 0 && creating() == false ? <p>you haven't created any tags yet</p> : null}
       <For each={currentTags()}>
         {(tag) => <TagLine tag={tag} upsert={upsert} remove={remove} />}
       </For>
