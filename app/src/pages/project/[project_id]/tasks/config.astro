@@ -1,46 +1,49 @@
 ---
+import ConfigEditor from "../../../../components/solid/ConfigEditor";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
+import { getBranches } from "../../../../server/github";
 import { getProject } from "../../../../server/projects";
 
 const { project_id } = Astro.params;
-if (!project_id) return { error: { status: 404, message: "Project not found" } };
+if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
 
 const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
-if (error) return { error: { status: 500, message: error } };
-if (!project) return { error: { status: 404, message: "Project not found" } };
+if (error) return new Response(null, { status: 500, statusText: error });
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 
-const parsed_config = typeof project.config_json === "string" ? JSON.parse(project.config_json) : project.config_json ?? {};
+const parsed_config =
+  typeof project.config_json === "string"
+    ? JSON.parse(project.config_json)
+    : project.config_json ?? {};
+
+const [owner, repo] = project.repo_url
+  ? project.repo_url.split("/").slice(-2)
+  : [null, null];
+
+let branches: any[] | null = null;
+if (owner && repo) {
+  if (Astro.locals.session?.access_token) {
+    branches = await getBranches(
+      owner,
+      repo,
+      Astro.locals.session.access_token,
+    );
+  }
+}
 ---
 
 <PageLayout title={"Project Config"}>
-	<ProjectTasksLayout project_id={project_id}>
-		<p>at the moment, this is just a json blob</p>
-		<textarea style="width: 100%; height: 300px;">{JSON.stringify(parsed_config, null, 2)}</textarea>
-		<br />
-		<a id="save-config" data-projectid={project?.id}>save</a>
-	</ProjectTasksLayout>
+  <ProjectTasksLayout project_id={project_id}>
+    <ConfigEditor
+      id={project.id}
+      config={parsed_config}
+      branches={branches}
+      scan_branch={project.scan_branch}
+      client:load
+    />
+  </ProjectTasksLayout>
 </PageLayout>
-
-<script>
-	document.getElementById("save-config")?.addEventListener("click", async () => {
-		const config = document.querySelector("textarea")?.value ?? "{}";
-		const response = await fetch(`/api/project/config`, {
-			method: "PATCH",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				config_json: JSON.parse(config),
-				id: document.getElementById("save-config")?.dataset.projectid,
-			}),
-		});
-		if (response.ok) {
-			alert("config saved");
-		} else {
-			alert("error saving config");
-		}
-	});
-</script>
