@@ -6,12 +6,12 @@ import { TaskCard } from "../../../../components/solid/TaskCard";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
-if (!project_id) return { error: { status: 404, message: "Project not found" } };
+if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
 const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
-if (error) return { error: { status: 500, message: error } };
-if (!project) return { error: { status: 404, message: "Project not found" } };
+if (error) return new Response(null, { status: 500, statusText: error });
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 
 const project_uuid = project.id;
 

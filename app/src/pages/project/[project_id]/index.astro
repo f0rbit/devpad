@@ -5,14 +5,14 @@ import ProjectLayout from "../../../layouts/ProjectLayout.astro";
 
 const { project_id } = Astro.params;
 
-if (!project_id) return { error: { status: 404, message: "Project not found" } };
+if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
 
 const user = Astro.locals.user;
 
 // want to fetch the project from db
 const { project, error } = await getProject(user?.id ?? null, project_id);
 
-if (error) return { error: { status: 500, message: error } };
+if (error) return new Response(null, { status: 500, statusText: error });
 ---
 
 <PageLayout title={`Project - ${project_id}`}>
