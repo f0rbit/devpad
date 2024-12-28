@@ -1,0 +1,20 @@
+---
+import PageLayout from "../../layouts/PageLayout.astro";
+import { getUserTags } from "../../server/tags";
+import { TagEditor } from "../../components/solid/TagEditor";
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401 });
+
+const tags = (await getUserTags(user.id)) ?? [];
+---
+
+<PageLayout title="Tags">
+  <main>
+    <section>
+      <h5>tags</h5>
+      <br />
+      <TagEditor client:load tags={tags} />
+    </section>
+  </main>
+</PageLayout>

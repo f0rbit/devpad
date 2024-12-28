@@ -215,7 +215,18 @@ h6>input[type="text"] {
   font-size: medium;
 }
 
+input[type="color"] {
+  border: none;
+    outline: none;
+    background: none;
+    /* color: transparent; */
+    padding: 0 !important;
+    appearance: none;
+    width: 50px;
+}
+
 input[type="text"],
+input[type="color"],
 select,
 textarea,
 input[type="datetime-local"] {
