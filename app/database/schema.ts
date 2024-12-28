@@ -189,6 +189,16 @@ export const task_tag = sqliteTable("task_tag", {
   task_tag_unique: primaryKey({ columns: [table.task_id, table.tag_id] })
 }));
 
+export const commit_detail = sqliteTable("commit_detail", {
+	sha: text("sha").primaryKey(),
+	message: text("message").notNull(),
+	url: text("url").notNull(),
+	avatar_url: text("avatar_url"),
+	author_user: text("author_user").notNull(),
+	author_name: text("author_name"),
+	author_email: text("author_email").notNull(),
+	date: text("date").notNull(),
+});
 
 // relations
 
