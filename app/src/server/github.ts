@@ -1,4 +1,7 @@
 import { GitHub } from "arctic";
+import { db } from "../../database/db";
+import { commit_detail } from "../../database/schema";
+import { inArray } from "drizzle-orm";
 
 
 export const github = new GitHub(
@@ -36,25 +39,65 @@ export async function getBranches(owner: string, repo: string, access_token: str
   for (const branch of branches) {
     commits.add(branch.commit.sha);
   }
-  // fetch the commit details for each commit
-  const commit_details = await Promise.all(Array.from(commits).map(async (commit) => {
+
+  const commit_details = await getCommitDetails(owner, repo, commits, access_token);
+  // index commit_details by sha
+  const commit_map = new Map(commit_details.map((commit) => [commit.sha, commit]));
+
+  for (const branch of branches) {
+    branch.commit = commit_map.get(branch.commit.sha);
+  }
+
+  // sort branches by date
+  branches.sort((a: any, b: any) => {
+    return new Date(b.commit.date).getTime() - new Date(a.commit.date).getTime();
+  });
+
+  return branches;
+}
+
+async function getCommitDetails(owner: string, repo: string, commit_shas: Set<string>, access_token: string) {
+  // search for existing commits within the database
+  const shas = Array.from(commit_shas);
+  const existing = await db.select().from(commit_detail).where(inArray(commit_detail.sha, shas));
+
+  const existing_shas = new Set(existing.map((commit: any) => commit.sha));
+  const missing_shas = new Set(shas.filter((sha) => !existing_shas.has(sha)));
+
+  console.log(`Fetching missing commits: ${missing_shas.size}`, missing_shas);
+
+  // fetch the missing commits
+  const commit_details = await Promise.all(Array.from(missing_shas).map(async (commit) => {
     const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${commit}`, { headers: gh_headers(access_token) });
     if (!response.ok) {
       throw new Error("error fetching commit details");
     }
     return (await response.json() as any);
   }));
-  // merge the commit details into the branches
-  branches.forEach((branch: any, index: any) => {
-    branch.commit = commit_details[index].commit;
-    branch.commit.sha = commit_details[index].sha;
-    branch.commit.url = commit_details[index].url;
-  });
 
-  // sort branches by date
-  branches.sort((a: any, b: any) => {
-    return new Date(b.commit.committer.date).getTime() - new Date(a.commit.committer.date).getTime();
-  });
+  let commits = existing;
 
-  return branches;
+  // insert the missing commits into the database
+  if (commit_details.length) {
+    // map the commit details to the database schema
+    const values = commit_details.map((c) => {
+      return {
+        sha: c.sha,
+        url: c.url,
+        message: c.commit.message ?? "",
+        avatar_url: c.author?.avatar_url ?? null,
+        author_user: c.author?.login ?? "",
+        author_name: c.commit.author.name,
+        author_email: c.commit.author.email,
+        date: c.commit.author.date,
+      };
+    });
+
+    await db.insert(commit_detail).values(values);
+
+    // put new commits into result array
+    commits = commits.concat(values);
+  }
+
+  return commits;
 }
