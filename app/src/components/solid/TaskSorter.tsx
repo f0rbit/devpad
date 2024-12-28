@@ -4,6 +4,8 @@ import { TaskCard } from "./TaskCard";
 import type { Project } from "../../server/projects";
 import Search from "lucide-solid/icons/search";
 import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
+import { ProjectSelector } from "./ProjectSelector";
+import FolderSearch from "lucide-solid/icons/folder-search";
 
 const options = ["recent", "priority", "progress"] as const;
 
@@ -15,6 +17,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
   const [search, setSearch] = createSignal("");
+  const [project, setProject] = createSignal<string | null>(null); // -1 means no project selected
 
 
   // sort tasks based on selected option
@@ -30,6 +33,12 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
       filtered = filtered.filter((task) => {
         return task.task.title.toLowerCase().includes(search_term.toLowerCase());
       });
+    }
+
+
+    const search_project = project();
+    if (search_project != null && search_project !== "") {
+      filtered = filtered.filter((task) => task.task.project_id === search_project);
     }
 
     const sorted = filtered.toSorted((a, b) => {
@@ -59,7 +68,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
 
   return (
     <div class="flex-col" >
-      <div class="flex-row">
+      <div class="flex-row" style={{ gap: "9px" }}>
         <Search />
         <input type="text" placeholder="Search" value={search()} onInput={(e) => setSearch(e.target.value)} />
         <ArrowDownWideNarrow />
@@ -70,6 +79,9 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
             </option>
           ))}
         </select>
+        <FolderSearch />
+        <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+
       </div>
       <ul class="flex-col" style={{ gap: "9px" }}>
         <For each={sortedTasks()}>
