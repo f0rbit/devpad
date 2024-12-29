@@ -1,21 +1,19 @@
 import { For, createSignal } from "solid-js";
 import type { Tag } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
+import type { UpsertTag } from "../../server/types";
+import Save from "lucide-solid/icons/save";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
-type UpsertTag = {
-  id: string | null;
-  title: string;
-  color: string;
-};
+type TagProp = UpsertTag;
 
 
-export function TagEditor({ tags }: { tags: Tag[] }) {
-  const [currentTags, setCurrentTags] = createSignal<UpsertTag[]>(tags as UpsertTag[]);
+export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string }) {
+  const [currentTags, setCurrentTags] = createSignal(tags as TagProp[]);
   const [creating, setCreating] = createSignal(false);
 
-  function upsert(tag: UpsertTag) {
+  function upsert(tag: TagProp) {
     console.log("upsert", tag);
     if (tag.id && tag.id != "") {
       const new_tags = currentTags().map((t) => {
@@ -34,7 +32,14 @@ export function TagEditor({ tags }: { tags: Tag[] }) {
   }
 
   function remove(id: string) {
-    const new_tags = currentTags().filter((t) => t.id !== id);
+    // set 'deleted' to true
+    const new_tags = currentTags().map((t) => {
+      if (t.id === id) {
+        return { ...t, deleted: true };
+      } else {
+        return t;
+      }
+    });
     setCurrentTags(new_tags);
   }
 
@@ -42,23 +47,49 @@ export function TagEditor({ tags }: { tags: Tag[] }) {
     setCreating(true);
   }
 
+  async function save() {
+    if (creating()) return;
+    const values = currentTags().map((t) => ({ ...t, owner_id }));
+    // make patch request to /todo/save_tags
+    const response = await fetch("/api/todo/save_tags", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(values),
+    });
+    if (response.ok) {
+      const result = await response.json();
+      console.log("result", result);
+      window.location.reload();
+    } else {
+      const msg = await response.text();
+      console.error(response.statusText, msg);
+    }
+  }
+
 
   return (
     <div class="flex-col" style="gap: 5px;">
       {currentTags().length == 0 && creating() == false ? <p>you haven't created any tags yet</p> : null}
       <For each={currentTags()}>
-        {(tag) => <TagLine tag={tag} upsert={upsert} remove={remove} />}
+        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} />}
       </For>
-      {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} /> : <a href="#" onClick={create} class="flex-row" style="margin-top: 10px" >
+      {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a href="#" onClick={create} class="flex-row" style="margin-top: 10px" >
         <Plus />
         add
       </a>}
+      <a href="#" onClick={save} class="flex-row" style="margin-top: 10px" >
+        <Save />
+        save
+      </a>
+
     </div>
   );
 }
 
 
-function TagLine({ tag, upsert, remove }: { tag: UpsertTag | null, upsert: (tag: UpsertTag) => void, remove: (id: string) => void }) {
+function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upsert: (tag: TagProp) => void, remove: (id: string) => void, owner_id: string }) {
   const is_new = !tag || tag.id == "";
   const [editing, setEditing] = createSignal(is_new);
   const [title, setTitle] = createSignal(tag?.title ?? "");
@@ -66,7 +97,7 @@ function TagLine({ tag, upsert, remove }: { tag: UpsertTag | null, upsert: (tag:
 
   function save() {
     if (is_new) {
-      upsert({ id: "", title: title(), color: color() });
+      upsert({ title: title(), color: color(), deleted: false, owner_id: owner_id });
     } else {
       upsert({ ...tag, title: title(), color: color() });
     }

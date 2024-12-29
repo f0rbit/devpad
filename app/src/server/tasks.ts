@@ -47,7 +47,7 @@ export async function getTask(todo_id: string) {
 	const found = todo[0] as Task & { tags: any[] };
 
 	const tags = await db.select().from(task_tag).where(eq(task_tag.task_id, found.task.id));
-	found.tags = tags;
+	found.tags = tags ?? [];
 
 	return found;
 }
