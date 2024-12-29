@@ -178,7 +178,9 @@ export const tag = sqliteTable("tag", {
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   deleted: int("deleted", { mode: "boolean" }),
-});
+}, (table) => ({
+  tag_unique: unique("tag_unique").on(table.owner_id, table.title)
+}));
 
 export const task_tag = sqliteTable("task_tag", {
   task_id: text("task_id").notNull().references(() => task.id),

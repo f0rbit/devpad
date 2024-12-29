@@ -43,6 +43,13 @@
       "when": 1735349743161,
       "tag": "0005_spicy_slapstick",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1735515355088,
+      "tag": "0006_brief_yellowjacket",
+      "breakpoints": true
     }
   ]
 }
