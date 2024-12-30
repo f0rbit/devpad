@@ -106,8 +106,8 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
 
   return (
     <div class="flex-row">
-      <input type="text" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-      <input type="color" value={color()} onInput={(e) => setColor(e.currentTarget.value)} />
+      <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
+      <input type="color" value={color()} disabled={!editing()} onInput={(e) => setColor(e.currentTarget.value)} />
       {editing() ? (
         <div class="flex-row">
           <a href="#" onClick={save}>{is_new ? "create" : "save"}</a>
