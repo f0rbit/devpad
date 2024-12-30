@@ -9,25 +9,33 @@ import FolderSearch from "lucide-solid/icons/folder-search";
 import type { Tag as UserTag } from "../../server/tags";
 import { TagSelect } from "./TagPicker";
 import Tag from "lucide-solid/icons/tag";
-import type { UpsertTag } from "../../server/types";
+import type { TaskView, UpsertTag } from "../../server/types";
 import LayoutList from "lucide-solid/icons/layout-list";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
 
 const options = ["recent", "priority", "progress"] as const;
-const views = ["list", "grid"] as const;
 
 export type SortOption = (typeof options)[number];
-type View = (typeof views)[number];
+
+type Props = {
+  tasks: TaskType[];
+  defaultOption: SortOption;
+  project_map: Record<string, Project>;
+  from: string;
+  tags: UserTag[];
+  user_id: string;
+  defaultView: TaskView | null;
+};
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { tasks: TaskType[]; defaultOption: SortOption; project_map: Record<string, Project>; from: string, tags: UserTag[] }) {
+export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user_id, defaultView }: Props) {
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
   const [search, setSearch] = createSignal("");
   const [project, setProject] = createSignal<string | null>(null); // id of selected project
   const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
-  const [view, setView] = createSignal<View>("list");
+  const [view, setView] = createSignal<TaskView>(defaultView ?? "list");
 
   // sort tasks based on selected option
   createEffect(() => {
@@ -80,6 +88,24 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { 
     setSortedTasks(sorted);
   });
 
+  async function selectView(view: View) {
+    setView(view);
+
+    const body = JSON.stringify({ task_view: view, id: user_id });
+    const response = await fetch("/api/user/update_view", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      console.error("Failed to update user view", await response.text());
+      return;
+    }
+  }
+
   return (
     <div class="flex-col" >
       <div class="flex-row" style={{ gap: "9px" }}>
@@ -99,10 +125,10 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { 
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
         <div class="icons" style={{ gap: "9px", "margin-left": "auto" }} >
-          <a href="#" onClick={(e) => { e.preventDefault(); setView("list") }}>
+          <a href="#" onClick={(e) => { e.preventDefault(); selectView("list") }}>
             <LayoutList />
           </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); setView("grid") }}>
+          <a href="#" onClick={(e) => { e.preventDefault(); selectView("grid") }}>
             <LayoutGrid />
           </a>
         </div>
@@ -113,7 +139,14 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { 
   );
 }
 
-function ListView({ tasks, project_map, from, user_tags }: { tasks: Accessor<TaskType[]>; project_map: Record<string, Project>; from: string; user_tags: UpsertTag[] }) {
+type ListProps = {
+  tasks: Accessor<Props['tasks']>;
+  project_map: Props['project_map'];
+  from: Props['from'];
+  user_tags: UpsertTag[];
+};
+
+function ListView({ tasks, project_map, from, user_tags }: ListProps) {
   return (
     <ul class="flex-col" style={{ gap: "9px" }}>
       <For each={tasks()}>
@@ -131,7 +164,7 @@ function ListView({ tasks, project_map, from, user_tags }: { tasks: Accessor<Tas
   );
 }
 
-function GridView({ tasks, project_map, from, user_tags }: { tasks: Accessor<TaskType[]>; project_map: Record<string, Project>; from: string; user_tags: UpsertTag[] }) {
+function GridView({ tasks, project_map, from, user_tags }: ListProps) {
   return (
     <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
       <For each={tasks()}>

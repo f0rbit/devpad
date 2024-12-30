@@ -37,6 +37,8 @@ const tags = await getActiveUserTags(user.id);
         defaultOption={"priority"}
         from={"/todo"}
         tags={tags}
+        user_id={user.id}
+        defaultView={user.task_view}
       />
     </section>
   </main>
