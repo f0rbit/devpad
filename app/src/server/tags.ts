@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { tag, task_tag } from "../../database/schema";
 import { db } from "../../database/db";
+import type { UpsertTag } from "./types";
 
 
 export async function getUserTags(user_id: string) {
@@ -18,4 +19,9 @@ export async function getTaskTags(task_id: string) {
   const tags = await db.select().from(tag).where(inArray(tag.id, Array.from(tag_ids)));
 
   return tags;
+}
+
+export async function upsertTag(data: UpsertTag) {
+  const res = await db.insert(tag).values(data).onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: data }).returning();
+  return res;
 }

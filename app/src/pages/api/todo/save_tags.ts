@@ -1,12 +1,9 @@
 import { z } from "zod";
 import { upsert_tag } from "../../../server/types";
 import type { APIContext } from "astro";
-import { db } from "../../../../database/db";
-import { tag } from "../../../../database/schema";
+import { upsertTag } from "../../../server/tags";
 
 const upsert_tags = z.array(upsert_tag);
-type UpsertTags = z.infer<typeof upsert_tags>;
-
 
 // upsert tags endpoint
 export async function PATCH(context: APIContext) {
@@ -42,8 +39,3 @@ export async function PATCH(context: APIContext) {
   }
 }
 
-
-async function upsertTag(data: UpsertTags[number]) {
-  const res = await db.insert(tag).values(data).onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: data }).returning();
-  return res;
-}
