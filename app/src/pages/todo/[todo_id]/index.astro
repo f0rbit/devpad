@@ -164,6 +164,8 @@ const from = Astro.url.searchParams.get("from")! || "";
     const start_time = get_value("start_time");
     const end_time = get_value("end_time");
     const priority = get_value("priority") ?? "LOW";
+    // @ts-ignore
+    const tags = get_tags() ?? [];
 
     const owner_id =
       document.querySelector(".editor")?.getAttribute("data-user-id") ?? null;
@@ -186,6 +188,7 @@ const from = Astro.url.searchParams.get("from")! || "";
         end_time,
         priority,
         owner_id,
+        tags
       }),
     });
 
