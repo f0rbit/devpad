@@ -74,3 +74,13 @@ export const ConfigSchema = z.object({
   ),
   ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
 });
+
+export const upsert_tag = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  color: z.string(),
+  deleted: z.boolean().optional().default(false),
+  owner_id: z.string(),
+});
+
+export type UpsertTag = z.infer<typeof upsert_tag>;

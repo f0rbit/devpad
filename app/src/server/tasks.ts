@@ -15,7 +15,7 @@ export async function getUserTasks(user_id: string) {
 	if (task_ids.length) {
 		const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
 		tasks.forEach((t: any) => {
-			t.tags = tags.filter((tag: any) => tag.task_id === t.id);
+			t.tags = tags.filter((tag: TagLink) => tag.task_id === t.id);
 		});
 	}
 
@@ -32,22 +32,24 @@ export async function getProjectTasks(project_id: string) {
 	if (task_ids.length) {
 		const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
 		tasks.forEach((t: any) => {
-			t.tags = tags.filter((tag: any) => tag.task_id === t.id);
+			t.tags = tags.filter((tag: TagLink) => tag.task_id === t.id);
 		});
 	}
 
 	return tasks;
 }
 
+export type TagLink = { task_id: string, tag_id: string, updated_at: string, created_at: string };
+
 export async function getTask(todo_id: string) {
 	const todo = await db.select().from(task).leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id)).where(eq(task.id, todo_id));
 	if (!todo || todo.length != 1) {
 		return null;
 	}
-	const found = todo[0] as Task & { tags: any[] };
+	const found = todo[0] as Task & { tags: TagLink[] };
 
 	const tags = await db.select().from(task_tag).where(eq(task_tag.task_id, found.task.id));
-	found.tags = tags;
+	found.tags = tags ?? [];
 
 	return found;
 }

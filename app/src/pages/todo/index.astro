@@ -3,22 +3,34 @@ import PageLayout from "../../layouts/PageLayout.astro";
 import { getUserProjects } from "../../server/projects";
 import { getUserTasks } from "../../server/tasks";
 import { TaskSorter } from "../../components/solid/TaskSorter";
+import Tag from "lucide-solid/icons/tag";
 
 const user = Astro.locals.user;
 const projects = user ? await getUserProjects(user.id) : [];
 const project_map = {} as any;
 for (const p of projects) {
-	project_map[p.id] = p;
+  project_map[p.id] = p;
 }
 const tasks = user ? await getUserTasks(user.id) : [];
-
 ---
 
-<PageLayout title="Welcome to Astro.">
-	<main>
-		<section>
-			<h3>upcoming tasks</h3>
-			<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"priority"} from={"/todo"}>
-		</section>
-	</main>
+<PageLayout title="Task List">
+  <main>
+    <section>
+      <div class="flex-row">
+        <h3>upcoming tasks</h3>
+        <a href="/todo/tags" style="margin-left: auto" class="flex-row" >
+          <Tag />
+          tags
+        </a>
+      </div>
+      <TaskSorter
+        client:load
+        tasks={tasks}
+        project_map={project_map}
+        defaultOption={"priority"}
+        from={"/todo"}
+      />
+    </section>
+  </main>
 </PageLayout>

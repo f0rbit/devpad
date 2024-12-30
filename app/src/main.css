@@ -198,6 +198,24 @@ p.description {
   align-items: center;
 }
 
+.tag-badge {
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  padding: 2px 8px;
+  font-size: small;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-direction: row;
+
+  .lucide {
+    width: unset;
+    height: unset;
+    cursor: pointer;
+  }
+}
+
 footer {
   margin-top: auto;
   display: flex;
@@ -215,7 +233,18 @@ h6>input[type="text"] {
   font-size: medium;
 }
 
+input[type="color"] {
+  border: none;
+    outline: none;
+    background: none;
+    /* color: transparent; */
+    padding: 0 !important;
+    appearance: none;
+    width: 50px;
+}
+
 input[type="text"],
+input[type="color"],
 select,
 textarea,
 input[type="datetime-local"] {

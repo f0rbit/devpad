@@ -6,12 +6,14 @@ import { TaskCard } from "../../../../components/solid/TaskCard";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 
 const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!project_id)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 const user = Astro.locals.user;
 
 const { project, error } = await getProject(user?.id ?? null, project_id);
 if (error) return new Response(null, { status: 500, statusText: error });
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!project)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 
 const project_uuid = project.id;
 
@@ -19,64 +21,71 @@ const tasks = await getProjectTasks(project_uuid);
 ---
 
 <PageLayout title={"Project Tasks"}>
-	<ProjectTasksLayout project_id={project_id}>
-		{
-			project.repo_id && (
-				<>
-					<a href="#" id="update-check">
-						check for updates
-					</a>
-					<p id="output" />
-				</>
-			)
-		}
-		<br />
-		<ul>
-			{
-				tasks.map((task: any) => (
-					<li>
-						<TaskCard task={task} project={project} from={`/project/${project_id}/tasks`} />
-					</li>
-				))
-			}
-		</ul>
-	</ProjectTasksLayout>
+  <ProjectTasksLayout project_id={project_id}>
+    {
+      project.repo_id && (
+        <>
+          <a href="#" id="update-check">
+            check for updates
+          </a>
+          <p id="output" />
+        </>
+      )
+    }
+    <br />
+    <ul>
+      {
+        tasks.map((task: any) => (
+          <li>
+            <TaskCard
+              task={task}
+              project={project}
+              from={`/project/${project_id}/tasks`}
+            />
+          </li>
+        ))
+      }
+    </ul>
+  </ProjectTasksLayout>
 
-	<script is:inline define:vars={{ project_uuid }}>
-		function hook_check() {
-			const update_check = document.getElementById("update-check");
-			if (!update_check) return;
-			const output = document.getElementById("output");
-			if (!output) throw new Error("Output element not found");
-			update_check.addEventListener("click", async () => {
-				const response = await fetch(`/api/project/scan?project_id=${project_uuid}`, { method: "POST" });
-				if (!response.ok) {
-					output.innerText = "Error: " + response.statusText;
-					return;
-				}
-				output.innerText = "";
-				const reader = response.body.getReader();
+  <script is:inline define:vars={{ project_uuid }}>
+    function hook_check() {
+      const update_check = document.getElementById("update-check");
+      if (!update_check) return;
+      const output = document.getElementById("output");
+      if (!output) throw new Error("Output element not found");
+      update_check.addEventListener("click", async () => {
+        const response = await fetch(
+          `/api/project/scan?project_id=${project_uuid}`,
+          { method: "POST" },
+        );
+        if (!response.ok) {
+          output.innerText = "Error: " + response.statusText;
+          return;
+        }
+        output.innerText = "";
+        const reader = response.body.getReader();
 
-				const read_data = async function* () {
-					let done = false;
-					while (!done) {
-						const { done: d, value: v } = await reader.read();
-						done = d;
-						const value = new TextDecoder().decode(v);
-						const lines = value.split("\n");
-						for (const line of lines) {
-							if (line.length > 1) yield line;
-						}
-					}
-				};
+        const read_data = async function* () {
+          let done = false;
+          while (!done) {
+            const { done: d, value: v } = await reader.read();
+            done = d;
+            const value = new TextDecoder().decode(v);
+            const lines = value.split("\n");
+            for (const line of lines) {
+              if (line.length > 1) yield line;
+            }
+          }
+        };
 
-				for await (const line of read_data()) {
-					output.innerText = line;
-					await new Promise((resolve) => setTimeout(resolve, 100));
-				}
-			});
-		}
+        for await (const line of read_data()) {
+          output.innerText = line;
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      });
+    }
 
-		hook_check();
-	</script>
+    hook_check();
+  </script>
 </PageLayout>

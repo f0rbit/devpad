@@ -7,23 +7,31 @@ import LinkedCode from "../../../components/LinkedCode.astro";
 import Loader from "lucide-solid/icons/loader";
 import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
+import { getUserTags } from "../../../server/tags";
+import { TagPicker } from "../../../components/solid/TagPicker";
 
 const { todo_id } = Astro.params;
+if (!todo_id)
+  return new Response(null, { status: 404, statusText: "Task not found" });
+
 const user = Astro.locals.user;
+if (!user)
+  return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-if (!todo_id) {
-  return Astro.redirect("/todo");
-}
+const { task, codebase_tasks, tags } = (await getTask(todo_id)) ?? {
+  task: null,
+};
+if (!task)
+  return new Response(null, { status: 404, statusText: "Task not found" });
 
-const { task, codebase_tasks } = (await getTask(todo_id)) ?? { task: null };
+if (task.owner_id !== user.id)
+  return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-if (!task) {
-  return Astro.redirect("/todo");
-}
+const user_tags = await getUserTags(user.id);
 
-if (!user || task.owner_id !== user.id) {
-  return Astro.redirect("/todo");
-}
+// tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
+const tag_map = new Map(user_tags.map((t) => [t.id, t]));
+const current_tags = tags?.map((t) => tag_map.get(t.tag_id)) ?? [];
 
 const from = Astro.url.searchParams.get("from")! || "";
 ---
@@ -101,6 +109,16 @@ const from = Astro.url.searchParams.get("from")! || "";
       </div>
     </details>
     <br />
+    <div class="editor">
+      <label for="tags">Tags</label>
+      <TagPicker
+        currentTags={current_tags}
+        availableTags={user_tags ?? []}
+        owner_id={user.id}
+        client:load
+      />
+    </div>
+    <br />
     <a href={from.length > 0 ? from : "/todo"}>back</a>
     <a href="#" id="save-button">save</a>
     <Loader id="spinner" class="icon hidden" />
@@ -155,6 +173,8 @@ const from = Astro.url.searchParams.get("from")! || "";
     const start_time = get_value("start_time");
     const end_time = get_value("end_time");
     const priority = get_value("priority") ?? "LOW";
+    // @ts-ignore
+    const tags = get_tags() ?? [];
 
     const owner_id =
       document.querySelector(".editor")?.getAttribute("data-user-id") ?? null;
@@ -177,8 +197,17 @@ const from = Astro.url.searchParams.get("from")! || "";
         end_time,
         priority,
         owner_id,
+        tags,
       }),
     });
+
+    if (!response.ok) {
+      console.error(await response.text());
+      return;
+    } else {
+      const data = await response.json();
+      console.log(data);
+    }
 
     // fake an 80ms second delay
     await new Promise((resolve) => setTimeout(resolve, 80));
