@@ -28,7 +28,7 @@ export async function PUT(context: APIContext) {
     return new Response(null, { status: 401 });
   }
 
-  let tag_ids = null;
+  let tag_ids: string[] = [];
 
   if (body.tags) {
     // parse upsert tags
@@ -52,7 +52,7 @@ export async function PUT(context: APIContext) {
     if (new_todo.length != 1) throw new Error(`Todo upsert returned incorrect rows (${new_todo.length}`);
 
     // link each tag to every task
-    if (tag_ids) {
+    if (tag_ids.length > 0) {
       try {
         await upsertTags(new_todo[0].id, tag_ids);
       } catch (err) {
@@ -63,7 +63,7 @@ export async function PUT(context: APIContext) {
 
     return new Response(JSON.stringify(new_todo[0]), { status: 200 });
   } catch (err) {
-    console.error(err);
+    console.error("Error upserting todo", err);
     return new Response(null, { status: 500 });
   }
 }
@@ -86,8 +86,7 @@ async function upsertTags(task_id: string, tags: string[]) {
   // insert any new tags
   const insert_tags = create.map((t) => ({ task_id: task_id, tag_id: t }));
   if (insert_tags.length > 0) {
-
-    await db.insert(task_tag).values(insert_tags).onConflictDoNothing().returning({ tag_id: task_tag.tag_id });
+    await db.insert(task_tag).values(insert_tags);
   }
 
   // update the updated_at time on each link

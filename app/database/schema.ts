@@ -7,7 +7,8 @@ export const user = sqliteTable("user", {
   name: text("name"),
   email: text("email").unique(),
   email_verified: text("email_verified"), // timestamp
-  image_url: text("image_url")
+  image_url: text("image_url"),
+  task_view: text("task_view", { enum: ["list", "grid"] }).notNull().default("list"),
 });
 
 export const session = sqliteTable("session", {

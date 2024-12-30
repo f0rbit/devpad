@@ -7,7 +7,7 @@ import LinkedCode from "../../../components/LinkedCode.astro";
 import Loader from "lucide-solid/icons/loader";
 import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
-import { getUserTags } from "../../../server/tags";
+import { getActiveUserTags } from "../../../server/tags";
 import { TagPicker } from "../../../components/solid/TagPicker";
 
 const { todo_id } = Astro.params;
@@ -18,20 +18,19 @@ const user = Astro.locals.user;
 if (!user)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { task, codebase_tasks, tags } = (await getTask(todo_id)) ?? {
-  task: null,
-};
-if (!task)
-  return new Response(null, { status: 404, statusText: "Task not found" });
+const found = await getTask(todo_id);
+if (!found) return new Response(null, { status: 404, statusText: "Task not found" });
+
+const { task, codebase_tasks, tags } = found;
 
 if (task.owner_id !== user.id)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const user_tags = await getUserTags(user.id);
+const user_tags = await getActiveUserTags(user.id);
 
 // tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
 const tag_map = new Map(user_tags.map((t) => [t.id, t]));
-const current_tags = tags?.map((t) => tag_map.get(t.tag_id)) ?? [];
+const current_tags = tags.map((tag_id) => tag_map.get(tag_id)) ?? [];
 
 const from = Astro.url.searchParams.get("from")! || "";
 ---

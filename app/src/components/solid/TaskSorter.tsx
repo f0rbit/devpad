@@ -1,25 +1,67 @@
-import { createEffect, createSignal } from "solid-js";
+import { For, createEffect, createSignal, type Accessor } from "solid-js";
 import type { Task as TaskType } from "../../server/tasks";
 import { TaskCard } from "./TaskCard";
 import type { Project } from "../../server/projects";
+import Search from "lucide-solid/icons/search";
+import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
+import { ProjectSelector } from "./ProjectSelector";
+import FolderSearch from "lucide-solid/icons/folder-search";
+import type { Tag as UserTag } from "../../server/tags";
+import { TagSelect } from "./TagPicker";
+import Tag from "lucide-solid/icons/tag";
+import type { TaskView, UpsertTag } from "../../server/types";
+import LayoutList from "lucide-solid/icons/layout-list";
+import LayoutGrid from "lucide-solid/icons/layout-grid";
 
 const options = ["recent", "priority", "progress"] as const;
 
 export type SortOption = (typeof options)[number];
 
+type Props = {
+  tasks: TaskType[];
+  defaultOption: SortOption;
+  project_map: Record<string, Project>;
+  from: string;
+  tags: UserTag[];
+  user_id: string;
+  defaultView: TaskView | null;
+};
+
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks: TaskType[]; defaultOption: SortOption; project_map: Record<string, Project>; from: string }) {
+export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user_id, defaultView }: Props) {
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
+  const [search, setSearch] = createSignal("");
+  const [project, setProject] = createSignal<string | null>(null); // id of selected project
+  const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
+  const [view, setView] = createSignal<TaskView>(defaultView ?? "list");
 
   // sort tasks based on selected option
   createEffect(() => {
     // filter out 'archived' and 'deleted' tasks
-    const filtered = tasks.filter((task) => {
+    let filtered = tasks.filter((task) => {
       if (task.task == null) return false;
       return task.task.visibility !== "ARCHIVED" && task.task.visibility !== "DELETED" && task.task.visibility != "HIDDEN";
     });
+
+    const search_term = search();
+    if (search_term.length > 0) {
+      filtered = filtered.filter((task) => {
+        return task.task.title.toLowerCase().includes(search_term.toLowerCase());
+      });
+    }
+
+
+    const search_project = project();
+    if (search_project != null && search_project !== "") {
+      filtered = filtered.filter((task) => task.task.project_id === search_project);
+    }
+
+    const search_tag = tag();
+    if (search_tag != null && search_tag != "") {
+      filtered = filtered.filter((task) => task.tags.some((tag_id) => tag_id === search_tag));
+    }
 
     const sorted = filtered.toSorted((a, b) => {
       if (a == null && b == null) return 0;
@@ -46,26 +88,96 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
     setSortedTasks(sorted);
   });
 
+  async function selectView(view: View) {
+    setView(view);
+
+    const body = JSON.stringify({ task_view: view, id: user_id });
+    const response = await fetch("/api/user/update_view", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      console.error("Failed to update user view", await response.text());
+      return;
+    }
+  }
+
   return (
-    <div>
-      <select value={selectedOption()} onChange={(e) => setSelectedOption(e.target.value as SortOption)}>
-        {options.map((option) => (
-          <option value={option} selected={option === selectedOption()}>
-            {option}
-          </option>
-        ))}
-      </select>
-      <ul class="flex-col" style={{ gap: "9px" }}>
-        {sortedTasks().map((task) => {
+    <div class="flex-col" >
+      <div class="flex-row" style={{ gap: "9px" }}>
+        <Search />
+        <input type="text" placeholder="Search" value={search()} onInput={(e) => setSearch(e.target.value)} />
+        <ArrowDownWideNarrow />
+        <select value={selectedOption()} onChange={(e) => setSelectedOption(e.target.value as SortOption)}>
+          {options.map((option) => (
+            <option value={option} selected={option === selectedOption()}>
+              {option}
+            </option>
+          ))}
+        </select>
+        <FolderSearch />
+        <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+        <Tag />
+        <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
+
+        <div class="icons" style={{ gap: "9px", "margin-left": "auto" }} >
+          <a href="#" onClick={(e) => { e.preventDefault(); selectView("list") }}>
+            <LayoutList />
+          </a>
+          <a href="#" onClick={(e) => { e.preventDefault(); selectView("grid") }}>
+            <LayoutGrid />
+          </a>
+        </div>
+      </div>
+      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} /> : <GridView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} />}
+
+    </div >
+  );
+}
+
+type ListProps = {
+  tasks: Accessor<Props['tasks']>;
+  project_map: Props['project_map'];
+  from: Props['from'];
+  user_tags: UpsertTag[];
+};
+
+function ListView({ tasks, project_map, from, user_tags }: ListProps) {
+  return (
+    <ul class="flex-col" style={{ gap: "9px" }}>
+      <For each={tasks()}>
+        {(task) => {
           const project = project_map[task.task.project_id!];
           if (project == null) return null;
           return (
             <li>
-              <TaskCard task={task} project={project} from={from} />
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} />
             </li>
           );
-        })}
-      </ul>
-    </div>
+        }}
+      </For>
+    </ul>
+  );
+}
+
+function GridView({ tasks, project_map, from, user_tags }: ListProps) {
+  return (
+    <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
+      <For each={tasks()}>
+        {(task) => {
+          const project = project_map[task.task.project_id!];
+          if (project == null) return null;
+          return (
+            <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} />
+            </li>
+          );
+        }}
+      </For>
+    </ul>
   );
 }

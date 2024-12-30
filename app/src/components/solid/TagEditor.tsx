@@ -3,6 +3,9 @@ import type { Tag } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
 import type { UpsertTag } from "../../server/types";
 import Save from "lucide-solid/icons/save";
+import Check from "lucide-solid/icons/check";
+import Trash from "lucide-solid/icons/trash";
+import PencilLine from "lucide-solid/icons/pencil-line";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -106,16 +109,18 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
 
   return (
     <div class="flex-row">
-      <input type="text" value={title()} onInput={(e) => setTitle(e.currentTarget.value)} />
-      <input type="color" value={color()} onInput={(e) => setColor(e.currentTarget.value)} />
+      <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
+      <input type="color" value={color()} disabled={!editing()} onInput={(e) => setColor(e.currentTarget.value)} />
       {editing() ? (
-        <div class="flex-row">
-          <a href="#" onClick={save}>{is_new ? "create" : "save"}</a>
-          {tag?.id && <a href="#" onClick={() => remove(tag.id!)}>remove</a>}
+        <div class="icons">
+          <a href="#" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
+          {tag?.id && <a href="#" title="Remove Tag" onClick={() => remove(tag.id!)}><Trash /></a>}
         </div>
       ) : (
-        <div>
-          <a href="#" onClick={() => setEditing(true)}>edit</a>
+        <div class="icons">
+          <a href="#" onClick={() => setEditing(true)} title="Edit Tag">
+            <PencilLine />
+          </a>
         </div>
       )}
 

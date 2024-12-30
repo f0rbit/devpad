@@ -6,6 +6,26 @@ import type { Tag } from "../../server/tags";
 import X from "lucide-solid/icons/x";
 import Plus from "lucide-solid/icons/plus";
 
+export function TagSelect({ tags, onSelect }: { tags: Tag[], onSelect: (tag: Tag | null) => void }) {
+  // use a select element
+  function select(id: string) {
+    const found = tags.find((t) => t.id === id) ?? null;
+    onSelect(found);
+  }
+
+  return (
+    <select onChange={(e) => select(e.target.value)} style="min-width: 6rem">
+      <option value="">-</option>
+      {tags.map((tag) => (
+        <option value={tag.id}>
+          {tag.title}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+
 
 export function TagPicker({ currentTags, availableTags, owner_id }: { currentTags: UpsertTag[], availableTags: Tag[], owner_id: string }) {
   const [tags, setTags] = createSignal(currentTags);
@@ -75,10 +95,10 @@ export function TagPicker({ currentTags, availableTags, owner_id }: { currentTag
       </datalist>
       <a href="#" onClick={add}><Plus /></a>
       <div class="flex-row" style="flex-wrap: wrap;">
-      <For each={tags()}>
-        {(tag) => (
-          <TagBadge tag={tag} onRemove={() => removeTag(tag)} />
-        )}
+        <For each={tags()}>
+          {(tag) => (
+            <TagBadge tag={tag} onRemove={() => removeTag(tag)} />
+          )}
         </For>
       </div>
     </div>
@@ -86,14 +106,14 @@ export function TagPicker({ currentTags, availableTags, owner_id }: { currentTag
 
 }
 
-function TagBadge({ tag, onRemove }: { tag: UpsertTag, onRemove?: () => void }) {
+export function TagBadge({ tag, onRemove }: { tag: UpsertTag, onRemove?: () => void }) {
   return (
-    <div class="tag-badge" style={`background-color: ${tag.color}`}>
+    <div class="tag-badge" style={`background-color: ${tag.color}; color: var(--text-secondary);`}>
       {tag.title}
       {onRemove &&
-      <div onClick={onRemove} class="flex-row">
-        <X size={16} />
-      </div>}
+        <div onClick={onRemove} class="flex-row">
+          <X size={16} />
+        </div>}
     </div>
   );
 }
