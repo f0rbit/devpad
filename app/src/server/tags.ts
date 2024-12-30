@@ -22,6 +22,6 @@ export async function getTaskTags(task_id: string) {
 }
 
 export async function upsertTag(data: UpsertTag) {
-  const res = await db.insert(tag).values(data).onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: data }).returning();
-  return res;
+  const res = await db.insert(tag).values(data).onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: data }).returning({ id: tag.id });
+  return res[0].id;
 }
