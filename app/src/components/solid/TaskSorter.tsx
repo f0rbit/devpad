@@ -6,6 +6,9 @@ import Search from "lucide-solid/icons/search";
 import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
 import { ProjectSelector } from "./ProjectSelector";
 import FolderSearch from "lucide-solid/icons/folder-search";
+import type { Tag as UserTag } from "../../server/tags";
+import { TagSelect } from "./TagPicker";
+import Tag from "lucide-solid/icons/tag";
 
 const options = ["recent", "priority", "progress"] as const;
 
@@ -13,11 +16,12 @@ export type SortOption = (typeof options)[number];
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks: TaskType[]; defaultOption: SortOption; project_map: Record<string, Project>; from: string }) {
+export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { tasks: TaskType[]; defaultOption: SortOption; project_map: Record<string, Project>; from: string, tags: UserTag[] }) {
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
   const [search, setSearch] = createSignal("");
-  const [project, setProject] = createSignal<string | null>(null); // -1 means no project selected
+  const [project, setProject] = createSignal<string | null>(null); // id of selected project
+  const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
 
 
   // sort tasks based on selected option
@@ -39,6 +43,11 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
     const search_project = project();
     if (search_project != null && search_project !== "") {
       filtered = filtered.filter((task) => task.task.project_id === search_project);
+    }
+
+    const search_tag = tag();
+    if (search_tag != null && search_tag != "") {
+      filtered = filtered.filter((task) => task.tags.some((tag_id) => tag_id === search_tag));
     }
 
     const sorted = filtered.toSorted((a, b) => {
@@ -81,7 +90,8 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
         </select>
         <FolderSearch />
         <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
-
+        <Tag />
+        <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
       </div>
       <ul class="flex-col" style={{ gap: "9px" }}>
         <For each={sortedTasks()}>
@@ -94,7 +104,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from }: { tasks:
               </li>
             );
           }}
-        </For> 
+        </For>
       </ul>
     </div>
   );
