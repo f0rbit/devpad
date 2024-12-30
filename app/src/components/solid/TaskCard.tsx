@@ -5,6 +5,8 @@ import type { Task } from "../../server/tasks";
 import CalendarClock from "lucide-solid/icons/calendar-clock";
 import { TagBadge } from "./TagPicker";
 import type { UpsertTag } from "../../server/types";
+import CalendarX2 from "lucide-solid/icons/calendar-x-2";
+import Calendar from "lucide-solid/icons/calendar";
 
 interface Props {
   task: Task;
@@ -28,22 +30,32 @@ export const TaskCard = (props: Props) => {
     return user_tags.find((tag) => tag.id === tag_id) ?? null;
   }).filter(Boolean) as UpsertTag[];
 
+  const Clock = () => {
+    if (!task.end_time) return <Calendar />;
+    const past_due = new Date(task.end_time) < new Date();
+    if (past_due) return <CalendarX2 />;
+    return <CalendarClock />;
+  }
+
+  const past_due = task.end_time && new Date(task.end_time) < new Date();
+
   return (
-    <div>
-      <div style={{ "font-size": "small" }}>
+    <div class="flex-col" style={{ "gap": "3px", height: "100%" }}>
+      <div style={{ "font-size": "small", color: "var(--text-tertiary)" }}>
         <span class='date-highlighted'><FormattedDate date={task.updated_at} /></span>
         {" - "}
         <span>{project_name}</span>
       </div>
       <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
       <p>{task.summary}</p>
-      <div class={`flex-row ${priority_class}`} style={{ "font-size": "small" }}>
-        <span class="flex-row"><CalendarClock /><DueDate date={task.end_time} /></span>
+      <div style={{ height: "100%" }} />
+      <div class={`flex-col ${priority_class}`} style={{ "font-size": "small", gap: "6px" }}>
         <span class="flex-row">
           <For each={tag_list}>
             {(tag) => <TagBadge tag={tag} />}
           </For>
         </span>
+        <span class="flex-row"><Clock /><DueDate date={task.end_time} /></span>
       </div>
     </div>
   );
@@ -76,15 +88,24 @@ const DueDate = ({ date }: { date: string | null }) => {
   const now = new Date();
   const due = new Date(date);
 
-  const diff = due.getTime() - now.getTime();
+  const past = now.getTime() > due.getTime();
+  const diff = Math.abs(due.getTime() - now.getTime());
   const diffSeconds = diff / 1000;
   const diffMinutes = diffSeconds / 60;
   const diffHours = diffMinutes / 60;
   const diffDays = diffHours / 24;
 
-  if (diffMinutes < 60) return <span>{Math.round(diffMinutes)} minutes</span>;
-  if (diffHours < 48) return <span>{Math.round(diffHours)} hours</span>;
-  if (diffDays < 14) return <span>{Math.round(diffDays)} days</span>;
+  // if time is less than 0, show "due {span} ago"
+  let span = null;
+  if (diffMinutes < 60) span = <span>{Math.round(diffMinutes)} minutes</span>;
+  if (diffHours < 48) span = <span>{Math.round(diffHours)} hours</span>;
+  if (diffDays < 14) span = <span>{Math.round(diffDays)} days</span>;
+  
+  if (span) {
+    if (past) return <span>{span} ago</span>;
+    return span;
+  }
+
 
   const options = { month: "long", day: "numeric" } as const;
   return (
