@@ -198,6 +198,24 @@ p.description {
   align-items: center;
 }
 
+.tag-badge {
+  border: 1px solid var(--input-border);
+  border-radius: 7px;
+  padding: 2px 8px;
+  font-size: small;
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-direction: row;
+
+  .lucide {
+    width: unset;
+    height: unset;
+    cursor: pointer;
+  }
+}
+
 footer {
   margin-top: auto;
   display: flex;

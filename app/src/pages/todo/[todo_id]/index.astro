@@ -7,6 +7,8 @@ import LinkedCode from "../../../components/LinkedCode.astro";
 import Loader from "lucide-solid/icons/loader";
 import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
+import { getUserTags } from "../../../server/tags";
+import { TagPicker } from "../../../components/solid/TagPicker";
 
 const { todo_id } = Astro.params;
 if (!todo_id)
@@ -16,12 +18,16 @@ const user = Astro.locals.user;
 if (!user)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { task, codebase_tasks } = (await getTask(todo_id)) ?? { task: null };
+const { task, codebase_tasks, tags } = (await getTask(todo_id)) ?? {
+  task: null,
+};
 if (!task)
   return new Response(null, { status: 404, statusText: "Task not found" });
 
 if (task.owner_id !== user.id)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const user_tags = await getUserTags(user.id);
 
 const from = Astro.url.searchParams.get("from")! || "";
 ---
@@ -98,6 +104,11 @@ const from = Astro.url.searchParams.get("from")! || "";
         </select>
       </div>
     </details>
+    <br />
+    <div class="editor">
+      <label for="tags">Tags</label>
+      <TagPicker currentTags={tags} availableTags={user_tags ?? []} client:load />
+    </div>
     <br />
     <a href={from.length > 0 ? from : "/todo"}>back</a>
     <a href="#" id="save-button">save</a>
