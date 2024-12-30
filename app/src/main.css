@@ -197,6 +197,18 @@ p.description {
   gap: 4px;
   align-items: center;
 }
+.icons {
+  display: flex;
+  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+
+  a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
 
 .tag-badge {
   border: 1px solid var(--input-border);
