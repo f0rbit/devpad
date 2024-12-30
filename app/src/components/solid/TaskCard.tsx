@@ -35,7 +35,7 @@ export const TaskCard = (props: Props) => {
         {" - "}
         <span>{project_name}</span>
       </div>
-      <a href={`/todo/${task.id}?from=${from}`}>{task.title}</a>
+      <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
       <p>{task.summary}</p>
       <div class={`flex-row ${priority_class}`} style={{ "font-size": "small" }}>
         <span class="flex-row"><CalendarClock /><DueDate date={task.end_time} /></span>

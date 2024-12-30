@@ -1,4 +1,4 @@
-import { For, createEffect, createSignal } from "solid-js";
+import { For, createEffect, createSignal, type Accessor } from "solid-js";
 import type { Task as TaskType } from "../../server/tasks";
 import { TaskCard } from "./TaskCard";
 import type { Project } from "../../server/projects";
@@ -10,10 +10,14 @@ import type { Tag as UserTag } from "../../server/tags";
 import { TagSelect } from "./TagPicker";
 import Tag from "lucide-solid/icons/tag";
 import type { UpsertTag } from "../../server/types";
+import LayoutList from "lucide-solid/icons/layout-list";
+import LayoutGrid from "lucide-solid/icons/layout-grid";
 
 const options = ["recent", "priority", "progress"] as const;
+const views = ["list", "grid"] as const;
 
 export type SortOption = (typeof options)[number];
+type View = (typeof views)[number];
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
@@ -23,7 +27,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { 
   const [search, setSearch] = createSignal("");
   const [project, setProject] = createSignal<string | null>(null); // id of selected project
   const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
-
+  const [view, setView] = createSignal<View>("list");
 
   // sort tasks based on selected option
   createEffect(() => {
@@ -93,20 +97,54 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { 
         <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
         <Tag />
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
+
+        <div class="icons" style={{ gap: "9px", "margin-left": "auto" }} >
+          <a href="#" onClick={(e) => { e.preventDefault(); setView("list") }}>
+            <LayoutList />
+          </a>
+          <a href="#" onClick={(e) => { e.preventDefault(); setView("grid") }}>
+            <LayoutGrid />
+          </a>
+        </div>
       </div>
-      <ul class="flex-col" style={{ gap: "9px" }}>
-        <For each={sortedTasks()}>
-          {(task) => {
-            const project = project_map[task.task.project_id!];
-            if (project == null) return null;
-            return (
-              <li>
-                <TaskCard task={task} project={project} from={from} user_tags={tags as UpsertTag[]}  />
-              </li>
-            );
-          }}
-        </For>
-      </ul>
-    </div>
+      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} /> : <GridView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} />}
+
+    </div >
+  );
+}
+
+function ListView({ tasks, project_map, from, user_tags }: { tasks: Accessor<TaskType[]>; project_map: Record<string, Project>; from: string; user_tags: UpsertTag[] }) {
+  return (
+    <ul class="flex-col" style={{ gap: "9px" }}>
+      <For each={tasks()}>
+        {(task) => {
+          const project = project_map[task.task.project_id!];
+          if (project == null) return null;
+          return (
+            <li>
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} />
+            </li>
+          );
+        }}
+      </For>
+    </ul>
+  );
+}
+
+function GridView({ tasks, project_map, from, user_tags }: { tasks: Accessor<TaskType[]>; project_map: Record<string, Project>; from: string; user_tags: UpsertTag[] }) {
+  return (
+    <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
+      <For each={tasks()}>
+        {(task) => {
+          const project = project_map[task.task.project_id!];
+          if (project == null) return null;
+          return (
+            <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} />
+            </li>
+          );
+        }}
+      </For>
+    </ul>
   );
 }

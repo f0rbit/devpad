@@ -148,6 +148,14 @@ a.underlined:hover {
   text-decoration: underline;
 }
 
+.task-title {
+  color: var(--text-secondary);
+}
+
+.task-title:hover {
+  color: var(--text-primary);
+}
+
 h1 {
   font-size: x-large;
   font-weight: bold;
