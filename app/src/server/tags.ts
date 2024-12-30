@@ -16,6 +16,8 @@ export async function getTaskTags(task_id: string) {
   const task_tags = await db.select().from(task_tag).where(eq(task_tag.task_id, task_id));
 
   const tag_ids = new Set(task_tags.map((t: any) => t.tag_id));
+  if (tag_ids.size == 0) return [];
+
   const tags = await db.select().from(tag).where(inArray(tag.id, Array.from(tag_ids)));
 
   return tags;
