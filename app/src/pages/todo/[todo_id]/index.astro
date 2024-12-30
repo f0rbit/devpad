@@ -107,7 +107,12 @@ const from = Astro.url.searchParams.get("from")! || "";
     <br />
     <div class="editor">
       <label for="tags">Tags</label>
-      <TagPicker currentTags={tags} availableTags={user_tags ?? []} client:load />
+      <TagPicker
+        currentTags={tags}
+        availableTags={user_tags ?? []}
+        owner_id={user.id}
+        client:load
+      />
     </div>
     <br />
     <a href={from.length > 0 ? from : "/todo"}>back</a>
@@ -188,9 +193,17 @@ const from = Astro.url.searchParams.get("from")! || "";
         end_time,
         priority,
         owner_id,
-        tags
+        tags,
       }),
     });
+
+    if (!response.ok) {
+      console.error(await response.text());
+      return;
+    } else {
+      const data = await response.json();
+      console.log(data);
+    }
 
     // fake an 80ms second delay
     await new Promise((resolve) => setTimeout(resolve, 80));
