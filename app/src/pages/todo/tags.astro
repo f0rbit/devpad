@@ -13,7 +13,6 @@ const tags = (await getUserTags(user.id)) ?? [];
   <main>
     <section>
       <h5>tags</h5>
-      <pre>{JSON.stringify(tags, null, 2)}</pre>
       <br />
       <TagEditor client:load tags={tags} owner_id={user.id} />
     </section>
