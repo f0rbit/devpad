@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, isNull, and, or } from "drizzle-orm";
 import { tag, task_tag } from "../../database/schema";
 import { db } from "../../database/db";
 import type { UpsertTag } from "./types";
@@ -6,6 +6,12 @@ import type { UpsertTag } from "./types";
 
 export async function getUserTags(user_id: string) {
   const tags = await db.select().from(tag).where(eq(tag.owner_id, user_id));
+
+  return tags;
+}
+
+export async function getActiveUserTags(user_id: string) {
+  const tags = await db.select().from(tag).where(and(eq(tag.owner_id, user_id), or(isNull(tag.deleted), eq(tag.deleted, false))));
 
   return tags;
 }

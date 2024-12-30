@@ -68,10 +68,10 @@ export async function getTask(todo_id: string) {
   if (!todo || todo.length != 1) {
     return null;
   }
-  const found = todo[0] as Task & { tags: TagLink[] };
+  const found = todo[0] as _FetchTaskUnion;
 
   const tags = await db.select().from(task_tag).where(eq(task_tag.task_id, found.task.id));
-  found.tags = tags ?? [];
+  found.tags = tags?.map((t) => t.tag_id) ?? [];
 
   return found;
 }
