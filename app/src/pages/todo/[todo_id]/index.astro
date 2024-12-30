@@ -29,6 +29,10 @@ if (task.owner_id !== user.id)
 
 const user_tags = await getUserTags(user.id);
 
+// tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
+const tag_map = new Map(user_tags.map((t) => [t.id, t]));
+const current_tags = tags?.map((t) => tag_map.get(t.tag_id)) ?? [];
+
 const from = Astro.url.searchParams.get("from")! || "";
 ---
 
@@ -108,7 +112,7 @@ const from = Astro.url.searchParams.get("from")! || "";
     <div class="editor">
       <label for="tags">Tags</label>
       <TagPicker
-        currentTags={tags}
+        currentTags={current_tags}
         availableTags={user_tags ?? []}
         owner_id={user.id}
         client:load
