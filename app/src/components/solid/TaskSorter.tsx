@@ -9,6 +9,7 @@ import FolderSearch from "lucide-solid/icons/folder-search";
 import type { Tag as UserTag } from "../../server/tags";
 import { TagSelect } from "./TagPicker";
 import Tag from "lucide-solid/icons/tag";
+import type { UpsertTag } from "../../server/types";
 
 const options = ["recent", "priority", "progress"] as const;
 
@@ -100,7 +101,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags }: { 
             if (project == null) return null;
             return (
               <li>
-                <TaskCard task={task} project={project} from={from} />
+                <TaskCard task={task} project={project} from={from} user_tags={tags as UpsertTag[]}  />
               </li>
             );
           }}

@@ -106,9 +106,9 @@ export function TagPicker({ currentTags, availableTags, owner_id }: { currentTag
 
 }
 
-function TagBadge({ tag, onRemove }: { tag: UpsertTag, onRemove?: () => void }) {
+export function TagBadge({ tag, onRemove }: { tag: UpsertTag, onRemove?: () => void }) {
   return (
-    <div class="tag-badge" style={`background-color: ${tag.color}`}>
+    <div class="tag-badge" style={`background-color: ${tag.color}; color: var(--text-secondary);`}>
       {tag.title}
       {onRemove &&
         <div onClick={onRemove} class="flex-row">
