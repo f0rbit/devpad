@@ -28,7 +28,8 @@ const history = await getProjectHistory(project_uuid);
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
   <ProjectTasksLayout project_id={project_id}>
-    <h3>Updates</h3>
+    <h5>timeline</h5>
+    <br />
     <HistoryTimeline actions={history} client:load />
     </ul>
   </ProjectTasksLayout>

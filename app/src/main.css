@@ -447,7 +447,7 @@ article {
 .timeline-container {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem; 
+  gap: 1rem; 
   padding-left: 30px;
   position: relative;
 }
@@ -479,8 +479,9 @@ article {
 }
 
 .timeline-item {
-  display: flex;
-  gap: 0.5rem;
   position: relative;
+  display: flex;
+  flex-direction: column;  
+  gap: 0.25rem;
 }
 

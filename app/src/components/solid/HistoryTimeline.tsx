@@ -3,6 +3,8 @@
 // using solidjs
 import { createSignal, For } from "solid-js";
 import type { HistoryAction } from "../../server/types";
+import type { ActionType } from "../../../database/schema";
+import ScanText from "lucide-solid/icons/scan-text";
 
 const pageSize = () => 10;
 
@@ -74,25 +76,62 @@ export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
     <div class="flex-col">
       <div class="timeline-container">
         <For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>
-          {(action) => (
-            <div class="timeline-item">
-              <div>
-                {action.created_at}
-              </div>
-              <div>
-                {action.type}
-              </div>
-              <div>
-                {action.description}
-              </div>
-            </div>
-          )}
+          {(action) => <TimelineItem action={action} />}
         </For>
       </div>
       <div>
         <div class="flex-col">
           <PageControls />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TimelineItem({ action }: { action: HistoryAction }) {
+
+  const ActionDate = () => {
+    // format it like YYYY/MM/DD 08:15 PM
+    // and the time needs to be converted to local timezone.
+    // use Intl.DateTimeFormat to do this.
+    const date = new Date(action.created_at);
+    const dateString = date.toLocaleDateString("en-AU", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    });
+
+    const timeString = date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+      hour12: true,
+    });
+
+    return (
+      <div class="date-highlighted flex-row" style={{ "color": "var(--text-tertiary)" }}>
+        <div class="date">{timeString}</div>
+        <div class="year">{dateString}</div>
+      </div>
+    );
+  };
+
+  const ActionIcon = ({ type }: { type: HistoryAction['type'] }) => {
+    switch (type) {
+      case "SCAN":
+        return <ScanText />;
+      default:
+        return <span>?</span>;
+    }
+  };
+
+  return (
+    <div class="timeline-item">
+      <div class="flex-row">
+        <ActionIcon type={action.type} />
+        <ActionDate />
+      </div>
+      <div>
+        {action.description}
       </div>
     </div>
   );
