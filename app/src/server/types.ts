@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { todo_updates, tracker_result } from "../../database/schema";
+import type { ActionType, action, todo_updates, tracker_result } from "../../database/schema";
 import type { Task } from "./tasks";
+import ScanText from "lucide-solid/icons/scan-text";
 
 export const upsert_project = z.object({
   id: z.string().optional().nullable(),
@@ -96,3 +97,6 @@ export const update_user = z.object({
 export type UpdateUser = z.infer<typeof update_user>;
 
 export type TaskView = NonNullable<UpdateUser['task_view']>;
+
+
+export type HistoryAction = Omit<typeof action.$inferSelect, "updated_at" | "owner_id" | "type"> & { type: ActionType | "SCAN" }
