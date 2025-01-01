@@ -4,6 +4,7 @@ import { getProject } from "../../../../server/projects.ts";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getProjectHistory } from "../../../../server/action";
+import HistoryTimeline from "../../../../components/solid/HistoryTimeline";
 
 const { project_id } = Astro.params;
 if (!project_id)
@@ -28,14 +29,7 @@ const history = await getProjectHistory(project_uuid);
 <PageLayout title={`Codebase - ${project_id} - Update`}>
   <ProjectTasksLayout project_id={project_id}>
     <h3>Updates</h3>
-    <ul>
-      {
-        history.map((u) => (
-          <li>
-            {u.created_at} - {u.description}
-          </li>
-        ))
-      }
+    <HistoryTimeline actions={history} client:load />
     </ul>
   </ProjectTasksLayout>
 </PageLayout>
