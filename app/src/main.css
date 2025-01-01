@@ -442,3 +442,45 @@ article {
     color: var(--text-subtlish);
   }
 }
+
+
+.timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem; 
+  padding-left: 30px;
+  position: relative;
+}
+
+.timeline-container::before {
+  content: "";
+  display: block;
+  width: 1px;
+  height: calc(100% - 1rem);
+  background: var(--input-border);
+  position: absolute;
+  left: 10px;
+  top: 0.5rem;
+}
+
+.timeline-item::before {
+  content: "";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--input-border);
+  border-radius: 50%;
+  position: absolute;
+  left: -23.5px;
+  top: 0.5rem;
+  outline: 1px solid var(--bg-primary);
+}
+
+.timeline-item {
+  display: flex;
+  gap: 0.5rem;
+  position: relative;
+}
+

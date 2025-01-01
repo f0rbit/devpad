@@ -1,11 +1,8 @@
 // takes an array of HistoryAction[], draws a timeline of them.
 // we want to add pagination as well.
 // using solidjs
-
 import { createSignal, For } from "solid-js";
 import type { HistoryAction } from "../../server/types";
-import ChevronLeft from "lucide-solid/icons/chevron-left";
-import ChevronRight from "lucide-solid/icons/chevron-right";
 
 const pageSize = () => 10;
 
@@ -75,10 +72,10 @@ export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
 
   return (
     <div class="flex-col">
-      <div class="flex-col">
+      <div class="timeline-container">
         <For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>
           {(action) => (
-            <div>
+            <div class="timeline-item">
               <div>
                 {action.created_at}
               </div>
