@@ -43,7 +43,7 @@
 
 # todo tracker integration
 - [ ] remove old scanned repos
-- [ ] add config modification
+- [x] add config modification
 - [x] render diff
 - [ ] if all tasks are "SAME", don't create new update
 - [x] on approve > create tasks
@@ -65,10 +65,10 @@
         - [x] add description
         - [x] set start date
         - [x] set end date
-        - [ ] tag management
-            - [ ] tags are scoped per-user
-            - [ ] any task the user owns can be assigned to any tag the user owns
-            - [ ] tags should have a 'colour' field & title
+        - [x] tag management
+            - [x] tags are scoped per-user
+            - [x] any task the user owns can be assigned to any tag the user owns
+            - [x] tags should have a 'colour' field & title
         - [x] add a summary
         - [x] set a priority
         - [x] set visiblity
@@ -124,6 +124,6 @@ tasks are made of many different fields, outlined above. They also contain links
 - [ ] task management
 	- [x] better edit screen
 	- [ ] support for modules
-	- [ ] link to codebase scan
+	- [x] link to codebase scan
 - [ ] on failed scan, add a "failed" row to history
 	- [ ] write out metadata so we can see if things failed
