@@ -3,14 +3,16 @@
 // using solidjs
 import { createSignal, For } from "solid-js";
 import type { HistoryAction } from "../../server/types";
-import type { ActionType } from "../../../database/schema";
 import ScanText from "lucide-solid/icons/scan-text";
+import FolderPen from "lucide-solid/icons/folder-pen";
+import FolderPlus from "lucide-solid/icons/folder-plus";
+import FolderMinus from "lucide-solid/icons/folder-minus";
 
 const pageSize = () => 10;
 
 export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
   // duplicate the actions x30 for testing
-  const actions = props.actions.flatMap((action) => Array(50).fill(action));
+  const actions = props.actions;
   const [page, setPage] = createSignal(0);
 
   const pageCount = () => Math.ceil(actions.length / pageSize());
@@ -91,24 +93,33 @@ export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
 function TimelineItem({ action }: { action: HistoryAction }) {
 
   const ActionDate = () => {
-    // format it like YYYY/MM/DD 08:15 PM
-    // and the time needs to be converted to local timezone.
-    // use Intl.DateTimeFormat to do this.
-    const date = new Date(action.created_at);
-    const dateString = date.toLocaleDateString("en-AU", {
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-    });
+    // Ensure 'action' is passed as a prop
+    if (!action || !action.created_at) {
+      return null; // Handle the case where action or created_at is undefined
+    }
 
-    const timeString = date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "numeric",
+    // Parse the UTC date and convert it to a Date object
+    const utcDate = new Date(action.created_at + "Z");
+
+    // Automatically detect the user's locale
+    const userLocale = navigator.language || "en-US";
+
+    // Format the date and time in the user's locale and convert it to local timezone
+    const dateString = new Intl.DateTimeFormat(userLocale, {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(utcDate);
+
+    const timeString = new Intl.DateTimeFormat(userLocale, {
+      hour: "2-digit",
+      minute: "2-digit",
       hour12: true,
-    });
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    }).format(utcDate);
 
     return (
-      <div class="date-highlighted flex-row" style={{ "color": "var(--text-tertiary)" }}>
+      <div class="date-highlighted flex-row" style={{ color: "var(--text-tertiary)" }}>
         <div class="date">{timeString}</div>
         <div class="year">{dateString}</div>
       </div>
@@ -119,6 +130,12 @@ function TimelineItem({ action }: { action: HistoryAction }) {
     switch (type) {
       case "SCAN":
         return <ScanText />;
+      case "UPDATE_PROJECT":
+        return <FolderPen />;
+      case "CREATE_PROJECT":
+        return <FolderPlus />;
+      case "DELETE_PROJECT":
+        return <FolderMinus />;
       default:
         return <span>?</span>;
     }
