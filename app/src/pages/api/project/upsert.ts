@@ -2,6 +2,7 @@ import type { APIContext } from "astro";
 import { upsert_project, type UpsertProject } from "../../../server/types";
 import { db } from "../../../../database/db";
 import { project } from "../../../../database/schema";
+import { addProjectAction, getProject, getProjectById } from "../../../server/projects";
 
 type CompleteUpsertProject = Omit<UpsertProject, "id"> & { id: string };
 
@@ -26,6 +27,13 @@ export async function PATCH(context: APIContext) {
   if (data.owner_id != context.locals.user.id) {
     return new Response(null, { status: 401 });
   }
+
+  const exists = await (async () => {
+    if (!data.id) return false;
+    return (await getProjectById(data.id))?.project ? true : false;
+  })();
+
+  console.log("project exists?", exists);
 
   try {
 
@@ -55,6 +63,19 @@ export async function PATCH(context: APIContext) {
     const new_project = await db.insert(project).values(insert).onConflictDoUpdate({ target: [project.id], set: insert }).returning();
 
     if (new_project.length != 1) throw new Error(`Project upsert returned incorrect rows (${new_project.length}`);
+
+    const project_id = new_project[0].id;
+
+    if (!exists) {
+      // add CREATE_PROJECT action
+      await addProjectAction({ owner_id: data.owner_id, project_id, type: "CREATE_PROJECT", description: "Created project" });
+    } else if (data.specification) {
+      // add UPDATE_PROJECT action with 'updated specification' description
+      await addProjectAction({ owner_id: data.owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated specification" });
+    } else {
+      // add UPDATE_PROJECT action
+      await addProjectAction({ owner_id: data.owner_id, project_id , type: "UPDATE_PROJECT", description: "Updated project" });
+    }
 
     // return the project data
     return new Response(JSON.stringify(new_project[0]));

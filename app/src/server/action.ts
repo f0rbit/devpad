@@ -2,6 +2,7 @@ import { db } from "../../database/db";
 import { action, todo_updates, type ActionType } from "../../database/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "./types";
+import { getProjectById } from "./projects";
 
 
 export async function getActions(user_id: string, action_filter: ActionType[] | null) {
@@ -25,8 +26,15 @@ export async function getProjectScanHistory(project_id: string) {
 export async function getProjectHistory(project_id: string) {
   const project_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
 
+  // get the user id from the project
+  const { project, error } = await getProjectById(project_id);
+  if (error || !project) return [];
+  const user_id = project.owner_id;
+
   // for actions, look through the 'data' json field, if action.project_id == project_id
-  const actions = await getActions(project_id, project_filter);
+  const actions = await getActions(user_id, project_filter);
+
+  console.log(project_id);
 
   const filtered: HistoryAction[] = actions.filter((a) => {
     const data = (a.data as any);
