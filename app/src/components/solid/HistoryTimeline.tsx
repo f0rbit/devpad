@@ -7,6 +7,9 @@ import ScanText from "lucide-solid/icons/scan-text";
 import FolderPen from "lucide-solid/icons/folder-pen";
 import FolderPlus from "lucide-solid/icons/folder-plus";
 import FolderMinus from "lucide-solid/icons/folder-minus";
+import FilePlus2 from "lucide-solid/icons/file-plus-2";
+import FilePen from "lucide-solid/icons/file-pen";
+import FileMinus2 from "lucide-solid/icons/file-minus-2";
 
 const pageSize = () => 10;
 
@@ -63,7 +66,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
       <div class="flex-row icons">
         {renderPageNumbers().map((item) => (
           <a
-            href="#"
+            role="button"
             class={item === page() ? "active" : ""}
             onClick={() => typeof item === "number" && setPage(item)}
           >
@@ -136,6 +139,12 @@ function TimelineItem({ action }: { action: HistoryAction }) {
         return <FolderPlus />;
       case "DELETE_PROJECT":
         return <FolderMinus />;
+      case "CREATE_TASK":
+        return <FilePlus2 />;
+      case "UPDATE_TASK":
+        return <FilePen />;
+      case "DELETE_TASK":
+        return <FileMinus2 />;
       default:
         return <span>?</span>;
     }
