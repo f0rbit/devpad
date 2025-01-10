@@ -50,7 +50,7 @@ export const TaskCard = (props: Props) => {
           <TaskProgress progress={task.progress} onClick={() => {
             console.log("clicked");
             // TODO: increment progress
-          }} type="circle" />
+          }} type="box" />
         </span>
         <span>
           <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
