@@ -130,7 +130,7 @@ const DueDate = ({ date }: { date: string | null }) => {
 }
 
 export function TaskProgress({ progress, onClick, type }: { progress: Task['task']['progress'], onClick: () => void, type: "box" | "circle" }) {
-  // TODO: completed items don't need an onclick?
+  // TODO: completed items don't need <a> or onclick
   switch (type) {
     case "box": {
       if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Square /></a>;
