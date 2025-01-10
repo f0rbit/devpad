@@ -5,6 +5,8 @@ import { upsert_tag, upsert_todo, type UpsertTodo } from "../../../server/types"
 import { z } from "zod";
 import { getTaskTags, upsertTag } from "../../../server/tags";
 import { and, eq, inArray, sql } from "drizzle-orm";
+import { getTask } from "../../../server/tasks";
+import { addTaskAction } from "../../../server/projects";
 
 type CompleteUpsertTodo = Omit<UpsertTodo, "todo_id"> & { id: string, updated_at: string };
 
@@ -31,6 +33,8 @@ export async function PUT(context: APIContext) {
   let tag_ids: string[] = [];
 
   if (body.tags) {
+    // TODO: add actions for tags
+
     // parse upsert tags
     const tag_parse = upsert_tags.safeParse(body.tags);
     if (!tag_parse.success) {
@@ -43,6 +47,15 @@ export async function PUT(context: APIContext) {
     tag_ids = await Promise.all(promises);
   }
 
+  const previous = await (async () => {
+    if (!data.id) return null;
+    return (await getTask(data.id))?.task ?? null;
+  })();
+  
+  const exists = !!previous;
+
+  const project_id = data.project_id ?? previous?.project_id ?? null;
+
   try {
     const insert = data as CompleteUpsertTodo;
     insert.updated_at = new Date().toISOString();
@@ -50,6 +63,15 @@ export async function PUT(context: APIContext) {
     const new_todo = await db.insert(task).values(insert).onConflictDoUpdate({ target: [task.id], set: insert }).returning();
 
     if (new_todo.length != 1) throw new Error(`Todo upsert returned incorrect rows (${new_todo.length}`);
+
+    if (!exists) {
+      // add CREATE_TASK action
+      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo[0].id, type: "CREATE_TASK", description: "Created task", project_id });
+    } else {
+      // add UPDATE_TASK action
+      // TODO: for task updates, include the changes as a diff in the data
+      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo[0].id, type: "UPDATE_TASK", description: "Updated task", project_id });
+    }
 
     // link each tag to every task
     if (tag_ids.length > 0) {

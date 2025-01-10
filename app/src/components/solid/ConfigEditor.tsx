@@ -160,6 +160,14 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
       });
   };
 
+  const commit_message = () => {
+    const branch = selectedBranch();
+    if (!branch) return "";
+    if (!branches) return "";
+    if (!branches[branch]) return "";
+    return branches[branch]?.commit.message ?? "";
+  };
+
 
   console.log(branches);
 
@@ -180,7 +188,7 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
               )}
             </For>
           </select>
-          <p style="font-size: small">{selectedBranch() != null ? branches[selectedBranch()!].commit.message : ""}</p>
+          <p style="font-size: small">{commit_message()}</p>
         </div>
       </div>
       ) : null}

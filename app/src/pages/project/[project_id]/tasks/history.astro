@@ -1,42 +1,37 @@
 ---
-/** 
- * @idea this should track changes to all tasks, not just scans. scan history should be able to be inspected to see breakdown
- * of changes and what we accepted/rejected
- */
-import { db } from "../../../../../database/db";
-import { todo_updates } from "../../../../../database/schema";
-import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
+/** @idea scan history should be able to be inspected to see breakdown of changes and what we accepted/rejected */
+import { getProject } from "../../../../server/projects.ts";
 import PageLayout from "../../../../layouts/PageLayout.astro";
-import { eq, desc } from "drizzle-orm";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
+import { getProjectHistory } from "../../../../server/action";
+import HistoryTimeline from "../../../../components/solid/HistoryTimeline";
 
 const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!project_id)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+if (!user)
+  return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project: found_project, error } = (await getProject(user?.id ?? null, project_id)) ?? null;
+const { project: found_project, error } =
+  (await getProject(user?.id ?? null, project_id)) ?? null;
 if (error) return new Response(null, { status: 500, statusText: error });
-if (!found_project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!found_project)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 
 const project_uuid = found_project.id;
 
 // get all updates as well
-/** @todo functionalise this */
-const updates = project_uuid ? await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_uuid)).orderBy(desc(todo_updates.created_at)) : [];
+const history = await getProjectHistory(project_uuid);
+
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
-	<ProjectTasksLayout project_id={project_id}>
-		<h3>Updates</h3>
-		<ul>
-			{
-				updates.map((u: any) => (
-					<li>
-						{u.created_at} - {u.status}
-					</li>
-				))
-			}
-		</ul>
-	</ProjectTasksLayout>
+  <ProjectTasksLayout project_id={project_id}>
+    <h5>timeline</h5>
+    <br />
+    <HistoryTimeline actions={history} client:load />
+    </ul>
+  </ProjectTasksLayout>
 </PageLayout>
+

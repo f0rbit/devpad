@@ -71,6 +71,7 @@ export async function POST(context: APIContext) {
     }
     // we want to group into 'upserts', 'deletes'
     const upserts = codebase_items.filter((item) => item.type == "NEW" || item.type == "UPDATE" || item.type == "SAME" || item.type == "MOVE");
+    const changed = upserts.filter((item) => item.type != "SAME");
     const deletes = codebase_items.filter((item) => item.type == "DELETE");
 
     // run the upserts
@@ -135,10 +136,9 @@ export async function POST(context: APIContext) {
         await db.insert(task).values(values);
       }
 
-      const update_tasks = found_ids.filter(Boolean) as string[];
-      if (found_ids.length > 0) {
-        // update the updated_at field of all found tasks
-        await db.update(task).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.codebase_task_id, update_tasks));
+      // set the updated_at field of all changed tasks
+      if (changed.length > 0) {
+        await db.update(task).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.codebase_task_id, changed.map((item) => item.id)));
       }
 
     } catch (e) {

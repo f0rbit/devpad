@@ -55,6 +55,8 @@ const ACTIONS = [
   "CREATE_CHECKLIST", "UPDATE_CHECKLIST", "DELETE_CHECKLIST",
 ] as const;
 
+export type ActionType = typeof ACTIONS[number];
+
 export const action = sqliteTable("action", {
   id: text("id").primaryKey().$defaultFn(() => "action_" + crypto.randomUUID()),
   owner_id: text("owner_id").references(() => user.id),

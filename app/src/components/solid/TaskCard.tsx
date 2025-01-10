@@ -7,6 +7,12 @@ import { TagBadge } from "./TagPicker";
 import type { UpsertTag } from "../../server/types";
 import CalendarX2 from "lucide-solid/icons/calendar-x-2";
 import Calendar from "lucide-solid/icons/calendar";
+import Square from "lucide-solid/icons/square";
+import SquareDot from "lucide-solid/icons/square-dot";
+import SquareCheck from "lucide-solid/icons/square-check";
+import Circle from "lucide-solid/icons/circle";
+import CircleDot from "lucide-solid/icons/circle-dot";
+import CircleCheck from "lucide-solid/icons/circle-check";
 
 interface Props {
   task: Task;
@@ -37,25 +43,32 @@ export const TaskCard = (props: Props) => {
     return <CalendarClock />;
   }
 
-  const past_due = task.end_time && new Date(task.end_time) < new Date();
-
   return (
     <div class="flex-col" style={{ "gap": "3px", height: "100%" }}>
-      <div style={{ "font-size": "small", color: "var(--text-tertiary)" }}>
-        <span class='date-highlighted'><FormattedDate date={task.updated_at} /></span>
-        {" - "}
-        <span>{project_name}</span>
+      <div>
+        <span class="progress-icon">
+          <TaskProgress progress={task.progress} onClick={() => {
+            console.log("clicked");
+            // TODO: increment progress
+          }} type="box" />
+        </span>
+        <span>
+          <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
+        </span>
       </div>
-      <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
-      <p>{task.summary}</p>
+      {task.summary && <p>{task.summary}</p>}
       <div style={{ height: "100%" }} />
       <div class={`flex-col ${priority_class}`} style={{ "font-size": "small", gap: "6px" }}>
-        <span class="flex-row">
+        {tag_list.length > 0 && <span class="flex-row">
           <For each={tag_list}>
             {(tag) => <TagBadge tag={tag} />}
           </For>
+        </span>}
+        <span class="flex-row">
+          <Clock />
+          <DueDate date={task.end_time} />
+          {project_name && <span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>{" - "}{project_name}</span>}
         </span>
-        <span class="flex-row"><Clock /><DueDate date={task.end_time} /></span>
       </div>
     </div>
   );
@@ -100,7 +113,7 @@ const DueDate = ({ date }: { date: string | null }) => {
   if (diffMinutes < 60) span = <span>{Math.round(diffMinutes)} minutes</span>;
   if (diffHours < 48) span = <span>{Math.round(diffHours)} hours</span>;
   if (diffDays < 14) span = <span>{Math.round(diffDays)} days</span>;
-  
+
   if (span) {
     if (past) return <span>{span} ago</span>;
     return span;
@@ -114,5 +127,23 @@ const DueDate = ({ date }: { date: string | null }) => {
       <span>, {due.getFullYear()}</span>
     </>
   );
+}
+
+export function TaskProgress({ progress, onClick, type }: { progress: Task['task']['progress'], onClick: () => void, type: "box" | "circle" }) {
+  // TODO: completed items don't need <a> or onclick
+  switch (type) {
+    case "box": {
+      if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Square /></a>;
+      if (progress == "IN_PROGRESS") return <a role="button" onClick={onClick}><SquareDot /></a>;
+      if (progress == "COMPLETED") return <a role="button" onClick={onClick}><SquareCheck /></a>;
+    }
+    case "circle": {
+      if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Circle /></a>;
+      if (progress == "IN_PROGRESS") return <a role="button" onClick={onClick}><CircleDot /></a>;
+      if (progress == "COMPLETED") return <a role="button" onClick={onClick}><CircleCheck /></a>;
+    }
+  }
+
+  throw new Error(`Invalid task progress type: ${type}`);
 }
 
