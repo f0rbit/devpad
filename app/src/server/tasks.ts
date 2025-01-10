@@ -1,6 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
-import { codebase_tasks, task, task_tag } from "../../database/schema";
+import { action, codebase_tasks, task, task_tag, type ActionType } from "../../database/schema";
 import { db } from "../../database/db";
+import { doesUserOwnProject } from "./projects";
 
 
 export async function getUserTasks(user_id: string) {
@@ -74,4 +75,22 @@ export async function getTask(todo_id: string) {
   found.tags = tags?.map((t) => t.tag_id) ?? [];
 
   return found;
+}
+
+
+export async function addTaskAction({ owner_id, task_id, type, description, project_id }: { owner_id: string, task_id: string, type: ActionType, description: string, project_id: string | null }) {
+  // if project_id is null, don't write anything to the data field
+  const data = { task_id } as { task_id: string, project_id?: string };
+  if (project_id) {
+    const user_owns = await doesUserOwnProject(owner_id, project_id);
+    if (!user_owns) return false;
+    data.project_id = project_id;
+  }
+
+  // add the action
+  await db.insert(action).values({ owner_id, type, description, data });
+
+  console.log("inserted action", type);
+
+  return true;
 }
