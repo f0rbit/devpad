@@ -141,11 +141,11 @@ const task_history = await getTaskHistory(todo_id);
       )
     }
     {
-      task_history && (
+      task_history?.length > 0 && (
         <>
           <br />
           <h5 style="margin-bottom: 10px">task history</h5>
-          <HistoryTimeline actions={task_history} client:load  />
+          <HistoryTimeline actions={task_history} client:load />
         </>
       )
     }
