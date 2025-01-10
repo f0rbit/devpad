@@ -9,6 +9,8 @@ import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
 import { getActiveUserTags } from "../../../server/tags";
 import { TagPicker } from "../../../components/solid/TagPicker";
+import { getTaskHistory } from "../../../server/action";
+import HistoryTimeline from "../../../components/solid/HistoryTimeline";
 
 const { todo_id } = Astro.params;
 if (!todo_id)
@@ -19,7 +21,8 @@ if (!user)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
 const found = await getTask(todo_id);
-if (!found) return new Response(null, { status: 404, statusText: "Task not found" });
+if (!found)
+  return new Response(null, { status: 404, statusText: "Task not found" });
 
 const { task, codebase_tasks, tags } = found;
 
@@ -33,6 +36,8 @@ const tag_map = new Map(user_tags.map((t) => [t.id, t]));
 const current_tags = tags.map((tag_id) => tag_map.get(tag_id)) ?? [];
 
 const from = Astro.url.searchParams.get("from")! || "";
+
+const task_history = await getTaskHistory(todo_id);
 ---
 
 <PageLayout title={"Editing Task"}>
@@ -129,8 +134,18 @@ const from = Astro.url.searchParams.get("from")! || "";
     {
       codebase_tasks && (
         <>
+          <br />
           <h5>linked code</h5>
           <LinkedCode code={codebase_tasks} />
+        </>
+      )
+    }
+    {
+      task_history && (
+        <>
+          <br />
+          <h5 style="margin-bottom: 10px">task history</h5>
+          <HistoryTimeline actions={task_history} client:load  />
         </>
       )
     }

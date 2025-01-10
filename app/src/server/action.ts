@@ -3,6 +3,7 @@ import { action, todo_updates, type ActionType } from "../../database/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "./types";
 import { getProjectById } from "./projects";
+import { getTask } from "./tasks";
 
 
 export async function getActions(user_id: string, action_filter: ActionType[] | null) {
@@ -23,6 +24,12 @@ export async function getProjectScanHistory(project_id: string) {
     .orderBy(desc(todo_updates.created_at))
 }
 
+function sortByDate(a: HistoryAction, b: HistoryAction) {
+  const a_time = new Date(a.created_at);
+  const b_time = new Date(b.created_at);
+  return b_time.getTime() - a_time.getTime();
+}
+
 export async function getProjectHistory(project_id: string) {
   const project_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
 
@@ -33,8 +40,6 @@ export async function getProjectHistory(project_id: string) {
 
   // for actions, look through the 'data' json field, if action.project_id == project_id
   const actions = await getActions(user_id, project_filter);
-
-  console.log(project_id);
 
   const filtered: HistoryAction[] = actions.filter((a) => {
     const data = (a.data as any);
@@ -54,11 +59,27 @@ export async function getProjectHistory(project_id: string) {
   });
 
   const combined = filtered.concat(mapped_scan);
-  
+
   // sort by .created_at (string)
-  return combined.sort((a,b) => {
-    const a_time = new Date(a.created_at);
-    const b_time = new Date(b.created_at);
-    return b_time.getTime() - a_time.getTime();
+  return combined.sort(sortByDate);
+}
+
+export async function getTaskHistory(task_id: string) {
+  const task_filter: ActionType[] = ["CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
+
+  // get the user id from the project
+  const task = await getTask(task_id);
+  if (!task) return [];
+  const user_id = task.task.owner_id;
+
+  // for actions, look through the 'data' json field, if action.task_id == task_id
+  const actions = await getActions(user_id, task_filter);
+  console.log(actions);
+
+  const filtered: HistoryAction[] = actions.filter((a) => {
+    const data = (a.data as any);
+    return data.task_id == task_id;
   });
+
+  return filtered.sort(sortByDate);
 }
