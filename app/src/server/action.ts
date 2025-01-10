@@ -53,5 +53,12 @@ export async function getProjectHistory(project_id: string) {
     };
   });
 
-  return filtered.concat(mapped_scan);
+  const combined = filtered.concat(mapped_scan);
+  
+  // sort by .created_at (string)
+  return combined.sort((a,b) => {
+    const a_time = new Date(a.created_at);
+    const b_time = new Date(b.created_at);
+    return b_time.getTime() - a_time.getTime();
+  });
 }
