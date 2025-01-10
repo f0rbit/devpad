@@ -72,15 +72,25 @@ export async function getRecentUpdate(project: Project) {
   return update;
 }
 
-export async function addProjectAction({ owner_id, project_id, type, description }: { owner_id: string, project_id: string, type: ActionType, description: string }) {
-  const data = { project_id };
-  // confirm that the user owns the project
+export async function doesUserOwnProject(user_id: string, project_id: string) {
   const { project, error } = await getProjectById(project_id);
-  if (error || !project) {
-    console.error("Error finding project in addProjectAction", error);
+  if (error) {
+    console.error("Error finding project in doesUserOwnProject", error);
     return false;
   }
-  if (project.owner_id != owner_id) return false;
+  if (!project) {
+    // project not found
+    return false;
+  }
+
+  return project.owner_id == user_id;
+}
+
+export async function addProjectAction({ owner_id, project_id, type, description }: { owner_id: string, project_id: string, type: ActionType, description: string }) {
+  const data = { project_id };
+
+  const user_owns = await doesUserOwnProject(owner_id, project_id);
+  if (!user_owns) return false;
 
   // add the action
   await db.insert(action).values({ owner_id, type, description, data });
@@ -89,3 +99,4 @@ export async function addProjectAction({ owner_id, project_id, type, description
 
   return true;
 }
+

@@ -70,6 +70,7 @@ export async function PATCH(context: APIContext) {
 
     const project_id = new_project[0].id;
 
+    // TODO: for project updates, include the changes as a diff in the data
     if (!exists) {
       // add CREATE_PROJECT action
       await addProjectAction({ owner_id: data.owner_id, project_id, type: "CREATE_PROJECT", description: "Created project" });
@@ -78,7 +79,7 @@ export async function PATCH(context: APIContext) {
       await addProjectAction({ owner_id: data.owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated specification" });
     } else {
       // add UPDATE_PROJECT action
-      await addProjectAction({ owner_id: data.owner_id, project_id , type: "UPDATE_PROJECT", description: "Updated project" });
+      await addProjectAction({ owner_id: data.owner_id, project_id , type: "UPDATE_PROJECT", description: "Updated project settings" });
     }
 
     // return the project data
