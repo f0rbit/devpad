@@ -74,7 +74,6 @@ export async function getTaskHistory(task_id: string) {
 
   // for actions, look through the 'data' json field, if action.task_id == task_id
   const actions = await getActions(user_id, task_filter);
-  console.log(actions);
 
   const filtered: HistoryAction[] = actions.filter((a) => {
     const data = (a.data as any);
