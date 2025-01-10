@@ -28,19 +28,23 @@ export async function PATCH(context: APIContext) {
     return new Response(null, { status: 401 });
   }
 
-  const exists = await (async () => {
-    if (!data.id) return false;
-    return (await getProjectById(data.id))?.project ? true : false;
+  const previous = await (async () => {
+    if (!data.id) return null;
+    return (await getProjectById(data.id)).project ?? null;
   })();
 
-  console.log("project exists?", exists);
+  const exists = !!previous;
+
+  const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
+  const repo_url = data.repo_url ?? previous?.repo_url;
+  const fetch_specification = (github_linked && repo_url) && (!data.specification && (previous && !previous.specification));
 
   try {
-
     // the new_project is imported from github and doesn't have a specification, import it from the README
-    if (data.repo_id && data.repo_url && !data.specification) {
+    if (fetch_specification) {
+      console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
       // we need to get OWNER and REPO from the repo_url
-      const slices = data.repo_url.split("/");
+      const slices = repo_url.split("/");
       const repo = slices.at(-1);
       const owner = slices.at(-2);
       if (!context?.locals?.session?.access_token) throw new Error("Linking a github repo without access token");
