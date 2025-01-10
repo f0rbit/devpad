@@ -485,3 +485,12 @@ article {
   gap: 0.25rem;
 }
 
+.progress-icon {
+  display: inline-flex;
+  vertical-align: text-bottom;
+  margin-right: 0.5ch;
+
+  a {
+    display: inline-flex;
+  }
+}
