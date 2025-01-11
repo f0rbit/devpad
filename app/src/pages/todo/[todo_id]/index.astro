@@ -54,9 +54,9 @@ const task_history = await getTaskHistory(todo_id);
       >
       <label for="progress">Progress</label>
       <select id="progress" name="progress" value={task.progress}>
-        <option value="UNSTARTED">Not Started</option>
-        <option value="IN_PROGRESS">In Progress</option>
-        <option value="COMPLETED">Completed</option>
+        <option value="UNSTARTED" selected={task.progress === "UNSTARTED"}>Not Started</option>
+        <option value="IN_PROGRESS" selected={task.progress === "IN_PROGRESS"}>In Progress</option>
+        <option value="COMPLETED" selected={task.progress === "COMPLETED"}>Completed</option>
       </select>
 
       <label for="end_time">End Time</label>
