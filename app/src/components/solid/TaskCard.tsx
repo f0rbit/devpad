@@ -19,6 +19,7 @@ interface Props {
   project: Project;
   from: string;
   user_tags: UpsertTag[];
+  update: (task_id: string, data: any) => void;
 }
 
 export const TaskCard = (props: Props) => {
@@ -37,20 +38,41 @@ export const TaskCard = (props: Props) => {
   }).filter(Boolean) as UpsertTag[];
 
   const Clock = () => {
-    if (!task.end_time) return <Calendar />;
-    const past_due = new Date(task.end_time) < new Date();
+    const end_time = task.end_time;
+    if (!end_time) return <Calendar />;
+    const past_due = new Date(end_time) < new Date();
     if (past_due) return <CalendarX2 />;
     return <CalendarClock />;
+  }
+
+  const progress = async () => {
+    const current_progress = task.progress;
+    if (current_progress == "COMPLETED") return; // can't progress from completed
+    let new_progress: "IN_PROGRESS" | "COMPLETED" = current_progress == "UNSTARTED" ? "IN_PROGRESS" : "COMPLETED";
+    const response = await fetch(`/api/todo/upsert`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: task.id,
+        progress: new_progress,
+        owner_id: task.owner_id,
+      }),
+    });
+    if (!response.ok) {
+      console.error(await response.text());
+      return;
+    } else {
+      props.update(task.id, { progress: new_progress });
+    }
   }
 
   return (
     <div class="flex-col" style={{ "gap": "3px", height: "100%" }}>
       <div>
         <span class="progress-icon">
-          <TaskProgress progress={task.progress} onClick={() => {
-            console.log("clicked");
-            // TODO: increment progress
-          }} type="box" />
+          <TaskProgress progress={task.progress} onClick={progress} type="box" />
         </span>
         <span>
           <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
