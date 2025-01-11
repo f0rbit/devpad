@@ -27,14 +27,14 @@ export type UpsertProject = z.infer<typeof upsert_project>;
 
 export const upsert_todo = z.object({
   id: z.string().optional().nullable(),
-  title: z.string(),
+  title: z.string().optional(),
   summary: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
-  progress: z.union([z.literal("UNSTARTED"), z.literal("IN_PROGRESS"), z.literal("COMPLETED")]),
-  visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]),
+  progress: z.union([z.literal("UNSTARTED"), z.literal("IN_PROGRESS"), z.literal("COMPLETED")]).optional(),
+  visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]).optional(),
   start_time: z.string().optional().nullable(),
   end_time: z.string().optional().nullable(),
-  priority: z.union([z.literal("LOW"), z.literal("MEDIUM"), z.literal("HIGH")]),
+  priority: z.union([z.literal("LOW"), z.literal("MEDIUM"), z.literal("HIGH")]).optional(),
   owner_id: z.string(),
   project_id: z.string().optional().nullable(),
 });
