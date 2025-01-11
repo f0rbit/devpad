@@ -20,6 +20,7 @@ interface Props {
   from: string;
   user_tags: UpsertTag[];
   update: (task_id: string, data: any) => void;
+  draw_project: boolean;
 }
 
 export const TaskCard = (props: Props) => {
@@ -89,7 +90,7 @@ export const TaskCard = (props: Props) => {
         <span class="flex-row">
           <Clock />
           <DueDate date={task.end_time} />
-          {project_name && <span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>{" - "}{project_name}</span>}
+          {(project_name && props.draw_project) && <a href={`/project/${project_name}/tasks`}><span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>{" - "}{project_name}</span></a>}
         </span>
       </div>
     </div>

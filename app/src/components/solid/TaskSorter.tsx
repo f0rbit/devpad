@@ -130,8 +130,10 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
             </option>
           ))}
         </select>
-        <FolderSearch />
-        <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+        {Object.keys(project_map).length > 1 && <>
+          <FolderSearch />
+          <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+        </>}
         <Tag />
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
@@ -167,7 +169,7 @@ function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
           if (project == null) return null;
           return (
             <li>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} />
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}
@@ -185,7 +187,7 @@ function GridView({ tasks, project_map, from, user_tags, update }: ListProps) {
           if (project == null) return null;
           return (
             <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} />
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}
