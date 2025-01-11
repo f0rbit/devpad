@@ -41,7 +41,7 @@ export async function getUserTasks(user_id: string) {
   return tasks;
 }
 
-type _FetchedTask = typeof task.$inferSelect;
+export type _FetchedTask = typeof task.$inferSelect;
 type _FetchedCodebaseTask = typeof codebase_tasks.$inferSelect;
 type _FetchTaskUnion = { task: _FetchedTask, codebase_tasks: _FetchedCodebaseTask, tags: string[] };
 
