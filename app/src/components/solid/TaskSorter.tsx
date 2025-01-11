@@ -29,7 +29,8 @@ type Props = {
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user_id, defaultView }: Props) {
+export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, from, tags, user_id, defaultView }: Props) {
+  const [tasks, setTasks] = createSignal<TaskType[]>(defaultTasks);
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
   const [search, setSearch] = createSignal("");
@@ -40,7 +41,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user
   // sort tasks based on selected option
   createEffect(() => {
     // filter out 'archived' and 'deleted' tasks
-    let filtered = tasks.filter((task) => {
+    let filtered = tasks().filter((task) => {
       if (task.task == null) return false;
       return task.task.visibility !== "ARCHIVED" && task.task.visibility !== "DELETED" && task.task.visibility != "HIDDEN";
     });
@@ -51,7 +52,6 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user
         return task.task.title.toLowerCase().includes(search_term.toLowerCase());
       });
     }
-
 
     const search_project = project();
     if (search_project != null && search_project !== "") {
@@ -86,9 +86,9 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user
       return a.task.id < b.task.id ? -1 : 1;
     });
     setSortedTasks(sorted);
-  });
+  }, [tasks]);
 
-  async function selectView(view: View) {
+  async function selectView(view: TaskView) {
     setView(view);
 
     const body = JSON.stringify({ task_view: view, id: user_id });
@@ -106,6 +106,17 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user
     }
   }
 
+  const update = (task_id: string, data: any) => {
+    // replace the task with the updated task
+    const new_tasks = tasks().map((t) => {
+      if (t.task.id === task_id) {
+        return { ...t, task: { ...t.task, ...data } };
+      }
+      return t;
+    });
+    setTasks(new_tasks);
+  }
+
   return (
     <div class="flex-col" >
       <div class="flex-row" style={{ gap: "9px" }}>
@@ -119,8 +130,10 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user
             </option>
           ))}
         </select>
-        <FolderSearch />
-        <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+        {Object.keys(project_map).length > 1 && <>
+          <FolderSearch />
+          <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+        </>}
         <Tag />
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
@@ -133,7 +146,7 @@ export function TaskSorter({ tasks, defaultOption, project_map, from, tags, user
           </a>
         </div>
       </div>
-      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} /> : <GridView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} />}
+      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} update={update} /> : <GridView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} update={update} />}
 
     </div >
   );
@@ -144,9 +157,10 @@ type ListProps = {
   project_map: Props['project_map'];
   from: Props['from'];
   user_tags: UpsertTag[];
+  update: (task_id: string, data: any) => void;
 };
 
-function ListView({ tasks, project_map, from, user_tags }: ListProps) {
+function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
   return (
     <ul class="flex-col" style={{ gap: "9px" }}>
       <For each={tasks()}>
@@ -155,7 +169,7 @@ function ListView({ tasks, project_map, from, user_tags }: ListProps) {
           if (project == null) return null;
           return (
             <li>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} />
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}
@@ -164,7 +178,7 @@ function ListView({ tasks, project_map, from, user_tags }: ListProps) {
   );
 }
 
-function GridView({ tasks, project_map, from, user_tags }: ListProps) {
+function GridView({ tasks, project_map, from, user_tags, update }: ListProps) {
   return (
     <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
       <For each={tasks()}>
@@ -173,7 +187,7 @@ function GridView({ tasks, project_map, from, user_tags }: ListProps) {
           if (project == null) return null;
           return (
             <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} />
+              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}

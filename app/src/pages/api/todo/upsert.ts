@@ -1,14 +1,13 @@
 import type { APIContext } from "astro";
 import { task, task_tag } from "../../../../database/schema";
 import { db } from "../../../../database/db";
-import { upsert_tag, upsert_todo, type UpsertTodo } from "../../../server/types";
+import { upsert_tag, upsert_todo } from "../../../server/types";
 import { z } from "zod";
 import { getTaskTags, upsertTag } from "../../../server/tags";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { getTask } from "../../../server/tasks";
-import { addTaskAction } from "../../../server/projects";
+import { addTaskAction, getTask, type Task, type _FetchedTask } from "../../../server/tasks";
 
-type CompleteUpsertTodo = Omit<UpsertTodo, "todo_id"> & { id: string, updated_at: string };
+// type CompleteUpsertTodo = Omit<UpsertTodo, "todo_id"> & { id: string, updated_at: string };
 
 const upsert_tags = z.array(upsert_tag);
 
@@ -57,33 +56,43 @@ export async function PUT(context: APIContext) {
   const project_id = data.project_id ?? previous?.project_id ?? null;
 
   try {
-    const insert = data as CompleteUpsertTodo;
-    insert.updated_at = new Date().toISOString();
+    const upsert = data as any;
+    upsert.updated_at = new Date().toISOString();
 
-    const new_todo = await db.insert(task).values(insert).onConflictDoUpdate({ target: [task.id], set: insert }).returning();
 
-    if (new_todo.length != 1) throw new Error(`Todo upsert returned incorrect rows (${new_todo.length}`);
+    let res: _FetchedTask[] | null = null;
+    if (exists) {
+      // perform update
+      res = await db.update(task).set(upsert).where(eq(task.id, upsert.id)).returning();
+    } else {
+      // perform insert
+      res = await db.insert(task).values(upsert).onConflictDoUpdate({ target: [task.id], set: upsert }).returning();
+    }
+    if (!res || res.length != 1) throw new Error(`Todo upsert returned incorrect rows (${res?.length ?? 0})`);
+
+    const [new_todo] = res;
+  
 
     if (!exists) {
       // add CREATE_TASK action
-      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo[0].id, type: "CREATE_TASK", description: "Created task", project_id });
+      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo.id, type: "CREATE_TASK", description: "Created task", project_id });
     } else {
       // add UPDATE_TASK action
       // TODO: for task updates, include the changes as a diff in the data
-      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo[0].id, type: "UPDATE_TASK", description: "Updated task", project_id });
+      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo.id, type: "UPDATE_TASK", description: "Updated task", project_id });
     }
 
     // link each tag to every task
     if (tag_ids.length > 0) {
       try {
-        await upsertTags(new_todo[0].id, tag_ids);
+        await upsertTags(new_todo.id, tag_ids);
       } catch (err) {
         console.error("Error upserting tag links", err);
         return new Response(null, { status: 500 });
       }
     }
 
-    return new Response(JSON.stringify(new_todo[0]), { status: 200 });
+    return new Response(JSON.stringify(new_todo), { status: 200 });
   } catch (err) {
     console.error("Error upserting todo", err);
     return new Response(null, { status: 500 });

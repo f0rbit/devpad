@@ -1,11 +1,10 @@
 ---
 import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
-import { getProject } from "../../../../server/projects";
-import { TaskCard } from "../../../../components/solid/TaskCard";
+import { getProject, getUserProjects, type Project } from "../../../../server/projects";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
-import { getUserTags } from "../../../../server/tags";
-import type { UpsertTag } from "../../../../server/types";
+import { getActiveUserTags, getUserTags } from "../../../../server/tags";
+import { TaskSorter } from "../../../../components/solid/TaskSorter";
 
 const { project_id } = Astro.params;
 if (!project_id)
@@ -14,15 +13,18 @@ const user = Astro.locals.user;
 if (!user)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
+const project_map = {} as Record<string, Project>;
+
 const { project, error } = await getProject(user.id, project_id);
 if (error) return new Response(null, { status: 500, statusText: error });
 if (!project)
   return new Response(null, { status: 404, statusText: "Project not found" });
 
+project_map[project.id] = project;
 const project_uuid = project.id;
 
 const tasks = await getProjectTasks(project_uuid);
-const tags = await getUserTags(user.id);
+const tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={"Project Tasks"}>
@@ -39,18 +41,16 @@ const tags = await getUserTags(user.id);
     }
     <br />
     <ul>
-      {
-        tasks.map((task: any) => (
-          <li>
-            <TaskCard
-              task={task}
-              project={project}
-              from={`/project/${project_id}/tasks`}
-              user_tags={tags as UpsertTag[]}
-            />
-          </li>
-        ))
-      }
+      <TaskSorter
+        tasks={tasks}
+        project_map={project_map}
+        defaultOption={"priority"}
+        from={`/project/${project_id}/tasks`}
+        tags={tags}
+        user_id={user.id}
+        defaultView={user.task_view}
+      client:load
+      />
     </ul>
   </ProjectTasksLayout>
 
