@@ -100,8 +100,8 @@ export async function addProjectAction({ owner_id, project_id, type, description
 export async function getProjectConfig(project_id: string) {
   // Fetch project details
   const { project, error } = await getProjectById(project_id);
-  if (error) return { config: null, error: `Error fetching project: ${error}` };
-  if (!project) return { config: null, error: `Project not found` };
+  if (error) return { config: null, id: null, scan_branch: null, error: `Error fetching project: ${error}` };
+  if (!project) return { config: null, id: null, scan_branch: null, error: `Project not found` };
 
   // Fetch tags and their matches
   const tag_result = await db
@@ -122,9 +122,9 @@ export async function getProjectConfig(project_id: string) {
       match: JSON.parse(row.matches || "[]") as string[],
     }));
   } catch (err) {
-    return { config: null, error: "Error parsing tag matches" };
+    return { config: null, id: null, scan_branch: null, error: "Error parsing tag matches" };
   }
-  if (!tags) return { config: null, error: "Error fetching tags" };
+  if (!tags) return { config: null, id: null, scan_branch: null, error: "Error fetching tags" };
 
 
   // Fetch ignore paths
@@ -143,5 +143,8 @@ export async function getProjectConfig(project_id: string) {
       ignore,
     },
     scan_branch: project.scan_branch,
+    error: null,
   };
 }
+
+export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
