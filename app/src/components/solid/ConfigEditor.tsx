@@ -6,12 +6,13 @@ import { z } from "zod";
 import { ConfigSchema } from "../../server/types";
 import GitBranch from "lucide-solid/icons/git-branch";
 import { createStore } from "solid-js/store";
+import type { Tag } from "../../server/tags";
 
 type Config = z.infer<typeof ConfigSchema>;
 
 /** @todo element to select from a couple default configs for different languages */
 
-const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }: { config: Config, id: string, branches: any[] | null, scan_branch: string | undefined | null }) => {
+const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, user_tags }: { config: Config, id: string, branches: any[] | null, scan_branch: string | undefined | null, user_tags: Tag[] }) => {
   /** @todo change this from any - has to represent the nested signal for matches */
   const [config, setConfig] = createStore({
     tags: initial_config.tags ?? [],
@@ -86,7 +87,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }
   };
 
   const validate = () => {
-    const { tags, ignore } = config;
+    const { tags } = config;
     const tag_names = new Set();
     const all_matches = new Set();
     let valid = true;
@@ -176,6 +177,11 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }
           </div>
         </div>
       ) : null}
+      <datalist id="tags">
+        {user_tags.map((tag) => (
+          <option data-id={tag.id} value={tag.title}>{tag.title}</option>
+        ))}
+      </datalist>
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
           <h5>tags</h5>
@@ -191,6 +197,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }
                 <input
                   type="text"
                   placeholder="Tag Name"
+                  list="tags"
                   value={tag().name}
                   onInput={(e) => updateTagName(index, e.target.value)}
                 />

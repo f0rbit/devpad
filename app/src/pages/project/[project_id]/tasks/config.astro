@@ -4,6 +4,7 @@ import PageLayout from "../../../../layouts/PageLayout.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getBranches } from "../../../../server/github";
 import { getProject, getProjectConfig } from "../../../../server/projects";
+import { getActiveUserTags } from "../../../../server/tags";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -33,6 +34,8 @@ if (owner && repo) {
     );
   }
 }
+
+const available_tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={"Project Config"}>
@@ -42,6 +45,7 @@ if (owner && repo) {
       config={config}
       branches={branches}
       scan_branch={project.scan_branch}
+      user_tags={available_tags}
       client:load
     />
   </ProjectTasksLayout>
