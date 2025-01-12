@@ -40,7 +40,6 @@ export const project = sqliteTable("project", {
   link_text: text("link_text"),
   visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
   current_version: text("current_version"),
-  config_json: text("config_json", { mode: "json" }),
   scan_branch: text("scan_branch"),
 }, (table) => ({
   project_unique: unique().on(table.owner_id, table.project_id)
@@ -195,15 +194,34 @@ export const task_tag = sqliteTable("task_tag", {
 }));
 
 export const commit_detail = sqliteTable("commit_detail", {
-	sha: text("sha").primaryKey(),
-	message: text("message").notNull(),
-	url: text("url").notNull(),
-	avatar_url: text("avatar_url"),
-	author_user: text("author_user").notNull(),
-	author_name: text("author_name"),
-	author_email: text("author_email").notNull(),
-	date: text("date").notNull(),
+  sha: text("sha").primaryKey(),
+  message: text("message").notNull(),
+  url: text("url").notNull(),
+  avatar_url: text("avatar_url"),
+  author_user: text("author_user").notNull(),
+  author_name: text("author_name"),
+  author_email: text("author_email").notNull(),
+  date: text("date").notNull(),
 });
+
+export const tag_config = sqliteTable("tag_config", {
+  id: text("id").primaryKey().$defaultFn(() => "tag_config_" + crypto.randomUUID()),
+  project_id: text("project_id").notNull().references(() => project.id), // Foreign key to projects
+  tag_id: text("tag_id").notNull().references(() => tag.id), // Foreign key to tags
+  match: text("match").notNull(), // Match pattern for this tag
+  created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+
+export const ignore_path = sqliteTable("ignore_path", {
+  id: text("id").primaryKey().$defaultFn(() => "ignore_path_" + crypto.randomUUID()),
+  project_id: text("project_id").notNull().references(() => project.id), // Foreign key to projects
+  path: text("path").notNull(), // Ignore path
+  created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
 
 // relations
 
