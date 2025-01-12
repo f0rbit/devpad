@@ -9,10 +9,7 @@ export async function getUserProjects(user_id: string) {
 
 export type Project = Awaited<ReturnType<typeof getUserProjects>>[0];
 
-export async function getProject(user_id: string | null, project_id: string | undefined | null) {
-  if (!user_id) return { project: null, error: "No user ID" };
-  if (!project_id) return { project: null, error: "No project ID" };
-
+export async function getProject(user_id: string, project_id: string) {
   try {
     const search = await db.select().from(project).where(and(eq(project.owner_id, user_id), eq(project.project_id, project_id)));
     if (!search || !search[0]) return { project: null, error: "Couldn't find project" };
