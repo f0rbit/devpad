@@ -79,7 +79,7 @@ export const ConfigSchema = z.object({
 export const upsert_tag = z.object({
   id: z.string().optional(),
   title: z.string(),
-  color: z.string(),
+  color: z.string().optional(),
   deleted: z.boolean().optional().default(false),
   owner_id: z.string(),
 });
