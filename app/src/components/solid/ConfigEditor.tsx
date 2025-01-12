@@ -195,7 +195,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }
                   onInput={(e) => updateTagName(index, e.target.value)}
                 />
                 <a href="#" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
-                  <X onClick={() => removeTag(index)} />
+                  <X />
                 </a>
               </div>
               <div class="flex-col" style="border-left: 1px solid var(--input-border); padding-left: 10px; gap: 4px;">
@@ -209,7 +209,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }
                         onChange={(e) => updateMatch(index, matchIndex(), e.target.value)}
                       />
                       <a href="#" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
-                        <Minus onClick={() => removeMatch(index, matchIndex())} />
+                        <Minus />
                       </a>
                     </div>
                   )}
