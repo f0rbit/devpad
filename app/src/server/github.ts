@@ -18,6 +18,15 @@ function gh_headers(access_token: string) {
   };
 }
 
+export async function getRepos(access_token: string) {
+  const response = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", { headers: gh_headers(access_token) });
+  if (!response.ok) {
+    console.log(response.status, response.statusText);
+    throw new Error("error fetching repos");
+  }
+  return await response.json();
+}
+
 export async function getRepo(owner: string, repo: string, access_token: string, branch: string | null) {
   let url = `https://api.github.com/repos/${owner}/${repo}/zipball`;
   if (branch) url = `https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`;
