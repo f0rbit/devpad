@@ -76,7 +76,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
     <div class="flex-col" style="gap: 5px;">
       {currentTags().length == 0 && creating() == false ? <p>you haven't created any tags yet</p> : null}
       <For each={currentTags()}>
-        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} />}
+        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id}  />}
       </For>
       {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a href="#" onClick={create} class="flex-row" style="margin-top: 10px" >
         <Plus />

@@ -43,7 +43,8 @@ export async function PATCH(context: APIContext) {
     let tag_ids: string[] = [];
     if (data.config.tags.length > 0) {
       const tag_promises = data.config.tags.map(async (tag) => {
-        const tag_id = await upsertTag({ owner_id: user_id, title: tag.name, deleted: false });
+        // TODO: pick random color from set of presets
+        const tag_id = await upsertTag({ owner_id: user_id, title: tag.name, deleted: false, color: null });
 
         // Upsert tag matches into `tag_config`
         const current_matches = await db.select({ match: tag_config.match }).from(tag_config).where(and(eq(tag_config.project_id, data.id), eq(tag_config.tag_id, tag_id)));

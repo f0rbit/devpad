@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { ActionType, action, todo_updates, tracker_result } from "../../database/schema";
 import type { Task } from "./tasks";
-import ScanText from "lucide-solid/icons/scan-text";
 
 export const upsert_project = z.object({
   id: z.string().optional().nullable(),
@@ -14,7 +13,7 @@ export const upsert_project = z.object({
   repo_id: z.number().optional().nullable(),
   icon_url: z.string().optional().nullable(),
   status: z.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")]),
-  deleted: z.boolean().optional().nullable().default(false),
+  deleted: z.boolean().optional().default(false),
   link_url: z.string().optional().nullable(),
   link_text: z.string().optional().nullable(),
   visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]),
@@ -79,7 +78,7 @@ export const ConfigSchema = z.object({
 export const upsert_tag = z.object({
   id: z.string().optional(),
   title: z.string(),
-  color: z.string().optional(),
+  color: z.string().nullable(),
   deleted: z.boolean().optional().default(false),
   owner_id: z.string(),
 });
