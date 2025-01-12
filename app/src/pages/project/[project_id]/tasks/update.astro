@@ -6,64 +6,75 @@ import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import { getProjectTasks, type Task } from "../../../../server/tasks";
 
 const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!project_id)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+if (!user)
+  return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project: found_project, error } = (await getProject(user?.id ?? null, project_id)) ?? null;
+const { project: found_project, error } = await getProject(user.id, project_id);
 if (error) return new Response(null, { status: 500, statusText: error });
-if (!found_project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!found_project)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 
 const project_uuid = found_project.id;
 
 const project_tasks = await getProjectTasks(project_uuid);
 // build a map of task.codebases_tasks.id -> task
 const codebase_task_map = project_tasks.reduce(
-	(acc, task) => {
-		if (!task.codebase_tasks) return acc;
-		acc[task.codebase_tasks.id] = task;
-		return acc;
-	},
-	{} as Record<string, Task>
+  (acc, task) => {
+    if (!task.codebase_tasks) return acc;
+    acc[task.codebase_tasks.id] = task;
+    return acc;
+  },
+  {} as Record<string, Task>,
 );
 
 // get the most recent todo_update for the project and render it
 // really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(found_project);
 const update_id = update?.id ?? null;
-const update_data = update?.data ? (typeof update.data == "string" ? JSON.parse(update.data) : update.data) : null;
+const update_data = update?.data
+  ? typeof update.data == "string"
+    ? JSON.parse(update.data)
+    : update.data
+  : null;
 ---
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
-	<ProjectTasksLayout project_id={project_id}>
-		{
-			update_data ? (
-				<>
-					<UpdateDiffList items={update_data} tasks={codebase_task_map} />
-					<a href="#" id="approve">
-						Approve
-					</a>
-					<a href="#" id="reject">
-						Reject
-					</a>
-				</>
-			) : (
-				<p>No updates</p>
-			)
-		}
-	</ProjectTasksLayout>
+  <ProjectTasksLayout project_id={project_id}>
+    {
+      update_data ? (
+        <>
+          <UpdateDiffList items={update_data} tasks={codebase_task_map} />
+          <a href="#" id="approve">
+            Approve
+          </a>
+          <a href="#" id="reject">
+            Reject
+          </a>
+        </>
+      ) : (
+        <p>No updates</p>
+      )
+    }
+  </ProjectTasksLayout>
 </PageLayout>
 
 <script is:inline define:vars={{ project_uuid, update_id }}>
-	const url = `/api/project/scan_status?project_id=${project_uuid}`;
-	const accept = async (approve) => {
-		if (event) event.preventDefault();
-		await fetch(url, {
-			method: "POST",
-			body: JSON.stringify({ approved: approve, id: update_id }),
-		});
-		location.reload();
-	};
-	document.getElementById("approve")?.addEventListener("click", () => accept(true));
-	document.getElementById("reject")?.addEventListener("click", () => accept(false));
+  const url = `/api/project/scan_status?project_id=${project_uuid}`;
+  const accept = async (approve) => {
+    if (event) event.preventDefault();
+    await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({ approved: approve, id: update_id }),
+    });
+    location.reload();
+  };
+  document
+    .getElementById("approve")
+    ?.addEventListener("click", () => accept(true));
+  document
+    .getElementById("reject")
+    ?.addEventListener("click", () => accept(false));
 </script>
