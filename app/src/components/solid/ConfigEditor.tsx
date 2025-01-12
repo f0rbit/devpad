@@ -1,196 +1,180 @@
 import Minus from "lucide-solid/icons/minus";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
-import { createSignal, For, Index } from "solid-js";
+import { For, Index } from "solid-js";
 import { z } from "zod";
 import { ConfigSchema } from "../../server/types";
 import GitBranch from "lucide-solid/icons/git-branch";
+import { createStore } from "solid-js/store";
 
 type Config = z.infer<typeof ConfigSchema>;
 
 /** @todo element to select from a couple default configs for different languages */
 
-const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Config, id: string, branches: any[] | null, scan_branch: string | undefined | null }) => {
+const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch }: { config: Config, id: string, branches: any[] | null, scan_branch: string | undefined | null }) => {
   /** @todo change this from any - has to represent the nested signal for matches */
-  const [tags, setTags] = createSignal<any>([]);
-  const [ignorePaths, setIgnorePaths] = createSignal<Config["ignore"]>(config?.ignore ?? []);
-  const [tagError, setTagError] = createSignal("");
-  const [pathError, setPathError] = createSignal("");
-  const [selectedBranch, setSelectedBranch] = createSignal<number | null>(branches?.length ? 0 : null);
-
-  if (scan_branch) {
-   const idx = branches?.findIndex((branch) => branch.name === scan_branch);
-    if (idx != null) setSelectedBranch(idx);
-  }
-
-  if (config?.tags) {
-    // we need to create signals for matches as well
-    const tags = config.tags.map((tag) => {
-      const [matches, setMatches] = createSignal<string[]>(tag.match);
-      return { name: tag.name, matches, setMatches };
-    });
-    setTags(tags);
-  }
+  const [config, setConfig] = createStore({
+    tags: initial_config.tags ?? [],
+    ignore: initial_config?.ignore ?? [],
+    branch: scan_branch ?? null,
+  });
+  const [errors, setErrors] = createStore({
+    tags: "",
+    ignore: "",
+  });
 
   const addTag = () => {
-    const [matches, setMatches] = createSignal<string[]>([]);
-    setTags((prev) => {
-      const updatedTags = [...prev, { name: "", matches, setMatches }];
-      setMatches([]);
-      return updatedTags;
-    });
+    setConfig("tags", [...config.tags, { name: "", match: [] }]);
+    validate();
   };
 
-  const updateTag = (index: number, field: "name" | "match", value: any) => {
-    setTags((prev) => {
-      const updatedTags = [...prev];
-      updatedTags[index][field] = value;
-      return updatedTags;
+  const updateTagName = (index: number, name: string) => {
+    setConfig("tags", (prev) => {
+      return prev.map((t, i) => (i === index ? { ...t, name } : t))
     });
-    validateTags(tags());
+    validate();
   };
 
   const removeTag = (index: number) => {
-    const updatedTags = [...tags()];
-    updatedTags.splice(index, 1);
-    setTags(updatedTags);
-    validateTags(updatedTags);
+    setConfig("tags", (prev) => {
+      return prev.filter((_, i) => i !== index);
+    });
+    validate();
   };
 
   const addMatch = (index: number) => {
-    const updatedTags = [...tags()];
-    updatedTags[index].setMatches([...updatedTags[index].matches(), ""]);
-    setTags(updatedTags);
+    setConfig("tags", (prev) => {
+      return prev.map((t, i) => (i === index ? { ...t, match: [...t.match, ""] } : t))
+    });
+    validate();
   };
 
-  const removeMatch = (tagIndex: number, matchIndex: number) => {
-    const updatedTags = [...tags()];
-    updatedTags[tagIndex].setMatches([...updatedTags[tagIndex].matches().slice(0, matchIndex), ...updatedTags[tagIndex].matches().slice(matchIndex + 1)]);
-    setTags(updatedTags);
-    validateTags(updatedTags);
+  const updateMatch = (index: number, match_index: number, value: string) => {
+    setConfig("tags", (prev) => {
+      return prev.map((t, i) => (i === index ? { ...t, match: t.match.map((m, mi) => (mi === match_index ? value : m)) } : t))
+    });
+    validate();
   };
 
-  const validateTags = (tags: any) => {
-    const tagNames = new Set();
-    const allMatches = new Set();
-    for (const tag of tags) {
-      if (tag.name == "") continue; // empty tags will be ignored on export
-      if (tagNames.has(tag.name)) {
-        setTagError(`Tag name "${tag.name}" must be unique.`);
-        return false;
-      }
-      tagNames.add(tag.name);
-      const matches = typeof tag.matches === "function" ? tag.matches() : tag.match;
-      for (const match of matches) {
-        if (match == "") continue; // empty matches will be ignored on export
-        if (allMatches.has(match)) {
-          setTagError(`Match "${match}" must be unique across tags.`);
-          return false;
-        }
-        allMatches.add(match);
-      }
-    }
-    setTagError("");
-    return true;
+  const removeMatch = (index: number, match_index: number) => {
+    setConfig("tags", (prev) => {
+      return prev.map((t, i) => (i === index ? { ...t, match: t.match.filter((_, mi) => mi !== match_index) } : t))
+    });
+    validate();
   };
 
   const addIgnorePath = () => {
-    setIgnorePaths([...ignorePaths(), ""]);
+    setConfig("ignore", [...config.ignore, ""]);
   };
 
   const updateIgnorePath = (index: number, value: string) => {
-    const updatedPaths = [...ignorePaths()];
-    updatedPaths[index] = value;
-    setIgnorePaths(updatedPaths);
-    validateIgnorePaths(updatedPaths);
+    setConfig("ignore", (prev) => {
+      return prev.map((p, i) => (i === index ? value : p))
+    });
+    validate();
   };
 
   const removeIgnorePath = (index: number) => {
-    const updatedPaths = [...ignorePaths()];
-    updatedPaths.splice(index, 1);
-    setIgnorePaths(updatedPaths);
-    validateIgnorePaths(updatedPaths);
+    setConfig("ignore", (prev) => {
+      return prev.filter((_, i) => i !== index)
+    });
+    validate();
   };
 
-  const validateIgnorePaths = (paths: Config["ignore"], t = tags()) => {
-    console.log({ tags: t, ignore: paths });
-    try {
-      ConfigSchema.parse({ tags: t, ignore: paths });
-      setPathError("");
-      return true;
-    } catch (e: any) {
-      setPathError(e.errors[0]?.message || "Invalid ignore paths.");
-      return false;
-    }
+  const selectBranch = (branch: string | null) => {
+    setConfig("branch", branch);
   };
 
-  const saveConfig = () => {
-    const mapped_tags = tags().map((tag: any) => ({ name: tag.name, match: tag.matches() }));
-    if (!validateTags(mapped_tags) || !validateIgnorePaths(ignorePaths(), mapped_tags)) {
-      alert("Please resolve validation errors before exporting.");
-      return;
-    }
-    // remove tags.setMatches & convert tags.matches() to tag.match as string[]
-    const config = { tags: mapped_tags, ignore: ignorePaths() } as Config;
+  const validate = () => {
+    const { tags, ignore } = config;
+    const tag_names = new Set();
+    const all_matches = new Set();
+    let valid = true;
 
-    // clean up config, removing empty tags, empty matches within tags, and empty ignore paths
-    const cleaned_tags = config.tags.filter((tag) => tag.name != "" && tag.match.length > 0).map((tag) => ({ name: tag.name, match: tag.match.filter((match) => match != "") }));
-    const cleaned_ignore = config.ignore.filter((path) => path != "");
-    const cleaned_config = { tags: cleaned_tags, ignore: cleaned_ignore };
-    const scan_branch = !branches || selectedBranch() == null ? undefined : branches[selectedBranch()!]?.name ?? undefined;
+    setErrors({ tags: "", ignore: "" });
 
-    const body = { id, config: cleaned_config, scan_branch };
-    fetch("/api/project/save_config", {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    })
-      .then((response) => {
-        if (response.ok) {
-          window.location.reload();
-        } else {
-          alert("Error saving config.");
+    for (const tag of tags) {
+      if (!tag.name) continue;
+      if (tag_names.has(tag.name)) {
+        setErrors("tags", `Tag name "${tag.name}" must be unique.`);
+        valid = false;
+      }
+      tag_names.add(tag.name);
+
+      for (const match of tag.match) {
+        if (!match) continue;
+        if (all_matches.has(match)) {
+          setErrors("tags", `Match "${match}" must be unique across tags.`);
+          valid = false;
         }
-      })
-      .catch((error) => {
-        console.error("Error saving config:", error);
-        alert("Error saving config.");
+        all_matches.add(match);
+      }
+    }
+    
+    // TODO: validate that ignore paths are correct glob/regex patterns
+
+    return valid;
+  };
+
+  const save = async () => {
+    if (!validate()) return;
+
+    try {
+      const response = await fetch(`/api/project/save_config`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          config: {
+            tags: config.tags.filter((tag) => tag.name && tag.match.length > 0),
+            ignore: config.ignore.filter((path) => path.trim()),
+          },
+          scan_branch: config.branch ?? undefined,
+          id
+        }),
       });
+
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        setErrors("tags", "Failed to save configuration.");
+      }
+    } catch (error) {
+      console.error("Error saving config:", error);
+      setErrors("tags", "An error occurred while saving.");
+    }
   };
 
   const commit_message = () => {
-    const branch = selectedBranch();
-    if (!branch) return "";
-    if (!branches) return "";
-    if (!branches[branch]) return "";
-    return branches[branch]?.commit.message ?? "";
+    const branch = config.branch;
+    if (!branch) return null;
+    if (!branches) return null;
+    // find branch with same name inside branches
+    const found = branches.find((b) => b.name === branch);
+    if (!found) return null;
+    return found.commit.message;
   };
 
-
-  console.log(branches);
 
   return (
     <div>
       {/* section to pick branch */}
       {branches != null ? (
-      <div class="flex-col" style="gap: 6px; margin-bottom: 20px">
-        <div class="flex-row" style="gap: 20px">
-          <h5>branch</h5>
+        <div class="flex-col" style="gap: 6px; margin-bottom: 20px">
+          <div class="flex-row" style="gap: 20px">
+            <h5>branch</h5>
+          </div>
+          <div class="flex-row" style="gap: 8px">
+            <GitBranch />
+            <select value={config.branch ?? ""} onChange={(e) => selectBranch(e.target.value)}>
+              <For each={branches}>
+                {(branch) => (
+                  <option value={branch.name} selected={branch.name === config.branch}>{branch.name}</option>
+                )}
+              </For>
+            </select>
+            <p style="font-size: small">{commit_message()}</p>
+          </div>
         </div>
-        <div class="flex-row" style="gap: 8px">
-          <GitBranch />
-          <select value={selectedBranch() ?? ""} onChange={(e) => setSelectedBranch(parseInt(e.target.value))}>
-            <For each={branches}>
-              {(branch, index) => (
-                <option value={index()} selected={index() === selectedBranch()}>{branch.name}</option>
-              )}
-            </For>
-          </select>
-          <p style="font-size: small">{commit_message()}</p>
-        </div>
-      </div>
       ) : null}
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
@@ -200,7 +184,7 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
             add tag
           </a>
         </div>
-        <Index each={tags()}>
+        <Index each={config.tags}>
           {(tag, index) => (
             <div class="flex-col" style="gap: 4px">
               <div class="flex-row" style="gap: 10px">
@@ -208,31 +192,21 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
                   type="text"
                   placeholder="Tag Name"
                   value={tag().name}
-                  onInput={(e) => updateTag(index, "name", e.target.value)}
+                  onInput={(e) => updateTagName(index, e.target.value)}
                 />
                 <a href="#" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
                   <X onClick={() => removeTag(index)} />
                 </a>
               </div>
               <div class="flex-col" style="border-left: 1px solid var(--input-border); padding-left: 10px; gap: 4px;">
-                <For each={tag().matches()}>
+                <For each={tag().match}>
                   {(match, matchIndex) => (
                     <div class="flex-row" style="gap: 10px">
                       <input
                         type="text"
                         placeholder="Match Pattern"
                         value={match}
-                        onChange={(e) =>
-                          setTags((prev) => {
-                            const updatedTags = [...prev];
-                            updatedTags[index].setMatches([
-                              ...updatedTags[index].matches().slice(0, matchIndex()),
-                              e.target.value,
-                              ...updatedTags[index].matches().slice(matchIndex() + 1),
-                            ]);
-                            return updatedTags;
-                          })
-                        }
+                        onChange={(e) => updateMatch(index, matchIndex(), e.target.value)}
                       />
                       <a href="#" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
                         <Minus onClick={() => removeMatch(index, matchIndex())} />
@@ -248,7 +222,7 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
             </div>
           )}
         </Index>
-        {tagError() && <p style={{ color: "red" }}>{tagError()}</p>}
+        {errors.tags && <p style={{ color: "red" }}>{errors.tags}</p>}
       </div>
       <br />
 
@@ -260,7 +234,7 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
             add path
           </a>
         </div>
-        <For each={ignorePaths()}>
+        <For each={config.ignore}>
           {(path, index) => (
             <div class="flex-row" style="gap: 4px">
               <input
@@ -275,12 +249,12 @@ const TodoScannerConfig = ({ config, id, branches, scan_branch }: { config: Conf
             </div>
           )}
         </For>
-        {pathError() && <p style={{ color: "red" }}>{pathError()}</p>}
+        {errors.ignore && <p style={{ color: "red" }}>{errors.ignore}</p>}
       </div>
 
       <br />
       <div class="flex-row" style="gap: 20px">
-        <a href="#" onClick={saveConfig} title="Export Config" class="flex-row">
+        <a href="#" onClick={save} title="Export Config" class="flex-row">
           save
         </a>
       </div>
