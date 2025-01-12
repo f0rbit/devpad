@@ -35,7 +35,7 @@ export const project = sqliteTable("project", {
   repo_id: integer("repo_id"),
   icon_url: text("icon_url"),
   status: text("status", { enum: ["DEVELOPMENT", "PAUSED", "RELEASED", "LIVE", "FINISHED", "ABANDONED", "STOPPED"] }).notNull().default("DEVELOPMENT"),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   link_url: text("link_url"),
   link_text: text("link_text"),
   visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
@@ -100,7 +100,7 @@ export const milestone = sqliteTable("milestone", {
   name: text("name").notNull(),
   description: text("description"),
   target_time: text("target_time"),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   target_version: text("target_version"),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -114,7 +114,7 @@ export const goal = sqliteTable("goal", {
   name: text("name").notNull(),
   description: text("description"),
   target_time: text("target_time"),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   finished_at: text("finished_at"),
@@ -144,7 +144,7 @@ export const checklist = sqliteTable("checklist", {
   name: text("name").notNull(),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 });
 
 export const checklist_item = sqliteTable("checklist_item", {
@@ -168,7 +168,7 @@ export const codebase_tasks = sqliteTable("codebase_tasks", {
   context: text("context", { mode: "json" }),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   recent_scan_id: integer("recent_scan_id").references(() => tracker_result.id),
 });
 
@@ -179,7 +179,7 @@ export const tag = sqliteTable("tag", {
   color: text("color"),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 }, (table) => ({
   tag_unique: unique("tag_unique").on(table.owner_id, table.title)
 }));
