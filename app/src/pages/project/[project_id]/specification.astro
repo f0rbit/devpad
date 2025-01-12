@@ -26,5 +26,5 @@ const parsed = project?.specification
 
 <PageLayout title={`Project Specification - ${project_id}`}>
   <ProjectLayout project_id={project_id} />
-  <article style="max-width: 50vw">{parsed ?? "no specification"}</article>
+  <article>{parsed ?? "no specification"}</article>
 </PageLayout>
