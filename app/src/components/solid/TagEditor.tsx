@@ -218,7 +218,7 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>, c
       style={{
         background: colour() ? TAG_COLOURS[colour()!].colour : "none",
         color: colour() ? TAG_COLOURS[colour()!].text : "var(--text-secondary)",
-        border: `2px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
+        border: `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
         "border-radius": "5px",
         "min-width": "50px",
         "padding": "0.5px 8px",
@@ -227,6 +227,7 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>, c
         display: "block",
         height: "20px"
       }}
+      class="flex-row"
     >
       {name()}
       {onRemove &&

@@ -28,6 +28,7 @@ export function TagSelect({ tags, onSelect }: { tags: Tag[], onSelect: (tag: Tag
 
 
 
+
 export function TagPicker({ currentTags, availableTags, owner_id }: { currentTags: UpsertTag[], availableTags: Tag[], owner_id: string }) {
   const [tags, setTags] = createSignal(currentTags);
   let input!: HTMLInputElement;
