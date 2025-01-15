@@ -1,7 +1,7 @@
 import { For, createSignal } from "solid-js";
 import type { Tag } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
-import type { UpsertTag } from "../../server/types";
+import { TAG_COLOURS, type TagColor, type UpsertTag } from "../../server/types";
 import Save from "lucide-solid/icons/save";
 import Check from "lucide-solid/icons/check";
 import Trash from "lucide-solid/icons/trash";
@@ -76,7 +76,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
     <div class="flex-col" style="gap: 5px;">
       {currentTags().length == 0 && creating() == false ? <p>you haven't created any tags yet</p> : null}
       <For each={currentTags()}>
-        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id}  />}
+        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}
       </For>
       {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a href="#" onClick={create} class="flex-row" style="margin-top: 10px" >
         <Plus />
@@ -96,7 +96,7 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
   const is_new = !tag || tag.id == "";
   const [editing, setEditing] = createSignal(is_new);
   const [title, setTitle] = createSignal(tag?.title ?? "");
-  const [color, setColor] = createSignal(tag?.color ?? "#000000");
+  const [color, setColor] = createSignal<TagColor | null>(tag?.color ?? null);
 
   function save() {
     if (is_new) {
@@ -110,7 +110,7 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
   return (
     <div class="flex-row">
       <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
-      <input type="color" value={color()} disabled={!editing()} onInput={(e) => setColor(e.currentTarget.value)} />
+      <TagColourPicker value={color()} disabled={!editing()} onChange={(col: TagColor) => setColor(col)} />
       {editing() ? (
         <div class="icons">
           <a href="#" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
@@ -126,5 +126,64 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
 
     </div>
   );
+}
 
+// COLOUR PICKER
+
+
+
+
+function TagColourPicker({ value, disabled, onChange }: { value: TagColor | null, disabled: boolean, onChange: (value: TagColor) => void }) {
+  const valid = !value || Object.keys(TAG_COLOURS).includes(value);
+  if (!valid) value = "red";
+
+  return (
+    <div>
+      <h2>Select a Tag Color</h2>
+      <div style={{ display: "flex", "flex-wrap": "wrap", gap: "10px" }}>
+        <For each={Object.entries(TAG_COLOURS)}>
+          {([name, { colour, text, border }]) => (
+            <button
+              style={{
+                background: colour,
+                color: text,
+                border: `2px solid ${border}`,
+                padding: "10px",
+                "border-radius": "5px",
+                cursor: "pointer",
+                "min-width": "50px",
+                "text-align": "center",
+                "font-size": "14px",
+              }}
+              onClick={() => onChange(name as TagColor)}
+            >
+              {name}
+            </button>
+          )}
+        </For>
+      </div>
+      {value && (
+        <div style={{ "margin-top": "20px" }}>
+          <h3>Selected Color:</h3>
+          <p>
+            <strong>{value}</strong>
+          </p>
+          <p>
+            <span
+              style={{
+                display: "inline-block",
+                background: TAG_COLOURS[value].colour,
+                color: TAG_COLOURS[value].text,
+                border: `2px solid ${TAG_COLOURS[value].border}`,
+                padding: "5px 10px",
+                "border-radius": "5px",
+              }}
+            >
+              Preview
+            </span>
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
