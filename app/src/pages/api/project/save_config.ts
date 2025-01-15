@@ -39,6 +39,8 @@ export async function PATCH(context: APIContext) {
   if (found.owner_id != context.locals.user.id) return new Response("Unauthorized", { status: 401 });
 
   try {
+    // get current tags
+    const current_tags = await db.select({ id: tag_config.tag_id }).from(tag_config).where(eq(tag_config.project_id, data.id));
     // Upsert Tags
     let tag_ids: string[] = [];
     if (data.config.tags.length > 0) {
@@ -69,6 +71,13 @@ export async function PATCH(context: APIContext) {
       });
 
       tag_ids = await Promise.all(tag_promises);
+    }
+
+    // remove any old tags that arent in tag_ids
+    const tags_to_remove = current_tags.filter((t) => !tag_ids.includes(t.id)).map((t) => t.id);
+
+    if (tags_to_remove.length > 0) {
+      await db.delete(tag_config).where(and(eq(tag_config.project_id, data.id), inArray(tag_config.tag_id, tags_to_remove)));
     }
 
     // Upsert Ignore Paths
