@@ -57,6 +57,20 @@
       "when": 1735598208279,
       "tag": "0007_lazy_black_tom",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1736649987065,
+      "tag": "0008_robust_steve_rogers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1736652802043,
+      "tag": "0009_far_tyger_tiger",
+      "breakpoints": true
     }
   ]
 }

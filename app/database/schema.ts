@@ -35,12 +35,11 @@ export const project = sqliteTable("project", {
   repo_id: integer("repo_id"),
   icon_url: text("icon_url"),
   status: text("status", { enum: ["DEVELOPMENT", "PAUSED", "RELEASED", "LIVE", "FINISHED", "ABANDONED", "STOPPED"] }).notNull().default("DEVELOPMENT"),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   link_url: text("link_url"),
   link_text: text("link_text"),
   visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
   current_version: text("current_version"),
-  config_json: text("config_json", { mode: "json" }),
   scan_branch: text("scan_branch"),
 }, (table) => ({
   project_unique: unique().on(table.owner_id, table.project_id)
@@ -101,7 +100,7 @@ export const milestone = sqliteTable("milestone", {
   name: text("name").notNull(),
   description: text("description"),
   target_time: text("target_time"),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   target_version: text("target_version"),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -115,7 +114,7 @@ export const goal = sqliteTable("goal", {
   name: text("name").notNull(),
   description: text("description"),
   target_time: text("target_time"),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   finished_at: text("finished_at"),
@@ -145,7 +144,7 @@ export const checklist = sqliteTable("checklist", {
   name: text("name").notNull(),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 });
 
 export const checklist_item = sqliteTable("checklist_item", {
@@ -169,7 +168,7 @@ export const codebase_tasks = sqliteTable("codebase_tasks", {
   context: text("context", { mode: "json" }),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   recent_scan_id: integer("recent_scan_id").references(() => tracker_result.id),
 });
 
@@ -180,7 +179,7 @@ export const tag = sqliteTable("tag", {
   color: text("color"),
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-  deleted: int("deleted", { mode: "boolean" }),
+  deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 }, (table) => ({
   tag_unique: unique("tag_unique").on(table.owner_id, table.title)
 }));
@@ -195,15 +194,34 @@ export const task_tag = sqliteTable("task_tag", {
 }));
 
 export const commit_detail = sqliteTable("commit_detail", {
-	sha: text("sha").primaryKey(),
-	message: text("message").notNull(),
-	url: text("url").notNull(),
-	avatar_url: text("avatar_url"),
-	author_user: text("author_user").notNull(),
-	author_name: text("author_name"),
-	author_email: text("author_email").notNull(),
-	date: text("date").notNull(),
+  sha: text("sha").primaryKey(),
+  message: text("message").notNull(),
+  url: text("url").notNull(),
+  avatar_url: text("avatar_url"),
+  author_user: text("author_user").notNull(),
+  author_name: text("author_name"),
+  author_email: text("author_email").notNull(),
+  date: text("date").notNull(),
 });
+
+export const tag_config = sqliteTable("tag_config", {
+  id: text("id").primaryKey().$defaultFn(() => "tag_config_" + crypto.randomUUID()),
+  project_id: text("project_id").notNull().references(() => project.id), // Foreign key to projects
+  tag_id: text("tag_id").notNull().references(() => tag.id), // Foreign key to tags
+  match: text("match").notNull(), // Match pattern for this tag
+  created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+
+export const ignore_path = sqliteTable("ignore_path", {
+  id: text("id").primaryKey().$defaultFn(() => "ignore_path_" + crypto.randomUUID()),
+  project_id: text("project_id").notNull().references(() => project.id), // Foreign key to projects
+  path: text("path").notNull(), // Ignore path
+  created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+  updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
 
 // relations
 

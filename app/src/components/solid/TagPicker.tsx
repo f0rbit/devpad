@@ -5,6 +5,7 @@ import type { UpsertTag } from "../../server/types";
 import type { Tag } from "../../server/tags";
 import X from "lucide-solid/icons/x";
 import Plus from "lucide-solid/icons/plus";
+import { TagBadge } from "./TagEditor";
 
 export function TagSelect({ tags, onSelect }: { tags: Tag[], onSelect: (tag: Tag | null) => void }) {
   // use a select element
@@ -24,6 +25,7 @@ export function TagSelect({ tags, onSelect }: { tags: Tag[], onSelect: (tag: Tag
     </select>
   );
 }
+
 
 
 
@@ -97,23 +99,10 @@ export function TagPicker({ currentTags, availableTags, owner_id }: { currentTag
       <div class="flex-row" style="flex-wrap: wrap;">
         <For each={tags()}>
           {(tag) => (
-            <TagBadge tag={tag} onRemove={() => removeTag(tag)} />
+            <TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />
           )}
         </For>
       </div>
-    </div>
-  );
-
-}
-
-export function TagBadge({ tag, onRemove }: { tag: UpsertTag, onRemove?: () => void }) {
-  return (
-    <div class="tag-badge" style={`background-color: ${tag.color}; color: var(--text-secondary);`}>
-      {tag.title}
-      {onRemove &&
-        <div onClick={onRemove} class="flex-row">
-          <X size={16} />
-        </div>}
     </div>
   );
 }

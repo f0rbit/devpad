@@ -33,7 +33,7 @@ const user_tags = await getActiveUserTags(user.id);
 
 // tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
 const tag_map = new Map(user_tags.map((t) => [t.id, t]));
-const current_tags = tags.map((tag_id) => tag_map.get(tag_id)) ?? [];
+const current_tags = tags.map((tag_id) => tag_map.get(tag_id)!) ?? [];
 
 const from = Astro.url.searchParams.get("from")! || "";
 

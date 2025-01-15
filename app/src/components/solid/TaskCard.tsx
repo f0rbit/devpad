@@ -3,7 +3,6 @@ import type { Project } from "../../server/projects";
 import type { Task } from "../../server/tasks";
 
 import CalendarClock from "lucide-solid/icons/calendar-clock";
-import { TagBadge } from "./TagPicker";
 import type { UpsertTag } from "../../server/types";
 import CalendarX2 from "lucide-solid/icons/calendar-x-2";
 import Calendar from "lucide-solid/icons/calendar";
@@ -13,6 +12,7 @@ import SquareCheck from "lucide-solid/icons/square-check";
 import Circle from "lucide-solid/icons/circle";
 import CircleDot from "lucide-solid/icons/circle-dot";
 import CircleCheck from "lucide-solid/icons/circle-check";
+import { TagBadge } from "./TagEditor";
 
 interface Props {
   task: Task;
@@ -84,7 +84,7 @@ export const TaskCard = (props: Props) => {
       <div class={`flex-col ${priority_class}`} style={{ "font-size": "small", gap: "6px" }}>
         {tag_list.length > 0 && <span class="flex-row">
           <For each={tag_list}>
-            {(tag) => <TagBadge tag={tag} />}
+            {(tag) => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}
           </For>
         </span>}
         <span class="flex-row">

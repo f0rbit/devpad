@@ -3,7 +3,8 @@ import ConfigEditor from "../../../../components/solid/ConfigEditor";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getBranches } from "../../../../server/github";
-import { getProject } from "../../../../server/projects";
+import { getProject, getProjectConfig } from "../../../../server/projects";
+import { getActiveUserTags } from "../../../../server/tags";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -11,14 +12,13 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project, error } = await getProject(user?.id ?? null, project_id);
-if (error) return new Response(null, { status: 500, statusText: error });
+const { project, error: project_error } = await getProject(user.id, project_id);
+if (project_error) return new Response(null, { status: 500, statusText: error });
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 
-const parsed_config =
-  typeof project.config_json === "string"
-    ? JSON.parse(project.config_json)
-    : project.config_json ?? {};
+const { config, error: config_error } = await getProjectConfig(project.id);
+if (config_error) return new Response(null, { status: 500, statusText: error });
+if (!config) return new Response(null, { status: 404, statusText: "Config not found" });
 
 const [owner, repo] = project.repo_url
   ? project.repo_url.split("/").slice(-2)
@@ -34,15 +34,18 @@ if (owner && repo) {
     );
   }
 }
+
+const available_tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={"Project Config"}>
   <ProjectTasksLayout project_id={project_id}>
     <ConfigEditor
       id={project.id}
-      config={parsed_config}
+      config={config}
       branches={branches}
       scan_branch={project.scan_branch}
+      user_tags={available_tags}
       client:load
     />
   </ProjectTasksLayout>

@@ -4,7 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
-import { getProjectById } from "../../../server/projects";
+import { getProjectConfig, type ProjectConfig } from "../../../server/projects";
 import { getBranches, getRepo } from "../../../server/github";
 
 // will have ?project_id=<id> query parameter
@@ -55,9 +55,11 @@ export async function POST(context: APIContext) {
     return new Response("no repo url", { status: 400 });
   }
 
+  const config = await getProjectConfig(project_id);
+
   return new Response(new ReadableStream({
     async start(controller) {
-      for await (const chunk of scan_repo(repo_url, access_token, folder_id, project_id, project_data.scan_branch)) {
+      for await (const chunk of scan_repo(repo_url, access_token, folder_id, config)) {
         controller.enqueue(chunk);
       }
       controller.close();
@@ -65,7 +67,13 @@ export async function POST(context: APIContext) {
   }), { status: 200 });
 }
 
-async function* scan_repo(repo_url: string, access_token: string, folder_id: string, project_id: string, branch: string | null) {
+async function* scan_repo(repo_url: string, access_token: string, folder_id: string, config: ProjectConfig) {
+  const { id: project_id, scan_branch: branch, error: config_error } = config;
+  if (config_error) {
+    yield "error fetching project config\n";
+    return;
+  }
+
   yield "";
   yield "starting\n";
   // we need to get OWNER and REPO from the repo_url
@@ -80,7 +88,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 
   yield "cloning repo\n";
   // clone the repo into a temp folder
-  const clone = await getRepo(owner, repo, access_token, branch);
+  const clone = await getRepo(owner, repo, access_token, branch ?? null);
 
   if (!clone.ok) {
     yield "error fetching repo from github\n";
@@ -105,18 +113,11 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   const files = await readdir(unzipped_path);
   const folder_path = `${unzipped_path}/${files[0]}`;
 
-  // fetch project.config_json if available
-  const { project: found, error: config_error } = await getProjectById(project_id);
-  if (config_error) {
-    yield "error fetching project config\n";
-    return;
-  }
-
   let config_path = "../todo-config.json";
 
   // if we have a project.config_json, we need to write it to a file
-  if (found?.config_json) {
-    await Bun.write(unzipped_path + "/config.json", JSON.stringify(found.config_json, null, 2));
+  if (config && config.config) {
+    await Bun.write(unzipped_path + "/config.json", JSON.stringify(config.config, null, 2));
     config_path = unzipped_path + "/config.json";
     console.log("using config.json from project");
     yield "loaded config from project\n";
@@ -138,7 +139,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   yield "saving scan\n";
 
   const new_tracker = await db.insert(tracker_result).values({
-    project_id: project_id,
+    project_id: project_id!,
     data: output_file,
   }).returning();
 
@@ -152,7 +153,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   // and for old_id we want to the most recent tracker_result with 'accepted' as true
   yield "finding existing scan\n";
   const new_id = new_tracker[0].id;
-  const old_id = await db.select().from(tracker_result).where(and(eq(tracker_result.project_id, project_id), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
+  const old_id = await db.select().from(tracker_result).where(and(eq(tracker_result.project_id, project_id!), eq(tracker_result.accepted, true))).orderBy(desc(tracker_result.created_at)).limit(1);
 
   var old_data = [] as any[];
   if (old_id.length == 1 && old_id[0].data) {
@@ -190,7 +191,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   yield "ignoring old updates\n";
   // update any old todo_updates that had status == "PENDING" to status == "IGNORED"
   try {
-    await db.update(todo_updates).set({ status: "IGNORED" }).where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.status, "PENDING")));
+    await db.update(todo_updates).set({ status: "IGNORED" }).where(and(eq(todo_updates.project_id, project_id!), eq(todo_updates.status, "PENDING")));
   } catch (e) {
     console.error(e);
     yield "error ignoring old updates\n";
@@ -215,7 +216,7 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
 
   yield "saving update\n";
   await db.insert(todo_updates).values({
-    project_id: project_id,
+    project_id: project_id!,
     new_id: new_id,
     old_id: old_id[0]?.id ?? null,
     data: diff,

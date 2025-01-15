@@ -6,7 +6,7 @@ import { TagEditor } from "../../components/solid/TagEditor";
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401 });
 
-const tags = (await getUserTags(user.id)) ?? [];
+const tags = await getUserTags(user.id);
 ---
 
 <PageLayout title="Tags">

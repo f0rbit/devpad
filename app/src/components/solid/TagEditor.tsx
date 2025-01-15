@@ -1,11 +1,14 @@
-import { For, createSignal } from "solid-js";
+import { For, createEffect, createSignal, type Accessor } from "solid-js";
 import type { Tag } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
-import type { UpsertTag } from "../../server/types";
+import { TAG_COLOURS, type TagColor, type UpsertTag } from "../../server/types";
 import Save from "lucide-solid/icons/save";
 import Check from "lucide-solid/icons/check";
 import Trash from "lucide-solid/icons/trash";
 import PencilLine from "lucide-solid/icons/pencil-line";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import X from "lucide-solid/icons/x";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -76,7 +79,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
     <div class="flex-col" style="gap: 5px;">
       {currentTags().length == 0 && creating() == false ? <p>you haven't created any tags yet</p> : null}
       <For each={currentTags()}>
-        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} />}
+        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}
       </For>
       {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a href="#" onClick={create} class="flex-row" style="margin-top: 10px" >
         <Plus />
@@ -96,7 +99,7 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
   const is_new = !tag || tag.id == "";
   const [editing, setEditing] = createSignal(is_new);
   const [title, setTitle] = createSignal(tag?.title ?? "");
-  const [color, setColor] = createSignal(tag?.color ?? "#000000");
+  const [color, setColor] = createSignal<TagColor | null>(tag?.color ?? null);
 
   function save() {
     if (is_new) {
@@ -108,9 +111,9 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
   }
 
   return (
-    <div class="flex-row">
+    <div class="flex-row" style="align-items: unset;">
       <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
-      <input type="color" value={color()} disabled={!editing()} onInput={(e) => setColor(e.currentTarget.value)} />
+      <TagColourPicker value={color} enabled={editing} onChange={(col) => setColor(col)} />
       {editing() ? (
         <div class="icons">
           <a href="#" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
@@ -126,5 +129,112 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
 
     </div>
   );
-
 }
+
+// COLOUR PICKER
+
+function TagColourPicker({
+  value,
+  enabled,
+  onChange,
+}: {
+  value: Accessor<TagColor | null>;
+  enabled: Accessor<boolean>;
+  onChange: (value: TagColor | null) => void;
+}) {
+  const [isOpen, setIsOpen] = createSignal(false);
+
+  createEffect(() => {
+    console.log("value", value());
+  }, [value()]);
+
+  function togglePopup() {
+    if (enabled()) {
+      setIsOpen(!isOpen());
+    }
+  }
+
+  return (
+    <div style="position: relative; display: inline-block;">
+      {/* Display Current Selected Color */}
+      <button
+        style={{
+          "background": "var(--input-background)",
+          "border": "1px solid var(--input-border)",
+          "padding": "5px",
+          "border-radius": "5px",
+          "font-size": "14px",
+          "cursor": enabled() ? "pointer" : "text",
+          "display": "flex",
+          "align-items": "center",
+          "gap": "5px",
+          "color": "var(--input-text)",
+        }}
+        onClick={togglePopup}
+        disabled={enabled() == false}
+      >
+        {value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--text-secondary); font-size: small; height: 20px; line-height: 20px;">Select Colour</span>}
+        {isOpen() ? <ChevronUp /> : <ChevronDown />}
+      </button>
+
+      {/* Popup List */}
+      {isOpen() && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 5px)",
+            left: 0,
+            background: "var(--input-background)",
+            border: "1px solid var(--input-border)",
+            "border-radius": "5px",
+            "box-shadow": "0 2px 5px rgba(0, 0, 0, 0.2)",
+            padding: "5px",
+            "flex-wrap": "wrap",
+            "z-index": 1000,
+            display: "grid",
+            "grid-template-columns": "1fr 1fr 1fr",
+            gap: "5px",
+          }}
+        >
+          <For each={Object.keys(TAG_COLOURS) as TagColor[]}>
+            {(name) => (
+              <button onClick={() => onChange(name)} class="button-reset">
+                <TagBadge name={() => name} colour={() => name} />
+              </button>
+            )}
+          </For>
+          <button onClick={() => onChange(null)} class="button-reset">
+            <TagBadge name={() => "None"} colour={() => null} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>, colour: Accessor<TagColor | null>, onRemove?: () => void }) {
+  return (
+    <div
+      style={{
+        background: colour() ? TAG_COLOURS[colour()!].colour : "none",
+        color: colour() ? TAG_COLOURS[colour()!].text : "var(--text-secondary)",
+        border: `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
+        "border-radius": "5px",
+        "min-width": "50px",
+        "padding": "0.5px 8px",
+        "text-align": "center",
+        "font-size": "small",
+        display: "block",
+        height: "20px"
+      }}
+      class="flex-row"
+    >
+      {name()}
+      {onRemove &&
+        <div onClick={onRemove} class="flex-row">
+          <X size={16} />
+        </div>}
+    </div>
+  );
+}
+

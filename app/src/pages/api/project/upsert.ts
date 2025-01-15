@@ -2,7 +2,7 @@ import type { APIContext } from "astro";
 import { upsert_project, type UpsertProject } from "../../../server/types";
 import { db } from "../../../../database/db";
 import { project } from "../../../../database/schema";
-import { addProjectAction, getProject, getProjectById } from "../../../server/projects";
+import { addProjectAction, getProjectById } from "../../../server/projects";
 
 type CompleteUpsertProject = Omit<UpsertProject, "id"> & { id: string };
 
@@ -63,6 +63,7 @@ export async function PATCH(context: APIContext) {
     }
 
     const insert = data as CompleteUpsertProject;
+
     // perform db upsert
     const new_project = await db.insert(project).values(insert).onConflictDoUpdate({ target: [project.id], set: insert }).returning();
 

@@ -1,6 +1,6 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../database/db";
-import { action, project, todo_updates, tracker_result, type ActionType } from "../../database/schema";
+import { action, ignore_path, project, tag, tag_config, todo_updates, tracker_result, type ActionType } from "../../database/schema";
 import type { TodoUpdate, TrackerResult } from "./types";
 
 export async function getUserProjects(user_id: string) {
@@ -9,10 +9,7 @@ export async function getUserProjects(user_id: string) {
 
 export type Project = Awaited<ReturnType<typeof getUserProjects>>[0];
 
-export async function getProject(user_id: string | null, project_id: string | undefined | null) {
-  if (!user_id) return { project: null, error: "No user ID" };
-  if (!project_id) return { project: null, error: "No project ID" };
-
+export async function getProject(user_id: string, project_id: string) {
   try {
     const search = await db.select().from(project).where(and(eq(project.owner_id, user_id), eq(project.project_id, project_id)));
     if (!search || !search[0]) return { project: null, error: "Couldn't find project" };
@@ -100,3 +97,54 @@ export async function addProjectAction({ owner_id, project_id, type, description
   return true;
 }
 
+export async function getProjectConfig(project_id: string) {
+  // Fetch project details
+  const { project, error } = await getProjectById(project_id);
+  if (error) return { config: null, id: null, scan_branch: null, error: `Error fetching project: ${error}` };
+  if (!project) return { config: null, id: null, scan_branch: null, error: `Project not found` };
+
+  // Fetch tags and their matches
+  const tag_result = await db
+    .select({
+      tag_id: tag.id,
+      name: tag.title,
+      matches: sql<string>`json_group_array(${tag_config.match})`,
+    })
+    .from(tag_config)
+    .innerJoin(tag, eq(tag.id, tag_config.tag_id))
+    .where(eq(tag_config.project_id, project_id))
+    .groupBy(tag.id)
+
+  let tags: { name: string, match: string[] }[] | null = null;
+  try {
+    tags = tag_result.map((row) => ({
+      name: row.name,
+      match: JSON.parse(row.matches || "[]") as string[],
+    }));
+  } catch (err) {
+    return { config: null, id: null, scan_branch: null, error: "Error parsing tag matches" };
+  }
+  if (!tags) return { config: null, id: null, scan_branch: null, error: "Error fetching tags" };
+
+
+  // Fetch ignore paths
+  const ignore_result = await db
+    .select({ path: ignore_path.path, })
+    .from(ignore_path)
+    .where(eq(ignore_path.project_id, project_id))
+
+  const ignore = ignore_result.map((row) => row.path);
+
+  // Construct and return the configuration JSON
+  return {
+    id: project_id,
+    config: {
+      tags,
+      ignore,
+    },
+    scan_branch: project.scan_branch,
+    error: null,
+  };
+}
+
+export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
