@@ -75,10 +75,26 @@ export const ConfigSchema = z.object({
   ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
 });
 
+export const TAG_COLOURS = {
+  red: { colour: "#F28B82", text: "#FCE3E5", border: "#F5A5A5" },
+  green: { colour: "#81C995", text: "#E0F2EA", border: "#A6D7B3" },
+  blue: { colour: "#AECBFA", text: "#EBF4FE", border: "#BFDDFB" },
+  yellow: { colour: "#FDD663", text: "#FEF4DB", border: "#FEE085" },
+  purple: { colour: "#D7AEFB", text: "#F4EBFE", border: "#E2C5FC" },
+  orange: { colour: "#FDBA74", text: "#FEE8D9", border: "#FEC38F" },
+  teal: { colour: "#76DAD1", text: "#E6F7F5", border: "#98E1DC" },
+  pink: { colour: "#FCA8D1", text: "#FEE9F2", border: "#FCC3DE" },
+  gray: { colour: "#B1B1B1", text: "#E6E6E6", border: "#C3C3C3" },
+  cyan: { colour: "#77CFFC", text: "#E7F7FE", border: "#98D9FC" },
+} as const;
+
+
+export type TagColor = keyof typeof TAG_COLOURS;
+
 export const upsert_tag = z.object({
   id: z.string().optional(),
   title: z.string(),
-  color: z.string().nullable(),
+  color: z.union([z.literal("red"), z.literal("green"), z.literal("blue"), z.literal("yellow"), z.literal("purple"), z.literal("orange"), z.literal("teal"), z.literal("pink"), z.literal("gray"), z.literal("cyan")]).nullable().optional(),
   deleted: z.boolean().optional().default(false),
   owner_id: z.string(),
 });
