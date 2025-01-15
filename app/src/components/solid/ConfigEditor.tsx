@@ -1,19 +1,28 @@
 import Minus from "lucide-solid/icons/minus";
 import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
-import { For, Index } from "solid-js";
+import { For, Index, createEffect, createSignal, type Accessor } from "solid-js";
 import { z } from "zod";
 import { ConfigSchema } from "../../server/types";
 import GitBranch from "lucide-solid/icons/git-branch";
 import { createStore } from "solid-js/store";
 import type { Tag } from "../../server/tags";
+import ChevronLeft from "lucide-solid/icons/chevron-left";
+import ChevronRight from "lucide-solid/icons/chevron-right";
+
+// Default configurations for helper tags
+const DEFAULT_CONFIGS = {
+  todo: ["@todo", "// TODO:"],
+  bug: ["@bug", "// BUG:"],
+  fix: ["@fix", "// FIX:"],
+  idea: ["@idea", "// IDEA:"],
+};
+
+type DefaultConfig = keyof typeof DEFAULT_CONFIGS;
 
 type Config = z.infer<typeof ConfigSchema>;
 
-/** @todo element to select from a couple default configs for different languages */
-
-const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, user_tags }: { config: Config, id: string, branches: any[] | null, scan_branch: string | undefined | null, user_tags: Tag[] }) => {
-  /** @todo change this from any - has to represent the nested signal for matches */
+const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, user_tags }: { config: Config, id: string, branches: { name: string, commit: { message: string } }[] | null, scan_branch: string | undefined | null, user_tags: Tag[] }) => {
   const [config, setConfig] = createStore({
     tags: initial_config.tags ?? [],
     ignore: initial_config?.ignore ?? [],
@@ -111,11 +120,28 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
         all_matches.add(match);
       }
     }
-    
+
     // TODO: validate that ignore paths are correct glob/regex patterns
 
     return valid;
   };
+
+  const addDefaultTag = (tagName: DefaultConfig) => {
+    const matches = DEFAULT_CONFIGS[tagName];
+    setConfig("tags", (prev) => {
+      if (prev.some((tag) => tag.name === tagName)) return prev; // Tag already exists
+
+      return [
+        ...prev,
+        {
+          name: tagName,
+          match: matches,
+        },
+      ];
+    });
+    validate();
+  };
+
 
   const save = async () => {
     if (!validate()) return;
@@ -189,6 +215,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
             <Plus />
             add tag
           </a>
+          <ConfigDefaults tags={() => config.tags} add={addDefaultTag} />
         </div>
         <Index each={config.tags}>
           {(tag, index) => (
@@ -269,6 +296,53 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
     </div>
   );
 };
+
+
+function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>, add: (tag: DefaultConfig) => void }) {
+  const [open, setOpen] = createSignal(false);
+  const [available, setAvailable] = createSignal<DefaultConfig[]>([]);
+
+  // if tags is empty, set open to true
+  createEffect(() => {
+    if (tags().length == 0) {
+      setOpen(true);
+    }
+  });
+
+  createEffect(() => {
+    // go through default configs, and find the ones that aren't in the tags
+    const available = Object.keys(DEFAULT_CONFIGS).filter((tagName) => {
+      return !tags().some((tag) => tag.name === tagName);
+    }) as DefaultConfig[];
+    setAvailable(available);
+  });
+
+  // have a little > icon that opens the list
+  return (
+    <div class="flex-row" style="gap: 10px; height: 21px">
+      {available().length > 0 && <a role="button" onClick={() => setOpen(!open())} class="flex-row">
+        {open() ? <ChevronLeft /> : <ChevronRight />}
+      </a>
+      }
+      {open() && (
+        <div class="flex-row" style="gap: 4px">
+          <For each={available()}>
+            {(name) => (
+              <button
+                onClick={() => add(name)}
+                class="button-reset"
+                style="font-size: smaller; border: 1px solid var(--input-border); border-radius: 5px; padding: 2px 8px;"
+                title={`Add boilerplate config for ${name}`}
+              >
+                <a role="button" class="flex-row">+ {name}</a>
+              </button>
+            )}
+          </For>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default TodoScannerConfig;
 
