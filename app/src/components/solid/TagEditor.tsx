@@ -8,6 +8,7 @@ import Trash from "lucide-solid/icons/trash";
 import PencilLine from "lucide-solid/icons/pencil-line";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import X from "lucide-solid/icons/x";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -172,7 +173,7 @@ function TagColourPicker({
         onClick={togglePopup}
         disabled={enabled() == false}
       >
-        {value() ? <TagPickerItem name={value as Accessor<TagColor>} /> : <span style="color: var(--text-secondary); font-size: small; height: 22px; line-height: 22px;">Select Colour</span>}
+        {value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--text-secondary); font-size: small; height: 20px; line-height: 20px;">Select Colour</span>}
         {isOpen() ? <ChevronUp /> : <ChevronDown />}
       </button>
 
@@ -198,12 +199,12 @@ function TagColourPicker({
           <For each={Object.keys(TAG_COLOURS) as TagColor[]}>
             {(name) => (
               <button onClick={() => onChange(name)} class="button-reset">
-                <TagPickerItem name={() => name} />
+                <TagBadge name={() => name} colour={() => name} />
               </button>
             )}
           </For>
           <button onClick={() => onChange(null)} class="button-reset">
-            <TagPickerItem name={() => null} />
+            <TagBadge name={() => "None"} colour={() => null} />
           </button>
         </div>
       )}
@@ -211,25 +212,27 @@ function TagColourPicker({
   );
 }
 
-function TagPickerItem({ name }: { name: Accessor<TagColor | null> }) {
-
+export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>, colour: Accessor<TagColor | null>, onRemove?: () => void }) {
   return (
     <div
       style={{
-        background: name() ? TAG_COLOURS[name()!].colour : "none",
-        color: name() ? TAG_COLOURS[name()!].text : "var(--text-secondary)",
-        border: `2px solid ${name() ? TAG_COLOURS[name()!].border : "var(--input-border)"}`,
+        background: colour() ? TAG_COLOURS[colour()!].colour : "none",
+        color: colour() ? TAG_COLOURS[colour()!].text : "var(--text-secondary)",
+        border: `2px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
         "border-radius": "5px",
-        cursor: "pointer",
         "min-width": "50px",
-        "padding": "1px 10px",
+        "padding": "0.5px 8px",
         "text-align": "center",
-        "font-size": "14px",
+        "font-size": "small",
         display: "block",
-        "text-transform": "capitalize",
+        height: "20px"
       }}
     >
-      {name() ? name() : "none"}
+      {name()}
+      {onRemove &&
+        <div onClick={onRemove} class="flex-row">
+          <X size={16} />
+        </div>}
     </div>
   );
 }

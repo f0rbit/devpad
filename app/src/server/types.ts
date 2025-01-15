@@ -95,7 +95,7 @@ export type TagColor = keyof typeof TAG_COLOURS;
 export const upsert_tag = z.object({
   id: z.string().optional(),
   title: z.string(),
-  color: z.union([z.literal("red"), z.literal("green"), z.literal("blue"), z.literal("yellow"), z.literal("purple"), z.literal("orange"), z.literal("teal"), z.literal("pink"), z.literal("gray"), z.literal("cyan")]).nullable().optional(),
+  color: z.union([z.literal("red"), z.literal("green"), z.literal("blue"), z.literal("yellow"), z.literal("purple"), z.literal("orange"), z.literal("teal"), z.literal("pink"), z.literal("gray"), z.literal("cyan"), z.literal("lime")]).nullable().optional(),
   deleted: z.boolean().optional().default(false),
   owner_id: z.string(),
 });
