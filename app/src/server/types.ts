@@ -76,16 +76,17 @@ export const ConfigSchema = z.object({
 });
 
 export const TAG_COLOURS = {
-  red: { colour: "#F28B82", text: "#FCE3E5", border: "#F5A5A5" },
+  red: { colour: "#F28B82", text: "#faeeef", border: "#F5A5A5" },
   green: { colour: "#81C995", text: "#E0F2EA", border: "#A6D7B3" },
-  blue: { colour: "#AECBFA", text: "#EBF4FE", border: "#BFDDFB" },
-  yellow: { colour: "#FDD663", text: "#FEF4DB", border: "#FEE085" },
+  blue: { colour: "#AECBFA", text: "#f6faff", border: "#BFDDFB" },
+  yellow: { colour: "#FDD663", text: "#fffdf9", border: "#FEE085" },
   purple: { colour: "#D7AEFB", text: "#F4EBFE", border: "#E2C5FC" },
   orange: { colour: "#FDBA74", text: "#FEE8D9", border: "#FEC38F" },
   teal: { colour: "#76DAD1", text: "#E6F7F5", border: "#98E1DC" },
   pink: { colour: "#FCA8D1", text: "#FEE9F2", border: "#FCC3DE" },
   gray: { colour: "#B1B1B1", text: "#E6E6E6", border: "#C3C3C3" },
   cyan: { colour: "#77CFFC", text: "#E7F7FE", border: "#98D9FC" },
+  lime: { colour: "#ddf0bc", text: "#88b47f", border: "#becca5" },
 } as const;
 
 

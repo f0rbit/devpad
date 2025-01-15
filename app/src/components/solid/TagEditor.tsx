@@ -1,4 +1,4 @@
-import { For, createSignal } from "solid-js";
+import { For, createEffect, createSignal, type Accessor } from "solid-js";
 import type { Tag } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
 import { TAG_COLOURS, type TagColor, type UpsertTag } from "../../server/types";
@@ -6,6 +6,8 @@ import Save from "lucide-solid/icons/save";
 import Check from "lucide-solid/icons/check";
 import Trash from "lucide-solid/icons/trash";
 import PencilLine from "lucide-solid/icons/pencil-line";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import ChevronDown from "lucide-solid/icons/chevron-down";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -108,9 +110,9 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
   }
 
   return (
-    <div class="flex-row">
+    <div class="flex-row" style="align-items: unset;">
       <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
-      <TagColourPicker value={color()} disabled={!editing()} onChange={(col: TagColor) => setColor(col)} />
+      <TagColourPicker value={color} enabled={editing} onChange={(col) => setColor(col)} />
       {editing() ? (
         <div class="icons">
           <a href="#" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
@@ -130,60 +132,105 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
 
 // COLOUR PICKER
 
+function TagColourPicker({
+  value,
+  enabled,
+  onChange,
+}: {
+  value: Accessor<TagColor | null>;
+  enabled: Accessor<boolean>;
+  onChange: (value: TagColor | null) => void;
+}) {
+  const [isOpen, setIsOpen] = createSignal(false);
 
+  createEffect(() => {
+    console.log("value", value());
+  }, [value()]);
 
-
-function TagColourPicker({ value, disabled, onChange }: { value: TagColor | null, disabled: boolean, onChange: (value: TagColor) => void }) {
-  const valid = !value || Object.keys(TAG_COLOURS).includes(value);
-  if (!valid) value = "red";
+  function togglePopup() {
+    if (enabled()) {
+      setIsOpen(!isOpen());
+    }
+  }
 
   return (
-    <div>
-      <h2>Select a Tag Color</h2>
-      <div style={{ display: "flex", "flex-wrap": "wrap", gap: "10px" }}>
-        <For each={Object.entries(TAG_COLOURS)}>
-          {([name, { colour, text, border }]) => (
-            <button
-              style={{
-                background: colour,
-                color: text,
-                border: `2px solid ${border}`,
-                padding: "10px",
-                "border-radius": "5px",
-                cursor: "pointer",
-                "min-width": "50px",
-                "text-align": "center",
-                "font-size": "14px",
-              }}
-              onClick={() => onChange(name as TagColor)}
-            >
-              {name}
-            </button>
-          )}
-        </For>
-      </div>
-      {value && (
-        <div style={{ "margin-top": "20px" }}>
-          <h3>Selected Color:</h3>
-          <p>
-            <strong>{value}</strong>
-          </p>
-          <p>
-            <span
-              style={{
-                display: "inline-block",
-                background: TAG_COLOURS[value].colour,
-                color: TAG_COLOURS[value].text,
-                border: `2px solid ${TAG_COLOURS[value].border}`,
-                padding: "5px 10px",
-                "border-radius": "5px",
-              }}
-            >
-              Preview
-            </span>
-          </p>
+    <div style="position: relative; display: inline-block;">
+      {/* Display Current Selected Color */}
+      <button
+        style={{
+          "background": "var(--input-background)",
+          "border": "1px solid var(--input-border)",
+          "padding": "5px",
+          "border-radius": "5px",
+          "font-size": "14px",
+          "cursor": enabled() ? "pointer" : "text",
+          "display": "flex",
+          "align-items": "center",
+          "gap": "5px",
+          "color": "var(--input-text)",
+        }}
+        onClick={togglePopup}
+        disabled={enabled() == false}
+      >
+        {value() ? <TagPickerItem name={value as Accessor<TagColor>} /> : <span style="color: var(--text-secondary); font-size: small; height: 22px; line-height: 22px;">Select Colour</span>}
+        {isOpen() ? <ChevronUp /> : <ChevronDown />}
+      </button>
+
+      {/* Popup List */}
+      {isOpen() && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 5px)",
+            left: 0,
+            background: "var(--input-background)",
+            border: "1px solid var(--input-border)",
+            "border-radius": "5px",
+            "box-shadow": "0 2px 5px rgba(0, 0, 0, 0.2)",
+            padding: "5px",
+            "flex-wrap": "wrap",
+            "z-index": 1000,
+            display: "grid",
+            "grid-template-columns": "1fr 1fr 1fr",
+            gap: "5px",
+          }}
+        >
+          <For each={Object.keys(TAG_COLOURS) as TagColor[]}>
+            {(name) => (
+              <button onClick={() => onChange(name)} class="button-reset">
+                <TagPickerItem name={() => name} />
+              </button>
+            )}
+          </For>
+          <button onClick={() => onChange(null)} class="button-reset">
+            <TagPickerItem name={() => null} />
+          </button>
         </div>
       )}
     </div>
   );
 }
+
+function TagPickerItem({ name }: { name: Accessor<TagColor | null> }) {
+
+  return (
+    <div
+      style={{
+        background: name() ? TAG_COLOURS[name()!].colour : "none",
+        color: name() ? TAG_COLOURS[name()!].text : "var(--text-secondary)",
+        border: `2px solid ${name() ? TAG_COLOURS[name()!].border : "var(--input-border)"}`,
+        "border-radius": "5px",
+        cursor: "pointer",
+        "min-width": "50px",
+        "padding": "1px 10px",
+        "text-align": "center",
+        "font-size": "14px",
+        display: "block",
+        "text-transform": "capitalize",
+      }}
+    >
+      {name() ? name() : "none"}
+    </div>
+  );
+}
+
