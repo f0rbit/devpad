@@ -41,9 +41,17 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
     ])
   );
   const [actionsState, setActionsState] = createSignal<Record<string, UpdateAction>>(defaultActions);
+  const [titles, setTitles] = createSignal<Record<string, string>>({});
 
   const updateAction = (id: string, action: UpdateAction) => {
     setActionsState((prev) => ({ ...prev, [id]: action }));
+  };
+
+  const updateTitle = (id: string, title: string) => {
+    setTitles((prev) => {
+      prev[id] = title;
+      return prev;
+    });
   };
 
   const saveActions = async () => {
@@ -59,7 +67,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
     }, {} as Record<UpdateAction, string[]>);
 
     const url = `/api/project/scan_status?project_id=${project_id}`;
-    const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: grouped, id: update_id }) });
+    const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: grouped, id: update_id, titles: titles() }) });
     if (response.ok) {
       location.reload();
     } else {
@@ -84,6 +92,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
                 update={item}
                 action={actionsState()[item.id]}
                 onActionChange={updateAction}
+                onTitleChange={updateTitle}
               />
             ))}
           </div>
@@ -95,6 +104,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
             update={item}
             action={actionsState()[item.id]}
             onActionChange={updateAction}
+            onTitleChange={updateTitle}
           />
         ))}
       <button onClick={saveActions}>Save Actions</button>
@@ -106,9 +116,10 @@ interface ItemProps {
   update: UpdateData & { task?: Task };
   action: UpdateAction;
   onActionChange: (id: string, action: UpdateAction) => void;
+  onTitleChange: (id: string, title: string) => void;
 }
 
-export function UpdateDiff({ update, action, onActionChange }: ItemProps) {
+export function UpdateDiff({ update, action, onActionChange, onTitleChange }: ItemProps) {
   const available_actions = ACTIONS[update.type];
   const { data } = update;
 
@@ -176,7 +187,7 @@ export function UpdateDiff({ update, action, onActionChange }: ItemProps) {
           title ? (
             <span>{title}</span>
           ) : (
-            <input type="text" placeholder="Enter title" style="width: 50ch" />
+            <input type="text" placeholder="Enter title" style="width: 50ch" onInput={(e) => onTitleChange(update.id, e.currentTarget.value)} />
           )
         }
       </h5>
