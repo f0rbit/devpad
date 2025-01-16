@@ -188,9 +188,13 @@ h4 {
   font-size: large;
 }
 
-h5,
-h6 {
+h5 {
   font-size: medium;
+}
+
+h6 {
+  font-size: 1em;
+  color: var(--text-secondary);
 }
 
 p.description {
