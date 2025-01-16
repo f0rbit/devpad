@@ -94,26 +94,39 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
   );
 }
 
-
 function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upsert: (tag: TagProp) => void, remove: (id: string) => void, owner_id: string }) {
   const is_new = !tag || tag.id == "";
   const [editing, setEditing] = createSignal(is_new);
   const [title, setTitle] = createSignal(tag?.title ?? "");
   const [color, setColor] = createSignal<TagColor | null>(tag?.color ?? null);
+  const [render, setRender] = createSignal(tag?.render ?? true);
 
   function save() {
     if (is_new) {
-      upsert({ title: title(), color: color(), deleted: false, owner_id: owner_id });
+      upsert({ title: title(), color: color(), deleted: false, owner_id: owner_id, render: render() });
     } else {
-      upsert({ ...tag, title: title(), color: color() });
+      upsert({ ...tag, title: title(), color: color(), render: render() });
     }
     setEditing(false);
   }
+
 
   return (
     <div class="flex-row" style="align-items: unset;">
       <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
       <TagColourPicker value={color} enabled={editing} onChange={(col) => setColor(col)} />
+      <div
+        style={{
+          "background": "var(--input-background)",
+          "border": "1px solid var(--input-border)",
+          "padding": "5px",
+          "border-radius": "5px",
+          "color": "var(--input-text)",
+          "font-size": "small",
+        }}
+        title="Toggle whether this tag should be rendered in the task list">
+        <input type="checkbox" checked={render()} onInput={(e) => setRender(e.currentTarget.checked)} />
+      </div>
       {editing() ? (
         <div class="icons">
           <a href="#" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
@@ -173,7 +186,7 @@ function TagColourPicker({
         onClick={togglePopup}
         disabled={enabled() == false}
       >
-        {value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--text-secondary); font-size: small; height: 20px; line-height: 20px;">Select Colour</span>}
+        {value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--text-secondary); font-size: small; height: 21px; line-height: 21px;">Select Colour</span>}
         {isOpen() ? <ChevronUp /> : <ChevronDown />}
       </button>
 
@@ -216,18 +229,11 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>, c
   return (
     <div
       style={{
-        background: colour() ? TAG_COLOURS[colour()!].colour : "none",
-        color: colour() ? TAG_COLOURS[colour()!].text : "var(--text-secondary)",
-        border: `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
-        "border-radius": "5px",
-        "min-width": "50px",
-        "padding": "0.5px 8px",
-        "text-align": "center",
-        "font-size": "small",
-        display: "block",
-        height: "20px"
+        "background": colour() ? TAG_COLOURS[colour()!].colour : "none",
+        "color": colour() ? TAG_COLOURS[colour()!].text : "var(--text-secondary)",
+        "border": `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
       }}
-      class="flex-row"
+      class="tag-badge"
     >
       {name()}
       {onRemove &&

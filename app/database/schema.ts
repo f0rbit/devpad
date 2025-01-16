@@ -180,6 +180,7 @@ export const tag = sqliteTable("tag", {
   created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
   deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
+  render: int("render", { mode: "boolean" }).notNull().default(true),
 }, (table) => ({
   tag_unique: unique("tag_unique").on(table.owner_id, table.title)
 }));

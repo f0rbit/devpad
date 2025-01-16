@@ -1,7 +1,8 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { action, codebase_tasks, task, task_tag, type ActionType } from "../../database/schema";
 import { db } from "../../database/db";
 import { doesUserOwnProject } from "./projects";
+import type { UpdateData } from "./types";
 
 
 export async function getUserTasks(user_id: string) {
@@ -58,7 +59,7 @@ export async function getProjectTasks(project_id: string) {
 
 
   // get all tags for each task
-  const task_ids = tasks.map((t: any) => t.id);
+  const task_ids = tasks.map((t) => t.task.id);
   if (task_ids.length) {
     const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
     // construct a Map of task_id -> array of tag_ids
@@ -110,4 +111,18 @@ export async function addTaskAction({ owner_id, task_id, type, description, proj
   console.log("inserted action", type);
 
   return true;
+}
+
+export async function getUpsertedTaskMap(codebase_items: UpdateData[], titles: Record<string, string>, project_id: string, user_id: string) {
+  // for every item we want to make sure we have a task associated with it,
+  // if not, then we can create one. when creating, we can use the titles map to get the title, otherwise use item.data.new.text 
+  const result = new Map<string, string>(); // codebase_tasks.id -> task.id
+
+  const existing_tasks = await db.select().from(task).where(inArray(task.codebase_task_id, codebase_items.map((item) => item.id)));
+
+  for (const t of existing_tasks) {
+    result.set(t.codebase_task_id!, t.id);
+  }
+
+  return result;
 }

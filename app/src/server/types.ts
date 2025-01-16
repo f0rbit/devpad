@@ -43,7 +43,7 @@ export type UpsertTodo = z.infer<typeof upsert_todo>;
 
 export type UpdateData = {
   id: string;
-  tag: "todo" | "bug" | "note" | "error";
+  tag: string;
   type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
   data: {
     old: {
@@ -61,6 +61,10 @@ export type UpdateData = {
   };
   task?: Task;
 }
+
+export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
+export type UpdateAction = z.infer<typeof update_action>;
+
 
 export type TodoUpdate = typeof todo_updates.$inferSelect;
 export type TrackerResult = typeof tracker_result.$inferSelect;
@@ -97,6 +101,7 @@ export const upsert_tag = z.object({
   title: z.string(),
   color: z.union([z.literal("red"), z.literal("green"), z.literal("blue"), z.literal("yellow"), z.literal("purple"), z.literal("orange"), z.literal("teal"), z.literal("pink"), z.literal("gray"), z.literal("cyan"), z.literal("lime")]).nullable().optional(),
   deleted: z.boolean().optional().default(false),
+  render: z.boolean().optional().default(true),
   owner_id: z.string(),
 });
 
