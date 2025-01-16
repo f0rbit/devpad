@@ -7,6 +7,8 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 interface Props {
   items: UpdateData[];
   tasks: Record<string, Task>; //key is codebase_tasks.id
+  project_id: string;
+  update_id: number;
 }
 
 const ACTIONS = {
@@ -14,12 +16,11 @@ const ACTIONS = {
   MOVE: ["CONFIRM", "UNLINK"],
   UPDATE: ["CONFIRM", "UNLINK"],
   NEW: ["CREATE", "IGNORE"],
-  DELETE: ["DELETE", "UNLINK"],
+  DELETE: ["UNLINK", "COMPLETE", "DELETE"],
 } as const;
 
-export function UpdateDiffList({ items, tasks }: Props) {
+export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
   const _items = JSON.parse(JSON.stringify(items)) as UpdateData[];
-  // append .task to each item if found within tasks map
   const mapped_items = _items.map((item) => {
     const task = tasks[item.id];
     if (task) {
@@ -28,10 +29,44 @@ export function UpdateDiffList({ items, tasks }: Props) {
     return item;
   });
 
-  // split into same and other. 
   const { same = [], others = [] } = Object.groupBy(mapped_items, (u) =>
     u.type === "SAME" || u.type === "MOVE" ? "same" : "others",
   );
+
+  // Initialize actions state with default actions
+  const defaultActions = Object.fromEntries(
+    mapped_items.map((item) => [
+      item.id,
+      ACTIONS[item.type as keyof typeof ACTIONS][0], // Default to the 0th action
+    ])
+  );
+  const [actionsState, setActionsState] = createSignal<Record<string, UpdateAction>>(defaultActions);
+
+  const updateAction = (id: string, action: UpdateAction) => {
+    setActionsState((prev) => ({ ...prev, [id]: action }));
+  };
+
+  const saveActions = async () => {
+    const actions = actionsState();
+    // Make the API request here
+    const grouped = Object.entries(actions).reduce((acc, [id, action]) => {
+      if (acc[action]) {
+        acc[action].push(id);
+      } else {
+        acc[action] = [id];
+      }
+      return acc;
+    }, {} as Record<UpdateAction, string[]>);
+
+    const url = `/api/project/scan_status?project_id=${project_id}`;
+    const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: grouped, id: update_id }) });
+    if (response.ok) {
+      location.reload();
+    } else {
+      console.error("Failed to save actions");
+      console.error(await response.json());
+    }
+  };
 
   return (
     <div class="flex-col diff-list">
@@ -45,19 +80,36 @@ export function UpdateDiffList({ items, tasks }: Props) {
           <br />
           <div class="flex-col">
             {same.map((item) => (
-              <UpdateDiff update={item} />
+              <UpdateDiff
+                update={item}
+                action={actionsState()[item.id]}
+                onActionChange={updateAction}
+              />
             ))}
           </div>
         </details>
       )}
-      {others.length > 0 && others.map((item) => <UpdateDiff update={item} />)}
+      {others.length > 0 &&
+        others.map((item) => (
+          <UpdateDiff
+            update={item}
+            action={actionsState()[item.id]}
+            onActionChange={updateAction}
+          />
+        ))}
+      <button onClick={saveActions}>Save Actions</button>
     </div>
   );
 }
 
-export function UpdateDiff({ update }: { update: UpdateData & { task?: Task } }) {
+interface ItemProps {
+  update: UpdateData & { task?: Task };
+  action: UpdateAction;
+  onActionChange: (id: string, action: UpdateAction) => void;
+}
+
+export function UpdateDiff({ update, action, onActionChange }: ItemProps) {
   const available_actions = ACTIONS[update.type];
-  const [action, setAction] = createSignal<UpdateAction>(available_actions[0]);
   const { data } = update;
 
   const title: string | null = update?.task?.task?.title ?? null;
@@ -158,10 +210,8 @@ export function UpdateDiff({ update }: { update: UpdateData & { task?: Task } })
                   name={update.id}
                   id={`${update.id}-${label}`}
                   style="display: none"
-                  checked={label === action()}
-                  onChange={() => {
-                    setAction(label)
-                  }}
+                  checked={label === action}
+                  onChange={() => onActionChange(update.id, label)}
                 />
                 <label class="label-modal" for={`${update.id}-${label}`}>
                   {label.toLowerCase()}
