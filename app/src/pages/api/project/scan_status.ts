@@ -5,6 +5,7 @@ import { codebase_tasks, project, task, todo_updates, tracker_result } from "../
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { update_action, type UpdateData } from "../../../server/types";
 import { addTaskAction, getUpsertedTaskMap } from "../../../server/tasks";
+import { getActiveUserTagsMapByName, linkTaskToTag } from "../../../server/tags";
 
 const request_schema = z.object({
   id: z.number(),
@@ -60,13 +61,9 @@ export async function POST(context: APIContext) {
 
   // then we want to execute the update
   await db.update(todo_updates).set({ status: approved ? "ACCEPTED" : "REJECTED" }).where(eq(todo_updates.id, update_id));
-  
-
 
   // TODO: extract this to function that throws errors on failure
   if (approved) {
-
-
     const codebase_map = new Map<string, UpdateData>();
     // update all the tasks within the update and codebase_task table
     // TODO: add typesafety to this, either infer datatype from schema or use zod validator
@@ -80,6 +77,8 @@ export async function POST(context: APIContext) {
       console.error(e);
       return new Response("error parsing update data", { status: 500 });
     }
+
+    const tag_map = await getActiveUserTagsMapByName(user_id);
 
     const actionable_items = actions.IGNORE && actions.IGNORE.length > 0 ? codebase_items.filter((item) => !actions.IGNORE!.includes(item.id)) : codebase_items;
 
@@ -132,10 +131,12 @@ export async function POST(context: APIContext) {
       return new Response("error deleting tasks", { status: 500 });
     }
 
+    const connect_tags = [] as { task_id: string, codebase_task_id: string }[];
+
     try {
       // update the underlying tasks 
       if (actions.CREATE) {
-        const values = actions.CREATE.map((item) => { 
+        const values = actions.CREATE.map((item) => {
           let title = "New Item";
           if (titles[item]) {
             title = titles[item];
@@ -145,8 +146,9 @@ export async function POST(context: APIContext) {
           return { codebase_task_id: item, project_id, title, owner_id: user_id, updated_at: sql`CURRENT_TIMESTAMP` }
         });
         for (const item of values) {
-          await db.insert(task).values(item).onConflictDoUpdate({ target: [task.id], set: item });
-          await addTaskAction({ owner_id: user_id, task_id: item.codebase_task_id, type: "CREATE_TASK", description: "Task created (via scan)", project_id });
+          const new_task = await db.insert(task).values(item).onConflictDoUpdate({ target: [task.id], set: item }).returning();
+          await addTaskAction({ owner_id: user_id, task_id: new_task[0].id, type: "CREATE_TASK", description: "Task created (via scan)", project_id });
+          connect_tags.push({ task_id: new_task[0].id, codebase_task_id: item.codebase_task_id });
         }
       }
       if (actions.DELETE) {
@@ -162,6 +164,7 @@ export async function POST(context: APIContext) {
         await db.update(task).set({ codebase_task_id: null, updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.id, task_ids));
         for (const task_id of task_ids) {
           await addTaskAction({ owner_id: user_id, task_id, type: "UPDATE_TASK", description: "Task unlinked (via scan)", project_id });
+          connect_tags.push({ task_id, codebase_task_id: task_map.get(task_id)! });
         }
       }
       if (actions.COMPLETE) {
@@ -169,6 +172,7 @@ export async function POST(context: APIContext) {
         await db.update(task).set({ progress: "COMPLETED", updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.id, task_ids));
         for (const task_id of task_ids) {
           await addTaskAction({ owner_id: user_id, task_id, type: "UPDATE_TASK", description: "Task completed (via scan)", project_id });
+          connect_tags.push({ task_id, codebase_task_id: task_map.get(task_id)! });
         }
       }
       if (actions.CONFIRM) {
@@ -179,12 +183,35 @@ export async function POST(context: APIContext) {
             return null;
           }
           await db.update(task).set({ codebase_task_id: ctid }).where(eq(task.id, task_id));
+          connect_tags.push({ task_id, codebase_task_id: ctid });
         }).filter(Boolean);
         await Promise.all(task_promises);
       }
     } catch (e) {
       console.error(e);
       return new Response("error updating tasks", { status: 500 });
+    }
+
+    try {
+      // upsert all the tags
+      const tag_promises = connect_tags.map(async (t) => {
+        const codebase_task = codebase_map.get(t.codebase_task_id);
+        if (!codebase_task) {
+          console.error(`codebase_task for ${t.codebase_task_id} not found`);
+          return null;
+        }
+        const tag = tag_map.get(codebase_task.tag);
+        if (!tag) {
+          console.error(`tag for ${t.codebase_task_id} not found`);
+          return null;
+        }
+        await linkTaskToTag(t.task_id, tag.id);
+      }).filter(Boolean);
+
+      await Promise.all(tag_promises);
+    } catch (e) {
+      console.error(e);
+      return new Response("error linking tags", { status: 500 });
     }
   }
 

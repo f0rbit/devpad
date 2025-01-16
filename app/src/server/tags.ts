@@ -33,3 +33,25 @@ export async function upsertTag(data: UpsertTag) {
   const res = await db.insert(tag).values(data).onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: data }).returning({ id: tag.id });
   return res[0].id;
 }
+
+export async function getActiveUserTagsMap(user_id: string) {
+  const tags = await getActiveUserTags(user_id);
+  const map = new Map<string, Tag>();
+  for (const tag of tags) {
+    map.set(tag.id, tag);
+  }
+  return map;
+}
+
+export async function getActiveUserTagsMapByName(user_id: string) {
+  const tags = await getActiveUserTags(user_id);
+  const map = new Map<string, Tag>();
+  for (const tag of tags) {
+    map.set(tag.title, tag);
+  }
+  return map;
+}
+
+export async function linkTaskToTag(task_id: string, tag_id: string) {
+  await db.insert(task_tag).values({ task_id, tag_id }).onConflictDoNothing();
+}

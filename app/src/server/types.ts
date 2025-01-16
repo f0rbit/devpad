@@ -43,7 +43,7 @@ export type UpsertTodo = z.infer<typeof upsert_todo>;
 
 export type UpdateData = {
   id: string;
-  tag: "todo" | "bug" | "note" | "error";
+  tag: string;
   type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
   data: {
     old: {
