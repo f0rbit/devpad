@@ -584,3 +584,7 @@ article {
   }
 }
 
+hr {
+  width: 90%;
+  border-color: var(--input-border);
+}

@@ -3,6 +3,8 @@ import type { UpdateAction, UpdateData } from "../../server/types";
 import type { Task } from "../../server/tasks";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
+import Trash from "lucide-solid/icons/trash";
+import Save from "lucide-solid/icons/save";
 
 interface Props {
   items: UpdateData[];
@@ -118,7 +120,11 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
             onTitleChange={updateTitle}
           />
         ))}
-      <button onClick={saveActions}>Save Actions</button>
+      <hr />
+      <div class="icons" style="gap: 20px; justify-content: center;">
+        <a role="button" onClick={saveActions} class="flex-row"><Save /> save actions</a>
+        <a role="button" onClick={ignoreUpdate} class="flex-row"><Trash /> ignore updates</a>
+      </div>
     </div>
   );
 }
