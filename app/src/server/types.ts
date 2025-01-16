@@ -121,3 +121,5 @@ export type TaskView = NonNullable<UpdateUser['task_view']>;
 
 
 export type HistoryAction = Omit<typeof action.$inferSelect, "updated_at" | "owner_id" | "type"> & { type: ActionType | "SCAN" }
+
+export type ScanStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED";

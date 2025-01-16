@@ -72,10 +72,14 @@ export async function PUT(context: APIContext) {
 
     const [new_todo] = res;
   
+    const fresh_complete = data.progress == "COMPLETED" && previous?.progress != "COMPLETED";
 
     if (!exists) {
       // add CREATE_TASK action
       await addTaskAction({ owner_id: data.owner_id, task_id: new_todo.id, type: "CREATE_TASK", description: "Created task", project_id });
+    } else if (fresh_complete) {
+      // add COMPLETE_TASK action
+      await addTaskAction({ owner_id: data.owner_id, task_id: new_todo.id, type: "UPDATE_TASK", description: "Completed task", project_id });
     } else {
       // add UPDATE_TASK action
       // TODO: for task updates, include the changes as a diff in the data

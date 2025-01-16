@@ -29,6 +29,6 @@ const history = await getProjectHistory(project_uuid);
   <ProjectLayout project_id={project_id}>
     <h5>timeline</h5>
     <br />
-    <HistoryTimeline actions={history} client:load />
+    <HistoryTimeline actions={history} view="project" client:load />
   </ProjectLayout>
 </PageLayout>

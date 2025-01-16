@@ -98,12 +98,18 @@ export async function getTask(todo_id: string) {
 
 export async function addTaskAction({ owner_id, task_id, type, description, project_id }: { owner_id: string, task_id: string, type: ActionType, description: string, project_id: string | null }) {
   // if project_id is null, don't write anything to the data field
-  const data = { task_id } as { task_id: string, project_id?: string };
+  const data = { task_id } as { task_id: string, project_id?: string, title?: string };
   if (project_id) {
     const user_owns = await doesUserOwnProject(owner_id, project_id);
     if (!user_owns) return false;
     data.project_id = project_id;
   }
+
+  const task = await getTask(task_id);
+  if (!task) return false;
+
+  // attach title to the data
+  data.title = task.task.title;
 
   // add the action
   await db.insert(action).values({ owner_id, type, description, data });
