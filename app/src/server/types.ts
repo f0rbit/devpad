@@ -62,7 +62,9 @@ export type UpdateData = {
   task?: Task;
 }
 
-export type UpdateAction = "CONFIRM" | "UNLINK" | "CREATE" | "IGNORE" | "DELETE";
+export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE"), z.literal("DELETE")]);
+export type UpdateAction = z.infer<typeof update_action>;
+
 
 export type TodoUpdate = typeof todo_updates.$inferSelect;
 export type TrackerResult = typeof tracker_result.$inferSelect;
