@@ -62,6 +62,8 @@ export type UpdateData = {
   task?: Task;
 }
 
+export type UpdateAction = "CONFIRM" | "UNLINK" | "CREATE" | "IGNORE" | "DELETE";
+
 export type TodoUpdate = typeof todo_updates.$inferSelect;
 export type TrackerResult = typeof tracker_result.$inferSelect;
 

@@ -1,9 +1,9 @@
 ---
-import UpdateDiffList from "../../../../components/UpdateDiffList.astro";
 import PageLayout from "../../../../layouts/PageLayout.astro";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import { getProjectTasks, type Task } from "../../../../server/tasks";
+import { UpdateDiffList } from "../../../../components/solid/UpdateDiff.tsx";
 
 const { project_id } = Astro.params;
 if (!project_id)
@@ -31,8 +31,8 @@ const codebase_task_map = project_tasks.reduce(
 );
 
 // get the most recent todo_update for the project and render it
-// really struggled to get drizzle to do a join with 2 records from the same table, and db.execute() didn't exist???
 const update = await getRecentUpdate(found_project);
+
 const update_id = update?.id ?? null;
 const update_data = update?.data
   ? typeof update.data == "string"
@@ -46,7 +46,7 @@ const update_data = update?.data
     {
       update_data ? (
         <>
-          <UpdateDiffList items={update_data} tasks={codebase_task_map} />
+          <UpdateDiffList items={update_data} tasks={codebase_task_map} client:load />
           <a href="#" id="approve">
             Approve
           </a>

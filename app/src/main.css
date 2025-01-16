@@ -525,3 +525,61 @@ article {
   cursor: pointer;
   outline: inherit;
 }
+
+.diff-list {
+  .item {
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    padding: 5px 10px;
+  }
+
+  .item.old {
+    background-color: var(--item-red);
+    border-color: var(--item-red-border);
+  }
+
+  .item.new {
+    background-color: var(--item-green);
+    border-color: var(--item-green-border);
+  }
+
+  .astro-code {
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: unset;
+    overflow: auto;
+  }
+
+  .astro-code.new {
+    background-color: var(--item-green) !important;
+    border-color: var(--item-green-border) !important;
+  }
+
+  .astro-code.old {
+    background-color: var(--item-red) !important;
+    border-color: var(--item-red-border) !important;
+  }
+
+  .button-container {
+    position: absolute;
+    right: 2px;
+    top: 2px;
+  }
+
+  .up-arrow {
+    display: none;
+  }
+
+  .down-arrow {
+    display: unset;
+  }
+
+  details[open] .up-arrow {
+    display: unset;
+  }
+
+  details[open] .down-arrow {
+    display: none;
+  }
+}
