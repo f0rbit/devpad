@@ -67,7 +67,18 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
     }, {} as Record<UpdateAction, string[]>);
 
     const url = `/api/project/scan_status?project_id=${project_id}`;
-    const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: grouped, id: update_id, titles: titles() }) });
+    const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: grouped, id: update_id, titles: titles(), approved: true }) });
+    if (response.ok) {
+      location.reload();
+    } else {
+      console.error("Failed to save actions");
+      console.error(await response.json());
+    }
+  };
+
+  const ignoreUpdate = async () => {
+    const url = `/api/project/scan_status?project_id=${project_id}`;
+    const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: {}, id: update_id, titles: {}, approved: false }) });
     if (response.ok) {
       location.reload();
     } else {

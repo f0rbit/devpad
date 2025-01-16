@@ -62,7 +62,7 @@ export type UpdateData = {
   task?: Task;
 }
 
-export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE"), z.literal("DELETE")]);
+export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
 export type UpdateAction = z.infer<typeof update_action>;
 
 
