@@ -42,18 +42,70 @@ const update_data = update?.data
 
 <PageLayout title={`Codebase - ${project_id} - Update`}>
   <ProjectTasksLayout project_id={project_id}>
-    {
-      update ? (
-        <UpdateDiffList
-          items={update_data ?? []}
-          tasks={codebase_task_map}
-          project_id={project_uuid}
-          update_id={update.id}
-          client:load
-        />
-      ) : (
-        <p>No updates</p>
-      )
-    }
+    <div class="flex-col" style="gap: 10px">
+      <a role="button" id="update-check"> check for updates </a>
+      <p id="output"></p>
+      <div></div>
+      {
+        update ? (
+          <UpdateDiffList
+            items={update_data ?? []}
+            tasks={codebase_task_map}
+            project_id={project_uuid}
+            update_id={update.id}
+            client:load
+          />
+        ) : (
+          <p>No updates</p>
+        )
+      }
+    </div>
   </ProjectTasksLayout>
 </PageLayout>
+
+<script is:inline define:vars={{ project_uuid }}>
+  function hook_check() {
+    const update_check = document.getElementById("update-check");
+    if (!update_check) return;
+    const output = document.getElementById("output");
+    if (!output) throw new Error("Output element not found");
+    update_check.addEventListener("click", async () => {
+      const response = await fetch(
+        `/api/project/scan?project_id=${project_uuid}`,
+        { method: "POST" },
+      );
+      if (!response.ok) {
+        output.innerText = "Error: " + response.statusText;
+        return;
+      }
+      output.innerText = "";
+      const reader = response.body.getReader();
+
+      const read_data = async function* () {
+        let done = false;
+        while (!done) {
+          const { done: d, value: v } = await reader.read();
+          done = d;
+          const value = new TextDecoder().decode(v);
+          const lines = value.split("\n");
+          for (const line of lines) {
+            if (line.length > 1) yield line;
+          }
+        }
+
+        if ((output.innerText = "done")) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        }
+      };
+
+      for await (const line of read_data()) {
+        output.innerText = line;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    });
+  }
+
+  hook_check();
+</script>

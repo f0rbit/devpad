@@ -183,12 +183,12 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
 
 
   return (
-    <div>
+    <div style="font-size: 0.9em">
       {/* section to pick branch */}
       {branches != null ? (
         <div class="flex-col" style="gap: 6px; margin-bottom: 20px">
           <div class="flex-row" style="gap: 20px">
-            <h5>branch</h5>
+            <h6>branch</h6>
           </div>
           <div class="flex-row" style="gap: 8px">
             <GitBranch />
@@ -210,7 +210,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
       </datalist>
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
-          <h5>tags</h5>
+          <h6>tags</h6>
           <a href="#" onClick={addTag} title="Add Tag" class="flex-row">
             <Plus />
             add tag
@@ -262,7 +262,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
 
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
-          <h5>ignore paths</h5>
+          <h6>ignore paths</h6>
           <a href="#" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
             <Plus />
             add path
@@ -300,7 +300,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
 
 function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>, add: (tag: DefaultConfig) => void }) {
   const [open, setOpen] = createSignal(false);
-  const [available, setAvailable] = createSignal<DefaultConfig[]>([]);
+  const [available, setAvailable] = createSignal<DefaultConfig[]>(Object.keys(DEFAULT_CONFIGS) as DefaultConfig[]);
 
   // if tags is empty, set open to true
   createEffect(() => {
@@ -331,7 +331,7 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>, add: (t
               <button
                 onClick={() => add(name)}
                 class="button-reset"
-                style="font-size: smaller; border: 1px solid var(--input-border); border-radius: 5px; padding: 2px 8px;"
+                style="font-size: small; border: 1px solid var(--input-border); border-radius: 5px; padding: 2px 8px;"
                 title={`Add boilerplate config for ${name}`}
               >
                 <a role="button" class="flex-row">+ {name}</a>

@@ -145,7 +145,7 @@ const task_history = await getTaskHistory(todo_id);
         <>
           <br />
           <h5 style="margin-bottom: 10px">task history</h5>
-          <HistoryTimeline actions={task_history} client:load />
+          <HistoryTimeline actions={task_history} view="task" client:load />
         </>
       )
     }

@@ -71,8 +71,7 @@ const mode = project ? "edit" : "create";
     </select>
   </div>
   <div>
-    <a href={back}>back</a>
-    <a href="#" id="submit">{mode == "create" ? "create" : "save"}</a>
+    <a role="button" id="submit">{mode == "create" ? "create" : "save"}</a>
   </div>
   <div>
     <p id="error"></p>
@@ -136,7 +135,7 @@ const mode = project ? "edit" : "create";
     // otherwise goto new project
     try {
       const result = (await response.json()) as any;
-      window.location.href = `/project/${result.project_id}`;
+      window.location.reload();
     } catch (err) {
       document.getElementById("error")!.innerText = "Error parsing result";
       console.error(err);

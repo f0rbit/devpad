@@ -2,7 +2,7 @@
 // we want to add pagination as well.
 // using solidjs
 import { createSignal, For } from "solid-js";
-import type { HistoryAction } from "../../server/types";
+import type { HistoryAction, ScanStatus } from "../../server/types";
 import ScanText from "lucide-solid/icons/scan-text";
 import FolderPen from "lucide-solid/icons/folder-pen";
 import FolderPlus from "lucide-solid/icons/folder-plus";
@@ -10,10 +10,13 @@ import FolderMinus from "lucide-solid/icons/folder-minus";
 import FilePlus2 from "lucide-solid/icons/file-plus-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FileMinus2 from "lucide-solid/icons/file-minus-2";
+import GitBranch from "lucide-solid/icons/git-branch";
+import ArrowRight from "lucide-solid/icons/arrow-right";
+import Type from "lucide-solid/icons/type";
 
 const pageSize = () => 10;
 
-export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
+export default function HistoryTimeline(props: { actions: HistoryAction[], view: "project" | "task" | "account" }) {
   // duplicate the actions x30 for testing
   const actions = props.actions;
   const [page, setPage] = createSignal(0);
@@ -81,7 +84,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
     <div class="flex-col">
       <div class="timeline-container">
         <For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>
-          {(action) => <TimelineItem action={action} />}
+          {(action) => <TimelineItem action={action} view={props.view}/>}
         </For>
       </div>
       <div>
@@ -93,7 +96,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[] }) {
   );
 }
 
-function TimelineItem({ action }: { action: HistoryAction }) {
+function TimelineItem({ action, view }: { action: HistoryAction, view: "project" | "task" | "account" }) {
 
   const ActionDate = () => {
     // Ensure 'action' is passed as a prop
@@ -150,6 +153,28 @@ function TimelineItem({ action }: { action: HistoryAction }) {
     }
   };
 
+  const Data = () => {
+    switch (action.type) {
+      case "SCAN":
+        const { message, status } = action.data as { message: string, status: Omit<ScanStatus, "PENDING"> }
+        return <div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
+          <GitBranch />
+          <span>{message}</span>
+          <ArrowRight /> 
+          <span>{status.toLowerCase()}</span>
+        </div>
+      case "UPDATE_TASK":
+        if (view == "task") return null;
+        const { title } = action.data as { title: string };
+        if (!title) return null;
+        return <div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
+          <Type />
+          <span>{title}</span>
+        </div>
+    }
+    return <></>;
+  }
+
   return (
     <div class="timeline-item">
       <div class="flex-row">
@@ -158,6 +183,9 @@ function TimelineItem({ action }: { action: HistoryAction }) {
       </div>
       <div>
         {action.description}
+      </div>
+      <div style="padding-left: 15px; border-left: 1px solid var(--input-border); margin-left: 5px; font-size: 0.9em; color: var(--text-tertiary)">
+        <Data />
       </div>
     </div>
   );
