@@ -84,7 +84,7 @@ export const TaskCard = (props: Props) => {
       <div class={`flex-col ${priority_class}`} style={{ "font-size": "small", gap: "6px" }}>
         {tag_list.length > 0 && <span class="flex-row">
           <For each={tag_list}>
-            {(tag) => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}
+            {(tag) => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}
           </For>
         </span>}
         <span class="flex-row">
