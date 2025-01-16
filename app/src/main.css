@@ -238,15 +238,15 @@ p.description {
 }
 
 .tag-badge {
-  border: 1px solid var(--input-border);
-  border-radius: 7px;
+  border-radius: 5px;
   padding: 2px 8px;
   font-size: small;
-  width: max-content;
+  min-width: 50px;
   display: flex;
   align-items: center;
   gap: 4px;
   flex-direction: row;
+  justify-content: center;
 
   .lucide {
     width: unset;
@@ -583,3 +583,4 @@ article {
     display: none;
   }
 }
+
