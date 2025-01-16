@@ -59,7 +59,7 @@ export async function getProjectTasks(project_id: string) {
 
 
   // get all tags for each task
-  const task_ids = tasks.map((t: any) => t.id);
+  const task_ids = tasks.map((t) => t.task.id);
   if (task_ids.length) {
     const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
     // construct a Map of task_id -> array of tag_ids

@@ -1,7 +1,11 @@
 ---
 import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
-import { getProject, getUserProjects, type Project } from "../../../../server/projects";
+import {
+  getProject,
+  getUserProjects,
+  type Project,
+} from "../../../../server/projects";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getActiveUserTags, getUserTags } from "../../../../server/tags";
 import { TaskSorter } from "../../../../components/solid/TaskSorter";
@@ -49,7 +53,7 @@ const tags = await getActiveUserTags(user.id);
         tags={tags}
         user_id={user.id}
         defaultView={user.task_view}
-      client:load
+        client:load
       />
     </ul>
   </ProjectTasksLayout>
