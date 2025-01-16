@@ -1,7 +1,6 @@
 import { For, createEffect, createSignal, type Accessor } from "solid-js";
-import type { Tag } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
-import { TAG_COLOURS, type TagColor, type UpsertTag } from "../../server/types";
+import { TAG_COLOURS, type Tag, type TagColor, type UpsertTag } from "../../server/types";
 import Save from "lucide-solid/icons/save";
 import Check from "lucide-solid/icons/check";
 import Trash from "lucide-solid/icons/trash";

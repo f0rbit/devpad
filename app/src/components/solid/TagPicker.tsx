@@ -1,9 +1,7 @@
 /* solid-js component to pick a selection of tags. it should store the list in the data-attribute of the container, so we can access it from other js scripts. input should be a input element with a datalist of tags with the name and value of the id. the user can input a tag that isn't within the list, and this would have the id of null but pass through the name and a random colour that is generated for it. upon saving the item, these new tags are then inserted into the db & saved. the "new" tags should have some sort of bright green outline on the badge. */
 
 import { For, createSignal, onMount } from "solid-js";
-import type { UpsertTag } from "../../server/types";
-import type { Tag } from "../../server/tags";
-import X from "lucide-solid/icons/x";
+import type { UpsertTag, Tag  } from "../../server/types";
 import Plus from "lucide-solid/icons/plus";
 import { TagBadge } from "./TagEditor";
 
@@ -25,9 +23,6 @@ export function TagSelect({ tags, onSelect }: { tags: Tag[], onSelect: (tag: Tag
     </select>
   );
 }
-
-
-
 
 export function TagPicker({ currentTags, availableTags, owner_id }: { currentTags: UpsertTag[], availableTags: Tag[], owner_id: string }) {
   const [tags, setTags] = createSignal(currentTags);
@@ -64,7 +59,7 @@ export function TagPicker({ currentTags, availableTags, owner_id }: { currentTag
       addTag(existing as UpsertTag);
     } else {
       // if we don't, add a new tag
-      addTag({ title: input.value, id: undefined, color: "#" + Math.floor(Math.random() * 16777215).toString(16), deleted: false, owner_id });
+      addTag({ title: input.value, id: undefined, color: null, deleted: false, owner_id, render: true });
     }
   }
 
