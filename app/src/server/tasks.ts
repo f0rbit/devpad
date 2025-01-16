@@ -113,7 +113,7 @@ export async function addTaskAction({ owner_id, task_id, type, description, proj
   return true;
 }
 
-export async function getUpsertedTaskMap(codebase_items: UpdateData[], titles: Record<string, string>, project_id: string, user_id: string) {
+export async function getUpsertedTaskMap(codebase_items: UpdateData[]) {
   // for every item we want to make sure we have a task associated with it,
   // if not, then we can create one. when creating, we can use the titles map to get the title, otherwise use item.data.new.text 
   const result = new Map<string, string>(); // codebase_tasks.id -> task.id

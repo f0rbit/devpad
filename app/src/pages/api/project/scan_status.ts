@@ -114,7 +114,7 @@ export async function POST(context: APIContext) {
 
 
     // this will upsert new tasks if they don't exist
-    const task_map = await getUpsertedTaskMap(actionable_items, titles, project_id, user_id);
+    const task_map = await getUpsertedTaskMap(actionable_items);
 
     // run the deletes
     const delete_item = async (item: any) => {
