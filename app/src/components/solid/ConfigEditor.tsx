@@ -3,10 +3,9 @@ import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { For, Index, createEffect, createSignal, type Accessor } from "solid-js";
 import { z } from "zod";
-import { ConfigSchema } from "../../server/types";
+import { ConfigSchema, type Tag } from "../../server/types";
 import GitBranch from "lucide-solid/icons/git-branch";
 import { createStore } from "solid-js/store";
-import type { Tag } from "../../server/tags";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 

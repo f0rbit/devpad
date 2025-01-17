@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ActionType, action, todo_updates, tracker_result } from "../../database/schema";
+import type { ActionType, action, tag, todo_updates, tracker_result } from "../../database/schema";
 import type { Task } from "./tasks";
 
 export const upsert_project = z.object({
@@ -93,6 +93,8 @@ export const TAG_COLOURS = {
   lime: { colour: "#ddf0bc", text: "#88b47f", border: "#becca5" },
 } as const;
 
+export type _FetchedTag = typeof tag.$inferSelect;
+export type Tag = Omit<_FetchedTag, "color"> & { color: TagColor | null };
 
 export type TagColor = keyof typeof TAG_COLOURS;
 
