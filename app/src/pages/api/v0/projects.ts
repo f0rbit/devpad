@@ -31,11 +31,11 @@ export async function GET(context: APIContext) {
   }
 
   // extract the query params from the request
-  const query = context.params;
+  const query = context.url.searchParams;
 
   // extract the project id from the query params
-  const id = query.id;
-  const name = query.name;
+  const id = query.get("id");
+  const name = query.get("name");
 
   if (id) {
     // get the project by id
