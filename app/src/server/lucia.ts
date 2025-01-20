@@ -4,6 +4,7 @@ import { db } from "../../database/db";
 import { session, user } from "../../database/schema";
 import type { TaskView } from "./types";
 
+// @ts-ignore
 const adapter = new DrizzleSQLiteAdapter(db, session, user);
 
 export const lucia = new Lucia(adapter, {

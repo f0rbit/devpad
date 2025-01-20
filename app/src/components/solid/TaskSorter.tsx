@@ -6,10 +6,9 @@ import Search from "lucide-solid/icons/search";
 import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
 import { ProjectSelector } from "./ProjectSelector";
 import FolderSearch from "lucide-solid/icons/folder-search";
-import type { Tag as UserTag } from "../../server/tags";
 import { TagSelect } from "./TagPicker";
 import Tag from "lucide-solid/icons/tag";
-import type { TaskView, UpsertTag } from "../../server/types";
+import type { TaskView, UpsertTag, Tag as UserTag } from "../../server/types";
 import LayoutList from "lucide-solid/icons/layout-list";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
 
