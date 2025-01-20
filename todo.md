@@ -130,8 +130,8 @@ tasks are made of many different fields, outlined above. They also contain links
 
 
 # api endpoints
-- [ ] GET /project?id=<project_uuid>
-- [ ] GET /projects
+- [x] GET /projects?id=<project_uuid>
+- [x] GET /projects
 - [ ] GET /tasks
-- [ ] GET /task?id=<task_uuid>
+- [ ] GET /tasks?id=<task_uuid>
 - [ ] GET /tasks?tag=<tag_uuid>
