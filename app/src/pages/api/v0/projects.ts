@@ -57,6 +57,6 @@ export async function GET(context: APIContext) {
 
   // should only show 'public' projects
   const public_projects = projects.filter((project) => project.visibility == "PUBLIC");
-  return new Response(JSON.stringify(public_projects, null, 2));
+  return new Response(JSON.stringify(public_projects));
 }
 
