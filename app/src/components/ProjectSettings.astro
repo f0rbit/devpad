@@ -25,14 +25,14 @@ const mode = project ? "edit" : "create";
       required
     />
     <label for="status">status</label>
-    <select id="status" value={project?.status ?? "development"}>
-      <option>development</option>
-      <option>released</option>
-      <option>stopped</option>
-      <option>live</option>
-      <option>finished</option>
-      <option>paused</option>
-      <option>abandoned</option>
+    <select id="status" value={project?.status ?? "DEVELOPMENT"}>
+      <option selected={project?.status == "DEVELOPMENT"}>development</option>
+      <option selected={project?.status == "RELEASED"}>released</option>
+      <option selected={project?.status == "STOPPED"}>stopped</option>
+      <option selected={project?.status == "LIVE"}>live</option>
+      <option selected={project?.status == "FINISHED"}>finished</option>
+      <option selected={project?.status == "PAUSED"}>paused</option>
+      <option selected={project?.status == "ABANDONED"}>abandoned</option>
     </select>
   </div>
   <div>
@@ -61,13 +61,13 @@ const mode = project ? "edit" : "create";
       style="display: none;"
     />
     <label for="visibility">visibility</label>
-    <select id="visibility" value={project?.visibility ?? "private"}>
-      <option>public</option>
-      <option>private</option>
-      <option>hidden</option>
-      <option>archived</option>
-      <option>draft</option>
-      <option>deleted</option>
+    <select id="visibility" value={project?.visibility ?? "PRIVATE"}>
+      <option selected={project?.visibility == "PUBLIC"}>public</option>
+      <option selected={project?.visibility == "PRIVATE"}>private</option>
+      <option selected={project?.visibility == "HIDDEN"}>hidden</option>
+      <option selected={project?.visibility == "ARCHIVED"}>archived</option>
+      <option selected={project?.visibility == "DRAFT"}>draft</option>
+      <option selected={project?.visibility == "DELETED"}>deleted</option>
     </select>
   </div>
   <div>

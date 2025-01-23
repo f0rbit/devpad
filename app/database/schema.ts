@@ -20,8 +20,8 @@ export const session = sqliteTable("session", {
 
 export const api_key = sqliteTable("api_key", {
   id: text("id").primaryKey().$defaultFn(() => "api_key" + crypto.randomUUID()),
-  owner_id: text("owner_id").references(() => user.id),
-  hash: text("hash")
+  owner_id: text("owner_id").references(() => user.id).notNull(),
+  hash: text("hash").notNull()
 });
 
 export const project = sqliteTable("project", {
@@ -38,7 +38,7 @@ export const project = sqliteTable("project", {
   deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
   link_url: text("link_url"),
   link_text: text("link_text"),
-  visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }),
+  visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] }).notNull().default("PRIVATE"),
   current_version: text("current_version"),
   scan_branch: text("scan_branch"),
 }, (table) => ({
