@@ -4,22 +4,8 @@
 // ?name=<project_name>
 // this is a astro api endpoint
 import type { APIContext } from "astro";
-import { getUserByAPIKey } from "../../../server/keys";
 import { getProject, getProjectById, getUserProjects } from "../../../server/projects";
-
-async function getAuthedUser(request: APIContext): Promise<{ user_id: string, error: null } | { user_id: null, error: string }> {
-  // take the auth key from the headers
-  // will be Authorization: Bearer <auth_key>
-  const auth_key = request.request.headers.get("Authorization")?.split(" ")?.[1];
-  if (!auth_key) {
-    return { user_id: null, error: "No auth key provided" };
-  }
-
-  // check if the auth key is valid
-  const found = await getUserByAPIKey(auth_key);
-  return found;
-}
-
+import { getAuthedUser } from "../../../server/keys";
 
 export async function GET(context: APIContext) {
   const { user_id, error } = await getAuthedUser(context);
