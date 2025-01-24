@@ -1,15 +1,13 @@
 
 import { describe, expect, it } from "bun:test";
 import type { Project } from "../src/server/projects";
-
-const headers = { "Authorization": "Bearer 878daa046fd33f89eb518fd258e420c2769a22dad851ed93cb547025d77a8819" };
-const url = "http://localhost:4321/api/v0";
+import { headers, URL } from "./config";
 
 describe("projects", () => {
   let devpad_uuid: string | null = null; // get this from the get all projects endpoint
 
   it("should get all projects", async () => {
-    const response = await fetch(`${url}/projects`, {
+    const response = await fetch(`${URL}/projects`, {
       method: "GET",
       headers,
     });
@@ -23,7 +21,7 @@ describe("projects", () => {
 
 
   it("should get a project by id", async () => {
-    const response = await fetch(`${url}/projects?id=${devpad_uuid}`, {
+    const response = await fetch(`${URL}/projects?id=${devpad_uuid}`, {
       method: "GET",
       headers,
     });
@@ -36,7 +34,7 @@ describe("projects", () => {
   });
 
   it("should get a project by name", async () => {
-    const response = await fetch(`${url}/projects?name=devpad`, {
+    const response = await fetch(`${URL}/projects?name=devpad`, {
       method: "GET",
       headers,
     });

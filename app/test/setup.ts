@@ -7,11 +7,12 @@ let cp: child_process.ChildProcess | null = null;
 beforeAll(async () => {
 	// call "bun dev" to start the server
 	cp = child_process.exec("bun dev");
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	cp.stderr?.pipe(process.stderr);
+	await new Promise((resolve) => setTimeout(resolve, 700));
 });
 
 // stop astro server
 afterAll(async () => {
 	cp?.kill();
-	await new Promise((resolve) => setTimeout(resolve, 1000));
+	await new Promise((resolve) => setTimeout(resolve, 300));
 });

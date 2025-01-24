@@ -3,11 +3,14 @@ import node from "@astrojs/node";
 
 import solidJs from "@astrojs/solid-js";
 
+console.log(Bun.env.PORT);
+
 // https://astro.build/config
 export default defineConfig({
-  output: "server",
-  adapter: node({
-    mode: "middleware",
-  }),
-  integrations: [solidJs()]
+	server: { port: Bun.env.PORT ? Number(Bun.env.PORT) : 3000 },
+	output: "server",
+	adapter: node({
+		mode: "middleware"
+	}),
+	integrations: [solidJs()]
 });
