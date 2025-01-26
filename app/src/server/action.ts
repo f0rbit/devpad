@@ -95,7 +95,10 @@ export async function getUserHistory(user_id: string) {
 	actions.forEach((a) => {
 		const data = (a.data as any);
 		const project = project_map[data.project_id]?.[0];
-		if (project) data.name = project.name;
+		if (project) {
+			data.href = project.project_id;
+			data.name = project.name;
+		}
 	});
 
 	return actions.sort(sortByDate);
