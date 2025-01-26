@@ -5,6 +5,7 @@
   --hover-filter: brightness(50%);
   --text-secondary: oklch(25% 0.02 290);
   --text-tertiary: oklch(35% 0.02 290);
+  --text-muted: oklch(50% 0.03 290);
   font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
 
   --input-background: oklch(96% 0.01 290);
@@ -26,6 +27,7 @@
     --text-primary: oklch(1 0 0);
     --text-secondary: oklch(85% 0.02 290);
     --text-tertiary: oklch(75% 0.02 290);
+    --text-muted: oklch(60% 0.03 290);
     --text-link: oklch(70% 0.035 280);
     --hover-filter: brightness(150%);
 
@@ -346,6 +348,10 @@ textarea:focus {
   color: color-mix(in srgb, var(--text-secondary) 70%, red);
 }
 
+.priority-none {
+  color: var(--text-muted);
+}
+
 code>pre {
   background: var(--input-background);
   border: 1px solid var(--input-border);
@@ -600,3 +606,8 @@ hr {
     margin: unset;
     background: oklch(from var(--input-border) 23% 0.017 h) !important;
   }
+
+.task-summary {
+  color: var(--text-muted); 
+  font-size: smaller;
+}
