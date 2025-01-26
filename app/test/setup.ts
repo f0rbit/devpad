@@ -8,7 +8,7 @@ beforeAll(async () => {
 	// call "bun dev" to start the server
 	cp = child_process.exec("bun dev");
 	cp.stderr?.pipe(process.stderr);
-	await new Promise((resolve) => setTimeout(resolve, 700));
+	await new Promise((resolve) => setTimeout(resolve, 2000));
 });
 
 // stop astro server
