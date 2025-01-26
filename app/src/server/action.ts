@@ -2,18 +2,38 @@ import { db } from "../../database/db";
 import { action, todo_updates, type ActionType } from "../../database/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "./types";
-import { getProjectById, getUserProjects } from "./projects";
+import { getProjectById, getUserProjects, type Project } from "./projects";
 import { getTask } from "./tasks";
 
 
 export async function getActions(user_id: string, action_filter: ActionType[] | null) {
   if (action_filter && action_filter.length == 0) action_filter = null;
 
-  if (action_filter) {
-    return await db.select().from(action).where(and(eq(action.owner_id, user_id), inArray(action.type, action_filter)));
-  } else {
-    return await db.select().from(action).where(eq(action.owner_id, user_id));
+  const project_map = {} as Record<string, Project>;
+  const projects = await getUserProjects(user_id);
+  for (const project of projects) {
+    project_map[project.id] = project;
   }
+
+  const data = await (async () => {
+    if (action_filter) {
+      return await db.select().from(action).where(and(eq(action.owner_id, user_id), inArray(action.type, action_filter)));
+    } else {
+      return await db.select().from(action).where(eq(action.owner_id, user_id));
+    }
+  })();
+
+  // attach each project.name to action.data.project based on action.data.project_id
+  data.forEach((a) => {
+    const data = (a.data as any);
+    const project = project_map[data.project_id];
+    if (project) {
+      data.href = project.project_id;
+      data.name = project.name;
+    }
+  });
+
+  return data;
 }
 
 export async function getProjectScanHistory(project_id: string) {
@@ -84,22 +104,9 @@ export async function getTaskHistory(task_id: string) {
 }
 
 export async function getUserHistory(user_id: string) {
-	const task_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT"];
+  const task_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT"];
 
-	const actions = await getActions(user_id, task_filter);
+  const actions = await getActions(user_id, task_filter);
 
-	const projects = await getUserProjects(user_id);
-	const project_map = Object.groupBy(projects, (p) => p.id);
-
-	// attach each project.name to action.data.project based on action.data.project_id
-	actions.forEach((a) => {
-		const data = (a.data as any);
-		const project = project_map[data.project_id]?.[0];
-		if (project) {
-			data.href = project.project_id;
-			data.name = project.name;
-		}
-	});
-
-	return actions.sort(sortByDate);
+  return actions.sort(sortByDate);
 }
