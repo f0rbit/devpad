@@ -102,7 +102,7 @@ tasks are made of many different fields, outlined above. They also contain links
 
 
 ## feature todo
-- [ ] history
+- [x] history
 	- [x] project history
 		- [x] modifications to spec
 		- [x] modifications to settings
@@ -117,10 +117,10 @@ tasks are made of many different fields, outlined above. They also contain links
 		- [x] project deleted
 		- [x] created task
 		- [x] deleted task
-	- [ ] history page
+	- [x] history page
 		- [x] project history under project
 		- [x] tasks under task
-		- [ ] account under account
+		- [x] account under account
 - [ ] task management
 	- [x] better edit screen
 	- [ ] support for modules

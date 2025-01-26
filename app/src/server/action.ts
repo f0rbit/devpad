@@ -2,7 +2,7 @@ import { db } from "../../database/db";
 import { action, todo_updates, type ActionType } from "../../database/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "./types";
-import { getProjectById } from "./projects";
+import { getProjectById, getUserProjects } from "./projects";
 import { getTask } from "./tasks";
 
 
@@ -81,4 +81,22 @@ export async function getTaskHistory(task_id: string) {
   });
 
   return filtered.sort(sortByDate);
+}
+
+export async function getUserHistory(user_id: string) {
+	const task_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT"];
+
+	const actions = await getActions(user_id, task_filter);
+
+	const projects = await getUserProjects(user_id);
+	const project_map = Object.groupBy(projects, (p) => p.id);
+
+	// attach each project.name to action.data.project based on action.data.project_id
+	actions.forEach((a) => {
+		const data = (a.data as any);
+		const project = project_map[data.project_id]?.[0];
+		if (project) data.name = project.name;
+	});
+
+	return actions.sort(sortByDate);
 }

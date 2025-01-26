@@ -171,6 +171,15 @@ function TimelineItem({ action, view }: { action: HistoryAction, view: "project"
           <Type />
           <span>{title}</span>
         </div>
+	  case "CREATE_PROJECT":
+	  case "UPDATE_PROJECT":
+	  case "DELETE_PROJECT":
+		const { name = null } = action.data as { name: string | null };
+		if (!name) return null;
+		return <div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
+			<FolderPlus />
+			<a href={`/project/${name}`}>{name}</a>
+		</div>
     }
     return <></>;
   }
