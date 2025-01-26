@@ -31,7 +31,7 @@ const tasks = await getProjectTasks(project_uuid);
 const tags = await getActiveUserTags(user.id);
 ---
 
-<PageLayout title={"Project Tasks"}>
+<PageLayout title={`Tasks - ${project_id}`}>
   <ProjectTasksLayout project_id={project_id}>
     <TaskSorter
       tasks={tasks}

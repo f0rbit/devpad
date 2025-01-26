@@ -6,9 +6,10 @@ const user = Astro.locals.user;
 const keys = user ? await getAPIKeys(user.id) : [];
 ---
 
+<PageLayout title="Account - devpad">
 {
 	user ? (
-		<PageLayout title="Welcome back!">
+		<>
 			<div>
 				<h3>api keys</h3>
 				{keys.length === 0 ? (
@@ -29,14 +30,15 @@ const keys = user ? await getAPIKeys(user.id) : [];
 			<a id="add-key" href="#">
 				+ generate
 			</a>
-		</PageLayout>
+		</>
 	) : (
-		<PageLayout title="Welcome!">
+		<>
 			<h1>Welcome!</h1>
 			<p>Sign in to access your dashboard...</p>
-		</PageLayout>
+		</>
 	)
 }
+</PageLayout>
 
 <script>
 	async function add_key() {
