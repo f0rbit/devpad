@@ -64,35 +64,79 @@ import PageLayout from "../layouts/PageLayout.astro";
 };`} lang="ts" /></pre>
     </section>
     <section>
-      <h4>GET /tasks</h4>
-      <p>This endpoint retrieves task information. It accepts the following optional query parameters:</p>
-      <ul>
-        <li><code>id</code>: The UUID of the task.</li>
-        <li><code>tag</code>: The UUID of the tag.</li>
-        <li><code>project</code>: The UUID of the project.</li>
-      </ul>
-      <p>Depending on the provided parameters, the endpoint will:</p>
-      <ul>
-        <li>Return a specific task if <code>id</code> is provided.</li>
-        <li>Return tasks associated with a specific tag if <code>tag</code> is provided.</li>
-        <li>Return tasks associated with a specific project if <code>project</code> is provided.</li>
-        <li>Return all tasks for the authenticated user if no parameters are provided.</li>
-      </ul>
+      <h4>tasks</h4>
+      <p>This endpoint retrieves task information. Note that only tasks with <code>visibility == "PUBLIC"</code> will be returned in <code>/tasks</code> (with no query params)</p>
+      <div class="flex-col" style="gap: 10px;">
+      <div>
+        <code>GET /tasks</code>
+        <ul style="padding-left: 20px;">
+        <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+        <p class="flex-row"><code>401 - Unauthorized</code></p>
+        </ul>
+      </div>
+      <div>
+        <code>GET /tasks?id=&ltstring&gt - id is task.id</code>
+        <ul style="padding-left: 20px;">
+        <p class="flex-row"><code>200 - TaskUnion</code></p>
+        <p class="flex-row"><code>401 - Unauthorized</code></p>
+        <p class="flex-row"><code>404 - Not Found</code></p>
+        <p class="flex-row"><code>500 - Internal Server Error</code></p>
+        </ul>
+      </div>
+      <div>
+        <code>GET /tasks?tag=&ltstring&gt - tag is task.tag</code>
+        <ul style="padding-left: 20px;">
+        <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+        <p class="flex-row"><code>401 - Unauthorized</code></p>
+        <p class="flex-row"><code>404 - Not Found</code></p>
+        <p class="flex-row"><code>500 - Internal Server Error</code></p>
+        </ul>
+      </div>
+      <div>
+        <code>GET /tasks?project=&ltstring&gt - project is task.project_id</code>
+        <ul style="padding-left: 20px;">
+        <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+        <p class="flex-row"><code>401 - Unauthorized</code></p>
+        <p class="flex-row"><code>404 - Not Found</code></p>
+        <p class="flex-row"><code>500 - Internal Server Error</code></p>
+        </ul>
+      </div>
+      </div>
+
       <pre><Code code={`type Task = {
-  id: string;
-  project_id: string;
-  owner_id: string;
-  title: string;
-  description: string;
-  start_time: string | null;
-  end_time: string | null;
-  priority: "LOW" | "MEDIUM" | "HIGH";
-  visibility: "PUBLIC" | "PRIVATE" | "HIDDEN" | "ARCHIVED" | "DRAFT" | "DELETED";
-  tags: string[];
-  // ...other fields
+    id: string;
+    project_id: string;
+    owner_id: string;
+    title: string;
+    description: string;
+    start_time: string | null;
+    end_time: string | null;
+    priority: "LOW" | "MEDIUM" | "HIGH";
+    visibility: "PUBLIC" | "PRIVATE" | "HIDDEN" | "ARCHIVED" | "DRAFT" | "DELETED";
 };
 
-type GetTaskResponse = Task | Task[];`} lang="ts" /></pre>
+type CodebaseTask = {
+    id: string;
+    branch: string;
+    commit_sha: string;
+    commit_msg: string;
+    commit_url: string;
+    type: string;
+    text: string;
+    file: string;
+    line: number;
+    context: string[];
+    created_at: string;
+    updated_at: string;
+    deleted: boolean | null;
+    recent_scan_id: number;
+};
+  
+type TaskUnion = {
+    task: Task;
+    codebase_task: CodebaseTask;
+    tags: string[];
+};`} lang="ts" /></pre>
     </section>
   </div>
 </PageLayout>
