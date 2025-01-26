@@ -25,7 +25,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
   const [config, setConfig] = createStore({
     tags: initial_config.tags ?? [],
     ignore: initial_config?.ignore ?? [],
-    branch: scan_branch ?? null,
+    branch: scan_branch ?? branches?.[0]?.name ?? null,
   });
   const [errors, setErrors] = createStore({
     tags: "",

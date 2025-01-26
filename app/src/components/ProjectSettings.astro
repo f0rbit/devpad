@@ -135,7 +135,8 @@ const mode = project ? "edit" : "create";
     // otherwise goto new project
     try {
       const result = (await response.json()) as any;
-      window.location.reload();
+      // go to project page
+      window.location.href = `/project/${project_id}`;
     } catch (err) {
       document.getElementById("error")!.innerText = "Error parsing result";
       console.error(err);

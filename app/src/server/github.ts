@@ -59,6 +59,10 @@ export async function getBranches(owner: string, repo: string, access_token: str
 
   // sort branches by date
   branches.sort((a: any, b: any) => {
+    // put either main or master first
+    if (a.name === "main" || a.name === "master") return -1;
+    if (b.name === "main" || b.name === "master") return 1;
+    // sort by date
     return new Date(b.commit.date).getTime() - new Date(a.commit.date).getTime();
   });
 

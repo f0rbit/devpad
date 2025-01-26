@@ -37,11 +37,11 @@ export async function PATCH(context: APIContext) {
 
   const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
   const repo_url = data.repo_url ?? previous?.repo_url;
-  const fetch_specification = (github_linked && repo_url) && (!data.specification && (previous && !previous.specification));
+  const fetch_specification = (github_linked && repo_url) && (!previous || !previous.specification);
 
   try {
     // the new_project is imported from github and doesn't have a specification, import it from the README
-    if (fetch_specification) {
+    if (fetch_specification && !data.specification) {
       console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
       // we need to get OWNER and REPO from the repo_url
       const slices = repo_url.split("/");
