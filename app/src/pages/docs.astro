@@ -1,0 +1,58 @@
+---
+import { Code } from "astro:components";
+import PageLayout from "../layouts/PageLayout.astro";
+---
+
+<PageLayout title="devpad">
+  <h3>API Documentation</h3>
+  <br />
+  <div class="flex-col">
+    <section>
+      <h4>GET /projects</h4>
+      <p>This endpoint retrieves project information. It accepts the following optional query parameters:</p>
+      <ul>
+        <li><code>id</code>: The UUID of the project.</li>
+        <li><code>name</code>: The name of the project.</li>
+      </ul>
+      <p>Depending on the provided parameters, the endpoint will:</p>
+      <ul>
+        <li>Return a specific project if <code>id</code> is provided.</li>
+        <li>Return a specific project if <code>name</code> is provided.</li>
+        <li>Return all public projects if no parameters are provided.</li>
+      </ul>
+      <pre><Code code={`type Project = {
+  id: string;
+  name: string;
+  owner_id: string;
+  visibility: "PUBLIC" | "PRIVATE";
+  // ...other fields
+};
+
+type GetProjectResponse = Project | Project[];`} lang="ts" /></pre>
+    </section>
+    <section>
+      <h4>GET /tasks</h4>
+      <p>This endpoint retrieves task information. It accepts the following optional query parameters:</p>
+      <ul>
+        <li><code>id</code>: The UUID of the task.</li>
+        <li><code>tag</code>: The UUID of the tag.</li>
+        <li><code>project</code>: The UUID of the project.</li>
+      </ul>
+      <p>Depending on the provided parameters, the endpoint will:</p>
+      <ul>
+        <li>Return a specific task if <code>id</code> is provided.</li>
+        <li>Return tasks associated with a specific tag if <code>tag</code> is provided.</li>
+        <li>Return tasks associated with a specific project if <code>project</code> is provided.</li>
+        <li>Return all tasks for the authenticated user if no parameters are provided.</li>
+      </ul>
+      <pre><Code code={`type Task = {
+  id: string;
+  project_id: string;
+  owner_id: string;
+  // ...other fields
+};
+
+type GetTaskResponse = Task | Task[];`} lang="ts" /></pre>
+    </section>
+  </div>
+</PageLayout>
