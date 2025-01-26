@@ -33,9 +33,9 @@
     - [ ] Some crucial tests for frontend interactions
 
 # features
-- [ ] Project management
-    - [ ] Move projects over from old devpad to new
-    - [ ] Add API token support
+- [x] Project management
+    - [x] Move projects over from old devpad to new
+    - [x] Add API token support
 - [x] Integrate todo-tracker
     - [x] Use Go binary
     - [x] Build system to clone github repo & run command
@@ -103,23 +103,23 @@ tasks are made of many different fields, outlined above. They also contain links
 
 ## feature todo
 - [ ] history
-	- [ ] project history
-		- [ ] modifications to spec
-		- [ ] modifications to settings
-		- [ ] scan accepts
-		- [ ] updates to tasks
-	- [ ] task history
-		- [ ] data updates
-		- [ ] status updates
-		- [ ] scan results
-	- [ ] user history
-		- [ ] project added
-		- [ ] project deleted
-		- [ ] created task
-		- [ ] deleted task
+	- [x] project history
+		- [x] modifications to spec
+		- [x] modifications to settings
+		- [x] scan accepts
+		- [x] updates to tasks
+	- [x] task history
+		- [x] data updates
+		- [x] status updates
+		- [x] scan results
+	- [x] user history
+		- [x] project added
+		- [x] project deleted
+		- [x] created task
+		- [x] deleted task
 	- [ ] history page
-		- [ ] project history under project
-		- [ ] tasks under task
+		- [x] project history under project
+		- [x] tasks under task
 		- [ ] account under account
 - [ ] task management
 	- [x] better edit screen
@@ -127,11 +127,14 @@ tasks are made of many different fields, outlined above. They also contain links
 	- [x] link to codebase scan
 - [ ] on failed scan, add a "failed" row to history
 	- [ ] write out metadata so we can see if things failed
+    - [ ] scans fail when using wildcards
 
 
 # api endpoints
 - [x] GET /projects?id=<project_uuid>
 - [x] GET /projects
-- [ ] GET /tasks
-- [ ] GET /tasks?id=<task_uuid>
-- [ ] GET /tasks?tag=<tag_uuid>
+- [x] GET /tasks
+- [x] GET /tasks?id=<task_uuid>
+- [x] GET /tasks?tag=<tag_uuid>
+
+
