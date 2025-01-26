@@ -84,7 +84,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[], view:
     <div class="flex-col">
       <div class="timeline-container">
         <For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>
-          {(action) => <TimelineItem action={action} view={props.view}/>}
+          {(action) => <TimelineItem action={action} view={props.view} />}
         </For>
       </div>
       <div>
@@ -160,7 +160,7 @@ function TimelineItem({ action, view }: { action: HistoryAction, view: "project"
         return <div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
           <GitBranch />
           <span>{message}</span>
-          <ArrowRight /> 
+          <ArrowRight />
           <span>{status.toLowerCase()}</span>
         </div>
       case "UPDATE_TASK":
@@ -171,22 +171,22 @@ function TimelineItem({ action, view }: { action: HistoryAction, view: "project"
           <Type />
           <span>{title}</span>
         </div>
-	  case "CREATE_PROJECT":
-	  case "UPDATE_PROJECT":
-	  case "DELETE_PROJECT":
-		const { name = null, href = null } = action.data as { name: string | null, href: string | null };
-		if (!name || !href) return null;
-		return <div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
-			<FolderPlus />
-			<a href={`/project/${href}`}>{name}</a>
-		</div>
+      case "CREATE_PROJECT":
+      case "UPDATE_PROJECT":
+      case "DELETE_PROJECT":
+        const { name = null, href = null } = action.data as { name: string | null, href: string | null };
+        if (!name || !href) return null;
+        return <div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
+          <FolderPlus />
+          <a href={`/project/${href}`}>{name}</a>
+        </div>
     }
     return <></>;
   }
 
   return (
     <div class="timeline-item">
-      <div class="flex-row">
+      <div class="flex-row" style={{ "font-size": "smaller" }}>
         <ActionIcon type={action.type} />
         <ActionDate />
       </div>

@@ -4,45 +4,60 @@ import PageLayout from "../layouts/PageLayout.astro";
 ---
 
 <PageLayout title="devpad">
-	<h3>API</h3>
-	<div class="flex-col" style="gap: 5px;">
-		<span>The API is available at <a href="https://devpad.tools/api/v0">devpad.tools/api/v0</a></span>
-		<span>You should put an <code>API_KEY</code> in the <code>Authorization</code> header for each request in this format:</span>
-		<Code code={`Authorization: Bearer <API_KEY>`} lang="http" />
-		<span>API keys are generated on the <a href="/account">account</a> page.</span>
+  <h3>API</h3>
+  <div class="flex-col" style="gap: 5px;">
+    <span
+      >The API is available at <a href="https://devpad.tools/api/v0"
+        >devpad.tools/api/v0</a
+      ></span
+    >
+    <span
+      >You should put an <code>API_KEY</code> in the <code>Authorization</code> header
+      for each request in this format:</span
+    >
+    <Code code={`Authorization: Bearer <API_KEY>`} lang="http" />
+    <span
+      >API keys are generated on the <a href="/account">account</a> page.</span
+    >
   </div>
-	<br />
+  <br />
   <div class="flex-col">
     <section>
       <h4>projects</h4>
-      <p>This endpoint fetches the data associated with each project. Note that only projects with <code>visibility == "PUBLIC"</code> will be returned in <code>/projects</code> (with no query params)</p>
+      <p>
+        This endpoint fetches the data associated with each project. Note that
+        only projects with <code>visibility == "PUBLIC"</code> will be returned in
+        <code>/projects</code> (with no query params)
+      </p>
       <div class="flex-col" style="gap: 10px;">
-	    <div>
-			<code>GET /projects</code>
-			<ul style="padding-left: 20px;">
-				<p class="flex-row"><code>200 - Array&ltProject&gt</code></p>
-				<p class="flex-row"><code>401 - Unauthorized</code></p>
-			</ul>
-		</div>
-		<div>
-			<code>GET /projects?id=&ltstring&gt - id is project.id</code>
-			<ul style="padding-left: 20px;">
-				<p class="flex-row"><code>200 - Project</code></p>
-				<p class="flex-row"><code>401 - Unauthorized</code></p>
-				<p class="flex-row"><code>404 - Not Found</code></p>
-				<p class="flex-row"><code>500 - Internal Server Error</code></p>
-			</ul>		
-		</div>
-		<div>
-			<code>GET /projects?name=&ltstring&gt - name is project.project_id</code>
-			<ul style="padding-left: 20px;">
-				<p class="flex-row"><code>200 - Project</code></p>
-				<p class="flex-row"><code>401 - Unauthorized</code></p>
-				<p class="flex-row"><code>404 - Not Found</code></p>
-				<p class="flex-row"><code>500 - Internal Server Error</code></p>
-			</ul>
-		</div>
-	  </div>
+        <div>
+          <code>GET /projects</code>
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - Array&ltProject&gt</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+          </ul>
+        </div>
+        <div>
+          <code>GET /projects?id=&ltstring&gt - id is project.id</code>
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - Project</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+            <p class="flex-row"><code>404 - Not Found</code></p>
+            <p class="flex-row"><code>500 - Internal Server Error</code></p>
+          </ul>
+        </div>
+        <div>
+          <code
+            >GET /projects?name=&ltstring&gt - name is project.project_id</code
+          >
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - Project</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+            <p class="flex-row"><code>404 - Not Found</code></p>
+            <p class="flex-row"><code>500 - Internal Server Error</code></p>
+          </ul>
+        </div>
+      </div>
 
       <pre><Code code={`type Project = {
     id: string;
@@ -65,42 +80,48 @@ import PageLayout from "../layouts/PageLayout.astro";
     </section>
     <section>
       <h4>tasks</h4>
-      <p>This endpoint retrieves task information. Note that only tasks with <code>visibility == "PUBLIC"</code> will be returned in <code>/tasks</code> (with no query params)</p>
+      <p>
+        This endpoint retrieves task information. Note that only tasks with <code
+          >visibility == "PUBLIC"</code
+        > will be returned in <code>/tasks</code> (with no query params)
+      </p>
       <div class="flex-col" style="gap: 10px;">
-      <div>
-        <code>GET /tasks</code>
-        <ul style="padding-left: 20px;">
-        <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
-        <p class="flex-row"><code>401 - Unauthorized</code></p>
-        </ul>
-      </div>
-      <div>
-        <code>GET /tasks?id=&ltstring&gt - id is task.id</code>
-        <ul style="padding-left: 20px;">
-        <p class="flex-row"><code>200 - TaskUnion</code></p>
-        <p class="flex-row"><code>401 - Unauthorized</code></p>
-        <p class="flex-row"><code>404 - Not Found</code></p>
-        <p class="flex-row"><code>500 - Internal Server Error</code></p>
-        </ul>
-      </div>
-      <div>
-        <code>GET /tasks?tag=&ltstring&gt - tag is task.tag</code>
-        <ul style="padding-left: 20px;">
-        <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
-        <p class="flex-row"><code>401 - Unauthorized</code></p>
-        <p class="flex-row"><code>404 - Not Found</code></p>
-        <p class="flex-row"><code>500 - Internal Server Error</code></p>
-        </ul>
-      </div>
-      <div>
-        <code>GET /tasks?project=&ltstring&gt - project is task.project_id</code>
-        <ul style="padding-left: 20px;">
-        <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
-        <p class="flex-row"><code>401 - Unauthorized</code></p>
-        <p class="flex-row"><code>404 - Not Found</code></p>
-        <p class="flex-row"><code>500 - Internal Server Error</code></p>
-        </ul>
-      </div>
+        <div>
+          <code>GET /tasks</code>
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+          </ul>
+        </div>
+        <div>
+          <code>GET /tasks?id=&ltstring&gt - id is task.id</code>
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - TaskUnion</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+            <p class="flex-row"><code>404 - Not Found</code></p>
+            <p class="flex-row"><code>500 - Internal Server Error</code></p>
+          </ul>
+        </div>
+        <div>
+          <code>GET /tasks?tag=&ltstring&gt - tag is task.tag</code>
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+            <p class="flex-row"><code>404 - Not Found</code></p>
+            <p class="flex-row"><code>500 - Internal Server Error</code></p>
+          </ul>
+        </div>
+        <div>
+          <code
+            >GET /tasks?project=&ltstring&gt - project is task.project_id</code
+          >
+          <ul style="padding-left: 20px;">
+            <p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+            <p class="flex-row"><code>401 - Unauthorized</code></p>
+            <p class="flex-row"><code>404 - Not Found</code></p>
+            <p class="flex-row"><code>500 - Internal Server Error</code></p>
+          </ul>
+        </div>
       </div>
 
       <pre><Code code={`type Task = {

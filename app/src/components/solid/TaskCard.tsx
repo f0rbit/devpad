@@ -32,7 +32,8 @@ export const TaskCard = (props: Props) => {
   }
 
   const project_name = project?.name || "No project";
-  const priority_class = `priority-${task.priority?.toLowerCase() ?? "low"}`;
+  let priority_class = task.priority == "MEDIUM" ? "priority-medium" : task.priority == "HIGH" ? "priority-high" : "priority-low";
+  if (task.end_time == null) priority_class = "priority-none";
 
   const tag_list = tags.map((tag_id) => {
     return user_tags.find((tag) => tag.id === tag_id) ?? null;
@@ -79,15 +80,15 @@ export const TaskCard = (props: Props) => {
           <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
         </span>
       </div>
-      {task.summary && <p>{task.summary}</p>}
+      {task.summary && <p class="task-summary">{task.summary}</p>}
       <div style={{ height: "100%" }} />
-      <div class={`flex-col ${priority_class}`} style={{ "font-size": "small", gap: "6px" }}>
+      <div class="flex-col" style={{ "font-size": "small", gap: "6px" }}>
         {tag_list.length > 0 && <span class="flex-row">
           <For each={tag_list}>
             {(tag) => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}
           </For>
         </span>}
-        <span class="flex-row">
+        <span class={`flex-row ${priority_class}`}>
           <Clock />
           <DueDate date={task.end_time} />
           {(project_name && props.draw_project) && <a href={`/project/${project_name}/tasks`}><span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>{" - "}{project_name}</span></a>}
