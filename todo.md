@@ -127,3 +127,11 @@ tasks are made of many different fields, outlined above. They also contain links
 	- [x] link to codebase scan
 - [ ] on failed scan, add a "failed" row to history
 	- [ ] write out metadata so we can see if things failed
+
+
+# api endpoints
+- [x] GET /projects?id=<project_uuid>
+- [x] GET /projects
+- [ ] GET /tasks
+- [ ] GET /tasks?id=<task_uuid>
+- [ ] GET /tasks?tag=<tag_uuid>

@@ -132,3 +132,35 @@ export async function getUpsertedTaskMap(codebase_items: UpdateData[]) {
 
   return result;
 }
+
+export async function getTasksByTag(tag_id: string) {
+  const tasks = await db.select().from(task).leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id)).leftJoin(task_tag, eq(task_tag.task_id, task.id)).where(eq(task_tag.tag_id, tag_id));
+  // append .tags = [] to each task
+  const found_tasks = tasks.map((t) => {
+    const new_task: _FetchTaskUnion = (t as any);
+    new_task.tags = [];
+    return new_task;
+  });
+
+  // get all tags for each task
+  const task_ids = found_tasks.map((t) => t.task.id);
+  if (task_ids.length) {
+    const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
+    // construct a Map of task_id -> array of tag_ids
+    const mapped_tags = new Map<string, string[]>();
+    tags.forEach((tag) => {
+      const task_id = tag.task_id;
+      if (!mapped_tags.has(task_id)) {
+        mapped_tags.set(task_id, []);
+      }
+      mapped_tags.get(task_id)!.push(tag.tag_id);
+      console.log("tag", tag);
+    });
+
+    for (const t of found_tasks) {
+      t.tags = mapped_tags.get(t.task.id) ?? [];
+    }
+  }
+
+  return found_tasks;
+}
