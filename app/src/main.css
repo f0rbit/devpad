@@ -592,3 +592,11 @@ hr {
   width: 90%;
   border-color: var(--input-border);
 }
+
+.astro-code {
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: unset;
+    background: oklch(from var(--input-border) 23% 0.017 h) !important;
+  }

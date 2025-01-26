@@ -27,7 +27,10 @@ export async function GET(context: APIContext) {
     // get the project by id
     const { project, error } = await getProjectById(id);
     if (error) {
-      return new Response(error, { status: 401 });
+      if (error == "Couldn't find project") {
+        return new Response(null, { status: 404 });
+      }
+      return new Response(error, { status: 500 });
     }
     if (!project) {
       return new Response(null, { status: 404 });
@@ -42,6 +45,9 @@ export async function GET(context: APIContext) {
     // get the project by name
     const { project, error } = await getProject(user_id, name);
     if (error) {
+      if (error == "Couldn't find project") {
+        return new Response(null, { status: 404 });
+      }
       return new Response(error, { status: 401 });
     }
     if (!project) {

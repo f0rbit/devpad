@@ -48,13 +48,3 @@ if (code.file) {
   </div>
   {context && <Code code={context} lang={file_type} />}
 </div>
-
-<style scoped>
-  .astro-code {
-    border: 1px solid var(--input-border);
-    border-radius: 5px;
-    padding: 5px 10px;
-    margin: unset;
-    background: oklch(from var(--input-border) 23% 0.017 h) !important;
-  }
-</style>
