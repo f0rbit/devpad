@@ -5,85 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1714478424655,
-      "tag": "0000_bright_squadron_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1715415857240,
-      "tag": "0001_demonic_titanium_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "5",
-      "when": 1735255473926,
-      "tag": "0002_bright_sprite",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "5",
-      "when": 1735257494534,
-      "tag": "0003_gigantic_ultragirl",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1735258082706,
-      "tag": "0004_powerful_gunslinger",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1735349743161,
-      "tag": "0005_spicy_slapstick",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1735515355088,
-      "tag": "0006_brief_yellowjacket",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "5",
-      "when": 1735598208279,
-      "tag": "0007_lazy_black_tom",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "5",
-      "when": 1736649987065,
-      "tag": "0008_robust_steve_rogers",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "5",
-      "when": 1736652802043,
-      "tag": "0009_far_tyger_tiger",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "5",
-      "when": 1737015066924,
-      "tag": "0010_aspiring_lila_cheney",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "5",
-      "when": 1737358161250,
-      "tag": "0011_organic_the_leader",
+      "when": 1737865058086,
+      "tag": "0000_big_maelstrom",
       "breakpoints": true
     }
   ]
