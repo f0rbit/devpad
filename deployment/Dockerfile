@@ -7,9 +7,7 @@ WORKDIR /todo-tracker
 
 # need to git clone (its a public directory)
 RUN apt-get update && apt-get install -y git
-RUN git clone https://github.com/f0rbit/todo-tracker.git
-
-WORKDIR /todo-tracker/todo-tracker/go
+RUN git clone https://github.com/f0rbit/todo-tracker.git .
 
 # build the go application
 RUN go build -o todo-tracker
@@ -23,7 +21,7 @@ RUN apt-get update && apt-get install -y unzip
 WORKDIR /
 
 COPY ../todo-config.json .
-COPY --from=go-builder /todo-tracker/todo-tracker/go/todo-tracker .
+COPY --from=go-builder /todo-tracker/todo-tracker .
 
 # Set the working directory
 WORKDIR /app
