@@ -21,7 +21,7 @@ if (!project)
   return new Response(null, { status: 404, statusText: "Project not found" });
 
 const { config, error: config_error } = await getProjectConfig(project.id);
-if (config_error) return new Response(null, { status: 500, statusText: error });
+if (config_error) return new Response(null, { status: 500, statusText: config_error });
 
 const [owner, repo] = project.repo_url
   ? project.repo_url.split("/").slice(-2)
@@ -41,7 +41,7 @@ if (owner && repo) {
 const available_tags = await getActiveUserTags(user.id);
 ---
 
-<PageLayout title={`Project - ${project_id}`}>
+<PageLayout title={`Settings - ${project_id}`}>
   <ProjectLayout project_id={project_id}>
     <div class="flex-col" style="gap: 5px">
       <h5>project settings</h5>

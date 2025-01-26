@@ -4,7 +4,7 @@ import PageLayout from "../../../layouts/PageLayout.astro"
 const { project_id } = Astro.params;
 ---
 
-<PageLayout title={"Project Goals"}>
+<PageLayout title={`Goals - ${project_id}`}>
 	<main>
 	<h2>under development</h2>
 	<a href={`/project/${project_id}`}>back</a>

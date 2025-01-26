@@ -40,7 +40,7 @@ const from = Astro.url.searchParams.get("from")! || "";
 const task_history = await getTaskHistory(todo_id);
 ---
 
-<PageLayout title={"Editing Task"}>
+<PageLayout title={`${task.title ?? "New Task"} - devpad`}>
   <main>
     <h4>task editor</h4>
     <br />
