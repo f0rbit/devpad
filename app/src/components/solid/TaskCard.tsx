@@ -17,14 +17,13 @@ import { TagBadge } from "./TagEditor";
 interface Props {
   task: Task;
   project: Project;
-  from: string;
   user_tags: UpsertTag[];
   update: (task_id: string, data: any) => void;
   draw_project: boolean;
 }
 
 export const TaskCard = (props: Props) => {
-  const { task: fetched_task, project, from, user_tags } = props;
+  const { task: fetched_task, project, user_tags } = props;
   const { task, tags } = fetched_task;
 
   if (!task) {
@@ -77,7 +76,7 @@ export const TaskCard = (props: Props) => {
           <TaskProgress progress={task.progress} onClick={progress} type="box" />
         </span>
         <span>
-          <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
+          <a href={`/todo/${task.id}`} class="task-title">{task.title}</a>
         </span>
       </div>
       {task.summary && <p class="task-summary">{task.summary}</p>}

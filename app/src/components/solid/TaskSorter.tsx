@@ -20,7 +20,6 @@ type Props = {
   tasks: TaskType[];
   defaultOption: SortOption;
   project_map: Record<string, Project>;
-  from: string;
   tags: UserTag[];
   user_id: string;
   defaultView: TaskView | null;
@@ -28,7 +27,7 @@ type Props = {
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, from, tags, user_id, defaultView }: Props) {
+export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, tags, user_id, defaultView }: Props) {
   const [tasks, setTasks] = createSignal<TaskType[]>(defaultTasks);
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
@@ -145,7 +144,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
           </a>
         </div>
       </div>
-      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} update={update} /> : <GridView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} update={update} />}
+      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} user_tags={tags as UpsertTag[]} update={update} /> : <GridView tasks={sortedTasks} project_map={project_map} user_tags={tags as UpsertTag[]} update={update} />}
 
     </div >
   );
@@ -154,12 +153,11 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
 type ListProps = {
   tasks: Accessor<Props['tasks']>;
   project_map: Props['project_map'];
-  from: Props['from'];
   user_tags: UpsertTag[];
   update: (task_id: string, data: any) => void;
 };
 
-function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
+function ListView({ tasks, project_map, user_tags, update }: ListProps) {
   return (
     <ul class="flex-col" style={{ gap: "9px" }}>
       <For each={tasks()}>
@@ -168,7 +166,7 @@ function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
           if (project == null) return null;
           return (
             <li>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
+              <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}
@@ -177,7 +175,7 @@ function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
   );
 }
 
-function GridView({ tasks, project_map, from, user_tags, update }: ListProps) {
+function GridView({ tasks, project_map, user_tags, update }: ListProps) {
   return (
     <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
       <For each={tasks()}>
@@ -186,7 +184,7 @@ function GridView({ tasks, project_map, from, user_tags, update }: ListProps) {
           if (project == null) return null;
           return (
             <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
+              <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}
