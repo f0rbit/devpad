@@ -37,7 +37,7 @@ const user_history = await getUserHistory(user.id);
 				</div>
 			)
 		}
-		<a id="add-key" href="#"> + generate </a>
+		<a id="add-key" role="button"> + generate </a>
 		<br />
 		<h3>history</h3>
 		<HistoryTimeline actions={user_history} view="account" />
@@ -50,15 +50,18 @@ const user_history = await getUserHistory(user.id);
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
+        "Accept": "application/json",
 			},
-      credentials: "include"
+			credentials: "include",
+      body: JSON.stringify({}),
 		});
-    if (!res || !res.ok) {
-      console.error(res.status, res.statusText);
-    }
+		if (!res || !res.ok) {
+			console.error(res.status, res.statusText);
+			return;
+		}
 		try {
 			const data = await res.text();
-      console.log(data);
+			console.log(data);
 			location.reload();
 		} catch (err) {
 			console.error(err);
