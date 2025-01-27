@@ -51,6 +51,7 @@ const user_history = await getUserHistory(user.id);
 			headers: {
 				"Content-Type": "application/json",
 			},
+      credentials: "include"
 		});
     if (!res || !res.ok) {
       console.error(res.status, res.statusText);

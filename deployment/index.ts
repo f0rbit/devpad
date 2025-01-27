@@ -14,6 +14,9 @@ console.log("✅ migrations complete");
 
 const app = express();
 
+// use cors
+app.use(cors({ origin: "https://devpad.tools", credentials: true }));
+
 const base = '/';
 app.use(base, express.static('../app/dist/client/'));
 app.use(ssrHandler);
