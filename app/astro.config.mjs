@@ -13,5 +13,8 @@ export default defineConfig({
   adapter: node({
     mode: "middleware"
   }),
-  integrations: [solidJs()]
+  integrations: [solidJs()],
+  experimental: {
+    session: { driver: "fs" },
+  }
 });
