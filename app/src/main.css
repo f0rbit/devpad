@@ -611,3 +611,13 @@ hr {
   color: var(--text-muted); 
   font-size: smaller;
 }
+
+.last-page {
+  position: absolute;
+  left: -100px;
+  top: 0;
+  font-size: smaller;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
