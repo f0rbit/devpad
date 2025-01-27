@@ -136,10 +136,10 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
         <div class="icons" style={{ gap: "9px", "margin-left": "auto" }} >
-          <a href="#" onClick={(e) => { e.preventDefault(); selectView("list") }}>
+          <a role="button" onClick={(e) => { e.preventDefault(); selectView("list") }}>
             <LayoutList />
           </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); selectView("grid") }}>
+          <a role="button" onClick={(e) => { e.preventDefault(); selectView("grid") }}>
             <LayoutGrid />
           </a>
         </div>

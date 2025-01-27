@@ -80,11 +80,11 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
       <For each={currentTags()}>
         {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}
       </For>
-      {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a href="#" onClick={create} class="flex-row" style="margin-top: 10px" >
+      {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a role="button" onClick={create} class="flex-row" style="margin-top: 10px" >
         <Plus />
         add
       </a>}
-      <a href="#" onClick={save} class="flex-row" style="margin-top: 10px" >
+      <a role="button" onClick={save} class="flex-row" style="margin-top: 10px" >
         <Save />
         save
       </a>
@@ -128,12 +128,12 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
       </div>
       {editing() ? (
         <div class="icons">
-          <a href="#" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
-          {tag?.id && <a href="#" title="Remove Tag" onClick={() => remove(tag.id!)}><Trash /></a>}
+          <a role="button" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
+          {tag?.id && <a role="button" title="Remove Tag" onClick={() => remove(tag.id!)}><Trash /></a>}
         </div>
       ) : (
         <div class="icons">
-          <a href="#" onClick={() => setEditing(true)} title="Edit Tag">
+          <a role="button" onClick={() => setEditing(true)} title="Edit Tag">
             <PencilLine />
           </a>
         </div>

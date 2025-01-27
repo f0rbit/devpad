@@ -124,7 +124,7 @@ const task_history = await getTaskHistory(todo_id);
     </div>
     <br />
     <a href={from.length > 0 ? from : "/todo"}>back</a>
-    <a href="#" id="save-button">save</a>
+    <a role="button" id="save-button">save</a>
     <Loader id="spinner" class="icon hidden" />
     <Check id="success-icon" class="icon hidden" />
     <X id="error-icon" class="icon hidden" />
