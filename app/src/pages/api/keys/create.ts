@@ -9,7 +9,6 @@ function getKey(size = 32, format: BufferEncoding = 'hex') {
 
 // we want a POST request handler to generate a random key
 export async function POST(context: APIContext) {
-  console.log("POST /api/keys/create");
   try {
     if (!context.locals.user) {
       return new Response(null, { status: 401 });
