@@ -128,8 +128,8 @@ tasks are made of many different fields, outlined above. They also contain links
 - [ ] on failed scan, add a "failed" row to history
 	- [ ] write out metadata so we can see if things failed
     - [ ] scans fail when using wildcards
-- [ ] global back button
-	- [ ] store every navigation in session stack
+- [x] global back button
+	- [x] store every navigation in session stack
 - [ ] global 404 page
 	- [ ] ideally has a contextual error message?
 - [ ] global 401 unauthorized page
