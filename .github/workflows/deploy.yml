@@ -29,7 +29,6 @@ jobs:
       matrix:
         include:
           - dockerfile: ./deployment/Dockerfile
-            context: ./deployment
             image: ghcr.io/f0rbit/devpad
     permissions:
       contents: read
