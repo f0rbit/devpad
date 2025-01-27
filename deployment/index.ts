@@ -3,6 +3,7 @@ import { handler as ssrHandler } from '../app/dist/server/entry.mjs';
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Database } from "bun:sqlite";
+import cors from "cors";
 
 console.log("🌳 database file:", Bun.env.DATABASE_FILE);
 
