@@ -52,13 +52,15 @@ const user_history = await getUserHistory(user.id);
 				"Content-Type": "application/json",
 			},
 		});
+    if (!res || !res.ok) {
+      console.error(res.status, res.statusText);
+    }
 		try {
-			const data = await res.json();
-			if (data.error) throw new Error(data.error);
+			const data = await res.text();
+      console.log(data);
 			location.reload();
 		} catch (err) {
 			console.error(err);
-			alert(err);
 		}
 	}
 
