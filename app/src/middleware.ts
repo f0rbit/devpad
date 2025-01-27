@@ -3,10 +3,12 @@ import { verifyRequestOrigin } from "lucia";
 import { defineMiddleware } from "astro:middleware";
 
 export const onRequest = defineMiddleware(async (context, next) => {
+	console.log("onRequest, NODE_ENV: ", Bun.env.NODE_ENV);
 	if (context.request.method !== "GET") {
 		const originHeader = context.request.headers.get("Origin");
 		const hostHeader = context.request.headers.get("Host");
 		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
+			console.error("Invalid origin", { originHeader, hostHeader });
 			return new Response(null, {
 				status: 403
 			});
