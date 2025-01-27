@@ -17,27 +17,27 @@ const user_history = await getUserHistory(user.id);
 <PageLayout title="Account - devpad">
 	<div class="flex-col" style="gap: 15px;">
 		<a href="/api/auth/logout">logout</a>
-		<br />	
+		<br />
 		<h3>api keys</h3>
-		{keys.length === 0 ? (
-			<p>you don't have any api keys yet</p>
-		) : (
-			<div style="margin-top: -10px">
-				<ul>
-					{keys.map((key) => (
-						<li>
-							<code>{key.hash}</code>{" "}
-							<a data-keyid={key.id} class="delete-key">
-								&times;
-							</a>
-						</li>
-					))}
-				</ul>
-				<a id="add-key" href="#">
-					+ generate
-				</a>
-			</div>
-		)}
+		{
+			keys.length === 0 ? (
+				<p>you don't have any api keys yet</p>
+			) : (
+				<div style="margin-top: -10px">
+					<ul>
+						{keys.map((key) => (
+							<li>
+								<code>{key.hash}</code>{" "}
+								<a data-keyid={key.id} class="delete-key">
+									&times;
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			)
+		}
+		<a id="add-key" role="button"> + generate </a>
 		<br />
 		<h3>history</h3>
 		<HistoryTimeline actions={user_history} view="account" />
@@ -50,15 +50,21 @@ const user_history = await getUserHistory(user.id);
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
+        "Accept": "application/json",
 			},
+			credentials: "include",
+      body: JSON.stringify({}),
 		});
+		if (!res || !res.ok) {
+			console.error(res.status, res.statusText);
+			return;
+		}
 		try {
-			const data = await res.json();
-			if (data.error) throw new Error(data.error);
+			const data = await res.text();
+			console.log(data);
 			location.reload();
 		} catch (err) {
 			console.error(err);
-			alert(err);
 		}
 	}
 

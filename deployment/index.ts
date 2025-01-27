@@ -15,7 +15,9 @@ console.log("✅ migrations complete");
 const app = express();
 
 const base = '/';
+
 app.use(base, express.static('../app/dist/client/'));
+
 app.use(ssrHandler);
 
 console.log("✅ started server on port:", process.env.PORT);

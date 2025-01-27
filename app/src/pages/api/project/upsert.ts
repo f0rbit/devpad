@@ -27,19 +27,18 @@ export async function PATCH(context: APIContext) {
   if (data.owner_id != context.locals.user.id) {
     return new Response(null, { status: 401 });
   }
-
-  const previous = await (async () => {
-    if (!data.id) return null;
-    return (await getProjectById(data.id)).project ?? null;
-  })();
-
-  const exists = !!previous;
-
-  const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
-  const repo_url = data.repo_url ?? previous?.repo_url;
-  const fetch_specification = (github_linked && repo_url) && (!previous || !previous.specification);
-
   try {
+    const previous = await (async () => {
+      if (!data.id) return null;
+      return (await getProjectById(data.id)).project ?? null;
+    })();
+
+    const exists = !!previous;
+
+    const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
+    const repo_url = data.repo_url ?? previous?.repo_url;
+    const fetch_specification = (github_linked && repo_url) && (!previous || !previous.specification);
+
     // the new_project is imported from github and doesn't have a specification, import it from the README
     if (fetch_specification && !data.specification) {
       console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
@@ -80,7 +79,7 @@ export async function PATCH(context: APIContext) {
       await addProjectAction({ owner_id: data.owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated specification" });
     } else {
       // add UPDATE_PROJECT action
-      await addProjectAction({ owner_id: data.owner_id, project_id , type: "UPDATE_PROJECT", description: "Updated project settings" });
+      await addProjectAction({ owner_id: data.owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated project settings" });
     }
 
     // return the project data

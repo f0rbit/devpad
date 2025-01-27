@@ -7,7 +7,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		const originHeader = context.request.headers.get("Origin");
 		const hostHeader = context.request.headers.get("Host");
 		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
-			return new Response(null, {
+			console.error("Invalid origin", { originHeader, hostHeader });
+			return new Response("Invalid origin", {
 				status: 403
 			});
 		}
