@@ -1,13 +1,9 @@
 ---
 import { getProjectTasks } from "../../../../server/tasks";
 import PageLayout from "../../../../layouts/PageLayout.astro";
-import {
-  getProject,
-  getUserProjects,
-  type Project,
-} from "../../../../server/projects";
+import { getProject, type Project } from "../../../../server/projects";
 import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
-import { getActiveUserTags, getUserTags } from "../../../../server/tags";
+import { getActiveUserTags } from "../../../../server/tags";
 import { TaskSorter } from "../../../../components/solid/TaskSorter";
 
 const { project_id } = Astro.params;
@@ -36,7 +32,7 @@ const tags = await getActiveUserTags(user.id);
     <TaskSorter
       tasks={tasks}
       project_map={project_map}
-      defaultOption={"priority"}
+      defaultOption={"upcoming"}
       tags={tags}
       user_id={user.id}
       defaultView={user.task_view}

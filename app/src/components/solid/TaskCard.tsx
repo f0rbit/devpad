@@ -32,7 +32,7 @@ export const TaskCard = (props: Props) => {
 
   const project_name = project?.name || "No project";
   let priority_class = task.priority == "MEDIUM" ? "priority-medium" : task.priority == "HIGH" ? "priority-high" : "priority-low";
-  if (task.end_time == null) priority_class = "priority-none";
+  if (task.priority == "LOW" && task.end_time == null) priority_class = "priority-none";
 
   const tag_list = tags.map((tag_id) => {
     return user_tags.find((tag) => tag.id === tag_id) ?? null;
