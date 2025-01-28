@@ -2,7 +2,9 @@ import type { APIContext } from "astro";
 import { upsert_project, type UpsertProject } from "../../../server/types";
 import { db } from "../../../../database/db";
 import { project } from "../../../../database/schema";
-import { addProjectAction, getProjectById } from "../../../server/projects";
+import { addProjectAction, getProjectById, type Project } from "../../../server/projects";
+import { getSpecification } from "../../../server/github";
+import { eq } from "drizzle-orm";
 
 type CompleteUpsertProject = Omit<UpsertProject, "id"> & { id: string };
 
@@ -24,7 +26,7 @@ export async function PATCH(context: APIContext) {
   const { data } = parsed;
 
   // assert that the owner_id of upsert_project is same as logged in user
-  if (data.owner_id != context.locals.user.id) {
+  if (data.owner_id && data.owner_id != context.locals.user.id) {
     return new Response(null, { status: 401 });
   }
   try {
@@ -32,6 +34,17 @@ export async function PATCH(context: APIContext) {
       if (!data.id) return null;
       return (await getProjectById(data.id)).project ?? null;
     })();
+
+    // authorise
+    if (previous && previous.owner_id != context.locals.user.id) {
+      return new Response(null, { status: 401 });
+    }
+
+    const owner_id = data.owner_id ?? previous?.owner_id;
+
+    if (!owner_id) {
+      return new Response(null, { status: 400 });
+    }
 
     const exists = !!previous;
 
@@ -46,44 +59,44 @@ export async function PATCH(context: APIContext) {
       const slices = repo_url.split("/");
       const repo = slices.at(-1);
       const owner = slices.at(-2);
-      if (!context?.locals?.session?.access_token) throw new Error("Linking a github repo without access token");
-      const access_token = context.locals.session.access_token;
-      const readme_response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: { "Accept": "application/vnd.github.raw+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
-      if (!readme_response || !readme_response.ok) {
-        console.warn(`Code ${readme_response.status} - ${readme_response.statusText}`);
-        throw new Error("Error fetching readme");
-      }
-      try {
-        data.specification = (await readme_response.text()) ?? null;
-      } catch (err) {
-        console.log(`Error reading raw text: ${err} - ${readme_response.status} ${readme_response.statusText}`);
-        throw err;
-      }
+      if (!repo || !owner) throw new Error("Invalid repo_url");
+      const readme = await getSpecification(owner, repo, context.locals.session!.access_token);
+      data.specification = readme;
     }
 
-    const insert = data as CompleteUpsertProject;
+    // TODO: proper typesafety for upsert project
+    const upsert = data as any;
+    upsert.updated_at = new Date().toISOString();
+    if (upsert.id == "" || upsert.id == null) delete upsert.id;
 
-    // perform db upsert
-    const new_project = await db.insert(project).values(insert).onConflictDoUpdate({ target: [project.id], set: insert }).returning();
+    let res: Project[] | null = null;
+    if (exists) {
+      // perform update
+      res = await db.update(project).set(upsert).where(eq(project.id, upsert.id)).returning();
+    } else {
+      // perform insert
+      res = await db.insert(project).values(upsert).onConflictDoUpdate({ target: [project.id], set: upsert }).returning();
+    }
+    if (!res || res.length != 1) throw new Error(`Project upsert returned incorrect rows (${res?.length ?? 0})`);
 
-    if (new_project.length != 1) throw new Error(`Project upsert returned incorrect rows (${new_project.length}`);
+    const [new_project] = res;
 
-    const project_id = new_project[0].id;
+    const project_id = new_project.id;
 
     // TODO: for project updates, include the changes as a diff in the data
     if (!exists) {
       // add CREATE_PROJECT action
-      await addProjectAction({ owner_id: data.owner_id, project_id, type: "CREATE_PROJECT", description: "Created project" });
+      await addProjectAction({ owner_id, project_id, type: "CREATE_PROJECT", description: "Created project" });
     } else if (data.specification) {
       // add UPDATE_PROJECT action with 'updated specification' description
-      await addProjectAction({ owner_id: data.owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated specification" });
+      await addProjectAction({ owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated specification" });
     } else {
       // add UPDATE_PROJECT action
-      await addProjectAction({ owner_id: data.owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated project settings" });
+      await addProjectAction({ owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated project settings" });
     }
 
     // return the project data
-    return new Response(JSON.stringify(new_project[0]));
+    return new Response(JSON.stringify(new_project));
   } catch (err) {
     console.error(err);
     return new Response(null, { status: 500 });

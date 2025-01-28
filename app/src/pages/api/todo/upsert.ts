@@ -56,6 +56,7 @@ export async function PUT(context: APIContext) {
   const project_id = data.project_id ?? previous?.project_id ?? null;
 
   try {
+    // TODO: proper typesafety for upsert todo
     const upsert = data as any;
     upsert.updated_at = new Date().toISOString();
     if (upsert.id == "" || upsert.id == null) delete upsert.id;
