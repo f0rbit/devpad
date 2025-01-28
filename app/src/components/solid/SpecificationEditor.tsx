@@ -13,11 +13,12 @@ import Check from "lucide-solid/icons/check";
 interface Props {
   project_id: string;
   initial: string;
+  has_github: boolean;
 }
 
 type LoadingState = "idle" | "loading" | "success" | "error";
 
-const SpecificationEditor = ({ project_id, initial }: Props) => {
+const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
   const [current, setCurrent] = createSignal(initial);
   const [isEditing, setIsEditing] = createSignal(false);
   const [markdown, setMarkdown] = createSignal(initial);
@@ -75,6 +76,8 @@ const SpecificationEditor = ({ project_id, initial }: Props) => {
 
   const resetMarkdown = () => {
     setError("");
+    setSaving("idle");
+    setFetching("idle");
     setMarkdown(current());
   };
 
@@ -109,10 +112,10 @@ const SpecificationEditor = ({ project_id, initial }: Props) => {
               <LoadingIndicator state={saving} idle={<Save />} />
               save
             </a>
-            <a role="button" onClick={fetchSpecification}>
+            {has_github && <a role="button" onClick={fetchSpecification}>
               <LoadingIndicator state={fetching} idle={<Github />} />
               fetch
-            </a>
+            </a>}
             <a role="button" onClick={resetMarkdown}>
               <RotateCcw />
               reset
