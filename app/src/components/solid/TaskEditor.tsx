@@ -44,6 +44,8 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
   const [currentTags, setCurrentTags] = createSignal(current_tags);
   const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
 
+  const project_disabled = () => !!(task?.task?.project_id && task?.codebase_tasks);
+
   const saveTask = async () => {
     setRequestState("loading");
 
@@ -63,6 +65,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
         end_time: state.end_time == "" ? null : state.end_time,
         priority: state.priority,
         owner_id: user_id,
+		project_id: state.project_id,
         tags: currentTags(),
       }),
     });
@@ -100,7 +103,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				<option value="COMPLETED" selected={state.progress == "COMPLETED"}>Completed</option>
 			</select>
 			<label for="project-selector" style="padding: 0px 5px;">Project</label>
-			<ProjectSelector project_map={project_map} default_id={state.project_id} callback={(p) => setState({ project_id: p })} disabled={!!task?.task?.project_id} />
+			<ProjectSelector project_map={project_map} default_id={state.project_id} callback={(p) => setState({ project_id: p })} disabled={project_disabled()} />
 		</div>
         <label for="end_time">End Time</label>
         <input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={(e) => setState({ end_time: e.target.value })} />
