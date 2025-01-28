@@ -521,7 +521,7 @@ article {
   vertical-align: text-bottom;
   margin-right: 0.5ch;
 
-  a {
+  a, div {
     display: inline-flex;
   }
 }

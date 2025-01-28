@@ -158,12 +158,12 @@ export function TaskProgress({ progress, onClick, type }: { progress: Task['task
     case "box": {
       if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Square /></a>;
       if (progress == "IN_PROGRESS") return <a role="button" onClick={onClick}><SquareDot /></a>;
-      if (progress == "COMPLETED") return <a role="button" onClick={onClick}><SquareCheck /></a>;
+      if (progress == "COMPLETED") return <div class="priority-low"><SquareCheck /></div>;
     }
     case "circle": {
       if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Circle /></a>;
       if (progress == "IN_PROGRESS") return <a role="button" onClick={onClick}><CircleDot /></a>;
-      if (progress == "COMPLETED") return <a role="button" onClick={onClick}><CircleCheck /></a>;
+      if (progress == "COMPLETED") return <div class="priority-low"><CircleCheck /></div>;
     }
   }
 
