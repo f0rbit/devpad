@@ -83,9 +83,9 @@ const TaskEditor = ({ task, codebase_tasks, tags, tag_map, history, user_id }: P
         <textarea id="description" name="description" value={description()} onInput={(e) => setDescription(e.target.value)} />
         <label for="progress">Progress</label>
         <select id="progress" name="progress" value={progress()} onChange={(e) => setProgress(e.target.value as Props['task']['progress'])}>
-          <option value="UNSTARTED">Not Started</option>
-          <option value="IN_PROGRESS">In Progress</option>
-          <option value="COMPLETED">Completed</option>
+          <option value="UNSTARTED" selected={progress() == "UNSTARTED"}>Not Started</option>
+          <option value="IN_PROGRESS" selected={progress() == "IN_PROGRESS"}>In Progress</option>
+          <option value="COMPLETED" selected={progress() == "COMPLETED"}>Completed</option>
         </select>
         <label for="end_time">End Time</label>
         <input type="datetime-local" id="end_time" name="end_time" value={endTime()} onInput={(e) => setEndTime(e.target.value)} />
@@ -101,18 +101,18 @@ const TaskEditor = ({ task, codebase_tasks, tags, tag_map, history, user_id }: P
           <input type="datetime-local" id="start_time" name="start_time" value={startTime()} onInput={(e) => setStartTime(e.target.value)} />
           <label for="visibility">Visibility</label>
           <select id="visibility" name="visibility" value={visibility()} onChange={(e) => setVisibility(e.target.value as Props['task']['visibility'] )}>
-            <option value="PUBLIC">Public</option>
-            <option value="PRIVATE">Private</option>
-            <option value="HIDDEN">Hidden</option>
-            <option value="ARCHIVED">Archived</option>
-            <option value="DRAFT">Draft</option>
-            <option value="DELETED">Deleted</option>
+            <option value="PUBLIC" selected={visibility() == "PUBLIC"}>Public</option>
+            <option value="PRIVATE" selected={visibility() == "PRIVATE"}>Private</option>
+            <option value="HIDDEN" selected={visibility() == "HIDDEN"}>Hidden</option>
+            <option value="ARCHIVED" selected={visibility() == "ARCHIVED"}>Archived</option>
+            <option value="DRAFT" selected={visibility() == "DRAFT"}>Draft</option>
+            <option value="DELETED" selected={visibility() == "DELETED"}>Deleted</option>
           </select>
           <label for="priority">Priority</label>
           <select id="priority" name="priority" value={priority()} onChange={(e) => setPriority(e.target.value as Props['task']['priority'])}>
-            <option value="LOW">Low</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="HIGH">High</option>
+            <option value="LOW" selected={priority() == "LOW"}>Low</option>
+            <option value="MEDIUM" selected={priority() == "MEDIUM"}>Medium</option>
+            <option value="HIGH" selected={priority() == "HIGH"}>High</option>
           </select>
         </div>
       </details>
