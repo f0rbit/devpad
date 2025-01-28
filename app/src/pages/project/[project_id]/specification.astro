@@ -1,9 +1,8 @@
 ---
-import remarkHtml from "remark-html";
-import { remark } from "remark";
 import PageLayout from "../../../layouts/PageLayout.astro";
 import { getProject } from "../../../server/projects";
 import ProjectLayout from "../../../layouts/ProjectLayout.astro";
+import SpecificationEditor from "../../../components/solid/SpecificationEditor";
 
 const { project_id } = Astro.params;
 if (!project_id)
@@ -14,18 +13,12 @@ if (!user)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
 const { project, error } = await getProject(user.id, project_id);
-
 if (error) return new Response(null, { status: 500, statusText: error });
-
-const parsed = project?.specification
-  ? await remark()
-      .use(remarkHtml)
-      .process(project?.specification ?? "no specification")
-  : null;
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 ---
 
 <PageLayout title={`Specification - ${project_id}`}>
   <ProjectLayout project_id={project_id}>
-    <article>{parsed ?? "no specification"}</article>
+    <SpecificationEditor project_id={project.id} initial={project.specification ?? ""} client:load />
   </ProjectLayout>
 </PageLayout>
