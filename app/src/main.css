@@ -669,3 +669,38 @@ details[open] .down-arrow {
 #error-icon {
   color: oklch(from var(--item-red) 0.8 0.15 h);
 }
+
+.specification-editor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.specification-editor a.edit {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+
+.specification-editor button .lucide {
+  width: 1rem;
+  height: 1rem;
+}
+
+.specification-editor .controls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: flex-end;
+  border: 1px solid var(--input-border);
+  padding: 5px 10px;
+  border-radius: 5px;
+}
+
+.specification-editor .controls a {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}

@@ -14,11 +14,16 @@ if (!user)
 
 const { project, error } = await getProject(user.id, project_id);
 if (error) return new Response(null, { status: 500, statusText: error });
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!project)
+  return new Response(null, { status: 404, statusText: "Project not found" });
 ---
 
 <PageLayout title={`Specification - ${project_id}`}>
   <ProjectLayout project_id={project_id}>
-    <SpecificationEditor project_id={project.id} initial={project.specification ?? ""} client:load />
+    <SpecificationEditor
+      project_id={project.id}
+      initial={project.specification ?? ""}
+      client:load
+    />
   </ProjectLayout>
 </PageLayout>
