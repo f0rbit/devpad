@@ -1,6 +1,6 @@
 ---
 import PageLayout from "../../layouts/PageLayout.astro";
-import { getUserProjects, type Project } from "../../server/projects";
+import { getUserProjectMap } from "../../server/projects";
 import { getUserTasks } from "../../server/tasks";
 import { TaskSorter } from "../../components/solid/TaskSorter";
 import Tag from "lucide-solid/icons/tag";
@@ -11,11 +11,7 @@ const user = Astro.locals.user;
 if (!user)
   return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const projects = await getUserProjects(user.id);
-const project_map = {} as Record<string, Project>;
-for (const p of projects) {
-  project_map[p.id] = p;
-}
+const project_map = await getUserProjectMap(user.id);
 const tasks = await getUserTasks(user.id);
 
 const tags = await getActiveUserTags(user.id);

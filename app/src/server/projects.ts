@@ -32,6 +32,15 @@ export async function getProjectById(project_id: string) {
   }
 }
 
+export async function getUserProjectMap(user_id: string) {
+  const projects = await getUserProjects(user_id);
+  const project_map = {} as Record<string, Project>;
+  for (const p of projects) {
+    project_map[p.id] = p;
+  }
+  return project_map;
+}
+
 export async function getRecentUpdate(project: Project) {
   const DEBUG_THIS = true;
   const { owner_id: user_id, id } = project;
