@@ -12,7 +12,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         status: 403
       });
     }
-  } else if (!context.url.pathname.includes("api")) {
+  } else if (!context.url.pathname.includes("api") && !context.url.pathname.includes("favicon")) {
     // handle session history for GET requests
     const history = (await context.session!.get("history")) ?? [];
     if (context.url.searchParams.get("back") == "true") { // remove the last page

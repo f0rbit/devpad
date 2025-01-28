@@ -9,6 +9,8 @@ import { TagPicker } from "./TagPicker";
 import HistoryTimeline from "./HistoryTimeline";
 import type { _FetchedCodebaseTask, _FetchedTask, Task } from "../../server/tasks";
 import { type HistoryAction, type Tag, type UpsertTag } from "../../server/types";
+import type { Project } from "../../server/projects";
+import { ProjectSelector } from "./ProjectSelector";
 
 interface Props {
   task: {
@@ -20,13 +22,14 @@ interface Props {
   current_tags: UpsertTag[];
   history: HistoryAction[];
   user_id: string;
+  project_map: Record<string, Project>;
 }
 
 type Progress = Task['task']['progress'];
 type Visibility = Task['task']['visibility'];
 type Priority = Task['task']['priority'];
 
-const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) => {
+const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map }: Props) => {
   const [state, setState] = createStore({
     title: task.task?.title ?? "",
     summary: task.task?.summary ?? null,
@@ -36,9 +39,12 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) 
     start_time: task.task?.start_time ?? null,
     end_time: task.task?.end_time ?? null,
     priority: (task.task?.priority ?? "LOW") as Priority,
+	project_id: task.task?.project_id ?? null,
   });
   const [currentTags, setCurrentTags] = createSignal(current_tags);
   const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
+
+  const project_disabled = () => !!(task?.task?.project_id && task?.codebase_tasks);
 
   const saveTask = async () => {
     setRequestState("loading");
@@ -59,6 +65,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) 
         end_time: state.end_time == "" ? null : state.end_time,
         priority: state.priority,
         owner_id: user_id,
+		project_id: state.project_id,
         tags: currentTags(),
       }),
     });
@@ -89,11 +96,15 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) 
         </textarea>
 
         <label for="progress">Progress</label>
-        <select id="progress" name="progress" value={state.progress} onChange={(e) => setState({ progress: e.target.value as Progress })}>
-          <option value="UNSTARTED" selected={state.progress == "UNSTARTED"}>Not Started</option>
-          <option value="IN_PROGRESS" selected={state.progress == "IN_PROGRESS"}>In Progress</option>
-          <option value="COMPLETED" selected={state.progress == "COMPLETED"}>Completed</option>
-        </select>
+		<div class="flex-row combined-row">
+			<select id="progress" name="progress" value={state.progress} onChange={(e) => setState({ progress: e.target.value as Progress })}>
+				<option value="UNSTARTED" selected={state.progress == "UNSTARTED"}>Not Started</option>
+				<option value="IN_PROGRESS" selected={state.progress == "IN_PROGRESS"}>In Progress</option>
+				<option value="COMPLETED" selected={state.progress == "COMPLETED"}>Completed</option>
+			</select>
+			<label for="project-selector" style="padding: 0px 5px;">Project</label>
+			<ProjectSelector project_map={project_map} default_id={state.project_id} callback={(p) => setState({ project_id: p })} disabled={project_disabled()} />
+		</div>
         <label for="end_time">End Time</label>
         <input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={(e) => setState({ end_time: e.target.value })} />
       </div>
@@ -130,7 +141,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) 
       </div>
       <br />
       <a role="button" id="save-button" onClick={saveTask}>save</a>
-      <Loader class="icono spinner" classList={{ hidden: requestState() !== "loading" }} />
+      <Loader class="icon spinner" classList={{ hidden: requestState() !== "loading" }} />
       <Check class="icon success-icon" classList={{ hidden: requestState() !== "success" }} />
       <X class="icon error-icon" classList={{ hidden: requestState() !== "error" }} />
       <br />

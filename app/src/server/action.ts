@@ -2,18 +2,14 @@ import { db } from "../../database/db";
 import { action, todo_updates, type ActionType } from "../../database/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "./types";
-import { getProjectById, getUserProjects, type Project } from "./projects";
+import { getProjectById, getUserProjectMap } from "./projects";
 import { getTask } from "./tasks";
 
 
 export async function getActions(user_id: string, action_filter: ActionType[] | null) {
   if (action_filter && action_filter.length == 0) action_filter = null;
 
-  const project_map = {} as Record<string, Project>;
-  const projects = await getUserProjects(user_id);
-  for (const project of projects) {
-    project_map[project.id] = project;
-  }
+  const project_map = await getUserProjectMap(user_id);
 
   const data = await (async () => {
     if (action_filter) {
