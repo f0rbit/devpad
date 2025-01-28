@@ -648,7 +648,7 @@ details[open] .down-arrow {
   display: none;
 }
 
-#spinner {
+.spinner {
   animation: spin 1s linear infinite;
 }
 
@@ -662,11 +662,11 @@ details[open] .down-arrow {
   }
 }
 
-#success-icon {
+.success-icon {
   color: oklch(from var(--item-green) 0.8 0.15 h);
 }
 
-#error-icon {
+.error-icon {
   color: oklch(from var(--item-red) 0.8 0.15 h);
 }
 

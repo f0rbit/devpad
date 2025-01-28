@@ -130,9 +130,9 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) 
       </div>
       <br />
       <a role="button" id="save-button" onClick={saveTask}>save</a>
-      <Loader id="spinner" class="icon" classList={{ hidden: requestState() !== "loading" }} />
-      <Check id="success-icon" class="icon" classList={{ hidden: requestState() !== "success" }} />
-      <X id="error-icon" class="icon" classList={{ hidden: requestState() !== "error" }} />
+      <Loader class="icono spinner" classList={{ hidden: requestState() !== "loading" }} />
+      <Check class="icon success-icon" classList={{ hidden: requestState() !== "success" }} />
+      <X class="icon error-icon" classList={{ hidden: requestState() !== "error" }} />
       <br />
       <br />
       <div id="response" class="response"></div>
