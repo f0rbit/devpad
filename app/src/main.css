@@ -604,8 +604,8 @@ hr {
 
 .last-page {
   position: absolute;
-  left: -100px;
-  top: 0;
+  left: -35px;
+  top: 1px;
   font-size: smaller;
   display: flex;
   align-items: center;
