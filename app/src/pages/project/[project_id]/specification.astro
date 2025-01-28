@@ -23,6 +23,7 @@ if (!project)
     <SpecificationEditor
       project_id={project.id}
       initial={project.specification ?? ""}
+      has_github={project.repo_url != null}
       client:load
     />
   </ProjectLayout>
