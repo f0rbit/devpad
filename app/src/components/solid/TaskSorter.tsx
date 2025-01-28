@@ -216,8 +216,8 @@ function GridView({ tasks, project_map, user_tags, update }: ListProps) {
     <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
       <For each={tasks()}>
         {(task) => {
-          const project = project_map[task.task.project_id!];
-          if (project == null) return null;
+		  let project = null;
+		  if (task.task.project_id) project = project_map[task.task.project_id];
           return (
             <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
               <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />

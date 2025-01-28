@@ -15,9 +15,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   } else {
     // handle session history for GET requests
     const history = (await context.session!.get("history")) ?? [];
-    if (context.url.searchParams.get("back") == "true") {
+    if (context.url.searchParams.get("back") == "true") { // remove the last page
       history.pop();
-    } else {
+    } else if (context.url.pathname != history.at(-1)) { // don't add the same page twice
       history.push(context.url.pathname);
     }
     if (history.at(-1) == "/") {

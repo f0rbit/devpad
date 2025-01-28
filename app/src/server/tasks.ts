@@ -43,7 +43,7 @@ export async function getUserTasks(user_id: string) {
 }
 
 export type _FetchedTask = typeof task.$inferSelect;
-type _FetchedCodebaseTask = typeof codebase_tasks.$inferSelect;
+export type _FetchedCodebaseTask = typeof codebase_tasks.$inferSelect;
 type _FetchTaskUnion = { task: _FetchedTask, codebase_tasks: _FetchedCodebaseTask, tags: string[] };
 
 export type Task = Awaited<ReturnType<typeof getUserTasks>>[0];

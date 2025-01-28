@@ -5,6 +5,7 @@ import { getUserTasks } from "../../server/tasks";
 import { TaskSorter } from "../../components/solid/TaskSorter";
 import Tag from "lucide-solid/icons/tag";
 import { getActiveUserTags } from "../../server/tags";
+import Plus from "lucide-solid/icons/plus";
 
 const user = Astro.locals.user;
 if (!user)
@@ -25,6 +26,10 @@ const tags = await getActiveUserTags(user.id);
     <section>
       <div class="flex-row">
         <h3>upcoming tasks</h3>
+        <a href="/todo/new" style="font-size: small;" class="flex-row">
+          <Plus />
+          new task
+        </a>
         <a
           href="/todo/tags"
           style="margin-left: auto; font-size: small;"

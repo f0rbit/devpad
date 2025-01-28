@@ -82,7 +82,6 @@ export const todo_updates = sqliteTable("todo_updates", {
   new_id: integer("new_id").notNull().references(() => tracker_result.id),
   data: text("data", { mode: "json" }).notNull(),
   status: text("status", { enum: ["PENDING", "ACCEPTED", "REJECTED", "IGNORED"] }).notNull().default("PENDING"),
-  /** @todo normalise to a commits table */
   branch: text("branch"),
   commit_sha: text("commit_sha"),
   commit_msg: text("commit_msg"),
