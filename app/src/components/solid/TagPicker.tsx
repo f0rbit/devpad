@@ -90,7 +90,7 @@ export function TagPicker({ currentTags, availableTags, owner_id }: { currentTag
           <option data-id={tag.id} value={tag.title}>{tag.title}</option>
         ))}
       </datalist>
-      <a href="#" onClick={add}><Plus /></a>
+      <a role="button" onClick={add}><Plus /></a>
       <div class="flex-row" style="flex-wrap: wrap;">
         <For each={tags()}>
           {(tag) => (

@@ -17,14 +17,13 @@ import { TagBadge } from "./TagEditor";
 interface Props {
   task: Task;
   project: Project;
-  from: string;
   user_tags: UpsertTag[];
   update: (task_id: string, data: any) => void;
   draw_project: boolean;
 }
 
 export const TaskCard = (props: Props) => {
-  const { task: fetched_task, project, from, user_tags } = props;
+  const { task: fetched_task, project, user_tags } = props;
   const { task, tags } = fetched_task;
 
   if (!task) {
@@ -33,7 +32,7 @@ export const TaskCard = (props: Props) => {
 
   const project_name = project?.name || "No project";
   let priority_class = task.priority == "MEDIUM" ? "priority-medium" : task.priority == "HIGH" ? "priority-high" : "priority-low";
-  if (task.end_time == null) priority_class = "priority-none";
+  if (task.priority == "LOW" && task.end_time == null) priority_class = "priority-none";
 
   const tag_list = tags.map((tag_id) => {
     return user_tags.find((tag) => tag.id === tag_id) ?? null;
@@ -77,7 +76,7 @@ export const TaskCard = (props: Props) => {
           <TaskProgress progress={task.progress} onClick={progress} type="box" />
         </span>
         <span>
-          <a href={`/todo/${task.id}?from=${from}`} class="task-title">{task.title}</a>
+          <a href={`/todo/${task.id}`} class="task-title">{task.title}</a>
         </span>
       </div>
       {task.summary && <p class="task-summary">{task.summary}</p>}
@@ -159,12 +158,12 @@ export function TaskProgress({ progress, onClick, type }: { progress: Task['task
     case "box": {
       if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Square /></a>;
       if (progress == "IN_PROGRESS") return <a role="button" onClick={onClick}><SquareDot /></a>;
-      if (progress == "COMPLETED") return <a role="button" onClick={onClick}><SquareCheck /></a>;
+      if (progress == "COMPLETED") return <div class="priority-low"><SquareCheck /></div>;
     }
     case "circle": {
       if (progress == "UNSTARTED") return <a role="button" onClick={onClick}><Circle /></a>;
       if (progress == "IN_PROGRESS") return <a role="button" onClick={onClick}><CircleDot /></a>;
-      if (progress == "COMPLETED") return <a role="button" onClick={onClick}><CircleCheck /></a>;
+      if (progress == "COMPLETED") return <div class="priority-low"><CircleCheck /></div>;
     }
   }
 

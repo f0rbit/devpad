@@ -25,7 +25,7 @@ const deleted = projects.filter((p) => p.visibility == "DELETED");
 			<summary>{deleted.length} deleted projects</summary>
 			{deleted.map((p) => (
 				<div>
-					<span>{p.project_id} - </span><span><a href='#'>restore</a></span>
+					<span>{p.project_id} - </span><span><a role="button">restore</a></span>
 				</div>
 			))}
 		</details> : <></>}

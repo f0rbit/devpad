@@ -12,7 +12,7 @@ import type { TaskView, UpsertTag, Tag as UserTag } from "../../server/types";
 import LayoutList from "lucide-solid/icons/layout-list";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
 
-const options = ["recent", "priority", "progress"] as const;
+const options = ["upcoming", "recent", "priority", "progress"] as const;
 
 export type SortOption = (typeof options)[number];
 
@@ -20,15 +20,38 @@ type Props = {
   tasks: TaskType[];
   defaultOption: SortOption;
   project_map: Record<string, Project>;
-  from: string;
   tags: UserTag[];
   user_id: string;
   defaultView: TaskView | null;
 };
 
+
+// task sorting functions
+
+const last_updated = (a: TaskType, b: TaskType) => {
+  return new Date(b.task!.updated_at ?? 0).getTime() - new Date(a.task!.updated_at ?? 0).getTime();
+}
+
+const by_priority = (a: TaskType, b: TaskType) => {
+  const priority_map = { LOW: 0, MEDIUM: 1, HIGH: 2 };
+  return priority_map[b.task!.priority] - priority_map[a.task!.priority];
+}
+
+const by_progress = (a: TaskType, b: TaskType) => {
+  const progress_map = { UNSTARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
+  return progress_map[b.task!.progress] - progress_map[a.task!.progress];
+}
+
+const by_due_date = (a: TaskType, b: TaskType) => {
+  if (a.task!.end_time == null && b.task!.end_time == null) return 0;
+  if (a.task!.end_time == null) return 1;
+  if (b.task!.end_time == null) return -1;
+  return new Date(a.task!.end_time).getTime() - new Date(b.task!.end_time).getTime();
+}
+
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, from, tags, user_id, defaultView }: Props) {
+export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, tags, user_id, defaultView }: Props) {
   const [tasks, setTasks] = createSignal<TaskType[]>(defaultTasks);
   const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
   const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
@@ -62,6 +85,10 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
       filtered = filtered.filter((task) => task.tags.some((tag_id) => tag_id === search_tag));
     }
 
+    if (selectedOption() === "upcoming") {
+      filtered = filtered.filter((task) => task.task.progress != "COMPLETED");
+    }
+
     const sorted = filtered.toSorted((a, b) => {
       if (a == null && b == null) return 0;
       if (a == null) return 1;
@@ -71,15 +98,23 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
       if (b.task == null) return -1;
 
       if (selectedOption() === "recent") {
-        return new Date(b.task.updated_at ?? 0).getTime() - new Date(a.task.updated_at ?? 0).getTime();
+        return last_updated(a, b);
       } else if (selectedOption() === "priority") {
-        // priorioty is either "LOW", "MEDIUM", "HIGH"
-        const priority_map = { LOW: 0, MEDIUM: 1, HIGH: 2 };
-        return priority_map[b.task.priority] - priority_map[a.task.priority];
+        return by_priority(a, b);
       } else if (selectedOption() === "progress") {
-        // progress is "UNSTARTED", "IN_PROGRESS", "COMPLETED"
-        const progress_map = { UNSTARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
-        return progress_map[b.task.progress] - progress_map[a.task.progress];
+        return by_progress(a, b);
+      } else if (selectedOption() === "upcoming") {
+        // at the top should be tasks that are set as "IN_PROGRESS"
+        // within those, they should be sorted by priority & then due date
+        // for those that are not in progress, they should be sorted by priority & then due date
+        // for those that have the same due date, they should be sorted by updated_at
+        const progress = by_progress(a, b);
+        if (progress != 0) return progress;
+        const priority = by_priority(a, b);
+        if (priority != 0) return priority;
+        const due_date = by_due_date(a, b);
+        if (due_date != 0) return due_date;
+        return last_updated(a, b);
       }
 
       return a.task.id < b.task.id ? -1 : 1;
@@ -137,15 +172,15 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
         <div class="icons" style={{ gap: "9px", "margin-left": "auto" }} >
-          <a href="#" onClick={(e) => { e.preventDefault(); selectView("list") }}>
+          <a role="button" onClick={(e) => { e.preventDefault(); selectView("list") }}>
             <LayoutList />
           </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); selectView("grid") }}>
+          <a role="button" onClick={(e) => { e.preventDefault(); selectView("grid") }}>
             <LayoutGrid />
           </a>
         </div>
       </div>
-      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} update={update} /> : <GridView tasks={sortedTasks} project_map={project_map} from={from} user_tags={tags as UpsertTag[]} update={update} />}
+      {view() === "list" ? <ListView tasks={sortedTasks} project_map={project_map} user_tags={tags as UpsertTag[]} update={update} /> : <GridView tasks={sortedTasks} project_map={project_map} user_tags={tags as UpsertTag[]} update={update} />}
 
     </div >
   );
@@ -154,12 +189,11 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, fr
 type ListProps = {
   tasks: Accessor<Props['tasks']>;
   project_map: Props['project_map'];
-  from: Props['from'];
   user_tags: UpsertTag[];
   update: (task_id: string, data: any) => void;
 };
 
-function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
+function ListView({ tasks, project_map, user_tags, update }: ListProps) {
   return (
     <ul class="flex-col" style={{ gap: "9px" }}>
       <For each={tasks()}>
@@ -168,7 +202,7 @@ function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
           if (project == null) return null;
           return (
             <li>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
+              <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}
@@ -177,7 +211,7 @@ function ListView({ tasks, project_map, from, user_tags, update }: ListProps) {
   );
 }
 
-function GridView({ tasks, project_map, from, user_tags, update }: ListProps) {
+function GridView({ tasks, project_map, user_tags, update }: ListProps) {
   return (
     <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
       <For each={tasks()}>
@@ -186,7 +220,7 @@ function GridView({ tasks, project_map, from, user_tags, update }: ListProps) {
           if (project == null) return null;
           return (
             <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
-              <TaskCard task={task} project={project} from={from} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
+              <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
             </li>
           );
         }}

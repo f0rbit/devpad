@@ -521,7 +521,7 @@ article {
   vertical-align: text-bottom;
   margin-right: 0.5ch;
 
-  a {
+  a, div {
     display: inline-flex;
   }
 }
@@ -610,4 +610,14 @@ hr {
 .task-summary {
   color: var(--text-muted); 
   font-size: smaller;
+}
+
+.last-page {
+  position: absolute;
+  left: -100px;
+  top: 0;
+  font-size: smaller;
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }

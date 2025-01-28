@@ -210,7 +210,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
           <h6>tags</h6>
-          <a href="#" onClick={addTag} title="Add Tag" class="flex-row">
+          <a role="button" onClick={addTag} title="Add Tag" class="flex-row">
             <Plus />
             add tag
           </a>
@@ -227,7 +227,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
                   value={tag().name}
                   onInput={(e) => updateTagName(index, e.target.value)}
                 />
-                <a href="#" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
+                <a role="button" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
                   <X />
                 </a>
               </div>
@@ -241,13 +241,13 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
                         value={match}
                         onChange={(e) => updateMatch(index, matchIndex(), e.target.value)}
                       />
-                      <a href="#" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
+                      <a role="button" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
                         <Minus />
                       </a>
                     </div>
                   )}
                 </For>
-                <a href="#" onClick={() => addMatch(index)} title="Add Match" class="flex-row" style="font-size: small">
+                <a role="button" onClick={() => addMatch(index)} title="Add Match" class="flex-row" style="font-size: small">
                   <Plus onClick={() => addMatch(index)} />
                   add match
                 </a>
@@ -262,7 +262,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
       <div class="flex-col" style="gap: 6px">
         <div class="flex-row" style="gap: 20px">
           <h6>ignore paths</h6>
-          <a href="#" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
+          <a role="button" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
             <Plus />
             add path
           </a>
@@ -276,7 +276,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
                 value={path}
                 onChange={(e) => updateIgnorePath(index(), e.target.value)}
               />
-              <a href="#" onClick={() => removeIgnorePath(index())} title="Remove Path" class="flex-row">
+              <a role="button" onClick={() => removeIgnorePath(index())} title="Remove Path" class="flex-row">
                 <Minus />
               </a>
             </div>
@@ -287,7 +287,7 @@ const TodoScannerConfig = ({ config: initial_config, id, branches, scan_branch, 
 
       <br />
       <div class="flex-row" style="gap: 20px">
-        <a href="#" onClick={save} title="Export Config" class="flex-row">
+        <a role="button" onClick={save} title="Export Config" class="flex-row">
           save
         </a>
       </div>
