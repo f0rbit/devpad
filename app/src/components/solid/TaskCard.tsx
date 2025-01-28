@@ -16,7 +16,7 @@ import { TagBadge } from "./TagEditor";
 
 interface Props {
   task: Task;
-  project: Project;
+  project: Project | null;
   user_tags: UpsertTag[];
   update: (task_id: string, data: any) => void;
   draw_project: boolean;
@@ -30,7 +30,7 @@ export const TaskCard = (props: Props) => {
     return <div>Task not found</div>;
   }
 
-  const project_name = project?.name || "No project";
+  const project_name = project?.name ?? null;
   let priority_class = task.priority == "MEDIUM" ? "priority-medium" : task.priority == "HIGH" ? "priority-high" : "priority-low";
   if (task.priority == "LOW" && task.end_time == null) priority_class = "priority-none";
 

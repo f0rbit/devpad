@@ -10,8 +10,8 @@ import type { _FetchedCodebaseTask, _FetchedTask, Task } from "../../server/task
 import { type HistoryAction, type Tag, type UpsertTag } from "../../server/types";
 
 interface Props {
-  task: _FetchedTask;
-  codebase_tasks: _FetchedCodebaseTask;
+  task: _FetchedTask | null;
+  codebase_tasks: _FetchedCodebaseTask | null;
   tags: string[];
   user_tags: Tag[];
   current_tags: UpsertTag[];
@@ -19,15 +19,19 @@ interface Props {
   user_id: string;
 }
 
+type Progress = Task['task']['progress'];
+type Visibility = Task['task']['visibility'];
+type Priority = Task['task']['priority'];
+
 const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, history, user_id }: Props) => {
   const [title, setTitle] = createSignal(task?.title ?? "");
-  const [summary, setSummary] = createSignal(task?.summary ?? "");
-  const [description, setDescription] = createSignal(task?.description ?? "");
-  const [progress, setProgress] = createSignal(task?.progress ?? "UNSTARTED");
-  const [visibility, setVisibility] = createSignal(task?.visibility ?? "PRIVATE");
-  const [startTime, setStartTime] = createSignal(task?.start_time ?? "");
-  const [endTime, setEndTime] = createSignal(task?.end_time ?? "");
-  const [priority, setPriority] = createSignal(task?.priority ?? "LOW");
+  const [summary, setSummary] = createSignal(task?.summary ?? null);
+  const [description, setDescription] = createSignal(task?.description ?? null);
+  const [progress, setProgress] = createSignal<Progress>(task?.progress ?? "UNSTARTED");
+  const [visibility, setVisibility] = createSignal<Visibility>(task?.visibility ?? "PRIVATE");
+  const [startTime, setStartTime] = createSignal(task?.start_time ?? null);
+  const [endTime, setEndTime] = createSignal(task?.end_time ?? null);
+  const [priority, setPriority] = createSignal<Priority>(task?.priority ?? "LOW");
   const [currentTags, setCurrentTags] = createSignal(current_tags);
   const [showSpinner, setShowSpinner] = createSignal(false);
   const [showSuccess, setShowSuccess] = createSignal(false);
@@ -79,17 +83,20 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
         <label for="title">Title</label>
         <input type="text" id="title" name="title" value={title()} onInput={(e) => setTitle(e.target.value)} />
         <label for="summary">Summary</label>
-        <input type="text" id="summary" name="summary" value={summary()} onInput={(e) => setSummary(e.target.value)} />
+        <input type="text" id="summary" name="summary" value={summary() ?? ""} onInput={(e) => setSummary(e.target.value)} />
         <label for="description">Description</label>
-        <textarea id="description" name="description" value={description()} onInput={(e) => setDescription(e.target.value)} />
+        <textarea id="description" name="description" onInput={(e) => setDescription(e.target.value)}>
+          {description() ?? ""}
+        </textarea>
+
         <label for="progress">Progress</label>
-        <select id="progress" name="progress" value={progress()} onChange={(e) => setProgress(e.target.value as Props['task']['progress'])}>
+        <select id="progress" name="progress" value={progress()} onChange={(e) => setProgress(e.target.value as Progress)}>
           <option value="UNSTARTED" selected={progress() == "UNSTARTED"}>Not Started</option>
           <option value="IN_PROGRESS" selected={progress() == "IN_PROGRESS"}>In Progress</option>
           <option value="COMPLETED" selected={progress() == "COMPLETED"}>Completed</option>
         </select>
         <label for="end_time">End Time</label>
-        <input type="datetime-local" id="end_time" name="end_time" value={endTime()} onInput={(e) => setEndTime(e.target.value)} />
+        <input type="datetime-local" id="end_time" name="end_time" value={endTime() ?? ""} onInput={(e) => setEndTime(e.target.value)} />
       </div>
       <details class="boxed">
         <summary class="flex-row" style="font-size: smaller;">
@@ -99,9 +106,9 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
         </summary>
         <div class="editor">
           <label for="start_time">Start Time</label>
-          <input type="datetime-local" id="start_time" name="start_time" value={startTime()} onInput={(e) => setStartTime(e.target.value)} />
+          <input type="datetime-local" id="start_time" name="start_time" value={startTime() ?? ""} onInput={(e) => setStartTime(e.target.value)} />
           <label for="visibility">Visibility</label>
-          <select id="visibility" name="visibility" value={visibility()} onChange={(e) => setVisibility(e.target.value as Props['task']['visibility'] )}>
+          <select id="visibility" name="visibility" value={visibility()} onChange={(e) => setVisibility(e.target.value as Visibility)}>
             <option value="PUBLIC" selected={visibility() == "PUBLIC"}>Public</option>
             <option value="PRIVATE" selected={visibility() == "PRIVATE"}>Private</option>
             <option value="HIDDEN" selected={visibility() == "HIDDEN"}>Hidden</option>
@@ -110,7 +117,7 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
             <option value="DELETED" selected={visibility() == "DELETED"}>Deleted</option>
           </select>
           <label for="priority">Priority</label>
-          <select id="priority" name="priority" value={priority()} onChange={(e) => setPriority(e.target.value as Props['task']['priority'])}>
+          <select id="priority" name="priority" value={priority()} onChange={(e) => setPriority(e.target.value as Priority)}>
             <option value="LOW" selected={priority() == "LOW"}>Low</option>
             <option value="MEDIUM" selected={priority() == "MEDIUM"}>Medium</option>
             <option value="HIGH" selected={priority() == "HIGH"}>High</option>
@@ -149,53 +156,52 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
 };
 
 const LinkedCode = ({ code }: { code: NonNullable<Task['codebase_tasks']> }) => {
-  
-	// format <path>:<line>
-	let path = 'unknown:?';
-	if (code.file) {
-	  path = code.file;
-	  if (code.line) {
-		path += `:${code.line}`;
-	  }
-	}
-  
-	const buildContext = (context: string[]) => {
-	  if (!context) return null;
-	  const minWhitespace = context.reduce((acc, line) => {
-		if (line.trim() === '') return acc;
-		const whitespace = line.match(/^\s*/);
-		if (whitespace) {
-		  return Math.min(acc, whitespace[0].length);
-		}
-		return acc;
-	  }, Infinity);
-  
-	  return context.map((line) => line.slice(minWhitespace)).join('\n');
-	};
-  
-	const context = code.context ? buildContext(code.context as string[]) : null;
-  
-	/** @note had to set these to 'any' to avoid type error on lang attribute */
-	let fileType: any = '';
-	if (code.file) {
-	  const parts = code.file.split('.');
-	  fileType = parts[parts.length - 1];
-	}
-  
-	return (
-	  <div class="flex-col" style={{ gap: '2px' }}>
-		<div class="flex-row">
-		  <span>{code.type}</span>
-		  <span> - </span>
-		  <code>{path}</code>
-		</div>
-		{context && (
-		  <pre class="astro-code">
-			{context}
-		  </pre>
-		)}
-	  </div>
-	);
+  // format <path>:<line>
+  let path = 'unknown:?';
+  if (code.file) {
+    path = code.file;
+    if (code.line) {
+      path += `:${code.line}`;
+    }
+  }
+
+  const buildContext = (context: string[]) => {
+    if (!context) return null;
+    const minWhitespace = context.reduce((acc, line) => {
+      if (line.trim() === '') return acc;
+      const whitespace = line.match(/^\s*/);
+      if (whitespace) {
+        return Math.min(acc, whitespace[0].length);
+      }
+      return acc;
+    }, Infinity);
+
+    return context.map((line) => line.slice(minWhitespace)).join('\n');
   };
+
+  const context = code.context ? buildContext(code.context as string[]) : null;
+
+  /** @note had to set these to 'any' to avoid type error on lang attribute */
+  let fileType: any = '';
+  if (code.file) {
+    const parts = code.file.split('.');
+    fileType = parts[parts.length - 1];
+  }
+
+  return (
+    <div class="flex-col" style={{ gap: '2px' }}>
+      <div class="flex-row">
+        <span>{code.type}</span>
+        <span> - </span>
+        <code>{path}</code>
+      </div>
+      {context && (
+        <pre class="astro-code">
+          {context}
+        </pre>
+      )}
+    </div>
+  );
+};
 
 export default TaskEditor;

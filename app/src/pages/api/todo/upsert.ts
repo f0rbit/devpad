@@ -58,6 +58,7 @@ export async function PUT(context: APIContext) {
   try {
     const upsert = data as any;
     upsert.updated_at = new Date().toISOString();
+    if (upsert.id == "" || upsert.id == null) delete upsert.id;
 
 
     let res: _FetchedTask[] | null = null;
