@@ -313,6 +313,15 @@ textarea:focus {
   border: 1px solid var(--input-focus);
 }
 
+input[type="text"]:disabled,
+select:disabled,
+textarea:disabled {
+  background: none;
+  background-image: none !important;
+  color: var(--text-secondary);
+}
+
+
 .date-highlighted {
   .date {
     filter: brightness(100%);
