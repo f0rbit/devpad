@@ -704,3 +704,7 @@ details[open] .down-arrow {
   align-items: center;
   gap: 5px;
 }
+
+.combined-row select {
+	width: 100%;
+}
