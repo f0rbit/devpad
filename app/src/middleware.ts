@@ -12,22 +12,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
         status: 403
       });
     }
-  }
-
-  // handle session history
-  const history = (await context.session!.get("history")) ?? [];
-  if (context.url.searchParams.get("back") == "true") {
-    history.pop();
   } else {
-    history.push(context.url.pathname);
-  }
-  if (history.at(-1) == "/") {
-    context.session!.set("history", []);
-  } else if (history.length > 15) {
-    history.shift();
-    context.session!.set("history", history);
-  } else {
-    context.session!.set("history", history);
+    // handle session history for GET requests
+    const history = (await context.session!.get("history")) ?? [];
+    if (context.url.searchParams.get("back") == "true") {
+      history.pop();
+    } else {
+      history.push(context.url.pathname);
+    }
+    if (history.at(-1) == "/") {
+      context.session!.set("history", []);
+    } else if (history.length > 15) {
+      history.shift();
+      context.session!.set("history", history);
+    } else {
+      context.session!.set("history", history);
+    }
   }
 
   const sessionId = context.cookies.get(lucia.sessionCookieName)?.value ?? null;
