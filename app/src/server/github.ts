@@ -117,7 +117,11 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 
 export async function getSpecification(owner: string, repo: string, access_token: string) {
   if (!access_token) throw new Error("README: fetching repo without access token");
-  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: gh_headers(access_token) });
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: {
+    "Accept": "application/vnd.github.raw+json",
+    "Authorization": `Bearer ${access_token}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+  }});
   if (!response.ok) {
     console.warn(`README: Code ${response.status} - ${response.statusText}`);
     throw new Error("error fetching readme");
