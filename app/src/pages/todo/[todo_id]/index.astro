@@ -37,7 +37,8 @@ const task_history = await getTaskHistory(todo_id);
       task={task}
       codebase_tasks={codebase_tasks}
       tags={tags}
-      tag_map={tag_map}
+      user_tags={user_tags}
+	  current_tags={current_tags.filter(Boolean)}
       history={task_history}
       user_id={user.id}
 	  client:load

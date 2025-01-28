@@ -13,12 +13,13 @@ interface Props {
   task: _FetchedTask;
   codebase_tasks: _FetchedCodebaseTask;
   tags: string[];
-  tag_map: Map<string, Tag>;
+  user_tags: Tag[];
+  current_tags: UpsertTag[];
   history: HistoryAction[];
   user_id: string;
 }
 
-const TaskEditor = ({ task, codebase_tasks, tags, tag_map, history, user_id }: Props) => {
+const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, history, user_id }: Props) => {
   const [title, setTitle] = createSignal(task?.title ?? "");
   const [summary, setSummary] = createSignal(task?.summary ?? "");
   const [description, setDescription] = createSignal(task?.description ?? "");
@@ -27,7 +28,7 @@ const TaskEditor = ({ task, codebase_tasks, tags, tag_map, history, user_id }: P
   const [startTime, setStartTime] = createSignal(task?.start_time ?? "");
   const [endTime, setEndTime] = createSignal(task?.end_time ?? "");
   const [priority, setPriority] = createSignal(task?.priority ?? "LOW");
-  const [currentTags, setCurrentTags] = createSignal<UpsertTag[]>(tags.map(tag_id => tag_map.get(tag_id)!) ?? []);
+  const [currentTags, setCurrentTags] = createSignal(current_tags);
   const [showSpinner, setShowSpinner] = createSignal(false);
   const [showSuccess, setShowSuccess] = createSignal(false);
   const [showError, setShowError] = createSignal(false);
@@ -119,7 +120,7 @@ const TaskEditor = ({ task, codebase_tasks, tags, tag_map, history, user_id }: P
       <br />
       <div class="editor">
         <label for="tags">Tags</label>
-        <TagPicker currentTags={currentTags()} availableTags={Object.values(tag_map)} owner_id={user_id} />
+        <TagPicker currentTags={currentTags()} availableTags={user_tags} owner_id={user_id} onChange={(t) => setCurrentTags(t)} />
       </div>
       <br />
       <a role="button" id="save-button" onClick={saveTask}>save</a>
