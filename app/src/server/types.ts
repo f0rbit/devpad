@@ -4,19 +4,19 @@ import type { Task } from "./tasks";
 
 export const upsert_project = z.object({
   id: z.string().optional().nullable(),
-  project_id: z.string(),
-  owner_id: z.string(),
-  name: z.string(),
-  description: z.string(),
+  project_id: z.string().optional(),
+  owner_id: z.string().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
   specification: z.string().optional().nullable(),
   repo_url: z.string().optional().nullable(),
   repo_id: z.number().optional().nullable(),
   icon_url: z.string().optional().nullable(),
-  status: z.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")]),
+  status: z.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")]).optional(),
   deleted: z.boolean().optional().default(false),
   link_url: z.string().optional().nullable(),
   link_text: z.string().optional().nullable(),
-  visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]),
+  visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]).optional(),
   current_version: z.string().optional()
 });
 
