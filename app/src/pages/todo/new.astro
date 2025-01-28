@@ -14,9 +14,7 @@ const user_tags = await getActiveUserTags(user.id);
 <PageLayout title={"New Task - devpad"}>
   <main>
     <TaskEditor
-      task={null}
-      codebase_tasks={null}
-      tags={[]}
+      task={{ task: null, codebase_tasks: null, tags: [] }}
       user_tags={user_tags}
 	  current_tags={[]}
       history={[]}

@@ -1,4 +1,5 @@
 import { createSignal } from "solid-js";
+import { createStore } from "solid-js/store";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import Loader from "lucide-solid/icons/loader";
@@ -10,9 +11,11 @@ import type { _FetchedCodebaseTask, _FetchedTask, Task } from "../../server/task
 import { type HistoryAction, type Tag, type UpsertTag } from "../../server/types";
 
 interface Props {
-  task: _FetchedTask | null;
-  codebase_tasks: _FetchedCodebaseTask | null;
-  tags: string[];
+  task: {
+    task: _FetchedTask | null;
+    codebase_tasks: _FetchedCodebaseTask | null;
+    tags: string[];
+  };
   user_tags: Tag[];
   current_tags: UpsertTag[];
   history: HistoryAction[];
@@ -23,24 +26,22 @@ type Progress = Task['task']['progress'];
 type Visibility = Task['task']['visibility'];
 type Priority = Task['task']['priority'];
 
-const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, history, user_id }: Props) => {
-  const [title, setTitle] = createSignal(task?.title ?? "");
-  const [summary, setSummary] = createSignal(task?.summary ?? null);
-  const [description, setDescription] = createSignal(task?.description ?? null);
-  const [progress, setProgress] = createSignal<Progress>(task?.progress ?? "UNSTARTED");
-  const [visibility, setVisibility] = createSignal<Visibility>(task?.visibility ?? "PRIVATE");
-  const [startTime, setStartTime] = createSignal(task?.start_time ?? null);
-  const [endTime, setEndTime] = createSignal(task?.end_time ?? null);
-  const [priority, setPriority] = createSignal<Priority>(task?.priority ?? "LOW");
+const TaskEditor = ({ task, user_tags, current_tags, history, user_id }: Props) => {
+  const [state, setState] = createStore({
+    title: task.task?.title ?? "",
+    summary: task.task?.summary ?? null,
+    description: task.task?.description ?? null,
+    progress: (task.task?.progress ?? "UNSTARTED") as Progress,
+    visibility: (task.task?.visibility ?? "PRIVATE") as Visibility,
+    start_time: task.task?.start_time ?? null,
+    end_time: task.task?.end_time ?? null,
+    priority: (task.task?.priority ?? "LOW") as Priority,
+  });
   const [currentTags, setCurrentTags] = createSignal(current_tags);
-  const [showSpinner, setShowSpinner] = createSignal(false);
-  const [showSuccess, setShowSuccess] = createSignal(false);
-  const [showError, setShowError] = createSignal(false);
+  const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
 
   const saveTask = async () => {
-    setShowSpinner(true);
-    setShowSuccess(false);
-    setShowError(false);
+    setRequestState("loading");
 
     const response = await fetch(`/api/todo/upsert`, {
       method: "PUT",
@@ -48,55 +49,53 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        id: task?.id ?? null,
-        title: title(),
-        summary: summary() == "" ? null : summary(),
-        description: description() == "" ? null : description(),
-        progress: progress(),
-        visibility: visibility(),
-        start_time: startTime() == "" ? null : startTime(),
-        end_time: endTime() == "" ? null : endTime(),
-        priority: priority(),
+        id: task.task?.id ?? null,
+        title: state.title,
+        summary: state.summary == "" ? null : state.summary,
+        description: state.description == "" ? null : state.description,
+        progress: state.progress,
+        visibility: state.visibility,
+        start_time: state.start_time == "" ? null : state.start_time,
+        end_time: state.end_time == "" ? null : state.end_time,
+        priority: state.priority,
         owner_id: user_id,
         tags: currentTags(),
       }),
     });
 
     if (response.ok) {
-      setShowSuccess(true);
+      setRequestState("success");
     } else {
-      setShowError(true);
+      setRequestState("error");
     }
 
-    setShowSpinner(false);
     setTimeout(() => {
-      setShowSuccess(false);
-      setShowError(false);
+      setRequestState("idle");
     }, 5000);
   };
 
   return (
     <div>
-      <h4>{task ? "edit task" : "new task"}</h4>
+      <h4>{task.task ? "edit task" : "new task"}</h4>
       <br />
-      <div class="editor" data-todo-id={task?.id ?? null} data-user-id={user_id}>
+      <div class="editor" data-todo-id={task.task?.id ?? null} data-user-id={user_id}>
         <label for="title">Title</label>
-        <input type="text" id="title" name="title" value={title()} onInput={(e) => setTitle(e.target.value)} />
+        <input type="text" id="title" name="title" value={state.title} onInput={(e) => setState({ title: e.target.value })} />
         <label for="summary">Summary</label>
-        <input type="text" id="summary" name="summary" value={summary() ?? ""} onInput={(e) => setSummary(e.target.value)} />
+        <input type="text" id="summary" name="summary" value={state.summary ?? ""} onInput={(e) => setState({ summary: e.target.value })} />
         <label for="description">Description</label>
-        <textarea id="description" name="description" onInput={(e) => setDescription(e.target.value)}>
-          {description() ?? ""}
+        <textarea id="description" name="description" onInput={(e) => setState({ description: e.target.value })}>
+          {state.description ?? ""}
         </textarea>
 
         <label for="progress">Progress</label>
-        <select id="progress" name="progress" value={progress()} onChange={(e) => setProgress(e.target.value as Progress)}>
-          <option value="UNSTARTED" selected={progress() == "UNSTARTED"}>Not Started</option>
-          <option value="IN_PROGRESS" selected={progress() == "IN_PROGRESS"}>In Progress</option>
-          <option value="COMPLETED" selected={progress() == "COMPLETED"}>Completed</option>
+        <select id="progress" name="progress" value={state.progress} onChange={(e) => setState({ progress: e.target.value as Progress })}>
+          <option value="UNSTARTED" selected={state.progress == "UNSTARTED"}>Not Started</option>
+          <option value="IN_PROGRESS" selected={state.progress == "IN_PROGRESS"}>In Progress</option>
+          <option value="COMPLETED" selected={state.progress == "COMPLETED"}>Completed</option>
         </select>
         <label for="end_time">End Time</label>
-        <input type="datetime-local" id="end_time" name="end_time" value={endTime() ?? ""} onInput={(e) => setEndTime(e.target.value)} />
+        <input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={(e) => setState({ end_time: e.target.value })} />
       </div>
       <details class="boxed">
         <summary class="flex-row" style="font-size: smaller;">
@@ -106,21 +105,21 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
         </summary>
         <div class="editor">
           <label for="start_time">Start Time</label>
-          <input type="datetime-local" id="start_time" name="start_time" value={startTime() ?? ""} onInput={(e) => setStartTime(e.target.value)} />
+          <input type="datetime-local" id="start_time" name="start_time" value={state.start_time ?? ""} onInput={(e) => setState({ start_time: e.target.value })} />
           <label for="visibility">Visibility</label>
-          <select id="visibility" name="visibility" value={visibility()} onChange={(e) => setVisibility(e.target.value as Visibility)}>
-            <option value="PUBLIC" selected={visibility() == "PUBLIC"}>Public</option>
-            <option value="PRIVATE" selected={visibility() == "PRIVATE"}>Private</option>
-            <option value="HIDDEN" selected={visibility() == "HIDDEN"}>Hidden</option>
-            <option value="ARCHIVED" selected={visibility() == "ARCHIVED"}>Archived</option>
-            <option value="DRAFT" selected={visibility() == "DRAFT"}>Draft</option>
-            <option value="DELETED" selected={visibility() == "DELETED"}>Deleted</option>
+          <select id="visibility" name="visibility" value={state.visibility} onChange={(e) => setState({ visibility: e.target.value as Visibility })}>
+            <option value="PUBLIC" selected={state.visibility == "PUBLIC"}>Public</option>
+            <option value="PRIVATE" selected={state.visibility == "PRIVATE"}>Private</option>
+            <option value="HIDDEN" selected={state.visibility == "HIDDEN"}>Hidden</option>
+            <option value="ARCHIVED" selected={state.visibility == "ARCHIVED"}>Archived</option>
+            <option value="DRAFT" selected={state.visibility == "DRAFT"}>Draft</option>
+            <option value="DELETED" selected={state.visibility == "DELETED"}>Deleted</option>
           </select>
           <label for="priority">Priority</label>
-          <select id="priority" name="priority" value={priority()} onChange={(e) => setPriority(e.target.value as Priority)}>
-            <option value="LOW" selected={priority() == "LOW"}>Low</option>
-            <option value="MEDIUM" selected={priority() == "MEDIUM"}>Medium</option>
-            <option value="HIGH" selected={priority() == "HIGH"}>High</option>
+          <select id="priority" name="priority" value={state.priority} onChange={(e) => setState({ priority: e.target.value as Priority })}>
+            <option value="LOW" selected={state.priority == "LOW"}>Low</option>
+            <option value="MEDIUM" selected={state.priority == "MEDIUM"}>Medium</option>
+            <option value="HIGH" selected={state.priority == "HIGH"}>High</option>
           </select>
         </div>
       </details>
@@ -131,17 +130,17 @@ const TaskEditor = ({ task, codebase_tasks, tags, user_tags, current_tags, histo
       </div>
       <br />
       <a role="button" id="save-button" onClick={saveTask}>save</a>
-      <Loader id="spinner" class="icon" classList={{ hidden: !showSpinner() }} />
-      <Check id="success-icon" class="icon" classList={{ hidden: !showSuccess() }} />
-      <X id="error-icon" class="icon" classList={{ hidden: !showError() }} />
+      <Loader id="spinner" class="icon" classList={{ hidden: requestState() !== "loading" }} />
+      <Check id="success-icon" class="icon" classList={{ hidden: requestState() !== "success" }} />
+      <X id="error-icon" class="icon" classList={{ hidden: requestState() !== "error" }} />
       <br />
       <br />
       <div id="response" class="response"></div>
-      {codebase_tasks && (
+      {task.codebase_tasks && (
         <>
           <br />
           <h5>linked code</h5>
-          <LinkedCode code={codebase_tasks} />
+          <LinkedCode code={task.codebase_tasks} />
         </>
       )}
       {history?.length > 0 && (
