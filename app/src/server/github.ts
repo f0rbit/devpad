@@ -114,3 +114,20 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 
   return commits;
 }
+
+export async function getSpecification(owner: string, repo: string, access_token: string) {
+  if (!access_token) throw new Error("README: fetching repo without access token");
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: gh_headers(access_token) });
+  if (!response.ok) {
+    console.warn(`README: Code ${response.status} - ${response.statusText}`);
+    throw new Error("error fetching readme");
+  }
+  try {
+    const text = await response.text();
+    return text;
+  } catch (err) {
+    console.log(`README: Error reading raw text: ${err} - ${response.status} ${response.statusText}`);
+    throw err;
+  }
+}
+

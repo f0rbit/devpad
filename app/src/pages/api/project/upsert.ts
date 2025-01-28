@@ -3,6 +3,7 @@ import { upsert_project, type UpsertProject } from "../../../server/types";
 import { db } from "../../../../database/db";
 import { project } from "../../../../database/schema";
 import { addProjectAction, getProjectById } from "../../../server/projects";
+import { getSpecification } from "../../../server/github";
 
 type CompleteUpsertProject = Omit<UpsertProject, "id"> & { id: string };
 
@@ -46,19 +47,9 @@ export async function PATCH(context: APIContext) {
       const slices = repo_url.split("/");
       const repo = slices.at(-1);
       const owner = slices.at(-2);
-      if (!context?.locals?.session?.access_token) throw new Error("Linking a github repo without access token");
-      const access_token = context.locals.session.access_token;
-      const readme_response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: { "Accept": "application/vnd.github.raw+json", "Authorization": `Bearer ${access_token}`, "X-GitHub-Api-Version": "2022-11-28" } });
-      if (!readme_response || !readme_response.ok) {
-        console.warn(`Code ${readme_response.status} - ${readme_response.statusText}`);
-        throw new Error("Error fetching readme");
-      }
-      try {
-        data.specification = (await readme_response.text()) ?? null;
-      } catch (err) {
-        console.log(`Error reading raw text: ${err} - ${readme_response.status} ${readme_response.statusText}`);
-        throw err;
-      }
+      if (!repo || !owner) throw new Error("Invalid repo_url");
+      const readme = await getSpecification(owner, repo, context.locals.session!.access_token);
+      data.specification = readme;
     }
 
     const insert = data as CompleteUpsertProject;
