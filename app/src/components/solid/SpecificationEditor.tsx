@@ -18,6 +18,7 @@ interface Props {
 type LoadingState = "idle" | "loading" | "success" | "error";
 
 const SpecificationEditor = ({ project_id, initial }: Props) => {
+  const [current, setCurrent] = createSignal(initial);
   const [isEditing, setIsEditing] = createSignal(false);
   const [markdown, setMarkdown] = createSignal(initial);
   const [parsedMarkdown, setParsedMarkdown] = createSignal("");
@@ -26,6 +27,8 @@ const SpecificationEditor = ({ project_id, initial }: Props) => {
   const [saving, setSaving] = createSignal<LoadingState>("idle");
 
   const fetchSpecification = async () => {
+    setError("");
+    setSaving("idle");
     setFetching("loading");
     try {
       const response = await fetch(`/api/project/fetch_spec?project_id=${project_id}`);
@@ -43,19 +46,40 @@ const SpecificationEditor = ({ project_id, initial }: Props) => {
   };
 
   const save = async () => {
+    setError("");
     setSaving("loading");
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setSaving("success");
-    setTimeout(() => {
-      setSaving("idle");
-    }, 1500);
+    setFetching("idle");
+    try {
+      const response = await fetch(`/api/project/upsert?`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: project_id,
+          specification: markdown(),
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to save specification");
+      setSaving("success");
+      setCurrent(markdown());
+      setTimeout(() => {
+        setSaving("idle");
+      }, 1500);
+    } catch (err) {
+      setError((err as Error).message);
+      setSaving("error");
+    }
   };
 
   const resetMarkdown = () => {
-    setMarkdown(initial);
+    setError("");
+    setMarkdown(current());
   };
 
   const exitEditing = () => {
+    setError("");
     resetMarkdown();
     setIsEditing(false);
   };
@@ -99,6 +123,7 @@ const SpecificationEditor = ({ project_id, initial }: Props) => {
               <span>exit</span>
             </a>
           </div>
+          {error() && <p class="error-icon">{error()}</p>}
           <textarea
             value={markdown()}
             rows={50}
@@ -112,7 +137,6 @@ const SpecificationEditor = ({ project_id, initial }: Props) => {
             <Pencil />
             edit
           </a>
-          {error() && <p style={{ color: "red" }}>{error()}</p>}
           <div innerHTML={parsedMarkdown()} />
         </>
       )}
