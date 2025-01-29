@@ -1,27 +1,38 @@
 ---
 interface Props {
   title: string;
+  description?: string;
+  keywords?: string[];
+  canonical?: string;
 }
 
 const dark_mode = false;
 
 import "../main.css";
 
-const { title } = Astro.props;
+const {
+  title,
+  description = "devpad.tools",
+  keywords = [],
+  canonical = null,
+} = Astro.props;
 ---
 
 <!doctype html>
 <html lang="en" class={dark_mode ? "dark" : ""}>
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="Astro description" />
+    {keywords.length > 0 && <meta name="keywords" content={keywords.join(", ")} />}
+    <meta name="title" content={title} />
+    <meta name="author" content="forbit" />
+    <meta name="description" content={description} />
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="stylesheet" href="https://use.typekit.net/jmv8pmn.css" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
     <meta name="generator" content={Astro.generator} />
+    {canonical ? <link rel="canonical" href={canonical} /> : null}
     <title>{title}</title>
   </head>
   <slot />
-
-
 </html>

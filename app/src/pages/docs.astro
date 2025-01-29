@@ -1,9 +1,42 @@
 ---
 import { Code } from "astro:components";
 import PageLayout from "../layouts/PageLayout.astro";
+
+const keywords = [
+  // One-word keywords
+  "API",
+  "docs",
+  "documentation",
+  "integration",
+  "features",
+
+  // Two-word keywords
+  "API documentation",
+  "devpad API",
+  "task management",
+  "project management",
+  "code scanning",
+  "API integration",
+  "API examples",
+  "developer tools",
+  "API endpoints",
+  "task tracking",
+  "project visibility",
+  "API usage",
+  "API guide",
+  "API reference",
+  "API features",
+
+  // Three-word keywords
+  "devpad API documentation",
+  "project management API",
+  "task management API",
+  "API integration guide",
+  "codebase scanning API"
+]
 ---
 
-<PageLayout title="devpad">
+<PageLayout title="API docs - devpad" description="Explore the devpad API documentation to integrate project and task management into your workflow. Learn how to fetch project data, manage tasks, and utilize powerful features like codebase scanning and API integration with detailed examples." keywords={keywords} canonical="https://devpad.tools/docs">
   <h3>API</h3>
   <div class="flex-col" style="gap: 5px;">
     <span

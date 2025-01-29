@@ -4,6 +4,9 @@ import GithubLogin from "../components/solid/GithubLogin";
 import DevpadLogo from "../components/solid/DevpadLogo";
 interface Props {
   title: string;
+  description?: string;
+  keywords?: string[];
+  canonical?: string;
 }
 const user = Astro.locals.user;
 
@@ -36,7 +39,7 @@ const history = (await Astro.session!.get("history")) ?? [];
 const last_page = history.at(-2) ?? null;
 ---
 
-<Layout title={title}>
+<Layout title={title} description={description} keywords={keywords} canonical={canonical}>
   <body>
     <div id="container">
       <header style="position: relative">

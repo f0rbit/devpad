@@ -14,9 +14,42 @@ const project_map = user ? await getUserProjectMap(user!.id) : {};
 const tasks = user ?  await getUserTasks(user!.id) : [];
 
 const tags = user ? await getActiveUserTags(user!.id) : [];
+
+const keywords = [
+  // One-word keywords
+  "tasks",
+  "todo",
+  "tracking",
+  "priorities",
+  "automation",
+
+  // Two-word keywords
+  "task management",
+  "todo tracking",
+  "code scanning",
+  "task priorities",
+  "due dates",
+  "task automation",
+  "task filtering",
+  "todo comments",
+  "task updates",
+  "task editor",
+  "task organization",
+  "project tasks",
+  "task integration",
+  "task visibility",
+  "task progress",
+
+  // Three-word keywords
+  "todo comment scanning",
+  "task priority management",
+  "codebase task tracking",
+  "task organization tools",
+  "task management system"
+];
 ---
 
-<PageLayout title="Tasks - devpad">
+<PageLayout title="Tasks - devpad" description="Streamline your task management with devpad. Track, organize, and prioritize tasks effortlessly. Automatically scan your codebase for TODO comments, assign priorities, set due dates, and integrate seamlessly with your projects." keywords={keywords} canonical="https://devpad.tools/todo">
   <main>
 {user ?
     <section>

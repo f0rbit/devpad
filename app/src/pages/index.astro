@@ -3,9 +3,44 @@ import { ExternalLink } from "lucide-solid/icons/index";
 import DevpadLogo from "../components/solid/DevpadLogo";
 import GithubLogin from "../components/solid/GithubLogin";
 import Layout from "../layouts/Layout.astro";
+
+const keywords = [
+  // One-word keywords
+  "devpad",
+  "tasks",
+  "projects",
+  "management",
+  "developers",
+
+  // Two-word keywords
+  "project management",
+  "task tracking",
+  "code scanning",
+  "github integration",
+  "todo comments",
+  "developer tools",
+  "task automation",
+  "project visibility",
+  "api integration",
+  "task filtering",
+  "project updates",
+  "task priorities",
+  "codebase tasks",
+  "project milestones",
+  "task editor",
+  "project goals",
+
+  // Three-word keywords
+  "developer project management",
+  "github task tracking",
+  "todo comment scanning",
+  "project management api",
+  "task management tools"
+];
+
 ---
 
-<Layout title="devpad">
+<Layout title="devpad" description="devpad.tools provides project and task management for developers. The main feature is automatic scanning of github repos to extract the todo comments" keywords={keywords} canonical="https://devpad.tools" >
   <body>
     <main
       class="landing-page"
