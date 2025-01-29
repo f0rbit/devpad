@@ -4,11 +4,10 @@ import { remark } from "remark";
 import remarkHtml from "remark-html";
 import Pencil from "lucide-solid/icons/pencil";
 import Github from "lucide-solid/icons/github";
-import Loader from "lucide-solid/icons/loader";
 import Save from "lucide-solid/icons/save";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import X from "lucide-solid/icons/x";
-import Check from "lucide-solid/icons/check";
+import { LoadingIndicator, type LoadingState } from "./LoadingIndicator";
 
 interface Props {
   project_id: string;
@@ -16,7 +15,6 @@ interface Props {
   has_github: boolean;
 }
 
-type LoadingState = "idle" | "loading" | "success" | "error";
 
 const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
   const [current, setCurrent] = createSignal(initial);
@@ -146,15 +144,6 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
     </div>
   );
 };
-
-function LoadingIndicator({ state, idle }: { state: Accessor<LoadingState>; idle: JSX.Element }) {
-  return <>
-    {state() === "loading" && <Loader class="spinner" />}
-    {state() === "success" && <Check class="success-icon" />}
-    {state() === "error" && <X class="error-icon" />}
-    {state() !== "loading" && state() !== "success" && state() !== "error" && idle}
-  </>;
-}
 
 export default SpecificationEditor;
 
