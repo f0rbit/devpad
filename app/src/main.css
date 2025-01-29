@@ -724,6 +724,6 @@ details[open] .down-arrow {
   padding: 2px 7px;
   border: 1px solid var(--input-border);
   border-radius: 5px;
-  width: 77px;
+  min-width: 77px;
   justify-content: space-between;
 }

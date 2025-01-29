@@ -1,41 +1,182 @@
 ---
-import PageLayout from "../layouts/PageLayout.astro";
+import DevpadLogo from "../components/solid/DevpadLogo";
+import GithubLogin from "../components/solid/GithubLogin";
+import Layout from "../layouts/Layout.astro";
 ---
 
-<PageLayout title="devpad">
-  <h3>tools</h3>
-  <br />
-  <div class="flex-col">
-    <section>
-      <h5 class="flex-row">
-        todo tracker <span class="version-tag">v2.5</span>
-      </h5>
-      <p class="description">
-        keep track of your in-code todo notes across github projects, assign
-        priority, due dates, descriptions & checklists to each task, and link it
-        back to the destination in your codebase
-      </p>
-      <a href="/todo">get started</a>
-    </section>
-    <section>
-      <h5 class="flex-row">
-        project manager<span class="version-tag">v1.5</span>
-      </h5>
-      <p class="description">
-        manage your side projects & link github repo for easy integration with
-        todo-tracker. manage groups of tasks under 'goals', build a development
-        roadmap, and view recent activity for each project
-      </p>
-      <a href="/project">get started</a>
-    </section>
-    <section>
-      <h5 class="flex-row">task calendar</h5>
-      <p class="description">
-        view upcoming deadlines for todo tasks, project milestones and other
-        defined deliverables. schedule blocks of work for each project & write a
-        report after completion that can be viewed from the project manager
-      </p>
-      <a>get started</a>
-    </section>
-  </div>
-</PageLayout>
+<Layout title="devpad">
+  <body>
+    <main
+      style="display: grid; gap: 100px; width: 80vw; max-width: 1000px; justify-items: center"
+      ;
+    >
+      <div></div>
+      <br />
+      <section id="hero" style="width: 100%">
+        <h1 class="flex-row" style="gap: 20px; justify-content: center;">
+          <DevpadLogo size={48} />
+          <span style="font-size: 3rem;">devpad</span>
+        </h1>
+        <div style="height: 75px"></div>
+        <div
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; justify-content: center;"
+        >
+          <div
+            style="width: 100%; display: flex; flex-direction: column; gap: 20px; justify-content: center; align-items: center;"
+          >
+            <p style="font-size: 1.5rem">
+              scan & track <code>@todo</code> comments
+            </p>
+            <p
+              style="margin-top: -19px; font-size: 1.1rem; color: var(--text-tertiary)"
+            >
+              & way more
+            </p>
+            <div style="font-size: 1.2rem">
+              <GithubLogin size={30} client:load />
+            </div>
+          </div>
+          <img src="/images/logo.png" style="width: 100%; height: 200px;" />
+        </div>
+      </section>
+      <br />
+      <section
+        id="projects"
+        style="display: flex; flex-direction: column; gap: 25px;"
+      >
+        <h2 style="text-align: center">project management</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+            culpa qui officia deserunt mollit anim id est laborum.
+          </p>
+          <img
+            src="/images/project-management.png"
+            style="width: 100%; height: auto;"
+          />
+          <img
+            src="/images/project-management-2.png"
+            style="width: 100%; height: auto;"
+          />
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non pro
+          </p>
+        </div>
+      </section>
+      <section
+        id="tasks"
+        style="display: flex; flex-direction: column; gap: 25px;"
+      >
+        <h2 style="text-align: center">task management</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+            culpa qui officia deserunt mollit anim id est laborum.
+          </p>
+          <img
+            src="/images/task-management.png"
+            style="width: 100%; height: auto;"
+          />
+          <img
+            src="/images/task-management-2.png"
+            style="width: 100%; height: auto;"
+          />
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+            culpa qui officia deserunt mollit anim id est laborum.
+          </p>
+        </div>
+      </section>
+      <br />
+      <section
+        id="testimonials"
+        style="display: flex; flex-direction: column; gap: 25px;"
+      >
+        <h2 style="text-align: center">testimonials</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+            culpa qui officia deserunt mollit anim id est laborum.
+          </p>
+          <img
+            src="/images/testimonials.png"
+            style="width: 100%; height: auto;"
+          />
+          <img
+            src="/images/testimonials-2.png"
+            style="width: 100%; height: auto;"
+          />
+          <p>
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
+            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
+            aliquip ex ea commodo consequat. Duis aute irure dolor in
+            reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla
+            pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
+            culpa qui officia deserunt mollit anim id est laborum.
+          </p>
+        </div>
+      </section>
+      <br />
+      <section
+        id="how-it-works"
+        style="display: flex; flex-direction: column; gap: 25px;"
+      >
+        <h2 style="text-align: center">how it works</h2>
+        <div
+          style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;"
+        >
+          <img
+            src="/images/how-it-works.png"
+            style="width: 100%; height: auto;"
+          />
+          <img
+            src="/images/how-it-works-2.png"
+            style="width: 100%; height: auto;"
+          />
+          <img
+            src="/images/how-it-works-3.png"
+            style="width: 100%; height: auto;"
+          />
+        </div>
+      </section>
+      <br />
+      <section
+        id="end"
+        style="display: flex; flex-direction: column; gap: 25px;"
+      >
+        <GithubLogin size={30} client:load />
+      </section>
+      <br />
+      <br />
+    </main>
+    <footer>
+      <p>© 2025 devpad</p>
+    </footer>
+  </body>
+</Layout>
