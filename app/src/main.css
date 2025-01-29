@@ -726,4 +726,12 @@ details[open] .down-arrow {
   border-radius: 5px;
   min-width: 77px;
   justify-content: space-between;
+  cursor: pointer;
+}
+
+.landing-page img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
 }

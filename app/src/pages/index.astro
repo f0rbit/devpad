@@ -1,4 +1,5 @@
 ---
+import { ExternalLink } from "lucide-solid/icons/index";
 import DevpadLogo from "../components/solid/DevpadLogo";
 import GithubLogin from "../components/solid/GithubLogin";
 import Layout from "../layouts/Layout.astro";
@@ -7,8 +8,8 @@ import Layout from "../layouts/Layout.astro";
 <Layout title="devpad">
   <body>
     <main
+      class="landing-page"
       style="display: grid; gap: 100px; width: 80vw; max-width: 1000px; justify-items: center"
-      ;
     >
       <div></div>
       <br />
@@ -36,7 +37,7 @@ import Layout from "../layouts/Layout.astro";
               <GithubLogin size={30} client:load />
             </div>
           </div>
-          <img src="/images/logo.png" style="width: 100%; height: 200px;" />
+          <img src="/hero-scan.png" alt="Scan codebase into tasks" />
         </div>
       </section>
       <br />
@@ -54,21 +55,23 @@ import Layout from "../layouts/Layout.astro";
             managed in a single place. when linking to a github repo, devpad
             offers the ability to scan the codebase for tasks, automatically
             updating, creating or deleting tasks for you.
+            <a style="margin-top: 10px;" class="flex-row" href="/project">
+              <span>projects</span>
+              <ExternalLink />
+            </a>
           </p>
-          <img
-            src="/images/project-management.png"
-            style="width: 100%; height: auto;"
-          />
-          <img
-            src="/images/project-management-2.png"
-            style="width: 100%; height: auto;"
-          />
+          <img src="/project-creator.png" alt="project creator dialog" />
+          <img src="/project-api.png" alt="devpad projects api" />
           <p>
             when all your projects have been setup, you can make use of devpad's
             built-in api to query your projects, perfect for integrating with
             your portfolio website, or other projects. with this api, you can
             build your own extensions, keeping this application as the only
             place to manage your projects.
+            <a style="margin-top: 10px;" class="flex-row" href="/docs">
+              <span>api docs</span>
+              <ExternalLink />
+            </a>
           </p>
         </div>
       </section>
@@ -86,15 +89,13 @@ import Layout from "../layouts/Layout.astro";
             these tasks automatically directly from the comments in your
             codebase, with just enough user verification to make sure everything
             is how you want it.
+            <a style="margin-top: 10px;" class="flex-row" href="/todo">
+              <span>tasks</span>
+              <ExternalLink />
+            </a>
           </p>
-          <img
-            src="/images/task-management.png"
-            style="width: 100%; height: auto;"
-          />
-          <img
-            src="/images/task-management-2.png"
-            style="width: 100%; height: auto;"
-          />
+          <img src="/task-view.png" alt="Task grid view" />
+          <img src="/scan-update.png" alt="Update dialog for task scanning" />
           <p>
             the task editor allows you to assign tags to each tasks, allowing
             for powerful searching & filtering. similar to the project manager,
@@ -104,7 +105,6 @@ import Layout from "../layouts/Layout.astro";
           </p>
         </div>
       </section>
-      <br />
       <!-- TODO: add testimonials 
 
         id="testimonials"
@@ -122,27 +122,22 @@ import Layout from "../layouts/Layout.astro";
       >
         <h2 style="text-align: center">how it works</h2>
         <div
-          style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;"
+          style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 20px; justify-items: center;"
         >
-          <img
-            src="/images/how-it-works.png"
-            style="width: 100%; height: auto;"
-          />
-          <img
-            src="/images/how-it-works-2.png"
-            style="width: 100%; height: auto;"
-          />
-          <img
-            src="/images/how-it-works-3.png"
-            style="width: 100%; height: auto;"
-          />
+          <img src="/import-project.png" alt="Import project from github" />
+          <img src="/check-for-updates.png" alt="Scan repo for updates" />
+          <img src="/scan-updates.png" alt="Accept updates from scan" />
+          <p>1. import project</p>
+          <p>2. check for updates</p>
+          <p>3. accept updates</p>
         </div>
       </section>
       <br />
       <section
         id="end"
-        style="display: flex; flex-direction: column; gap: 25px;"
+        style="display: flex; flex-direction: column; gap: 25px; align-items: center;"
       >
+        <h2 style="text-align: center">let's get started</h2>
         <GithubLogin size={30} client:load />
       </section>
       <br />
