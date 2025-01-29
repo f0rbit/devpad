@@ -2,6 +2,8 @@ import { lucia } from "./server/lucia";
 import { verifyRequestOrigin } from "lucia";
 import { defineMiddleware } from "astro:middleware";
 
+const history_ignore = ["/api", "/favicon", "/images", "/public"];
+
 export const onRequest = defineMiddleware(async (context, next) => {
   if (context.request.method !== "GET") {
     const originHeader = context.request.headers.get("Origin");
@@ -12,7 +14,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         status: 403
       });
     }
-  } else if (!context.url.pathname.includes("api") && !context.url.pathname.includes("favicon")) {
+  } else if (!history_ignore.find((p) => context.url.pathname.includes(p))) {
     // handle session history for GET requests
     const history = (await context.session!.get("history")) ?? [];
     if (context.url.searchParams.get("back") == "true") { // remove the last page

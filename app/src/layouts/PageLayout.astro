@@ -1,5 +1,7 @@
 ---
 import Layout from "./Layout.astro";
+import GithubLogin from "../components/solid/GithubLogin";
+import DevpadLogo from "../components/solid/DevpadLogo";
 interface Props {
   title: string;
 }
@@ -10,7 +12,8 @@ const { title } = Astro.props;
 const logout_pages = [
   { name: "home", href: "/" },
   { name: "docs", href: "/docs" },
-  { name: "login", href: "/api/auth/login" },
+  { name: "projects", href: "/project" },
+  { name: "tasks", href: "/todo" },
 ];
 
 const login_pages = [
@@ -39,24 +42,7 @@ const last_page = history.at(-2) ?? null;
       <header style="position: relative">
         <a href="/" class={active == "home" ? "active" : ""}>
           <h5 class="flex-row">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="lucide lucide-notebook-pen"
-              ><path
-                d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"
-              ></path><path d="M2 6h4"></path><path d="M2 10h4"></path><path
-                d="M2 14h4"></path><path d="M2 18h4"></path><path
-                d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"
-              ></path></svg
-            >
+            <DevpadLogo size={18} /> 
             <span>devpad</span>
           </h5>
         </a>
@@ -75,6 +61,7 @@ const last_page = history.at(-2) ?? null;
               </a>
             ))
           }
+          {!user && <GithubLogin client:load />}
         </nav>
       </header>
       <br />

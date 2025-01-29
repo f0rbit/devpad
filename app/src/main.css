@@ -106,11 +106,6 @@ body {
   align-items: center;
 }
 
-nav {
-  display: flex;
-  gap: 10px;
-}
-
 #container,
 footer {
   max-width: 100%;
@@ -120,6 +115,7 @@ footer {
 nav {
   display: flex;
   gap: 5px;
+  align-items: center;
 }
 
 h1,
@@ -144,7 +140,8 @@ h6 {
 }
 
 a,
-.label-modal {
+.label-modal,
+button {
   text-decoration: none;
   color: var(--text-link);
   transition: filter 0.15s;
@@ -152,17 +149,20 @@ a,
 }
 
 a.active,
-input:checked+.label-modal {
+input:checked+.label-modal,
+button.active {
   color: var(--text-primary);
   text-decoration: underline;
 }
 
 a:hover,
-.label-modal:hover {
+.label-modal:hover,
+button:hover {
   filter: var(--hover-filter);
 }
 
-a.underlined:hover {
+a.underlined:hover,
+button.underlined:hover {
   text-decoration: underline;
 }
 
@@ -529,7 +529,6 @@ article {
   border: none;
   padding: 0;
   font: inherit;
-  color: inherit;
   cursor: pointer;
   outline: inherit;
 }
@@ -716,4 +715,23 @@ details[open] .down-arrow {
 
 .combined-row select {
 	width: 100%;
+}
+
+.github-login {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border: 1px solid var(--input-border);
+  border-radius: 5px;
+  min-width: 77px;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.landing-page img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
 }

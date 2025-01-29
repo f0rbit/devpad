@@ -1,9 +1,11 @@
 import { defineConfig } from 'astro/config';
 import node from "@astrojs/node";
+import sitemap from "@astrojs/sitemap";
 
 import solidJs from "@astrojs/solid-js";
 
-console.log(Bun.env.PORT);
+const site = "https://devpad.tools";
+
 
 // https://astro.build/config
 export default defineConfig({
@@ -13,7 +15,9 @@ export default defineConfig({
   adapter: node({
     mode: "middleware"
   }),
-  integrations: [solidJs()],
+  integrations: [solidJs(), sitemap({
+    customPages: [ `${site}/`, `${site}/docs/` ],
+  })],
   experimental: {
     session: { driver: "fs" },
   }

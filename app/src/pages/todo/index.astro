@@ -6,19 +6,19 @@ import { TaskSorter } from "../../components/solid/TaskSorter";
 import Tag from "lucide-solid/icons/tag";
 import { getActiveUserTags } from "../../server/tags";
 import Plus from "lucide-solid/icons/plus";
+import GithubLogin from "../../components/solid/GithubLogin";
 
 const user = Astro.locals.user;
-if (!user)
-  return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const project_map = await getUserProjectMap(user.id);
-const tasks = await getUserTasks(user.id);
+const project_map = user ? await getUserProjectMap(user!.id) : {};
+const tasks = user ?  await getUserTasks(user!.id) : [];
 
-const tags = await getActiveUserTags(user.id);
+const tags = user ? await getActiveUserTags(user!.id) : [];
 ---
 
 <PageLayout title="Tasks - devpad">
   <main>
+{user ?
     <section>
       <div class="flex-row">
         <h3>upcoming tasks</h3>
@@ -44,6 +44,10 @@ const tags = await getActiveUserTags(user.id);
         user_id={user.id}
         defaultView={user.task_view}
       />
-    </section>
+</section>
+  : <>
+    <p>you must be logged in.</p>
+    <GithubLogin client:load />
+  </>}
   </main>
 </PageLayout>
