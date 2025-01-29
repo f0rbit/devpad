@@ -7,7 +7,7 @@ interface Props {
 }
 
 const user = Astro.locals.user;
-const { project, back } = Astro.props;
+const { project } = Astro.props;
 const mode = project ? "edit" : "create";
 ---
 
@@ -134,7 +134,7 @@ const mode = project ? "edit" : "create";
 
     // otherwise goto new project
     try {
-      const result = (await response.json()) as any;
+      await response.json();
       // go to project page
       window.location.href = `/project/${project_id}`;
     } catch (err) {

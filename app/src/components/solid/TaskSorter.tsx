@@ -166,7 +166,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
         </select>
         {Object.keys(project_map).length > 1 && <>
           <FolderSearch />
-          <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} />
+          <ProjectSelector project_map={project_map} default_id={project()} callback={(project_id) => setProject(project_id)} disabled={false} />
         </>}
         <Tag />
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />

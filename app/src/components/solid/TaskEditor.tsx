@@ -39,7 +39,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
     start_time: task.task?.start_time ?? null,
     end_time: task.task?.end_time ?? null,
     priority: (task.task?.priority ?? "LOW") as Priority,
-	project_id: task.task?.project_id ?? null,
+    project_id: task.task?.project_id ?? null,
   });
   const [currentTags, setCurrentTags] = createSignal(current_tags);
   const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
@@ -65,7 +65,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
         end_time: state.end_time == "" ? null : state.end_time,
         priority: state.priority,
         owner_id: user_id,
-		project_id: state.project_id,
+        project_id: state.project_id,
         tags: currentTags(),
       }),
     });
@@ -96,15 +96,15 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
         </textarea>
 
         <label for="progress">Progress</label>
-		<div class="flex-row combined-row">
-			<select id="progress" name="progress" value={state.progress} onChange={(e) => setState({ progress: e.target.value as Progress })}>
-				<option value="UNSTARTED" selected={state.progress == "UNSTARTED"}>Not Started</option>
-				<option value="IN_PROGRESS" selected={state.progress == "IN_PROGRESS"}>In Progress</option>
-				<option value="COMPLETED" selected={state.progress == "COMPLETED"}>Completed</option>
-			</select>
-			<label for="project-selector" style="padding: 0px 5px;">Project</label>
-			<ProjectSelector project_map={project_map} default_id={state.project_id} callback={(p) => setState({ project_id: p })} disabled={project_disabled()} />
-		</div>
+        <div class="flex-row combined-row">
+          <select id="progress" name="progress" value={state.progress} onChange={(e) => setState({ progress: e.target.value as Progress })}>
+            <option value="UNSTARTED" selected={state.progress == "UNSTARTED"}>Not Started</option>
+            <option value="IN_PROGRESS" selected={state.progress == "IN_PROGRESS"}>In Progress</option>
+            <option value="COMPLETED" selected={state.progress == "COMPLETED"}>Completed</option>
+          </select>
+          <label for="project-selector" style="padding: 0px 5px;">Project</label>
+          <ProjectSelector project_map={project_map} default_id={state.project_id} callback={(p) => setState({ project_id: p })} disabled={project_disabled()} />
+        </div>
         <label for="end_time">End Time</label>
         <input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={(e) => setState({ end_time: e.target.value })} />
       </div>
@@ -190,13 +190,6 @@ const LinkedCode = ({ code }: { code: NonNullable<Task['codebase_tasks']> }) => 
   };
 
   const context = code.context ? buildContext(code.context as string[]) : null;
-
-  /** @note had to set these to 'any' to avoid type error on lang attribute */
-  let fileType: any = '';
-  if (code.file) {
-    const parts = code.file.split('.');
-    fileType = parts[parts.length - 1];
-  }
 
   return (
     <div class="flex-col" style={{ gap: '2px' }}>

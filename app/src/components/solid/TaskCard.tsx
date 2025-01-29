@@ -98,21 +98,6 @@ export const TaskCard = (props: Props) => {
 };
 
 
-const FormattedDate = ({ date }: { date: string | null }) => {
-  if (!date) return <span>No date</span>;
-  // format like November 1, 2024
-  // use Intl.DateTimeFormat to format date
-  // return as <span class='date'>November 1</span><span class='year'>, 2024</span>
-  const options = { month: "long", day: "numeric" } as const;
-
-  return (
-    <>
-      <span class="date">{new Intl.DateTimeFormat("en-US", options).format(new Date(date))}</span>
-      <span class="year">, {new Date(date).getFullYear()}</span>
-    </>
-  );
-}
-
 const DueDate = ({ date }: { date: string | null }) => {
   // if no date, return <span>No due date</span>
   // otherwise, if within 1 hour say "x minutes"
