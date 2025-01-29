@@ -16,9 +16,16 @@ export default defineConfig({
     mode: "middleware"
   }),
   integrations: [solidJs(), sitemap({
-    customPages: [ `${site}/`, `${site}/docs/` ],
+    customPages: [`${site}/`, `${site}/docs/`],
   })],
   experimental: {
     session: { driver: "fs" },
+  },
+  vite: {
+    build: {
+      watch: false,
+      chunkSizeWarningLimit: 3000,
+      sourcemap: false
+    },
   }
 });

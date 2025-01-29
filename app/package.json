@@ -7,7 +7,8 @@
 		"start": "bun --bun dist/server/entry.mjs",
 		"migrate": "bun database/migrate.ts",
 		"schema": "bunx drizzle-kit generate:sqlite --schema=./database/schema.ts --out=./database/drizzle",
-		"build": "bun --bun astro check && bun --bun astro build",
+		"build": "bun --bun astro build",
+        "check": "bun --bun astro check",
 		"preview": "bun --bun astro preview",
 		"astro": "astro",
 		"push": "bunx --bun drizzle-kit push:sqlite"

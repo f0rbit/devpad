@@ -13,7 +13,7 @@ RUN git clone https://github.com/f0rbit/todo-tracker.git .
 RUN go build -o todo-tracker
 
 # Use a base image with Bun installed
-FROM oven/bun:latest as builder
+FROM oven/bun:1.1.37 as builder
 
 # install 'unzip'
 RUN apt-get update && apt-get install -y unzip
@@ -33,6 +33,7 @@ COPY ../deployment/.en[v] .
 
 # Install dependencies and build the project
 RUN bun install
+RUN bun run check
 RUN bun run build
 
 WORKDIR /server
