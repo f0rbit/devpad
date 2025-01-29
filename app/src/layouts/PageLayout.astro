@@ -10,7 +10,7 @@ interface Props {
 }
 const user = Astro.locals.user;
 
-const { title } = Astro.props;
+const { title, description, keywords, canonical } = Astro.props;
 
 const logout_pages = [
   { name: "home", href: "/" },
