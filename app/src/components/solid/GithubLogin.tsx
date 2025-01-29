@@ -1,7 +1,7 @@
 import { createSignal } from "solid-js";
 import { LoadingIndicator, type LoadingState } from "./LoadingIndicator";
 
-export default function GithubLogin() {
+export default function GithubLogin({ size = 20 }: { size?: number }) {
   const [state, setState] = createSignal<LoadingState>("idle");
 
   const login = async () => {
@@ -11,7 +11,7 @@ export default function GithubLogin() {
 
   return (
     <button class="button-reset github-login" onClick={login}>
-      <LoadingIndicator state={state} idle={<GithubLogo size={20} />} />
+      <LoadingIndicator state={state} idle={<GithubLogo size={size} />} />
       login
     </button>
   );
