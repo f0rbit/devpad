@@ -35,12 +35,16 @@ const keywords = [
   "github task tracking",
   "todo comment scanning",
   "project management api",
-  "task management tools"
+  "task management tools",
 ];
-
 ---
 
-<Layout title="devpad" description="devpad.tools provides project and task management for developers. The main feature is automatic scanning of github repos to extract the todo comments" keywords={keywords} canonical="https://devpad.tools" >
+<Layout
+  title="devpad"
+  description="devpad.tools provides project and task management for developers. The main feature is automatic scanning of github repos to extract the todo comments"
+  keywords={keywords}
+  canonical="https://devpad.tools"
+>
   <body>
     <main
       class="landing-page"
@@ -54,9 +58,7 @@ const keywords = [
           <span style="font-size: 3rem;">devpad</span>
         </h1>
         <div style="height: 75px"></div>
-        <div
-          style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; justify-content: center;"
-        >
+        <div class="mobile-grid">
           <div
             style="width: 100%; display: flex; flex-direction: column; gap: 20px; justify-content: center; align-items: center;"
           >
@@ -81,7 +83,7 @@ const keywords = [
         style="display: flex; flex-direction: column; gap: 25px;"
       >
         <h2 style="text-align: center">project management</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="mobile-grid">
           <p>
             devpad offers a dead simple yet powerful way to manage your
             ever-increasing list of projects. with options for visibility,
@@ -115,7 +117,7 @@ const keywords = [
         style="display: flex; flex-direction: column; gap: 25px;"
       >
         <h2 style="text-align: center">task management</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="mobile-grid">
           <p>
             keeping track of everything you need to do for a project is a pain.
             devpad offers a simple way to add new tasks, attach them to a
@@ -156,15 +158,19 @@ const keywords = [
         style="display: flex; flex-direction: column; gap: 25px;"
       >
         <h2 style="text-align: center">how it works</h2>
-        <div
-          style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 20px; justify-items: center;"
-        >
-          <img src="/import-project.png" alt="Import project from github" />
-          <img src="/check-for-updates.png" alt="Scan repo for updates" />
-          <img src="/scan-updates.png" alt="Accept updates from scan" />
-          <p>1. import project</p>
-          <p>2. check for updates</p>
-          <p>3. accept updates</p>
+        <div class="triple-grid">
+          <div>
+            <img src="/import-project.png" alt="Import project from github" />
+            <p>1. import project</p>
+          </div>
+          <div>
+            <img src="/check-for-updates.png" alt="Scan repo for updates" />
+            <p>2. check for updates</p>
+          </div>
+          <div>
+            <img src="/scan-updates.png" alt="Accept updates from scan" />
+            <p>3. accept updates</p>
+          </div>
         </div>
       </section>
       <br />

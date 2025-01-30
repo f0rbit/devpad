@@ -735,3 +735,39 @@ details[open] .down-arrow {
   border-radius: 10px;
   border: 1px solid var(--input-border);
 }
+
+.triple-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  justify-content: center;
+}
+
+.triple-grid img {
+  max-height: 500px;
+  width: auto;
+}
+
+.triple-grid > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.mobile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  justify-content: center;
+}
+
+@media (max-width: 1000px) {
+  .mobile-grid {
+    grid-template-columns: 1fr;
+  }
+  .triple-grid {
+    grid-template-columns: 1fr;
+  }
+}
