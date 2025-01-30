@@ -104,6 +104,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin: auto auto;
 }
 
 #container,
@@ -763,11 +764,26 @@ details[open] .down-arrow {
   justify-content: center;
 }
 
+.task-filters {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
 @media (max-width: 1000px) {
   .mobile-grid {
     grid-template-columns: 1fr;
   }
   .triple-grid {
     grid-template-columns: 1fr;
+  }
+  .last-page {
+    display: none;
+  }
+  .task-filters {
+    display: grid;
+    grid-template-columns: min-content 1fr;
+    gap: 10px;
+    margin-top: 10px;
   }
 }

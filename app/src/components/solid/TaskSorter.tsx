@@ -153,7 +153,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 
   return (
     <div class="flex-col" >
-      <div class="flex-row" style={{ gap: "9px" }}>
+      <div class="task-filters" style={{ gap: "9px" }}>
         <Search />
         <input type="text" placeholder="Search" value={search()} onInput={(e) => setSearch(e.target.value)} />
         <ArrowDownWideNarrow />
@@ -171,7 +171,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
         <Tag />
         <TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
-        <div class="icons" style={{ gap: "9px", "margin-left": "auto" }} >
+        <div class="icons" style={{ gap: "9px", "margin-left": "auto", "grid-column": "span 2" }} >
           <a role="button" onClick={(e) => { e.preventDefault(); selectView("list") }}>
             <LayoutList />
           </a>
@@ -198,8 +198,8 @@ function ListView({ tasks, project_map, user_tags, update }: ListProps) {
     <ul class="flex-col" style={{ gap: "9px" }}>
       <For each={tasks()}>
         {(task) => {
-          const project = project_map[task.task.project_id!];
-          if (project == null) return null;
+          let project = null;
+          if (task.task.project_id) project = project_map[task.task.project_id];
           return (
             <li>
               <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
@@ -216,8 +216,8 @@ function GridView({ tasks, project_map, user_tags, update }: ListProps) {
     <ul style={{ display: "grid", 'grid-template-columns': "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
       <For each={tasks()}>
         {(task) => {
-		  let project = null;
-		  if (task.task.project_id) project = project_map[task.task.project_id];
+          let project = null;
+          if (task.task.project_id) project = project_map[task.task.project_id];
           return (
             <li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
               <TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
