@@ -13,6 +13,7 @@ import Circle from "lucide-solid/icons/circle";
 import CircleDot from "lucide-solid/icons/circle-dot";
 import CircleCheck from "lucide-solid/icons/circle-check";
 import { TagBadge } from "./TagEditor";
+import Link from "lucide-solid/icons/link";
 
 interface Props {
   task: Task;
@@ -69,6 +70,8 @@ export const TaskCard = (props: Props) => {
     }
   }
 
+  const has_linked = !!fetched_task.codebase_tasks;
+
   return (
     <div class="flex-col" style={{ "gap": "3px", height: "100%" }}>
       <div>
@@ -88,6 +91,7 @@ export const TaskCard = (props: Props) => {
           </For>
         </span>}
         <span class={`flex-row ${priority_class}`}>
+          {has_linked && <div style="display: flex;" title="This task is linked to a codebase"><Link /></div>}
           <Clock />
           <DueDate date={task.end_time} />
           {(project_name && props.draw_project) && <a href={`/project/${project_name}/tasks`}><span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>{" - "}{project_name}</span></a>}
