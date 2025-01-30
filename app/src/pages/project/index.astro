@@ -36,37 +36,65 @@ const keywords = [
   "codebase task tracking",
   "project milestone tracking",
   "project visibility tools",
-  "development project management"
+  "development project management",
 ];
 ---
 
-<PageLayout title="Projects - devpad" description="Manage your development projects effortlessly with devpad. Track progress, link GitHub repositories, scan codebases for tasks, and centralize project visibility, milestones, and updates—all in one place." keywords={keywords} canonical="https://devpad.tools/project">
-  <main>
-    {
-      user && (
-        <div>
-          <section>
-            <h3>projects</h3>
-            <ul>
-              {codebases.map((c) => (
-                <li>
-                  <a href={`project/${c}`}>{c}</a>
-                </li>
-              ))}
-            </ul>
-            <br />
-          </section>
-          <a href="/project/create">+ add</a>
+<PageLayout
+  title="Projects - devpad"
+  description="Manage your development projects effortlessly with devpad. Track progress, link GitHub repositories, scan codebases for tasks, and centralize project visibility, milestones, and updates—all in one place."
+  keywords={keywords}
+  canonical="https://devpad.tools/project"
+>
+  <main class="landing-page" style="display: grid; gap: 100px; justify-items: center">
+      <section id="organize-projects">
+        <h2 style="text-align: center; font-size: 2rem;">Organize Side Projects</h2>
+        <div class="mobile-grid">
+        <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
+            <p>
+              Keep all your development projects in one place with automatic updates 
+              from your GitHub repositories. Track progress, manage visibility, and 
+              set milestones for your tasks.
+            </p>
+            <GithubLogin size={30} client:load />
+          </div>
+          <img src="/project-creator.png" alt="Project management dashboard" />
         </div>
-      )
-    }
-    {
-      !user && (
-        <div>
-          <p>you must be logged in</p>
-          <GithubLogin client:load />
+      </section>
+
+      <section id="api">
+        <h2 style="text-align: center; font-size: 1.5rem;">API Access</h2>
+        <div class="mobile-grid">
+            <p>
+              Access your project data through our comprehensive API. Perfect for 
+              integrating with your portfolio or other development tools. Query 
+              projects, tasks, and milestones programmatically.
+            </p>
+          <img src="/project-api.png" alt="Project API settings" />
         </div>
-      )
-    }
-  </main>
-</PageLayout>
+      </section>
+
+      <section id="scanning">
+        <h2 style="text-align: center; font-size: 1.5rem;">Automatic Scanning</h2>
+        <div class="mobile-grid">
+          <img src="/scan-update.png" alt="Code scanning process" />
+            <p>
+              Automatically scan your codebase for TODO comments and convert 
+              them into trackable tasks. Review and update tasks with just enough 
+              verification to keep your workflow smooth.
+            </p>
+        </div>
+      </section>
+
+      <!-- TODO: add testimonials section -->
+      <section id="testimonials" style="display: grid; gap: 20px;">
+        <h2 style="text-align: center; font-size: 1.5rem;">What Developers Say</h2>
+        <!-- Add testimonial content here -->
+      </section>
+
+      <section id="cta">
+        <div style="display: flex; justify-content: center; gap: 20px;">
+          <GithubLogin size={30} client:load />
+        </div>
+      </section>
+    </main></PageLayout>

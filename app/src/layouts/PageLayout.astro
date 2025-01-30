@@ -2,6 +2,7 @@
 import Layout from "./Layout.astro";
 import GithubLogin from "../components/solid/GithubLogin";
 import DevpadLogo from "../components/solid/DevpadLogo";
+import ArrowLeft from "lucide-solid/icons/arrow-left";
 interface Props {
   title: string;
   description?: string;
@@ -39,20 +40,29 @@ const history = (await Astro.session!.get("history")) ?? [];
 const last_page = history.at(-2) ?? null;
 ---
 
-<Layout title={title} description={description} keywords={keywords} canonical={canonical}>
+<Layout
+  title={title}
+  description={description}
+  keywords={keywords}
+  canonical={canonical}
+>
   <body>
     <div id="container">
       <header style="position: relative">
         <a href="/" class={active == "home" ? "active" : ""}>
           <h5 class="flex-row">
-            <DevpadLogo size={18} /> 
+            <DevpadLogo size={18} />
             <span>devpad</span>
           </h5>
         </a>
         {
           last_page && (
-            <a href={`${last_page}?back=true`} class="last-page" title="Go Back">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-left"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            <a
+              href={`${last_page}?back=true`}
+              class="last-page"
+              title="Go Back"
+            >
+              <ArrowLeft /> 
             </a>
           )
         }
