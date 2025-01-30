@@ -64,7 +64,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
       <div class="tag-grid">
         <div>Title</div>
         <div>Color</div>
-        <div style="margin: auto auto;"><Eye /></div>
+        <div style="margin: auto auto;" title="Render tag in tasks list"><Eye /></div>
         <div></div>
         <For each={currentTags()}>
           {(tag) => !tag.deleted && (
