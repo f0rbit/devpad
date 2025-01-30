@@ -47,6 +47,26 @@ const keywords = [
   keywords={keywords}
   canonical="https://devpad.tools/project"
 >
+  {
+    user && (
+      <main>
+        {" "}
+        <section>
+          <h3>projects</h3>
+          <ul>
+            {codebases.map((c) => (
+              <li>
+                <a href={`project/${c}`}>{c}</a>
+              </li>
+            ))}
+          </ul>
+          <br />
+        </section>
+        <a href="/project/create">+ add</a>
+      </main>
+    )
+}
+{!user && (
   <main
     class="landing-page"
     style="display: grid; gap: 100px; justify-items: center"
@@ -124,5 +144,6 @@ const keywords = [
     </section>
     <br />
     <br />
-  </main>
+</main>
+)}
 </PageLayout>
