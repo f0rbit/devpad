@@ -104,6 +104,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  margin: auto auto;
 }
 
 #container,
@@ -769,5 +770,8 @@ details[open] .down-arrow {
   }
   .triple-grid {
     grid-template-columns: 1fr;
+  }
+  .last-page {
+    display: none;
   }
 }
