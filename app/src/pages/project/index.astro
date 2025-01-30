@@ -2,6 +2,7 @@
 import PageLayout from "../../layouts/PageLayout.astro";
 import { getUserProjects } from "../../server/projects";
 import GithubLogin from "../../components/solid/GithubLogin";
+import ExternalLink from "lucide-solid/icons/external-link";
 const user = Astro.locals.user;
 
 const projects = user ? await getUserProjects(user.id) : [];
@@ -47,54 +48,65 @@ const keywords = [
   canonical="https://devpad.tools/project"
 >
   <main class="landing-page" style="display: grid; gap: 100px; justify-items: center">
-      <section id="organize-projects">
-        <h2 style="text-align: center; font-size: 2rem;">Organize Side Projects</h2>
-        <div class="mobile-grid">
-        <div style="display: flex; flex-direction: column; gap: 20px; align-items: center;">
-            <p>
-              Keep all your development projects in one place with automatic updates 
-              from your GitHub repositories. Track progress, manage visibility, and 
-              set milestones for your tasks.
-            </p>
-            <GithubLogin size={30} client:load />
-          </div>
-          <img src="/project-creator.png" alt="Project management dashboard" />
-        </div>
-      </section>
-
-      <section id="api">
-        <h2 style="text-align: center; font-size: 1.5rem;">API Access</h2>
-        <div class="mobile-grid">
-            <p>
-              Access your project data through our comprehensive API. Perfect for 
-              integrating with your portfolio or other development tools. Query 
-              projects, tasks, and milestones programmatically.
-            </p>
-          <img src="/project-api.png" alt="Project API settings" />
-        </div>
-      </section>
-
-      <section id="scanning">
-        <h2 style="text-align: center; font-size: 1.5rem;">Automatic Scanning</h2>
-        <div class="mobile-grid">
-          <img src="/scan-update.png" alt="Code scanning process" />
-            <p>
-              Automatically scan your codebase for TODO comments and convert 
-              them into trackable tasks. Review and update tasks with just enough 
-              verification to keep your workflow smooth.
-            </p>
-        </div>
-      </section>
-
-      <!-- TODO: add testimonials section -->
-      <section id="testimonials" style="display: grid; gap: 20px;">
-        <h2 style="text-align: center; font-size: 1.5rem;">What Developers Say</h2>
-        <!-- Add testimonial content here -->
-      </section>
-
-      <section id="cta">
-        <div style="display: flex; justify-content: center; gap: 20px;">
+    <br />
+    <section id="organize-projects">
+      <h2 style="text-align: center; font-size: 2rem; margin-bottom: 50px;">Organize Side Projects</h2>
+      <div class="mobile-grid">
+        <div style="display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center;">
+          <p>
+            Keep all your development projects in one place with automatic updates 
+            from your GitHub repositories. Track progress, manage visibility, and 
+            set milestones for your tasks.
+          </p>
           <GithubLogin size={30} client:load />
         </div>
-      </section>
-    </main></PageLayout>
+        <img src="/project-creator.png" alt="Project management dashboard" />
+      </div>
+    </section>
+
+    <section id="api" style="display: flex; flex-direction: column; gap: 25px;">
+      <h2 style="text-align: center;">api access</h2>
+      <div class="mobile-grid">
+        <p>
+          Access your project data through our comprehensive API. Perfect for 
+          integrating with your portfolio or other development tools. Query 
+          projects, tasks, and milestones programmatically. You can filter results 
+          based on project visibility, status, or specific time ranges. The API 
+          provides a RESTful interface with JSON endpoints for easy integration.
+          <a style="margin-top: 10px;" class="flex-row" href="/docs">
+            <span>api docs</span>
+            <ExternalLink />
+          </a>
+        </p>
+        <img src="/project-api.png" alt="Project API settings" />
+      </div>
+    </section>
+
+    <section id="scanning" style="display: flex; flex-direction: column; gap: 25px;">
+      <h2 style="text-align: center;">automatic scanning</h2>
+      <div class="mobile-grid">
+        <img src="/scan-update.png" alt="Code scanning process" />
+        <p>
+          Automatically scan your codebase for TODO comments and convert 
+          them into trackable tasks. Review and update tasks with just enough 
+          verification to keep your workflow smooth. Scanning updates tasks 
+          with the latest code changes and allows you to filter tasks by project 
+          or priority. This creates a seamless connection between your codebase 
+          and project management workflow.
+        </p>
+      </div>
+    </section>
+
+    <!-- TODO: add testimonials section -->
+    <section id="testimonials" style="display: grid; gap: 20px;">
+      <h2 style="text-align: center; font-size: 1.5rem;">What Developers Say</h2>
+      <!-- Add testimonial content here -->
+    </section>
+
+    <section id="cta">
+      <div style="display: flex; justify-content: center; gap: 20px;">
+        <GithubLogin size={30} client:load />
+      </div>
+    </section>
+  </main>
+</PageLayout>
