@@ -2,32 +2,23 @@ import { For, createEffect, createSignal, type Accessor } from "solid-js";
 import Plus from "lucide-solid/icons/plus";
 import { TAG_COLOURS, type Tag, type TagColor, type UpsertTag } from "../../server/types";
 import Save from "lucide-solid/icons/save";
-import Check from "lucide-solid/icons/check";
 import Trash from "lucide-solid/icons/trash";
-import PencilLine from "lucide-solid/icons/pencil-line";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import X from "lucide-solid/icons/x";
+import Eye from "lucide-solid/icons/eye";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
 type TagProp = UpsertTag;
-
 
 export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string }) {
   const [currentTags, setCurrentTags] = createSignal(tags as TagProp[]);
   const [creating, setCreating] = createSignal(false);
 
   function upsert(tag: TagProp) {
-    console.log("upsert", tag);
     if (tag.id && tag.id != "") {
-      const new_tags = currentTags().map((t) => {
-        if (t.id === tag.id) {
-          return tag;
-        } else {
-          return t;
-        }
-      });
+      const new_tags = currentTags().map((t) => t.id === tag.id ? tag : t);
       setCurrentTags(new_tags);
     } else {
       tag.id = crypto.randomUUID();
@@ -36,15 +27,9 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
     }
   }
 
-  function remove(id: string) {
-    // set 'deleted' to true
-    const new_tags = currentTags().map((t) => {
-      if (t.id === id) {
-        return { ...t, deleted: true };
-      } else {
-        return t;
-      }
-    });
+  function remove(id: string | undefined) {
+    if (!id) return;
+    const new_tags = currentTags().map((t) => t.id === id ? { ...t, deleted: true } : t);
     setCurrentTags(new_tags);
   }
 
@@ -54,14 +39,11 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
 
   async function save() {
     if (creating()) return;
-    const values = currentTags().map((t) => ({ ...t, owner_id }));
-    // make patch request to /todo/save_tags
+    const values = currentTags().map(t => ({ ...t, owner_id }));
     const response = await fetch("/api/todo/save_tags", {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(values),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values)
     });
     if (response.ok) {
       const result = await response.json();
@@ -73,29 +55,49 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[], owner_id: string })
     }
   }
 
-
   return (
     <div class="flex-col" style="gap: 5px;">
-      {currentTags().length == 0 && creating() == false ? <p>you haven't created any tags yet</p> : null}
-      <For each={currentTags()}>
-        {(tag) => tag.deleted == false && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}
-      </For>
-      {creating() ? <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} /> : <a role="button" onClick={create} class="flex-row" style="margin-top: 10px" >
+      {currentTags().length === 0 && !creating() ? (
+        <p>you haven't created any tags yet</p>
+      ) : null}
+
+      <div class="tag-grid">
+        <div>Title</div>
+        <div>Color</div>
+        <div style="margin: auto auto;"><Eye /></div>
+        <div></div>
+        <For each={currentTags()}>
+          {(tag) => !tag.deleted && (
+            <TagLine
+              tag={tag}
+              upsert={upsert}
+              remove={remove}
+              owner_id={owner_id}
+            />
+          )}
+        </For>
+        {creating() && <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} />}
+      </div>
+
+      <a role="button" onClick={create} class="flex-row" style="margin-top: 10px">
         <Plus />
         add
-      </a>}
-      <a role="button" onClick={save} class="flex-row" style="margin-top: 10px" >
+      </a>
+      <a role="button" onClick={save} class="flex-row" style="margin-top: 10px">
         <Save />
         save
       </a>
-
     </div>
   );
 }
 
-function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upsert: (tag: TagProp) => void, remove: (id: string) => void, owner_id: string }) {
-  const is_new = !tag || tag.id == "";
-  const [editing, setEditing] = createSignal(is_new);
+function TagLine({ tag, upsert, remove, owner_id }: {
+  tag: TagProp | null,
+  upsert: (tag: TagProp) => void,
+  remove: (id: string | undefined) => void,
+  owner_id: string
+}) {
+  const is_new = !tag || tag.id == null || tag.id == "";
   const [title, setTitle] = createSignal(tag?.title ?? "");
   const [color, setColor] = createSignal<TagColor | null>(tag?.color ?? null);
   const [render, setRender] = createSignal(tag?.render ?? true);
@@ -106,43 +108,58 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null, upser
     } else {
       upsert({ ...tag, title: title(), color: color(), render: render() });
     }
-    setEditing(false);
   }
 
-
   return (
-    <div class="flex-row" style="align-items: unset;">
-      <input type="text" value={title()} disabled={!editing()} onInput={(e) => setTitle(e.currentTarget.value)} />
-      <TagColourPicker value={color} enabled={editing} onChange={(col) => setColor(col)} />
+    <>
+      <input
+        type="text"
+        value={title()}
+        onInput={(e) => setTitle(e.currentTarget.value)}
+        onChange={save}
+        style={{
+          background: 'var(--input-background)',
+          border: '1px solid var(--input-border)',
+          padding: '5px',
+          "border-radius": '5px',
+          "font-size": '14px',
+          width: '100%'
+        }}
+      />
+      <TagColourPicker
+        value={color}
+        onChange={(col) => { setColor(col); save(); }}
+        enabled={() => true}
+      />
       <div
         style={{
-          "background": "var(--input-background)",
-          "border": "1px solid var(--input-border)",
-          "padding": "5px",
-          "border-radius": "5px",
-          "color": "var(--input-text)",
-          "font-size": "small",
+          background: 'var(--input-background)',
+          border: '1px solid var(--input-border)',
+          padding: '5px',
+          "border-radius": '5px',
+          "font-size": 'small',
         }}
-        title="Toggle whether this tag should be rendered in the task list">
-        <input type="checkbox" checked={render()} onInput={(e) => setRender(e.currentTarget.checked)} />
+      >
+        <input
+          type="checkbox"
+          checked={render()}
+          onInput={(e) => setRender(e.currentTarget.checked)}
+          onChange={save}
+        />
       </div>
-      {editing() ? (
-        <div class="icons">
-          <a role="button" onClick={save} title={is_new ? "Create Tag" : "Save Tag"}><Check /></a>
-          {tag?.id && <a role="button" title="Remove Tag" onClick={() => remove(tag.id!)}><Trash /></a>}
-        </div>
-      ) : (
-        <div class="icons">
-          <a role="button" onClick={() => setEditing(true)} title="Edit Tag">
-            <PencilLine />
-          </a>
-        </div>
+      {tag?.id && (
+        <a
+          role="button"
+          onClick={() => remove(tag?.id)}
+          title="Remove Tag"
+          style={{ cursor: 'pointer' }}
+        >
+          <Trash size={16} />
+        </a>
       )}
-
-    </div>
+    </>
   );
 }
-
 // COLOUR PICKER
 
 function TagColourPicker({
@@ -181,6 +198,7 @@ function TagColourPicker({
           "align-items": "center",
           "gap": "5px",
           "color": "var(--input-text)",
+          "width": "100%",
         }}
         onClick={togglePopup}
         disabled={enabled() == false}
