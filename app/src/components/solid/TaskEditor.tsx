@@ -72,6 +72,16 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 
     if (response.ok) {
       setRequestState("success");
+
+      const result = await response.json();
+      if (result.error) {
+        setRequestState("error");
+        return;
+      } else if (task.task?.id == null) {
+        const new_id = result.id;
+        // redirect to new task page
+        window.location.href = `/todo/${new_id}`;
+      }
     } else {
       setRequestState("error");
     }

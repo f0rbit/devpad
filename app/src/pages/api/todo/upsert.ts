@@ -16,6 +16,16 @@ export async function PUT(context: APIContext) {
     return new Response(null, { status: 401 });
   }
 
+  // remove /todo/new from history
+  if (context.session && await context.session!.has("history")) {
+    const history = (await context.session.get("history")) ?? [];
+    console.log(history);
+    if (history.at(-1) == "/todo/new") {
+      history.pop();
+      context.session.set("history", history);
+    }
+  }
+
   const body = await context.request.json();
 
   const parsed = upsert_todo.safeParse(body);

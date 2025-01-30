@@ -715,7 +715,7 @@ details[open] .down-arrow {
 }
 
 .combined-row select {
-	width: 100%;
+  width: 100%;
 }
 
 .github-login {
@@ -749,7 +749,7 @@ details[open] .down-arrow {
   width: auto;
 }
 
-.triple-grid > div {
+.triple-grid>div {
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -768,22 +768,39 @@ details[open] .down-arrow {
   display: flex;
   flex-direction: row;
   gap: 10px;
+  margin-top: 10px;
+  align-items: center;
 }
 
 @media (max-width: 1000px) {
   .mobile-grid {
     grid-template-columns: 1fr;
   }
+
   .triple-grid {
     grid-template-columns: 1fr;
   }
+
   .last-page {
     display: none;
   }
+
   .task-filters {
     display: grid;
     grid-template-columns: min-content 1fr;
     gap: 10px;
     margin-top: 10px;
   }
+}
+
+.tag-grid {
+  display: grid;
+  grid-template-columns: 240px max-content max-content max-content;
+  gap: 10px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.tag-grid .colour-picker, .tag-grid .tag-badge {
+  width: 100%;
 }
