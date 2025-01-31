@@ -21,6 +21,7 @@ export async function POST(context: APIContext) {
   const project_id = context.url.searchParams.get("project_id");
 
   if (!project_id) {
+    console.error("scan: no project id");
     return new Response("no project id", { status: 400 });
   }
 
@@ -30,6 +31,7 @@ export async function POST(context: APIContext) {
   const project_query = await db.select().from(project).where(and(eq(project.id, project_id)));
 
   if (project_query.length != 1) {
+    console.error("scan: project not found");
     return new Response("project not found", { status: 404 });
   }
 
@@ -41,28 +43,44 @@ export async function POST(context: APIContext) {
   const access_token = context.locals.session?.access_token;
 
   if (!access_token) {
+    console.error("scan: invalid access token");
     return new Response("invalid access token", { status: 401 });
   }
 
   const folder_id = github_id + "-" + crypto.randomUUID();
 
   if (!project_data.repo_id || !project_data.repo_url) {
+    console.error("scan: project isn't linked to a repo");
     return new Response("project isn't linked to a repo", { status: 400 });
   }
 
   const repo_url = project_data.repo_url;
   if (!repo_url) {
+    console.error("scan: no repo url");
     return new Response("no repo url", { status: 400 });
   }
 
-  const config = await getProjectConfig(project_id);
+  let config;
+  try {
+    config = await getProjectConfig(project_id);
+  } catch (e) {
+    console.error("scan: error fetching project config", e);
+    return new Response("error fetching project config", { status: 500 });
+  }
+
+  console.log("beginning scan", { repo_url, folder_id, config });
 
   return new Response(new ReadableStream({
     async start(controller) {
-      for await (const chunk of scan_repo(repo_url, access_token, folder_id, config)) {
-        controller.enqueue(chunk);
+      try {
+        for await (const chunk of scan_repo(repo_url, access_token, folder_id, config)) {
+          controller.enqueue(chunk);
+        }
+        controller.close();
+      } catch (e) {
+        console.error("scan: error streaming response", e);
+        controller.error(e);
       }
-      controller.close();
     },
   }), { status: 200 });
 }
@@ -70,6 +88,7 @@ export async function POST(context: APIContext) {
 async function* scan_repo(repo_url: string, access_token: string, folder_id: string, config: ProjectConfig) {
   const { id: project_id, scan_branch: branch, error: config_error } = config;
   if (config_error) {
+    console.error("scan_repo: error fetching project config", config_error);
     yield "error fetching project config\n";
     return;
   }
@@ -82,32 +101,48 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   const owner = slices.at(-2);
 
   if (!owner || !repo) {
+    console.error("scan_repo: error parsing repo url", repo_url, slices);
     yield "error parsing repo url\n";
     return;
   }
 
   yield "cloning repo\n";
   // clone the repo into a temp folder
-  const clone = await getRepo(owner, repo, access_token, branch ?? null);
-
-  if (!clone.ok) {
+  let clone;
+  try {
+    clone = await getRepo(owner, repo, access_token, branch ?? null);
+  } catch (e) {
+    console.error("scan_repo: error fetching repo from github", e);
     yield "error fetching repo from github\n";
     return;
   }
-  yield "loading repo into memory\n";
-  const zip = await clone.arrayBuffer();
+
+  if (!clone.ok) {
+    console.error("scan_repo: error fetching repo from github (not ok)", clone.status, clone.statusText);
+    yield "error fetching repo from github\n";
+    return;
+  }
 
   const repo_path = `/tmp/${folder_id}.zip`;
-  yield "writing repo to disk\n";
-  await Bun.write(repo_path, zip);
-
   const unzipped_path = `/tmp/${folder_id}`;
+  try {
+    yield "loading repo into memory\n";
+    const zip = await clone.arrayBuffer();
 
-  // call shell 'unzip'
-  // await $`unzip ${repo_path} -d ${unzipped_path}`
-  // call ^ using child_process 
-  yield "decompressing repo\n";
-  child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
+    yield "writing repo to disk\n";
+    await Bun.write(repo_path, zip);
+
+    // call shell 'unzip'
+    // await $`unzip ${repo_path} -d ${unzipped_path}`
+    // call ^ using child_process 
+    yield "decompressing repo\n";
+    child_process.execSync(`unzip ${repo_path} -d ${unzipped_path}`);
+
+  } catch (e) {
+    console.error("scan_repo: error decompressing repo", e);
+    yield "error decompressing repo\n";
+    return;
+  }
 
   // the unzipped folder will have a folder inside it with the repo contents, we need that pathname for the parsing task
   const files = await readdir(unzipped_path);
@@ -124,7 +159,6 @@ async function* scan_repo(repo_url: string, access_token: string, folder_id: str
   }
 
   // TODO: add handling for user-wide config & defaults based on project type??
-
 
   console.log("folder_path: ", folder_path);
 

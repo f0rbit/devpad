@@ -21,7 +21,7 @@ function gh_headers(access_token: string) {
 export async function getRepos(access_token: string) {
   const response = await fetch("https://api.github.com/user/repos?sort=updated&per_page=100", { headers: gh_headers(access_token) });
   if (!response.ok) {
-    console.log(response.status, response.statusText);
+    console.log("error getting user repos: ", response.status, response.statusText);
     throw new Error("error fetching repos");
   }
   return await response.json();
@@ -30,7 +30,37 @@ export async function getRepos(access_token: string) {
 export async function getRepo(owner: string, repo: string, access_token: string, branch: string | null) {
   let url = `https://api.github.com/repos/${owner}/${repo}/zipball`;
   if (branch) url = `https://api.github.com/repos/${owner}/${repo}/zipball/${branch}`;
-  return await fetch(url, { headers: gh_headers(access_token) });
+  console.log("fetching github repo", url);
+  const start = performance.now();
+  // initial request to get the redirect url
+  const response = await fetch(url, { headers: gh_headers(access_token) });
+
+  console.log("fetched repo in", performance.now() - start, "ms");
+  console.log("repo response", response.status, response.statusText, response.headers);
+
+  if (response.status === 302) {
+    // handle redirect explicitly
+    const redirect_url = response.headers.get("location");
+    if (!redirect_url) {
+      throw new Error("redirect url not found");
+    }
+    console.log("redirecting to", redirect_url);
+
+    // fetch the zipball from the redirect url
+    const zip_response = await fetch(redirect_url, { headers: gh_headers(access_token) });
+
+    if (!zip_response.ok) {
+      console.log(zip_response.status, zip_response.statusText);
+      throw new Error("error downloading zipball");
+    }
+
+    return zip_response; // return the response containing the zip file
+  } else if (!response.ok) {
+    console.log(response.status, response.statusText);
+    throw new Error("error fetching repo zipball");
+  }
+
+  return response; // return the response if no redirect is needed
 }
 
 
@@ -117,11 +147,13 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 
 export async function getSpecification(owner: string, repo: string, access_token: string) {
   if (!access_token) throw new Error("README: fetching repo without access token");
-  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, { headers: {
-    "Accept": "application/vnd.github.raw+json",
-    "Authorization": `Bearer ${access_token}`,
-    "X-GitHub-Api-Version": "2022-11-28",
-  }});
+  const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/readme`, {
+    headers: {
+      "Accept": "application/vnd.github.raw+json",
+      "Authorization": `Bearer ${access_token}`,
+      "X-GitHub-Api-Version": "2022-11-28",
+    }
+  });
   if (!response.ok) {
     console.warn(`README: Code ${response.status} - ${response.statusText}`);
     throw new Error("error fetching readme");
