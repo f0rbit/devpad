@@ -68,6 +68,8 @@ export async function POST(context: APIContext) {
     return new Response("error fetching project config", { status: 500 });
   }
 
+  console.log("beginning scan", { repo_url, folder_id, config });
+
   return new Response(new ReadableStream({
     async start(controller) {
       try {
