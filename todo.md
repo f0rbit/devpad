@@ -142,5 +142,3 @@ tasks are made of many different fields, outlined above. They also contain links
 - [x] GET /tasks
 - [x] GET /tasks?id=<task_uuid>
 - [x] GET /tasks?tag=<tag_uuid>
-
-
