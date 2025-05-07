@@ -1,11 +1,9 @@
-
-
 // we want to testing streaming response to user
 
 import type { APIContext } from "astro";
 
 // have 5 steps, each 200ms apart
-export async function POST(context: APIContext) { 
+export async function POST(context: APIContext) {
 	const stream = new ReadableStream({
 		async start(controller) {
 			controller.enqueue("starting\n");
@@ -18,5 +16,3 @@ export async function POST(context: APIContext) {
 	});
 	return new Response(stream, { status: 200 });
 }
-
-

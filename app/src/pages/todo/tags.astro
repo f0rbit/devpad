@@ -10,11 +10,11 @@ const tags = await getUserTags(user.id);
 ---
 
 <PageLayout title="Tags - devpad">
-  <main>
-    <section>
-      <h5>tags</h5>
-      <br />
-      <TagEditor client:load tags={tags} owner_id={user.id} />
-    </section>
-  </main>
+	<main>
+		<section>
+			<h5>tags</h5>
+			<br />
+			<TagEditor client:load tags={tags} owner_id={user.id} />
+		</section>
+	</main>
 </PageLayout>

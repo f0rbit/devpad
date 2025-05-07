@@ -1,5 +1,5 @@
-import { beforeAll, afterAll } from 'bun:test';
-import child_process from 'node:child_process';
+import { beforeAll, afterAll } from "bun:test";
+import child_process from "node:child_process";
 
 let cp: child_process.ChildProcess | null = null;
 

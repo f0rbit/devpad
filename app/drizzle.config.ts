@@ -1,4 +1,4 @@
-import { defineConfig } from 'drizzle-kit';
+import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
 	driver: "libsql",
@@ -7,5 +7,5 @@ export default defineConfig({
 	// dialect: "sqlite",
 	dbCredentials: {
 		url: `file:` + Bun.env.DATABASE_FILE!,
-	}
-})
+	},
+});

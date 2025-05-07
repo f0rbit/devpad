@@ -4,7 +4,7 @@ import { lucia } from "../../../server/lucia";
 export async function GET(context: APIContext): Promise<Response> {
 	if (!context.locals.session) {
 		return new Response(null, {
-			status: 401
+			status: 401,
 		});
 	}
 
@@ -15,4 +15,3 @@ export async function GET(context: APIContext): Promise<Response> {
 
 	return context.redirect("/");
 }
-

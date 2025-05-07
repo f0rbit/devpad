@@ -4,77 +4,59 @@ import PageLayout from "../../layouts/PageLayout.astro";
 import { getRepos } from "../../server/github";
 
 const session = Astro.locals.session;
-if (!session)
-  return new Response(null, { status: 401, statusText: "Unauthorized" });
+if (!session) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
 const repos_result = await getRepos(session.access_token);
 ---
 
 <PageLayout title="Create Project - devpad">
-  <main>
-    <h3>create project</h3>
-    <p class="description" style="font-size: smaller">
-      enter project details or import via github. importing via github allows
-      for searching codebase for tasks automatically.
-    </p>
-    <br />
-    <h5 class="flex-row">github import</h5>
-    <input id="project-importer" type="text" list="repo-list" class="big" />
-    <a id="importer-clear" role="button">clear</a>
-    <br />
-    <br />
-    <h5>settings</h5>
-    <div>
-      <ProjectSettings project={null} back={"/project"} />
-    </div>
-    <br />
-  </main>
+	<main>
+		<h3>create project</h3>
+		<p class="description" style="font-size: smaller">enter project details or import via github. importing via github allows for searching codebase for tasks automatically.</p>
+		<br />
+		<h5 class="flex-row">github import</h5>
+		<input id="project-importer" type="text" list="repo-list" class="big" />
+		<a id="importer-clear" role="button">clear</a>
+		<br />
+		<br />
+		<h5>settings</h5>
+		<div>
+			<ProjectSettings project={null} back={"/project"} />
+		</div>
+		<br />
+	</main>
 
-  <datalist id="repo-list">
-    {repos_result.map((r: any) => <option value={r.name}>{r.name}</option>)}
-  </datalist>
+	<datalist id="repo-list">
+		{repos_result.map((r: any) => <option value={r.name}>{r.name}</option>)}
+	</datalist>
 </PageLayout>
 
 <script define:vars={{ repos_result }} is:inline>
-  function import_project() {
-    const project_name = event.target.value;
-    const project_data = repos_result?.find((p) => p.name == project_name);
-    if (!project_data) {
-      clear_data();
-      return;
-    }
-    // fill in input fields with data from github project
-    document.getElementById("project_id").value = project_data["name"];
-    document.getElementById("name").value = project_data["name"];
-    document.getElementById("description").value = project_data["description"];
-    document.getElementById("visibility").value = project_data["visibility"];
+	function import_project() {
+		const project_name = event.target.value;
+		const project_data = repos_result?.find((p) => p.name == project_name);
+		if (!project_data) {
+			clear_data();
+			return;
+		}
+		// fill in input fields with data from github project
+		document.getElementById("project_id").value = project_data["name"];
+		document.getElementById("name").value = project_data["name"];
+		document.getElementById("description").value = project_data["description"];
+		document.getElementById("visibility").value = project_data["visibility"];
 
-    document.getElementById("github_url").value = project_data["html_url"];
-    document.getElementById("github_url").disabled = true;
-    document.getElementById("github_repo_id").value = Number(
-      project_data["id"],
-    );
-  }
+		document.getElementById("github_url").value = project_data["html_url"];
+		document.getElementById("github_url").disabled = true;
+		document.getElementById("github_repo_id").value = Number(project_data["id"]);
+	}
 
-  function clear_data() {
-    [
-      "project-importer",
-      "project_id",
-      "name",
-      "description",
-      "visibility",
-      "github_url",
-      "github_repo_id",
-    ].forEach((id) => {
-      document.getElementById(id).value = "";
-      document.getElementById(id).disabled = false;
-    });
-  }
+	function clear_data() {
+		["project-importer", "project_id", "name", "description", "visibility", "github_url", "github_repo_id"].forEach((id) => {
+			document.getElementById(id).value = "";
+			document.getElementById(id).disabled = false;
+		});
+	}
 
-  document
-    .getElementById("project-importer")
-    .addEventListener("change", import_project);
-  document
-    .getElementById("importer-clear")
-    .addEventListener("click", clear_data);
+	document.getElementById("project-importer").addEventListener("change", import_project);
+	document.getElementById("importer-clear").addEventListener("click", clear_data);
 </script>

@@ -6,7 +6,7 @@ import { getAPIKeys } from "../server/keys";
 const user = Astro.locals.user;
 
 if (!user) {
-  return new Response(null, { status: 401, statusText: "Unauthorized" });
+	return new Response(null, { status: 401, statusText: "Unauthorized" });
 }
 
 const keys = user ? await getAPIKeys(user.id) : [];
@@ -14,82 +14,82 @@ const user_history = await getUserHistory(user.id);
 ---
 
 <PageLayout title="Account - devpad">
-  <div class="flex-col" style="gap: 15px;">
-    <a href="/api/auth/logout" style="width: min-content;">logout</a>
-    <br />
-    <h3>api keys</h3>
-    {
-      keys.length === 0 ? (
-        <p>you don't have any api keys yet</p>
-      ) : (
-        <div style="margin-top: -10px">
-          <ul>
-            {keys.map((key) => (
-              <li>
-                <code>{key.hash}</code>{" "}
-                <a data-keyid={key.id} class="delete-key">
-                  &times;
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )
-    }
-    <a id="add-key" role="button"> + generate </a>
-    <br />
-    <h3>history</h3>
-    <HistoryTimeline actions={user_history} view="account" />
-  </div>
+	<div class="flex-col" style="gap: 15px;">
+		<a href="/api/auth/logout" style="width: min-content;">logout</a>
+		<br />
+		<h3>api keys</h3>
+		{
+			keys.length === 0 ? (
+				<p>you don't have any api keys yet</p>
+			) : (
+				<div style="margin-top: -10px">
+					<ul>
+						{keys.map((key) => (
+							<li>
+								<code>{key.hash}</code>{" "}
+								<a data-keyid={key.id} class="delete-key">
+									&times;
+								</a>
+							</li>
+						))}
+					</ul>
+				</div>
+			)
+		}
+		<a id="add-key" role="button"> + generate </a>
+		<br />
+		<h3>history</h3>
+		<HistoryTimeline actions={user_history} view="account" />
+	</div>
 </PageLayout>
 
 <script>
-  async function add_key() {
-    const res = await fetch("/api/keys/create", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({}),
-    });
-    if (!res || !res.ok) {
-      console.error(res.status, res.statusText);
-      return;
-    }
-    try {
-      const data = await res.text();
-      console.log(data);
-      location.reload();
-    } catch (err) {
-      console.error(err);
-    }
-  }
+	async function add_key() {
+		const res = await fetch("/api/keys/create", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			credentials: "include",
+			body: JSON.stringify({}),
+		});
+		if (!res || !res.ok) {
+			console.error(res.status, res.statusText);
+			return;
+		}
+		try {
+			const data = await res.text();
+			console.log(data);
+			location.reload();
+		} catch (err) {
+			console.error(err);
+		}
+	}
 
-  async function delete_key(id: string) {
-    const res = await fetch(`/api/keys/${id}/delete`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    try {
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      location.reload();
-    } catch (err) {
-      console.error(err);
-      alert(err);
-    }
-  }
+	async function delete_key(id: string) {
+		const res = await fetch(`/api/keys/${id}/delete`, {
+			method: "DELETE",
+			headers: {
+				"Content-Type": "application/json",
+			},
+		});
+		try {
+			const data = await res.json();
+			if (data.error) throw new Error(data.error);
+			location.reload();
+		} catch (err) {
+			console.error(err);
+			alert(err);
+		}
+	}
 
-  document.getElementById("add-key")?.addEventListener("click", add_key);
-  document.querySelectorAll(".delete-key").forEach((el) => {
-    el.addEventListener("click", (e) => {
-      // @ts-ignore
-      const keyid = e.target.getAttribute("data-keyid");
-      delete_key(keyid);
-    });
-  });
+	document.getElementById("add-key")?.addEventListener("click", add_key);
+	document.querySelectorAll(".delete-key").forEach((el) => {
+		el.addEventListener("click", (e) => {
+			// @ts-ignore
+			const keyid = e.target.getAttribute("data-keyid");
+			delete_key(keyid);
+		});
+	});
 </script>

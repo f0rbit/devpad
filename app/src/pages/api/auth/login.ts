@@ -11,7 +11,7 @@ export async function GET(context: APIContext): Promise<Response> {
 		secure: import.meta.env.PROD,
 		httpOnly: true,
 		maxAge: 60 * 10,
-		sameSite: "lax"
+		sameSite: "lax",
 	});
 
 	return context.redirect(url.toString());
