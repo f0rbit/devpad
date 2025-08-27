@@ -1,14 +1,14 @@
 # devpad api client
 
-type-safe api client for devpad built with typescript and bun.
+type-safe api client for devpad built with typescript and bun. this is a proxy client that communicates with the astro api routes in the main devpad application.
 
 ## features
 
 - full typescript support with runtime validation via zod
-- integration tests against actual server endpoints
+- integration tests against actual astro api endpoints
 - simple local development and testing
-- complete crud operations for projects, tasks, and authentication
-- fast test execution with comprehensive coverage
+- proxies requests to the real devpad api routes
+- fast test execution with clear separation of concerns
 
 ## prerequisites
 
@@ -20,32 +20,47 @@ type-safe api client for devpad built with typescript and bun.
 # install
 bun install
 
-# run unit tests (with mocks)
+# run unit tests (no external dependencies)
 make test
 
-# run integration tests (real api calls)
+# run integration tests (against astro server)
 make integration-test
 ```
+
+## architecture
+
+this api client is a **type-safe proxy** for the astro api routes located in `app/src/pages/api/v0/`. it does not include its own server implementation.
+
+### api routes proxied
+- `GET /api/v0` - api status
+- `GET /api/v0/projects` - list projects  
+- `GET /api/v0/projects?id=<id>` - get project by id
+- `GET /api/v0/projects?name=<name>` - get project by name
+- `GET /api/v0/tasks` - list tasks
+- `GET /api/v0/tasks?id=<id>` - get task by id
+- `GET /api/v0/tasks?project=<id>` - get tasks by project
+- `GET /api/v0/tasks?tag=<id>` - get tasks by tag
 
 ## testing
 
 ### unit tests
 - command: `make test` or `bun test:unit`
-- speed: ~20ms execution time
-- uses mocks to simulate api responses
-- tests individual components in isolation
+- tests individual functions without external dependencies
+- focuses on logic, validation, and type safety
+- located in `tests/unit/`
 
-### integration tests
+### integration tests  
 - command: `make integration-test`
-- speed: ~50ms execution time
-- real http calls against local test server
-- end-to-end validation of api workflows
+- starts a real astro dev server
+- creates test user and api key
+- tests against actual api endpoints
+- located in `tests/integration/`
 
 ### test architecture
-- automatically switches between mocks and real api based on environment
-- each test run uses fresh test database
-- simple local execution without docker overhead
-- integration tests create/modify actual records
+- clear separation between unit and integration tests
+- unit tests require no external dependencies
+- integration tests run against the full astro application
+- fresh test database for each integration test run
 
 ## development commands
 
@@ -168,9 +183,9 @@ cd ../.. && bun run app/scripts/debug-migrations.ts
 ## guidelines
 
 ### code style
-- snake_case for variables and database fields
-- camelCase for functions and methods
-- PascalCase for classes and types
+- **snake_case** for variables and database fields
+- **camelCase** for functions and methods
+- **PascalCase** for classes and types
 - environment-based configuration for test vs. production modes
 - real integration testing over complex mocking
 - type safety first - leverage typescript and zod throughout

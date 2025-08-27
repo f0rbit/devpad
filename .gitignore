@@ -43,3 +43,6 @@ yarn-error.log*
 
 data/
 database/*.db
+
+*.log
+*.db

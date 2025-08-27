@@ -12,4 +12,4 @@ test:
 
 # Run integration tests
 integration-test:
-	PORT=8080 ./scripts/run-integration-tests.sh
+	./scripts/run-integration-tests.sh

@@ -7,15 +7,14 @@
 	"scripts": {
 		"build": "bun build src/index.ts --compile",
 		"test": "bun test",
-		"test:unit": "DEVPAD_TEST_TYPE=unit bun test",
-		"test:integration": "DEVPAD_TEST_TYPE=integration bun test",
+		"test:unit": "bun test tests/unit/",
+		"test:integration": "bun test tests/integration/",
 		"test:coverage": "bun test --coverage",
 		"lint": "bun run eslint",
 		"format": "bun run prettier --write ."
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.30.6",
-		"elysia": "^1.3.20",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {

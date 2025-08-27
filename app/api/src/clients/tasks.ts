@@ -10,22 +10,45 @@ export class TasksClient {
 
   async list(options: { 
     project_id?: string;
-    tag?: string;
-    visibility?: SelectTask['visibility']
+    tag_id?: string;
   } = {}) {
+    const query: Record<string, string> = {};
+    
+    if (options.project_id) {
+      query.project = options.project_id;
+    }
+    if (options.tag_id) {
+      query.tag = options.tag_id;
+    }
+    
     return this.api_client.get<SelectTask[]>('/tasks', {
-      query: {
-        ...(options.project_id && { project: options.project_id }),
-        ...(options.tag && { tag: options.tag }),
-        ...(options.visibility && { visibility: options.visibility })
-      }
+      query: Object.keys(query).length > 0 ? query : undefined
     });
   }
 
   async get(id: string) {
-    return this.api_client.get<SelectTask>(`/tasks/${id}`);
+    // GET /tasks?id=<task_id>
+    return this.api_client.get<SelectTask>('/tasks', {
+      query: { id }
+    });
   }
 
+  async getByProject(project_id: string) {
+    // GET /tasks?project=<project_id>
+    return this.api_client.get<SelectTask[]>('/tasks', {
+      query: { project: project_id }
+    });
+  }
+
+  async getByTag(tag_id: string) {
+    // GET /tasks?tag=<tag_id>
+    return this.api_client.get<SelectTask[]>('/tasks', {
+      query: { tag: tag_id }
+    });
+  }
+
+  // Note: The current Astro API routes don't have POST endpoints for creating tasks
+  // These would need to be added to the Astro routes first
   async create(data: InsertTask) {
     return this.api_client.post<SelectTask>('/tasks', {
       body: data

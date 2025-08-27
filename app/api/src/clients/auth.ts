@@ -12,13 +12,23 @@ export class AuthClient {
     this.api_client = api_client;
   }
 
-  async generate_api_key(): Promise<{ api_key: string }> {
-    return this.api_client.post<{ api_key: string }>('/auth/api-key');
+  async generateApiKey(): Promise<{ api_key: string }> {
+    return this.api_client.post<{ api_key: string }>('/keys/create');
   }
 
-  async revoke_api_key(api_key: string): Promise<void> {
-    return this.api_client.post<void>('/auth/revoke-api-key', {
-      body: { api_key }
-    });
+  async revokeApiKey(key_id: string): Promise<void> {
+    return this.api_client.post<void>(`/keys/${key_id}/delete`);
+  }
+
+  async login(): Promise<void> {
+    return this.api_client.get<void>('/auth/login');
+  }
+
+  async logout(): Promise<void> {
+    return this.api_client.get<void>('/auth/logout');
+  }
+
+  async getSession(): Promise<any> {
+    return this.api_client.get<any>('/auth/session');
   }
 }

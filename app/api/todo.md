@@ -1,4 +1,9 @@
-# todo
+## immediate priorities
+
+- [ ] add missing astro api endpoints
+  - [ ] implement POST /api/v0/projects for project creation
+  - [ ] implement POST /api/v0/tasks for task creation
+  - [ ] add proper error handling to existing routes
 
 ## api client enhancements
 
@@ -17,17 +22,13 @@
   - [ ] implement response transformation
   - [ ] add performance monitoring hooks
 
-## api server completeness
+## astro api route enhancements
 
 - [ ] complete crud operations
-  - [ ] implement put/patch endpoints for updates
-  - [ ] add delete endpoints for projects and tasks
+  - [ ] implement POST endpoints for creating projects and tasks
+  - [ ] add PUT/PATCH endpoints for updates
+  - [ ] add DELETE endpoints for projects and tasks
   - [ ] add proper http status codes and error responses
-
-- [ ] authentication implementation
-  - [ ] add real api key validation to server routes
-  - [ ] implement proper user authentication
-  - [ ] add authorization checks for resource access
 
 - [ ] advanced query support
   - [ ] add complex filtering to server endpoints

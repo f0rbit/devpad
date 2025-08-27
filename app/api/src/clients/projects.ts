@@ -8,20 +8,27 @@ export class ProjectsClient {
     this.api_client = api_client;
   }
 
-  async list(options: { 
-    visibility?: SelectProject['visibility'] 
-  } = {}) {
-    return this.api_client.get<SelectProject[]>('/projects', {
-      query: options.visibility 
-        ? { visibility: options.visibility } 
-        : undefined
-    });
+  async list() {
+    // GET /projects returns all projects for the authenticated user
+    return this.api_client.get<SelectProject[]>('/projects');
   }
 
   async get(id: string) {
-    return this.api_client.get<SelectProject>(`/projects/${id}`);
+    // GET /projects?id=<project_id>
+    return this.api_client.get<SelectProject>('/projects', {
+      query: { id }
+    });
   }
 
+  async getByName(name: string) {
+    // GET /projects?name=<project_name>
+    return this.api_client.get<SelectProject>('/projects', {
+      query: { name }
+    });
+  }
+
+  // Note: The current Astro API routes don't have POST endpoints for creating projects
+  // These would need to be added to the Astro routes first
   async create(data: InsertProject) {
     return this.api_client.post<SelectProject>('/projects', {
       body: data

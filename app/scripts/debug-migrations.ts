@@ -12,7 +12,7 @@ try {
   const db = drizzle(sqlite, { schema });
 
   console.log('🌳 Running migrations...');
-  migrate(db, { migrationsFolder: '../database/drizzle' });
+  migrate(db, { migrationsFolder: './database/drizzle' });
   console.log('✅ Migrations complete');
 
   // Optional: Check tables

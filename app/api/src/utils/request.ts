@@ -21,12 +21,12 @@ export class ApiClient {
     this.api_key = parsed_key.api_key;
   }
 
-  private build_url(path: string, query?: Record<string, string>): URL {
+  private buildUrl(path: string, query?: Record<string, string>): URL {
     const url = new URL(`${this.base_url}${path}`);
     
     if (query) {
       Object.entries(query).forEach(([key, value]) => {
-        url.searchParams.append(key, value);
+        if (value) url.searchParams.append(key, value);
       });
     }
 
@@ -44,85 +44,13 @@ export class ApiClient {
       query 
     } = options;
 
-    const url = this.build_url(path, query);
+    const url = this.buildUrl(path, query);
 
     const request_headers: HeadersInit = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${this.api_key}`,
       ...headers,
     };
-
-    // Special handling for mock URLs
-    if (this.base_url.includes('mock.devpad.local')) {
-      console.log(`MOCK: Returning predefined response for ${method} ${path}`);
-      
-      // Mock routes for projects
-      if (path.includes('/projects')) {
-        return (method === 'GET' 
-          ? (path.includes('/projects/') 
-              ? { 
-                  id: 'mock-project-123', 
-                  project_id: 'test-project',
-                  name: 'Test Project',
-                  owner_id: 'test-owner',
-                  visibility: 'PRIVATE',
-                  status: 'DEVELOPMENT'
-                }
-              : [{
-                  id: 'mock-project-123', 
-                  project_id: 'test-project',
-                  name: 'Test Project', 
-                  owner_id: 'test-owner',
-                  visibility: 'PRIVATE',
-                  status: 'DEVELOPMENT'
-                }])
-          : {
-              id: 'new-project-123',
-              project_id: body?.project_id || 'new-project',
-              name: body?.name || 'New Project',
-              owner_id: body?.owner_id || 'test-owner',
-              visibility: body?.visibility || 'PRIVATE',
-              status: body?.status || 'DEVELOPMENT'
-            }
-        ) as T;
-      }
-
-      // Mock routes for tasks
-      if (path.includes('/tasks')) {
-        // Handle both 'project' and 'project_id' query parameters
-        const project_id = query?.project_id || query?.project || body?.project_id || 'mock-project-123';
-        
-        return (method === 'GET' 
-          ? (path.includes('/tasks/') 
-              ? { 
-                  id: 'mock-task-123', 
-                  title: 'Test Task',
-                  project_id: 'mock-project-123',
-                  owner_id: 'test-owner',
-                  visibility: 'PRIVATE',
-                  priority: 'MEDIUM'
-                }
-              : project_id === 'mock-project-123'
-                ? [{
-                    id: 'mock-task-123', 
-                    title: 'Test Task',
-                    project_id: 'mock-project-123',
-                    owner_id: 'test-owner',
-                    visibility: 'PRIVATE',
-                    priority: 'MEDIUM'
-                  }]
-                : [])
-          : {
-              id: 'new-task-123',
-              title: body?.title || 'New Task',
-              project_id: project_id,
-              owner_id: body?.owner_id || 'test-owner',
-              visibility: body?.visibility || 'PRIVATE',
-              priority: body?.priority || 'MEDIUM'
-            }
-        ) as T;
-      }
-    }
 
     try {
       console.log(`API Request: ${method} ${url.toString()}`);
@@ -139,7 +67,13 @@ export class ApiClient {
         if (response.status === 401) {
           throw new AuthenticationError('Invalid or expired API key');
         }
-        throw DevpadApiError.fromResponse(response);
+        if (response.status === 404) {
+          throw new DevpadApiError('Resource not found', { statusCode: 404 });
+        }
+        
+        // Try to get error message from response
+        const error_text = await response.text();
+        throw new DevpadApiError(error_text || 'Request failed', { statusCode: response.status });
       }
 
       // If the response doesn't have a body (like for delete methods), return void
@@ -151,7 +85,7 @@ export class ApiClient {
     } catch (error) {
       console.error('API Request Error:', error);
       
-      if (error instanceof DevpadApiError) {
+      if (error instanceof DevpadApiError || error instanceof AuthenticationError) {
         throw error;
       }
       

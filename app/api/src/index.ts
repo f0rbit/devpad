@@ -13,7 +13,7 @@ export class DevpadApiClient {
     base_url?: string; 
     api_key: string 
   }) {
-    const base_url = options.base_url || 'https://devpad.tools/api/v0';
+    const base_url = options.base_url || 'http://localhost:4321/api/v0';
     
     this.api_client = new ApiClient({
       base_url,
