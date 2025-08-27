@@ -1,6 +1,6 @@
-import { eq, inArray, sql } from "drizzle-orm";
-import { action, codebase_tasks, task, task_tag, type ActionType } from "../../database/schema";
-import { db } from "../../database/db";
+import { eq, inArray } from "drizzle-orm";
+import { action, codebase_tasks, task, task_tag, type ActionType } from "@/database/schema";
+import { db } from "@/database/db";
 import { doesUserOwnProject } from "./projects";
 import type { UpdateData } from "./types";
 

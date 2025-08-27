@@ -1,0 +1,23 @@
+{
+	"name": "@devpad/cli",
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "bun run src/index.ts",
+		"build": "bun build src/index.ts --compile --outfile devpad",
+		"test": "bun test",
+		"lint": "bun run eslint",
+		"format": "bun run prettier --write ."
+	},
+	"dependencies": {
+		"@devpad/api": "workspace:*",
+		"commander": "^12.0.0"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.24",
+		"bun-types": "latest",
+		"eslint": "^8.57.0",
+		"prettier": "^3.2.5",
+		"typescript": "^5.3.3"
+	}
+}

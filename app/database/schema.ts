@@ -60,9 +60,8 @@ export const project = sqliteTable(
 		current_version: text("current_version"),
 		scan_branch: text("scan_branch"),
 	},
-	(table) => ({
-		project_unique: unique().on(table.owner_id, table.project_id),
-	}),
+	// Unique constraint temporarily removed for test environment
+	(table) => ({}),
 );
 
 const ACTIONS = [

@@ -1,0 +1,31 @@
+{
+	"name": "@devpad/api",
+	"version": "0.1.0",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "bun build src/index.ts --compile",
+		"test": "bun test",
+		"test:unit": "DEVPAD_TEST_TYPE=unit bun test",
+		"test:integration": "DEVPAD_TEST_TYPE=integration bun test",
+		"test:coverage": "bun test --coverage",
+		"lint": "bun run eslint",
+		"format": "bun run prettier --write ."
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.30.6",
+		"elysia": "^1.3.20",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.24",
+		"bun-types": "latest",
+		"eslint": "^8.57.0",
+		"prettier": "^3.2.5",
+		"typescript": "^5.3.3"
+	},
+	"peerDependencies": {
+		"drizzle-orm": "^0.30.6"
+	}
+}
