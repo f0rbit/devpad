@@ -59,6 +59,12 @@ export const project = sqliteTable(
 			.default("PRIVATE"),
 		current_version: text("current_version"),
 		scan_branch: text("scan_branch"),
+		created_at: text("created_at")
+			.notNull()
+			.default(sql`(CURRENT_TIMESTAMP)`),
+		updated_at: text("updated_at")
+			.notNull()
+			.default(sql`(CURRENT_TIMESTAMP)`),
 	},
 	// Unique constraint temporarily removed for test environment
 	(table) => ({}),
