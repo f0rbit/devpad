@@ -17,22 +17,16 @@ export const ProjectUpdateSchema = z.object({
 	specification: z.string().nullable().optional(), 
 	repo_url: z.string().nullable().optional(),
 	icon_url: z.string().nullable().optional(),
-	visibility: z.enum(["public", "private"]).nullable().optional(),
+	visibility: z.enum(["PUBLIC", "PRIVATE"]).nullable().optional(),
 	archived: z.boolean().optional(),
 });
-
-export const ProjectUpsertSchema = ProjectCreateSchema.merge(
-	ProjectUpdateSchema.omit({ project_id: true }).extend({
-		project_id: z.string().optional(),
-	})
-);
 
 export const TaskCreateSchema = z.object({
 	project_id: z.string(),
 	title: z.string(),
 	description: z.string().optional(),
-	status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
-	priority: z.enum(["low", "medium", "high"]).optional(),
+	status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+	priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
 	tags: z.array(z.string()).optional(),
 });
 
@@ -41,8 +35,8 @@ export const TaskUpdateSchema = z.object({
 	project_id: z.string().optional(),
 	title: z.string().optional(),
 	description: z.string().nullable().optional(),
-	status: z.enum(["pending", "in_progress", "completed", "cancelled"]).optional(),
-	priority: z.enum(["low", "medium", "high"]).optional(),
+	status: z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"]).optional(),
+	priority: z.enum(["LOW", "MEDIUM", "HIGH"]).optional(),
 	tags: z.array(z.string()).optional(),
 });
 
@@ -68,7 +62,6 @@ export const ApiResponseSchema = z.object({
 // Exported types for client usage
 export type ProjectCreate = z.infer<typeof ProjectCreateSchema>;
 export type ProjectUpdate = z.infer<typeof ProjectUpdateSchema>;
-export type ProjectUpsert = z.infer<typeof ProjectUpsertSchema>;
 
 export type TaskCreate = z.infer<typeof TaskCreateSchema>;
 export type TaskUpdate = z.infer<typeof TaskUpdateSchema>;

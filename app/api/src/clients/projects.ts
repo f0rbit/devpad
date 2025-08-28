@@ -1,5 +1,6 @@
+import type { Project } from '@/src/server/projects';
 import { ApiClient } from '../utils/request';
-import type { ProjectType, ProjectUpsert } from '../types/common';
+import type { UpsertProject } from '@/src/server/types';
 
 export class ProjectsClient {
   private api_client: ApiClient;
@@ -10,43 +11,43 @@ export class ProjectsClient {
 
   async list() {
     // GET /projects returns all projects for the authenticated user
-    return this.api_client.get<ProjectType[]>('/projects');
+    return this.api_client.get<Project[]>('/projects');
   }
 
   async get(id: string) {
     // GET /projects?id=<project_id>
-    return this.api_client.get<ProjectType>('/projects', {
+    return this.api_client.get<Project>('/projects', {
       query: { id }
     });
   }
 
   async getByName(name: string) {
     // GET /projects?name=<project_name>
-    return this.api_client.get<ProjectType>('/projects', {
+    return this.api_client.get<Project>('/projects', {
       query: { name }
     });
   }
 
   // Create or update a project using the PATCH endpoint
-  async upsert(data: ProjectUpsert) {
-    return this.api_client.patch<ProjectType>('/projects', {
+  async upsert(data: UpsertProject) {
+    return this.api_client.patch<Project>('/projects', {
       body: data
     });
   }
 
   // Convenience method for creating a new project
-  async create(data: Omit<ProjectUpsert, 'id'>) {
+  async create(data: Omit<UpsertProject, 'id'>) {
     return this.upsert(data);
   }
 
-  // Convenience method for updating an existing project  
-  async update(project_id: string, data: Partial<Omit<ProjectUpsert, 'project_id'>>) {
-    return this.upsert({ project_id, ...data });
+  // Convenience method for updating an existing project
+  async update(data: UpsertProject) {
+    return this.upsert(data);
   }
 
   // Note: Delete endpoint would need to be implemented on the backend
-  async delete(id: string) {
+  async delete(data: Omit<UpsertProject, 'archived'>) {
     // For now, mark as archived using upsert
-    return this.upsert({ project_id: id, archived: true });
+    return this.upsert({ ...data, deleted: true });
   }
 }

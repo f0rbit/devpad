@@ -254,7 +254,7 @@ export async function upsertTask(data: any, tags: any[], owner_id: string) {
 		await upsertTaskTags(new_todo.id, tag_ids);
 	}
 
-	return new_todo;
+	return getTask(new_todo.id);
 }
 
 async function upsertTaskTags(task_id: string, tags: string[]) {

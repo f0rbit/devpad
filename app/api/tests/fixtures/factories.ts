@@ -1,102 +1,113 @@
-import type { UpsertProject, UpsertTask, UpsertTag } from '../../src/types/common';
+import type { Project } from '@/src/server/projects';
+import type { Nullable, Tag, UpsertProject, UpsertTag, UpsertTodo } from '@/src/server/types';
+import type { _FetchedTask } from '@/src/server/tasks';
+import { TEST_USER_ID } from '../integration/setup';
 
-// Helper types for test data that ensure required fields are present
-type TestProject = UpsertProject & Required<Pick<UpsertProject, 'name' | 'description' | 'status' | 'visibility'>>;
-type TestTask = UpsertTask & Required<Pick<UpsertTask, 'owner_id' | 'title' | 'description' | 'progress' | 'priority' | 'visibility'>>;
-type TestTag = UpsertTag & Required<Pick<UpsertTag, 'owner_id' | 'title'>>;
+type UpsertTaskOverrides = Nullable<UpsertTodo> & Pick<UpsertTodo, 'id' | 'owner_id' | 'title' | 'progress' | 'priority' | 'visibility' | 'project_id'>;
+type UpsertProjectOverrides = Nullable<UpsertProject> & Pick<UpsertProject, 'id' | 'owner_id' | 'description' | 'status'>;
 
 export class TestDataFactory {
-  private static counter = 0;
-  
-  private static getNextId(): string {
-    return `test-${Date.now()}-${++this.counter}`;
-  }
+	private static counter = 0;
 
-  static createProject(overrides: Partial<UpsertProject> = {}): TestProject {
-    const id = this.getNextId();
-    return {
-      name: `Test Project ${id}`,
-      project_id: `test-project-${id}`,
-      description: `A test project created at ${new Date().toISOString()}`,
-      status: 'DEVELOPMENT',
-      visibility: 'PRIVATE',
-      deleted: false,
-      ...overrides
-    };
-  }
+	private static getNextId(): string {
+		return `test-${Date.now()}-${++this.counter}`;
+	}
 
-  static createTask(owner_id: string, overrides: Partial<UpsertTask> = {}): TestTask {
-    const id = this.getNextId();
-    return {
-      owner_id,
-      title: `Test Task ${id}`,
-      description: `A test task created at ${new Date().toISOString()}`,
-      progress: 'UNSTARTED',
-      priority: 'MEDIUM',
-      visibility: 'PRIVATE',
-      ...overrides
-    };
-  }
+	static createProject(owner_id: string, overrides: UpsertProjectOverrides): Project {
+		const id = this.getNextId();
+		return {
+			id: overrides.id ?? id,
+			owner_id: overrides.owner_id ?? owner_id,
+			name: overrides.name ?? `Test Project ${id}`,
+			project_id: overrides.project_id ?? `test-project-${id}`,
+			description: overrides.description ?? `A test project created at ${new Date().toISOString()}`,
+			status: overrides.status ?? 'DEVELOPMENT',
+			visibility: overrides.visibility ?? "PRIVATE",
+			deleted: overrides.deleted ?? false,
+			scan_branch: null,
+			specification: overrides.specification,
+			current_version: overrides.current_version,
+			icon_url: null,
+			link_text: null,
+			link_url: null,
+			repo_url: null,
+			repo_id: null,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString()
+		};
+	}
 
-  static createTag(owner_id: string, overrides: Partial<UpsertTag> = {}): TestTag {
-    const id = this.getNextId();
-    return {
-      owner_id,
-      title: `Test Tag ${id}`,
-      color: 'blue',
-      deleted: false,
-      render: true,
-      ...overrides
-    };
-  }
+	static createTask(overrides: UpsertTaskOverrides): _FetchedTask {
+		const id = this.getNextId();
+		return {
+			title: `Test Task ${id}`,
+			description: `A test task created at ${new Date().toISOString()}`,
+			progress: 'UNSTARTED',
+			priority: 'MEDIUM',
+			visibility: 'PRIVATE',
+			updated_at: new Date().toISOString(),
+			created_at: new Date().toISOString(),
+			goal_id: null,
+			codebase_task_id: null,
+			...overrides,
+			id: id,
+			project_id: overrides.project_id || null,
+			start_time: overrides.start_time || null,
+			end_time: overrides.end_time || null,
+			summary: overrides.summary || null
+		};
+	}
 
-  // Create a realistic project with common fields filled  
-  static createRealisticProject(overrides: Partial<UpsertProject> = {}): TestProject & { specification: string | null } {
-    const id = this.getNextId();
-    return {
-      name: `DevPad Integration Test ${id}`,
-      project_id: `devpad-test-${id}`,
-      description: 'Integration test project for testing API functionality',
-      specification: '# Test Project\n\nThis project is used for testing the devpad API integration.',
-      status: 'DEVELOPMENT',
-      visibility: 'PUBLIC',
-      deleted: false,
-      link_url: 'https://github.com/test/project',
-      link_text: 'View on GitHub',
-      current_version: '0.1.0',
-      ...overrides
-    };
-  }
+	static createTag(owner_id: string, overrides: Partial<UpsertTag> = {}): Tag {
+		const id = this.getNextId();
+		return {
+			id: id,
+			owner_id,
+			title: `Test Tag ${id}`,
+			color: 'blue',
+			deleted: false,
+			render: true,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
+			...overrides
+		};
+	}
 
-  // Create a realistic task with common fields filled
-  static createRealisticTask(owner_id: string, project_id?: string, overrides: Partial<UpsertTask> = {}): TestTask {
-    const id = this.getNextId();
-    return {
-      owner_id,
-      project_id: project_id || null,
-      title: `Implement feature ${id}`,
-      description: `This task involves implementing and testing feature ${id} for the integration test suite.`,
-      summary: `Feature ${id} implementation`,
-      progress: 'UNSTARTED',
-      priority: 'HIGH',
-      visibility: 'PUBLIC',
-      start_time: new Date().toISOString(),
-      end_time: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week from now
-      ...overrides
-    };
-  }
+	static createRealisticProject(owner_id: string = TEST_USER_ID, overrides: Partial<UpsertProjectOverrides> = {}): Project {
+		const id = this.getNextId();
+		return this.createProject(owner_id, {
+			id: id,
+			name: `DevPad Integration Test ${id}`,
+			project_id: `devpad-test-${id}`,
+			description: 'Integration test project for testing API functionality',
+			specification: '# Test Project\n\nThis project is used for testing the devpad API integration.',
+			status: 'DEVELOPMENT',
+			visibility: 'PUBLIC',
+			deleted: false,
+			link_url: 'https://github.com/test/project',
+			link_text: 'View on GitHub',
+			current_version: '0.1.0',
+			repo_url: null,
+			repo_id: null,
+			icon_url: null,
+			...overrides
+		});
+	}
 
-  // Create multiple test tags for a user
-  static createTestTags(owner_id: string, count: number = 3): TestTag[] {
-    const colors: Array<UpsertTag['color']> = ['red', 'green', 'blue', 'yellow', 'purple'];
-    const tagTypes = ['bug', 'feature', 'enhancement', 'documentation', 'test'];
-    
-    return Array.from({ length: count }, (_, i) => ({
-      owner_id,
-      title: tagTypes[i % tagTypes.length],
-      color: colors[i % colors.length],
-      deleted: false,
-      render: true,
-    }));
-  }
+	// Create multiple test tags for a user
+	static createTestTags(owner_id: string, count: number = 3): Tag[] {
+		const colors: Array<UpsertTag['color']> = ['red', 'green', 'blue', 'yellow', 'purple'];
+		const tagTypes = ['bug', 'feature', 'enhancement', 'documentation', 'test'];
+
+		return Array.from({ length: count }, (_, i) => ({
+			id: this.getNextId(),
+			owner_id,
+			title: tagTypes[i % tagTypes.length],
+			color: colors[i % colors.length] ?? null,
+			deleted: false,
+			render: true,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
+		}));
+	}
 }

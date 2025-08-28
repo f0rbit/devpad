@@ -12,12 +12,12 @@ try {
   const db = drizzle(sqlite, { schema });
 
   console.log('🌳 Running migrations...');
-  migrate(db, { migrationsFolder: './database/drizzle' });
+  migrate(db, { migrationsFolder: './app/database/drizzle' });
   console.log('✅ Migrations complete');
 
   // Optional: Check tables
-  const tables = sqlite.query("SELECT name FROM sqlite_master WHERE type='table';").all();
-  console.log('📋 Existing tables:', tables);
+//   const tables = sqlite.query("SELECT name FROM sqlite_master WHERE type='table';").all();
+//   console.log('📋 Existing tables:', tables);
 } catch (error) {
   console.error('❌ Migration failed:', error);
   process.exit(1);

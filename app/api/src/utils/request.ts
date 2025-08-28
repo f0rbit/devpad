@@ -15,6 +15,10 @@ export class ApiClient {
     if (!options.api_key) {
       throw new Error('API key is required');
     }
+
+	if (options.api_key.length < 10) {
+		throw new Error('API key is too short');
+	}
     
     this.base_url = options.base_url;
     this.api_key = options.api_key;

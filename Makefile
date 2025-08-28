@@ -4,12 +4,14 @@ build:
 run:
 	docker run -p 8080:8080 -v ./database/preview.db:/sqlite.db devpad-app
 
-.PHONY: test integration-test
-
-# Run unit tests
-test:
+unit:
 	cd app/api && bun test:unit
 
-# Run integration tests
-integration-test:
+integration:
 	./scripts/run-integration-tests.sh
+
+test: unit integration
+
+clean:
+	rm -rf app/api/dist
+	rm -rf app/dist

@@ -59,7 +59,6 @@ export async function GET(context: APIContext) {
 
 	// no query params provided
 	// return all projects
-	console.log("user_id", user_id);
 	const projects = await getUserProjects(user_id);
 
 	// should only show 'public' projects
@@ -89,6 +88,7 @@ export async function PATCH(context: APIContext) {
 
 	// assert that the owner_id of upsert_project is same as authed user
 	if (data.owner_id && data.owner_id != user_id) {
+		console.log("Unauthorized: owner_id mismatch", { user_id, owner_id: data.owner_id });
 		return new Response("Unauthorized: owner_id mismatch", { status: 401 });
 	}
 

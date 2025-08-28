@@ -1,7 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { db } from "../../database/db";
 import { action, ignore_path, project, tag, tag_config, todo_updates, tracker_result, type ActionType } from "../../database/schema";
-import type { TodoUpdate, TrackerResult } from "./types";
+import type { TodoUpdate, TrackerResult, UpsertProject } from "./types";
 
 export async function getUserProjects(user_id: string) {
 	return await db.select().from(project).where(eq(project.owner_id, user_id));
@@ -162,7 +162,7 @@ export async function getProjectConfig(project_id: string) {
 
 export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
 
-export async function upsertProject(data: any, owner_id: string, access_token?: string) {
+export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string) {
 	const previous = await (async () => {
 		if (!data.id) return null;
 		return (await getProjectById(data.id)).project ?? null;
@@ -198,15 +198,17 @@ export async function upsertProject(data: any, owner_id: string, access_token?: 
 		data.specification = readme;
 	}
 
-	// TODO: proper typesafety for upsert project
-	const upsert = data as any;
-	upsert.updated_at = new Date().toISOString();
-	if (upsert.id == "" || upsert.id == null) delete upsert.id;
+	const upsert = {
+		...data,
+		id: (data.id == "" || data.id == null) ? undefined : data.id,
+		updated_at: new Date().toISOString(),
+		owner_id: final_owner_id
+	}
 
 	let res: Project[] | null = null;
 	if (exists) {
 		// perform update
-		res = await db.update(project).set(upsert).where(eq(project.id, upsert.id)).returning();
+		res = await db.update(project).set(upsert).where(eq(project.id, upsert.id!)).returning();
 	} else {
 		// perform insert
 		res = await db

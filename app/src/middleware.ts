@@ -3,12 +3,20 @@ import { verifyRequestOrigin } from "lucia";
 import { defineMiddleware } from "astro:middleware";
 
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
+const origin_ignore = ["/api"];
 
 export const onRequest = defineMiddleware(async (context, next) => {
 	if (context.request.method !== "GET") {
 		const originHeader = context.request.headers.get("Origin");
 		const hostHeader = context.request.headers.get("Host");
-		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
+		// check for missing or invalid headers
+		const checks = [
+			!originHeader,
+			!hostHeader,
+			!verifyRequestOrigin(originHeader!, [hostHeader!]),
+		];
+		const ignore = origin_ignore.find((p) => context.url.pathname.startsWith(p));
+		if (checks.some((c) => c) && !ignore) {
 			console.error("Invalid origin", { originHeader, hostHeader });
 			return new Response("Invalid origin", {
 				status: 403,

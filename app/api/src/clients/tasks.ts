@@ -1,5 +1,6 @@
+import type { Task } from '@/src/server/tasks';
 import { ApiClient } from '../utils/request';
-import type { TaskType, TaskUpsert } from '../types/common';
+import type { UpsertTag, UpsertTodo } from '@/src/server/types';
 
 export class TasksClient {
   private api_client: ApiClient;
@@ -21,52 +22,47 @@ export class TasksClient {
       query.tag = options.tag_id;
     }
     
-    return this.api_client.get<TaskType[]>('/tasks', 
+    return this.api_client.get<Task[]>('/tasks', 
       Object.keys(query).length > 0 ? { query } : {}
     );
   }
 
   async get(id: string) {
     // GET /tasks?id=<task_id>
-    return this.api_client.get<TaskType>('/tasks', {
+    return this.api_client.get<Task>('/tasks', {
       query: { id }
     });
   }
 
   async getByProject(project_id: string) {
     // GET /tasks?project=<project_id>
-    return this.api_client.get<TaskType[]>('/tasks', {
+    return this.api_client.get<Task[]>('/tasks', {
       query: { project: project_id }
     });
   }
 
   async getByTag(tag_id: string) {
     // GET /tasks?tag=<tag_id>
-    return this.api_client.get<TaskType[]>('/tasks', {
+    return this.api_client.get<Task[]>('/tasks', {
       query: { tag: tag_id }
     });
   }
 
-  // Create or update a task using the PATCH endpoint, with optional tag support
-  async upsert(data: TaskUpsert & { tags?: string[] }) {
-    return this.api_client.patch<TaskType>('/tasks', {
+  async upsert(data: UpsertTodo & { tags?: UpsertTag[] }) {
+    return this.api_client.patch<Task>('/tasks', {
       body: data
     });
   }
 
-  // Convenience method for creating a new task
-  async create(data: Omit<TaskUpsert, 'task_id'> & { tags?: string[] }) {
-    return this.upsert(data);
+  async create(data: Omit<UpsertTodo, 'task_id'> & { tags?: UpsertTag[] }) {
+    return this.upsert(data)
   }
 
-  // Convenience method for updating an existing task
-  async update(task_id: string, data: Partial<Omit<TaskUpsert, 'task_id'>> & { tags?: string[] }) {
-    return this.upsert({ ...data, task_id });
+  async update(task_id: string, data: Omit<UpsertTodo, 'id'> & { tags?: UpsertTag[] }) {
+	return this.upsert({ ...data, id: task_id });
   }
 
-  // Note: Delete endpoint would need to be implemented on the backend  
-  async delete(task_id: string) {
-    // For now, mark task status as cancelled
-    return this.upsert({ task_id, status: 'cancelled' });
+  async delete(task: Task) {
+    return this.upsert({ ...task.task, visibility: 'DELETED' });
   }
 }

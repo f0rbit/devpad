@@ -3,23 +3,23 @@ import type { ActionType, action, tag, todo_updates, tracker_result } from "../.
 import type { Task } from "./tasks";
 
 export const upsert_project = z.object({
-	id: z.string().optional().nullable(),
-	project_id: z.string().optional(),
+	id: z.string().optional(),
+	project_id: z.string(),
 	owner_id: z.string().optional(),
-	name: z.string().optional(),
-	description: z.string().optional(),
-	specification: z.string().optional().nullable(),
-	repo_url: z.string().optional().nullable(),
-	repo_id: z.number().optional().nullable(),
-	icon_url: z.string().optional().nullable(),
+	name: z.string(),
+	description: z.string().nullable(),
+	specification: z.string().nullable(),
+	repo_url: z.string().nullable(),
+	repo_id: z.number().nullable(),
+	icon_url: z.string().nullable(),
 	status: z
 		.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")])
 		.optional(),
 	deleted: z.boolean().optional().default(false),
-	link_url: z.string().optional().nullable(),
-	link_text: z.string().optional().nullable(),
+	link_url: z.string().nullable(),
+	link_text: z.string().nullable(),
 	visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]).optional(),
-	current_version: z.string().optional(),
+	current_version: z.string().nullable(),
 });
 
 export type UpsertProject = z.infer<typeof upsert_project>;
@@ -137,3 +137,19 @@ export type TaskView = NonNullable<UpdateUser["task_view"]>;
 export type HistoryAction = Omit<typeof action.$inferSelect, "updated_at" | "owner_id" | "type"> & { type: ActionType | "SCAN" };
 
 export type ScanStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED";
+
+export interface ApiClientConfig {
+	baseUrl: string;
+	apiKey: string;
+}
+
+export interface RequestOptions {
+	method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+	headers?: Record<string, string>;
+	body?: object;
+	query?: Record<string, string>;
+}
+
+export type Nullable<T> = {
+  [P in keyof T]: T[P] | null;
+};
