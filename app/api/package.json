@@ -1,17 +1,55 @@
 {
 	"name": "@devpad/api",
 	"version": "0.1.0",
+	"description": "TypeScript client library for the Devpad API - project and task management made simple",
 	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"files": [
+		"dist"
+	],
 	"scripts": {
-		"build": "bun build src/index.ts --compile",
+		"build": "tsc",
+		"build:watch": "tsc --watch",
 		"test": "bun test",
 		"test:unit": "bun test tests/unit/",
 		"test:integration": "bun test tests/integration/",
 		"test:coverage": "bun test --coverage",
 		"lint": "bun run eslint",
-		"format": "bun run prettier --write ."
+		"format": "bun run prettier --write .",
+		"prepublishOnly": "bun run build",
+		"clean": "rm -rf dist"
+	},
+	"keywords": [
+		"devpad",
+		"api",
+		"client",
+		"typescript",
+		"project-management",
+		"task-management"
+	],
+	"author": {
+		"name": "f0rbit",
+		"url": "https://github.com/f0rbit"
+	},
+	"license": "MIT",
+	"homepage": "https://devpad.tools",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/devpad.git",
+		"directory": "app/api"
+	},
+	"bugs": {
+		"url": "https://github.com/f0rbit/devpad/issues"
+	},
+	"publishConfig": {
+		"access": "public"
 	},
 	"dependencies": {
 		"drizzle-orm": "^0.30.6",
@@ -26,5 +64,8 @@
 	},
 	"peerDependencies": {
 		"drizzle-orm": "^0.30.6"
+	},
+	"engines": {
+		"node": ">=18.0.0"
 	}
 }

@@ -1,0 +1,78 @@
+name: Publish @devpad/api to NPM
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/api/**']
+  pull_request:
+    branches: [main]
+    paths: ['app/api/**']
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: cd app/api && bun install
+
+      - name: Run tests
+        run: cd app/api && bun test
+
+      - name: Build package
+        run: cd app/api && bun run build
+
+      - name: Check if version has been updated
+        id: check
+        run: |
+          cd app/api
+          if git diff HEAD~1 package.json | grep -q '"version"'; then
+            echo "version_updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "version_updated=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup Node.js for NPM
+        if: steps.check.outputs.version_updated == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to NPM
+        if: steps.check.outputs.version_updated == 'true'
+        run: |
+          cd app/api
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Create GitHub release
+        if: steps.check.outputs.version_updated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const packageJson = JSON.parse(fs.readFileSync('app/api/package.json', 'utf8'));
+            
+            github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: `@devpad/api-v${packageJson.version}`,
+              name: `@devpad/api v${packageJson.version}`,
+              body: `Published @devpad/api version ${packageJson.version} to NPM`,
+              draft: false,
+              prerelease: false
+            });

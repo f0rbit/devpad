@@ -7,10 +7,6 @@
 
 ## api client enhancements
 
-- [ ] enhanced error handling
-  - [ ] add retry logic for transient failures
-  - [ ] implement circuit breaker pattern
-  - [ ] add more specific error types and messages
 
 - [ ] advanced filtering & pagination
   - [ ] add pagination support to list operations

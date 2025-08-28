@@ -1,6 +1,4 @@
-import { z } from 'zod';
 import { DevpadApiError, NetworkError, AuthenticationError } from './errors';
-import { ApiKeySchema } from '../clients/auth';
 
 export type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -14,14 +12,15 @@ export class ApiClient {
   private api_key: string;
 
   constructor(options: { base_url: string; api_key: string }) {
-    // Validate API key is provided and meets schema requirements
-    const parsed_key = ApiKeySchema.parse({ api_key: options.api_key });
+    if (!options.api_key) {
+      throw new Error('API key is required');
+    }
     
     this.base_url = options.base_url;
-    this.api_key = parsed_key.api_key;
+    this.api_key = options.api_key;
   }
 
-  private buildUrl(path: string, query?: Record<string, string>): URL {
+  private buildUrl(path: string, query?: Record<string, string>): string {
     const url = new URL(`${this.base_url}${path}`);
     
     if (query) {
@@ -30,7 +29,7 @@ export class ApiClient {
       });
     }
 
-    return url;
+    return url.toString();
   }
 
   private async request<T>(
@@ -46,20 +45,25 @@ export class ApiClient {
 
     const url = this.buildUrl(path, query);
 
-    const request_headers: HeadersInit = {
+    const request_headers: Record<string, string> = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${this.api_key}`,
       ...headers,
     };
 
     try {
-      console.log(`API Request: ${method} ${url.toString()}`);
+      console.log(`API Request: ${method} ${url}`);
       
-      const response = await fetch(url, {
+      const fetchOptions: RequestInit = {
         method,
         headers: request_headers,
-        body: body ? JSON.stringify(body) : undefined,
-      });
+      };
+      
+      if (body) {
+        fetchOptions.body = JSON.stringify(body);
+      }
+      
+      const response = await fetch(url, fetchOptions);
 
       console.log(`API Response Status: ${response.status}`);
 

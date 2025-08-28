@@ -11,8 +11,8 @@ export class DevpadApiError extends Error {
   ) {
     super(message);
     this.name = 'DevpadApiError';
-    this.code = options.code;
-    this.statusCode = options.statusCode;
+    this.code = options.code ?? undefined;
+    this.statusCode = options.statusCode ?? undefined;
   }
 
   static fromResponse(response: Response): DevpadApiError {

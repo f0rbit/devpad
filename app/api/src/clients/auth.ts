@@ -1,9 +1,4 @@
 import { ApiClient } from '../utils/request';
-import { z } from 'zod';
-
-export const ApiKeySchema = z.object({
-  api_key: z.string().min(10, "API key must be at least 10 characters long")
-});
 
 export class AuthClient {
   private api_client: ApiClient;

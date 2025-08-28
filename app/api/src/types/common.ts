@@ -1,33 +1,49 @@
-import { z } from 'zod';
-import type { project, task } from '../../../database/schema';
+import { z } from "zod";
+import { ProjectType, TaskType, TagType } from "../schemas/database";
+import { 
+	ProjectCreateSchema,
+	ProjectUpdateSchema,
+	ProjectUpsertSchema,
+	TaskCreateSchema,
+	TaskUpdateSchema,
+	TaskUpsertSchema,
+	TagCreateSchema,
+	ApiResponse as ApiResponseType
+} from "../schemas/api";
 
-export const ProjectStatus = z.enum(['DEVELOPMENT', 'PAUSED', 'RELEASED', 'LIVE', 'FINISHED', 'ABANDONED', 'STOPPED']);
-export const Visibility = z.enum(['PUBLIC', 'PRIVATE', 'HIDDEN', 'ARCHIVED', 'DRAFT', 'DELETED']);
-export const Priority = z.enum(['LOW', 'MEDIUM', 'HIGH']);
+export interface ApiClientConfig {
+	baseUrl: string;
+	apiKey: string;
+}
 
-export const BaseEntitySchema = z.object({
-  id: z.string(),
-  created_at: z.string().optional(),
-  updated_at: z.string().optional()
-});
+export interface RequestOptions {
+	method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+	headers?: Record<string, string>;
+	body?: object;
+	query?: Record<string, string>;
+}
 
-export type ProjectStatus = z.infer<typeof ProjectStatus>;
-export type Visibility = z.infer<typeof Visibility>;
-export type Priority = z.infer<typeof Priority>;
+// Re-export database types
+export type { ProjectType, TaskType, TagType };
 
-export type SelectProject = typeof project.$inferSelect;
-export type InsertProject = typeof project.$inferInsert;
+// Re-export API response type
+export type ApiResponse<T = unknown> = ApiResponseType<T>;
 
-export type SelectTask = typeof task.$inferSelect;
-export type InsertTask = typeof task.$inferInsert;
+// Make the schemas more user-friendly with Partial wrappers where appropriate
+export type ProjectCreate = Partial<z.infer<typeof ProjectCreateSchema>>;
+export type ProjectUpdate = Partial<z.infer<typeof ProjectUpdateSchema>>;
+export type ProjectUpsert = Partial<z.infer<typeof ProjectUpsertSchema>>;
 
-// Import schemas from the source of truth
-export { upsert_project as UpsertProjectSchema, upsert_todo as UpsertTaskSchema, upsert_tag as UpsertTagSchema } from '../../../src/server/types';
+export type TaskCreate = Partial<z.infer<typeof TaskCreateSchema>>;
+export type TaskUpdate = Partial<z.infer<typeof TaskUpdateSchema>>;
+export type TaskUpsert = Partial<z.infer<typeof TaskUpsertSchema>>;
 
-// Import base types and make them more API-wrapper friendly
-import type { UpsertProject as _UpsertProject, UpsertTodo as _UpsertTodo, UpsertTag as _UpsertTag } from '../../../src/server/types';
+export type TagCreate = Partial<z.infer<typeof TagCreateSchema>>;
 
-// Make API wrapper types more permissive - all fields optional except required ones
-export type UpsertProject = Partial<_UpsertProject>;
-export type UpsertTask = Partial<_UpsertTodo> & { owner_id: string }; // owner_id is required
-export type UpsertTag = Partial<_UpsertTag> & { owner_id: string; title: string }; // owner_id and title are required
+// Legacy aliases for backward compatibility
+export type UpsertProject = ProjectUpsert;
+export type UpsertTask = TaskUpsert;
+export type UpsertTag = TagCreate;
+
+export type SelectProject = ProjectType;
+export type SelectTask = TaskType;

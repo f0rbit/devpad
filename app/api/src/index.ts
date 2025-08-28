@@ -30,8 +30,6 @@ export class DevpadApiClient {
 }
 
 export * from './types/common';
-export * from './types/tasks';
-export * from './types/tags';
 export * from './clients/auth';
 export * from './utils/errors';
 
