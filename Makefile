@@ -21,4 +21,5 @@ clean:
 	find app/src app/api/src -name "*.map" -delete
 
 build-api:
+	cd app && npx tsc --build
 	cd app/api && bun run build

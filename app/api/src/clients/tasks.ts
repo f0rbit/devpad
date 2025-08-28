@@ -1,6 +1,6 @@
 import type { Task } from '@/src/server/tasks';
-import { ApiClient } from '../utils/request';
 import type { UpsertTag, UpsertTodo } from '@/src/server/types';
+import { ApiClient } from '../utils/request';
 
 export class TasksClient {
   private api_client: ApiClient;

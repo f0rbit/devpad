@@ -4,10 +4,19 @@
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
 		"baseUrl": ".",
+		"composite": true,
+		"declaration": true,
+		"declarationMap": true,
+		"outDir": "./dist/types",
+		"noEmit": false,
+		"verbatimModuleSyntax": false,
+		"allowImportingTsExtensions": false,
 		"paths": {
 			"@/*": ["./*"],
 			"@/database/*": ["./database/*"],
 			"@/api/*": ["./api/*"]
 		}
-	}
+	},
+	"include": ["src/**/*", "database/**/*"],
+	"exclude": ["node_modules", "dist", "api/**/*"]
 }

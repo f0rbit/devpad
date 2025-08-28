@@ -6,12 +6,12 @@
 		"declaration": true,
 		"declarationMap": true,
 		"outDir": "./dist",
-		"rootDir": "../src",
+		"rootDir": "./src",
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"allowSyntheticDefaultImports": true,
 		"resolveJsonModule": true,
 		"isolatedModules": true,
@@ -25,13 +25,16 @@
 		"useUnknownInCatchVariables": true,
 		"allowUnusedLabels": false,
 		"allowUnreachableCode": false,
-		"baseUrl": ".",
+		"baseUrl": "..",
 		"paths": {
-			"@/*": ["../../*"],
-			"@/database/*": ["../../database/*"],
-			"@/api/*": ["./*"]
+			"@/*": ["*"],
+			"@/database/*": ["database/*"],
+			"@/api/*": ["api/*"]
 		}
 	},
-	"include": ["../src/**/*"],
-	"exclude": ["node_modules", "dist", "tests", "**/*.test.ts"]
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "tests", "**/*.test.ts"],
+	"references": [
+		{ "path": ".." }
+	]
 }
