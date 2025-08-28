@@ -33,7 +33,7 @@ export const CodebaseTaskSchema = z.object({
 
 export const TaskUnionSchema = z.object({
   task: TaskSchema,
-  codebase_task: CodebaseTaskSchema.nullable(),
+  codebase_tasks: CodebaseTaskSchema.nullable(),
   tags: z.array(z.string())
 });
 

@@ -1,5 +1,6 @@
 import { ApiClient } from '../utils/request';
-import type { InsertProject, SelectProject } from '../types/common';
+import type { SelectProject, UpsertProject } from '../types/common';
+import type { Project } from '../types/projects';
 
 export class ProjectsClient {
   private api_client: ApiClient;
@@ -10,38 +11,43 @@ export class ProjectsClient {
 
   async list() {
     // GET /projects returns all projects for the authenticated user
-    return this.api_client.get<SelectProject[]>('/projects');
+    return this.api_client.get<Project[]>('/projects');
   }
 
   async get(id: string) {
     // GET /projects?id=<project_id>
-    return this.api_client.get<SelectProject>('/projects', {
+    return this.api_client.get<Project>('/projects', {
       query: { id }
     });
   }
 
   async getByName(name: string) {
     // GET /projects?name=<project_name>
-    return this.api_client.get<SelectProject>('/projects', {
+    return this.api_client.get<Project>('/projects', {
       query: { name }
     });
   }
 
-  // Note: The current Astro API routes don't have POST endpoints for creating projects
-  // These would need to be added to the Astro routes first
-  async create(data: InsertProject) {
-    return this.api_client.post<SelectProject>('/projects', {
+  // Create or update a project using the PATCH endpoint
+  async upsert(data: UpsertProject) {
+    return this.api_client.patch<Project>('/projects', {
       body: data
     });
   }
 
-  async update(id: string, data: Partial<InsertProject>) {
-    return this.api_client.post<SelectProject>(`/projects/${id}`, {
-      body: data
-    });
+  // Convenience method for creating a new project
+  async create(data: Omit<UpsertProject, 'id'>) {
+    return this.upsert(data);
   }
 
+  // Convenience method for updating an existing project  
+  async update(id: string, data: Partial<Omit<UpsertProject, 'id'>>) {
+    return this.upsert({ id, ...data });
+  }
+
+  // Note: Delete endpoint would need to be implemented on the backend
   async delete(id: string) {
-    return this.api_client.post<void>(`/projects/${id}/delete`);
+    // For now, mark as deleted using upsert
+    return this.upsert({ id, deleted: true });
   }
 }

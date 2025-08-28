@@ -7,5 +7,7 @@ const integration_config = {
 };
 
 console.log('INTEGRATION: Using real API at', integration_config.base_url);
+console.log('INTEGRATION: API Key:', integration_config.api_key.substring(0, 8) + '...');
 
 export const test_client = new DevpadApiClient(integration_config);
+export const TEST_USER_ID = 'test-user-12345'; // This should match the user ID from your test setup

@@ -1,12 +1,14 @@
 import { ApiClient } from './utils/request';
 import { ProjectsClient } from './clients/projects';
 import { TasksClient } from './clients/tasks';
+import { TagsClient } from './clients/tags';
 import { AuthClient } from './clients/auth';
 
 export class DevpadApiClient {
   private api_client: ApiClient;
   public projects: ProjectsClient;
   public tasks: TasksClient;
+  public tags: TagsClient;
   public auth: AuthClient;
 
   constructor(options: { 
@@ -22,11 +24,14 @@ export class DevpadApiClient {
 
     this.projects = new ProjectsClient(this.api_client);
     this.tasks = new TasksClient(this.api_client);
+    this.tags = new TagsClient(this.api_client);
     this.auth = new AuthClient(this.api_client);
   }
 }
 
 export * from './types/common';
+export * from './types/tasks';
+export * from './types/tags';
 export * from './clients/auth';
 export * from './utils/errors';
 

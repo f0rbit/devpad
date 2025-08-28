@@ -109,5 +109,24 @@ export class ApiClient {
     return this.request(path, { ...options, method: 'POST' });
   }
 
-  // Similar methods for PUT, PATCH, DELETE
+  public patch<T>(
+    path: string, 
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<T> {
+    return this.request(path, { ...options, method: 'PATCH' });
+  }
+
+  public put<T>(
+    path: string, 
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<T> {
+    return this.request(path, { ...options, method: 'PUT' });
+  }
+
+  public delete<T>(
+    path: string, 
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<T> {
+    return this.request(path, { ...options, method: 'DELETE' });
+  }
 }
