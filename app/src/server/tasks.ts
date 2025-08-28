@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { action, codebase_tasks, task, task_tag, type ActionType } from "@/database/schema";
 import { db } from "@/database/db";
 import { doesUserOwnProject } from "./projects";
@@ -184,4 +184,104 @@ export async function getTasksByTag(tag_id: string) {
 	}
 
 	return found_tasks;
+}
+
+export async function upsertTask(data: any, tags: any[], owner_id: string) {
+	const previous = await (async () => {
+		if (!data.id) return null;
+		return (await getTask(data.id))?.task ?? null;
+	})();
+
+	// ensure owner_id matches
+	if (data.owner_id && data.owner_id !== owner_id) {
+		throw new Error("Unauthorized: owner_id mismatch");
+	}
+
+	// authorise existing task
+	if (previous && previous.owner_id !== owner_id) {
+		throw new Error("Unauthorized: User does not own this task");
+	}
+
+	let tag_ids: string[] = [];
+
+	if (tags && tags.length > 0) {
+		const { upsertTag } = await import("./tags");
+		// update any of the tags
+		const promises = tags.map(upsertTag);
+		tag_ids = await Promise.all(promises);
+	}
+
+	const exists = !!previous;
+	const project_id = data.project_id ?? previous?.project_id ?? null;
+
+	// TODO: proper typesafety for upsert todo
+	const upsert = data as any;
+	upsert.updated_at = new Date().toISOString();
+	upsert.owner_id = owner_id; // ensure owner_id is set correctly
+	if (upsert.id == "" || upsert.id == null) delete upsert.id;
+
+	let res: _FetchedTask[] | null = null;
+	if (exists) {
+		// perform update
+		res = await db.update(task).set(upsert).where(eq(task.id, upsert.id)).returning();
+	} else {
+		// perform insert
+		res = await db
+			.insert(task)
+			.values(upsert)
+			.onConflictDoUpdate({ target: [task.id], set: upsert })
+			.returning();
+	}
+	if (!res || res.length != 1) throw new Error(`Todo upsert returned incorrect rows (${res?.length ?? 0})`);
+
+	const [new_todo] = res;
+
+	const fresh_complete = data.progress == "COMPLETED" && previous?.progress != "COMPLETED";
+
+	if (!exists) {
+		// add CREATE_TASK action
+		await addTaskAction({ owner_id, task_id: new_todo.id, type: "CREATE_TASK", description: "Created task", project_id });
+	} else if (fresh_complete) {
+		// add COMPLETE_TASK action
+		await addTaskAction({ owner_id, task_id: new_todo.id, type: "UPDATE_TASK", description: "Completed task", project_id });
+	} else {
+		// add UPDATE_TASK action
+		await addTaskAction({ owner_id, task_id: new_todo.id, type: "UPDATE_TASK", description: "Updated task", project_id });
+	}
+
+	// link each tag to every task
+	if (tag_ids.length > 0) {
+		await upsertTaskTags(new_todo.id, tag_ids);
+	}
+
+	return new_todo;
+}
+
+async function upsertTaskTags(task_id: string, tags: string[]) {
+	const { getTaskTags } = await import("./tags");
+	// get the current tags on the task
+	const current = (await getTaskTags(task_id)).map((c) => c.id);
+
+	// split into [new, existing]
+	const create = tags.filter((tag_id) => !current.find((current_id) => current_id === tag_id));
+
+	// delete any tags that are no longer in the list
+	const delete_tags = current.filter((id) => !tags.includes(id));
+
+	if (delete_tags.length > 0) {
+		await db.delete(task_tag).where(and(eq(task_tag.task_id, task_id), inArray(task_tag.tag_id, delete_tags)));
+	}
+
+	// insert any new tags
+	const insert_tags = create.map((t) => ({ task_id: task_id, tag_id: t }));
+	if (insert_tags.length > 0) {
+		await db.insert(task_tag).values(insert_tags);
+	}
+
+	// update the updated_at time on each link
+	const { sql } = await import("drizzle-orm");
+	await db
+		.update(task_tag)
+		.set({ updated_at: sql`CURRENT_TIMESTAMP` })
+		.where(eq(task_tag.task_id, task_id));
 }

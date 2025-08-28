@@ -161,3 +161,77 @@ export async function getProjectConfig(project_id: string) {
 }
 
 export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
+
+export async function upsertProject(data: any, owner_id: string, access_token?: string) {
+	const previous = await (async () => {
+		if (!data.id) return null;
+		return (await getProjectById(data.id)).project ?? null;
+	})();
+
+	// authorise
+	if (previous && previous.owner_id != owner_id) {
+		throw new Error("Unauthorized: User does not own this project");
+	}
+
+	const final_owner_id = data.owner_id ?? previous?.owner_id ?? owner_id;
+
+	if (!final_owner_id) {
+		throw new Error("Bad Request: No owner_id provided");
+	}
+
+	const exists = !!previous;
+
+	const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
+	const repo_url = data.repo_url ?? previous?.repo_url;
+	const fetch_specification = github_linked && repo_url && (!previous || !previous.specification);
+
+	// the new_project is imported from github and doesn't have a specification, import it from the README
+	if (fetch_specification && !data.specification && access_token) {
+		console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
+		// we need to get OWNER and REPO from the repo_url
+		const { getSpecification } = await import("./github");
+		const slices = repo_url.split("/");
+		const repo = slices.at(-1);
+		const owner = slices.at(-2);
+		if (!repo || !owner) throw new Error("Invalid repo_url");
+		const readme = await getSpecification(owner, repo, access_token);
+		data.specification = readme;
+	}
+
+	// TODO: proper typesafety for upsert project
+	const upsert = data as any;
+	upsert.updated_at = new Date().toISOString();
+	if (upsert.id == "" || upsert.id == null) delete upsert.id;
+
+	let res: Project[] | null = null;
+	if (exists) {
+		// perform update
+		res = await db.update(project).set(upsert).where(eq(project.id, upsert.id)).returning();
+	} else {
+		// perform insert
+		res = await db
+			.insert(project)
+			.values(upsert)
+			.onConflictDoUpdate({ target: [project.id], set: upsert })
+			.returning();
+	}
+	if (!res || res.length != 1) throw new Error(`Project upsert returned incorrect rows (${res?.length ?? 0})`);
+
+	const [new_project] = res;
+
+	const project_id = new_project.id;
+
+	// TODO: for project updates, include the changes as a diff in the data
+	if (!exists) {
+		// add CREATE_PROJECT action
+		await addProjectAction({ owner_id: final_owner_id, project_id, type: "CREATE_PROJECT", description: "Created project" });
+	} else if (data.specification) {
+		// add UPDATE_PROJECT action with 'updated specification' description
+		await addProjectAction({ owner_id: final_owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated specification" });
+	} else {
+		// add UPDATE_PROJECT action
+		await addProjectAction({ owner_id: final_owner_id, project_id, type: "UPDATE_PROJECT", description: "Updated project settings" });
+	}
+
+	return new_project;
+}
