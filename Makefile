@@ -5,7 +5,7 @@ run:
 	docker run -p 8080:8080 -v ./database/preview.db:/sqlite.db devpad-app
 
 unit:
-	cd app/api && bun test:unit
+	cd packages/api && bun test:unit
 
 integration:
 	./scripts/run-integration-tests.sh
@@ -13,13 +13,12 @@ integration:
 test: unit integration
 
 clean:
-	rm -rf app/api/dist
-	rm -rf app/dist
-	# clean all .js, .d.ts, .map files in app/src and app/api/src except env.d.ts
-	find app/src app/api/src -name "*.js" -delete
-	find app/src app/api/src -name "*.d.ts" ! -name "env.d.ts" -delete
-	find app/src app/api/src -name "*.map" -delete
+	rm -rf packages/*/dist
+	# clean all .js, .d.ts, .map files in packages except env.d.ts
+	find packages -name "*.js" -delete 2>/dev/null || true
+	find packages -name "*.d.ts" ! -name "env.d.ts" -delete 2>/dev/null || true
+	find packages -name "*.map" -delete 2>/dev/null || true
 
 build-api:
-	cd app && npx tsc --build
-	cd app/api && bun run build
+	cd packages/schema && bun run build
+	cd packages/api && bun run build

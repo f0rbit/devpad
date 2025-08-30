@@ -25,16 +25,12 @@
 		"useUnknownInCatchVariables": true,
 		"allowUnusedLabels": false,
 		"allowUnreachableCode": false,
-		"baseUrl": "..",
+		"baseUrl": ".",
 		"paths": {
-			"@/*": ["*"],
-			"@/database/*": ["database/*"],
-			"@/api/*": ["api/*"]
+			"@/*": ["./src/*"],
+			"@devpad/schema/*": ["../schema/src/*"]
 		}
 	},
 	"include": ["src/**/*"],
-	"exclude": ["node_modules", "dist", "tests", "**/*.test.ts"],
-	"references": [
-		{ "path": ".." }
-	]
+	"exclude": ["node_modules", "dist", "tests", "**/*.test.ts"]
 }

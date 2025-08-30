@@ -1,6 +1,5 @@
-import type { Task } from '@/src/server/tasks';
-import type { UpsertTag, UpsertTodo } from '@/src/server/types';
-import { ApiClient } from '../utils/request';
+import type { TaskWithDetails, UpsertTodo, UpsertTag } from '@devpad/schema';
+import { ApiClient } from '@/utils/request';
 
 export class TasksClient {
   private api_client: ApiClient;
@@ -22,34 +21,34 @@ export class TasksClient {
       query.tag = options.tag_id;
     }
     
-    return this.api_client.get<Task[]>('/tasks', 
+    return this.api_client.get<TaskWithDetails[]>('/tasks', 
       Object.keys(query).length > 0 ? { query } : {}
     );
   }
 
   async get(id: string) {
     // GET /tasks?id=<task_id>
-    return this.api_client.get<Task>('/tasks', {
+    return this.api_client.get<TaskWithDetails>('/tasks', {
       query: { id }
     });
   }
 
   async getByProject(project_id: string) {
     // GET /tasks?project=<project_id>
-    return this.api_client.get<Task[]>('/tasks', {
+    return this.api_client.get<TaskWithDetails[]>('/tasks', {
       query: { project: project_id }
     });
   }
 
   async getByTag(tag_id: string) {
     // GET /tasks?tag=<tag_id>
-    return this.api_client.get<Task[]>('/tasks', {
+    return this.api_client.get<TaskWithDetails[]>('/tasks', {
       query: { tag: tag_id }
     });
   }
 
   async upsert(data: UpsertTodo & { tags?: UpsertTag[] }) {
-    return this.api_client.patch<Task>('/tasks', {
+    return this.api_client.patch<TaskWithDetails>('/tasks', {
       body: data
     });
   }
@@ -62,7 +61,7 @@ export class TasksClient {
 	return this.upsert({ ...data, id: task_id });
   }
 
-  async delete(task: Task) {
+  async delete(task: TaskWithDetails) {
     return this.upsert({ ...task.task, visibility: 'DELETED' });
   }
 }

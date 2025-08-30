@@ -1,6 +1,6 @@
-import type { Tag } from '@/src/server/types';
+import type { Tag } from '@devpad/schema';
 import type { TagCreate } from '../schemas/api';
-import { ApiClient } from '../utils/request';
+import { ApiClient } from '@/utils/request';
 
 export class TagsClient {
 	constructor(api_client: ApiClient) {

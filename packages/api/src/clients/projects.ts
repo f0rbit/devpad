@@ -1,6 +1,5 @@
-import type { Project } from '@/src/server/projects';
-import type { UpsertProject } from '@/src/server/types';
-import { ApiClient } from '../utils/request';
+import type { Project, UpsertProject } from '@devpad/schema';
+import { ApiClient } from '@/utils/request';
 
 export class ProjectsClient {
   private api_client: ApiClient;

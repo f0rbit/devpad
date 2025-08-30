@@ -1,6 +1,4 @@
 import { z } from "zod";
-import type { ActionType, action, tag, todo_updates, tracker_result } from "../../database/schema";
-import type { Task } from "./tasks";
 
 export const upsert_project = z.object({
 	id: z.string().optional(),
@@ -22,8 +20,6 @@ export const upsert_project = z.object({
 	current_version: z.string().nullable(),
 });
 
-export type UpsertProject = z.infer<typeof upsert_project>;
-
 export const upsert_todo = z.object({
 	id: z.string().optional().nullable(),
 	title: z.string().optional(),
@@ -38,34 +34,7 @@ export const upsert_todo = z.object({
 	project_id: z.string().optional().nullable(),
 });
 
-export type UpsertTodo = z.infer<typeof upsert_todo>;
-
-export type UpdateData = {
-	id: string;
-	tag: string;
-	type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
-	data: {
-		old: {
-			text: string;
-			line: number;
-			file: string;
-			context?: string[];
-		};
-		new: {
-			text: string;
-			line: number;
-			file: string;
-			context?: string[];
-		};
-	};
-	task?: Task;
-};
-
 export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
-export type UpdateAction = z.infer<typeof update_action>;
-
-export type TodoUpdate = typeof todo_updates.$inferSelect;
-export type TrackerResult = typeof tracker_result.$inferSelect;
 
 export const ConfigSchema = z.object({
 	tags: z.array(
@@ -77,24 +46,9 @@ export const ConfigSchema = z.object({
 	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
 });
 
-export const TAG_COLOURS = {
-	red: { colour: "#F28B82", text: "#faeeef", border: "#F5A5A5" },
-	green: { colour: "#81C995", text: "#E0F2EA", border: "#A6D7B3" },
-	blue: { colour: "#AECBFA", text: "#f6faff", border: "#BFDDFB" },
-	yellow: { colour: "#FDD663", text: "#fffdf9", border: "#FEE085" },
-	purple: { colour: "#D7AEFB", text: "#F4EBFE", border: "#E2C5FC" },
-	orange: { colour: "#FDBA74", text: "#FEE8D9", border: "#FEC38F" },
-	teal: { colour: "#76DAD1", text: "#E6F7F5", border: "#98E1DC" },
-	pink: { colour: "#FCA8D1", text: "#FEE9F2", border: "#FCC3DE" },
-	gray: { colour: "#B1B1B1", text: "#E6E6E6", border: "#C3C3C3" },
-	cyan: { colour: "#77CFFC", text: "#E7F7FE", border: "#98D9FC" },
-	lime: { colour: "#ddf0bc", text: "#88b47f", border: "#becca5" },
-} as const;
+// TAG_COLOURS moved to types.ts
 
-export type _FetchedTag = typeof tag.$inferSelect;
-export type Tag = Omit<_FetchedTag, "color"> & { color: TagColor | null };
-
-export type TagColor = keyof typeof TAG_COLOURS;
+// Tag types moved to types.ts
 
 export const upsert_tag = z.object({
 	id: z.string().optional(),
@@ -120,7 +74,7 @@ export const upsert_tag = z.object({
 	owner_id: z.string(),
 });
 
-export type UpsertTag = z.infer<typeof upsert_tag>;
+// UpsertTag type moved to types.ts
 
 export const update_user = z.object({
 	id: z.string(),
@@ -130,26 +84,4 @@ export const update_user = z.object({
 	email_verified: z.boolean().optional(),
 });
 
-export type UpdateUser = z.infer<typeof update_user>;
-
-export type TaskView = NonNullable<UpdateUser["task_view"]>;
-
-export type HistoryAction = Omit<typeof action.$inferSelect, "updated_at" | "owner_id" | "type"> & { type: ActionType | "SCAN" };
-
-export type ScanStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED";
-
-export interface ApiClientConfig {
-	baseUrl: string;
-	apiKey: string;
-}
-
-export interface RequestOptions {
-	method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
-	headers?: Record<string, string>;
-	body?: object;
-	query?: Record<string, string>;
-}
-
-export type Nullable<T> = {
-  [P in keyof T]: T[P] | null;
-};
+// All types moved to types.ts
