@@ -5,10 +5,10 @@ run:
 	docker run -p 8080:8080 -v ./database/preview.db:/sqlite.db devpad-app
 
 unit:
-	cd packages/api && bun test:unit
+	bun test unit
 
 integration:
-	cd tests/integration && bun test
+	bun test integration
 
 test: unit integration
 

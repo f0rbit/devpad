@@ -176,7 +176,11 @@ export class ArrayBufferedQueue<T> implements BufferedQueue<T> {
 	}
 
 	list(): T[] {
-		return this._entries.slice(this._head, this._tail);
+		if (this._size === 0) return [];
+		if (this._head < this._tail) {
+			return this._entries.slice(this._head, this._tail);
+		}
+		return this._entries.slice(this._head).concat(this._entries.slice(0, this._tail));
 	}
 
 	add(item: T): void {
