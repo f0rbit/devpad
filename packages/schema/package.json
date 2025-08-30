@@ -1,0 +1,39 @@
+{
+	"name": "@devpad/schema",
+	"version": "0.1.0",
+	"description": "Database schema, validation, and types for Devpad",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./database": {
+			"types": "./dist/database/index.d.ts",
+			"import": "./dist/database/index.js"
+		},
+		"./validation": {
+			"types": "./dist/validation/index.d.ts",
+			"import": "./dist/validation/index.js"
+		},
+		"./types": {
+			"types": "./dist/types/index.d.ts",
+			"import": "./dist/types/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"drizzle-orm": "^0.30.6",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.24",
+		"typescript": "^5.3.3"
+	}
+}

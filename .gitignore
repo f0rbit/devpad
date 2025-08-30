@@ -50,3 +50,5 @@ database/*.db
 *.d.ts
 *.js
 *.d.ts.map
+
+dist
