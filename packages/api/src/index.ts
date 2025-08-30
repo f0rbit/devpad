@@ -13,13 +13,15 @@ export class DevpadApiClient {
 
   constructor(options: { 
     base_url?: string; 
-    api_key: string 
+    api_key: string;
+    max_history_size?: number;
   }) {
     const base_url = options.base_url || 'http://localhost:4321/api/v0';
     
     this.api_client = new ApiClient({
       base_url,
-      api_key: options.api_key
+      api_key: options.api_key,
+      max_history_size: options.max_history_size
     });
 
     this.projects = new ProjectsClient(this.api_client);
@@ -27,6 +29,14 @@ export class DevpadApiClient {
     this.tags = new TagsClient(this.api_client);
     this.auth = new AuthClient(this.api_client);
   }
+
+  public history() {
+    return this.api_client.history();
+  }
 }
+
+// Export types that users might need
+export type { RequestHistoryEntry, RequestOptions } from './utils/request';
+export type { DevpadApiError, NetworkError, AuthenticationError, ValidationError } from './utils/errors';
 
 export default DevpadApiClient;

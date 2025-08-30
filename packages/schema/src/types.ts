@@ -152,3 +152,51 @@ export interface UpdateData {
 	};
 	task?: any; // TODO: Define proper task type relationship
 }
+
+export interface BufferedQueue<T> {
+	latest(): T | null;
+	list(): T[];
+	add(item: T): void;
+	size(): number;
+	clear(): void;
+}
+
+
+export class ArrayBufferedQueue<T> implements BufferedQueue<T> {
+	private _entries: T[] = [];
+	private _head: number = 0;
+	private _tail: number = 0;
+	private _size: number = 0;
+
+	constructor(private _capacity: number) {}
+
+	latest(): T | null {
+		if (this._size === 0) return null;
+		return this._entries[this._tail - 1] ?? null;
+	}
+
+	list(): T[] {
+		return this._entries.slice(this._head, this._tail);
+	}
+
+	add(item: T): void {
+		if (this._size === this._capacity) {
+			this._head = (this._head + 1) % this._capacity;
+		} else {
+			this._size++;
+		}
+		this._entries[this._tail] = item;
+		this._tail = (this._tail + 1) % this._capacity;
+	}
+
+	size(): number {
+		return this._size;
+	}
+
+	clear(): void {
+		this._entries = [];
+		this._head = 0;
+		this._tail = 0;
+		this._size = 0;
+	}
+}
