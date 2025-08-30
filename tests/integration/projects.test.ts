@@ -1,10 +1,17 @@
-import { test, expect, describe, afterAll } from 'bun:test';
-import { test_client } from './setup';
-import { TestDataFactory } from '../fixtures/factories';
-import type { Project } from '@/src/server/projects';
+import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
+import { setupIntegrationTests, teardownIntegrationTests } from './setup';
+import { TestDataFactory } from './factories';
+import type { Project } from '@devpad/schema';
+import type { DevpadApiClient } from '@devpad/api';
 
 describe('projects API client integration', () => {
+	let test_client: DevpadApiClient;
 	const createdProjects: Project[] = [];
+
+	// Setup test environment
+	beforeAll(async () => {
+		test_client = await setupIntegrationTests();
+	});
 
 	// Clean up after all tests
 	afterAll(async () => {
@@ -16,6 +23,8 @@ describe('projects API client integration', () => {
 				console.warn(`Failed to clean up project ${project.id}:`, error);
 			}
 		}
+		
+		await teardownIntegrationTests();
 	});
 
 	test('should get API status', async () => {

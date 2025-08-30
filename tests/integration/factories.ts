@@ -1,10 +1,8 @@
-import type { Project } from '@/src/server/projects';
-import type { Nullable, Tag, UpsertProject, UpsertTag, UpsertTodo } from '@/src/server/types';
-import type { _FetchedTask } from '@/src/server/tasks';
-import { TEST_USER_ID } from '../integration/setup';
+import type { Project, Tag, Task, UpsertProject, UpsertTag, UpsertTodo, Nullable } from '@devpad/schema';
+import { TEST_USER_ID } from './setup';
 
-type UpsertTaskOverrides = Nullable<UpsertTodo> & Pick<UpsertTodo, 'id' | 'owner_id' | 'title' | 'progress' | 'priority' | 'visibility' | 'project_id'>;
-type UpsertProjectOverrides = Nullable<UpsertProject> & Pick<UpsertProject, 'id' | 'owner_id' | 'description' | 'status'>;
+type UpsertTaskOverrides = Nullable<UpsertTodo> & Partial<Pick<UpsertTodo, 'id' | 'owner_id' | 'title' | 'progress' | 'priority' | 'visibility' | 'project_id'>>;
+type UpsertProjectOverrides = Nullable<UpsertProject> & Partial<Pick<UpsertProject, 'id' | 'owner_id' | 'description' | 'status'>>;
 
 export class TestDataFactory {
 	private static counter = 0;
@@ -37,7 +35,7 @@ export class TestDataFactory {
 		};
 	}
 
-	static createTask(overrides: UpsertTaskOverrides): _FetchedTask {
+	static createTask(overrides: UpsertTaskOverrides): Task {
 		const id = this.getNextId();
 		return {
 			title: `Test Task ${id}`,

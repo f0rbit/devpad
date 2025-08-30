@@ -12,7 +12,4 @@ describe('ProjectsClient unit tests', () => {
     const projects_client = new ProjectsClient(api_client);
     expect(projects_client).toBeInstanceOf(ProjectsClient);
   });
-
-  // Note: More unit tests would test individual methods without making HTTP requests
-  // This would require either dependency injection or refactoring to test logic in isolation
 });

@@ -1,12 +1,18 @@
-import { test, expect, describe, afterAll } from 'bun:test';
-import { test_client, TEST_USER_ID } from './setup';
-import { TestDataFactory } from '../fixtures/factories';
-import type { Project } from '@/src/server/projects';
-import type { _FetchedTask, Task } from '@/src/server/tasks';
+import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
+import { setupIntegrationTests, teardownIntegrationTests, TEST_USER_ID } from './setup';
+import { TestDataFactory } from './factories';
+import type { Project, TaskWithDetails } from '@devpad/schema';
+import type { DevpadApiClient } from '@devpad/api';
 
 describe('tasks API client integration', () => {
+	let test_client: DevpadApiClient;
 	const createdProjects: Project[] = [];
-	const createdTasks: Task[] = [];
+	const createdTasks: TaskWithDetails[] = [];
+
+	// Setup test environment
+	beforeAll(async () => {
+		test_client = await setupIntegrationTests();
+	});
 
 	// Clean up after all tests
 	afterAll(async () => {
@@ -27,6 +33,8 @@ describe('tasks API client integration', () => {
 				console.warn(`Failed to clean up project ${project.id}:`, error);
 			}
 		}
+		
+		await teardownIntegrationTests();
 	});
 
 	test('should list tasks', async () => {
@@ -78,9 +86,9 @@ describe('tasks API client integration', () => {
 			priority: 'MEDIUM',
 			visibility: 'PRIVATE',
 		});
-		const tags = TestDataFactory.createTestTags(TEST_USER_ID, 2);
+		// const tags = TestDataFactory.createTestTags(TEST_USER_ID, 2);
 
-		const createdTask = await test_client.tasks.create({ ...taskData, tags });
+		const createdTask = await test_client.tasks.create(taskData);
 		createdTasks.push(createdTask);
 
 		expect(createdTask.task.title).toBe(taskData.title);
@@ -199,7 +207,7 @@ describe('tasks API client integration', () => {
 		expect(Array.isArray(projectTasks)).toBe(true);
 		expect(projectTasks.length).toBeGreaterThanOrEqual(2);
 
-		const taskIds = projectTasks.map(t => t.task.id);
+		const taskIds = projectTasks.map((t: TaskWithDetails) => t.task.id);
 		expect(taskIds).toContain(task1.task.id);
 		expect(taskIds).toContain(task2.task.id);
 	});

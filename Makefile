@@ -8,7 +8,7 @@ unit:
 	cd packages/api && bun test:unit
 
 integration:
-	./scripts/run-integration-tests.sh
+	cd tests/integration && bun test
 
 test: unit integration
 
