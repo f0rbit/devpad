@@ -20,16 +20,23 @@ let testClient: DevpadApiClient | null = null;
 export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 	console.log('🧪 Setting up integration test environment...');
 	
+	// Set environment variables early
+	const baseDir = path.resolve(process.cwd());
+	const dbPath = path.join(baseDir, 'database', 'test.db');
+	process.env.NODE_ENV = 'test';
+	process.env.DATABASE_URL = `sqlite://${dbPath}`;
+	process.env.DATABASE_FILE = dbPath;
+	
 	// Only setup database and server once globally
 	if (!astroServer) {
 		// Setup test database
-		const dbPath = await setupTestDatabase();
+		await setupTestDatabase();
 		
 		// Start Astro server
 		await startAstroServer();
 		
 		// Create test user and API key (only once)
-		testApiKey = await createTestUser(dbPath);
+		testApiKey = await createTestUser(process.env.DATABASE_FILE!);
 	} else {
 		console.log('✅ Using existing Astro server and test database');
 	}
@@ -49,9 +56,36 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 }
 
 export async function teardownIntegrationTests(): Promise<void> {
-	// Only clean up data when all tests are done, keep server running between tests
-	console.log('🧹 Test completed, server remains running for next test');
+	// Clean up server after each test file (but keep database for next test)
+	console.log('🧹 Test completed, stopping server');
+	
+	// Stop Astro server
+	if (astroServer) {
+		astroServer.kill('SIGTERM');
+		astroServer = null;
+		testApiKey = null;
+		testClient = null;
+	}
+	
+	console.log('✅ Server stopped');
 }
+
+// Set up process exit handler to cleanup database when test process ends
+process.on('exit', () => {
+	if (astroServer) {
+		astroServer.kill('SIGTERM');
+	}
+});
+
+process.on('SIGINT', async () => {
+	await finalCleanup();
+	process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+	await finalCleanup();
+	process.exit(0);
+});
 
 // Export function to manually cleanup server when all tests are done
 export async function finalCleanup(): Promise<void> {
@@ -69,9 +103,8 @@ export async function finalCleanup(): Promise<void> {
 	console.log('✅ Final cleanup completed');
 }
 
-async function setupTestDatabase(): Promise<string> {
-	const baseDir = path.resolve(process.cwd());
-	const dbPath = path.join(baseDir, 'database', 'test.db');
+async function setupTestDatabase(): Promise<void> {
+	const dbPath = process.env.DATABASE_FILE!;
 	
 	// Ensure database directory exists
 	const dbDir = path.dirname(dbPath);
@@ -84,24 +117,19 @@ async function setupTestDatabase(): Promise<string> {
 		fs.unlinkSync(dbPath);
 	}
 	
-	// Set environment variables
-	process.env.NODE_ENV = 'test';
-	process.env.DATABASE_URL = `sqlite://${dbPath}`;
-	process.env.DATABASE_FILE = dbPath;
-	
 	console.log('🗄️ Setting up test database at:', dbPath);
 	
 	// Run migrations
 	const sqlite = new Database(dbPath);
 	const db = drizzle(sqlite, { schema });
 	
+	const baseDir = path.resolve(process.cwd());
 	const migrationsFolder = path.join(baseDir, 'packages', 'schema', 'src', 'database', 'drizzle');
 	migrate(db, { migrationsFolder });
 	
 	sqlite.close();
 	
 	console.log('✅ Test database setup complete');
-	return dbPath;
 }
 
 async function startAstroServer(): Promise<void> {
@@ -116,7 +144,9 @@ async function startAstroServer(): Promise<void> {
 		stdio: 'pipe',
 		env: { 
 			...process.env,
-			NODE_ENV: 'test'
+			NODE_ENV: 'test',
+			DATABASE_FILE: process.env.DATABASE_FILE,
+			DATABASE_URL: process.env.DATABASE_URL
 		}
 	});
 	
