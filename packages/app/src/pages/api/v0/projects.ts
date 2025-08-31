@@ -93,8 +93,9 @@ export async function PATCH(context: APIContext) {
 	}
 
 	try {
-		// Note: API key based auth doesn't have GitHub access token, so GitHub specification fetching is disabled
-		const new_project = await upsertProject(data, user_id);
+		// Get GitHub access token if available for specification fetching
+		const access_token = context.locals.session?.access_token;
+		const new_project = await upsertProject(data, user_id, access_token);
 
 		// return the project data
 		return new Response(JSON.stringify(new_project));

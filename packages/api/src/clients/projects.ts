@@ -1,5 +1,5 @@
-import type { Project, UpsertProject } from '@devpad/schema';
-import { ApiClient } from '@/utils/request';
+import type { Project, UpsertProject, SaveConfigRequest } from '@devpad/schema';
+import { ApiClient } from '../utils/request';
 
 export class ProjectsClient {
   private api_client: ApiClient;
@@ -48,5 +48,23 @@ export class ProjectsClient {
   async delete(data: Omit<UpsertProject, 'archived'>) {
     // For now, mark as archived using upsert
     return this.upsert({ ...data, deleted: true });
+  }
+
+  async saveConfig(request: SaveConfigRequest): Promise<void> {
+    return this.api_client.patch<void>('/projects/save_config', {
+      body: request
+    });
+  }
+
+  async fetchSpecification(projectId: string): Promise<string> {
+    return this.api_client.get<string>('/projects/fetch_spec', {
+      query: { project_id: projectId }
+    });
+  }
+
+  async upsertProject(data: UpsertProject): Promise<Project> {
+    return this.api_client.patch<Project>('/projects', {
+      body: data
+    });
   }
 }

@@ -76,6 +76,24 @@ export const upsert_tag = z.object({
 
 // UpsertTag type moved to types.ts
 
+export const project_config = z.object({
+	tags: z.array(
+		z.object({
+			name: z.string(),
+			match: z.array(z.string()),
+		}),
+	),
+	ignore: z.array(z.string()),
+});
+
+export const save_config_request = z.object({
+	id: z.string(),
+	config: project_config,
+	scan_branch: z.string().optional(),
+});
+
+export const save_tags_request = z.array(upsert_tag);
+
 export const update_user = z.object({
 	id: z.string(),
 	name: z.string().optional(),

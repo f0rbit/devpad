@@ -2,19 +2,18 @@ import type { APIContext } from "astro";
 import { z } from "zod";
 import { db, project, tag_config, ignore_path } from "@devpad/schema/database";
 import { eq, and, inArray } from "drizzle-orm";
-import { ConfigSchema } from "../../../server/types";
-import { getProjectById } from "../../../server/projects";
-import { upsertTag } from "../../../server/tags";
-import { getAuthedUser } from "../../../server/keys";
+import { ConfigSchema } from "../../../../server/types";
+import { getProjectById } from "../../../../server/projects";
+import { upsertTag } from "../../../../server/tags";
+import { getAuthedUser } from "../../../../server/keys";
 
-const schema = z.object({
+const save_config_schema = z.object({
 	id: z.string(),
 	config: ConfigSchema,
 	scan_branch: z.string().optional(),
 });
 
 export async function PATCH(context: APIContext) {
-	// Validate that the user is authenticated via API key
 	const { user_id, error: auth_error } = await getAuthedUser(context);
 	if (auth_error) {
 		return new Response(auth_error, { status: 401 });
@@ -25,8 +24,7 @@ export async function PATCH(context: APIContext) {
 
 	const body = await context.request.json();
 
-	// Validate input using Zod
-	const parsed = schema.safeParse(body);
+	const parsed = save_config_schema.safeParse(body);
 	if (!parsed.success) {
 		console.warn(parsed.error);
 		return new Response(parsed.error.message, { status: 400 });
@@ -34,20 +32,20 @@ export async function PATCH(context: APIContext) {
 
 	const { data } = parsed;
 
-	// Fetch the project to ensure user authorization
+	// Verify project ownership
 	const { project: found, error } = await getProjectById(data.id);
 	if (error) return new Response(error, { status: 500 });
 	if (!found) return new Response("Project not found", { status: 404 });
 	if (found.owner_id != user_id) return new Response("Unauthorized", { status: 401 });
 
 	try {
-		// get current tags
+		// Get current tags
 		const current_tags = await db.select({ id: tag_config.tag_id }).from(tag_config).where(eq(tag_config.project_id, data.id));
+		
 		// Upsert Tags
 		let tag_ids: string[] = [];
 		if (data.config.tags.length > 0) {
 			const tag_promises = data.config.tags.map(async (tag) => {
-				// TODO: pick random color from set of presets
 				const tag_id = await upsertTag({ owner_id: user_id, title: tag.name, deleted: false, color: null, render: true });
 
 				// Upsert tag matches into `tag_config`
@@ -78,7 +76,7 @@ export async function PATCH(context: APIContext) {
 			tag_ids = await Promise.all(tag_promises);
 		}
 
-		// remove any old tags that arent in tag_ids
+		// Remove any old tags that aren't in tag_ids
 		const tags_to_remove = current_tags.filter((t) => !tag_ids.includes(t.id)).map((t) => t.id);
 
 		if (tags_to_remove.length > 0) {
@@ -102,13 +100,12 @@ export async function PATCH(context: APIContext) {
 		}
 
 		if (data.scan_branch) {
-			// Update project with the scan_branch and save the configuration
 			await db.update(project).set({ scan_branch: data.scan_branch! }).where(eq(project.id, data.id));
 		}
 
 		return new Response(null, { status: 200 });
 	} catch (err) {
 		console.error("Error saving configuration:", err);
-		return new Response(null, { status: 500 });
+		return new Response("Error saving configuration", { status: 500 });
 	}
 }

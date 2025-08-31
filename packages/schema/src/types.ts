@@ -19,7 +19,10 @@ import type {
 	upsert_project, 
 	upsert_todo, 
 	upsert_tag,
-	update_action 
+	update_action,
+	project_config,
+	save_config_request,
+	save_tags_request
 } from './validation.js';
 
 // Database table select types (inferred from Drizzle schema)
@@ -57,6 +60,9 @@ export type UpsertProject = z.infer<typeof upsert_project>;
 export type UpsertTodo = z.infer<typeof upsert_todo>;
 export type UpsertTag = z.infer<typeof upsert_tag>;
 export type UpdateAction = z.infer<typeof update_action>;
+export type ProjectConfig = z.infer<typeof project_config>;
+export type SaveConfigRequest = z.infer<typeof save_config_request>;
+export type SaveTagsRequest = z.infer<typeof save_tags_request>;
 
 // Utility/combination types for API responses and complex data structures
 export interface TaskWithDetails {

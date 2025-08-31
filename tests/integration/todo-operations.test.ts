@@ -30,8 +30,8 @@ describe('todo operations API integration', () => {
 			end_time: null
 		};
 
-		const response = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const response = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${test_client.getApiKey()}`
@@ -80,8 +80,8 @@ describe('todo operations API integration', () => {
 			}
 		];
 
-		const response = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const response = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${test_client.getApiKey()}`
@@ -111,8 +111,8 @@ describe('todo operations API integration', () => {
 			priority: 'LOW' as const
 		};
 
-		const createResponse = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const createResponse = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${test_client.getApiKey()}`
@@ -133,8 +133,8 @@ describe('todo operations API integration', () => {
 			priority: 'HIGH' as const
 		};
 
-		const updateResponse = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const updateResponse = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${test_client.getApiKey()}`
@@ -168,7 +168,7 @@ describe('todo operations API integration', () => {
 			}
 		];
 
-		const response = await fetch('http://localhost:4321/api/todo/save_tags', {
+		const response = await fetch('http://localhost:4321/api/v0/tasks/save_tags', {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
@@ -189,8 +189,8 @@ describe('todo operations API integration', () => {
 
 	test('should handle authorization for todo operations', async () => {
 		// Test unauthorized access to upsert todo
-		const response = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const response = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json'
 				// No authorization header
@@ -204,7 +204,7 @@ describe('todo operations API integration', () => {
 		expect(response.status).toBe(401);
 
 		// Test unauthorized access to save tags
-		const tagsResponse = await fetch('http://localhost:4321/api/todo/save_tags', {
+		const tagsResponse = await fetch('http://localhost:4321/api/v0/tasks/save_tags', {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json'
@@ -224,8 +224,8 @@ describe('todo operations API integration', () => {
 			progress: 'INVALID_STATUS' // Invalid progress value
 		};
 
-		const response = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const response = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${test_client.getApiKey()}`
@@ -246,7 +246,7 @@ describe('todo operations API integration', () => {
 			}
 		];
 
-		const response = await fetch('http://localhost:4321/api/todo/save_tags', {
+		const response = await fetch('http://localhost:4321/api/v0/tasks/save_tags', {
 			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
@@ -266,8 +266,8 @@ describe('todo operations API integration', () => {
 			progress: 'UNSTARTED' as const
 		};
 
-		const response = await fetch('http://localhost:4321/api/todo/upsert', {
-			method: 'PUT',
+		const response = await fetch('http://localhost:4321/api/v0/tasks', {
+			method: 'PATCH',
 			headers: {
 				'Content-Type': 'application/json',
 				'Authorization': `Bearer ${test_client.getApiKey()}`

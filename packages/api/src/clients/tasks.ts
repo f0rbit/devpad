@@ -1,5 +1,5 @@
 import type { TaskWithDetails, UpsertTodo, UpsertTag } from '@devpad/schema';
-import { ApiClient } from '@/utils/request';
+import { ApiClient } from '../utils/request';
 
 export class TasksClient {
   private api_client: ApiClient;
@@ -53,6 +53,12 @@ export class TasksClient {
     });
   }
 
+  async upsertTodo(data: UpsertTodo & { tags?: UpsertTag[] }) {
+    return this.api_client.patch<TaskWithDetails>('/tasks', {
+      body: data
+    });
+  }
+
   async create(data: Omit<UpsertTodo, 'task_id'> & { tags?: UpsertTag[] }) {
     return this.upsert(data)
   }
@@ -63,5 +69,11 @@ export class TasksClient {
 
   async delete(task: TaskWithDetails) {
     return this.upsert({ ...task.task, visibility: 'DELETED' });
+  }
+
+  async saveTags(tags: UpsertTag[]): Promise<UpsertTag[]> {
+    return this.api_client.patch<UpsertTag[]>('/tasks/save_tags', {
+      body: tags
+    });
   }
 }
