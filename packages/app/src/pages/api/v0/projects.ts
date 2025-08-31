@@ -4,9 +4,8 @@
 // ?name=<project_name>
 // this is a astro api endpoint
 import type { APIContext } from "astro";
-import { getProject, getProjectById, getUserProjects, upsertProject } from "../../../server/projects";
-import { getAuthedUser } from "../../../server/keys";
-import { upsert_project } from "../../../server/types";
+import { getProject, getProjectById, getUserProjects, upsertProject, getAuthedUser } from "@devpad/core";
+import { upsert_project } from "@devpad/schema";
 
 export async function GET(context: APIContext) {
 	const { user_id, error } = await getAuthedUser(context);

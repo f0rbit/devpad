@@ -5,9 +5,8 @@
 // optional ?project=<project_uuid>
 
 import type { APIContext } from "astro";
-import { getProjectTasks, getTask, getTasksByTag, getUserTasks, upsertTask } from "../../../server/tasks";
-import { getAuthedUser } from "../../../server/keys";
-import { upsert_todo, upsert_tag } from "../../../server/types";
+import { getProjectTasks, getTask, getTasksByTag, getUserTasks, upsertTask, getAuthedUser } from "@devpad/core";
+import { upsert_todo, upsert_tag } from "@devpad/schema";
 import { z } from "zod";
 
 export async function GET(context: APIContext) {

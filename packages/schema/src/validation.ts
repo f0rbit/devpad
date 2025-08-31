@@ -46,9 +46,6 @@ export const ConfigSchema = z.object({
 	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
 });
 
-// TAG_COLOURS moved to types.ts
-
-// Tag types moved to types.ts
 
 export const upsert_tag = z.object({
 	id: z.string().optional(),
@@ -73,8 +70,6 @@ export const upsert_tag = z.object({
 	render: z.boolean().optional().default(true),
 	owner_id: z.string(),
 });
-
-// UpsertTag type moved to types.ts
 
 export const project_config = z.object({
 	tags: z.array(
@@ -102,4 +97,12 @@ export const update_user = z.object({
 	email_verified: z.boolean().optional(),
 });
 
-// All types moved to types.ts
+export const config_schema = z.object({
+	tags: z.array(
+		z.object({
+			name: z.string(),
+			match: z.array(z.string()),
+		}),
+	),
+	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
+});

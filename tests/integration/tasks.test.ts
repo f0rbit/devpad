@@ -2,7 +2,7 @@ import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
 import { setupIntegrationTests, teardownIntegrationTests, TEST_USER_ID } from './setup';
 import { TestDataFactory } from './factories';
 import type { Project, TaskWithDetails } from '@devpad/schema';
-import type { DevpadApiClient } from '@devpad/api';
+import { DevpadApiClient } from '@devpad/api';
 
 describe('tasks API client integration', () => {
 	let test_client: DevpadApiClient;

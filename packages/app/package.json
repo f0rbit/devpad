@@ -14,6 +14,7 @@
 		"push": "bunx --bun drizzle-kit push:sqlite"
 	},
 	"dependencies": {
+		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@astrojs/check": "0.9.4",
 		"@astrojs/node": "9.0.2",

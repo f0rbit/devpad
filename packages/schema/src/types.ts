@@ -22,7 +22,9 @@ import type {
 	update_action,
 	project_config,
 	save_config_request,
-	save_tags_request
+	save_tags_request,
+	update_user,
+	config_schema
 } from './validation.js';
 
 // Database table select types (inferred from Drizzle schema)
@@ -156,8 +158,11 @@ export interface UpdateData {
 			context?: string[];
 		};
 	};
-	task?: any; // TODO: Define proper task type relationship
+	task?: TaskWithDetails;
 }
+
+export type UpdateUser = z.infer<typeof update_user>;
+export type ConfigSchemaType = z.infer<typeof config_schema>;
 
 export interface BufferedQueue<T> {
 	latest(): T | null;
