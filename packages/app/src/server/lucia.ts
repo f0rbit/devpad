@@ -1,7 +1,6 @@
 import { DrizzleSQLiteAdapter } from "@lucia-auth/adapter-drizzle";
 import { Lucia } from "lucia";
-import { db } from "../../database/db";
-import { session, user } from "../../database/schema";
+import { db, session, user } from "@devpad/schema/database";
 import type { TaskView } from "./types";
 
 // @ts-ignore

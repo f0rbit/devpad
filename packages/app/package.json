@@ -5,7 +5,7 @@
 	"scripts": {
 		"dev": "bunx --bun astro dev",
 		"start": "bun --bun dist/server/entry.mjs",
-		"migrate": "bun database/migrate.ts",
+		"migrate": "bun ../schema/src/database/migrate.ts",
 		"schema": "bunx drizzle-kit generate:sqlite --schema=../schema/src/database/schema.ts --out=../schema/src/database/drizzle",
 		"build": "bun --bun astro build",
 		"check": "bun --bun astro check",

@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 
-import { TEST_USER_ID } from '@/api/tests/integration/setup';
-import { db } from '../database/db';
-import { user, api_key } from '../database/schema';
+const TEST_USER_ID = 'test-user-12345';
+import { db, user, api_key } from '@devpad/schema/database';
 import crypto from 'crypto';
 
 async function createTestUser() {

@@ -1,6 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db } from "../../database/db";
-import { action, ignore_path, project, tag, tag_config, todo_updates, tracker_result, type ActionType } from "../../database/schema";
+import { db, action, ignore_path, project, tag, tag_config, todo_updates, tracker_result, type ActionType } from "@devpad/schema/database";
 import type { TodoUpdate, TrackerResult, UpsertProject } from "./types";
 
 export async function getUserProjects(user_id: string) {

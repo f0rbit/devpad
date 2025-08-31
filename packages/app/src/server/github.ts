@@ -1,6 +1,5 @@
 import { GitHub } from "arctic";
-import { db } from "../../database/db";
-import { commit_detail } from "../../database/schema";
+import { db, commit_detail } from "@devpad/schema/database";
 import { inArray } from "drizzle-orm";
 
 export const github = new GitHub(Bun.env.GITHUB_CLIENT_ID!, Bun.env.GITHUB_CLIENT_SECRET!);

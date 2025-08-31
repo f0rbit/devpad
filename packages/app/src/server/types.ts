@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ActionType, action, tag, todo_updates, tracker_result } from "../../database/schema";
+import type { ActionType, action, tag, todo_updates, tracker_result } from "@devpad/schema/database";
 import type { Task } from "./tasks";
 
 export const upsert_project = z.object({

@@ -1,6 +1,5 @@
 import { eq, inArray, isNull, and, or } from "drizzle-orm";
-import { tag, task_tag } from "../../database/schema";
-import { db } from "../../database/db";
+import { db, tag, task_tag } from "@devpad/schema/database";
 import type { Tag, UpsertTag } from "./types";
 
 export async function getUserTags(user_id: string) {

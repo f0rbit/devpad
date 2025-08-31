@@ -1,7 +1,6 @@
 import type { APIContext } from "astro";
-import { db } from "../../../../database/db";
 import { and, desc, eq } from "drizzle-orm";
-import { codebase_tasks, project, todo_updates, tracker_result } from "../../../../database/schema";
+import { db, codebase_tasks, project, todo_updates, tracker_result } from "@devpad/schema/database";
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
 import { getProjectConfig, type ProjectConfig } from "../../../server/projects";

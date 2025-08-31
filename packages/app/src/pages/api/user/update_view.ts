@@ -1,7 +1,6 @@
 import type { APIContext } from "astro";
 import { update_user } from "../../../server/types";
-import { db } from "../../../../database/db";
-import { user } from "../../../../database/schema";
+import { db, user } from "@devpad/schema/database";
 import { eq } from "drizzle-orm";
 
 export async function PATCH(context: APIContext) {

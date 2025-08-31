@@ -1,11 +1,10 @@
 import { OAuth2RequestError } from "arctic";
 
 import type { APIContext } from "astro";
-import { db } from "../../../../database/db";
 import { github } from "../../../server/github";
 import { lucia } from "../../../server/lucia";
 import { eq } from "drizzle-orm";
-import { user } from "../../../../database/schema";
+import { db, user } from "@devpad/schema/database";
 
 export async function GET(context: APIContext): Promise<Response> {
 	const code = context.url.searchParams.get("code");

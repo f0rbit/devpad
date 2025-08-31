@@ -1,4 +1,3 @@
-import { type ChildProcess, spawn } from 'child_process';
 import { Database } from 'bun:sqlite';
 import { drizzle } from 'drizzle-orm/bun-sqlite';
 import { migrate } from 'drizzle-orm/bun-sqlite/migrator';
@@ -14,24 +13,30 @@ export const TEST_USER_ID = 'test-user-12345';
 export const TEST_BASE_URL = 'http://localhost:4321/api/v0';
 
 // Global test state
-let astroProcess: ChildProcess | null = null;
+let astroServer: any = null;
 let testApiKey: string | null = null;
 let testClient: DevpadApiClient | null = null;
 
 export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 	console.log('🧪 Setting up integration test environment...');
 	
-	// Kill any existing processes on port 4321
-	await killProcessOnPort(4321);
+	// Only setup database and server once globally
+	if (!astroServer) {
+		// Setup test database
+		const dbPath = await setupTestDatabase();
+		
+		// Start Astro server
+		await startAstroServer();
+		
+		// Create test user and API key (only once)
+		testApiKey = await createTestUser(dbPath);
+	} else {
+		console.log('✅ Using existing Astro server and test database');
+	}
 	
-	// Setup test database
-	const dbPath = await setupTestDatabase();
-	
-	// Start Astro dev server
-	await startAstroServer();
-	
-	// Create test user and API key
-	testApiKey = await createTestUser(dbPath);
+	if (!testApiKey) {
+		throw new Error('Test API key not available');
+	}
 	
 	// Create and return test client
 	testClient = new DevpadApiClient({
@@ -44,43 +49,24 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 }
 
 export async function teardownIntegrationTests(): Promise<void> {
-	console.log('🧹 Tearing down integration test environment...');
+	// Only clean up data when all tests are done, keep server running between tests
+	console.log('🧹 Test completed, server remains running for next test');
+}
+
+// Export function to manually cleanup server when all tests are done
+export async function finalCleanup(): Promise<void> {
+	console.log('🧹 Final cleanup - stopping server and cleaning database...');
 	
 	// Stop Astro server
-	if (astroProcess) {
-		astroProcess.kill('SIGTERM');
-		astroProcess = null;
+	if (astroServer) {
+		astroServer.kill('SIGTERM');
+		astroServer = null;
 	}
 	
 	// Clean up test database
 	await cleanupTestDatabase();
 	
-	console.log('✅ Integration test environment cleaned up');
-}
-
-async function killProcessOnPort(port: number): Promise<void> {
-	try {
-		const proc = Bun.spawn(['lsof', '-ti', `:${port}`], {
-			stdout: 'pipe'
-		});
-		const output = await new Response(proc.stdout).text();
-		await proc.exited;
-		
-		if (output.trim()) {
-			const pids = output.trim().split('\n');
-			for (const pid of pids) {
-				if (pid) {
-					const killProc = Bun.spawn(['kill', '-9', pid]);
-					await killProc.exited;
-				}
-			}
-		}
-	} catch (error) {
-		// Process might not exist, which is fine
-	}
-	
-	// Give time for port to be released
-	await new Promise(resolve => setTimeout(resolve, 2000));
+	console.log('✅ Final cleanup completed');
 }
 
 async function setupTestDatabase(): Promise<string> {
@@ -109,7 +95,7 @@ async function setupTestDatabase(): Promise<string> {
 	const sqlite = new Database(dbPath);
 	const db = drizzle(sqlite, { schema });
 	
-	const migrationsFolder = path.join(baseDir, 'packages', 'app', 'database', 'drizzle');
+	const migrationsFolder = path.join(baseDir, 'packages', 'schema', 'src', 'database', 'drizzle');
 	migrate(db, { migrationsFolder });
 	
 	sqlite.close();
@@ -121,56 +107,46 @@ async function setupTestDatabase(): Promise<string> {
 async function startAstroServer(): Promise<void> {
 	console.log('🚀 Starting Astro dev server...');
 	
-	const appDir = path.join(process.cwd(), 'packages', 'app');
-	const logPath = path.join(process.cwd(), 'astro-server.log');
+	const appDir = path.resolve(path.join(__dirname, '..', '..', 'packages', 'app'));
 	
-	// Start Astro server
-	astroProcess = spawn('bun', ['dev'], {
+	const { spawn } = await import('child_process');
+	
+	astroServer = spawn('bun', ['dev', '--port', '4321'], {
 		cwd: appDir,
-		stdio: ['ignore', 'pipe', 'pipe'],
-		env: { ...process.env }
+		stdio: 'pipe',
+		env: { 
+			...process.env,
+			NODE_ENV: 'test'
+		}
 	});
 	
-	// Pipe output to log file
-	const logStream = fs.createWriteStream(logPath);
-	astroProcess.stdout?.pipe(logStream);
-	astroProcess.stderr?.pipe(logStream);
+	// Handle process errors
+	astroServer.on('error', (error: any) => {
+		console.error('❌ Astro server error:', error);
+	});
 	
-	// Wait for server to be ready
-	const maxWait = 30;
-	let waitCount = 0;
-	let serverStarted = false;
+	// Wait for server to be ready by polling the endpoint
+	let attempts = 0;
+	const maxAttempts = 30;
 	
-	while (waitCount < maxWait && !serverStarted) {
-		// Check if process is still running
-		if (astroProcess.exitCode !== null) {
-			const logs = fs.readFileSync(logPath, 'utf-8');
-			throw new Error(`Astro server process died unexpectedly. Logs:\n${logs}`);
-		}
-		
-		// Try to connect to server
+	while (attempts < maxAttempts) {
 		try {
 			const response = await fetch(`${TEST_BASE_URL}`, { 
-				signal: AbortSignal.timeout(5000) 
+				signal: AbortSignal.timeout(2000) 
 			});
 			if (response.ok) {
-				serverStarted = true;
-				break;
+				console.log('✅ Astro dev server started and responding');
+				return;
 			}
 		} catch (error) {
-			// Server not ready yet
+			// Server not ready yet, continue waiting
 		}
 		
-		await new Promise(resolve => setTimeout(resolve, 2000));
-		waitCount++;
+		await new Promise(resolve => setTimeout(resolve, 1000));
+		attempts++;
 	}
 	
-	if (!serverStarted) {
-		const logs = fs.readFileSync(logPath, 'utf-8');
-		throw new Error(`Astro server did not start within ${maxWait} seconds. Logs:\n${logs}`);
-	}
-	
-	console.log('✅ Astro dev server started');
+	throw new Error(`Astro server did not start within ${maxAttempts} seconds`);
 }
 
 async function createTestUser(dbPath: string): Promise<string> {

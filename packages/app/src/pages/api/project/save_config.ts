@@ -1,7 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { project, tag_config, ignore_path } from "../../../../database/schema";
-import { db } from "../../../../database/db";
+import { db, project, tag_config, ignore_path } from "@devpad/schema/database";
 import { eq, and, inArray } from "drizzle-orm";
 import { ConfigSchema } from "../../../server/types";
 import { getProjectById } from "../../../server/projects";

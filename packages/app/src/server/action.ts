@@ -1,5 +1,4 @@
-import { db } from "../../database/db";
-import { action, todo_updates, type ActionType } from "../../database/schema";
+import { db, action, todo_updates, type ActionType } from "@devpad/schema/database";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "./types";
 import { getProjectById, getUserProjectMap } from "./projects";

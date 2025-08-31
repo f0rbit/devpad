@@ -1,7 +1,6 @@
 import type { APIContext } from "astro";
 import { randomBytes } from "crypto";
-import { api_key } from "../../../../database/schema";
-import { db } from "../../../../database/db";
+import { db, api_key } from "@devpad/schema/database";
 
 function getKey(size = 32, format: BufferEncoding = "hex") {
 	return randomBytes(size).toString(format);

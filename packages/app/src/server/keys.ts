@@ -1,6 +1,5 @@
 import { eq } from "drizzle-orm";
-import { db } from "../../database/db";
-import { api_key } from "../../database/schema";
+import { db, api_key } from "@devpad/schema/database";
 import type { APIContext } from "astro";
 
 export async function getAPIKeys(user_id: string) {

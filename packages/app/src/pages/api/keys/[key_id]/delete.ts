@@ -1,6 +1,5 @@
 import type { APIContext } from "astro";
-import { api_key } from "../../../../../database/schema";
-import { db } from "../../../../../database/db";
+import { db, api_key } from "@devpad/schema/database";
 import { eq } from "drizzle-orm";
 
 export async function DELETE(context: APIContext) {

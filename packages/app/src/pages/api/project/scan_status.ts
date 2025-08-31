@@ -1,7 +1,6 @@
 import type { APIContext } from "astro";
 import { z } from "zod";
-import { db } from "../../../../database/db";
-import { codebase_tasks, project, task, todo_updates, tracker_result } from "../../../../database/schema";
+import { db, codebase_tasks, project, task, todo_updates, tracker_result } from "@devpad/schema/database";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { update_action, type UpdateData } from "../../../server/types";
 import { addTaskAction, getUpsertedTaskMap } from "../../../server/tasks";
