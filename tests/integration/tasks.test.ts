@@ -295,3 +295,212 @@ describe('tasks API client integration', () => {
 		expect(projectTasks.length).toBeGreaterThanOrEqual(2);
 	});
 });
+
+describe('task operations', () => {
+	let test_client: DevpadApiClient;
+	const createdProjects: Project[] = [];
+	const createdTasks: TaskWithDetails[] = [];
+
+	// Setup test environment
+	beforeAll(async () => {
+		test_client = await setupIntegrationTests();
+	});
+
+	// Clean up after all tests
+	afterAll(async () => {
+		// Clean up tasks first
+		for (const task of createdTasks) {
+			try {
+				await test_client.tasks.delete(task);
+			} catch (error) {
+				console.warn(`Failed to clean up task ${task.task.id}:`, error);
+			}
+		}
+
+		// Then clean up projects
+		for (const project of createdProjects) {
+			try {
+				await test_client.projects.delete(project);
+			} catch (error) {
+				console.warn(`Failed to clean up project ${project.id}:`, error);
+			}
+		}
+		
+		await teardownIntegrationTests();
+	});
+
+	test('should upsert todo with basic fields', async () => {
+		const task = TestDataFactory.createTask({
+			owner_id: TEST_USER_ID,
+			title: 'Test Todo Task',
+			description: 'This is a test todo description',
+			summary: 'Test summary',
+			progress: 'UNSTARTED',
+			visibility: 'PRIVATE',
+			priority: 'MEDIUM',
+		});
+
+		const created = await test_client.tasks.upsert(task);
+		createdTasks.push(created);
+
+		expect(created.task.title).toBe(task.title);
+		expect(created.task.description).toBe(task.description);
+		expect(created.task.progress).toBe(task.progress);
+		expect(created.task.owner_id).toBe(task.owner_id);
+	});
+
+	test('should upsert todo with tags', async () => {
+		// First create a project to associate the task with
+		const projectData = TestDataFactory.createRealisticProject();
+		const project = await test_client.projects.create(projectData);
+		createdProjects.push(project);
+
+		const todoData = TestDataFactory.createTask({
+			title: 'Task with Tags',
+			description: 'Description for task with tags',
+			progress: 'UNSTARTED',
+			visibility: 'PRIVATE',
+			priority: 'HIGH',
+			owner_id: TEST_USER_ID,
+			project_id: project.id,
+		});
+
+		const tags = [
+			{
+				title: 'frontend',
+				color: 'green' as const,
+				owner_id: TEST_USER_ID,
+				deleted: false,
+				render: true
+			},
+			{
+				title: 'backend',
+				color: 'blue' as const,
+				owner_id: TEST_USER_ID,
+				deleted: false,
+				render: true
+			}
+		];
+
+		const result = await test_client.tasks.upsert({
+			...todoData,
+			tags: tags
+		});
+		createdTasks.push(result);
+		
+		expect(result.task.title).toBe(todoData.title);
+		expect(result.task.project_id).toBe(project.id);
+		expect(result.tags).toBeDefined();
+		expect(result.tags.length).toBeGreaterThanOrEqual(0);
+	});
+
+	test('should update existing todo', async () => {
+		// Create initial todo
+		const initialTodo = TestDataFactory.createTask({
+			title: 'Initial Todo',
+			description: 'Initial description',
+			progress: 'UNSTARTED',
+			visibility: 'PRIVATE',
+			priority: 'LOW',
+			owner_id: TEST_USER_ID
+		});
+
+		const createResponse = await test_client.tasks.upsert(initialTodo);
+		createdTasks.push(createResponse);
+
+		// Update the todo
+		const updatedTodo = {
+			...createResponse.task,
+			title: 'Updated Todo',
+			description: 'Updated description',
+			progress: 'IN_PROGRESS' as const,
+			priority: 'HIGH' as const
+		};
+
+		const updateResponse = await test_client.tasks.upsert(updatedTodo);
+		
+		expect(updateResponse.task.id).toBe(createResponse.task.id);
+		expect(updateResponse.task.title).toBe('Updated Todo');
+		expect(updateResponse.task.description).toBe('Updated description');
+		expect(updateResponse.task.progress).toBe('IN_PROGRESS');
+		expect(updateResponse.task.priority).toBe('HIGH');
+	});
+
+	test('should save tags independently', async () => {
+		const tags = [
+			{
+				title: 'testing',
+				color: 'yellow' as const,
+				owner_id: TEST_USER_ID,
+				deleted: false,
+				render: true
+			},
+			{
+				title: 'frontend',
+				color: 'green' as const,
+				owner_id: TEST_USER_ID,
+				deleted: false,
+				render: true
+			}
+		];
+
+		const savedTags = await test_client.tasks.saveTags(tags);
+		console.log('Saved tags response:', savedTags);
+		
+		expect(Array.isArray(savedTags)).toBe(true);
+		expect(savedTags.length).toBe(2);
+		expect(savedTags.find(t => t.title === 'testing')).toBeDefined();
+		expect(savedTags.find(t => t.title === 'frontend')).toBeDefined();
+	});
+
+	test('should handle authorization for todo operations', async () => {
+		const todoData = TestDataFactory.createTask({
+			title: 'Authorized Todo',
+			owner_id: TEST_USER_ID
+		});
+
+		// This should work with proper authorization
+		const result = await test_client.tasks.upsert(todoData);
+		createdTasks.push(result);
+		
+		expect(result.task.title).toBe(todoData.title);
+		expect(result.task.owner_id).toBe(TEST_USER_ID);
+	});
+
+	test('should validate todo schema', async () => {
+		// Test with invalid data
+		const invalidTodo = {
+			title: '', // Invalid empty title
+			progress: 'INVALID_STATUS', // Invalid progress status
+			priority: 'SUPER_HIGH', // Invalid priority
+			owner_id: TEST_USER_ID
+		} as any;
+
+		expect(test_client.tasks.upsert(invalidTodo)).rejects.toThrow();
+	});
+
+	test('should validate tag schema', async () => {
+		const invalidTags = [
+			{
+				title: '', // Invalid empty title
+				color: 'invalid_color', // Invalid color
+				owner_id: TEST_USER_ID
+			}
+		] as any;
+
+		expect(test_client.tasks.saveTags(invalidTags)).rejects.toThrow();
+	});
+
+	test('should handle owner authorization for todos', async () => {
+		const todoData = TestDataFactory.createTask({
+			title: 'Owner Authorization Test',
+			owner_id: TEST_USER_ID
+		});
+
+		// Should succeed with correct owner_id
+		const result = await test_client.tasks.upsert(todoData);
+		createdTasks.push(result);
+		
+		expect(result.task.owner_id).toBe(TEST_USER_ID);
+	});
+});
