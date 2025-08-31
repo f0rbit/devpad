@@ -5,6 +5,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { ConfigSchema } from "../../../server/types";
 import { getProjectById } from "../../../server/projects";
 import { upsertTag } from "../../../server/tags";
+import { getAuthedUser } from "../../../server/keys";
 
 const schema = z.object({
 	id: z.string(),
@@ -13,12 +14,14 @@ const schema = z.object({
 });
 
 export async function PATCH(context: APIContext) {
-	// Validate that the user is logged in
-	if (!context.locals.user) {
+	// Validate that the user is authenticated via API key
+	const { user_id, error: auth_error } = await getAuthedUser(context);
+	if (auth_error) {
+		return new Response(auth_error, { status: 401 });
+	}
+	if (!user_id) {
 		return new Response(null, { status: 401 });
 	}
-
-	const user_id = context.locals.user!.id;
 
 	const body = await context.request.json();
 
@@ -35,7 +38,7 @@ export async function PATCH(context: APIContext) {
 	const { project: found, error } = await getProjectById(data.id);
 	if (error) return new Response(error, { status: 500 });
 	if (!found) return new Response("Project not found", { status: 404 });
-	if (found.owner_id != context.locals.user.id) return new Response("Unauthorized", { status: 401 });
+	if (found.owner_id != user_id) return new Response("Unauthorized", { status: 401 });
 
 	try {
 		// get current tags

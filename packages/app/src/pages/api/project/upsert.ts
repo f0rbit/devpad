@@ -1,12 +1,17 @@
 import type { APIContext } from "astro";
 import { upsert_project, type UpsertProject } from "../../../server/types";
 import { upsertProject } from "../../../server/projects";
+import { getAuthedUser } from "../../../server/keys";
 
 type CompleteUpsertProject = Omit<UpsertProject, "id"> & { id: string };
 
 export async function PATCH(context: APIContext) {
-	// first we need to validate that the user is logged in
-	if (!context.locals.user) {
+	// Validate that the user is authenticated via API key
+	const { user_id, error } = await getAuthedUser(context);
+	if (error) {
+		return new Response(error, { status: 401 });
+	}
+	if (!user_id) {
 		return new Response(null, { status: 401 });
 	}
 
@@ -21,14 +26,14 @@ export async function PATCH(context: APIContext) {
 	}
 	const { data } = parsed;
 
-	// assert that the owner_id of upsert_project is same as logged in user
-	if (data.owner_id && data.owner_id != context.locals.user.id) {
+	// assert that the owner_id of upsert_project is same as authenticated user
+	if (data.owner_id && data.owner_id != user_id) {
 		return new Response(null, { status: 401 });
 	}
 	
 	try {
 		const access_token = context.locals.session?.access_token;
-		const new_project = await upsertProject(data, context.locals.user.id, access_token);
+		const new_project = await upsertProject(data, user_id, access_token);
 
 		// return the project data
 		return new Response(JSON.stringify(new_project));

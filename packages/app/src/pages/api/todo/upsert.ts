@@ -2,18 +2,23 @@ import type { APIContext } from "astro";
 import { upsert_tag, upsert_todo } from "../../../server/types";
 import { z } from "zod";
 import { upsertTask } from "../../../server/tasks";
+import { getAuthedUser } from "../../../server/keys";
 
 // type CompleteUpsertTodo = Omit<UpsertTodo, "todo_id"> & { id: string, updated_at: string };
 
 const upsert_tags = z.array(upsert_tag);
 
 export async function PUT(context: APIContext) {
-	if (!context.locals.user) {
+	const { user_id, error } = await getAuthedUser(context);
+	if (error) {
+		return new Response(error, { status: 401 });
+	}
+	if (!user_id) {
 		return new Response(null, { status: 401 });
 	}
 
 	// remove /todo/new from history
-	if (context.session && (await context.session!.has("history"))) {
+	if (typeof context != 'undefined' && context.session && (await context.session!.has("history"))) {
 		const history = (await context.session.get("history")) ?? [];
 		console.log(history);
 		if (history.at(-1) == "/todo/new") {
@@ -31,7 +36,7 @@ export async function PUT(context: APIContext) {
 	}
 	const { data } = parsed;
 
-	if (data.owner_id != context.locals.user.id) {
+	if (data.owner_id != user_id) {
 		return new Response(null, { status: 401 });
 	}
 
@@ -48,7 +53,7 @@ export async function PUT(context: APIContext) {
 	}
 
 	try {
-		const new_todo = await upsertTask(data, tags, context.locals.user.id);
+		const new_todo = await upsertTask(data, tags, user_id);
 		return new Response(JSON.stringify(new_todo), { status: 200 });
 	} catch (err) {
 		console.error("Error upserting todo", err);

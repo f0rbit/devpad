@@ -1,4 +1,4 @@
-import { DevpadApiError, NetworkError, AuthenticationError } from './errors';
+import { ApiError, NetworkError, AuthenticationError } from './errors';
 import { ArrayBufferedQueue, BufferedQueue } from '@devpad/schema';
 
 export type RequestOptions = {
@@ -114,7 +114,7 @@ export class ApiClient {
           errorMessage = 'Resource not found';
           historyEntry.error = errorMessage;
           this.request_history.add(historyEntry);
-          throw new DevpadApiError(errorMessage, { statusCode: 404 });
+          throw new ApiError(errorMessage, { statusCode: 404 });
         }
         
         // Try to get error message from response
@@ -122,7 +122,7 @@ export class ApiClient {
         errorMessage = error_text || 'Request failed';
         historyEntry.error = errorMessage;
         this.request_history.add(historyEntry);
-        throw new DevpadApiError(errorMessage, { statusCode: response.status });
+        throw new ApiError(errorMessage, { statusCode: response.status });
       }
 
       // Success - add to history
@@ -138,7 +138,7 @@ export class ApiClient {
       console.error('API Request Error:', error);
       
       // If this is a network error (not handled above), add to history
-      if (!(error instanceof DevpadApiError || error instanceof AuthenticationError)) {
+      if (!(error instanceof ApiError || error instanceof AuthenticationError)) {
         const duration = Date.now() - startTime;
         historyEntry.duration = duration;
         historyEntry.error = error instanceof Error ? error.message : 'Unknown network error';
