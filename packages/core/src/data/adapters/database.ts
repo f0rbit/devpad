@@ -124,12 +124,16 @@ class DatabaseGithubService implements GithubService {
 		return GithubServiceImpl.getBranches(owner, repo, accessToken);
 	}
 
-	async getRepo(owner: string, repo: string, accessToken: string) {
-		return GithubServiceImpl.getRepo(owner, repo, accessToken);
+	async getRepo(owner: string, repo: string, accessToken: string, branch?: string | null) {
+		return GithubServiceImpl.getRepo(owner, repo, accessToken, branch);
 	}
 
 	async getSpecification(owner: string, repo: string, accessToken: string) {
 		return GithubServiceImpl.getSpecification(owner, repo, accessToken);
+	}
+
+	async getRepos(accessToken: string) {
+		return GithubServiceImpl.getRepos(accessToken);
 	}
 }
 

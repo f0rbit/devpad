@@ -5,6 +5,10 @@ export class TagsClient {
 	// Tags are managed through the tasks upsert endpoint
 	// This is a placeholder for future tag management functionality
 
+	constructor(private api_client: any) {
+		// API client available for future use
+	}
+
 	// Create or update a tag (would need backend endpoint)
 	async upsert(data: UpsertTag): Promise<Tag> {
 		console.log("Tag upsert requested:", data);

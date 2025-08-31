@@ -124,7 +124,21 @@ export class ApiClient {
 				return undefined as T;
 			}
 
-			return (await response.json()) as T;
+			// Get the response text first
+			const text = await response.text();
+			
+			// If the response is null, empty, or just whitespace, return undefined for void endpoints
+			if (!text || text.trim() === '' || text.trim() === 'null') {
+				return undefined as T;
+			}
+			
+			// Try to parse as JSON
+			try {
+				return JSON.parse(text) as T;
+			} catch (parseError) {
+				// If JSON parsing fails, return the text as-is
+				return text as T;
+			}
 		} catch (error) {
 			console.error("API Request Error:", error);
 

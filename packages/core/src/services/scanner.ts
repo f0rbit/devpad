@@ -39,8 +39,8 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 		return;
 	}
 
-	if (!clone.ok) {
-		console.error("scan_repo: error fetching repo from github (not ok)", clone.status, clone.statusText);
+	if (clone.status < 200 || clone.status >= 400) {
+		console.error("scan_repo: error fetching repo from github", clone.status);
 		yield "error fetching repo from github\n";
 		return;
 	}

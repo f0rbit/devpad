@@ -59,5 +59,11 @@ export async function getActiveUserTagsMapByName(user_id: string) {
 }
 
 export async function linkTaskToTag(task_id: string, tag_id: string) {
-	await db.insert(task_tag).values({ task_id, tag_id }).onConflictDoNothing();
+	try {
+		await db.insert(task_tag).values({ task_id, tag_id }).onConflictDoNothing();
+		return true;
+	} catch (error) {
+		console.error('Failed to link task to tag:', error);
+		return false;
+	}
 }
