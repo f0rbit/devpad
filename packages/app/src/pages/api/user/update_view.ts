@@ -1,6 +1,6 @@
-import type { APIContext } from "astro";
 import { update_user } from "@devpad/schema";
 import { db, user } from "@devpad/schema/database";
+import type { APIContext } from "astro";
 import { eq } from "drizzle-orm";
 
 export async function PATCH(context: APIContext) {
@@ -24,7 +24,7 @@ export async function PATCH(context: APIContext) {
 		return new Response(null, { status: 403 });
 	}
 
-	let task_view = data?.task_view;
+	const task_view = data?.task_view;
 	if (!task_view) {
 		return new Response(null, { status: 400 });
 	}

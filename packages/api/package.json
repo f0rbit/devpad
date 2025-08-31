@@ -22,7 +22,6 @@
 		"test:integration": "bun test tests/integration/",
 		"test:coverage": "bun test --coverage",
 		"lint": "bun run eslint",
-		"format": "bun run prettier --write .",
 		"prepublishOnly": "bun run build",
 		"clean": "rm -rf dist"
 	},
@@ -60,7 +59,6 @@
 		"@types/node": "^20.11.24",
 		"bun-types": "latest",
 		"eslint": "^8.57.0",
-		"prettier": "^3.2.5",
 		"typescript": "^5.9.2"
 	},
 	"peerDependencies": {

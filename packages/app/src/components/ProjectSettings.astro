@@ -6,9 +6,9 @@ interface Props {
 	back: string;
 }
 
-const user = Astro.locals.user;
+const _user = Astro.locals.user;
 const { project } = Astro.props;
-const mode = project ? "edit" : "create";
+const _mode = project ? "edit" : "create";
 ---
 
 <section id="project-settings" data-user={user?.id ?? null} data-pid={project?.id ?? null}>

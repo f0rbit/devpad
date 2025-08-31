@@ -4,9 +4,9 @@
 // optional ?tag=<tag_uuid>
 // optional ?project=<project_uuid>
 
+import { getAuthedUser, getProjectTasks, getTask, getTasksByTag, getUserTasks, upsertTask } from "@devpad/core";
+import { upsert_tag, upsert_todo } from "@devpad/schema";
 import type { APIContext } from "astro";
-import { getProjectTasks, getTask, getTasksByTag, getUserTasks, upsertTask, getAuthedUser } from "@devpad/core";
-import { upsert_todo, upsert_tag } from "@devpad/schema";
 import { z } from "zod";
 
 export async function GET(context: APIContext) {
@@ -32,7 +32,7 @@ export async function GET(context: APIContext) {
 		if (!task) {
 			return new Response(null, { status: 404 });
 		}
-		if (task.task.owner_id != user_id) {
+		if (task.task.owner_id !== user_id) {
 			return new Response(null, { status: 401 });
 			// return new Response(null, { status: 401 });
 		}

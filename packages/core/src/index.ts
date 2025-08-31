@@ -1,22 +1,22 @@
 // Main exports for @devpad/core package
-export * from './services/index.js';
-export * from './auth/index.js';
 
 // Re-export types from schema for convenience
 export type {
+	HistoryAction,
 	Project,
-	Task,
-	Tag,
-	User,
-	UpsertProject,
-	UpsertTodo,
-	UpsertTag,
-	UpdateData,
-	TaskWithDetails,
 	ProjectWithTasks,
-	TagWithColor,
-	UpdateAction,
 	ScanStatus,
+	Tag,
+	TagWithColor,
+	Task,
 	TaskView,
-	HistoryAction
-} from '@devpad/schema';
+	TaskWithDetails,
+	UpdateAction,
+	UpdateData,
+	UpsertProject,
+	UpsertTag,
+	UpsertTodo,
+	User,
+} from "@devpad/schema";
+export * from "./auth/index.js";
+export * from "./services/index.js";

@@ -57,7 +57,7 @@ html select {
 
 @media (prefers-color-scheme: dark) {
 	html select {
-		background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M6%209%2012%2015%2018%209%22/%3E%3C/svg%3E") !important;
+		background-image: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20width=%2224%22%20height=%2224%22%20viewBox=%220%200%2024%2024%22%20fill=%22none%22%20stroke=%22white%22%20stroke-width=%222%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M6%209%2012%2015%2018%209%22/%3E%3C/svg%3E");
 	}
 }
 
@@ -283,7 +283,7 @@ input[type="color"] {
 	outline: none;
 	background: none;
 	/* color: transparent; */
-	padding: 0 !important;
+	padding: 0;
 	appearance: none;
 	width: 50px;
 }
@@ -319,7 +319,7 @@ input[type="text"]:disabled,
 select:disabled,
 textarea:disabled {
 	background: none;
-	background-image: none !important;
+	background-image: none;
 	color: var(--text-secondary);
 }
 
@@ -559,13 +559,13 @@ article {
 	}
 
 	.astro-code.new {
-		background-color: var(--item-green) !important;
-		border-color: var(--item-green-border) !important;
+		background-color: var(--item-green);
+		border-color: var(--item-green-border);
 	}
 
 	.astro-code.old {
-		background-color: var(--item-red) !important;
-		border-color: var(--item-red-border) !important;
+		background-color: var(--item-red);
+		border-color: var(--item-red-border);
 	}
 
 	.button-container {
@@ -601,7 +601,7 @@ hr {
 	border-radius: 5px;
 	padding: 5px 10px;
 	margin: unset;
-	background: oklch(from var(--input-border) 23% 0.017 h) !important;
+	background: oklch(from var(--input-border) 23% 0.017 h);
 	overflow: auto;
 }
 

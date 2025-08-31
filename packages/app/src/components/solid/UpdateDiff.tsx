@@ -1,10 +1,10 @@
-import { For, createSignal } from "solid-js";
-import type { UpdateAction, UpdateData } from "../../server/types";
-import type { Task } from "../../server/tasks";
-import ChevronUp from "lucide-solid/icons/chevron-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
-import Trash from "lucide-solid/icons/trash";
+import ChevronUp from "lucide-solid/icons/chevron-up";
 import Save from "lucide-solid/icons/save";
+import Trash from "lucide-solid/icons/trash";
+import { createSignal, For } from "solid-js";
+import type { Task } from "../../server/tasks";
+import type { UpdateAction, UpdateData } from "../../server/types";
 
 interface Props {
 	items: UpdateData[];
@@ -23,7 +23,7 @@ const ACTIONS = {
 
 export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const _items = JSON.parse(JSON.stringify(items)) as UpdateData[];
-	const mapped_items = _items.map((item) => {
+	const mapped_items = _items.map(item => {
 		const task = tasks[item.id];
 		if (task) {
 			item.task = task;
@@ -31,24 +31,24 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 		return item;
 	});
 
-	const { same = [], others = [] } = Object.groupBy(mapped_items, (u) => (u.type === "SAME" || u.type === "MOVE" ? "same" : "others"));
+	const { same = [], others = [] } = Object.groupBy(mapped_items, u => (u.type === "SAME" || u.type === "MOVE" ? "same" : "others"));
 
 	// Initialize actions state with default actions
 	const defaultActions = Object.fromEntries(
-		mapped_items.map((item) => [
+		mapped_items.map(item => [
 			item.id,
 			ACTIONS[item.type as keyof typeof ACTIONS][0], // Default to the 0th action
-		]),
+		])
 	);
 	const [actionsState, setActionsState] = createSignal<Record<string, UpdateAction>>(defaultActions);
 	const [titles, setTitles] = createSignal<Record<string, string>>({});
 
 	const updateAction = (id: string, action: UpdateAction) => {
-		setActionsState((prev) => ({ ...prev, [id]: action }));
+		setActionsState(prev => ({ ...prev, [id]: action }));
 	};
 
 	const updateTitle = (id: string, title: string) => {
-		setTitles((prev) => {
+		setTitles(prev => {
 			prev[id] = title;
 			return prev;
 		});
@@ -66,7 +66,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				}
 				return acc;
 			},
-			{} as Record<UpdateAction, string[]>,
+			{} as Record<UpdateAction, string[]>
 		);
 
 		const url = `/api/project/scan_status?project_id=${project_id}`;
@@ -101,13 +101,13 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 					</summary>
 					<br />
 					<div class="flex-col">
-						{same.map((item) => (
+						{same.map(item => (
 							<UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />
 						))}
 					</div>
 				</details>
 			)}
-			{others.length > 0 && others.map((item) => <UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />)}
+			{others.length > 0 && others.map(item => <UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />)}
 			<hr />
 			<div class="icons" style="gap: 20px; justify-content: center;">
 				<a role="button" onClick={saveActions} class="flex-row">
@@ -139,12 +139,12 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	if (data.new?.file) {
 		path = data.new.file;
 		if (data.new.line) {
-			path += ":" + data.new.line;
+			path += `:${data.new.line}`;
 		}
 	} else if (data.old?.file) {
 		path = data.old.file;
 		if (data.old.line) {
-			path += ":" + data.old.line;
+			path += `:${data.old.line}`;
 		}
 	}
 
@@ -159,7 +159,7 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 			return acc;
 		}, Infinity);
 
-		return context.map((line) => line.slice(min_whitespace)).join("\n");
+		return context.map(line => line.slice(min_whitespace)).join("\n");
 	};
 
 	let old_context = null;
@@ -173,15 +173,15 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	}
 
 	/** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
-	let old_filetype = "" as any;
-	let new_filetype = "" as any;
+	let _old_filetype = "" as any;
+	let _new_filetype = "" as any;
 	if (data.new?.file) {
 		const parts = data.new.file.split(".");
-		new_filetype = parts[parts.length - 1];
+		_new_filetype = parts[parts.length - 1];
 	}
 	if (data.old?.file) {
 		const parts = data.old.file.split(".");
-		old_filetype = parts[parts.length - 1];
+		_old_filetype = parts[parts.length - 1];
 	}
 
 	return (
@@ -190,7 +190,7 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 				{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
 				<span>{update.type}</span>
 				<span> - </span>
-				{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" onInput={(e) => onTitleChange(update.id, e.currentTarget.value)} />}
+				{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" onInput={e => onTitleChange(update.id, e.currentTarget.value)} />}
 			</h5>
 			<div class="flex-row">
 				<span>{update.tag}</span> - <code>{path}</code>
@@ -211,16 +211,9 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 				<Context old_context={old_context} new_context={new_context} />
 				<div class="button-container flex-row">
 					<For each={available_actions}>
-						{(label) => (
+						{label => (
 							<>
-								<input
-									type="radio"
-									name={update.id}
-									id={`${update.id}-${label}`}
-									style="display: none"
-									checked={label === action}
-									onChange={() => onActionChange(update.id, label)}
-								/>
+								<input type="radio" name={update.id} id={`${update.id}-${label}`} style="display: none" checked={label === action} onChange={() => onActionChange(update.id, label)} />
 								<label class="label-modal" for={`${update.id}-${label}`}>
 									{label.toLowerCase()}
 								</label>

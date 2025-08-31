@@ -1,14 +1,14 @@
+import type { HistoryAction, Project, Tag, TaskWithDetails, UpsertTag } from "@devpad/schema";
+import Check from "lucide-solid/icons/check";
+import ChevronDown from "lucide-solid/icons/chevron-down";
+import ChevronUp from "lucide-solid/icons/chevron-up";
+import Loader from "lucide-solid/icons/loader";
+import X from "lucide-solid/icons/x";
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
-import ChevronUp from "lucide-solid/icons/chevron-up";
-import ChevronDown from "lucide-solid/icons/chevron-down";
-import Loader from "lucide-solid/icons/loader";
-import Check from "lucide-solid/icons/check";
-import X from "lucide-solid/icons/x";
-import { TagPicker } from "./TagPicker";
 import HistoryTimeline from "./HistoryTimeline";
-import type { TaskWithDetails, HistoryAction, Tag, UpsertTag, Project } from "@devpad/schema";
 import { ProjectSelector } from "./ProjectSelector";
+import { TagPicker } from "./TagPicker";
 
 interface Props {
 	task: TaskWithDetails;
@@ -51,12 +51,12 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			body: JSON.stringify({
 				id: task.task?.id ?? null,
 				title: state.title,
-				summary: state.summary == "" ? null : state.summary,
-				description: state.description == "" ? null : state.description,
+				summary: state.summary === "" ? null : state.summary,
+				description: state.description === "" ? null : state.description,
 				progress: state.progress,
 				visibility: state.visibility,
-				start_time: state.start_time == "" ? null : state.start_time,
-				end_time: state.end_time == "" ? null : state.end_time,
+				start_time: state.start_time === "" ? null : state.start_time,
+				end_time: state.end_time === "" ? null : state.end_time,
 				priority: state.priority,
 				owner_id: user_id,
 				project_id: state.project_id,
@@ -91,34 +91,34 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<br />
 			<div class="editor" data-todo-id={task.task?.id ?? null} data-user-id={user_id}>
 				<label for="title">Title</label>
-				<input type="text" id="title" name="title" value={state.title} onInput={(e) => setState({ title: e.target.value })} />
+				<input type="text" id="title" name="title" value={state.title} onInput={e => setState({ title: e.target.value })} />
 				<label for="summary">Summary</label>
-				<input type="text" id="summary" name="summary" value={state.summary ?? ""} onInput={(e) => setState({ summary: e.target.value })} />
+				<input type="text" id="summary" name="summary" value={state.summary ?? ""} onInput={e => setState({ summary: e.target.value })} />
 				<label for="description">Description</label>
-				<textarea id="description" name="description" onInput={(e) => setState({ description: e.target.value })}>
+				<textarea id="description" name="description" onInput={e => setState({ description: e.target.value })}>
 					{state.description ?? ""}
 				</textarea>
 
 				<label for="progress">Progress</label>
 				<div class="flex-row combined-row">
-					<select id="progress" name="progress" value={state.progress} onChange={(e) => setState({ progress: e.target.value as Progress })}>
-						<option value="UNSTARTED" selected={state.progress == "UNSTARTED"}>
+					<select id="progress" name="progress" value={state.progress} onChange={e => setState({ progress: e.target.value as Progress })}>
+						<option value="UNSTARTED" selected={state.progress === "UNSTARTED"}>
 							Not Started
 						</option>
-						<option value="IN_PROGRESS" selected={state.progress == "IN_PROGRESS"}>
+						<option value="IN_PROGRESS" selected={state.progress === "IN_PROGRESS"}>
 							In Progress
 						</option>
-						<option value="COMPLETED" selected={state.progress == "COMPLETED"}>
+						<option value="COMPLETED" selected={state.progress === "COMPLETED"}>
 							Completed
 						</option>
 					</select>
 					<label for="project-selector" style="padding: 0px 5px;">
 						Project
 					</label>
-					<ProjectSelector project_map={project_map} default_id={state.project_id} callback={(p) => setState({ project_id: p })} disabled={project_disabled()} />
+					<ProjectSelector project_map={project_map} default_id={state.project_id} callback={p => setState({ project_id: p })} disabled={project_disabled()} />
 				</div>
 				<label for="end_time">End Time</label>
-				<input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={(e) => setState({ end_time: e.target.value })} />
+				<input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={e => setState({ end_time: e.target.value })} />
 			</div>
 			<details class="boxed">
 				<summary class="flex-row" style="font-size: smaller;">
@@ -128,37 +128,37 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				</summary>
 				<div class="editor">
 					<label for="start_time">Start Time</label>
-					<input type="datetime-local" id="start_time" name="start_time" value={state.start_time ?? ""} onInput={(e) => setState({ start_time: e.target.value })} />
+					<input type="datetime-local" id="start_time" name="start_time" value={state.start_time ?? ""} onInput={e => setState({ start_time: e.target.value })} />
 					<label for="visibility">Visibility</label>
-					<select id="visibility" name="visibility" value={state.visibility} onChange={(e) => setState({ visibility: e.target.value as Visibility })}>
-						<option value="PUBLIC" selected={state.visibility == "PUBLIC"}>
+					<select id="visibility" name="visibility" value={state.visibility} onChange={e => setState({ visibility: e.target.value as Visibility })}>
+						<option value="PUBLIC" selected={state.visibility === "PUBLIC"}>
 							Public
 						</option>
-						<option value="PRIVATE" selected={state.visibility == "PRIVATE"}>
+						<option value="PRIVATE" selected={state.visibility === "PRIVATE"}>
 							Private
 						</option>
-						<option value="HIDDEN" selected={state.visibility == "HIDDEN"}>
+						<option value="HIDDEN" selected={state.visibility === "HIDDEN"}>
 							Hidden
 						</option>
-						<option value="ARCHIVED" selected={state.visibility == "ARCHIVED"}>
+						<option value="ARCHIVED" selected={state.visibility === "ARCHIVED"}>
 							Archived
 						</option>
-						<option value="DRAFT" selected={state.visibility == "DRAFT"}>
+						<option value="DRAFT" selected={state.visibility === "DRAFT"}>
 							Draft
 						</option>
-						<option value="DELETED" selected={state.visibility == "DELETED"}>
+						<option value="DELETED" selected={state.visibility === "DELETED"}>
 							Deleted
 						</option>
 					</select>
 					<label for="priority">Priority</label>
-					<select id="priority" name="priority" value={state.priority} onChange={(e) => setState({ priority: e.target.value as Priority })}>
-						<option value="LOW" selected={state.priority == "LOW"}>
+					<select id="priority" name="priority" value={state.priority} onChange={e => setState({ priority: e.target.value as Priority })}>
+						<option value="LOW" selected={state.priority === "LOW"}>
 							Low
 						</option>
-						<option value="MEDIUM" selected={state.priority == "MEDIUM"}>
+						<option value="MEDIUM" selected={state.priority === "MEDIUM"}>
 							Medium
 						</option>
-						<option value="HIGH" selected={state.priority == "HIGH"}>
+						<option value="HIGH" selected={state.priority === "HIGH"}>
 							High
 						</option>
 					</select>
@@ -167,7 +167,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<br />
 			<div class="editor">
 				<label for="tags">Tags</label>
-				<TagPicker currentTags={currentTags()} availableTags={user_tags} owner_id={user_id} onChange={(t) => setCurrentTags(t)} />
+				<TagPicker currentTags={currentTags()} availableTags={user_tags} owner_id={user_id} onChange={t => setCurrentTags(t)} />
 			</div>
 			<br />
 			<a role="button" id="save-button" onClick={saveTask}>
@@ -218,7 +218,7 @@ const LinkedCode = ({ code }: { code: NonNullable<Task["codebase_tasks"]> }) => 
 			return acc;
 		}, Infinity);
 
-		return context.map((line) => line.slice(minWhitespace)).join("\n");
+		return context.map(line => line.slice(minWhitespace)).join("\n");
 	};
 
 	const context = code.context ? buildContext(code.context as string[]) : null;

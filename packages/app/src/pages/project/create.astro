@@ -1,12 +1,10 @@
 ---
-import ProjectSettings from "../../components/ProjectSettings.astro";
-import PageLayout from "../../layouts/PageLayout.astro";
 import { getRepos } from "../../server/github";
 
 const session = Astro.locals.session;
 if (!session) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const repos_result = await getRepos(session.access_token);
+const _repos_result = await getRepos(session.access_token);
 ---
 
 <PageLayout title="Create Project - devpad">

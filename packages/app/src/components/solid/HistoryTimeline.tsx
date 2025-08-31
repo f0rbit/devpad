@@ -1,18 +1,19 @@
 // takes an array of HistoryAction[], draws a timeline of them.
 // we want to add pagination as well.
 // using solidjs
-import { createSignal, For } from "solid-js";
-import type { HistoryAction, ScanStatus } from "../../server/types";
-import ScanText from "lucide-solid/icons/scan-text";
+
+import ArrowRight from "lucide-solid/icons/arrow-right";
+import FileMinus2 from "lucide-solid/icons/file-minus-2";
+import FilePen from "lucide-solid/icons/file-pen";
+import FilePlus2 from "lucide-solid/icons/file-plus-2";
+import FolderMinus from "lucide-solid/icons/folder-minus";
 import FolderPen from "lucide-solid/icons/folder-pen";
 import FolderPlus from "lucide-solid/icons/folder-plus";
-import FolderMinus from "lucide-solid/icons/folder-minus";
-import FilePlus2 from "lucide-solid/icons/file-plus-2";
-import FilePen from "lucide-solid/icons/file-pen";
-import FileMinus2 from "lucide-solid/icons/file-minus-2";
 import GitBranch from "lucide-solid/icons/git-branch";
-import ArrowRight from "lucide-solid/icons/arrow-right";
+import ScanText from "lucide-solid/icons/scan-text";
 import Type from "lucide-solid/icons/type";
+import { createSignal, For } from "solid-js";
+import type { HistoryAction, ScanStatus } from "../../server/types";
 
 const pageSize = () => 10;
 
@@ -65,7 +66,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 
 		return (
 			<div class="flex-row icons">
-				{renderPageNumbers().map((item) => (
+				{renderPageNumbers().map(item => (
 					<a role="button" class={item === page() ? "active" : ""} onClick={() => typeof item === "number" && setPage(item)}>
 						{item === "..." ? "..." : item + 1}
 					</a>
@@ -77,7 +78,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 	return (
 		<div class="flex-col">
 			<div class="timeline-container">
-				<For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>{(action) => <TimelineItem action={action} view={props.view} />}</For>
+				<For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>{action => <TimelineItem action={action} view={props.view} />}</For>
 			</div>
 			<div>
 				<div class="flex-col">
@@ -96,7 +97,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 		}
 
 		// Parse the UTC date and convert it to a Date object
-		const utcDate = new Date(action.created_at + "Z");
+		const utcDate = new Date(`${action.created_at}Z`);
 
 		// Automatically detect the user's locale
 		const userLocale = navigator.language || "en-US";
@@ -146,7 +147,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 
 	const Data = () => {
 		switch (action.type) {
-			case "SCAN":
+			case "SCAN": {
 				const { message, status } = action.data as { message: string; status: Omit<ScanStatus, "PENDING"> };
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
@@ -156,8 +157,9 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 						<span>{status.toLowerCase()}</span>
 					</div>
 				);
-			case "UPDATE_TASK":
-				if (view == "task") return null;
+			}
+			case "UPDATE_TASK": {
+				if (view === "task") return null;
 				const { title } = action.data as { title: string };
 				if (!title) return null;
 				return (
@@ -166,9 +168,10 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 						<span>{title}</span>
 					</div>
 				);
+			}
 			case "CREATE_PROJECT":
 			case "UPDATE_PROJECT":
-			case "DELETE_PROJECT":
+			case "DELETE_PROJECT": {
 				const { name = null, href = null } = action.data as { name: string | null; href: string | null };
 				if (!name || !href) return null;
 				return (
@@ -177,6 +180,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 						<a href={`/project/${href}`}>{name}</a>
 					</div>
 				);
+			}
 		}
 		return <></>;
 	};

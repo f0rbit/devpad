@@ -22,14 +22,6 @@
 		},
 		"types": ["bun-types"]
 	},
-	"include": [
-		"**/*.ts",
-		"**/*.tsx",
-		"../../packages/schema/src/**/*",
-		"../../packages/api/src/**/*",
-		"../../packages/app/src/**/*"
-	],
-	"exclude": [
-		"node_modules"
-	]
+	"include": ["**/*.ts", "**/*.tsx", "../../packages/schema/src/**/*", "../../packages/api/src/**/*", "../../packages/app/src/**/*"],
+	"exclude": ["node_modules"]
 }

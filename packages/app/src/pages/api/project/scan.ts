@@ -1,7 +1,7 @@
+import { getProjectConfig, scanRepo } from "@devpad/core";
+import { db, project } from "@devpad/schema/database";
 import type { APIContext } from "astro";
 import { and, eq } from "drizzle-orm";
-import { db, project } from "@devpad/schema/database";
-import { getProjectConfig, scanRepo } from "@devpad/core";
 
 // will have ?project_id=<id> query parameter
 /** @todo capture stderr/stdout on the child processes */
@@ -29,7 +29,7 @@ export async function POST(context: APIContext) {
 		.from(project)
 		.where(and(eq(project.id, project_id)));
 
-	if (project_query.length != 1) {
+	if (project_query.length !== 1) {
 		console.error("scan: project not found");
 		return new Response("project not found", { status: 404 });
 	}
@@ -46,7 +46,7 @@ export async function POST(context: APIContext) {
 		return new Response("invalid access token", { status: 401 });
 	}
 
-	const folder_id = github_id + "-" + crypto.randomUUID();
+	const folder_id = `${github_id}-${crypto.randomUUID()}`;
 
 	if (!project_data.repo_id || !project_data.repo_url) {
 		console.error("scan: project isn't linked to a repo");
@@ -83,6 +83,6 @@ export async function POST(context: APIContext) {
 				}
 			},
 		}),
-		{ status: 200 },
+		{ status: 200 }
 	);
 }

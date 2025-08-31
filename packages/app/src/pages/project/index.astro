@@ -1,43 +1,39 @@
 ---
-import PageLayout from "../../layouts/PageLayout.astro";
 import { getUserProjects } from "@devpad/core";
-import GithubLogin from "../../components/solid/GithubLogin";
-import ExternalLink from "lucide-solid/icons/external-link";
+
 const user = Astro.locals.user;
 
 const projects = user ? await getUserProjects(user.id) : [];
-const codebases = projects
-  .filter((p) => p.visibility != "DELETED")
-  .map((p) => p.project_id);
+const _codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
 // const deleted = projects.filter((p) => p.visibility == "DELETED");
 //
-const keywords = [
-  // One-word keywords
-  "projects",
-  "management",
-  "github",
-  "tasks",
-  "milestones",
+const _keywords = [
+	// One-word keywords
+	"projects",
+	"management",
+	"github",
+	"tasks",
+	"milestones",
 
-  // Two-word keywords
-  "project management",
-  "github integration",
-  "task tracking",
-  "code scanning",
-  "project updates",
-  "project visibility",
-  "task automation",
-  "project milestones",
-  "project goals",
-  "development progress",
-  "project links",
+	// Two-word keywords
+	"project management",
+	"github integration",
+	"task tracking",
+	"code scanning",
+	"project updates",
+	"project visibility",
+	"task automation",
+	"project milestones",
+	"project goals",
+	"development progress",
+	"project links",
 
-  // Three-word keywords
-  "github project management",
-  "codebase task tracking",
-  "project milestone tracking",
-  "project visibility tools",
-  "development project management",
+	// Three-word keywords
+	"github project management",
+	"codebase task tracking",
+	"project milestone tracking",
+	"project visibility tools",
+	"development project management",
 ];
 ---
 

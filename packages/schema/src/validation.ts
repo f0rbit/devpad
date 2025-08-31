@@ -10,9 +10,7 @@ export const upsert_project = z.object({
 	repo_url: z.string().nullable(),
 	repo_id: z.number().nullable(),
 	icon_url: z.string().nullable(),
-	status: z
-		.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")])
-		.optional(),
+	status: z.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")]).optional(),
 	deleted: z.boolean().optional().default(false),
 	link_url: z.string().nullable(),
 	link_text: z.string().nullable(),
@@ -41,29 +39,16 @@ export const ConfigSchema = z.object({
 		z.object({
 			name: z.string(),
 			match: z.array(z.string()),
-		}),
+		})
 	),
 	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
 });
-
 
 export const upsert_tag = z.object({
 	id: z.string().optional(),
 	title: z.string(),
 	color: z
-		.union([
-			z.literal("red"),
-			z.literal("green"),
-			z.literal("blue"),
-			z.literal("yellow"),
-			z.literal("purple"),
-			z.literal("orange"),
-			z.literal("teal"),
-			z.literal("pink"),
-			z.literal("gray"),
-			z.literal("cyan"),
-			z.literal("lime"),
-		])
+		.union([z.literal("red"), z.literal("green"), z.literal("blue"), z.literal("yellow"), z.literal("purple"), z.literal("orange"), z.literal("teal"), z.literal("pink"), z.literal("gray"), z.literal("cyan"), z.literal("lime")])
 		.nullable()
 		.optional(),
 	deleted: z.boolean().optional().default(false),
@@ -76,7 +61,7 @@ export const project_config = z.object({
 		z.object({
 			name: z.string(),
 			match: z.array(z.string()),
-		}),
+		})
 	),
 	ignore: z.array(z.string()),
 });
@@ -102,7 +87,7 @@ export const config_schema = z.object({
 		z.object({
 			name: z.string(),
 			match: z.array(z.string()),
-		}),
+		})
 	),
 	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
 });

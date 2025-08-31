@@ -1,22 +1,22 @@
-import express from "express";
-import { handler as ssrHandler } from '../app/dist/server/entry.mjs';
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
-import { drizzle } from "drizzle-orm/bun-sqlite";
 import { Database } from "bun:sqlite";
+import { drizzle } from "drizzle-orm/bun-sqlite";
+import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import express from "express";
+import { handler as ssrHandler } from "../app/dist/server/entry.mjs";
 
 console.log("🌳 database file:", Bun.env.DATABASE_FILE);
 
 const sqlite = new Database(Bun.env.DATABASE_FILE);
 const db = drizzle(sqlite);
 console.log("⌛️ running migrations");
-migrate(db, { migrationsFolder: "../app/database/drizzle"});
+migrate(db, { migrationsFolder: "../app/database/drizzle" });
 console.log("✅ migrations complete");
 
 const app = express();
 
-const base = '/';
+const base = "/";
 
-app.use(base, express.static('../app/dist/client/'));
+app.use(base, express.static("../app/dist/client/"));
 
 app.use(ssrHandler);
 

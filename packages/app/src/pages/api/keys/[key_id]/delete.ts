@@ -1,5 +1,5 @@
+import { api_key, db } from "@devpad/schema/database";
 import type { APIContext } from "astro";
-import { db, api_key } from "@devpad/schema/database";
 import { eq } from "drizzle-orm";
 
 export async function DELETE(context: APIContext) {
@@ -14,16 +14,16 @@ export async function DELETE(context: APIContext) {
 	}
 
 	const key = await db.select().from(api_key).where(eq(api_key.id, key_id));
-	if (key.length != 1) {
+	if (key.length !== 1) {
 		return new Response(null, { status: 404 });
 	}
-	if (key[0].owner_id != context.locals.user.id) {
+	if (key[0].owner_id !== context.locals.user.id) {
 		return new Response(null, { status: 403 });
 	}
 
 	// delete the key
 	const deleted_key = await db.delete(api_key).where(eq(api_key.id, key_id)).returning();
-	if (deleted_key.length != 1) {
+	if (deleted_key.length !== 1) {
 		throw new Error(`API key deletion returned incorrect rows (${deleted_key.length}`);
 	}
 

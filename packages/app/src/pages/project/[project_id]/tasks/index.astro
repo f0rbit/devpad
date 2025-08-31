@@ -1,10 +1,7 @@
 ---
-import { getProjectTasks } from "../../../../server/tasks";
-import PageLayout from "../../../../layouts/PageLayout.astro";
 import { getProject, type Project } from "../../../../server/projects";
-import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getActiveUserTags } from "../../../../server/tags";
-import { TaskSorter } from "../../../../components/solid/TaskSorter";
+import { getProjectTasks } from "../../../../server/tasks";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -20,8 +17,8 @@ if (!project) return new Response(null, { status: 404, statusText: "Project not 
 project_map[project.id] = project;
 const project_uuid = project.id;
 
-const tasks = await getProjectTasks(project_uuid);
-const tags = await getActiveUserTags(user.id);
+const _tasks = await getProjectTasks(project_uuid);
+const _tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={`Tasks - ${project_id}`}>

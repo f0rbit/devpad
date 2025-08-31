@@ -1,8 +1,7 @@
-import { defineConfig } from "astro/config";
 import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
-
 import solidJs from "@astrojs/solid-js";
+import { defineConfig } from "astro/config";
 
 const site = "https://devpad.tools";
 

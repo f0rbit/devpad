@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
-import { db, api_key } from "@devpad/schema/database";
+import { api_key, db } from "@devpad/schema/database";
 import type { APIContext } from "astro";
+import { eq } from "drizzle-orm";
 
 export async function getAPIKeys(user_id: string) {
 	return await db.select().from(api_key).where(eq(api_key.owner_id, user_id));
@@ -8,7 +8,7 @@ export async function getAPIKeys(user_id: string) {
 
 export async function getUserByAPIKey(key: string): Promise<{ user_id: string; error: null } | { user_id: null; error: string }> {
 	const user = await db.select().from(api_key).where(eq(api_key.hash, key));
-	if (!user || user.length == 0) {
+	if (!user || user.length === 0) {
 		return { user_id: null, error: "Invalid API key" };
 	}
 	if (user.length > 1) {

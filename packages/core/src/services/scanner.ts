@@ -1,8 +1,9 @@
 // Repository scanning functionality
-import { and, desc, eq } from "drizzle-orm";
-import { db, codebase_tasks, todo_updates, tracker_result } from "@devpad/schema/database";
+
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
+import { codebase_tasks, db, todo_updates, tracker_result } from "@devpad/schema/database";
+import { and, desc, eq } from "drizzle-orm";
 import { getBranches, getRepo } from "./github.js";
 import type { ProjectConfig } from "./projects.js";
 
@@ -71,9 +72,9 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 	let config_path = "../todo-config.json";
 
 	// if we have a project.config_json, we need to write it to a file
-	if (config && config.config) {
-		await Bun.write(unzipped_path + "/config.json", JSON.stringify(config.config, null, 2));
-		config_path = unzipped_path + "/config.json";
+	if (config?.config) {
+		await Bun.write(`${unzipped_path}/config.json`, JSON.stringify(config.config, null, 2));
+		config_path = `${unzipped_path}/config.json`;
 		console.log("using config.json from project");
 		yield "loaded config from project\n";
 	}
@@ -100,7 +101,7 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 		})
 		.returning();
 
-	if (new_tracker.length != 1) {
+	if (new_tracker.length !== 1) {
 		yield "error saving scan\n";
 		return;
 	}
@@ -118,13 +119,13 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 		.limit(1);
 
 	var old_data = [] as any[];
-	if (old_id.length == 1 && old_id[0].data) {
+	if (old_id.length === 1 && old_id[0].data) {
 		// fetch all the codebase tasks from the old_id
 		const existing_tasks = await db.select().from(codebase_tasks).where(eq(codebase_tasks.recent_scan_id, old_id[0].id));
 		old_data = existing_tasks;
 
 		// rename field 'type' to 'tag' in old_data
-		old_data = old_data.map((item) => {
+		old_data = old_data.map(item => {
 			item.tag = item.type;
 			delete item.type;
 			return item;
@@ -133,15 +134,13 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 
 	// write old data to old-output.json
 	yield "writing old data\n";
-	await Bun.write(unzipped_path + "/old-output.json", JSON.stringify(old_data));
+	await Bun.write(`${unzipped_path}/old-output.json`, JSON.stringify(old_data));
 
 	console.log("running diff");
 	// run diff script and write to diff-output.json
 	yield "running diff\n";
 	try {
-		child_process.execSync(
-			`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json 2> ${unzipped_path}/err.out`,
-		);
+		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json 2> ${unzipped_path}/err.out`);
 	} catch (e) {
 		console.error(e);
 		yield "error running diff\n";
@@ -150,7 +149,7 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 
 	// read diff-output.json
 	yield "reading diff\n";
-	const diff = await Bun.file(unzipped_path + "/diff-output.json").text();
+	const diff = await Bun.file(`${unzipped_path}/diff-output.json`).text();
 
 	yield "ignoring old updates\n";
 	// update any old todo_updates that had status == "PENDING" to status == "IGNORED"

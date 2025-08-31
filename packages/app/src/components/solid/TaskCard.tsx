@@ -1,19 +1,18 @@
+import Calendar from "lucide-solid/icons/calendar";
+import CalendarClock from "lucide-solid/icons/calendar-clock";
+import CalendarX2 from "lucide-solid/icons/calendar-x-2";
+import Circle from "lucide-solid/icons/circle";
+import CircleCheck from "lucide-solid/icons/circle-check";
+import CircleDot from "lucide-solid/icons/circle-dot";
+import Link from "lucide-solid/icons/link";
+import Square from "lucide-solid/icons/square";
+import SquareCheck from "lucide-solid/icons/square-check";
+import SquareDot from "lucide-solid/icons/square-dot";
 import { For } from "solid-js";
 import type { Project } from "../../server/projects";
 import type { Task } from "../../server/tasks";
-
-import CalendarClock from "lucide-solid/icons/calendar-clock";
 import type { UpsertTag } from "../../server/types";
-import CalendarX2 from "lucide-solid/icons/calendar-x-2";
-import Calendar from "lucide-solid/icons/calendar";
-import Square from "lucide-solid/icons/square";
-import SquareDot from "lucide-solid/icons/square-dot";
-import SquareCheck from "lucide-solid/icons/square-check";
-import Circle from "lucide-solid/icons/circle";
-import CircleDot from "lucide-solid/icons/circle-dot";
-import CircleCheck from "lucide-solid/icons/circle-check";
 import { TagBadge } from "./TagEditor";
-import Link from "lucide-solid/icons/link";
 
 interface Props {
 	task: Task;
@@ -32,12 +31,12 @@ export const TaskCard = (props: Props) => {
 	}
 
 	const project_name = project?.name ?? null;
-	let priority_class = task.priority == "MEDIUM" ? "priority-medium" : task.priority == "HIGH" ? "priority-high" : "priority-low";
-	if (task.priority == "LOW" && task.end_time == null) priority_class = "priority-none";
+	let priority_class = task.priority === "MEDIUM" ? "priority-medium" : task.priority === "HIGH" ? "priority-high" : "priority-low";
+	if (task.priority === "LOW" && task.end_time == null) priority_class = "priority-none";
 
 	const tag_list = tags
-		.map((tag_id) => {
-			return user_tags.find((tag) => tag.id === tag_id) ?? null;
+		.map(tag_id => {
+			return user_tags.find(tag => tag.id === tag_id) ?? null;
 		})
 		.filter(Boolean) as UpsertTag[];
 
@@ -51,8 +50,8 @@ export const TaskCard = (props: Props) => {
 
 	const progress = async () => {
 		const current_progress = task.progress;
-		if (current_progress == "COMPLETED") return; // can't progress from completed
-		let new_progress: "IN_PROGRESS" | "COMPLETED" = current_progress == "UNSTARTED" ? "IN_PROGRESS" : "COMPLETED";
+		if (current_progress === "COMPLETED") return; // can't progress from completed
+		const new_progress: "IN_PROGRESS" | "COMPLETED" = current_progress === "UNSTARTED" ? "IN_PROGRESS" : "COMPLETED";
 		const response = await fetch(`/api/todo/upsert`, {
 			method: "PUT",
 			headers: {
@@ -91,7 +90,7 @@ export const TaskCard = (props: Props) => {
 			<div class="flex-col" style={{ "font-size": "small", gap: "6px" }}>
 				{tag_list.length > 0 && (
 					<span class="flex-row">
-						<For each={tag_list}>{(tag) => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}</For>
+						<For each={tag_list}>{tag => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}</For>
 					</span>
 				)}
 				<span class={`flex-row ${priority_class}`}>
@@ -158,19 +157,19 @@ export function TaskProgress({ progress, onClick, type }: { progress: Task["task
 	// TODO: completed items don't need <a> or onclick
 	switch (type) {
 		case "box": {
-			if (progress == "UNSTARTED")
+			if (progress === "UNSTARTED")
 				return (
 					<a role="button" onClick={onClick}>
 						<Square />
 					</a>
 				);
-			if (progress == "IN_PROGRESS")
+			if (progress === "IN_PROGRESS")
 				return (
 					<a role="button" onClick={onClick}>
 						<SquareDot />
 					</a>
 				);
-			if (progress == "COMPLETED")
+			if (progress === "COMPLETED")
 				return (
 					<div class="priority-low">
 						<SquareCheck />
@@ -178,19 +177,19 @@ export function TaskProgress({ progress, onClick, type }: { progress: Task["task
 				);
 		}
 		case "circle": {
-			if (progress == "UNSTARTED")
+			if (progress === "UNSTARTED")
 				return (
 					<a role="button" onClick={onClick}>
 						<Circle />
 					</a>
 				);
-			if (progress == "IN_PROGRESS")
+			if (progress === "IN_PROGRESS")
 				return (
 					<a role="button" onClick={onClick}>
 						<CircleDot />
 					</a>
 				);
-			if (progress == "COMPLETED")
+			if (progress === "COMPLETED")
 				return (
 					<div class="priority-low">
 						<CircleCheck />

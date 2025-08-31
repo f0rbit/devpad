@@ -1,8 +1,4 @@
 ---
-import Layout from "./Layout.astro";
-import GithubLogin from "../components/solid/GithubLogin";
-import DevpadLogo from "../components/solid/DevpadLogo";
-import ArrowLeft from "lucide-solid/icons/arrow-left";
 interface Props {
 	title: string;
 	description?: string;
@@ -31,11 +27,11 @@ const login_pages = [
 const pages = user ? login_pages : logout_pages;
 
 // get the active page (excluding home)
-const search_pages = pages.filter((p) => p.href != "/");
-const active = search_pages.find((p) => Astro.url.pathname.startsWith(p.href))?.name ?? "home";
+const search_pages = pages.filter(p => p.href !== "/");
+const _active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "home";
 
-const history = (await Astro.session!.get("history")) ?? [];
-const last_page = history.at(-2) ?? null;
+const history = (await Astro.session?.get("history")) ?? [];
+const _last_page = history.at(-2) ?? null;
 ---
 
 <Layout title={title} description={description} keywords={keywords} canonical={canonical}>

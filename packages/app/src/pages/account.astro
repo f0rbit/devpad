@@ -1,15 +1,14 @@
 ---
-import HistoryTimeline from "../components/solid/HistoryTimeline";
-import PageLayout from "../layouts/PageLayout.astro";
-import { getUserHistory, getAPIKeys } from "@devpad/core";
+import { getAPIKeys, getUserHistory } from "@devpad/core";
+
 const user = Astro.locals.user;
 
 if (!user) {
 	return new Response(null, { status: 401, statusText: "Unauthorized" });
 }
 
-const keys = user ? await getAPIKeys(user.id) : [];
-const user_history = await getUserHistory(user.id);
+const _keys = user ? await getAPIKeys(user.id) : [];
+const _user_history = await getUserHistory(user.id);
 ---
 
 <PageLayout title="Account - devpad">

@@ -1,10 +1,10 @@
-import { sql, relations } from "drizzle-orm";
-import { sqliteTable, text, int, unique, integer, primaryKey } from "drizzle-orm/sqlite-core";
+import { relations, sql } from "drizzle-orm";
+import { int, integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 export const user = sqliteTable("user", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "user_" + crypto.randomUUID()),
+		.$defaultFn(() => `user_${crypto.randomUUID()}`),
 	github_id: integer("github_id"),
 	name: text("name"),
 	email: text("email").unique(),
@@ -27,7 +27,7 @@ export const session = sqliteTable("session", {
 export const api_key = sqliteTable("api_key", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "api_key" + crypto.randomUUID()),
+		.$defaultFn(() => `api_key${crypto.randomUUID()}`),
 	owner_id: text("owner_id")
 		.references(() => user.id)
 		.notNull(),
@@ -39,7 +39,7 @@ export const project = sqliteTable(
 	{
 		id: text("id")
 			.primaryKey()
-			.$defaultFn(() => "project_" + crypto.randomUUID()),
+			.$defaultFn(() => `project_${crypto.randomUUID()}`),
 		project_id: text("project_id").notNull(),
 		owner_id: text("owner_id").notNull(),
 		name: text("name").notNull(),
@@ -59,15 +59,11 @@ export const project = sqliteTable(
 			.default("PRIVATE"),
 		current_version: text("current_version"),
 		scan_branch: text("scan_branch"),
-		created_at: text("created_at")
-			.notNull()
-			.default(sql`(CURRENT_TIMESTAMP)`),
-		updated_at: text("updated_at")
-			.notNull()
-			.default(sql`(CURRENT_TIMESTAMP)`),
+		created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+		updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
 	// Unique constraint temporarily removed for test environment
-	(table) => ({}),
+	_table => ({})
 );
 
 const ACTIONS = [
@@ -96,17 +92,13 @@ export type ActionType = (typeof ACTIONS)[number];
 export const action = sqliteTable("action", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "action_" + crypto.randomUUID()),
+		.$defaultFn(() => `action_${crypto.randomUUID()}`),
 	owner_id: text("owner_id").references(() => user.id),
 	type: text("type", { enum: ACTIONS }).notNull(),
 	description: text("description").notNull(),
 	data: text("data", { mode: "json" }),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const tracker_result = sqliteTable("tracker_result", {
@@ -114,9 +106,7 @@ export const tracker_result = sqliteTable("tracker_result", {
 	project_id: text("project_id")
 		.notNull()
 		.references(() => project.id),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	data: text("data", { mode: "json" }).notNull(),
 	accepted: integer("accepted", { mode: "boolean" }).notNull().default(false),
 });
@@ -126,9 +116,7 @@ export const todo_updates = sqliteTable("todo_updates", {
 	project_id: text("project_id")
 		.notNull()
 		.references(() => project.id),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	old_id: integer("old_id").references(() => tracker_result.id),
 	new_id: integer("new_id")
 		.notNull()
@@ -151,7 +139,7 @@ export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
 export const milestone = sqliteTable("milestone", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "milestone_" + crypto.randomUUID()),
+		.$defaultFn(() => `milestone_${crypto.randomUUID()}`),
 	project_id: text("project_id")
 		.notNull()
 		.references(() => project.id),
@@ -160,12 +148,8 @@ export const milestone = sqliteTable("milestone", {
 	target_time: text("target_time"),
 	deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 	target_version: text("target_version"),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	finished_at: text("finished_at"),
 	after_id: text("after_id"),
 });
@@ -173,7 +157,7 @@ export const milestone = sqliteTable("milestone", {
 export const goal = sqliteTable("goal", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "goal_" + crypto.randomUUID()),
+		.$defaultFn(() => `goal_${crypto.randomUUID()}`),
 	milestone_id: text("milestone_id")
 		.notNull()
 		.references(() => milestone.id),
@@ -181,19 +165,15 @@ export const goal = sqliteTable("goal", {
 	description: text("description"),
 	target_time: text("target_time"),
 	deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	finished_at: text("finished_at"),
 });
 
 export const task = sqliteTable("task", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "task_" + crypto.randomUUID()),
+		.$defaultFn(() => `task_${crypto.randomUUID()}`),
 	owner_id: text("owner_id")
 		.notNull()
 		.references(() => user.id),
@@ -221,24 +201,20 @@ export const task = sqliteTable("task", {
 export const checklist = sqliteTable("checklist", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "checklist_" + crypto.randomUUID()),
+		.$defaultFn(() => `checklist_${crypto.randomUUID()}`),
 	task_id: text("task_id")
 		.notNull()
 		.references(() => task.id),
 	name: text("name").notNull(),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 });
 
 export const checklist_item = sqliteTable("checklist_item", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "checklist-item_" + crypto.randomUUID()),
+		.$defaultFn(() => `checklist-item_${crypto.randomUUID()}`),
 	checklist_id: text("checklist_id")
 		.notNull()
 		.references(() => checklist.id),
@@ -250,7 +226,7 @@ export const checklist_item = sqliteTable("checklist_item", {
 export const codebase_tasks = sqliteTable("codebase_tasks", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "codebase-task_" + crypto.randomUUID()),
+		.$defaultFn(() => `codebase-task_${crypto.randomUUID()}`),
 	branch: text("branch"),
 	commit_sha: text("commit_sha"),
 	commit_msg: text("commit_msg"),
@@ -260,12 +236,8 @@ export const codebase_tasks = sqliteTable("codebase_tasks", {
 	file: text("file"),
 	line: integer("line"),
 	context: text("context", { mode: "json" }),
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 	recent_scan_id: integer("recent_scan_id").references(() => tracker_result.id),
 });
@@ -275,24 +247,20 @@ export const tag = sqliteTable(
 	{
 		id: text("id")
 			.primaryKey()
-			.$defaultFn(() => "tag_" + crypto.randomUUID()),
+			.$defaultFn(() => `tag_${crypto.randomUUID()}`),
 		owner_id: text("owner_id")
 			.notNull()
 			.references(() => user.id),
 		title: text("title").notNull(),
 		color: text("color"),
-		created_at: text("created_at")
-			.notNull()
-			.default(sql`(CURRENT_TIMESTAMP)`),
-		updated_at: text("updated_at")
-			.notNull()
-			.default(sql`(CURRENT_TIMESTAMP)`),
+		created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+		updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 		deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 		render: int("render", { mode: "boolean" }).notNull().default(true),
 	},
-	(table) => ({
+	table => ({
 		tag_unique: unique("tag_unique").on(table.owner_id, table.title),
-	}),
+	})
 );
 
 export const task_tag = sqliteTable(
@@ -304,16 +272,12 @@ export const task_tag = sqliteTable(
 		tag_id: text("tag_id")
 			.notNull()
 			.references(() => tag.id),
-		created_at: text("created_at")
-			.notNull()
-			.default(sql`(CURRENT_TIMESTAMP)`),
-		updated_at: text("updated_at")
-			.notNull()
-			.default(sql`(CURRENT_TIMESTAMP)`),
+		created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+		updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
-	(table) => ({
+	table => ({
 		task_tag_unique: primaryKey({ columns: [table.task_id, table.tag_id] }),
-	}),
+	})
 );
 
 export const commit_detail = sqliteTable("commit_detail", {
@@ -330,7 +294,7 @@ export const commit_detail = sqliteTable("commit_detail", {
 export const tag_config = sqliteTable("tag_config", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "tag_config_" + crypto.randomUUID()),
+		.$defaultFn(() => `tag_config_${crypto.randomUUID()}`),
 	project_id: text("project_id")
 		.notNull()
 		.references(() => project.id), // Foreign key to projects
@@ -338,28 +302,20 @@ export const tag_config = sqliteTable("tag_config", {
 		.notNull()
 		.references(() => tag.id), // Foreign key to tags
 	match: text("match").notNull(), // Match pattern for this tag
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const ignore_path = sqliteTable("ignore_path", {
 	id: text("id")
 		.primaryKey()
-		.$defaultFn(() => "ignore_path_" + crypto.randomUUID()),
+		.$defaultFn(() => `ignore_path_${crypto.randomUUID()}`),
 	project_id: text("project_id")
 		.notNull()
 		.references(() => project.id), // Foreign key to projects
 	path: text("path").notNull(), // Ignore path
-	created_at: text("created_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
-	updated_at: text("updated_at")
-		.notNull()
-		.default(sql`(CURRENT_TIMESTAMP)`),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 // relations

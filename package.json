@@ -11,7 +11,14 @@
 		"build": "bun run --filter=@devpad/* build",
 		"dev": "bun run --filter=@devpad/app dev",
 		"test": "bun run --filter=@devpad/* test",
-		"clean": "bun run --filter=@devpad/* clean"
+		"clean": "bun run --filter=@devpad/* clean",
+		"format": "biome format . --write",
+		"format:check": "biome format .",
+		"lint": "biome check .",
+		"lint:fix": "biome check . --write"
 	},
-	"packageManager": "bun@1.0.0"
+	"packageManager": "bun@1.0.0",
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.2"
+	}
 }

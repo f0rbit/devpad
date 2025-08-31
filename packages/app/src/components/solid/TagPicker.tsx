@@ -1,21 +1,21 @@
 /* solid-js component to pick a selection of tags. it should store the list in the data-attribute of the container, so we can access it from other js scripts. input should be a input element with a datalist of tags with the name and value of the id. the user can input a tag that isn't within the list, and this would have the id of null but pass through the name and a random colour that is generated for it. upon saving the item, these new tags are then inserted into the db & saved. the "new" tags should have some sort of bright green outline on the badge. */
 
-import { For, createSignal } from "solid-js";
-import type { UpsertTag, Tag } from "../../server/types";
 import Plus from "lucide-solid/icons/plus";
+import { createSignal, For } from "solid-js";
+import type { Tag, UpsertTag } from "../../server/types";
 import { TagBadge } from "./TagEditor";
 
 export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag | null) => void }) {
 	// use a select element
 	function select(id: string) {
-		const found = tags.find((t) => t.id === id) ?? null;
+		const found = tags.find(t => t.id === id) ?? null;
 		onSelect(found);
 	}
 
 	return (
-		<select onChange={(e) => select(e.target.value)} style="min-width: 6rem">
+		<select onChange={e => select(e.target.value)} style="min-width: 6rem">
 			<option value="">-</option>
-			{tags.map((tag) => (
+			{tags.map(tag => (
 				<option value={tag.id}>{tag.title}</option>
 			))}
 		</select>
@@ -36,14 +36,14 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 
 	function add() {
 		const value = input.value.trim();
-		if (value.length == 0 || value == "") return;
+		if (value.length === 0 || value === "") return;
 		// check to see if we have selected an option from the input datalist
-		const selected = value ? input.list!.querySelector(`option[value="${value}"]`) : null;
+		const selected = value ? input.list?.querySelector(`option[value="${value}"]`) : null;
 		if (selected) {
 			const sel_id = selected.getAttribute("data-id");
 			if (sel_id) {
 				// if we have, add it to the list
-				const found = availableTags.find((t) => t.id === sel_id);
+				const found = availableTags.find(t => t.id === sel_id);
 				if (found) {
 					addTag(found as UpsertTag);
 					return;
@@ -51,7 +51,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 			}
 		}
 		// if we haven't check to see if we have one with the same name
-		const existing = availableTags.find((t) => t.title === value);
+		const existing = availableTags.find(t => t.title === value);
 		console.log("existing", existing);
 		if (existing) {
 			// if we do, add it to the list
@@ -73,9 +73,9 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 	function removeTag(tag: UpsertTag) {
 		if (tag.id == null) {
 			// filter by name
-			setTags(tags().filter((t) => t.title !== tag.title));
+			setTags(tags().filter(t => t.title !== tag.title));
 		} else {
-			setTags(tags().filter((t) => t.id !== tag.id));
+			setTags(tags().filter(t => t.id !== tag.id));
 		}
 		onChange(tags());
 	}
@@ -86,12 +86,12 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 				type="text"
 				list="tags"
 				ref={input}
-				onKeyPress={(e) => {
+				onKeyPress={e => {
 					if (e.key === "Enter") add();
 				}}
 			/>
 			<datalist id="tags">
-				{availableTags.map((tag) => (
+				{availableTags.map(tag => (
 					<option data-id={tag.id} value={tag.title}>
 						{tag.title}
 					</option>
@@ -101,7 +101,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 				<Plus />
 			</a>
 			<div class="flex-row" style="flex-wrap: wrap;">
-				<For each={tags()}>{(tag) => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />}</For>
+				<For each={tags()}>{tag => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />}</For>
 			</div>
 		</div>
 	);

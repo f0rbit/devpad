@@ -1,9 +1,8 @@
-import { OAuth2RequestError } from "arctic";
-
-import type { APIContext } from "astro";
 import { github, lucia } from "@devpad/core";
-import { eq } from "drizzle-orm";
 import { db, user } from "@devpad/schema/database";
+import { OAuth2RequestError } from "arctic";
+import type { APIContext } from "astro";
+import { eq } from "drizzle-orm";
 
 export async function GET(context: APIContext): Promise<Response> {
 	const code = context.url.searchParams.get("code");
@@ -26,7 +25,7 @@ export async function GET(context: APIContext): Promise<Response> {
 
 		// Replace this with your own DB client
 
-		if (existingUser && existingUser[0]) {
+		if (existingUser?.[0]) {
 			const session = await lucia.createSession(existingUser[0].id, { access_token: tokens.accessToken });
 			const sessionCookie = lucia.createSessionCookie(session.id);
 			context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);

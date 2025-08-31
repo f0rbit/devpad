@@ -1,31 +1,7 @@
-import type { InferSelectModel, InferInsertModel } from 'drizzle-orm';
-import type { z } from 'zod';
-import type { 
-	user, 
-	session, 
-	api_key, 
-	project, 
-	task, 
-	tag, 
-	task_tag, 
-	action, 
-	codebase_tasks,
-	todo_updates,
-	tracker_result,
-	tag_config,
-	ignore_path
-} from './database/schema.js';
-import type { 
-	upsert_project, 
-	upsert_todo, 
-	upsert_tag,
-	update_action,
-	project_config,
-	save_config_request,
-	save_tags_request,
-	update_user,
-	config_schema
-} from './validation.js';
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import type { z } from "zod";
+import type { action, api_key, codebase_tasks, ignore_path, project, session, tag, tag_config, task, task_tag, todo_updates, tracker_result, user } from "./database/schema.js";
+import type { config_schema, project_config, save_config_request, save_tags_request, update_action, update_user, upsert_project, upsert_tag, upsert_todo } from "./validation.js";
 
 // Database table select types (inferred from Drizzle schema)
 export type User = InferSelectModel<typeof user>;
@@ -128,7 +104,7 @@ export type TaskView = "list" | "grid";
 export type ScanStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED";
 
 // History action type
-export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & { 
+export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & {
 	type: string | "SCAN"; // TODO: Import ActionType from database schema
 };
 
@@ -171,7 +147,6 @@ export interface BufferedQueue<T> {
 	size(): number;
 	clear(): void;
 }
-
 
 export class ArrayBufferedQueue<T> implements BufferedQueue<T> {
 	private _entries: T[] = [];

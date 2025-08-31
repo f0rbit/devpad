@@ -1,5 +1,5 @@
+import { commit_detail, db } from "@devpad/schema/database";
 import { GitHub } from "arctic";
-import { db, commit_detail } from "@devpad/schema/database";
 import { inArray } from "drizzle-orm";
 
 export const github = new GitHub(Bun.env.GITHUB_CLIENT_ID!, Bun.env.GITHUB_CLIENT_SECRET!);
@@ -67,14 +67,14 @@ export async function getBranches(owner: string, repo: string, access_token: str
 		throw new Error("error fetching branches");
 	}
 	const commits = new Set<string>(); // store commits to fetch the details after
-	const branches = await response.json() as any[];
+	const branches = (await response.json()) as any[];
 	for (const branch of branches) {
 		commits.add(branch.commit.sha);
 	}
 
 	const commit_details = await getCommitDetails(owner, repo, commits, access_token);
 	// index commit_details by sha
-	const commit_map = new Map(commit_details.map((commit) => [commit.sha, commit]));
+	const commit_map = new Map(commit_details.map(commit => [commit.sha, commit]));
 
 	for (const branch of branches) {
 		branch.commit = commit_map.get(branch.commit.sha);
@@ -98,19 +98,19 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 	const existing = await db.select().from(commit_detail).where(inArray(commit_detail.sha, shas));
 
 	const existing_shas = new Set(existing.map((commit: any) => commit.sha));
-	const missing_shas = new Set(shas.filter((sha) => !existing_shas.has(sha)));
+	const missing_shas = new Set(shas.filter(sha => !existing_shas.has(sha)));
 
 	console.log(`Fetching missing commits: ${missing_shas.size}`, missing_shas);
 
 	// fetch the missing commits
 	const commit_details = await Promise.all(
-		Array.from(missing_shas).map(async (commit) => {
+		Array.from(missing_shas).map(async commit => {
 			const response = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${commit}`, { headers: gh_headers(access_token) });
 			if (!response.ok) {
 				throw new Error("error fetching commit details");
 			}
 			return (await response.json()) as any;
-		}),
+		})
 	);
 
 	let commits = existing;
@@ -118,7 +118,7 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 	// insert the missing commits into the database
 	if (commit_details.length) {
 		// map the commit details to the database schema
-		const values = commit_details.map((c) => {
+		const values = commit_details.map(c => {
 			return {
 				sha: c.sha,
 				url: c.url,

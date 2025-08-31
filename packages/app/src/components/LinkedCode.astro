@@ -1,6 +1,6 @@
 ---
-import { Code } from "astro/components";
 import type { Task } from "../server/tasks";
+
 interface Props {
 	code: NonNullable<Task["codebase_tasks"]>;
 }
@@ -8,11 +8,11 @@ interface Props {
 const { code } = Astro.props;
 
 // format <path>:<line>
-let path = "unknown:?";
+let _path = "unknown:?";
 if (code.file) {
-	path = code.file;
+	_path = code.file;
 	if (code.line) {
-		path += ":" + code.line;
+		_path += `:${code.line}`;
 	}
 }
 
@@ -27,16 +27,16 @@ const build_context = (context: string[]) => {
 		return acc;
 	}, Infinity);
 
-	return context.map((line) => line.slice(min_whitespace)).join("\n");
+	return context.map(line => line.slice(min_whitespace)).join("\n");
 };
 
-const context = code.context ? build_context(code.context as string[]) : null;
+const _context = code.context ? build_context(code.context as string[]) : null;
 
 /** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
-let file_type = "" as any;
+let _file_type = "" as any;
 if (code.file) {
 	const parts = code.file.split(".");
-	file_type = parts[parts.length - 1];
+	_file_type = parts[parts.length - 1];
 }
 ---
 

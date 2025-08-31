@@ -1,9 +1,9 @@
+import { addTaskAction, getActiveUserTagsMapByName, getUpsertedTaskMap, linkTaskToTag } from "@devpad/core";
+import { type UpdateData, update_action } from "@devpad/schema";
+import { codebase_tasks, db, project, task, todo_updates, tracker_result } from "@devpad/schema/database";
 import type { APIContext } from "astro";
-import { z } from "zod";
-import { db, codebase_tasks, project, task, todo_updates, tracker_result } from "@devpad/schema/database";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { update_action, type UpdateData } from "@devpad/schema";
-import { addTaskAction, getUpsertedTaskMap, getActiveUserTagsMapByName, linkTaskToTag } from "@devpad/core";
+import { z } from "zod";
 
 const request_schema = z.object({
 	id: z.number(),
@@ -42,7 +42,7 @@ export async function POST(context: APIContext) {
 		.from(project)
 		.where(and(eq(project.id, project_id), eq(project.owner_id, user_id)));
 
-	if (project_query.length != 1) {
+	if (project_query.length !== 1) {
 		return new Response("project not found", { status: 404 });
 	}
 
@@ -52,7 +52,7 @@ export async function POST(context: APIContext) {
 		.from(todo_updates)
 		.where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.id, update_id)));
 
-	if (update_query.length != 1) {
+	if (update_query.length !== 1) {
 		return new Response("update not found", { status: 404 });
 	}
 
@@ -76,7 +76,7 @@ export async function POST(context: APIContext) {
 		let codebase_items: UpdateData[];
 		try {
 			codebase_items = JSON.parse(update_query[0].data as string) as UpdateData[];
-			codebase_items.forEach((item) => {
+			codebase_items.forEach(item => {
 				codebase_map.set(item.id, item);
 			});
 		} catch (e) {
@@ -86,11 +86,11 @@ export async function POST(context: APIContext) {
 
 		const tag_map = await getActiveUserTagsMapByName(user_id);
 
-		const actionable_items = actions.IGNORE && actions.IGNORE.length > 0 ? codebase_items.filter((item) => !actions.IGNORE!.includes(item.id)) : codebase_items;
+		const actionable_items = actions.IGNORE && actions.IGNORE.length > 0 ? codebase_items.filter(item => !actions.IGNORE?.includes(item.id)) : codebase_items;
 
 		// we want to group into 'upserts', 'deletes'
-		const upserts = actionable_items.filter((item) => item.type == "NEW" || item.type == "UPDATE" || item.type == "SAME" || item.type == "MOVE");
-		const deletes = actionable_items.filter((item) => item.type == "DELETE");
+		const upserts = actionable_items.filter(item => item.type === "NEW" || item.type === "UPDATE" || item.type === "SAME" || item.type === "MOVE");
+		const deletes = actionable_items.filter(item => item.type === "DELETE");
 
 		// run the upserts
 		const upsert_item = async (item: any) => {
@@ -144,7 +144,7 @@ export async function POST(context: APIContext) {
 		try {
 			// update the underlying tasks
 			if (actions.CREATE) {
-				const values = actions.CREATE.map((item) => {
+				const values = actions.CREATE.map(item => {
 					let title = "New Item";
 					if (titles[item]) {
 						title = titles[item];
@@ -165,39 +165,30 @@ export async function POST(context: APIContext) {
 			}
 			if (actions.DELETE) {
 				// set task.visibility to DELETED
-				const task_ids = actions.DELETE.map((item) => task_map.get(item)).filter(Boolean) as string[];
-				await db
-					.update(task)
-					.set({ visibility: "DELETED", codebase_task_id: null, updated_at: sql`CURRENT_TIMESTAMP` })
-					.where(inArray(task.id, task_ids));
+				const task_ids = actions.DELETE.map(item => task_map.get(item)).filter(Boolean) as string[];
+				await db.update(task).set({ visibility: "DELETED", codebase_task_id: null, updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.id, task_ids));
 				for (const task_id of task_ids) {
 					await addTaskAction({ owner_id: user_id, task_id, type: "DELETE_TASK", description: "Task deleted (via scan)", project_id });
 				}
 			}
 			if (actions.UNLINK) {
-				const task_ids = actions.UNLINK.map((item) => task_map.get(item)).filter(Boolean) as string[];
-				await db
-					.update(task)
-					.set({ codebase_task_id: null, updated_at: sql`CURRENT_TIMESTAMP` })
-					.where(inArray(task.id, task_ids));
+				const task_ids = actions.UNLINK.map(item => task_map.get(item)).filter(Boolean) as string[];
+				await db.update(task).set({ codebase_task_id: null, updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.id, task_ids));
 				for (const task_id of task_ids) {
 					await addTaskAction({ owner_id: user_id, task_id, type: "UPDATE_TASK", description: "Task unlinked (via scan)", project_id });
 					connect_tags.push({ task_id, codebase_task_id: task_map.get(task_id)! });
 				}
 			}
 			if (actions.COMPLETE) {
-				const task_ids = actions.COMPLETE.map((item) => task_map.get(item)).filter(Boolean) as string[];
-				await db
-					.update(task)
-					.set({ progress: "COMPLETED", updated_at: sql`CURRENT_TIMESTAMP` })
-					.where(inArray(task.id, task_ids));
+				const task_ids = actions.COMPLETE.map(item => task_map.get(item)).filter(Boolean) as string[];
+				await db.update(task).set({ progress: "COMPLETED", updated_at: sql`CURRENT_TIMESTAMP` }).where(inArray(task.id, task_ids));
 				for (const task_id of task_ids) {
 					await addTaskAction({ owner_id: user_id, task_id, type: "UPDATE_TASK", description: "Task completed (via scan)", project_id });
 					connect_tags.push({ task_id, codebase_task_id: task_map.get(task_id)! });
 				}
 			}
 			if (actions.CONFIRM) {
-				const task_promises = actions.CONFIRM.map(async (ctid) => {
+				const task_promises = actions.CONFIRM.map(async ctid => {
 					const task_id = task_map.get(ctid);
 					if (!task_id) {
 						console.error(`task ${ctid} not found`);
@@ -216,7 +207,7 @@ export async function POST(context: APIContext) {
 		try {
 			// upsert all the tags
 			const tag_promises = connect_tags
-				.map(async (t) => {
+				.map(async t => {
 					const codebase_task = codebase_map.get(t.codebase_task_id);
 					if (!codebase_task) {
 						console.error(`codebase_task for ${t.codebase_task_id} not found`);

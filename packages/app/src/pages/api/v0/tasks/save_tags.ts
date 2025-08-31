@@ -1,9 +1,9 @@
-import { z } from "zod";
+import { getAuthedUser, upsertTag } from "@devpad/core";
 import { upsert_tag } from "@devpad/schema";
-import type { APIContext } from "astro";
-import { upsertTag, getAuthedUser } from "@devpad/core";
 import { db, tag } from "@devpad/schema/database";
+import type { APIContext } from "astro";
 import { inArray } from "drizzle-orm";
+import { z } from "zod";
 
 const upsert_tags = z.array(upsert_tag);
 
@@ -38,7 +38,7 @@ export async function PATCH(context: APIContext) {
 		const promises = data.map(upsertTag);
 		const tag_ids = await Promise.all(promises);
 
-		if (tag_ids.length != data.length) {
+		if (tag_ids.length !== data.length) {
 			throw new Error(`Tag upsert returned incorrect rows (${tag_ids.length})`);
 		}
 

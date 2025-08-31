@@ -6,8 +6,7 @@
 		"dev": "bun run src/index.ts",
 		"build": "bun build src/index.ts --compile --outfile devpad",
 		"test": "bun test",
-		"lint": "bun run eslint",
-		"format": "bun run prettier --write ."
+		"lint": "bun run eslint"
 	},
 	"dependencies": {
 		"@devpad/api": "workspace:*",
@@ -17,7 +16,6 @@
 		"@types/node": "^20.11.24",
 		"bun-types": "latest",
 		"eslint": "^8.57.0",
-		"prettier": "^3.2.5",
 		"typescript": "^5.3.3"
 	}
 }

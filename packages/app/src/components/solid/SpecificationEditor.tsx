@@ -1,12 +1,13 @@
 // SpecificationEditor.jsx
-import { createEffect, createSignal, type Accessor, type JSX } from "solid-js";
+
+import Github from "lucide-solid/icons/github";
+import Pencil from "lucide-solid/icons/pencil";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
+import Save from "lucide-solid/icons/save";
+import X from "lucide-solid/icons/x";
 import { remark } from "remark";
 import remarkHtml from "remark-html";
-import Pencil from "lucide-solid/icons/pencil";
-import Github from "lucide-solid/icons/github";
-import Save from "lucide-solid/icons/save";
-import RotateCcw from "lucide-solid/icons/rotate-ccw";
-import X from "lucide-solid/icons/x";
+import { createEffect, createSignal } from "solid-js";
 import { LoadingIndicator, type LoadingState } from "./LoadingIndicator";
 
 interface Props {
@@ -126,7 +127,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 						</a>
 					</div>
 					{error() && <p class="error-icon">{error()}</p>}
-					<textarea value={markdown()} rows={50} onInput={(e) => setMarkdown(e.target.value)} style={{ width: "100%", "font-family": "monospace", "font-size": "medium" }} />
+					<textarea value={markdown()} rows={50} onInput={e => setMarkdown(e.target.value)} style={{ width: "100%", "font-family": "monospace", "font-size": "medium" }} />
 				</>
 			) : (
 				<>

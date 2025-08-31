@@ -1,21 +1,16 @@
 ---
-import PageLayout from "../../layouts/PageLayout.astro";
 import { getUserProjectMap } from "../../server/projects";
-import { getUserTasks } from "../../server/tasks";
-import { TaskSorter } from "../../components/solid/TaskSorter";
-import Tag from "lucide-solid/icons/tag";
 import { getActiveUserTags } from "../../server/tags";
-import Plus from "lucide-solid/icons/plus";
-import GithubLogin from "../../components/solid/GithubLogin";
+import { getUserTasks } from "../../server/tasks";
 
 const user = Astro.locals.user;
 
-const project_map = user ? await getUserProjectMap(user!.id) : {};
-const tasks = user ? await getUserTasks(user!.id) : [];
+const _project_map = user ? await getUserProjectMap(user?.id) : {};
+const _tasks = user ? await getUserTasks(user?.id) : [];
 
-const tags = user ? await getActiveUserTags(user!.id) : [];
+const _tags = user ? await getActiveUserTags(user?.id) : [];
 
-const keywords = [
+const _keywords = [
 	// One-word keywords
 	"tasks",
 	"todo",

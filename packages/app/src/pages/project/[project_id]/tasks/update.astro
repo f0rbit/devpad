@@ -1,9 +1,6 @@
 ---
-import PageLayout from "../../../../layouts/PageLayout.astro";
-import ProjectTasksLayout from "../../../../layouts/ProjectTasksLayout.astro";
 import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
 import { getProjectTasks, type Task } from "../../../../server/tasks";
-import { UpdateDiffList } from "../../../../components/solid/UpdateDiff.tsx";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -18,19 +15,19 @@ const project_uuid = found_project.id;
 
 const project_tasks = await getProjectTasks(project_uuid);
 // build a map of task.codebases_tasks.id -> task
-const codebase_task_map = project_tasks.reduce(
+const _codebase_task_map = project_tasks.reduce(
 	(acc, task) => {
 		if (!task.codebase_tasks) return acc;
 		acc[task.codebase_tasks.id] = task;
 		return acc;
 	},
-	{} as Record<string, Task>,
+	{} as Record<string, Task>
 );
 
 // get the most recent todo_update for the project and render it
 const update = await getRecentUpdate(found_project);
 
-const update_data = update?.data ? (typeof update.data == "string" ? JSON.parse(update.data) : update.data) : null;
+const _update_data = update?.data ? (typeof update.data === "string" ? JSON.parse(update.data) : update.data) : null;
 ---
 
 <PageLayout title={`Update Codebase - ${project_id}`}>

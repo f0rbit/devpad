@@ -1,11 +1,11 @@
-import { db, action, todo_updates, type ActionType } from "@devpad/schema/database";
-import { eq, desc, inArray, and } from "drizzle-orm";
 import type { HistoryAction } from "@devpad/schema";
+import { type ActionType, action, db, todo_updates } from "@devpad/schema/database";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { getProjectById, getUserProjectMap } from "./projects.js";
 import { getTask } from "./tasks.js";
 
 export async function getActions(user_id: string, action_filter: ActionType[] | null) {
-	if (action_filter && action_filter.length == 0) action_filter = null;
+	if (action_filter && action_filter.length === 0) action_filter = null;
 
 	const project_map = await getUserProjectMap(user_id);
 
@@ -21,7 +21,7 @@ export async function getActions(user_id: string, action_filter: ActionType[] | 
 	})();
 
 	// attach each project.name to action.data.project based on action.data.project_id
-	data.forEach((a) => {
+	data.forEach(a => {
 		const data = a.data as any;
 		const project = project_map[data.project_id];
 		if (project) {
@@ -54,18 +54,18 @@ export async function getProjectHistory(project_id: string) {
 	// for actions, look through the 'data' json field, if action.project_id == project_id
 	const actions = await getActions(user_id, project_filter);
 
-	const filtered: HistoryAction[] = actions.filter((a) => {
+	const filtered: HistoryAction[] = actions.filter(a => {
 		const data = a.data as any;
-		return data.project_id == project_id;
+		return data.project_id === project_id;
 	});
 
 	const scan_history = await getProjectScanHistory(project_id);
 	// we need to map scan_history to be the same type as ActionType
-	const mapped_scan: HistoryAction[] = scan_history.map((s) => {
+	const mapped_scan: HistoryAction[] = scan_history.map(s => {
 		return {
 			id: `scan-${s.id}`,
 			type: "SCAN",
-			description: `Scanned branch \'${s.branch}\'`,
+			description: `Scanned branch '${s.branch}'`,
 			created_at: s.created_at,
 			data: { project_id, message: s.commit_msg, status: s.status },
 		};
@@ -88,9 +88,9 @@ export async function getTaskHistory(task_id: string) {
 	// for actions, look through the 'data' json field, if action.task_id == task_id
 	const actions = await getActions(user_id, task_filter);
 
-	const filtered: HistoryAction[] = actions.filter((a) => {
+	const filtered: HistoryAction[] = actions.filter(a => {
 		const data = a.data as any;
-		return data.task_id == task_id;
+		return data.task_id === task_id;
 	});
 
 	return filtered.sort(sortByDate);

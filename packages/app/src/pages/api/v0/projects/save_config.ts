@@ -1,9 +1,9 @@
-import type { APIContext } from "astro";
-import { z } from "zod";
-import { db, project, tag_config, ignore_path } from "@devpad/schema/database";
-import { eq, and, inArray } from "drizzle-orm";
+import { getAuthedUser, getProjectById, upsertTag } from "@devpad/core";
 import { ConfigSchema } from "@devpad/schema";
-import { getProjectById, upsertTag, getAuthedUser } from "@devpad/core";
+import { db, ignore_path, project, tag_config } from "@devpad/schema/database";
+import type { APIContext } from "astro";
+import { and, eq, inArray } from "drizzle-orm";
+import { z } from "zod";
 
 const save_config_schema = z.object({
 	id: z.string(),
@@ -34,16 +34,16 @@ export async function PATCH(context: APIContext) {
 	const { project: found, error } = await getProjectById(data.id);
 	if (error) return new Response(error, { status: 500 });
 	if (!found) return new Response("Project not found", { status: 404 });
-	if (found.owner_id != user_id) return new Response("Unauthorized", { status: 401 });
+	if (found.owner_id !== user_id) return new Response("Unauthorized", { status: 401 });
 
 	try {
 		// Get current tags
 		const current_tags = await db.select({ id: tag_config.tag_id }).from(tag_config).where(eq(tag_config.project_id, data.id));
-		
+
 		// Upsert Tags
 		let tag_ids: string[] = [];
 		if (data.config.tags.length > 0) {
-			const tag_promises = data.config.tags.map(async (tag) => {
+			const tag_promises = data.config.tags.map(async tag => {
 				const tag_id = await upsertTag({ owner_id: user_id, title: tag.name, deleted: false, color: null, render: true });
 
 				// Upsert tag matches into `tag_config`
@@ -52,17 +52,17 @@ export async function PATCH(context: APIContext) {
 					.from(tag_config)
 					.where(and(eq(tag_config.project_id, data.id), eq(tag_config.tag_id, tag_id)));
 
-				const current_match_set = new Set(current_matches.map((match) => match.match));
-				const new_matches = tag.match.filter((m) => !current_match_set.has(m));
+				const current_match_set = new Set(current_matches.map(match => match.match));
+				const new_matches = tag.match.filter(m => !current_match_set.has(m));
 
 				// Insert new matches
 				if (new_matches.length > 0) {
-					const values = new_matches.map((match) => ({ project_id: data.id, tag_id: tag_id, match: match }));
+					const values = new_matches.map(match => ({ project_id: data.id, tag_id: tag_id, match: match }));
 					await db.insert(tag_config).values(values);
 				}
 
 				// Remove old matches not in the current configuration
-				const matches_to_remove = current_matches.filter((m) => !tag.match.includes(m.match)).map((m) => m.match);
+				const matches_to_remove = current_matches.filter(m => !tag.match.includes(m.match)).map(m => m.match);
 
 				if (matches_to_remove.length > 0) {
 					await db.delete(tag_config).where(and(eq(tag_config.project_id, data.id), eq(tag_config.tag_id, tag_id), inArray(tag_config.match, matches_to_remove)));
@@ -75,7 +75,7 @@ export async function PATCH(context: APIContext) {
 		}
 
 		// Remove any old tags that aren't in tag_ids
-		const tags_to_remove = current_tags.filter((t) => !tag_ids.includes(t.id)).map((t) => t.id);
+		const tags_to_remove = current_tags.filter(t => !tag_ids.includes(t.id)).map(t => t.id);
 
 		if (tags_to_remove.length > 0) {
 			await db.delete(tag_config).where(and(eq(tag_config.project_id, data.id), inArray(tag_config.tag_id, tags_to_remove)));
@@ -84,14 +84,14 @@ export async function PATCH(context: APIContext) {
 		// Upsert Ignore Paths
 		const current_paths = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, data.id));
 
-		const current_path_set = new Set(current_paths.map((p) => p.path));
-		const new_paths = data.config.ignore.filter((p) => !current_path_set.has(p));
+		const current_path_set = new Set(current_paths.map(p => p.path));
+		const new_paths = data.config.ignore.filter(p => !current_path_set.has(p));
 
 		if (new_paths.length > 0) {
-			await db.insert(ignore_path).values(new_paths.map((path) => ({ project_id: data.id, path })));
+			await db.insert(ignore_path).values(new_paths.map(path => ({ project_id: data.id, path })));
 		}
 
-		const paths_to_remove = current_paths.filter((p) => !data.config.ignore.includes(p.path)).map((p) => p.path);
+		const paths_to_remove = current_paths.filter(p => !data.config.ignore.includes(p.path)).map(p => p.path);
 
 		if (paths_to_remove.length > 0) {
 			await db.delete(ignore_path).where(and(eq(ignore_path.project_id, data.id), inArray(ignore_path.path, paths_to_remove)));

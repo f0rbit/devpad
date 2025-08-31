@@ -1,21 +1,13 @@
 // Database adapter - implements data services using direct database access
-import type { 
-	DataAdapter,
-	ProjectService,
-	TaskService,
-	TagService,
-	AuthService,
-	ActionService,
-	GithubService
-} from "../interfaces.js";
 
-// Import existing service functions
-import * as ProjectsService from "../../services/projects.js";
-import * as TasksService from "../../services/tasks.js";
-import * as TagsService from "../../services/tags.js";
 import * as KeysService from "../../auth/keys.js";
 import * as ActionsService from "../../services/action.js";
 import * as GithubServiceImpl from "../../services/github.js";
+// Import existing service functions
+import * as ProjectsService from "../../services/projects.js";
+import * as TagsService from "../../services/tags.js";
+import * as TasksService from "../../services/tasks.js";
+import type { ActionService, AuthService, DataAdapter, GithubService, ProjectService, TagService, TaskService } from "../interfaces.js";
 
 class DatabaseProjectService implements ProjectService {
 	async getUserProjects(userId: string) {
@@ -46,12 +38,7 @@ class DatabaseProjectService implements ProjectService {
 		return ProjectsService.doesUserOwnProject(userId, projectId);
 	}
 
-	async addProjectAction(params: {
-		owner_id: string;
-		project_id: string;
-		type: any;
-		description: string;
-	}) {
+	async addProjectAction(params: { owner_id: string; project_id: string; type: any; description: string }) {
 		return ProjectsService.addProjectAction(params);
 	}
 }
@@ -81,13 +68,7 @@ class DatabaseTaskService implements TaskService {
 		return TasksService.getUpsertedTaskMap(codebaseItems);
 	}
 
-	async addTaskAction(params: {
-		owner_id: string;
-		task_id: string;
-		type: any;
-		description: string;
-		project_id: string | null;
-	}) {
+	async addTaskAction(params: { owner_id: string; task_id: string; type: any; description: string; project_id: string | null }) {
 		return TasksService.addTaskAction(params);
 	}
 }

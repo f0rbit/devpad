@@ -3,9 +3,10 @@
 // ?id=<project_uuid>
 // ?name=<project_name>
 // this is a astro api endpoint
-import type { APIContext } from "astro";
-import { getProject, getProjectById, getUserProjects, upsertProject, getAuthedUser } from "@devpad/core";
+
+import { getAuthedUser, getProject, getProjectById, getUserProjects, upsertProject } from "@devpad/core";
 import { upsert_project } from "@devpad/schema";
+import type { APIContext } from "astro";
 
 export async function GET(context: APIContext) {
 	const { user_id, error } = await getAuthedUser(context);
@@ -27,7 +28,7 @@ export async function GET(context: APIContext) {
 		// get the project by id
 		const { project, error } = await getProjectById(id);
 		if (error) {
-			if (error == "Couldn't find project") {
+			if (error === "Couldn't find project") {
 				return new Response(null, { status: 404 });
 			}
 			return new Response(error, { status: 500 });
@@ -35,7 +36,7 @@ export async function GET(context: APIContext) {
 		if (!project) {
 			return new Response(null, { status: 404 });
 		}
-		if (project.owner_id != user_id) {
+		if (project.owner_id !== user_id) {
 			return new Response(null, { status: 401 });
 		}
 		return new Response(JSON.stringify(project));
@@ -45,7 +46,7 @@ export async function GET(context: APIContext) {
 		// get the project by name
 		const { project, error } = await getProject(user_id, name);
 		if (error) {
-			if (error == "Couldn't find project") {
+			if (error === "Couldn't find project") {
 				return new Response(null, { status: 404 });
 			}
 			return new Response(error, { status: 401 });
@@ -61,7 +62,7 @@ export async function GET(context: APIContext) {
 	const projects = await getUserProjects(user_id);
 
 	// should only show 'public' projects
-	const public_projects = projects.filter((project) => project.visibility == "PUBLIC");
+	const public_projects = projects.filter(project => project.visibility === "PUBLIC");
 	return new Response(JSON.stringify(public_projects));
 }
 
@@ -86,7 +87,7 @@ export async function PATCH(context: APIContext) {
 	const { data } = parsed;
 
 	// assert that the owner_id of upsert_project is same as authed user
-	if (data.owner_id && data.owner_id != user_id) {
+	if (data.owner_id && data.owner_id !== user_id) {
 		console.log("Unauthorized: owner_id mismatch", { user_id, owner_id: data.owner_id });
 		return new Response("Unauthorized: owner_id mismatch", { status: 401 });
 	}

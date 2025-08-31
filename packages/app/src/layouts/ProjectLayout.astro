@@ -14,8 +14,8 @@ const pages = [
 	{ name: "history", href: `/project/${project_id}/history` },
 ];
 
-const search_pages = pages.filter((p) => p.name != "overview");
-const active = search_pages.find((p) => Astro.url.pathname.startsWith(p.href))?.name ?? "overview";
+const search_pages = pages.filter(p => p.name !== "overview");
+const _active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "overview";
 ---
 
 <main>

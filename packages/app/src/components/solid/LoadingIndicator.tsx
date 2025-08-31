@@ -1,5 +1,5 @@
-import Loader from "lucide-solid/icons/loader";
 import Check from "lucide-solid/icons/check";
+import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
 import type { Accessor, JSX } from "solid-js";
 

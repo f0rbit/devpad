@@ -1,5 +1,5 @@
+import { getAuthedUser, getProjectById, getSpecification } from "@devpad/core";
 import type { APIContext } from "astro";
-import { getSpecification, getProjectById, getAuthedUser } from "@devpad/core";
 
 export async function GET(context: APIContext) {
 	const { user_id, error: auth_error } = await getAuthedUser(context);
@@ -20,7 +20,7 @@ export async function GET(context: APIContext) {
 		const { project, error } = await getProjectById(project_id);
 		if (error) return new Response(error, { status: 500 });
 		if (!project) return new Response("Project not found", { status: 404 });
-		if (project.owner_id != user_id) return new Response("Unauthorized", { status: 401 });
+		if (project.owner_id !== user_id) return new Response("Unauthorized", { status: 401 });
 
 		const repo_url = project.repo_url;
 		if (!repo_url) return new Response("Project has no repo_url", { status: 400 });
