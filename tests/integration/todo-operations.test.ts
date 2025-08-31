@@ -1,8 +1,7 @@
 import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
-import { setupIntegrationTests, teardownIntegrationTests } from './setup';
-import { DevpadApiClient } from '@devpad/api';
+import { setupIntegrationTests, teardownIntegrationTests, TEST_USER_ID } from './setup';
+import { DevpadApiClient, UpsertTag } from '@devpad/api';
 import { TestDataFactory } from './factories';
-import { Task } from '../../packages/app/src/server/tasks';
 import { Tag } from '../../packages/app/src/server/types';
 
 describe('todo operations API integration', () => {
@@ -17,35 +16,22 @@ describe('todo operations API integration', () => {
 	});
 
 	test('should upsert todo with basic fields', async () => {
-		const todoData = {
+		const task = TestDataFactory.createTask({
+			owner_id: TEST_USER_ID,
 			title: 'Test Todo Task',
 			description: 'This is a test todo description',
 			summary: 'Test summary',
-			progress: 'UNSTARTED' as const,
-			visibility: 'PRIVATE' as const,
-			priority: 'MEDIUM' as const,
-			owner_id: 'test-user-12345', // This should match the test user ID from setup
-			project_id: null,
-			start_time: null,
-			end_time: null
-		};
-
-		const response = await fetch('http://localhost:4321/api/v0/tasks', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(todoData)
+			progress: 'UNSTARTED',
+			visibility: 'PRIVATE',
+			priority: 'MEDIUM',
 		});
 
-		expect(response.status).toBe(200);
-		
-		const createdTodo = await response.json();
-		expect(createdTodo.task.title).toBe(todoData.title);
-		expect(createdTodo.task.description).toBe(todoData.description);
-		expect(createdTodo.task.progress).toBe(todoData.progress);
-		expect(createdTodo.task.owner_id).toBe(todoData.owner_id);
+		const created = await test_client.tasks.create(task);
+
+		expect(created.task.title).toBe(task.title);
+		expect(created.task.description).toBe(task.description);
+		expect(created.task.progress).toBe(task.progress);
+		expect(created.task.owner_id).toBe(task.owner_id);
 	});
 
 	test('should upsert todo with tags', async () => {
@@ -53,78 +39,61 @@ describe('todo operations API integration', () => {
 		const projectData = TestDataFactory.createRealisticProject();
 		const project = await test_client.projects.create(projectData);
 
-		const todoData = {
+		const task = TestDataFactory.createTask({
 			title: 'Todo with Tags',
 			description: 'Todo that includes custom tags',
 			progress: 'IN_PROGRESS' as const,
 			visibility: 'PRIVATE' as const,
 			priority: 'HIGH' as const,
-			owner_id: 'test-user-12345',
+			owner_id: TEST_USER_ID,
 			project_id: project.id
-		};
+		});
 
-		const tags = [
+		const tags: UpsertTag[] = [
 			{
+				id: TestDataFactory.getNextId(),
 				title: 'urgent',
-				color: 'red' as const,
-				owner_id: 'test-user-12345',
+				color: 'red',
+				owner_id: TEST_USER_ID,
 				deleted: false,
-				render: true
+				render: true,
 			},
 			{
+				id: TestDataFactory.getNextId(),
 				title: 'backend',
-				color: 'blue' as const,
-				owner_id: 'test-user-12345',
+				color: 'blue',
+				owner_id: TEST_USER_ID,
 				deleted: false,
-				render: true
+				render: true,
 			}
 		];
 
-		const response = await fetch('http://localhost:4321/api/v0/tasks', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify({
-				...todoData,
-				tags: tags
-			})
-		});
+		const created = await test_client.tasks.create({ ...task, tags});
 
-		expect(response.status).toBe(200);
-		
-		const result = await response.json();
-		expect(result.task.title).toBe(todoData.title);
-		expect(result.task.project_id).toBe(project.id);
-		expect(result.tags).toBeDefined();
-		expect(Array.isArray(result.tags)).toBe(true);
+		expect(created.task.title).toBe(task.title);
+		expect(created.task.project_id).toBe(project.id);
+		expect(created.tags).toBeDefined();
+		expect(Array.isArray(created.tags)).toBe(true);
 	});
 
 	test('should update existing todo', async () => {
 		// Create initial todo
-		const initialTodo = {
+		const initial = TestDataFactory.createTask({
 			title: 'Initial Todo',
 			description: 'Initial description',
 			progress: 'UNSTARTED' as const,
 			owner_id: 'test-user-12345',
 			priority: 'LOW' as const
-		};
-
-		const createResponse = await fetch('http://localhost:4321/api/v0/tasks', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(initialTodo)
 		});
 
-		expect(createResponse.status).toBe(200);
-		const created = await createResponse.json();
+		const created = await test_client.tasks.create(initial);
+
+		expect(created.task.title).toBe(initial.title);
+		expect(created.task.progress).toBe(initial.progress);
 
 		// Update the todo
-		const updatedTodo = {
+		const upsert = {
+			...initial,
 			id: created.task.id,
 			title: 'Updated Todo Title',
 			description: 'Updated description',
@@ -132,55 +101,34 @@ describe('todo operations API integration', () => {
 			owner_id: 'test-user-12345',
 			priority: 'HIGH' as const
 		};
+		const updated = await test_client.tasks.update(created.task.id, upsert);
 
-		const updateResponse = await fetch('http://localhost:4321/api/v0/tasks', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(updatedTodo)
-		});
-
-		expect(updateResponse.status).toBe(200);
-		const updated = await updateResponse.json();
 		expect(updated.task.id).toBe(created.task.id);
-		expect(updated.task.title).toBe(updatedTodo.title);
-		expect(updated.task.progress).toBe(updatedTodo.progress);
-		expect(updated.task.priority).toBe(updatedTodo.priority);
+		expect(updated.task.title).toBe(upsert.title);
+		expect(updated.task.progress).toBe(upsert.progress);
+		expect(updated.task.priority).toBe(upsert.priority);
 	});
 
 	test('should save tags independently', async () => {
-		const tags = [
+		const tags: UpsertTag[] = [
 			{
 				title: 'frontend',
 				color: 'green' as const,
-				owner_id: 'test-user-12345',
+				owner_id: TEST_USER_ID,
 				deleted: false,
 				render: true
 			},
 			{
 				title: 'testing',
 				color: 'yellow' as const,
-				owner_id: 'test-user-12345',
+				owner_id: TEST_USER_ID,
 				deleted: false,
 				render: true
 			}
 		];
 
-		const response = await fetch('http://localhost:4321/api/v0/tasks/save_tags', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(tags)
-		});
-
-		expect(response.status).toBe(200);
+		const savedTags = await test_client.tasks.saveTags(tags);
 		
-		const savedTags = await response.json() as Tag[];
-		console.log('Saved tags response:', savedTags);
 		expect(Array.isArray(savedTags)).toBe(true);
 		expect(savedTags.length).toBe(2);
 		expect(savedTags.find(t => t.title === 'frontend')).toBeDefined();
@@ -224,16 +172,13 @@ describe('todo operations API integration', () => {
 			progress: 'INVALID_STATUS' // Invalid progress value
 		};
 
-		const response = await fetch('http://localhost:4321/api/v0/tasks', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(invalidTodo)
-		});
-
-		expect(response.status).toBe(400);
+		try {
+			await test_client.tasks.create(invalidTodo as any);
+			expect(false).toBe(true); // Should not reach here
+		} catch (error: any) {
+			expect(error).toBeDefined();
+			expect(error.message).toContain('Invalid input');
+		}
 	});
 
 	test('should validate tag schema', async () => {
@@ -242,20 +187,17 @@ describe('todo operations API integration', () => {
 			{
 				// Missing required title
 				color: 'red',
-				owner_id: 'test-user-12345'
+				owner_id: TEST_USER_ID
 			}
 		];
 
-		const response = await fetch('http://localhost:4321/api/v0/tasks/save_tags', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(invalidTags)
-		});
-
-		expect(response.status).toBe(400);
+		try {
+			await test_client.tasks.saveTags(invalidTags as any);
+			expect(false).toBe(true); // Should not reach here
+		} catch (error: any) {
+			expect(error).toBeDefined();
+			expect(error.message).toContain('Invalid input');
+		}
 	});
 
 	test('should handle owner authorization for todos', async () => {
@@ -265,16 +207,12 @@ describe('todo operations API integration', () => {
 			owner_id: 'different-user-id', // Different from authenticated user
 			progress: 'UNSTARTED' as const
 		};
-
-		const response = await fetch('http://localhost:4321/api/v0/tasks', {
-			method: 'PATCH',
-			headers: {
-				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${test_client.getApiKey()}`
-			},
-			body: JSON.stringify(todoData)
-		});
-
-		expect(response.status).toBe(401);
+		try {
+			await test_client.tasks.create(todoData);
+			expect(false).toBe(true); // Should not reach here
+		} catch (error: any) {
+			expect(error).toBeDefined();
+			expect(error.message).toContain('Invalid or expired API key');
+		}
 	});
 });

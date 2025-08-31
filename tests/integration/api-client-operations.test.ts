@@ -52,7 +52,7 @@ describe('API client operations integration', () => {
 			owner_id: 'test-user-12345'
 		};
 
-		const result = await test_client.tasks.upsertTodo(request);
+		const result = await test_client.tasks.upsert(request);
 		
 		expect(result.task.title).toBe(request.title);
 		expect(result.task.description).toBe(request.description);

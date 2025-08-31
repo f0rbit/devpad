@@ -7,7 +7,7 @@ type UpsertProjectOverrides = Nullable<UpsertProject> & Partial<Pick<UpsertProje
 export class TestDataFactory {
 	private static counter = 0;
 
-	private static getNextId(): string {
+	public static getNextId(): string {
 		return `test-${Date.now()}-${++this.counter}`;
 	}
 
