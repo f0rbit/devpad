@@ -43,7 +43,7 @@ export class DevpadApiClient {
 
 // Export types that users might need
 export type { RequestHistoryEntry, RequestOptions } from './utils/request';
-export type { ApiError as DevpadApiError, NetworkError, AuthenticationError, ValidationError } from './utils/errors';
+export type { ApiError as ApiError, NetworkError, AuthenticationError, ValidationError } from './utils/errors';
 export type { 
 	Project, 
 	UpsertProject, 

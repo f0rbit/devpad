@@ -10,7 +10,7 @@ export class ApiError extends Error {
     } = {}
   ) {
     super(message);
-    this.name = 'DevpadApiError';
+    this.name = 'ApiError';
     this.code = options.code ?? undefined;
     this.statusCode = options.statusCode ?? undefined;
   }

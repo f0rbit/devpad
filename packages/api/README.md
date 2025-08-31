@@ -117,14 +117,14 @@ import {
 The client throws typed errors for different failure scenarios:
 
 ```typescript
-import { DevpadApiError, AuthenticationError, NetworkError } from '@devpad/api';
+import { ApiError, AuthenticationError, NetworkError } from '@devpad/api';
 
 try {
   await client.projects.create({ name: 'Test Project' });
 } catch (error) {
   if (error instanceof AuthenticationError) {
     console.error('Invalid API key');
-  } else if (error instanceof DevpadApiError) {
+  } else if (error instanceof ApiError) {
     console.error('API Error:', error.message, error.statusCode);
   } else if (error instanceof NetworkError) {
     console.error('Network Error:', error.message);
