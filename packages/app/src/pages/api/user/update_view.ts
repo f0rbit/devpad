@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { update_user } from "../../../server/types";
+import { update_user } from "@devpad/schema";
 import { db, user } from "@devpad/schema/database";
 import { eq } from "drizzle-orm";
 

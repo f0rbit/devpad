@@ -1,8 +1,7 @@
 import { OAuth2RequestError } from "arctic";
 
 import type { APIContext } from "astro";
-import { github } from "../../../server/github";
-import { lucia } from "../../../server/lucia";
+import { github, lucia } from "@devpad/core";
 import { eq } from "drizzle-orm";
 import { db, user } from "@devpad/schema/database";
 

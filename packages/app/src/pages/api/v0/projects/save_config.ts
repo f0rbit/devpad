@@ -2,10 +2,8 @@ import type { APIContext } from "astro";
 import { z } from "zod";
 import { db, project, tag_config, ignore_path } from "@devpad/schema/database";
 import { eq, and, inArray } from "drizzle-orm";
-import { ConfigSchema } from "../../../../server/types";
-import { getProjectById } from "../../../../server/projects";
-import { upsertTag } from "../../../../server/tags";
-import { getAuthedUser } from "../../../../server/keys";
+import { ConfigSchema } from "@devpad/schema";
+import { getProjectById, upsertTag, getAuthedUser } from "@devpad/core";
 
 const save_config_schema = z.object({
 	id: z.string(),

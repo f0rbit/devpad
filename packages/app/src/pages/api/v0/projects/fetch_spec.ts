@@ -1,7 +1,5 @@
 import type { APIContext } from "astro";
-import { getSpecification } from "../../../../server/github";
-import { getProjectById } from "../../../../server/projects";
-import { getAuthedUser } from "../../../../server/keys";
+import { getSpecification, getProjectById, getAuthedUser } from "@devpad/core";
 
 export async function GET(context: APIContext) {
 	const { user_id, error: auth_error } = await getAuthedUser(context);

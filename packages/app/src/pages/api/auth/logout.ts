@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import { lucia } from "../../../server/lucia";
+import { lucia } from "@devpad/core";
 
 export async function GET(context: APIContext): Promise<Response> {
 	if (!context.locals.session) {

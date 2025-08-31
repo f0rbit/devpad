@@ -1,8 +1,7 @@
 ---
 import HistoryTimeline from "../components/solid/HistoryTimeline";
 import PageLayout from "../layouts/PageLayout.astro";
-import { getUserHistory } from "../server/action";
-import { getAPIKeys } from "../server/keys";
+import { getUserHistory, getAPIKeys } from "@devpad/core";
 const user = Astro.locals.user;
 
 if (!user) {

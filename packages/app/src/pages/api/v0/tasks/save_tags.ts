@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { upsert_tag } from "../../../../server/types";
+import { upsert_tag } from "@devpad/schema";
 import type { APIContext } from "astro";
-import { upsertTag } from "../../../../server/tags";
-import { getAuthedUser } from "../../../../server/keys";
+import { upsertTag, getAuthedUser } from "@devpad/core";
 import { db, tag } from "@devpad/schema/database";
 import { inArray } from "drizzle-orm";
 

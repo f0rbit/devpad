@@ -7,17 +7,11 @@ import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
 import { TagPicker } from "./TagPicker";
 import HistoryTimeline from "./HistoryTimeline";
-import type { _FetchedCodebaseTask, _FetchedTask, Task } from "../../server/tasks";
-import { type HistoryAction, type Tag, type UpsertTag } from "../../server/types";
-import type { Project } from "../../server/projects";
+import type { TaskWithDetails, HistoryAction, Tag, UpsertTag, Project } from "@devpad/schema";
 import { ProjectSelector } from "./ProjectSelector";
 
 interface Props {
-	task: {
-		task: _FetchedTask | null;
-		codebase_tasks: _FetchedCodebaseTask | null;
-		tags: string[];
-	};
+	task: TaskWithDetails;
 	user_tags: Tag[];
 	current_tags: UpsertTag[];
 	history: HistoryAction[];
@@ -25,9 +19,9 @@ interface Props {
 	project_map: Record<string, Project>;
 }
 
-type Progress = Task["task"]["progress"];
-type Visibility = Task["task"]["visibility"];
-type Priority = Task["task"]["priority"];
+type Progress = TaskWithDetails["task"]["progress"];
+type Visibility = TaskWithDetails["task"]["visibility"];
+type Priority = TaskWithDetails["task"]["priority"];
 
 const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map }: Props) => {
 	const [state, setState] = createStore({

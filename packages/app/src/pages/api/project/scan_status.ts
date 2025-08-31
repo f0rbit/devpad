@@ -2,9 +2,8 @@ import type { APIContext } from "astro";
 import { z } from "zod";
 import { db, codebase_tasks, project, task, todo_updates, tracker_result } from "@devpad/schema/database";
 import { and, eq, inArray, sql } from "drizzle-orm";
-import { update_action, type UpdateData } from "../../../server/types";
-import { addTaskAction, getUpsertedTaskMap } from "../../../server/tasks";
-import { getActiveUserTagsMapByName, linkTaskToTag } from "../../../server/tags";
+import { update_action, type UpdateData } from "@devpad/schema";
+import { addTaskAction, getUpsertedTaskMap, getActiveUserTagsMapByName, linkTaskToTag } from "@devpad/core";
 
 const request_schema = z.object({
 	id: z.number(),

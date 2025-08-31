@@ -1,6 +1,6 @@
 import { generateState } from "arctic";
 import type { APIContext } from "astro";
-import { github } from "../../../server/github";
+import { github } from "@devpad/core";
 
 export async function GET(context: APIContext): Promise<Response> {
 	const state = generateState();
