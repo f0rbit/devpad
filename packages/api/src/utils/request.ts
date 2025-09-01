@@ -126,12 +126,12 @@ export class ApiClient {
 
 			// Get the response text first
 			const text = await response.text();
-			
+
 			// If the response is null, empty, or just whitespace, return undefined for void endpoints
-			if (!text || text.trim() === '' || text.trim() === 'null') {
+			if (!text || text.trim() === "" || text.trim() === "null") {
 				return undefined as T;
 			}
-			
+
 			// Try to parse as JSON
 			try {
 				return JSON.parse(text) as T;

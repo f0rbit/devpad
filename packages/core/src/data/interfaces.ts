@@ -46,9 +46,9 @@ export interface ActionService {
 	getActions(userId: string, actionFilter: ActionType[] | null): Promise<HistoryAction[]>;
 }
 
-import type { Endpoints } from '@octokit/types';
+import type { Endpoints } from "@octokit/types";
 
-export type GitHubBranch = Endpoints['GET /repos/{owner}/{repo}/branches']['response']['data'][0] & {
+export type GitHubBranch = Endpoints["GET /repos/{owner}/{repo}/branches"]["response"]["data"][0] & {
 	commit: {
 		sha: string;
 		url: string;
@@ -70,7 +70,7 @@ export interface GithubService {
 	getBranches(owner: string, repo: string, accessToken: string): Promise<GitHubBranch[]>;
 	getRepo(owner: string, repo: string, accessToken: string, branch?: string | null): Promise<GitHubRepo>;
 	getSpecification(owner: string, repo: string, accessToken: string): Promise<string>;
-	getRepos(accessToken: string): Promise<Endpoints['GET /user/repos']['response']['data']>;
+	getRepos(accessToken: string): Promise<Endpoints["GET /user/repos"]["response"]["data"]>;
 }
 
 // Main data adapter interface

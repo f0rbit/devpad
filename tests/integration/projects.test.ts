@@ -29,7 +29,7 @@ describe("projects API client integration", () => {
 
 	test("should get API status", async () => {
 		// Test the basic API endpoint that should always work
-		const response = await fetch("http://localhost:4321/api/v0");
+		const response = await fetch("http://localhost:3001/api/v0");
 		expect(response.ok).toBe(true);
 
 		const data = await response.json();

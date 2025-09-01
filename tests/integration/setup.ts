@@ -10,10 +10,10 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 
 // Test constants
 export const TEST_USER_ID = "test-user-12345";
-export const TEST_BASE_URL = "http://localhost:4321/api/v0";
+export const TEST_BASE_URL = "http://localhost:3001/api/v0";
 
 // Global test state
-let astroServer: any = null;
+let honoServer: any = null;
 let testApiKey: string | null = null;
 let testClient: DevpadApiClient | null = null;
 
@@ -28,17 +28,17 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 	process.env.DATABASE_FILE = dbPath;
 
 	// Only setup database and server once globally
-	if (!astroServer) {
+	if (!honoServer) {
 		// Setup test database
 		await setupTestDatabase();
 
-		// Start Astro server
-		await startAstroServer();
+		// Start Hono server
+		await startHonoServer();
 
 		// Create test user and API key (only once)
 		testApiKey = await createTestUser(process.env.DATABASE_FILE!);
 	} else {
-		console.log("✅ Using existing Astro server and test database");
+		console.log("✅ Using existing Hono server and test database");
 	}
 
 	if (!testApiKey) {
@@ -59,10 +59,10 @@ export async function teardownIntegrationTests(): Promise<void> {
 	// Clean up server after each test file (but keep database for next test)
 	console.log("🧹 Test completed, stopping server");
 
-	// Stop Astro server
-	if (astroServer) {
-		astroServer.kill("SIGTERM");
-		astroServer = null;
+	// Stop Hono server
+	if (honoServer) {
+		honoServer.kill("SIGTERM");
+		honoServer = null;
 		testApiKey = null;
 		testClient = null;
 	}
@@ -72,8 +72,8 @@ export async function teardownIntegrationTests(): Promise<void> {
 
 // Set up process exit handler to cleanup database when test process ends
 process.on("exit", () => {
-	if (astroServer) {
-		astroServer.kill("SIGTERM");
+	if (honoServer) {
+		honoServer.kill("SIGTERM");
 	}
 });
 
@@ -91,10 +91,10 @@ process.on("SIGTERM", async () => {
 export async function finalCleanup(): Promise<void> {
 	console.log("🧹 Final cleanup - stopping server and cleaning database...");
 
-	// Stop Astro server
-	if (astroServer) {
-		astroServer.kill("SIGTERM");
-		astroServer = null;
+	// Stop Hono server
+	if (honoServer) {
+		honoServer.kill("SIGTERM");
+		honoServer = null;
 	}
 
 	// Clean up test database
@@ -123,8 +123,9 @@ async function setupTestDatabase(): Promise<void> {
 	const sqlite = new Database(dbPath);
 	const db = drizzle(sqlite, { schema });
 
-	const baseDir = path.resolve(process.cwd());
+	const baseDir = path.resolve(__dirname, "..", "..");
 	const migrationsFolder = path.join(baseDir, "packages", "schema", "src", "database", "drizzle");
+	console.log("🔍 Migration folder:", migrationsFolder);
 	migrate(db, { migrationsFolder });
 
 	sqlite.close();
@@ -132,40 +133,41 @@ async function setupTestDatabase(): Promise<void> {
 	console.log("✅ Test database setup complete");
 }
 
-async function startAstroServer(): Promise<void> {
-	console.log("🚀 Starting Astro dev server...");
+async function startHonoServer(): Promise<void> {
+	console.log("🚀 Starting Hono dev server...");
 
-	const appDir = path.resolve(path.join(__dirname, "..", "..", "packages", "app"));
+	const serverDir = path.resolve(path.join(__dirname, "..", "..", "packages", "server"));
 
 	const { spawn } = await import("node:child_process");
 
-	astroServer = spawn("bun", ["dev", "--port", "4321"], {
-		cwd: appDir,
+	honoServer = spawn("bun", ["dev"], {
+		cwd: serverDir,
 		stdio: "pipe",
 		env: {
 			...process.env,
 			NODE_ENV: "test",
 			DATABASE_FILE: process.env.DATABASE_FILE,
 			DATABASE_URL: process.env.DATABASE_URL,
+			PORT: "3001",
 		},
 	});
 
 	// Handle process errors
-	astroServer.on("error", (error: any) => {
-		console.error("❌ Astro server error:", error);
+	honoServer.on("error", (error: any) => {
+		console.error("❌ Hono server error:", error);
 	});
 
-	// Wait for server to be ready by polling the endpoint
+	// Wait for server to be ready by polling the health endpoint
 	let attempts = 0;
 	const maxAttempts = 30;
 
 	while (attempts < maxAttempts) {
 		try {
-			const response = await fetch(`${TEST_BASE_URL}`, {
+			const response = await fetch("http://localhost:3001/health", {
 				signal: AbortSignal.timeout(2000),
 			});
 			if (response.ok) {
-				console.log("✅ Astro dev server started and responding");
+				console.log("✅ Hono dev server started and responding");
 				return;
 			}
 		} catch (_error) {
@@ -176,7 +178,7 @@ async function startAstroServer(): Promise<void> {
 		attempts++;
 	}
 
-	throw new Error(`Astro server did not start within ${maxAttempts} seconds`);
+	throw new Error(`Hono server did not start within ${maxAttempts} seconds`);
 }
 
 async function createTestUser(dbPath: string): Promise<string> {

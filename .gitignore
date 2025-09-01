@@ -51,5 +51,4 @@ database/*.db
 *.d.ts.map
 
 dist
-
-packages/app/.astro
+.astro/

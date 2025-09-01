@@ -39,13 +39,13 @@ export async function getUserByApiKey(apiKey: string): Promise<{ user: User | nu
 		if (result.error) {
 			return { user: null, error: result.error };
 		}
-		
+
 		// Get full user details
 		const users = await db.select().from(user).where(eq(user.id, result.user_id!));
 		if (users.length === 0) {
 			return { user: null, error: "User not found" };
 		}
-		
+
 		return { user: users[0] as User, error: null };
 	} catch (error) {
 		return { user: null, error: `Failed to get user: ${error}` };
@@ -55,16 +55,19 @@ export async function getUserByApiKey(apiKey: string): Promise<{ user: User | nu
 export async function createApiKey(userId: string, name: string): Promise<{ key: ApiKey; error: string | null }> {
 	try {
 		const keyHash = createId(); // This would normally be properly hashed
-		
-		const result = await db.insert(api_key).values({
-			owner_id: userId,
-			hash: keyHash,
-		}).returning();
-		
+
+		const result = await db
+			.insert(api_key)
+			.values({
+				owner_id: userId,
+				hash: keyHash,
+			})
+			.returning();
+
 		if (result.length === 0) {
 			return { key: {} as ApiKey, error: "Failed to create API key" };
 		}
-		
+
 		return { key: result[0] as ApiKey, error: null };
 	} catch (error) {
 		return { key: {} as ApiKey, error: `Failed to create API key: ${error}` };

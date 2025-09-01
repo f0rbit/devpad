@@ -8,9 +8,13 @@ import type { GitHubBranch } from "../data/interfaces.js";
 export const github = new GitHub(Bun.env.GITHUB_CLIENT_ID!, Bun.env.GITHUB_CLIENT_SECRET!);
 
 class GitHubError extends Error {
-	constructor(message: string, public status?: number, public response?: any) {
+	constructor(
+		message: string,
+		public status?: number,
+		public response?: any
+	) {
 		super(message);
-		this.name = 'GitHubError';
+		this.name = "GitHubError";
 	}
 }
 
@@ -24,7 +28,7 @@ export async function getRepos(access_token: string) {
 	try {
 		const octokit = createOctokit(access_token);
 		const response = await octokit.rest.repos.listForAuthenticatedUser({
-			sort: 'updated',
+			sort: "updated",
 			per_page: 100,
 		});
 		return response.data;
@@ -37,8 +41,8 @@ export async function getRepos(access_token: string) {
 export async function getRepo(owner: string, repo: string, access_token: string, branch?: string | null) {
 	try {
 		const octokit = createOctokit(access_token);
-		const ref = branch || 'HEAD';
-		
+		const ref = branch || "HEAD";
+
 		console.log(`Fetching GitHub repo: ${owner}/${repo}@${ref}`);
 		const start = performance.now();
 
@@ -50,13 +54,13 @@ export async function getRepo(owner: string, repo: string, access_token: string,
 		});
 
 		console.log(`Fetched repo in ${performance.now() - start}ms`);
-		
+
 		// Octokit returns the response directly as an ArrayBuffer for binary data
 		return {
 			status: response.status,
 			async arrayBuffer() {
 				return response.data as ArrayBuffer;
-			}
+			},
 		};
 	} catch (error: any) {
 		console.error("Error fetching GitHub repository:", error);
@@ -70,7 +74,7 @@ export async function getRepo(owner: string, repo: string, access_token: string,
 export async function getBranches(owner: string, repo: string, access_token: string): Promise<GitHubBranch[]> {
 	try {
 		const octokit = createOctokit(access_token);
-		
+
 		// Fetch all branches
 		const branchesResponse = await octokit.rest.repos.listBranches({
 			owner,
@@ -90,22 +94,22 @@ export async function getBranches(owner: string, repo: string, access_token: str
 		const commit_details = await getCommitDetails(owner, repo, commits, access_token);
 		const commit_map = new Map(commit_details.map(commit => [commit.sha, commit]));
 
-		// Merge branch data with commit details  
+		// Merge branch data with commit details
 		const enrichedBranches: GitHubBranch[] = branches.map(branch => {
 			const enrichedCommit = commit_map.get(branch.commit.sha) || {
 				sha: branch.commit.sha,
 				url: branch.commit.url,
-				message: '',
-				author_name: '',
-				author_email: '',
-				date: '',
+				message: "",
+				author_name: "",
+				author_email: "",
+				date: "",
 				avatar_url: null,
-				author_user: '',
+				author_user: "",
 			};
 
 			return {
 				...branch,
-				commit: enrichedCommit
+				commit: enrichedCommit,
 			} as GitHubBranch;
 		});
 
@@ -113,7 +117,7 @@ export async function getBranches(owner: string, repo: string, access_token: str
 		enrichedBranches.sort((a, b) => {
 			if (a.name === "main" || a.name === "master") return -1;
 			if (b.name === "main" || b.name === "master") return 1;
-			
+
 			const dateA = new Date(a.commit.date).getTime();
 			const dateB = new Date(b.commit.date).getTime();
 			return dateB - dateA;
@@ -142,7 +146,7 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 	if (missing_shas.size > 0) {
 		try {
 			const octokit = createOctokit(access_token);
-			
+
 			const commit_details = await Promise.all(
 				Array.from(missing_shas).map(async commit_sha => {
 					try {
@@ -161,7 +165,7 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 
 			// Filter out failed requests and map to database schema
 			const validCommits = commit_details.filter((c): c is NonNullable<typeof c> => c !== null);
-			
+
 			if (validCommits.length > 0) {
 				const values = validCommits.map(c => ({
 					sha: c.sha,
@@ -186,24 +190,24 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 	return commits;
 }
 
-export async function getSpecification(owner: string, repo: string, access_token: string){
+export async function getSpecification(owner: string, repo: string, access_token: string) {
 	if (!access_token) {
 		throw new GitHubError("GitHub access token is required to fetch repository README");
 	}
-	
+
 	try {
 		const octokit = createOctokit(access_token);
-		
+
 		const response = await octokit.rest.repos.getReadme({
 			owner,
 			repo,
 		});
 
-		// Decode the base64 content 
-		if ('content' in response.data && response.data.content) {
-			return Buffer.from(response.data.content, 'base64').toString('utf-8');
+		// Decode the base64 content
+		if ("content" in response.data && response.data.content) {
+			return Buffer.from(response.data.content, "base64").toString("utf-8");
 		}
-		
+
 		throw new GitHubError("README content not found in response");
 	} catch (error: any) {
 		console.warn(`README: Code ${error.status} - ${error.message}`);

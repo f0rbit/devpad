@@ -1,0 +1,25 @@
+{
+	"name": "@devpad/server",
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"build": "bun build src/index.ts --outdir dist --target bun",
+		"start": "bun dist/index.js",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@devpad/core": "workspace:*",
+		"@devpad/schema": "workspace:*",
+		"@hono/node-server": "^1.13.1",
+		"@hono/zod-validator": "^0.7.2",
+		"arctic": "^1.9.2",
+		"hono": "^4.6.3",
+		"lucia": "^3.2.1",
+		"zod": "^4.1.5"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"typescript": "^5.6.2"
+	}
+}
