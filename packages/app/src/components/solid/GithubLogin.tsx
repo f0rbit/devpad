@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import { LoadingIndicator, type LoadingState } from "./LoadingIndicator";
+import { LoadingIndicator, type LoadingState } from "@/components/solid/LoadingIndicator";
 
 export default function GithubLogin({ size = 20 }: { size?: number }) {
 	const [state, setState] = createSignal<LoadingState>("idle");

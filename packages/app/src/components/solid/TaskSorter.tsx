@@ -5,12 +5,11 @@ import Search from "lucide-solid/icons/search";
 import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
 import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
-import type { Project } from "../../server/projects";
-import type { Task as TaskType } from "../../server/tasks";
-import type { TaskView, UpsertTag, Tag as UserTag } from "../../server/types";
-import { ProjectSelector } from "./ProjectSelector";
-import { TagSelect } from "./TagPicker";
-import { TaskCard } from "./TaskCard";
+import type { Project, TaskWithDetails as TaskType, TaskView, UpsertTag, TagWithTypedColor as UserTag } from "@devpad/schema";
+import { getApiClient } from "@/utils/api-client";
+import { ProjectSelector } from "@/components/solid/ProjectSelector";
+import { TagSelect } from "@/components/solid/TagPicker";
+import { TaskCard } from "@/components/solid/TaskCard";
 
 const options = ["upcoming", "recent", "priority", "progress"] as const;
 

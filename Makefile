@@ -8,7 +8,7 @@ unit:
 	bun test unit
 
 integration:
-	bun test integration
+	bun test integration --concurrent 1
 
 test: unit integration
 

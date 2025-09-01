@@ -2,8 +2,8 @@
 
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, For } from "solid-js";
-import type { Tag, UpsertTag } from "../../server/types";
-import { TagBadge } from "./TagEditor";
+import type { TagWithTypedColor as Tag, UpsertTag } from "@devpad/schema";
+import { TagBadge } from "@/components/solid/TagEditor";
 
 export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag | null) => void }) {
 	// use a select element

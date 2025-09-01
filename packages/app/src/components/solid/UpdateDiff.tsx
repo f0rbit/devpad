@@ -3,8 +3,7 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
-import type { Task } from "../../server/tasks";
-import type { UpdateAction, UpdateData } from "../../server/types";
+import type { TaskWithDetails as Task, UpdateAction, UpdateData } from "@devpad/schema";
 
 interface Props {
 	items: UpdateData[];

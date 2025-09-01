@@ -6,7 +6,8 @@ import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
-import { TAG_COLOURS, type Tag, type TagColor, type UpsertTag } from "../../server/types";
+import { TAG_COLOURS, type TagWithTypedColor as Tag, type TagColor, type UpsertTag } from "@devpad/schema";
+import { getApiClient } from "@/utils/api-client";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -39,19 +40,14 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 
 	async function save() {
 		if (creating()) return;
-		const values = currentTags().map(t => ({ ...t, owner_id }));
-		const response = await fetch("/api/todo/save_tags", {
-			method: "PATCH",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify(values),
-		});
-		if (response.ok) {
-			const result = await response.json();
+		try {
+			const values = currentTags().map(t => ({ ...t, owner_id }));
+			const apiClient = getApiClient();
+			const result = await apiClient.tasks.saveTags(values);
 			console.log("result", result);
 			window.location.reload();
-		} else {
-			const msg = await response.text();
-			console.error(response.statusText, msg);
+		} catch (error) {
+			console.error("Error saving tags:", error);
 		}
 	}
 

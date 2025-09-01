@@ -1,8 +1,9 @@
 ---
-import type { Task } from "../server/tasks";
+import type { TaskWithDetails } from "@devpad/schema";
+import { Code } from "astro:components";
 
 interface Props {
-	code: NonNullable<Task["codebase_tasks"]>;
+	code: NonNullable<TaskWithDetails["codebase_tasks"]>;
 }
 
 const { code } = Astro.props;
@@ -44,7 +45,7 @@ if (code.file) {
 	<div class="flex-row">
 		<span>{code.type}</span>
 		<span> - </span>
-		<code>{path}</code>
+		<code>{_path}</code>
 	</div>
-	{context && <Code code={context} lang={file_type} />}
+	{_context && <Code code={_context} lang={_file_type} />}
 </div>

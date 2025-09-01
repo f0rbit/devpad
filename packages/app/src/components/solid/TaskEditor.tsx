@@ -1,4 +1,5 @@
-import type { HistoryAction, Project, Tag, TaskWithDetails, UpsertTag } from "@devpad/schema";
+import type { HistoryAction, Project, TagWithTypedColor, TaskWithDetails, UpsertTag } from "@devpad/schema";
+import { getApiClient } from "@/utils/api-client";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -6,13 +7,13 @@ import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
 import { createSignal } from "solid-js";
 import { createStore } from "solid-js/store";
-import HistoryTimeline from "./HistoryTimeline";
-import { ProjectSelector } from "./ProjectSelector";
-import { TagPicker } from "./TagPicker";
+import HistoryTimeline from "@/components/solid/HistoryTimeline";
+import { ProjectSelector } from "@/components/solid/ProjectSelector";
+import { TagPicker } from "@/components/solid/TagPicker";
 
 interface Props {
 	task: TaskWithDetails;
-	user_tags: Tag[];
+	user_tags: TagWithTypedColor[];
 	current_tags: UpsertTag[];
 	history: HistoryAction[];
 	user_id: string;
@@ -43,12 +44,9 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 	const saveTask = async () => {
 		setRequestState("loading");
 
-		const response = await fetch(`/api/todo/upsert`, {
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
+		try {
+			const apiClient = getApiClient();
+			const result = await apiClient.tasks.upsert({
 				id: task.task?.id ?? null,
 				title: state.title,
 				summary: state.summary === "" ? null : state.summary,
@@ -61,22 +59,16 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				owner_id: user_id,
 				project_id: state.project_id,
 				tags: currentTags(),
-			}),
-		});
+			});
 
-		if (response.ok) {
 			setRequestState("success");
-
-			const result = await response.json();
-			if (result.error) {
-				setRequestState("error");
-				return;
-			} else if (task.task?.id == null) {
-				const new_id = result.id;
+			if (task.task?.id == null) {
+				const new_id = result.task.id;
 				// redirect to new task page
 				window.location.href = `/todo/${new_id}`;
 			}
-		} else {
+		} catch (error) {
+			console.error("Error saving task:", error);
 			setRequestState("error");
 		}
 
@@ -197,7 +189,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 	);
 };
 
-const LinkedCode = ({ code }: { code: NonNullable<Task["codebase_tasks"]> }) => {
+const LinkedCode = ({ code }: { code: NonNullable<TaskWithDetails["codebase_tasks"]> }) => {
 	// format <path>:<line>
 	let path = "unknown:?";
 	if (code.file) {

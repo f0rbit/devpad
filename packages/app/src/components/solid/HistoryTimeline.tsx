@@ -13,7 +13,7 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import ScanText from "lucide-solid/icons/scan-text";
 import Type from "lucide-solid/icons/type";
 import { createSignal, For } from "solid-js";
-import type { HistoryAction, ScanStatus } from "../../server/types";
+import type { HistoryAction, ScanStatus } from "@devpad/schema";
 
 const pageSize = () => 10;
 

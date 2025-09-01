@@ -6,8 +6,8 @@ import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For, Index } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { z } from "zod";
-import type { ConfigSchema, Tag } from "../../server/types";
+import type { ConfigSchemaType, TagWithTypedColor } from "@devpad/schema";
+import { getApiClient } from "@/utils/api-client";
 
 // Default configurations for helper tags
 const DEFAULT_CONFIGS = {
@@ -19,7 +19,7 @@ const DEFAULT_CONFIGS = {
 
 type DefaultConfig = keyof typeof DEFAULT_CONFIGS;
 
-type Config = z.infer<typeof ConfigSchema>;
+type Config = ConfigSchemaType;
 
 const TodoScannerConfig = ({
 	config: initial_config,
@@ -32,7 +32,7 @@ const TodoScannerConfig = ({
 	id: string;
 	branches: { name: string; commit: { message: string } }[] | null;
 	scan_branch: string | undefined | null;
-	user_tags: Tag[];
+	user_tags: TagWithTypedColor[];
 }) => {
 	const [config, setConfig] = createStore({
 		tags: initial_config.tags ?? [],
@@ -157,24 +157,16 @@ const TodoScannerConfig = ({
 		if (!validate()) return;
 
 		try {
-			const response = await fetch(`/api/project/save_config`, {
-				method: "PATCH",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					config: {
-						tags: config.tags.filter(tag => tag.name && tag.match.length > 0),
-						ignore: config.ignore.filter(path => path.trim()),
-					},
-					scan_branch: config.branch ?? undefined,
-					id,
-				}),
+			const apiClient = getApiClient();
+			await apiClient.projects.saveConfig({
+				config: {
+					tags: config.tags.filter(tag => tag.name && tag.match.length > 0),
+					ignore: config.ignore.filter(path => path.trim()),
+				},
+				scan_branch: config.branch ?? undefined,
+				id,
 			});
-
-			if (response.ok) {
-				window.location.reload();
-			} else {
-				setErrors("tags", "Failed to save configuration.");
-			}
+			window.location.reload();
 		} catch (error) {
 			console.error("Error saving config:", error);
 			setErrors("tags", "An error occurred while saving.");

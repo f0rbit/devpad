@@ -1,5 +1,5 @@
 ---
-import type { Project } from "../server/projects";
+import type { Project } from "@devpad/schema";
 
 interface Props {
 	project: Project | null;
@@ -11,7 +11,7 @@ const { project } = Astro.props;
 const _mode = project ? "edit" : "create";
 ---
 
-<section id="project-settings" data-user={user?.id ?? null} data-pid={project?.id ?? null}>
+<section id="project-settings" data-user={_user?.id ?? null} data-pid={project?.id ?? null}>
 	<div>
 		<label for="project_id">project id</label>
 		<input type="text" id="project_id" value={project?.project_id ?? ""} required />
@@ -57,7 +57,7 @@ const _mode = project ? "edit" : "create";
 		</select>
 	</div>
 	<div>
-		<a role="button" id="submit">{mode == "create" ? "create" : "save"}</a>
+		<a role="button" id="submit">{_mode == "create" ? "create" : "save"}</a>
 	</div>
 	<div>
 		<p id="error"></p>
@@ -65,7 +65,7 @@ const _mode = project ? "edit" : "create";
 </section>
 
 <script>
-	import type { UpsertProject } from "../server/types";
+	import type { UpsertProject } from "@devpad/schema";
 	async function create_project() {
 		document.getElementById("error")!.innerText = "";
 		const get_value = (id: string) => {

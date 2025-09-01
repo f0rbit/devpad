@@ -9,17 +9,18 @@ import Square from "lucide-solid/icons/square";
 import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { For } from "solid-js";
-import type { Project } from "../../server/projects";
-import type { Task } from "../../server/tasks";
-import type { UpsertTag } from "../../server/types";
-import { TagBadge } from "./TagEditor";
+import type { Project, TaskWithDetails, UpsertTag } from "@devpad/schema";
+import { getApiClient } from "@/utils/api-client";
+import { TagBadge } from "@/components/solid/TagEditor";
 
 interface Props {
-	task: Task;
+	task: TaskWithDetails;
 	project: Project | null;
 	user_tags: UpsertTag[];
-	update: (task_id: string, data: any) => void;
-	draw_project: boolean;
+	view?: "list" | "grid";
+	class?: string;
+	update?: (id: string, updates: any) => void;
+	draw_project?: boolean;
 }
 
 export const TaskCard = (props: Props) => {
@@ -52,22 +53,16 @@ export const TaskCard = (props: Props) => {
 		const current_progress = task.progress;
 		if (current_progress === "COMPLETED") return; // can't progress from completed
 		const new_progress: "IN_PROGRESS" | "COMPLETED" = current_progress === "UNSTARTED" ? "IN_PROGRESS" : "COMPLETED";
-		const response = await fetch(`/api/todo/upsert`, {
-			method: "PUT",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
+		try {
+			const apiClient = getApiClient();
+			await apiClient.tasks.upsert({
 				id: task.id,
 				progress: new_progress,
 				owner_id: task.owner_id,
-			}),
-		});
-		if (!response.ok) {
-			console.error(await response.text());
-			return;
-		} else {
-			props.update(task.id, { progress: new_progress });
+			});
+			props.update?.(task.id, { progress: new_progress });
+		} catch (error) {
+			console.error("Error updating task progress:", error);
 		}
 	};
 
@@ -153,7 +148,7 @@ const DueDate = ({ date }: { date: string | null }) => {
 	);
 };
 
-export function TaskProgress({ progress, onClick, type }: { progress: Task["task"]["progress"]; onClick: () => void; type: "box" | "circle" }) {
+export function TaskProgress({ progress, onClick, type }: { progress: TaskWithDetails["task"]["progress"]; onClick: () => void; type: "box" | "circle" }) {
 	// TODO: completed items don't need <a> or onclick
 	switch (type) {
 		case "box": {

@@ -12,9 +12,11 @@
 		"verbatimModuleSyntax": false,
 		"allowImportingTsExtensions": false,
 		"paths": {
-			"@/*": ["./*"],
-			"@/database/*": ["./database/*"],
-			"@/api/*": ["./api/*"]
+			"@/*": ["./src/*"],
+			"@/components/*": ["./src/components/*"],
+			"@/layouts/*": ["./src/layouts/*"],
+			"@/pages/*": ["./src/pages/*"],
+			"@/utils/*": ["./src/utils/*"]
 		}
 	},
 	"include": ["src/**/*", "database/**/*"],
