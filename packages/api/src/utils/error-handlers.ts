@@ -54,7 +54,9 @@ export async function handleResponseError(response: Response): Promise<never> {
 	}
 
 	if (response.status === HTTP_STATUS.BAD_REQUEST && parsedError?.error?.name === "ZodError") {
-		throw new ValidationError(`Validation failed: ${errorMessage}`);
+		// Enhanced: Create a more detailed ValidationError with the original Zod error info
+		const zodErrorDetails = parsedError.error?.issues ? JSON.stringify(parsedError.error) : errorMessage;
+		throw new ValidationError(zodErrorDetails);
 	}
 
 	throw new ApiError(errorMessage, { statusCode: response.status });
@@ -90,6 +92,91 @@ export function isNetworkError(error: unknown): error is NetworkError {
 }
 
 /**
+ * Parse Zod validation errors into user-friendly messages
+ */
+export function parseZodErrors(errorMessage: string): string {
+	try {
+		// Try to parse as JSON first to get structured error info
+		let parsedError: any = null;
+		try {
+			parsedError = JSON.parse(errorMessage);
+		} catch {
+			// If not JSON, try to extract Zod error details from the error message
+			const zodErrorMatch = errorMessage.match(/ZodError: (.+)/);
+			if (zodErrorMatch && zodErrorMatch[1]) {
+				try {
+					parsedError = JSON.parse(zodErrorMatch[1]);
+				} catch {
+					// If still not JSON, try to extract from the message
+					const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
+					if (issuesMatch && issuesMatch[1]) {
+						try {
+							parsedError = { issues: JSON.parse(issuesMatch[1]) };
+						} catch {
+							// Fall back to basic parsing
+						}
+					}
+				}
+			}
+		}
+
+		if (parsedError?.issues && Array.isArray(parsedError.issues)) {
+			const friendlyMessages = parsedError.issues.map((issue: any) => {
+				const path = issue.path && issue.path.length > 0 ? issue.path.join(".") : "field";
+				const message = issue.message || "is invalid";
+
+				// Handle common validation types with friendly messages
+				switch (issue.code) {
+					case "invalid_type":
+						return `${path} must be a ${issue.expected} (received ${issue.received})`;
+					case "too_small":
+						if (issue.type === "string") {
+							return `${path} must be at least ${issue.minimum} characters long`;
+						}
+						if (issue.type === "number") {
+							return `${path} must be at least ${issue.minimum}`;
+						}
+						return `${path} is too small`;
+					case "too_big":
+						if (issue.type === "string") {
+							return `${path} must be no more than ${issue.maximum} characters long`;
+						}
+						if (issue.type === "number") {
+							return `${path} must be no more than ${issue.maximum}`;
+						}
+						return `${path} is too large`;
+					case "invalid_string":
+						if (issue.validation === "email") {
+							return `${path} must be a valid email address`;
+						}
+						if (issue.validation === "url") {
+							return `${path} must be a valid URL`;
+						}
+						if (issue.validation === "uuid") {
+							return `${path} must be a valid UUID`;
+						}
+						return `${path} format is invalid`;
+					case "custom":
+						return `${path}: ${message}`;
+					default:
+						return `${path}: ${message}`;
+				}
+			});
+
+			if (friendlyMessages.length === 1) {
+				return friendlyMessages[0];
+			}
+			return `Validation failed:\n• ${friendlyMessages.join("\n• ")}`;
+		}
+	} catch (e) {
+		// Fall back to original message if parsing fails
+		console.debug("Failed to parse Zod error:", e);
+	}
+
+	return errorMessage;
+}
+
+/**
  * Get user-friendly error message from any error
  */
 export function getUserFriendlyErrorMessage(error: unknown): string {
@@ -108,6 +195,12 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
 		if (error.statusCode === HTTP_STATUS.BAD_REQUEST) {
 			return "Invalid request. Please check your data";
 		}
+
+		// Enhanced: Parse Zod validation errors for ValidationError types
+		if (error.code === "VALIDATION_ERROR" && error.message) {
+			return parseZodErrors(error.message);
+		}
+
 		return error.message || "An error occurred";
 	}
 

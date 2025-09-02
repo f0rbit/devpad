@@ -54,5 +54,7 @@ export type {
 export type { ApiError, AuthenticationError, NetworkError, ValidationError } from "./utils/errors";
 // Export types that users might need
 export type { RequestHistoryEntry, RequestOptions } from "./utils/request";
+// Export user-friendly error utilities
+export { getUserFriendlyErrorMessage, parseZodErrors } from "./utils/error-handlers";
 
 export default DevpadApiClient;

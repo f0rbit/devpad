@@ -74,8 +74,6 @@ export class ApiClient {
 		};
 
 		try {
-			// console.log(`API Request: ${method} ${url}`);
-
 			const fetchOptions: RequestInit = {
 				method,
 				headers: request_headers,
@@ -88,8 +86,6 @@ export class ApiClient {
 			const response = await fetch(url, fetchOptions);
 			const duration = Date.now() - startTime;
 
-			// console.log(`API Response Status: ${response.status}`);
-
 			// Update history entry with response info
 			historyEntry.status = response.status;
 			historyEntry.duration = duration;
@@ -98,7 +94,6 @@ export class ApiClient {
 				try {
 					// Use centralized error handling
 					handleHttpResponse(response);
-					// If no exception thrown, handle with response error
 					await handleResponseError(response);
 				} catch (error) {
 					// Log error in history and re-throw
@@ -112,46 +107,41 @@ export class ApiClient {
 			// Success - add to history
 			this.request_history.add(historyEntry);
 
-			// If the response doesn't have a body (like for delete methods), return void
-			if (response.status === 204) {
+			// Handle response parsing
+			if (response.status === HTTP_STATUS.NO_CONTENT) {
 				return undefined as T;
 			}
 
-			// Get the response text first
 			const text = await response.text();
-
-			// If the response is null, empty, or just whitespace, return undefined for void endpoints
 			if (!text || text.trim() === "" || text.trim() === "null") {
 				return undefined as T;
 			}
 
-			// Try to parse as JSON
 			try {
 				return JSON.parse(text) as T;
 			} catch (parseError) {
-				// If JSON parsing fails, return the text as-is
 				return text as T;
 			}
 		} catch (error) {
 			console.error("API Request Error:", error);
 
-			// If this is a network error (not handled above), add to history
-			if (!(error instanceof ApiError || error instanceof AuthenticationError)) {
-				const duration = Date.now() - startTime;
-				historyEntry.duration = duration;
-
-				try {
-					handleNetworkError(error);
-				} catch (networkError) {
-					const errorMessage = networkError instanceof Error ? networkError.message : "Unknown network error";
-					historyEntry.error = errorMessage;
-					this.request_history.add(historyEntry);
-					throw networkError;
-				}
+			// If this is already an API error, just re-throw it (already added to history above)
+			if (error instanceof ApiError || error instanceof AuthenticationError) {
+				throw error;
 			}
 
-			// Re-throw API errors (already added to history above)
-			throw error;
+			// Handle network error
+			const duration = Date.now() - startTime;
+			historyEntry.duration = duration;
+
+			try {
+				handleNetworkError(error);
+			} catch (networkError) {
+				const errorMessage = networkError instanceof Error ? networkError.message : "Unknown network error";
+				historyEntry.error = errorMessage;
+				this.request_history.add(historyEntry);
+				throw networkError;
+			}
 		}
 	}
 
