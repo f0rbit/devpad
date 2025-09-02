@@ -1,18 +1,10 @@
-import { Database } from "bun:sqlite";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { DevpadApiClient } from "@devpad/api";
-import * as schema from "@devpad/schema/database";
-import { api_key, user } from "@devpad/schema/database/schema";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { TEST_USER_ID, DEBUG_LOGGING, log, setupTestDatabase, createTestUser, cleanupTestDatabase, waitForServer } from "../shared/test-utils";
 
-// Test constants
-export const TEST_USER_ID = "test-user-12345";
 export const TEST_BASE_URL = "http://localhost:3001/api/v0";
-
-export const DEBUG_LOGGING = Bun.env.DEBUG_LOGGING === "true";
+export { TEST_USER_ID, DEBUG_LOGGING };
 
 // Global test state
 let honoServer: any = null;
@@ -37,13 +29,13 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 	// Only setup database and server once globally
 	if (!honoServer) {
 		// Setup test database
-		await setupTestDatabase();
+		await setupTestDatabase(dbPath);
 
 		// Start Hono server
 		await startHonoServer();
 
 		// Create test user and API key (only once)
-		testApiKey = await createTestUser(process.env.DATABASE_FILE!);
+		testApiKey = await createTestUser(dbPath);
 	} else {
 		log("✅ Using existing Hono server and test database");
 	}
@@ -107,39 +99,10 @@ export async function finalCleanup(): Promise<void> {
 	}
 
 	// Clean up test database
-	await cleanupTestDatabase();
+	const dbPath = path.join(process.cwd(), "database", "test.db");
+	cleanupTestDatabase(dbPath);
 
 	log("✅ Final cleanup completed");
-}
-
-async function setupTestDatabase(): Promise<void> {
-	const dbPath = process.env.DATABASE_FILE!;
-
-	// Ensure database directory exists
-	const dbDir = path.dirname(dbPath);
-	if (!fs.existsSync(dbDir)) {
-		fs.mkdirSync(dbDir, { recursive: true });
-	}
-
-	// Remove existing test database
-	if (fs.existsSync(dbPath)) {
-		fs.unlinkSync(dbPath);
-	}
-
-	log("🗄️ Setting up test database at:", dbPath);
-
-	// Run migrations
-	const sqlite = new Database(dbPath);
-	const db = drizzle(sqlite, { schema });
-
-	const baseDir = path.resolve(__dirname, "..", "..");
-	const migrationsFolder = path.join(baseDir, "packages", "schema", "src", "database", "drizzle");
-	log("🔍 Migration folder:", migrationsFolder);
-	migrate(db, { migrationsFolder });
-
-	sqlite.close();
-
-	log("✅ Test database setup complete");
 }
 
 async function startHonoServer(): Promise<void> {
@@ -167,7 +130,7 @@ async function startHonoServer(): Promise<void> {
 	console.error = function (...args) {
 		logFile.write(args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n");
 		process.stderr.write(args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n");
-	}
+	};
 
 	if (!DEBUG_LOGGING) {
 		// Pipe stdout and stderr to the log file
@@ -186,76 +149,9 @@ async function startHonoServer(): Promise<void> {
 		console.error("❌ Hono server error:", error);
 	});
 
-	// Wait for server to be ready by polling the health endpoint
-	let attempts = 0;
-	const maxAttempts = 30;
-
-	while (attempts < maxAttempts) {
-		try {
-			const response = await fetch("http://localhost:3001/health", {
-				signal: AbortSignal.timeout(2000),
-			});
-			if (response.ok) {
-				log("✅ Hono dev server started and responding");
-				return;
-			}
-		} catch (_error) {
-			// Server not ready yet, continue waiting
-		}
-
-		await new Promise(resolve => setTimeout(resolve, 1000));
-		attempts++;
-	}
-
-	throw new Error(`Hono server did not start within ${maxAttempts} seconds`);
-}
-
-async function createTestUser(dbPath: string): Promise<string> {
-	log("👤 Creating test user and API key...");
-
-	const sqlite = new Database(dbPath);
-	const db = drizzle(sqlite, { schema });
-
-	try {
-		// Create test user
-		const [testUser] = await db
-			.insert(user)
-			.values({
-				id: TEST_USER_ID,
-				name: "Integration Test User",
-				email: `test-${Date.now()}@devpad.test`,
-				github_id: null,
-			})
-			.returning();
-
-		// Create API key
-		const apiKeyValue = crypto.randomBytes(32).toString("hex");
-		await db.insert(api_key).values({
-			owner_id: testUser.id,
-			hash: apiKeyValue,
-		});
-
-		sqlite.close();
-
-		log("✅ Test user and API key created");
-		return apiKeyValue;
-	} catch (error) {
-		sqlite.close();
-		throw error;
-	}
-}
-
-async function cleanupTestDatabase(): Promise<void> {
-	const dbPath = path.join(process.cwd(), "database", "test.db");
-	if (fs.existsSync(dbPath)) {
-		fs.unlinkSync(dbPath);
-	}
-}
-
-function log(...args: any[]) {
-	if (DEBUG_LOGGING) {
-		console.log(...args);
-	}
+	// Wait for server to be ready
+	await waitForServer("http://localhost:3001/health");
+	log("✅ Hono dev server started and responding");
 }
 
 export { testClient };
