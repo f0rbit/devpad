@@ -1,5 +1,6 @@
 import { ArrayBufferedQueue, type BufferedQueue } from "@devpad/schema";
 import { ApiError, AuthenticationError, NetworkError } from "./errors";
+import { handleHttpResponse, handleResponseError, handleNetworkError, HTTP_STATUS } from "./error-handlers";
 
 export type RequestOptions = {
 	method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
@@ -94,26 +95,18 @@ export class ApiClient {
 			historyEntry.duration = duration;
 
 			if (!response.ok) {
-				let errorMessage: string;
-				if (response.status === 401) {
-					errorMessage = "Invalid or expired API key";
+				try {
+					// Use centralized error handling
+					handleHttpResponse(response);
+					// If no exception thrown, handle with response error
+					await handleResponseError(response);
+				} catch (error) {
+					// Log error in history and re-throw
+					const errorMessage = error instanceof Error ? error.message : "Request failed";
 					historyEntry.error = errorMessage;
 					this.request_history.add(historyEntry);
-					throw new AuthenticationError(errorMessage);
+					throw error;
 				}
-				if (response.status === 404) {
-					errorMessage = "Resource not found";
-					historyEntry.error = errorMessage;
-					this.request_history.add(historyEntry);
-					throw new ApiError(errorMessage, { statusCode: 404 });
-				}
-
-				// Try to get error message from response
-				const error_text = await response.text();
-				errorMessage = error_text || "Request failed";
-				historyEntry.error = errorMessage;
-				this.request_history.add(historyEntry);
-				throw new ApiError(errorMessage, { statusCode: response.status });
 			}
 
 			// Success - add to history
@@ -146,10 +139,15 @@ export class ApiClient {
 			if (!(error instanceof ApiError || error instanceof AuthenticationError)) {
 				const duration = Date.now() - startTime;
 				historyEntry.duration = duration;
-				historyEntry.error = error instanceof Error ? error.message : "Unknown network error";
-				this.request_history.add(historyEntry);
 
-				throw new NetworkError(error instanceof Error ? error.message : "Unknown network error");
+				try {
+					handleNetworkError(error);
+				} catch (networkError) {
+					const errorMessage = networkError instanceof Error ? networkError.message : "Unknown network error";
+					historyEntry.error = errorMessage;
+					this.request_history.add(historyEntry);
+					throw networkError;
+				}
 			}
 
 			// Re-throw API errors (already added to history above)

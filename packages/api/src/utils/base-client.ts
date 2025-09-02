@@ -58,4 +58,37 @@ export abstract class BaseClient {
 		}
 		return query;
 	}
+
+	/**
+	 * Generic getBy method for common query patterns
+	 */
+	protected getBy<T>(path: string, field: string, value: string): Promise<T> {
+		return this.get<T>(path, {
+			query: { [field]: value },
+		});
+	}
+
+	/**
+	 * Generic list method with optional filtering
+	 */
+	protected listWith<T>(path: string, filters: Record<string, string | undefined> = {}): Promise<T> {
+		const query = this.buildQuery(filters);
+		return this.get<T>(path, Object.keys(query).length > 0 ? { query } : {});
+	}
+
+	/**
+	 * Generic upsert method - handles both create and update
+	 */
+	protected upsertEntity<T, U>(path: string, data: U): Promise<T> {
+		return this.patch<T>(path, { body: data });
+	}
+
+	/**
+	 * Generic delete via upsert pattern (soft delete)
+	 */
+	protected deleteEntity<T, U extends Record<string, any>>(path: string, data: U, deleteField: string = "deleted"): Promise<T> {
+		return this.patch<T>(path, {
+			body: { ...data, [deleteField]: true },
+		});
+	}
 }
