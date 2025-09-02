@@ -1,9 +1,10 @@
-import { createSignal, createStore } from "solid-js/store";
-import { createSignal as signal } from "solid-js";
+import { createStore } from "solid-js/store";
+import { createOptimisticUpdate, createOptimisticForm, type OptimisticUpdateOptions } from "./optimistic-updates";
 
 /**
  * Form state management utilities for SolidJS components
  * Reduces duplication in TaskEditor, TagEditor, and other form components
+ * Now includes optimistic update capabilities
  */
 
 export type RequestState = "idle" | "loading" | "success" | "error";
@@ -24,186 +25,114 @@ export function createFormStore<T extends Record<string, any>>(initialData: T) {
 		errors: {},
 	});
 
-	const updateField = (field: keyof T, value: T[keyof T]) => {
-		setState("data", field, value);
+	const updateField = (field: string, value: any) => {
+		setState("data", field as any, value);
 		// Clear error when field is updated
-		if (state.errors[field as string]) {
-			setState("errors", field as string, undefined);
+		if (state.errors[field]) {
+			setState("errors", field, "");
 		}
 	};
 
-	const setError = (field: string, error: string) => {
-		setState("errors", field, error);
+	const setError = (field: string, message: string) => {
+		setState("errors", field, message);
 	};
 
-	const clearError = (field: string) => {
-		setState("errors", field, undefined);
-	};
-
-	const clearAllErrors = () => {
+	const clearErrors = () => {
 		setState("errors", {});
 	};
 
-	const setRequestState = (newState: RequestState) => {
-		setState("requestState", newState);
+	const setLoading = () => {
+		setState("requestState", "loading");
 	};
 
-	const reset = () => {
-		setState("data", initialData);
+	const setSuccess = () => {
+		setState("requestState", "success");
+	};
+
+	const setFailed = () => {
+		setState("requestState", "error");
+	};
+
+	const setIdle = () => {
 		setState("requestState", "idle");
-		setState("errors", {});
 	};
 
 	return {
 		state,
-		setState,
 		updateField,
 		setError,
-		clearError,
-		clearAllErrors,
-		setRequestState,
-		reset,
+		clearErrors,
+		setLoading,
+		setSuccess,
+		setFailed,
+		setIdle,
+		isLoading: () => state.requestState === "loading",
+		isSuccess: () => state.requestState === "success",
+		isError: () => state.requestState === "error",
 	};
 }
 
 /**
- * Hook for managing simple loading states (commonly used for save buttons)
+ * Enhanced form hook with optimistic updates
+ * Perfect for forms that need immediate feedback
  */
-export function createRequestState(initialState: RequestState = "idle") {
-	const [requestState, setRequestState] = signal<RequestState>(initialState);
+export function createOptimisticFormStore<T extends Record<string, any>>(
+	options: OptimisticUpdateOptions<T> & {
+		validate?: (data: T) => Record<keyof T, string> | null;
+	}
+) {
+	const optimisticForm = createOptimisticForm(options);
 
-	const setLoading = () => setRequestState("loading");
-	const setSuccess = () => setRequestState("success");
-	const setError = () => setRequestState("error");
-	const setIdle = () => setRequestState("idle");
+	const updateField = (field: string, value: any) => {
+		const current = optimisticForm.data();
+		const updated = { ...current, [field]: value };
+		optimisticForm.update(updated);
+	};
 
-	// Auto-reset success/error states after delay
-	const setTempState = (tempState: "success" | "error", delay: number = 3000) => {
-		setRequestState(tempState);
-		setTimeout(() => {
-			if (requestState() === tempState) {
-				setRequestState("idle");
-			}
-		}, delay);
+	const submitForm = () => {
+		return optimisticForm.update(optimisticForm.data());
 	};
 
 	return {
-		requestState,
-		setRequestState,
-		setLoading,
-		setSuccess: () => setTempState("success"),
-		setError: () => setTempState("error"),
-		setIdle,
-		isLoading: () => requestState() === "loading",
-		isSuccess: () => requestState() === "success",
-		isError: () => requestState() === "error",
-		isIdle: () => requestState() === "idle",
+		data: optimisticForm.data,
+		state: optimisticForm.state,
+		error: optimisticForm.error,
+		validationErrors: optimisticForm.validationErrors,
+		updateField,
+		submitForm,
+		reset: optimisticForm.reset,
+		isLoading: optimisticForm.isLoading,
+		isSuccess: optimisticForm.isSuccess,
+		isError: optimisticForm.isError,
+		isValid: optimisticForm.isValid,
 	};
 }
 
 /**
- * Generic async form submit handler with error handling
+ * Simplified hook for single-field optimistic updates
+ * Great for toggles, dropdowns, and other simple controls
  */
-export async function handleFormSubmit<T, R>(formStore: ReturnType<typeof createFormStore<T>>, submitFn: (data: T) => Promise<R>, onSuccess?: (result: R) => void, onError?: (error: unknown) => void): Promise<R | null> {
-	formStore.setRequestState("loading");
-	formStore.clearAllErrors();
-
-	try {
-		const result = await submitFn(formStore.state.data);
-		formStore.setRequestState("success");
-		onSuccess?.(result);
-
-		// Auto-reset to idle after success
-		setTimeout(() => {
-			if (formStore.state.requestState === "success") {
-				formStore.setRequestState("idle");
-			}
-		}, 3000);
-
-		return result;
-	} catch (error) {
-		console.error("Form submission error:", error);
-		formStore.setRequestState("error");
-		onError?.(error);
-
-		// Auto-reset to idle after error
-		setTimeout(() => {
-			if (formStore.state.requestState === "error") {
-				formStore.setRequestState("idle");
-			}
-		}, 5000);
-
-		return null;
-	}
+export function createOptimisticField<T extends Record<string, any>>(
+	initialValue: T,
+	updateFn: (value: T) => Promise<T>,
+	options: {
+		showSuccessToast?: boolean;
+		showErrorToast?: boolean;
+		successMessage?: string;
+		onSuccess?: (value: T) => void;
+		onError?: (error: unknown) => void;
+	} = {}
+) {
+	return createOptimisticUpdate({
+		initialData: initialValue,
+		updateFn: async (value: T) => updateFn(value),
+		showSuccessToast: options.showSuccessToast || false,
+		showErrorToast: options.showErrorToast !== false, // Default to true
+		successMessage: options.successMessage || "Updated successfully",
+		onSuccess: options.onSuccess,
+		onError: options.onError,
+	});
 }
 
-/**
- * Validation utilities
- */
-export const validators = {
-	required: (value: any): string | null => {
-		if (!value || (typeof value === "string" && value.trim() === "")) {
-			return "This field is required";
-		}
-		return null;
-	},
-
-	minLength:
-		(min: number) =>
-		(value: string): string | null => {
-			if (value && value.length < min) {
-				return `Must be at least ${min} characters`;
-			}
-			return null;
-		},
-
-	maxLength:
-		(max: number) =>
-		(value: string): string | null => {
-			if (value && value.length > max) {
-				return `Must be no more than ${max} characters`;
-			}
-			return null;
-		},
-
-	email: (value: string): string | null => {
-		if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-			return "Must be a valid email address";
-		}
-		return null;
-	},
-};
-
-/**
- * Validate a form field
- */
-export function validateField<T>(formStore: ReturnType<typeof createFormStore<T>>, fieldName: keyof T, validatorFns: Array<(value: any) => string | null>): boolean {
-	const value = formStore.state.data[fieldName];
-
-	for (const validator of validatorFns) {
-		const error = validator(value);
-		if (error) {
-			formStore.setError(fieldName as string, error);
-			return false;
-		}
-	}
-
-	formStore.clearError(fieldName as string);
-	return true;
-}
-
-/**
- * Validate entire form
- */
-export function validateForm<T>(formStore: ReturnType<typeof createFormStore<T>>, validationRules: Record<keyof T, Array<(value: any) => string | null>>): boolean {
-	let isValid = true;
-
-	for (const [fieldName, validatorFns] of Object.entries(validationRules)) {
-		const fieldValid = validateField(formStore, fieldName as keyof T, validatorFns);
-		if (!fieldValid) {
-			isValid = false;
-		}
-	}
-
-	return isValid;
-}
+// Export the optimistic update utilities for direct use
+export { createOptimisticUpdate, createOptimisticForm } from "./optimistic-updates";
