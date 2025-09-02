@@ -1,70 +1,24 @@
 import type { TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
 import { type ActionType, action, db, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database";
 import { and, desc, eq, sql } from "drizzle-orm";
+import { projectRepository, type Project } from "../data/project-repository";
 
-export async function getUserProjects(user_id: string) {
-	return await db.select().from(project).where(eq(project.owner_id, user_id));
+export async function getUserProjects(user_id: string): Promise<Project[]> {
+	return projectRepository.getUserProjects(user_id);
 }
 
-export type Project = Awaited<ReturnType<typeof getUserProjects>>[0];
+export type { Project };
 
-export async function getProject(user_id: string, project_id: string) {
-	try {
-		const search = await db
-			.select()
-			.from(project)
-			.where(and(eq(project.owner_id, user_id), eq(project.project_id, project_id)));
-		if (!search || !search[0])
-			return {
-				project: null,
-				error: "Couldn't find project",
-			};
-		return {
-			project: search[0],
-			error: null,
-		};
-	} catch (err) {
-		console.error(err);
-		return {
-			project: null,
-			error: "Internal Server Error",
-		};
-	}
+export async function getProject(user_id: string, project_id: string): Promise<{ project: Project | null; error: string | null }> {
+	return projectRepository.getProject(user_id, project_id);
 }
 
-export async function getProjectById(project_id: string) {
-	if (!project_id)
-		return {
-			project: null,
-			error: "No project ID",
-		};
-	try {
-		const search = await db.select().from(project).where(eq(project.id, project_id));
-		if (!search || !search[0])
-			return {
-				project: null,
-				error: "Couldn't find project",
-			};
-		return {
-			project: search[0],
-			error: null,
-		};
-	} catch (err) {
-		console.error(err);
-		return {
-			project: null,
-			error: "Internal Server Error",
-		};
-	}
+export async function getProjectById(project_id: string): Promise<{ project: Project | null; error: string | null }> {
+	return projectRepository.getProjectById(project_id);
 }
 
-export async function getUserProjectMap(user_id: string) {
-	const projects = await getUserProjects(user_id);
-	const project_map = {} as Record<string, Project>;
-	for (const p of projects) {
-		project_map[p.id] = p;
-	}
-	return project_map;
+export async function getUserProjectMap(user_id: string): Promise<Record<string, Project>> {
+	return projectRepository.getUserProjectMap(user_id);
 }
 
 export async function getRecentUpdate(project: Project) {
@@ -112,39 +66,12 @@ export async function getRecentUpdate(project: Project) {
 	return update;
 }
 
-export async function doesUserOwnProject(user_id: string, project_id: string) {
-	const { project, error } = await getProjectById(project_id);
-	if (error) {
-		console.error("Error finding project in doesUserOwnProject", error);
-		return false;
-	}
-	if (!project) {
-		// project not found
-		return false;
-	}
-
-	return project.owner_id === user_id;
+export async function doesUserOwnProject(user_id: string, project_id: string): Promise<boolean> {
+	return projectRepository.doesUserOwnProject(user_id, project_id);
 }
 
-export async function addProjectAction({ owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }) {
-	const data = {
-		project_id,
-	};
-
-	const user_owns = await doesUserOwnProject(owner_id, project_id);
-	if (!user_owns) return false;
-
-	// add the action
-	await db.insert(action).values({
-		owner_id,
-		type,
-		description,
-		data,
-	});
-
-	// console.log("inserted action", type);
-
-	return true;
+export async function addProjectAction({ owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }): Promise<boolean> {
+	return projectRepository.addProjectAction({ owner_id, project_id, type, description });
 }
 
 export async function getProjectConfig(project_id: string) {
@@ -228,96 +155,27 @@ export async function getProjectConfig(project_id: string) {
 
 export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
 
-export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string) {
-	const previous = await (async () => {
-		if (!data.id) return null;
-		return (await getProjectById(data.id)).project ?? null;
-	})();
+export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string): Promise<Project> {
+	// Handle GitHub specification fetching if needed
+	if (access_token) {
+		const previous = data.id ? (await getProjectById(data.id)).project : null;
+		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
+		const repo_url = data.repo_url ?? previous?.repo_url;
+		const fetch_specification = github_linked && repo_url && (!previous || !previous.specification);
 
-	// authorise
-	if (previous && previous.owner_id !== owner_id) {
-		throw new Error("Unauthorized: User does not own this project");
+		// the new_project is imported from github and doesn't have a specification, import it from the README
+		if (fetch_specification && !data.specification && access_token) {
+			console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
+			// we need to get OWNER and REPO from the repo_url
+			const { getSpecification } = await import("./github");
+			const slices = repo_url.split("/");
+			const repo = slices.at(-1);
+			const owner = slices.at(-2);
+			if (!repo || !owner) throw new Error("Invalid repo_url");
+			const readme = await getSpecification(owner, repo, access_token);
+			data.specification = readme;
+		}
 	}
 
-	const final_owner_id = data.owner_id ?? previous?.owner_id ?? owner_id;
-
-	if (!final_owner_id) {
-		throw new Error("Bad Request: No owner_id provided");
-	}
-
-	const exists = !!previous;
-
-	const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
-	const repo_url = data.repo_url ?? previous?.repo_url;
-	const fetch_specification = github_linked && repo_url && (!previous || !previous.specification);
-
-	// the new_project is imported from github and doesn't have a specification, import it from the README
-	if (fetch_specification && !data.specification && access_token) {
-		console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
-		// we need to get OWNER and REPO from the repo_url
-		const { getSpecification } = await import("./github");
-		const slices = repo_url.split("/");
-		const repo = slices.at(-1);
-		const owner = slices.at(-2);
-		if (!repo || !owner) throw new Error("Invalid repo_url");
-		const readme = await getSpecification(owner, repo, access_token);
-		data.specification = readme;
-	}
-
-	const upsert = {
-		...data,
-		id: data.id === "" || data.id == null ? undefined : data.id,
-		updated_at: new Date().toISOString(),
-		owner_id: final_owner_id,
-	};
-
-	let res: Project[] | null = null;
-	if (exists) {
-		// perform update
-		res = await db.update(project).set(upsert).where(eq(project.id, upsert.id!)).returning();
-	} else {
-		// perform insert
-		res = await db
-			.insert(project)
-			.values(upsert)
-			.onConflictDoUpdate({
-				target: [project.id],
-				set: upsert,
-			})
-			.returning();
-	}
-	if (!res || res.length !== 1) throw new Error(`Project upsert returned incorrect rows (${res?.length ?? 0})`);
-
-	const [new_project] = res;
-
-	const project_id = new_project.id;
-
-	// TODO: for project updates, include the changes as a diff in the data
-	if (!exists) {
-		// add CREATE_PROJECT action
-		await addProjectAction({
-			owner_id: final_owner_id,
-			project_id,
-			type: "CREATE_PROJECT",
-			description: "Created project",
-		});
-	} else if (data.specification) {
-		// add UPDATE_PROJECT action with 'updated specification' description
-		await addProjectAction({
-			owner_id: final_owner_id,
-			project_id,
-			type: "UPDATE_PROJECT",
-			description: "Updated specification",
-		});
-	} else {
-		// add UPDATE_PROJECT action
-		await addProjectAction({
-			owner_id: final_owner_id,
-			project_id,
-			type: "UPDATE_PROJECT",
-			description: "Updated project settings",
-		});
-	}
-
-	return new_project;
+	return projectRepository.upsertProject(data, owner_id);
 }
