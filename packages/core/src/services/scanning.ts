@@ -1,4 +1,4 @@
-import { db, project, tracker_result, todo_updates } from "@devpad/schema/database";
+import { db, project, todo_updates, tracker_result } from "@devpad/schema/database";
 import { and, eq } from "drizzle-orm";
 import { getProjectConfig } from "./projects.js";
 import { scanRepo } from "./scanner.js";

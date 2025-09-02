@@ -1,3 +1,4 @@
+import type { ConfigSchemaType, TagWithTypedColor } from "@devpad/schema";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import GitBranch from "lucide-solid/icons/git-branch";
@@ -6,7 +7,6 @@ import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For, Index } from "solid-js";
 import { createStore } from "solid-js/store";
-import type { ConfigSchemaType, TagWithTypedColor } from "@devpad/schema";
 import { getApiClient } from "@/utils/api-client";
 
 // Default configurations for helper tags

@@ -1,8 +1,8 @@
+import { initiateScan, processScanResults } from "@devpad/core";
 import { Hono } from "hono";
 import { stream } from "hono/streaming";
-import { requireAuth, type AuthContext } from "../middleware/auth";
-import { initiateScan, processScanResults } from "@devpad/core";
 import { z } from "zod";
+import { type AuthContext, requireAuth } from "../middleware/auth";
 
 const app = new Hono<AuthContext>();
 

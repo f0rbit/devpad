@@ -1,5 +1,5 @@
-import { createEffect, createSignal, For } from "solid-js";
 import type { Project } from "@devpad/schema";
+import { createEffect, createSignal, For } from "solid-js";
 
 /** solid-js component called <ProjectSelector>, given a map of projects via `project_map`,
  * render a <select> element with the name of each project, and on change call `callback(project_id)`, the prop also accepts `default` as a project_id, otherwise the selected value is -1

@@ -1,5 +1,5 @@
-import { generateState } from "arctic";
 import { db, user } from "@devpad/schema/database";
+import { generateState } from "arctic";
 import { eq } from "drizzle-orm";
 import { github } from "../services/github.js";
 import { lucia } from "./lucia.js";

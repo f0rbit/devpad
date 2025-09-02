@@ -1,9 +1,9 @@
+import type { TaskWithDetails as Task, UpdateAction, UpdateData } from "@devpad/schema";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
-import type { TaskWithDetails as Task, UpdateAction, UpdateData } from "@devpad/schema";
 
 interface Props {
 	items: UpdateData[];

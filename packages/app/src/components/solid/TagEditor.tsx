@@ -1,3 +1,4 @@
+import { TAG_COLOURS, type TagWithTypedColor as Tag, type TagColor, type UpsertTag } from "@devpad/schema";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import Eye from "lucide-solid/icons/eye";
@@ -6,7 +7,6 @@ import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
-import { TAG_COLOURS, type TagWithTypedColor as Tag, type TagColor, type UpsertTag } from "@devpad/schema";
 import { getApiClient } from "@/utils/api-client";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */

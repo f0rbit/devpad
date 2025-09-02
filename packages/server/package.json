@@ -3,9 +3,9 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "bun --watch src/index.ts",
-		"build": "bun build src/index.ts --outdir dist --target bun",
-		"start": "bun dist/index.js",
+		"dev": "bun --watch src/local.ts",
+		"build": "bun build src/server.ts --outdir dist --target bun",
+		"start": "bun src/local.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

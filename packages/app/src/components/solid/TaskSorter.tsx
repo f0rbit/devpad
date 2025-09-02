@@ -1,3 +1,4 @@
+import type { Project, TaskWithDetails as TaskType, TaskView, UpsertTag, TagWithTypedColor as UserTag } from "@devpad/schema";
 import FolderSearch from "lucide-solid/icons/folder-search";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
 import LayoutList from "lucide-solid/icons/layout-list";
@@ -5,11 +6,10 @@ import Search from "lucide-solid/icons/search";
 import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
 import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
-import type { Project, TaskWithDetails as TaskType, TaskView, UpsertTag, TagWithTypedColor as UserTag } from "@devpad/schema";
-import { getApiClient } from "@/utils/api-client";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagSelect } from "@/components/solid/TagPicker";
 import { TaskCard } from "@/components/solid/TaskCard";
+import { getApiClient } from "@/utils/api-client";
 
 const options = ["upcoming", "recent", "priority", "progress"] as const;
 

@@ -1,6 +1,6 @@
+import type { TaskView } from "@devpad/schema";
 import { db, user } from "@devpad/schema/database";
 import { eq } from "drizzle-orm";
-import type { TaskView } from "@devpad/schema";
 
 export interface UpdateUserData {
 	task_view?: TaskView;

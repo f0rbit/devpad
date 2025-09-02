@@ -18,7 +18,10 @@
 		"format": "biome format . --write",
 		"format:check": "biome format .",
 		"lint": "biome check .",
-		"lint:fix": "biome check . --write"
+		"lint:fix": "biome check . --write",
+		"deploy:production": "bun deployment/production.ts",
+		"deploy:serverless": "bun deployment/serverless.ts",
+		"deploy:migrate": "bun deployment/migrate.ts"
 	},
 	"packageManager": "bun@1.0.0",
 	"devDependencies": {

@@ -1,8 +1,8 @@
-import { api_key, db, user } from "@devpad/schema/database";
-import type { APIContext } from "astro";
 import type { ApiKey, User } from "@devpad/schema";
-import { eq } from "drizzle-orm";
+import { api_key, db, user } from "@devpad/schema/database";
 import { createId } from "@paralleldrive/cuid2";
+import type { APIContext } from "astro";
+import { eq } from "drizzle-orm";
 
 export async function getAPIKeys(user_id: string) {
 	return await db.select().from(api_key).where(eq(api_key.owner_id, user_id));

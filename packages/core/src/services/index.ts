@@ -5,9 +5,8 @@ export * from "./github.js";
 export * from "./projects.js";
 export * from "./scanner.js";
 export * from "./scanning.js";
+// Export specific functions for testing
+export { scanLocalRepo } from "./scanning.js";
 export * from "./tags.js";
 export * from "./tasks.js";
 export * from "./users.js";
-
-// Export specific functions for testing
-export { scanLocalRepo } from "./scanning.js";

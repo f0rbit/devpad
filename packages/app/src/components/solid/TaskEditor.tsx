@@ -1,5 +1,4 @@
 import type { HistoryAction, Project, TagWithTypedColor, TaskWithDetails, UpsertTag } from "@devpad/schema";
-import { getApiClient } from "@/utils/api-client";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -10,6 +9,7 @@ import { createStore } from "solid-js/store";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
+import { getApiClient } from "@/utils/api-client";
 
 interface Props {
 	task: TaskWithDetails;

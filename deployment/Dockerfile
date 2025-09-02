@@ -1,45 +1,71 @@
-# First stage is to build todo-tracker application from go source code
-# url: https://github.com/f0rbit/todo-tracker
-# the go application is under /go
+# First stage: Build todo-tracker application from go source code
 FROM golang:1.22.1 as go-builder
 
 WORKDIR /todo-tracker
-
-# need to git clone (its a public directory)
 RUN apt-get update && apt-get install -y git
 RUN git clone https://github.com/f0rbit/todo-tracker.git .
-
-# build the go application
 RUN go build -o todo-tracker
 
-# Use a base image with Bun installed
+# Second stage: Build the application
 FROM oven/bun:1.1.37 as builder
 
-# install 'unzip'
+# Install system dependencies
 RUN apt-get update && apt-get install -y unzip
 
-WORKDIR /
-
-COPY ../todo-config.json .
-COPY --from=go-builder /todo-tracker/todo-tracker .
-
-# Set the working directory
+# Set up workspace
 WORKDIR /app
 
-# Copy the application files
-COPY ../app/ .
-RUN rm -f ./.env.example
-COPY ../deployment/.en[v] .
+# Copy workspace configuration and source code
+COPY package.json bun.lockb ./
+COPY packages/ packages/
+COPY todo-config.json .
+COPY --from=go-builder /todo-tracker/todo-tracker .
 
-# Install dependencies and build the project
-RUN bun install
-RUN bun run check
+# Install all workspace dependencies
+RUN bun install --frozen-lockfile
+
+# Build the Astro app (creates dist folder with static assets and SSR handler)
+WORKDIR /app/packages/app
 RUN bun run build
 
-WORKDIR /server
+# Build the Hono server for production
+WORKDIR /app/packages/server
+RUN bun run build:production
 
-COPY ../deployment/ .
+# Third stage: Production runtime
+FROM oven/bun:1.1.37-slim as runtime
 
-RUN bun install
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
-CMD ["bun", "index.ts"]
+WORKDIR /app
+
+# Copy todo-tracker binary
+COPY --from=go-builder /todo-tracker/todo-tracker .
+COPY todo-config.json .
+
+# Copy built applications and dependencies
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV DATABASE_FILE=/app/data/devpad.db
+ENV STATIC_FILES_PATH=./packages/app/dist/client
+
+# Create data directory for SQLite
+RUN mkdir -p /app/data
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Start the production server
+WORKDIR /app
+CMD ["bun", "deployment/production.ts"]

@@ -16,7 +16,7 @@ export function getApiClient(): DevpadApiClient {
 	const serverUrl = import.meta.env.PUBLIC_API_SERVER_URL || `${window.location.origin}/api/v0`;
 
 	// Try to get API key from various sources
-	let apiKey = getApiKey();
+	const apiKey = getApiKey();
 
 	if (!apiKey) {
 		throw new Error("No API key found. Please ensure you are logged in and have an API key.");

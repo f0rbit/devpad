@@ -1,3 +1,4 @@
+import type { Project, TaskWithDetails, UpsertTag } from "@devpad/schema";
 import Calendar from "lucide-solid/icons/calendar";
 import CalendarClock from "lucide-solid/icons/calendar-clock";
 import CalendarX2 from "lucide-solid/icons/calendar-x-2";
@@ -9,9 +10,8 @@ import Square from "lucide-solid/icons/square";
 import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { For } from "solid-js";
-import type { Project, TaskWithDetails, UpsertTag } from "@devpad/schema";
-import { getApiClient } from "@/utils/api-client";
 import { TagBadge } from "@/components/solid/TagEditor";
+import { getApiClient } from "@/utils/api-client";
 
 interface Props {
 	task: TaskWithDetails;

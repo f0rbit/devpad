@@ -1,8 +1,8 @@
 import { commit_detail, db } from "@devpad/schema/database";
-import { GitHub } from "arctic";
 import { Octokit } from "@octokit/rest";
-import { inArray } from "drizzle-orm";
 import type { Endpoints } from "@octokit/types";
+import { GitHub } from "arctic";
+import { inArray } from "drizzle-orm";
 import type { GitHubBranch } from "../data/interfaces.js";
 
 export const github = new GitHub(Bun.env.GITHUB_CLIENT_ID!, Bun.env.GITHUB_CLIENT_SECRET!);

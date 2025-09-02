@@ -2,6 +2,7 @@
 // we want to add pagination as well.
 // using solidjs
 
+import type { HistoryAction, ScanStatus } from "@devpad/schema";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import FileMinus2 from "lucide-solid/icons/file-minus-2";
 import FilePen from "lucide-solid/icons/file-pen";
@@ -13,7 +14,6 @@ import GitBranch from "lucide-solid/icons/git-branch";
 import ScanText from "lucide-solid/icons/scan-text";
 import Type from "lucide-solid/icons/type";
 import { createSignal, For } from "solid-js";
-import type { HistoryAction, ScanStatus } from "@devpad/schema";
 
 const pageSize = () => 10;
 

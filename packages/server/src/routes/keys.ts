@@ -1,7 +1,7 @@
+import { createApiKey, deleteApiKey, getAPIKeys } from "@devpad/core";
 import { Hono } from "hono";
-import { requireAuth, type AuthContext } from "../middleware/auth";
-import { getAPIKeys, createApiKey, deleteApiKey } from "@devpad/core";
 import { z } from "zod";
+import { type AuthContext, requireAuth } from "../middleware/auth";
 
 const app = new Hono<AuthContext>();
 

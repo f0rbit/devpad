@@ -1,8 +1,8 @@
-import { createMiddleware } from "hono/factory";
+import { getUserById } from "@devpad/core";
 import { lucia } from "@devpad/core/auth";
 import { getUserByAPIKey } from "@devpad/core/auth/keys";
-import { getUserById } from "@devpad/core";
 import { getCookie } from "hono/cookie";
+import { createMiddleware } from "hono/factory";
 import { verifyRequestOrigin } from "lucia";
 
 export interface AuthVariables {

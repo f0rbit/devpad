@@ -1,8 +1,8 @@
-import { Hono } from "hono";
-import { zValidator } from "@hono/zod-validator";
-import { requireAuth, type AuthContext } from "../middleware/auth";
-import { updateUserPreferences, getUserById } from "@devpad/core";
+import { getUserById, updateUserPreferences } from "@devpad/core";
 import { update_user } from "@devpad/schema";
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { type AuthContext, requireAuth } from "../middleware/auth";
 
 const app = new Hono<AuthContext>();
 
