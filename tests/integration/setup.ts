@@ -12,13 +12,20 @@ import { migrate } from "drizzle-orm/bun-sqlite/migrator";
 export const TEST_USER_ID = "test-user-12345";
 export const TEST_BASE_URL = "http://localhost:3001/api/v0";
 
+export const DEBUG_LOGGING = Bun.env.DEBUG_LOGGING === "true";
+
 // Global test state
 let honoServer: any = null;
 let testApiKey: string | null = null;
 let testClient: DevpadApiClient | null = null;
+let teardownTimeout: NodeJS.Timeout | null = null;
 
 export async function setupIntegrationTests(): Promise<DevpadApiClient> {
-	console.log("🧪 Setting up integration test environment...");
+	if (teardownTimeout) {
+		clearTimeout(teardownTimeout);
+		teardownTimeout = null;
+	}
+	log("🧪 Setting up integration test environment...");
 
 	// Set environment variables early
 	const baseDir = path.resolve(process.cwd());
@@ -38,7 +45,7 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 		// Create test user and API key (only once)
 		testApiKey = await createTestUser(process.env.DATABASE_FILE!);
 	} else {
-		console.log("✅ Using existing Hono server and test database");
+		log("✅ Using existing Hono server and test database");
 	}
 
 	if (!testApiKey) {
@@ -51,13 +58,15 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 		api_key: testApiKey,
 	});
 
-	console.log("✅ Integration test environment ready");
+	log("✅ Integration test environment ready");
 	return testClient;
 }
 
 export async function teardownIntegrationTests(): Promise<void> {
+	if (teardownTimeout) return;
+
 	// Clean up server after each test file (but keep database for next test)
-	console.log("🧹 Test completed, stopping server");
+	log("🧹 Test completed, stopping server");
 
 	// Stop Hono server
 	if (honoServer) {
@@ -67,7 +76,7 @@ export async function teardownIntegrationTests(): Promise<void> {
 		testClient = null;
 	}
 
-	console.log("✅ Server stopped");
+	log("✅ Server stopped");
 }
 
 // Set up process exit handler to cleanup database when test process ends
@@ -89,7 +98,7 @@ process.on("SIGTERM", async () => {
 
 // Export function to manually cleanup server when all tests are done
 export async function finalCleanup(): Promise<void> {
-	console.log("🧹 Final cleanup - stopping server and cleaning database...");
+	log("🧹 Final cleanup - stopping server and cleaning database...");
 
 	// Stop Hono server
 	if (honoServer) {
@@ -100,7 +109,7 @@ export async function finalCleanup(): Promise<void> {
 	// Clean up test database
 	await cleanupTestDatabase();
 
-	console.log("✅ Final cleanup completed");
+	log("✅ Final cleanup completed");
 }
 
 async function setupTestDatabase(): Promise<void> {
@@ -117,7 +126,7 @@ async function setupTestDatabase(): Promise<void> {
 		fs.unlinkSync(dbPath);
 	}
 
-	console.log("🗄️ Setting up test database at:", dbPath);
+	log("🗄️ Setting up test database at:", dbPath);
 
 	// Run migrations
 	const sqlite = new Database(dbPath);
@@ -125,24 +134,26 @@ async function setupTestDatabase(): Promise<void> {
 
 	const baseDir = path.resolve(__dirname, "..", "..");
 	const migrationsFolder = path.join(baseDir, "packages", "schema", "src", "database", "drizzle");
-	console.log("🔍 Migration folder:", migrationsFolder);
+	log("🔍 Migration folder:", migrationsFolder);
 	migrate(db, { migrationsFolder });
 
 	sqlite.close();
 
-	console.log("✅ Test database setup complete");
+	log("✅ Test database setup complete");
 }
 
 async function startHonoServer(): Promise<void> {
-	console.log("🚀 Starting Hono dev server...");
+	log("🚀 Starting Hono dev server...");
 
 	const serverDir = path.resolve(path.join(__dirname, "..", "..", "packages", "server"));
 
 	const { spawn } = await import("node:child_process");
 
+	const logFile = fs.createWriteStream(path.join(serverDir, "server.log"), { flags: "a" });
+
 	honoServer = spawn("bun", ["dev"], {
 		cwd: serverDir,
-		stdio: "pipe",
+		stdio: ["pipe", "pipe", "pipe"],
 		env: {
 			...process.env,
 			NODE_ENV: "test",
@@ -151,6 +162,24 @@ async function startHonoServer(): Promise<void> {
 			PORT: "3001",
 		},
 	});
+
+	// pipe console.error into log file as well
+	console.error = function (...args) {
+		logFile.write(args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n");
+		process.stderr.write(args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n");
+	}
+
+	if (!DEBUG_LOGGING) {
+		// Pipe stdout and stderr to the log file
+		honoServer.stdout?.pipe(logFile);
+		honoServer.stderr?.pipe(logFile);
+
+		// Override console.error to log to file
+		console.error = function (...args) {
+			logFile.write(args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n");
+			process.stderr.write(args.map(a => (typeof a === "string" ? a : JSON.stringify(a))).join(" ") + "\n");
+		};
+	}
 
 	// Handle process errors
 	honoServer.on("error", (error: any) => {
@@ -167,7 +196,7 @@ async function startHonoServer(): Promise<void> {
 				signal: AbortSignal.timeout(2000),
 			});
 			if (response.ok) {
-				console.log("✅ Hono dev server started and responding");
+				log("✅ Hono dev server started and responding");
 				return;
 			}
 		} catch (_error) {
@@ -182,7 +211,7 @@ async function startHonoServer(): Promise<void> {
 }
 
 async function createTestUser(dbPath: string): Promise<string> {
-	console.log("👤 Creating test user and API key...");
+	log("👤 Creating test user and API key...");
 
 	const sqlite = new Database(dbPath);
 	const db = drizzle(sqlite, { schema });
@@ -208,7 +237,7 @@ async function createTestUser(dbPath: string): Promise<string> {
 
 		sqlite.close();
 
-		console.log("✅ Test user and API key created");
+		log("✅ Test user and API key created");
 		return apiKeyValue;
 	} catch (error) {
 		sqlite.close();
@@ -220,6 +249,12 @@ async function cleanupTestDatabase(): Promise<void> {
 	const dbPath = path.join(process.cwd(), "database", "test.db");
 	if (fs.existsSync(dbPath)) {
 		fs.unlinkSync(dbPath);
+	}
+}
+
+function log(...args: any[]) {
+	if (DEBUG_LOGGING) {
+		console.log(...args);
 	}
 }
 

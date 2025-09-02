@@ -75,13 +75,13 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 	if (config?.config) {
 		await Bun.write(`${unzipped_path}/config.json`, JSON.stringify(config.config, null, 2));
 		config_path = `${unzipped_path}/config.json`;
-		console.log("using config.json from project");
+		// console.log("using config.json from project");
 		yield "loaded config from project\n";
 	}
 
 	// TODO: add handling for user-wide config & defaults based on project type??
 
-	console.log("folder_path: ", folder_path);
+	// console.log("folder_path: ", folder_path);
 
 	// generate the todo-tracker parse
 	yield "scanning repo\n";
@@ -136,7 +136,7 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 	yield "writing old data\n";
 	await Bun.write(`${unzipped_path}/old-output.json`, JSON.stringify(old_data));
 
-	console.log("running diff");
+	// console.log("running diff");
 	// run diff script and write to diff-output.json
 	yield "running diff\n";
 	try {
@@ -171,7 +171,7 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 		const branches = await getBranches(owner, repo, access_token);
 		/** @todo type this properly */
 		const found = branches.find((b: any) => b.name === branch);
-		console.log(branch, branches, found);
+		// console.log(branch, branches, found);
 		if (found) {
 			branch_info.commit_sha = found.commit.sha;
 			branch_info.commit_msg = found.commit.message;

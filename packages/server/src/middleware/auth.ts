@@ -28,7 +28,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 
 		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
 			console.error("Invalid origin", { originHeader, hostHeader, isTest, nodeEnv: process.env.NODE_ENV });
-			console.log("CSRF check:", { method: c.req.method, nodeEnv: process.env.NODE_ENV, isTest: process.env.NODE_ENV === "test" });
+			// console.log("CSRF check:", { method: c.req.method, nodeEnv: process.env.NODE_ENV, isTest: process.env.NODE_ENV === "test" });
 			return c.json({ error: "Invalid origin" }, 403);
 		}
 	}

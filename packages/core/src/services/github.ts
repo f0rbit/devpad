@@ -43,8 +43,8 @@ export async function getRepo(owner: string, repo: string, access_token: string,
 		const octokit = createOctokit(access_token);
 		const ref = branch || "HEAD";
 
-		console.log(`Fetching GitHub repo: ${owner}/${repo}@${ref}`);
-		const start = performance.now();
+		// console.log(`Fetching GitHub repo: ${owner}/${repo}@${ref}`);
+		// const start = performance.now();
 
 		// Get the zipball download URL using Octokit
 		const response = await octokit.rest.repos.downloadZipballArchive({
@@ -53,7 +53,7 @@ export async function getRepo(owner: string, repo: string, access_token: string,
 			ref,
 		});
 
-		console.log(`Fetched repo in ${performance.now() - start}ms`);
+		// console.log(`Fetched repo in ${performance.now() - start}ms`);
 
 		// Octokit returns the response directly as an ArrayBuffer for binary data
 		return {
@@ -138,7 +138,7 @@ async function getCommitDetails(owner: string, repo: string, commit_shas: Set<st
 	const existing_shas = new Set(existing.map((commit: any) => commit.sha));
 	const missing_shas = new Set(shas.filter(sha => !existing_shas.has(sha)));
 
-	console.log(`Fetching missing commits: ${missing_shas.size}`, missing_shas);
+	// console.log(`Fetching missing commits: ${missing_shas.size}`, missing_shas);
 
 	let commits = existing;
 

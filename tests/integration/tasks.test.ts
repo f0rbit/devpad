@@ -19,7 +19,7 @@ describe("tasks API client integration", () => {
 		// Clean up tasks first
 		for (const task of createdTasks) {
 			try {
-				await test_client.tasks.delete(task);
+				await test_client.tasks.deleteTask(task);
 			} catch (error) {
 				console.warn(`Failed to clean up task ${task.task.id}:`, error);
 			}
@@ -28,7 +28,7 @@ describe("tasks API client integration", () => {
 		// Then clean up projects
 		for (const project of createdProjects) {
 			try {
-				await test_client.projects.delete(project);
+				await test_client.projects.deleteProject(project);
 			} catch (error) {
 				console.warn(`Failed to clean up project ${project.id}:`, error);
 			}
@@ -65,7 +65,7 @@ describe("tasks API client integration", () => {
 		const createdTask = await test_client.tasks.create(taskData);
 		createdTasks.push(createdTask);
 
-		console.log("created task", createdTask);
+		// console.log("created task", createdTask);
 
 		expect(createdTask).toHaveProperty("task");
 		expect(createdTask.task).toHaveProperty("id");
@@ -164,7 +164,7 @@ describe("tasks API client integration", () => {
 		createdTasks.push(createdTask);
 
 		// Then get it by ID
-		const fetchedTask = await test_client.tasks.get(createdTask.task.id);
+		const fetchedTask = await test_client.tasks.getById(createdTask.task.id);
 
 		expect(fetchedTask.task.id).toBe(createdTask.task.id);
 		expect(fetchedTask.task.title).toBe(createdTask.task.title);
@@ -411,7 +411,7 @@ describe("tasks API client integration", () => {
 		];
 
 		const savedTags = await test_client.tasks.saveTags(tags);
-		console.log("Saved tags response:", savedTags);
+		// console.log("Saved tags response:", savedTags);
 
 		expect(Array.isArray(savedTags)).toBe(true);
 		expect(savedTags.length).toBe(2);

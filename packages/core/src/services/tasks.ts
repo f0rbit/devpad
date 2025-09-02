@@ -109,7 +109,7 @@ export async function addTaskAction({ owner_id, task_id, type, description, proj
 	// add the action
 	await db.insert(action).values({ owner_id, type, description, data });
 
-	console.log("inserted action", type);
+	// console.log("inserted action", type);
 
 	return true;
 }
@@ -157,7 +157,7 @@ export async function getTasksByTag(tag_id: string) {
 				mapped_tags.set(task_id, []);
 			}
 			mapped_tags.get(task_id)?.push(tag.tag_id);
-			console.log("tag", tag);
+			// console.log("tag", tag);
 		});
 
 		for (const t of found_tasks) {

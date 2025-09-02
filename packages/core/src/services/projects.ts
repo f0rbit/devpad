@@ -142,7 +142,7 @@ export async function addProjectAction({ owner_id, project_id, type, description
 		data,
 	});
 
-	console.log("inserted action", type);
+	// console.log("inserted action", type);
 
 	return true;
 }

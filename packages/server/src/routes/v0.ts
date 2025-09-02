@@ -16,9 +16,9 @@ app.get("/", c => c.json({ version: "0", status: "ok" }));
 app.get("/projects", requireAuth, async c => {
 	try {
 		const user = c.get("user")!;
-		console.log("DEBUG: User from auth:", user);
+		// console.log("DEBUG: User from auth:", user);
 		const query = c.req.query();
-		console.log("DEBUG: Query params:", query);
+		// console.log("DEBUG: Query params:", query);
 
 		// Get project by ID
 		if (query.id) {
@@ -69,7 +69,7 @@ app.patch("/projects", requireAuth, zValidator("json", upsert_project), async c 
 
 	// Assert that the owner_id matches the authenticated user
 	if (data.owner_id && data.owner_id !== user.id) {
-		console.log("Unauthorized: owner_id mismatch", { user_id: user.id, owner_id: data.owner_id });
+		// console.log("Unauthorized: owner_id mismatch", { user_id: user.id, owner_id: data.owner_id });
 		return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
 	}
 

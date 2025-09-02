@@ -18,7 +18,7 @@ describe("projects API client integration", () => {
 		// Clean up any projects we created during testing
 		for (const project of createdProjects) {
 			try {
-				await test_client.projects.delete(project);
+				await test_client.projects.deleteProject(project);
 			} catch (error) {
 				console.warn(`Failed to clean up project ${project.id}:`, error);
 			}
@@ -94,7 +94,7 @@ describe("projects API client integration", () => {
 		createdProjects.push(createdProject);
 
 		// Then get it by ID
-		const fetchedProject = await test_client.projects.get(createdProject.id);
+		const fetchedProject = await test_client.projects.getById(createdProject.id);
 
 		expect(fetchedProject.id).toBe(createdProject.id);
 		expect(fetchedProject.name).toBe(createdProject.name);
@@ -141,7 +141,7 @@ describe("projects API client integration", () => {
 		createdProjects.push(createdProject);
 
 		// Then delete it (soft delete)
-		const deletedProject = await test_client.projects.delete(createdProject);
+		const deletedProject = await test_client.projects.deleteProject(createdProject);
 
 		expect(deletedProject.id).toBe(createdProject.id);
 		expect(deletedProject.deleted).toBe(true);

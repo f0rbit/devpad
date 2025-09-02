@@ -9,8 +9,8 @@ describe("GitHub Service with Octokit Fixtures", () => {
 		expect(repoFixture).toBeDefined();
 
 		// Show the structure - this confirms fixtures are loaded
-		console.log("✅ Octokit fixtures loaded successfully");
-		console.log("Fixture has", Object.keys(repoFixture || {}).length, "request/response pairs");
+		// console.log("✅ Octokit fixtures loaded successfully");
+		// console.log("Fixture has", Object.keys(repoFixture || {}).length, "request/response pairs");
 	});
 
 	it("should create GitHub service tests with fixture mocking strategy", () => {
@@ -24,7 +24,7 @@ describe("GitHub Service with Octokit Fixtures", () => {
 			implementation: "Will be added once nock/Bun compatibility issues resolved",
 		};
 
-		console.log("📋 GitHub Service Test Plan:", testPlan);
+		// console.log("📋 GitHub Service Test Plan:", testPlan);
 
 		// Verify our GitHub service functions exist and are testable
 		expect(typeof getBranches).toBe("function");
@@ -32,7 +32,7 @@ describe("GitHub Service with Octokit Fixtures", () => {
 		expect(typeof getSpecification).toBe("function");
 		expect(typeof getRepos).toBe("function");
 
-		console.log("✅ GitHub service functions ready for testing");
+		// console.log("✅ GitHub service functions ready for testing");
 	});
 
 	it("should verify GitHub service refactor is complete", () => {

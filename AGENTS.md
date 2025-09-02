@@ -46,3 +46,9 @@
 - Handle async operations with proper error catching
 - Maintain API type consistency
 - Ensure visibility and access control for projects/tasks
+
+
+# Debugging
+When running integration tests, logs will get piped to `packages/server/server.log`, only read the logs if you're looking for errors.
+
+In the case where you want logs in stdout, specify the exact test suite you want to run in the command using bun specifically rather than `make integration` & pass `DEBUG_LOGGING="true"` as an env variable to the function.

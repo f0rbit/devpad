@@ -73,7 +73,7 @@ export class ApiClient {
 		};
 
 		try {
-			console.log(`API Request: ${method} ${url}`);
+			// console.log(`API Request: ${method} ${url}`);
 
 			const fetchOptions: RequestInit = {
 				method,
@@ -87,7 +87,7 @@ export class ApiClient {
 			const response = await fetch(url, fetchOptions);
 			const duration = Date.now() - startTime;
 
-			console.log(`API Response Status: ${response.status}`);
+			// console.log(`API Response Status: ${response.status}`);
 
 			// Update history entry with response info
 			historyEntry.status = response.status;

@@ -93,13 +93,13 @@ export async function processScanResults(projectId: string, userId: string, upda
 		if (approved) {
 			// In a real implementation, this would process all the actions
 			// For now, just log what would be processed
-			console.log("Processing scan actions:", {
-				updateId,
-				actions,
-				titles,
-				projectId,
-				userId,
-			});
+			// console.log("Processing scan actions:", {
+			// 	updateId,
+			// 	actions,
+			// 	titles,
+			// 	projectId,
+			// 	userId,
+			// });
 		}
 
 		return { success: true };
