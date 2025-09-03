@@ -1,4 +1,4 @@
-import { db, user } from "@devpad/schema/database";
+import { db, user } from "@devpad/schema/database/server";
 import { generateState } from "arctic";
 import { eq } from "drizzle-orm";
 import { github } from "../services/github.js";

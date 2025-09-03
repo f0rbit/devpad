@@ -1,4 +1,4 @@
-import { commit_detail, db } from "@devpad/schema/database";
+import { commit_detail, db } from "@devpad/schema/database/server";
 import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
 import { GitHub } from "arctic";

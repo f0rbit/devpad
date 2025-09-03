@@ -1,5 +1,5 @@
 import type { TaskView } from "@devpad/schema";
-import { db, session, user } from "@devpad/schema/database";
+import { db, session, user } from "@devpad/schema/database/server";
 import { DrizzleSQLiteAdapter } from "@lucia-auth/adapter-drizzle";
 import { Lucia } from "lucia";
 

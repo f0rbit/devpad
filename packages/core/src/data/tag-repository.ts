@@ -1,5 +1,5 @@
 import type { Tag, UpsertTag } from "@devpad/schema";
-import { db, tag, task_tag } from "@devpad/schema/database";
+import { db, tag, task_tag } from "@devpad/schema/database/server";
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
 import { BaseRepository } from "./base-repository";
 

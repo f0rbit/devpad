@@ -1,5 +1,5 @@
 import type { ApiKey, User } from "@devpad/schema";
-import { api_key, db, user } from "@devpad/schema/database";
+import { api_key, db, user } from "@devpad/schema/database/server";
 import { createId } from "@paralleldrive/cuid2";
 import type { APIContext } from "astro";
 import { eq } from "drizzle-orm";

@@ -1,5 +1,5 @@
 import type { TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
-import { db, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database";
+import { db, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { BaseRepository } from "./base-repository";
 

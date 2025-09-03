@@ -1,5 +1,5 @@
 import type { UpdateData } from "@devpad/schema";
-import { type ActionType, codebase_tasks, db, task, task_tag } from "@devpad/schema/database";
+import { type ActionType, codebase_tasks, db, task, task_tag } from "@devpad/schema/database/server";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { BaseRepository } from "./base-repository";
 

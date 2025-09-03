@@ -1,4 +1,4 @@
-import { db } from "@devpad/schema/database";
+import { db } from "@devpad/schema/database/server";
 import { action, type ActionType } from "@devpad/schema/database";
 import { eq, and, type SQL } from "drizzle-orm";
 

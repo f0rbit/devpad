@@ -1,5 +1,5 @@
 import type { TaskView } from "@devpad/schema";
-import { db, user } from "@devpad/schema/database";
+import { db, user } from "@devpad/schema/database/server";
 import { eq } from "drizzle-orm";
 import { BaseRepository } from "./base-repository";
 

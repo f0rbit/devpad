@@ -2,7 +2,7 @@
 
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
-import { codebase_tasks, db, todo_updates, tracker_result } from "@devpad/schema/database";
+import { codebase_tasks, db, todo_updates, tracker_result } from "@devpad/schema/database/server";
 import { and, desc, eq } from "drizzle-orm";
 import { getBranches, getRepo } from "./github.js";
 import type { ProjectConfig } from "./projects.js";
