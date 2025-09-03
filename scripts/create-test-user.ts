@@ -3,7 +3,7 @@
 const TEST_USER_ID = "test-user-12345";
 
 import crypto from "node:crypto";
-import { api_key, db, user } from "@devpad/schema/database";
+import { api_key, db, user } from "@devpad/schema/database/server";
 
 async function createTestUser() {
 	try {

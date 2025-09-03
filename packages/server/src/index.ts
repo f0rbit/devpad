@@ -3,6 +3,9 @@
 export type { DatabaseOptions, ServerOptions } from "./server";
 export { createApp, createServerExport, migrateDb, startServer } from "./server";
 
+// Export database instance from schema package server module
+export { db } from "@devpad/schema/database/server";
+
 // Default export for compatibility
 import { createServerExport } from "./server";
 
