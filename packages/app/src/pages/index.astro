@@ -1,5 +1,10 @@
 ---
-const _keywords = [
+import DevpadLogo from "@/components/solid/DevpadLogo";
+import GithubLogin from "@/components/solid/GithubLogin";
+import Layout from "@/layouts/Layout.astro";
+import ExternalLink from "lucide-solid/icons/external-link";
+
+const keywords = [
 	// One-word keywords
 	"devpad",
 	"tasks",
@@ -46,7 +51,7 @@ const _keywords = [
 			<br />
 			<section id="hero" style="width: 100%">
 				<h1 class="flex-row" style="gap: 20px; justify-content: center;">
-					<DevpadLogo size={48} />
+					<DevpadLogo size={48} client:load />
 					<span style="font-size: 3rem;">devpad</span>
 				</h1>
 				<div style="height: 75px"></div>

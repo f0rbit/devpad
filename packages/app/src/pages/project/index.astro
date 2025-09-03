@@ -1,13 +1,16 @@
 ---
 import { getUserProjects } from "@devpad/core";
+import PageLayout from "@/layouts/PageLayout.astro";
+import GithubLogin from "@/components/solid/GithubLogin";
+import ExternalLink from "lucide-solid/icons/external-link";
 
 const user = Astro.locals.user;
 
 const projects = user ? await getUserProjects(user.id) : [];
-const _codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
+const codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
 // const deleted = projects.filter((p) => p.visibility == "DELETED");
 //
-const _keywords = [
+const keywords = [
 	// One-word keywords
 	"projects",
 	"management",

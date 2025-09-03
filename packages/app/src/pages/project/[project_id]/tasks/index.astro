@@ -1,5 +1,8 @@
 ---
 import { getProject, getActiveUserTags, getProjectTasks, type Project } from "@devpad/core";
+import PageLayout from '@/layouts/PageLayout.astro";
+import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro";
+import { TaskSorter } from '@/components/solid/TaskSorter";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -15,8 +18,8 @@ if (!project) return new Response(null, { status: 404, statusText: "Project not 
 project_map[project.id] = project;
 const project_uuid = project.id;
 
-const _tasks = await getProjectTasks(project_uuid);
-const _tags = await getActiveUserTags(user.id);
+const tasks = await getProjectTasks(project_uuid);
+const tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={`Tasks - ${project_id}`}>

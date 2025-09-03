@@ -1,10 +1,12 @@
 ---
 import { getUserTags } from "@devpad/core";
+import PageLayout from '@/layouts/PageLayout.astro";
+import { TagEditor } from '@/components/solid/TagEditor";
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401 });
 
-const _tags = await getUserTags(user.id);
+const tags = await getUserTags(user.id);
 ---
 
 <PageLayout title="Tags - devpad">

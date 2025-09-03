@@ -1,5 +1,7 @@
 ---
 import { getTaskHistory, getUserProjectMap, getActiveUserTags, getTask } from "@devpad/core";
+import PageLayout from '@/layouts/PageLayout.astro";
+import TaskEditor from '@/components/solid/TaskEditor";
 
 const { todo_id } = Astro.params;
 if (!todo_id) return new Response(null, { status: 404, statusText: "Task not found" });
@@ -16,13 +18,13 @@ if (found.task.owner_id !== user.id) return new Response(null, { status: 401, st
 
 const user_tags = await getActiveUserTags(user.id);
 
-const _project_map = await getUserProjectMap(user.id);
+const project_map = await getUserProjectMap(user.id);
 
 // tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
 const tag_map = new Map(user_tags.map(t => [t.id, t]));
-const _current_tags = tags.map(tag_id => tag_map.get(tag_id)!) ?? [];
+const current_tags = tags.map(tag_id => tag_map.get(tag_id)!) ?? [];
 
-const _task_history = await getTaskHistory(todo_id);
+const task_history = await getTaskHistory(todo_id);
 ---
 
 <PageLayout title={`${found.task?.title ?? "New Task"} - devpad`}>

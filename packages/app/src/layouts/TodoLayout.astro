@@ -1,5 +1,6 @@
 ---
-import { getProject } from "../server/projects";
+import { getProject } from "@devpad/core";
+import PageLayout from './PageLayout.astro";
 
 interface Props {
 	title: string;
@@ -13,7 +14,7 @@ const { title } = Astro.props;
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const _sub_pages = [
+const sub_pages = [
 	{ name: "info", href: "/" },
 	{ name: "update", href: "/update" },
 	{ name: "config", href: "/config" },
@@ -36,5 +37,4 @@ if (!project) return new Response(null, { status: 404, statusText: "Project not 
 			<slot />
 		</section>
 	</main>
-	)
 </PageLayout>

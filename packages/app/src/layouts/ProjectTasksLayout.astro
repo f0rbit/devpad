@@ -1,4 +1,5 @@
 ---
+import ProjectLayout from "./ProjectLayout.astro"
 interface Props {
 	project_id: string;
 }
@@ -12,7 +13,7 @@ const pages = [
 ];
 
 const search_pages = pages.filter(p => p.name !== "tasks");
-const _active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "tasks";
+const active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "tasks";
 ---
 
 <ProjectLayout project_id={project_id}>

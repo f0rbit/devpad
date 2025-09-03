@@ -1,11 +1,13 @@
 ---
 import { getUserProjectMap, getActiveUserTags } from "@devpad/core";
+import PageLayout from '@/layouts/PageLayout.astro";
+import TaskEditor from '@/components/solid/TaskEditor";
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const _project_map = await getUserProjectMap(user.id);
-const _user_tags = await getActiveUserTags(user.id);
+const project_map = await getUserProjectMap(user.id);
+const user_tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={"New Task - devpad"}>

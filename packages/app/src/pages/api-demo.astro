@@ -73,9 +73,9 @@ await apiClient.projects.saveConfig({
                 const { getApiClient, hasApiKey } = await import('@/utils/api-client');
                 
                 if (!hasApiKey()) {
-                    resultDiv.innerHTML = '<p style="color: orange;">⚠️ No API key found. In a real app, this would be provided after login.</p>';
+                    resultDiv.innerHTML = '<p style="color: orange;">⚠️ No API key found. In a real app, this would be provided after login.</p>";
                 } else {
-                    resultDiv.innerHTML = '<p style="color: green;">✅ API client is configured and ready!</p>';
+                    resultDiv.innerHTML = '<p style="color: green;">✅ API client is configured and ready!</p>";
                     
                     // You could test actual API calls here if you had a valid key
                     // const client = getApiClient();

@@ -1,14 +1,19 @@
 ---
 import { getUserProjectMap, getActiveUserTags, getUserTasks } from "@devpad/core";
+import PageLayout from '@/layouts/PageLayout.astro";
+import { TaskSorter } from '@/components/solid/TaskSorter";
+import GithubLogin from '@/components/solid/GithubLogin";
+import Plus from "lucide-solid/icons/plus";
+import Tag from "lucide-solid/icons/tag";
 
 const user = Astro.locals.user;
 
-const _project_map = user ? await getUserProjectMap(user?.id) : {};
-const _tasks = user ? await getUserTasks(user?.id) : [];
+const project_map = user ? await getUserProjectMap(user?.id) : {};
+const tasks = user ? await getUserTasks(user?.id) : [];
 
-const _tags = user ? await getActiveUserTags(user?.id) : [];
+const tags = user ? await getActiveUserTags(user?.id) : [];
 
-const _keywords = [
+const keywords = [
 	// One-word keywords
 	"tasks",
 	"todo",

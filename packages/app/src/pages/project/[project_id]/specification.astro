@@ -1,5 +1,8 @@
 ---
 import { getProject } from "@devpad/core";
+import PageLayout from '../../../layouts/PageLayout.astro";
+import ProjectLayout from '../../../layouts/ProjectLayout.astro";
+import SpecificationEditor from '../../../components/solid/SpecificationEditor";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });

@@ -1,5 +1,8 @@
 ---
 import { getProjectHistory, getProject } from "@devpad/core";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import HistoryTimeline from "@/components/solid/HistoryTimeline";
 
 /** @idea scan history should be able to be inspected to see breakdown of changes and what we accepted/rejected */
 
@@ -15,7 +18,7 @@ if (!found_project) return new Response(null, { status: 404, statusText: "Projec
 const project_uuid = found_project.id;
 
 // get all updates as well
-const _history = await getProjectHistory(project_uuid);
+const history = await getProjectHistory(project_uuid);
 ---
 
 <PageLayout title={`History - ${project_id}`}>

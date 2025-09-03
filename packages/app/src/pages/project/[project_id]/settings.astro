@@ -1,5 +1,9 @@
 ---
 import { getBranches, getProject, getProjectConfig, getActiveUserTags } from "@devpad/core";
+import PageLayout from '../../../layouts/PageLayout.astro";
+import ProjectLayout from '../../../layouts/ProjectLayout.astro";
+import ProjectSettings from '../../../components/ProjectSettings.astro";
+import ConfigEditor from '../../../components/solid/ConfigEditor";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -16,14 +20,14 @@ if (config_error) return new Response(null, { status: 500, statusText: config_er
 
 const [owner, repo] = project.repo_url ? project.repo_url.split("/").slice(-2) : [null, null];
 
-let _branches: any[] | null = null;
+let branches: any[] | null = null;
 if (owner && repo) {
 	if (Astro.locals.session?.access_token) {
-		_branches = await getBranches(owner, repo, Astro.locals.session.access_token);
+		branches = await getBranches(owner, repo, Astro.locals.session.access_token);
 	}
 }
 
-const _available_tags = await getActiveUserTags(user.id);
+const available_tags = await getActiveUserTags(user.id);
 ---
 
 <PageLayout title={`Settings - ${project_id}`}>
