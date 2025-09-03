@@ -4,7 +4,7 @@ import { db, ignore_path, project, tag, tag_config } from "@devpad/schema/databa
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
-import { ApiError } from "../../../api/src/utils/errors";
+
 import { type AuthContext, requireAuth } from "../middleware/auth";
 
 const app = new Hono<AuthContext>();
@@ -53,12 +53,24 @@ app.get("/projects", requireAuth, async c => {
 			return c.json(project);
 		}
 
-		// Get all projects
+		// Get all user projects (authenticated user can see all their own projects)
+		const projects = await getUserProjects(user.id);
+		return c.json(projects);
+	} catch (error: any) {
+		console.error("ERROR in GET /projects:", error);
+		return c.json({ error: "Internal Server Error", details: error.message }, 500);
+	}
+});
+
+// Public projects endpoint - returns only public projects for the authenticated user
+app.get("/projects/public", requireAuth, async c => {
+	try {
+		const user = c.get("user")!;
 		const projects = await getUserProjects(user.id);
 		const publicProjects = projects.filter(project => project.visibility === "PUBLIC");
 		return c.json(publicProjects);
 	} catch (error: any) {
-		console.error("ERROR in GET /projects:", error);
+		console.error("ERROR in GET /projects/public:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });

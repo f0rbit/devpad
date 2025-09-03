@@ -3,7 +3,15 @@ import { BaseClient } from "../utils/base-client";
 
 export class ProjectsClient extends BaseClient {
 	async list() {
+		return this.getAllProjects();
+	}
+
+	async getAllProjects() {
 		return this.listWith<Project[]>("/projects");
+	}
+
+	async getPublicProjects() {
+		return this.listWith<Project[]>("/projects/public");
 	}
 
 	async getById(id: string) {

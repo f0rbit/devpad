@@ -1,73 +1,47 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { DevpadApiClient } from "@devpad/api";
-import type { Project } from "@devpad/schema";
+import { describe, expect, test } from "bun:test";
+import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { expectValidProject, expectValidArray, expectMatchesPartial, expectSuccessfulResponse, expectValidApiError } from "../shared/assertions";
 import { TestDataFactory } from "./factories";
-import { setupIntegrationTests, teardownIntegrationTests } from "./setup";
+
+class ProjectsIntegrationTest extends BaseIntegrationTest {}
+
+// Setup test instance
+const testInstance = new ProjectsIntegrationTest();
+setupBaseIntegrationTest(testInstance);
 
 describe("projects API client integration", () => {
-	let test_client: DevpadApiClient;
-	const createdProjects: Project[] = [];
-
-	// Setup test environment
-	beforeAll(async () => {
-		test_client = await setupIntegrationTests();
-	});
-
-	// Clean up after all tests
-	afterAll(async () => {
-		// Clean up any projects we created during testing
-		for (const project of createdProjects) {
-			try {
-				await test_client.projects.deleteProject(project);
-			} catch (error) {
-				console.warn(`Failed to clean up project ${project.id}:`, error);
-			}
-		}
-
-		await teardownIntegrationTests();
-	});
-
 	test("should get API status", async () => {
 		// Test the basic API endpoint that should always work
 		const response = await fetch("http://localhost:3001/api/v0");
-		expect(response.ok).toBe(true);
+		expectSuccessfulResponse(response);
 
 		const data = await response.json();
 		expect(data.version).toBe("0");
 	});
 
 	test("should list projects", async () => {
-		const projects = await test_client.projects.list();
-
-		expect(Array.isArray(projects)).toBe(true);
-		// Projects might be empty for a new user, which is fine
-		if (projects.length > 0) {
-			const project = projects[0];
-			expect(project).toHaveProperty("id");
-			expect(project).toHaveProperty("name");
-			expect(project).toHaveProperty("visibility");
-		}
+		const projects = await testInstance.client.projects.list();
+		expectValidArray(projects, expectValidProject);
 	});
 
 	test("should create a new project", async () => {
 		const projectData = TestDataFactory.createRealisticProject();
+		const createdProject = await testInstance.createAndRegisterProject(projectData);
 
-		const createdProject = await test_client.projects.create(projectData);
-		createdProjects.push(createdProject);
-
-		expect(createdProject).toHaveProperty("id");
-		expect(createdProject.name).toBe(projectData.name);
-		expect(createdProject.description).toBe(projectData.description);
-		expect(createdProject.status).toBe(projectData.status);
-		expect(createdProject.visibility).toBe(projectData.visibility);
-		expect(createdProject.specification).toBe(projectData.specification);
+		expectValidProject(createdProject);
+		expectMatchesPartial(createdProject, {
+			name: projectData.name,
+			description: projectData.description,
+			status: projectData.status,
+			visibility: projectData.visibility,
+			specification: projectData.specification,
+		});
 	});
 
 	test("should update an existing project", async () => {
 		// First create a project
 		const projectData = TestDataFactory.createRealisticProject();
-		const createdProject = await test_client.projects.create(projectData);
-		createdProjects.push(createdProject);
+		const createdProject = await testInstance.createAndRegisterProject(projectData);
 
 		// Then update it
 		const updatedData = {
@@ -76,82 +50,95 @@ describe("projects API client integration", () => {
 			status: "PAUSED" as const,
 		};
 
-		const updatedProject = await test_client.projects.update({
+		const updatedProject = await testInstance.client.projects.update({
 			...projectData,
 			...updatedData,
 		});
 
-		expect(updatedProject.id).toBe(createdProject.id);
-		expect(updatedProject.name).toBe(updatedData.name);
-		expect(updatedProject.description).toBe(updatedData.description);
-		expect(updatedProject.status).toBe(updatedData.status);
+		expectValidProject(updatedProject);
+		expectMatchesPartial(updatedProject, {
+			id: createdProject.id,
+			name: updatedData.name,
+			description: updatedData.description,
+			status: updatedData.status,
+		});
 	});
 
 	test("should get project by id", async () => {
 		// First create a project
 		const projectData = TestDataFactory.createRealisticProject();
-		const createdProject = await test_client.projects.create(projectData);
-		createdProjects.push(createdProject);
+		const createdProject = await testInstance.createAndRegisterProject(projectData);
 
 		// Then get it by ID
-		const fetchedProject = await test_client.projects.getById(createdProject.id);
+		const fetchedProject = await testInstance.client.projects.getById(createdProject.id);
 
-		expect(fetchedProject.id).toBe(createdProject.id);
-		expect(fetchedProject.name).toBe(createdProject.name);
+		expectValidProject(fetchedProject);
+		expectMatchesPartial(fetchedProject, {
+			id: createdProject.id,
+			name: createdProject.name,
+		});
 	});
 
 	test("should get project by name", async () => {
 		// First create a project
 		const projectData = TestDataFactory.createRealisticProject();
-		const createdProject = await test_client.projects.create(projectData);
-		createdProjects.push(createdProject);
+		const createdProject = await testInstance.createAndRegisterProject(projectData);
 
 		// Then get it by project_id (name)
-		const fetchedProject = await test_client.projects.getByName(createdProject.project_id);
+		const fetchedProject = await testInstance.client.projects.getByName(createdProject.project_id);
 
-		expect(fetchedProject.id).toBe(createdProject.id);
-		expect(fetchedProject.project_id).toBe(createdProject.project_id);
+		expectValidProject(fetchedProject);
+		expectMatchesPartial(fetchedProject, {
+			id: createdProject.id,
+			project_id: createdProject.project_id,
+		});
 	});
 
 	test("should handle upsert for both create and update", async () => {
 		// Test create via upsert (no id)
 		const projectData = TestDataFactory.createRealisticProject();
-		const createdProject = await test_client.projects.upsert(projectData);
-		createdProjects.push(createdProject);
+		const createdProject = await testInstance.client.projects.upsert(projectData);
+		testInstance.registerProject(createdProject);
 
-		expect(createdProject).toHaveProperty("id");
-		expect(createdProject.name).toBe(projectData.name);
+		expectValidProject(createdProject);
+		expectMatchesPartial(createdProject, {
+			name: projectData.name,
+		});
 
 		// Test update via upsert (with id)
-		const updatedProject = await test_client.projects.upsert({
+		const updatedProject = await testInstance.client.projects.upsert({
 			...projectData,
 			name: "Updated via Upsert",
 			description: "Updated description via upsert",
 		});
 
-		expect(updatedProject.id).toBe(createdProject.id);
-		expect(updatedProject.name).toBe("Updated via Upsert");
-		expect(updatedProject.description).toBe("Updated description via upsert");
+		expectValidProject(updatedProject);
+		expectMatchesPartial(updatedProject, {
+			id: createdProject.id,
+			name: "Updated via Upsert",
+			description: "Updated description via upsert",
+		});
 	});
 
 	test("should soft delete a project", async () => {
 		// First create a project
 		const projectData = TestDataFactory.createRealisticProject();
-		const createdProject = await test_client.projects.create(projectData);
-		createdProjects.push(createdProject);
+		const createdProject = await testInstance.createAndRegisterProject(projectData);
 
 		// Then delete it (soft delete)
-		const deletedProject = await test_client.projects.deleteProject(createdProject);
+		const deletedProject = await testInstance.client.projects.deleteProject(createdProject);
 
-		expect(deletedProject.id).toBe(createdProject.id);
-		expect(deletedProject.deleted).toBe(true);
+		expectValidProject(deletedProject);
+		expectMatchesPartial(deletedProject, {
+			id: createdProject.id,
+			deleted: true,
+		});
 	});
 
 	test("should save project configuration", async () => {
 		// Create a test project
 		const projectData = TestDataFactory.createRealisticProject();
-		const project = await test_client.projects.create(projectData);
-		createdProjects.push(project);
+		const project = await testInstance.createAndRegisterProject(projectData);
 
 		const configPayload = {
 			id: project.id,
@@ -171,7 +158,7 @@ describe("projects API client integration", () => {
 			scan_branch: "main",
 		};
 
-		expect(test_client.projects.saveConfig(configPayload)).resolves.toBeUndefined();
+		expect(testInstance.client.projects.saveConfig(configPayload)).resolves.toBeUndefined();
 	});
 
 	test("should upsert project with extended functionality", async () => {
@@ -194,13 +181,16 @@ describe("projects API client integration", () => {
 			current_version: "1.0.0",
 		};
 
-		const upsertedProject = await test_client.projects.upsertProject(payload);
-		createdProjects.push(upsertedProject);
+		const upsertedProject = await testInstance.client.projects.upsertProject(payload);
+		testInstance.registerProject(upsertedProject);
 
-		expect(upsertedProject.project_id).toBe(payload.project_id);
-		expect(upsertedProject.name).toBe(payload.name);
-		expect(upsertedProject.repo_url).toBe(payload.repo_url);
-		expect(upsertedProject.specification).toBe(payload.specification);
+		expectValidProject(upsertedProject);
+		expectMatchesPartial(upsertedProject, {
+			project_id: payload.project_id,
+			name: payload.name,
+			repo_url: payload.repo_url,
+			specification: payload.specification,
+		});
 	});
 
 	test("should fetch project specification", async () => {
@@ -208,17 +198,17 @@ describe("projects API client integration", () => {
 		const projectData = TestDataFactory.createRealisticProject();
 		projectData.repo_url = "https://github.com/octocat/Hello-World"; // Use a known public repo
 
-		const project = await test_client.projects.upsertProject({
+		const project = await testInstance.client.projects.upsertProject({
 			...projectData,
 			owner_id: "test-user-12345",
 			deleted: false,
 		});
-		createdProjects.push(project);
+		testInstance.registerProject(project);
 
 		// Note: This will likely fail without proper GitHub auth token
 		// But we're testing the API structure and error handling
 		try {
-			await test_client.projects.fetchSpecification(project.id);
+			await testInstance.client.projects.fetchSpecification(project.id);
 			// If it succeeds, great! If not, we expect specific errors
 		} catch (error: any) {
 			// Should fail with API authentication error or GitHub access token error
@@ -230,8 +220,7 @@ describe("projects API client integration", () => {
 	test("should validate project configuration schema", async () => {
 		// Test with invalid configuration
 		const projectData = TestDataFactory.createRealisticProject();
-		const project = await test_client.projects.create(projectData);
-		createdProjects.push(project);
+		const project = await testInstance.createAndRegisterProject(projectData);
 
 		const invalidConfig = {
 			id: project.id,
@@ -241,14 +230,13 @@ describe("projects API client integration", () => {
 			},
 		} as any;
 
-		expect(test_client.projects.saveConfig(invalidConfig)).rejects.toThrow();
+		expect(testInstance.client.projects.saveConfig(invalidConfig)).rejects.toThrow();
 	});
 
 	test("should handle authorization for project operations", async () => {
 		// Create project with one user's ID, try to access with different auth
 		const projectData = TestDataFactory.createRealisticProject();
-		const project = await test_client.projects.create(projectData);
-		createdProjects.push(project);
+		const project = await testInstance.createAndRegisterProject(projectData);
 
 		const configPayload = {
 			id: project.id,
@@ -259,6 +247,6 @@ describe("projects API client integration", () => {
 		};
 
 		// This should work since we're using the same client
-		expect(test_client.projects.saveConfig(configPayload)).resolves.toBeUndefined();
+		expect(testInstance.client.projects.saveConfig(configPayload)).resolves.toBeUndefined();
 	});
 });

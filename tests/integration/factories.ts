@@ -45,6 +45,7 @@ export class TestDataFactory {
 			visibility: "PRIVATE",
 			updated_at: new Date().toISOString(),
 			created_at: new Date().toISOString(),
+			deleted: false,
 			goal_id: null,
 			codebase_task_id: null,
 			...overrides,
