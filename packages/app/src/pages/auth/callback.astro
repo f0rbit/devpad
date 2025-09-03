@@ -1,0 +1,20 @@
+---
+// Handle OAuth callback with JWT token
+const token = Astro.url.searchParams.get("token");
+
+if (token) {
+  // Store JWT token in cookie and redirect
+  Astro.cookies.set("jwt-token", token, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    secure: Astro.site?.protocol === "https:",
+    maxAge: 60 * 60 * 24, // 24 hours
+  });
+  
+  return Astro.redirect("/project");
+}
+
+// If no token, redirect to home
+return Astro.redirect("/");
+---

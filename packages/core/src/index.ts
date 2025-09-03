@@ -19,4 +19,5 @@ export type {
 	User,
 } from "@devpad/schema";
 export * from "./auth/index.js";
+export * from "./auth/jwt.js";
 export * from "./services/index.js";

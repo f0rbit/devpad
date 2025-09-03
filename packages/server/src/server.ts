@@ -103,14 +103,18 @@ export function createApp(options: ServerOptions = {}): Hono {
 		})
 	);
 
-	// Auth routes (without middleware to allow OAuth callbacks)
-	app.route("/api/auth", authRoutes);
+	// Apply auth middleware to auth routes (except login/callback which need to be public)
+	app.use("/api/auth/verify", authMiddleware);
+	app.use("/api/auth/session", authMiddleware);
 
 	// Apply auth middleware to other API routes
 	app.use("/api/v0/*", authMiddleware);
 	app.use("/api/keys/*", authMiddleware);
 	app.use("/api/project/*", authMiddleware);
 	app.use("/api/user/*", authMiddleware);
+
+	// Auth routes (login/callback public, verify/session protected by middleware above)
+	app.route("/api/auth", authRoutes);
 
 	// API Routes
 	app.route("/api/v0", v0Routes);

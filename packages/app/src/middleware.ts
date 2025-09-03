@@ -1,60 +1,171 @@
+import type { MiddlewareHandler } from "astro";
 import { defineMiddleware } from "astro:middleware";
-import { lucia } from "@devpad/core/auth";
 import { verifyRequestOrigin } from "lucia";
 
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];
 
-export const onRequest = defineMiddleware(async (context, next) => {
+const API_SERVER_URL = import.meta.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
+const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "") || "http://localhost:3001";
+
+export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
+	console.log(`🔍 [MIDDLEWARE] Processing ${context.request.method} ${context.url.pathname}`);
+
 	if (context.request.method !== "GET") {
 		const originHeader = context.request.headers.get("Origin");
 		const hostHeader = context.request.headers.get("Host");
 		// check for missing or invalid headers
 		const checks = [!originHeader, !hostHeader, !verifyRequestOrigin(originHeader!, [hostHeader!])];
 		const ignore = origin_ignore.find(p => context.url.pathname.startsWith(p));
+		console.log(`🔍 [MIDDLEWARE] CSRF check:`, { originHeader, hostHeader, ignore });
 		if (checks.some(c => c) && !ignore) {
-			console.error("Invalid origin", { originHeader, hostHeader });
+			console.error("❌ [MIDDLEWARE] Invalid origin", { originHeader, hostHeader });
 			return new Response("Invalid origin", {
 				status: 403,
 			});
 		}
-	} else if (!history_ignore.find(p => context.url.pathname.includes(p))) {
-		// handle session history for GET requests
-		const history = (await context.session?.get("history")) ?? [];
-		if (context.url.searchParams.get("back") === "true") {
-			// remove the last page
-			history.pop();
-		} else if (context.url.pathname !== history.at(-1)) {
-			// don't add the same page twice
-			history.push(context.url.pathname);
+	}
+
+	// Handle session history for GET requests
+	if (context.request.method === "GET" && !history_ignore.find(p => context.url.pathname.includes(p))) {
+		console.log(`📋 [MIDDLEWARE] Processing history for ${context.url.pathname}`);
+		// Get existing history from cookie
+		const historyCookie = context.cookies.get("nav-history")?.value;
+		let history: string[] = [];
+
+		try {
+			history = historyCookie ? JSON.parse(decodeURIComponent(historyCookie)) : [];
+			console.log(`📋 [MIDDLEWARE] Current history:`, history);
+		} catch {
+			history = [];
+			console.log(`📋 [MIDDLEWARE] Failed to parse history, starting fresh`);
 		}
+
+		if (context.url.searchParams.get("back") === "true") {
+			// Remove the last page for back navigation
+			history.pop();
+			console.log(`📋 [MIDDLEWARE] Back navigation, history now:`, history);
+		} else if (context.url.pathname !== history.at(-1)) {
+			// Don't add the same page twice
+			history.push(context.url.pathname);
+			console.log(`📋 [MIDDLEWARE] Added to history:`, history);
+		}
+
+		// Clean up history
 		if (history.at(-1) === "/") {
-			context.session?.set("history", []);
+			history = [];
 		} else if (history.length > 15) {
 			history.shift();
-			context.session?.set("history", history);
-		} else {
-			context.session?.set("history", history);
 		}
+
+		// Store updated history in cookie
+		if (history.length > 0) {
+			context.cookies.set("nav-history", encodeURIComponent(JSON.stringify(history)), {
+				path: "/",
+				maxAge: 60 * 60 * 24, // 24 hours
+				sameSite: "lax",
+			});
+		}
+
+		// Make history available to pages
+		context.locals.history = history;
 	}
 
-	const sessionId = context.cookies.get(lucia.sessionCookieName)?.value ?? null;
-	if (!sessionId) {
-		context.locals.user = null;
-		context.locals.session = null;
-		return next();
+	console.log("[MIDDLEWARE] 🔐 Starting auth check for:", context.url.pathname);
+
+	// Initialize user as null
+	context.locals.user = null;
+	context.locals.session = null;
+
+	// Check for JWT token in localStorage (handled client-side) or session cookie
+	const jwtToken = context.url.searchParams.get("token"); // From OAuth callback
+
+	// Check for various possible session cookie names (Lucia default is usually "auth_session")
+	const sessionCookie1 = context.cookies.get("auth-session")?.value;
+	const sessionCookie2 = context.cookies.get("auth_session")?.value;
+	const sessionCookie3 = context.cookies.get("lucia_session")?.value;
+	const sessionCookie = sessionCookie1 || sessionCookie2 || sessionCookie3;
+
+	const storedJWT = context.cookies.get("jwt-token")?.value;
+
+	console.log("[MIDDLEWARE] 🍪 Auth cookies found:", {
+		hasJwtToken: !!jwtToken,
+		hasSessionCookie: !!sessionCookie,
+		hasStoredJWT: !!storedJWT,
+		sessionCookieSource: sessionCookie1 ? "auth-session" : sessionCookie2 ? "auth_session" : sessionCookie3 ? "lucia_session" : "none",
+		"auth-session": !!sessionCookie1,
+		auth_session: !!sessionCookie2,
+		lucia_session: !!sessionCookie3,
+	});
+
+	if (jwtToken) {
+		console.log("[MIDDLEWARE] 🔄 JWT token in URL - storing in cookie and redirecting");
+		// Store JWT token and redirect without token in URL
+		const response = new Response(null, {
+			status: 302,
+			headers: {
+				Location: context.url.pathname,
+				"Set-Cookie": `jwt-token=${jwtToken}; Path=/; HttpOnly; SameSite=Lax${context.site?.protocol === "https:" ? "; Secure" : ""}`,
+			},
+		});
+		return response;
 	}
 
-	const { session, user } = await lucia.validateSession(sessionId);
-	if (session?.fresh) {
-		const sessionCookie = lucia.createSessionCookie(session.id);
-		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
+	if (storedJWT || sessionCookie) {
+		console.log("[MIDDLEWARE] 📞 Making API call to verify auth");
+
+		try {
+			// Call API to verify authentication
+			const authHeader = storedJWT ? `Bearer jwt:${storedJWT}` : undefined;
+			// Use the detected cookie name for the header
+			const cookieHeader = sessionCookie ? (sessionCookie1 ? `auth-session=${sessionCookie}` : sessionCookie2 ? `auth_session=${sessionCookie}` : sessionCookie3 ? `lucia_session=${sessionCookie}` : undefined) : undefined;
+
+			console.log("[MIDDLEWARE] 📡 Auth request headers:", {
+				hasAuthHeader: !!authHeader,
+				hasCookieHeader: !!cookieHeader,
+				apiUrl: `${API_SERVER_BASE}/api/auth/verify`,
+			});
+
+			const response = await fetch(`${API_SERVER_BASE}/api/auth/verify`, {
+				headers: {
+					...(authHeader && { Authorization: authHeader }),
+					...(cookieHeader && { Cookie: cookieHeader }),
+					"Content-Type": "application/json",
+				},
+			});
+
+			console.log("[MIDDLEWARE] 📋 API response:", {
+				status: response.status,
+				ok: response.ok,
+			});
+
+			if (response.ok) {
+				const authData = await response.json();
+				console.log("[MIDDLEWARE] ✅ Auth successful:", {
+					authenticated: authData.authenticated,
+					hasUser: !!authData.user,
+					userId: authData.user?.id,
+				});
+
+				context.locals.user = authData.user;
+				context.locals.session = { id: "verified" } as any; // Minimal session object
+			} else {
+				const errorData = await response.text();
+				console.log("[MIDDLEWARE] ❌ Auth failed:", errorData);
+			}
+		} catch (error) {
+			// API unreachable or error - continue without auth
+			console.error("[MIDDLEWARE] 🚨 Auth verification failed:", error);
+		}
+	} else {
+		console.log("[MIDDLEWARE] 🚫 No auth tokens found");
 	}
-	if (!session) {
-		const sessionCookie = lucia.createBlankSessionCookie();
-		context.cookies.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes);
-	}
-	context.locals.session = session;
-	context.locals.user = user;
+
+	console.log("[MIDDLEWARE] 🏁 Final auth state:", {
+		hasUser: !!context.locals.user,
+		hasSession: !!context.locals.session,
+		userId: context.locals.user?.id,
+	});
+
 	return next();
 });
