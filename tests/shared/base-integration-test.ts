@@ -1,14 +1,14 @@
 import { afterAll, beforeAll } from "bun:test";
 import type ApiClient from "@devpad/api";
 import type { Project, TaskWithDetails, Tag } from "@devpad/schema";
-import { setupIntegrationTests, teardownIntegrationTests } from "../integration/setup";
+import { getSharedApiClient } from "../integration/setup";
 import { CleanupManager } from "./cleanup-manager";
 import { log } from "./test-utils";
-import { TestDataFactory } from "../integration/factories";
 
 /**
  * Base class for integration tests providing common functionality
  * Handles test client setup, cleanup management, and helper methods
+ * Now uses the shared global server instance
  */
 export abstract class BaseIntegrationTest {
 	protected cleanupManager!: CleanupManager;
@@ -18,26 +18,25 @@ export abstract class BaseIntegrationTest {
 	protected cleanup!: CleanupManager;
 
 	/**
-	 * Setup test environment - call this in beforeAll
+	 * Setup test environment - now uses shared client
 	 */
 	public async setupTest(): Promise<void> {
 		log(`🧪 Setting up integration test: ${this.constructor.name}`);
-		this.client = await setupIntegrationTests();
+		this.client = getSharedApiClient();
 		this.cleanup = new CleanupManager(this.client);
 		log(`✅ Test setup completed for: ${this.constructor.name}`);
 	}
 
 	/**
-	 * Cleanup test resources - call this in afterAll
+	 * Cleanup test resources - only cleans up test data, not server
 	 */
 	public async teardownTest(): Promise<void> {
 		log(`🧹 Tearing down integration test: ${this.constructor.name}`);
 
-		// Clean up all registered resources
+		// Clean up all registered resources (projects, tasks, etc.)
 		await this.cleanup.cleanupAll();
 
-		// Shutdown the test server
-		await teardownIntegrationTests();
+		// Note: Server cleanup is handled globally, not per test file
 
 		log(`✅ Test teardown completed for: ${this.constructor.name}`);
 	}

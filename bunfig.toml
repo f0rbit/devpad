@@ -1,0 +1,3 @@
+[test]
+# Global setup for integration tests - starts single shared server
+preload = ["./tests/integration/setup.ts"]
