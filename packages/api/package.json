@@ -16,7 +16,7 @@
 	],
 	"scripts": {
 		"build": "bunx tsc",
-		"build:watch": "tsc --watch",
+		"build:watch": "bunx tsc --watch",
 		"test": "bun test",
 		"test:unit": "bun test tests/unit/",
 		"test:integration": "bun test tests/integration/",

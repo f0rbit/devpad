@@ -1,6 +1,5 @@
 ---
-import { getProject, getRecentUpdate } from "../../../../server/projects.ts";
-import { getProjectTasks, type Task } from "../../../../server/tasks";
+import { getProject, getRecentUpdate, getProjectTasks, type Task } from "@devpad/core";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });

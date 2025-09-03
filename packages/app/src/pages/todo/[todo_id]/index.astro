@@ -1,8 +1,5 @@
 ---
-import { getTaskHistory } from "../../../server/action";
-import { getUserProjectMap } from "../../../server/projects";
-import { getActiveUserTags } from "../../../server/tags";
-import { getTask } from "../../../server/tasks";
+import { getTaskHistory, getUserProjectMap, getActiveUserTags, getTask } from "@devpad/core";
 
 const { todo_id } = Astro.params;
 if (!todo_id) return new Response(null, { status: 404, statusText: "Task not found" });

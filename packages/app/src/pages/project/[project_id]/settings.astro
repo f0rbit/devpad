@@ -1,7 +1,5 @@
 ---
-import { getBranches } from "../../../server/github";
-import { getProject, getProjectConfig } from "../../../server/projects";
-import { getActiveUserTags } from "../../../server/tags";
+import { getBranches, getProject, getProjectConfig, getActiveUserTags } from "@devpad/core";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });

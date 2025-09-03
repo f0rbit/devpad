@@ -86,7 +86,7 @@ export abstract class BaseClient {
 	/**
 	 * Generic delete via upsert pattern (soft delete)
 	 */
-	protected deleteEntity<T, U extends Record<string, any>>(path: string, data: U, deleteField: string = "deleted"): Promise<T> {
+	protected deleteEntity<T, U>(path: string, data: U, deleteField: string = "deleted"): Promise<T> {
 		return this.patch<T>(path, {
 			body: { ...data, [deleteField]: true },
 		});

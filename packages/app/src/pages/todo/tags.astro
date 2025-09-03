@@ -1,5 +1,5 @@
 ---
-import { getUserTags } from "../../server/tags";
+import { getUserTags } from "@devpad/core";
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401 });

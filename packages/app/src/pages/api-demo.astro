@@ -39,7 +39,7 @@ const title = "API Client Demo";
         </ul>
         
         <h2>Usage Examples:</h2>
-        <pre><code>// In a Solid component
+        <pre><code>{`// In a Solid component
 import { getApiClient } from "../../utils/api-client";
 
 // Save tags
@@ -55,10 +55,10 @@ await apiClient.tasks.upsert({
 
 // Save project configuration
 await apiClient.projects.saveConfig({
-  config: { tags, ignore },
-  scan_branch: branch,
+  config: { tags: [], ignore: [] },
+  scan_branch: "main",
   id: project_id,
-});</code></pre>
+});`}</code></pre>
 
         <button id="test-api" type="button">Test API Client</button>
         <div id="result"></div>

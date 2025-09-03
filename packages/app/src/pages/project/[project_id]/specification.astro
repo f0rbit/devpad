@@ -1,5 +1,5 @@
 ---
-import { getProject } from "../../../server/projects";
+import { getProject } from "@devpad/core";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });

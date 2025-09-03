@@ -67,6 +67,7 @@ export async function getProjectHistory(project_id: string) {
 			type: "SCAN",
 			description: `Scanned branch '${s.branch}'`,
 			created_at: s.created_at,
+			deleted: false,
 			data: { project_id, message: s.commit_msg, status: s.status },
 		};
 	});

@@ -1,5 +1,5 @@
 ---
-import { getRepos } from "../../server/github";
+import { getRepos } from "@devpad/core";
 
 const session = Astro.locals.session;
 if (!session) return new Response(null, { status: 401, statusText: "Unauthorized" });
