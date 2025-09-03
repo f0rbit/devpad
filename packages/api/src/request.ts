@@ -1,6 +1,6 @@
 import { ArrayBufferedQueue, type BufferedQueue } from "@devpad/schema";
-import { ApiError, AuthenticationError, NetworkError } from "./errors";
-import { handleHttpResponse, handleResponseError, handleNetworkError, HTTP_STATUS } from "./error-handlers";
+import { HTTP_STATUS, handleHttpResponse, handleNetworkError, handleResponseError } from "./error-handlers";
+import { ApiError, AuthenticationError } from "./errors";
 
 export type RequestOptions = {
 	method?: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";

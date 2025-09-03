@@ -1,14 +1,14 @@
-import type { DevpadApiClient } from "@devpad/api";
-import type { Project, TaskWithDetails, Tag } from "@devpad/schema";
-import { log } from "./test-utils";
+import type ApiClient from "@devpad/api";
+import type { Project, TaskWithDetails } from "@devpad/schema";
 
-type CleanupFunction = () => Promise<void>;
-
+/**
+ * Manages cleanup of test resources to prevent test pollution
+ * Tracks created resources and cleans them up after tests
+ */
 export class CleanupManager {
-	private cleanupFunctions: Map<string, CleanupFunction[]> = new Map();
-	private client: DevpadApiClient;
+	private client: ApiClient;
 
-	constructor(client: DevpadApiClient) {
+	constructor(client: ApiClient) {
 		this.client = client;
 	}
 

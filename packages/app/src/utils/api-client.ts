@@ -1,13 +1,13 @@
-import DevpadApiClient from "@devpad/api";
+import ApiClient from "@devpad/api";
 
 // Global API client instance
-let _apiClient: DevpadApiClient | null = null;
+let _apiClient: ApiClient | null = null;
 
 /**
  * Get or create the global API client instance
  * This function handles API key authentication and server URL configuration
  */
-export function getApiClient(): DevpadApiClient {
+export function getApiClient(): ApiClient {
 	if (_apiClient) {
 		return _apiClient;
 	}
@@ -22,7 +22,7 @@ export function getApiClient(): DevpadApiClient {
 		throw new Error("No API key found. Please ensure you are logged in and have an API key.");
 	}
 
-	_apiClient = new DevpadApiClient({
+	_apiClient = new ApiClient({
 		base_url: serverUrl,
 		api_key: apiKey,
 	});

@@ -1,10 +1,10 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { DevpadApiClient } from "@devpad/api";
+import type ApiClient from "@devpad/api";
 import { TestDataFactory } from "./factories";
 import { setupIntegrationTests, TEST_USER_ID, teardownIntegrationTests } from "./setup";
 
 describe("API client operations integration", () => {
-	let test_client: DevpadApiClient;
+	let test_client: ApiClient;
 
 	beforeAll(async () => {
 		test_client = await setupIntegrationTests();

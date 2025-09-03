@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { DevpadApiClient } from "@devpad/api";
+import ApiClient from "@devpad/api";
 import { TEST_USER_ID, DEBUG_LOGGING, log, setupTestDatabase, createTestUser, cleanupTestDatabase, waitForServer } from "../shared/test-utils";
 
 export const TEST_BASE_URL = "http://localhost:3001/api/v0";
@@ -9,10 +9,10 @@ export { TEST_USER_ID, DEBUG_LOGGING };
 // Global test state
 let honoServer: any = null;
 let testApiKey: string | null = null;
-let testClient: DevpadApiClient | null = null;
+let testClient: ApiClient | null = null;
 let teardownTimeout: NodeJS.Timeout | null = null;
 
-export async function setupIntegrationTests(): Promise<DevpadApiClient> {
+export async function setupIntegrationTests(): Promise<ApiClient> {
 	if (teardownTimeout) {
 		clearTimeout(teardownTimeout);
 		teardownTimeout = null;
@@ -45,7 +45,7 @@ export async function setupIntegrationTests(): Promise<DevpadApiClient> {
 	}
 
 	// Create and return test client
-	testClient = new DevpadApiClient({
+	testClient = new ApiClient({
 		base_url: TEST_BASE_URL,
 		api_key: testApiKey,
 	});

@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type { DevpadApiClient } from "@devpad/api";
+import type ApiClient from "@devpad/api";
 import type { Project, TaskWithDetails } from "@devpad/schema";
 import { TestDataFactory } from "./factories";
 import { setupIntegrationTests, TEST_USER_ID, teardownIntegrationTests } from "./setup";
 
 describe("tasks API client integration", () => {
-	let test_client: DevpadApiClient;
+	let test_client: ApiClient;
 	const createdProjects: Project[] = [];
 	const createdTasks: TaskWithDetails[] = [];
 

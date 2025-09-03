@@ -1,45 +1,4 @@
-import { AuthClient } from "./clients/auth";
-import { ProjectsClient } from "./clients/projects";
-import { TagsClient } from "./clients/tags";
-import { TasksClient } from "./clients/tasks";
-import { ApiClient } from "./utils/request";
-
-export class DevpadApiClient {
-	private api_client: ApiClient;
-	private _api_key: string;
-	public projects: ProjectsClient;
-	public tasks: TasksClient;
-	public tags: TagsClient;
-	public auth: AuthClient;
-
-	constructor(options: {
-		base_url?: string;
-		api_key: string;
-		max_history_size?: number;
-	}) {
-		const v0_base_url = options.base_url || "http://localhost:4321/api/v0";
-
-		this._api_key = options.api_key;
-		this.api_client = new ApiClient({
-			base_url: v0_base_url,
-			api_key: options.api_key,
-			max_history_size: options.max_history_size,
-		});
-
-		this.projects = new ProjectsClient(this.api_client);
-		this.tasks = new TasksClient(this.api_client);
-		this.tags = new TagsClient(this.api_client);
-		this.auth = new AuthClient(this.api_client);
-	}
-
-	public history() {
-		return this.api_client.history();
-	}
-
-	public getApiKey(): string {
-		return this._api_key;
-	}
-}
+import { ApiClient } from "./api-client";
 
 export type {
 	Project,
@@ -51,10 +10,7 @@ export type {
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema";
-export type { ApiError, AuthenticationError, NetworkError, ValidationError } from "./utils/errors";
-// Export types that users might need
-export type { RequestHistoryEntry, RequestOptions } from "./utils/request";
-// Export user-friendly error utilities
-export { getUserFriendlyErrorMessage, parseZodErrors } from "./utils/error-handlers";
-
-export default DevpadApiClient;
+export { getUserFriendlyErrorMessage, parseZodErrors } from "./error-handlers";
+export type { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
+export type { RequestHistoryEntry, RequestOptions } from "./request";
+export default ApiClient;

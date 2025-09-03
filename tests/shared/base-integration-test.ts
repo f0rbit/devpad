@@ -1,16 +1,20 @@
 import { afterAll, beforeAll } from "bun:test";
-import type { DevpadApiClient } from "@devpad/api";
+import type ApiClient from "@devpad/api";
 import type { Project, TaskWithDetails, Tag } from "@devpad/schema";
 import { setupIntegrationTests, teardownIntegrationTests } from "../integration/setup";
 import { CleanupManager } from "./cleanup-manager";
 import { log } from "./test-utils";
+import { TestDataFactory } from "../integration/factories";
 
 /**
- * Base class for integration tests that provides common setup/teardown
- * and resource management functionality
+ * Base class for integration tests providing common functionality
+ * Handles test client setup, cleanup management, and helper methods
  */
 export abstract class BaseIntegrationTest {
-	public client!: DevpadApiClient;
+	protected cleanupManager!: CleanupManager;
+
+	// These will be initialized by setupBaseIntegrationTest
+	public client!: ApiClient;
 	protected cleanup!: CleanupManager;
 
 	/**
