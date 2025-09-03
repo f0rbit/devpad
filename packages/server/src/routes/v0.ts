@@ -1,6 +1,7 @@
 import { getProject, getProjectById, getProjectTasks, getSpecification, getTask, getTasksByTag, getUserProjects, getUserTasks, upsertProject, upsertTag, upsertTask } from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_project, upsert_todo } from "@devpad/schema";
-import { db, ignore_path, project, tag, tag_config } from "@devpad/schema/database";
+import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
+import { db } from "../db";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
