@@ -146,7 +146,7 @@ export const update_tracker_relations = relations(todo_updates, ({ one }) => ({
 }));
 
 export const milestone = sqliteTable("milestone", {
-	...owned_entity("milestone"),
+	...entity("milestone"),
 	project_id: text("project_id")
 		.notNull()
 		.references(() => project.id),
@@ -159,7 +159,7 @@ export const milestone = sqliteTable("milestone", {
 });
 
 export const goal = sqliteTable("goal", {
-	...owned_entity("goal"),
+	...entity("goal"),
 	milestone_id: text("milestone_id")
 		.notNull()
 		.references(() => milestone.id),

@@ -123,6 +123,7 @@ async function startHonoServer(): Promise<void> {
 			DATABASE_FILE: process.env.DATABASE_FILE,
 			DATABASE_URL: process.env.DATABASE_URL,
 			PORT: "3001",
+			RUN_MIGRATIONS: "true",
 		},
 	});
 

@@ -29,7 +29,7 @@
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
-		"drizzle-orm": "^0.30.6",
+		"drizzle-orm": "^0.44.5",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
