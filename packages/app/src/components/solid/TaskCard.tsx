@@ -11,7 +11,7 @@ import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { For } from "solid-js";
 import { TagBadge } from "@/components/solid/TagEditor";
-import { getApiClient } from "@/utils/api-client";
+import { advanceTaskProgress, formatDueDate, getPriorityClass, getProgressIconType, isPastDue, isProgressClickable } from "@/utils/task-status";
 
 interface Props {
 	task: TaskWithDetails;
@@ -32,8 +32,7 @@ export const TaskCard = (props: Props) => {
 	}
 
 	const project_name = project?.name ?? null;
-	let priority_class = task.priority === "MEDIUM" ? "priority-medium" : task.priority === "HIGH" ? "priority-high" : "priority-low";
-	if (task.priority === "LOW" && task.end_time == null) priority_class = "priority-none";
+	const priority_class = getPriorityClass(task.priority, !!task.end_time);
 
 	const tag_list = tags
 		.map(tag_id => {
@@ -44,26 +43,12 @@ export const TaskCard = (props: Props) => {
 	const Clock = () => {
 		const end_time = task.end_time;
 		if (!end_time) return <Calendar />;
-		const past_due = new Date(end_time) < new Date();
-		if (past_due) return <CalendarX2 />;
+		if (isPastDue(end_time)) return <CalendarX2 />;
 		return <CalendarClock />;
 	};
 
 	const progress = async () => {
-		const current_progress = task.progress;
-		if (current_progress === "COMPLETED") return; // can't progress from completed
-		const new_progress: "IN_PROGRESS" | "COMPLETED" = current_progress === "UNSTARTED" ? "IN_PROGRESS" : "COMPLETED";
-		try {
-			const apiClient = getApiClient();
-			await apiClient.tasks.upsert({
-				id: task.id,
-				progress: new_progress,
-				owner_id: task.owner_id,
-			});
-			props.update?.(task.id, { progress: new_progress });
-		} catch (error) {
-			console.error("Error updating task progress:", error);
-		}
+		await advanceTaskProgress(task.id, task.owner_id, task.progress, newProgress => props.update?.(task.id, { progress: newProgress }));
 	};
 
 	const has_linked = !!fetched_task.codebase_tasks;
@@ -111,87 +96,44 @@ export const TaskCard = (props: Props) => {
 };
 
 const DueDate = ({ date }: { date: string | null }) => {
-	// if no date, return <span>No due date</span>
-	// otherwise, if within 1 hour say "x minutes"
-	// if within 2 days say "x hours"
-	// if within 2 weeks say "x days"
-	// otherwise say "November 1, 2024"
-	// use Intl.DateTimeFormat to format date
-	if (!date) return <span>No due date</span>;
-	const now = new Date();
-	const due = new Date(date);
-
-	const past = now.getTime() > due.getTime();
-	const diff = Math.abs(due.getTime() - now.getTime());
-	const diffSeconds = diff / 1000;
-	const diffMinutes = diffSeconds / 60;
-	const diffHours = diffMinutes / 60;
-	const diffDays = diffHours / 24;
-
-	// if time is less than 0, show "due {span} ago"
-	let span = null;
-	if (diffMinutes < 60) span = <span>{Math.round(diffMinutes)} minutes</span>;
-	if (diffHours < 48) span = <span>{Math.round(diffHours)} hours</span>;
-	if (diffDays < 14) span = <span>{Math.round(diffDays)} days</span>;
-
-	if (span) {
-		if (past) return <span>{span} ago</span>;
-		return span;
-	}
-
-	const options = { month: "long", day: "numeric" } as const;
-	return (
-		<>
-			<span>{new Intl.DateTimeFormat("en-US", options).format(due)}</span>
-			<span>, {due.getFullYear()}</span>
-		</>
-	);
+	return <span>{formatDueDate(date)}</span>;
 };
 
 export function TaskProgress({ progress, onClick, type }: { progress: TaskWithDetails["task"]["progress"]; onClick: () => void; type: "box" | "circle" }) {
-	// TODO: completed items don't need <a> or onclick
-	switch (type) {
-		case "box": {
-			if (progress === "UNSTARTED")
-				return (
-					<a role="button" onClick={onClick}>
-						<Square />
-					</a>
-				);
-			if (progress === "IN_PROGRESS")
-				return (
-					<a role="button" onClick={onClick}>
-						<SquareDot />
-					</a>
-				);
-			if (progress === "COMPLETED")
-				return (
-					<div class="priority-low">
-						<SquareCheck />
-					</div>
-				);
+	const iconType = getProgressIconType(progress, type);
+	const clickable = isProgressClickable(progress);
+
+	// Map icon types to components
+	const IconComponent = (() => {
+		switch (iconType) {
+			case "Square":
+				return Square;
+			case "SquareDot":
+				return SquareDot;
+			case "SquareCheck":
+				return SquareCheck;
+			case "Circle":
+				return Circle;
+			case "CircleDot":
+				return CircleDot;
+			case "CircleCheck":
+				return CircleCheck;
+			default:
+				return Square;
 		}
-		case "circle": {
-			if (progress === "UNSTARTED")
-				return (
-					<a role="button" onClick={onClick}>
-						<Circle />
-					</a>
-				);
-			if (progress === "IN_PROGRESS")
-				return (
-					<a role="button" onClick={onClick}>
-						<CircleDot />
-					</a>
-				);
-			if (progress === "COMPLETED")
-				return (
-					<div class="priority-low">
-						<CircleCheck />
-					</div>
-				);
-		}
+	})();
+
+	if (clickable) {
+		return (
+			<a role="button" onClick={onClick}>
+				<IconComponent />
+			</a>
+		);
 	}
 
-	throw new Error(`Invalid task progress type: ${type}`);
+	return (
+		<div class="priority-low">
+			<IconComponent />
+		</div>
+	);
 }

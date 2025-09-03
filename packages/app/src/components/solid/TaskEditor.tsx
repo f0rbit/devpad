@@ -4,12 +4,13 @@ import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
-import { createSignal } from "solid-js";
+import { createSignal, For } from "solid-js";
 import { createStore } from "solid-js/store";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
 import { getApiClient } from "@/utils/api-client";
+import { PROGRESS_OPTIONS, PRIORITY_OPTIONS, VISIBILITY_OPTIONS, type Progress, type Priority, type Visibility } from "@/utils/task-status";
 
 interface Props {
 	task: TaskWithDetails;
@@ -19,10 +20,6 @@ interface Props {
 	user_id: string;
 	project_map: Record<string, Project>;
 }
-
-type Progress = TaskWithDetails["task"]["progress"];
-type Visibility = TaskWithDetails["task"]["visibility"];
-type Priority = TaskWithDetails["task"]["priority"];
 
 const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map }: Props) => {
 	const [state, setState] = createStore({
@@ -94,15 +91,13 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				<label for="progress">Progress</label>
 				<div class="flex-row combined-row">
 					<select id="progress" name="progress" value={state.progress} onChange={e => setState({ progress: e.target.value as Progress })}>
-						<option value="UNSTARTED" selected={state.progress === "UNSTARTED"}>
-							Not Started
-						</option>
-						<option value="IN_PROGRESS" selected={state.progress === "IN_PROGRESS"}>
-							In Progress
-						</option>
-						<option value="COMPLETED" selected={state.progress === "COMPLETED"}>
-							Completed
-						</option>
+						<For each={PROGRESS_OPTIONS}>
+							{option => (
+								<option value={option.value} selected={state.progress === option.value}>
+									{option.label}
+								</option>
+							)}
+						</For>
 					</select>
 					<label for="project-selector" style="padding: 0px 5px;">
 						Project
@@ -123,36 +118,23 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 					<input type="datetime-local" id="start_time" name="start_time" value={state.start_time ?? ""} onInput={e => setState({ start_time: e.target.value })} />
 					<label for="visibility">Visibility</label>
 					<select id="visibility" name="visibility" value={state.visibility} onChange={e => setState({ visibility: e.target.value as Visibility })}>
-						<option value="PUBLIC" selected={state.visibility === "PUBLIC"}>
-							Public
-						</option>
-						<option value="PRIVATE" selected={state.visibility === "PRIVATE"}>
-							Private
-						</option>
-						<option value="HIDDEN" selected={state.visibility === "HIDDEN"}>
-							Hidden
-						</option>
-						<option value="ARCHIVED" selected={state.visibility === "ARCHIVED"}>
-							Archived
-						</option>
-						<option value="DRAFT" selected={state.visibility === "DRAFT"}>
-							Draft
-						</option>
-						<option value="DELETED" selected={state.visibility === "DELETED"}>
-							Deleted
-						</option>
+						<For each={VISIBILITY_OPTIONS}>
+							{option => (
+								<option value={option.value} selected={state.visibility === option.value}>
+									{option.label}
+								</option>
+							)}
+						</For>
 					</select>
 					<label for="priority">Priority</label>
 					<select id="priority" name="priority" value={state.priority} onChange={e => setState({ priority: e.target.value as Priority })}>
-						<option value="LOW" selected={state.priority === "LOW"}>
-							Low
-						</option>
-						<option value="MEDIUM" selected={state.priority === "MEDIUM"}>
-							Medium
-						</option>
-						<option value="HIGH" selected={state.priority === "HIGH"}>
-							High
-						</option>
+						<For each={PRIORITY_OPTIONS}>
+							{option => (
+								<option value={option.value} selected={state.priority === option.value}>
+									{option.label}
+								</option>
+							)}
+						</For>
 					</select>
 				</div>
 			</details>
