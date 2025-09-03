@@ -138,7 +138,7 @@ This plan outlines a systematic approach to reduce code complexity and lines of 
 2. **Server Route Testing** - Integration tests for all API endpoints
 3. **Database & Repository Testing** - Test repository classes with real database
 
-### 7. Task Status Management Utilities
+### 7. Task Status Management Utilities ✅ **COMPLETED**
 **Target Reduction: ~50 lines**
 
 **Current Issue:**
@@ -148,10 +148,96 @@ This plan outlines a systematic approach to reduce code complexity and lines of 
 - Create shared task state management utilities
 - Extract progress handling logic
 
+**Files Modified:**
+- Created `packages/app/src/utils/task-status.ts` (165 lines of utilities)
+- Refactored `packages/app/src/components/solid/TaskCard.tsx` (saved ~59 lines)
+- Refactored `packages/app/src/components/solid/TaskEditor.tsx` (saved ~19 lines)
+
+**Results:**
+- **Actual reduction**: ~78 lines of duplicated code eliminated
+- **All tests passing**: 46/46 integration tests ✅
+- **Enhanced maintainability** with centralized task status logic
+
+## Phase 4: API Interface Standardization (Priority 1)
+
+### 8. Clean & Consistent API Client Interface
+**Target**: Standardize API client interface for optimal developer experience
+
+**Current Issues:**
+- **Inconsistent Naming**: Multiple methods doing the same thing (`list()`, `getAllProjects()`, `upsert()`, `create()`, `update()`)
+- **Confusing Parameters**: Inconsistent parameter patterns between resources
+- **Missing Domain Actions**: No dedicated endpoints for common business operations
+- **Poor Resource Organization**: Flat structure instead of nested resources
+
+**Proposed Clean Interface:**
+```typescript
+// Consistent CRUD operations
+client.projects.list(filters?: {private?: boolean})
+client.projects.get(id: string)
+client.projects.create(data: CreateProject)
+client.projects.update(id: string, changes: Partial<Project>)
+client.projects.delete(id: string)
+
+// Nested resource management
+client.projects.config.get(project_id: string)
+client.projects.config.save(project_id: string, config: ProjectConfig)
+client.projects.specification.get(project_id: string)
+client.projects.specification.update(project_id: string, spec: string)
+
+// Domain-specific actions
+client.projects.archive(id: string)
+client.projects.publish(id: string)
+
+// Auth with nested resources
+client.auth.keys.create()
+client.auth.keys.delete(key_id: string)
+client.auth.session.get()
+
+// Tasks with consistent patterns
+client.tasks.list(filters?: {project_id?: string, tag_id?: string})
+client.tasks.get(id: string)
+client.tasks.create(data: CreateTask)
+client.tasks.update(id: string, changes: Partial<Task>)
+client.tasks.delete(id: string)
+
+// Task domain actions
+client.tasks.complete(id: string)
+client.tasks.start(id: string)
+client.tasks.tags.assign(task_id: string, tag_ids: string[])
+
+// Dedicated tags management
+client.tags.list()
+client.tags.create(data: CreateTag)
+client.tags.update(id: string, changes: Partial<Tag>)
+client.tags.delete(id: string)
+```
+
+**Implementation Strategy:**
+1. **Phase 4a**: Create new nested resource classes with clean interfaces
+2. **Phase 4b**: Implement backward compatibility layer
+3. **Phase 4c**: Update all internal usage to new interface
+4. **Phase 4d**: Remove deprecated methods and update documentation
+
 **Files to Modify:**
-- Create `packages/app/src/utils/task-status.ts` (new)
-- `packages/app/src/components/solid/TaskCard.tsx`
-- `packages/app/src/components/solid/TaskEditor.tsx`
+- Create `packages/api/src/resources/` directory structure
+- Create nested resource classes: `ProjectConfigClient`, `ProjectSpecificationClient`, `AuthKeysClient`
+- Update main client classes to use nested resources
+- Create type definitions for new interfaces
+- Update all usage throughout codebase
+- Update tests to use new interface
+
+**Benefits:**
+- **Intuitive**: Follows REST and domain-driven design principles
+- **Consistent**: Same patterns across all resources
+- **Type-Safe**: Better TypeScript support with clear parameter types
+- **Discoverable**: IDE autocomplete guides developers to correct methods
+- **Maintainable**: Clear separation of concerns with nested resources
+
+**Success Metrics:**
+- All API calls follow consistent `resource.action()` or `resource.subresource.action()` pattern
+- Zero methods with ambiguous names (no more `upsert` vs `create` confusion)
+- All delete operations use simple `id: string` parameter
+- 100% test coverage maintained throughout refactoring
 
 ## Implementation Strategy
 

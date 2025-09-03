@@ -50,20 +50,9 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 		setFetching("idle");
 		try {
 			const apiClient = getApiClient();
-			// Use upsertProject method with just the fields we need to update
-			await apiClient.projects.upsertProject({
-				id: project_id,
-				project_id: project_id,
-				name: "", // This will need to be filled in properly
-				description: null,
+			// Use the new clean update interface - much simpler!
+			await apiClient.projects.update(project_id, {
 				specification: markdown(),
-				repo_url: null,
-				repo_id: null,
-				icon_url: null,
-				deleted: false,
-				link_url: null,
-				link_text: null,
-				current_version: null,
 			});
 			setSaving("success");
 			setCurrent(markdown());
