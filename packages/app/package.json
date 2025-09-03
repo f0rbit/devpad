@@ -14,13 +14,13 @@
 		"push": "bunx --bun drizzle-kit push:sqlite"
 	},
 	"dependencies": {
+		"@astrojs/check": "0.9.4",
+		"@astrojs/node": "^9.4.3",
+		"@astrojs/sitemap": "^3.2.1",
+		"@astrojs/solid-js": "5.0.4",
 		"@devpad/api": "workspace:*",
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
-		"@astrojs/check": "0.9.4",
-		"@astrojs/node": "9.0.2",
-		"@astrojs/sitemap": "^3.2.1",
-		"@astrojs/solid-js": "5.0.4",
 		"@lucia-auth/adapter-drizzle": "^1.0.7",
 		"@types/bun": "^1.0.12",
 		"arctic": "^1.5.0",

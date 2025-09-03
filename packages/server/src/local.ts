@@ -2,7 +2,7 @@ import { startServer } from "./server";
 
 // Local development configuration
 const options = {
-	runMigrations: process.env.RUN_MIGRATIONS === "true", // Enable migrations for integration tests
+	runMigrations: true, // Always run migrations in local development
 	enableStatic: false, // Astro dev server handles static files
 	corsOrigins: [
 		"http://localhost:4321", // Astro dev server

@@ -103,11 +103,16 @@ export function createApp(options: ServerOptions = {}): Hono {
 		})
 	);
 
-	// Apply auth middleware to API routes only
-	app.use("/api/*", authMiddleware);
+	// Auth routes (without middleware to allow OAuth callbacks)
+	app.route("/api/auth", authRoutes);
+
+	// Apply auth middleware to other API routes
+	app.use("/api/v0/*", authMiddleware);
+	app.use("/api/keys/*", authMiddleware);
+	app.use("/api/project/*", authMiddleware);
+	app.use("/api/user/*", authMiddleware);
 
 	// API Routes
-	app.route("/api/auth", authRoutes);
 	app.route("/api/v0", v0Routes);
 	app.route("/api/keys", keysRoutes);
 	app.route("/api/project", projectRoutes);

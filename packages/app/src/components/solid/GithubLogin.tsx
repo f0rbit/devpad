@@ -6,7 +6,10 @@ export default function GithubLogin({ size = 20 }: { size?: number }) {
 
 	const login = async () => {
 		setState("loading");
-		window.location.href = "/api/auth/login";
+		// Get API server URL from environment variable or default to port 3001
+		const apiServerUrl = import.meta.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
+		const baseUrl = apiServerUrl.replace("/api/v0", "");
+		window.location.href = `${baseUrl}/api/auth/login`;
 	};
 
 	return (

@@ -1,3 +1,4 @@
+import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import { defineConfig } from "astro/config";
@@ -8,7 +9,10 @@ const site = "https://devpad.tools";
 export default defineConfig({
 	server: { port: Bun.env.PORT ? Number(Bun.env.PORT) : 3000 },
 	site: "https://devpad.tools",
-	output: "static",
+	output: "server",
+	adapter: node({
+		mode: "standalone",
+	}),
 	integrations: [
 		solidJs(),
 		sitemap({

@@ -31,10 +31,10 @@ app.get("/login", async c => {
 });
 
 /**
- * GET /api/auth/callback
+ * GET /api/auth/callback/github
  * Handle GitHub OAuth callback and create user session
  */
-app.get("/callback", async c => {
+app.get("/callback/github", async c => {
 	try {
 		const code = c.req.query("code");
 		const state = c.req.query("state");
