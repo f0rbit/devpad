@@ -1,7 +1,7 @@
 ---
 import { getTaskHistory, getUserProjectMap, getActiveUserTags, getTask } from "@devpad/core";
-import PageLayout from '@/layouts/PageLayout.astro";
-import TaskEditor from '@/components/solid/TaskEditor";
+import PageLayout from '@/layouts/PageLayout.astro';
+import TaskEditor from '@/components/solid/TaskEditor';
 
 const { todo_id } = Astro.params;
 if (!todo_id) return new Response(null, { status: 404, statusText: "Task not found" });

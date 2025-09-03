@@ -1,7 +1,7 @@
 ---
 import { getRepos } from "@devpad/core";
-import PageLayout from '@/layouts/PageLayout.astro";
-import ProjectSettings from '@/components/ProjectSettings.astro";
+import PageLayout from '@/layouts/PageLayout.astro';
+import ProjectSettings from '@/components/ProjectSettings.astro';
 
 const session = Astro.locals.session;
 if (!session) return new Response(null, { status: 401, statusText: "Unauthorized" });

@@ -1,7 +1,7 @@
 ---
 import { getUserProjectMap, getActiveUserTags } from "@devpad/core";
-import PageLayout from '@/layouts/PageLayout.astro";
-import TaskEditor from '@/components/solid/TaskEditor";
+import PageLayout from '@/layouts/PageLayout.astro';
+import TaskEditor from '@/components/solid/TaskEditor';
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });

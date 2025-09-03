@@ -1,8 +1,8 @@
 ---
 import { getProject, getRecentUpdate, getProjectTasks, type Task } from "@devpad/core";
-import PageLayout from '@/layouts/PageLayout.astro";
-import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro";
-import { UpdateDiffList } from '@/components/solid/UpdateDiff";
+import PageLayout from '@/layouts/PageLayout.astro';
+import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro';
+import { UpdateDiffList } from '@/components/solid/UpdateDiff';
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });

@@ -1,7 +1,7 @@
 ---
 import { getUserTags } from "@devpad/core";
-import PageLayout from '@/layouts/PageLayout.astro";
-import { TagEditor } from '@/components/solid/TagEditor";
+import PageLayout from '@/layouts/PageLayout.astro';
+import { TagEditor } from '@/components/solid/TagEditor';
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401 });
