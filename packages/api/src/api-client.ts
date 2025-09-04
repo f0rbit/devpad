@@ -348,6 +348,16 @@ export class ApiClient {
 		 */
 		save_tags: (tags: UpsertTag[]): Promise<UpsertTag[]> => this.httpClient.patch<UpsertTag[]>("/tasks/save_tags", { body: tags }),
 
+		/**
+		 * History namespace for task history operations
+		 */
+		history: {
+			/**
+			 * Get task history by task ID
+			 */
+			get: (task_id: string) => this.httpClient.get<any[]>(`/tasks/history/${task_id}`),
+		},
+
 		// === BACKWARD COMPATIBILITY METHODS ===
 		getById: async (id: string) => {
 			const task = await this.tasks.find(id);

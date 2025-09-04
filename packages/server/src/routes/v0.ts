@@ -1,4 +1,4 @@
-import { getActiveUserTags, getProject, getProjectById, getProjectTasks, getSpecification, getTask, getTasksByTag, getUserProjectMap, getUserProjects, getUserTasks, upsertProject, upsertTag, upsertTask } from "@devpad/core";
+import { getActiveUserTags, getProject, getProjectById, getProjectTasks, getSpecification, getTask, getTaskHistory, getTasksByTag, getUserProjectMap, getUserProjects, getUserTasks, upsertProject, upsertTag, upsertTask } from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_project, upsert_todo } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { db } from "@devpad/schema/database/server";
@@ -145,6 +145,34 @@ app.get("/tasks", requireAuth, async c => {
 	// Get all user tasks
 	const tasks = await getUserTasks(user.id);
 	return c.json(tasks);
+});
+
+// Task history endpoint
+app.get("/tasks/history/:task_id", requireAuth, async c => {
+	const user = c.get("user")!;
+	const task_id = c.req.param("task_id");
+
+	if (!task_id) {
+		return c.json({ error: "Missing task_id parameter" }, 400);
+	}
+
+	try {
+		// First verify the task belongs to the user
+		const task = await getTask(task_id);
+		if (!task) {
+			return c.json(null, 404);
+		}
+		if (task.task.owner_id !== user.id) {
+			return c.json({ error: "Unauthorized" }, 401);
+		}
+
+		// Get task history
+		const history = await getTaskHistory(task_id);
+		return c.json(history);
+	} catch (error: any) {
+		console.error("ERROR in GET /tasks/history:", error);
+		return c.json({ error: "Internal Server Error", details: error.message }, 500);
+	}
 });
 
 app.patch("/tasks", requireAuth, zValidator("json", upsert_todo), async c => {

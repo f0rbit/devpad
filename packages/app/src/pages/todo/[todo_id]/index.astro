@@ -1,5 +1,4 @@
 ---
-import { getTaskHistory } from "@devpad/core";  // TODO: Move to API
 import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import TaskEditor from '@/components/solid/TaskEditor';
@@ -31,10 +30,10 @@ try {
 		return acc;
 	}, {} as Record<string, any>);
 
-	// Get tags using API client and task history using core function
+	// Get tags and task history using API client
 	[user_tags, task_history] = await Promise.all([
 		apiClient.tags.list(),
-		getTaskHistory(todo_id) // TODO: Move this to API endpoint
+		apiClient.tasks.history.get(todo_id)
 	]);
 } catch (error) {
 	console.error("Error fetching task data:", error);
