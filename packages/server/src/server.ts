@@ -10,9 +10,6 @@ import { authMiddleware } from "./middleware/auth";
 
 // Import route modules
 import authRoutes from "./routes/auth";
-import keysRoutes from "./routes/keys";
-import projectRoutes from "./routes/project";
-import userRoutes from "./routes/user";
 import v0Routes from "./routes/v0";
 
 export interface ServerOptions {
@@ -110,18 +107,12 @@ export function createApp(options: ServerOptions = {}): Hono {
 
 	// Apply auth middleware to other API routes
 	app.use("/api/v0/*", authMiddleware);
-	app.use("/api/keys/*", authMiddleware);
-	app.use("/api/project/*", authMiddleware);
-	app.use("/api/user/*", authMiddleware);
 
 	// Auth routes (login/callback public, verify/session protected by middleware above)
 	app.route("/api/auth", authRoutes);
 
 	// API Routes
 	app.route("/api/v0", v0Routes);
-	app.route("/api/keys", keysRoutes);
-	app.route("/api/project", projectRoutes);
-	app.route("/api/user", userRoutes);
 
 	// Static file serving (optional)
 	if (options.enableStatic && options.staticPath) {

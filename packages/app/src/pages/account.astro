@@ -44,43 +44,27 @@ const user_history = await getUserHistory(user.id);
 </PageLayout>
 
 <script>
+	import { getApiClient } from "../utils/api-client";
+	
 	async function add_key() {
-		const res = await fetch("/api/keys/create", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Accept: "application/json",
-			},
-			credentials: "include",
-			body: JSON.stringify({}),
-		});
-		if (!res || !res.ok) {
-			console.error(res.status, res.statusText);
-			return;
-		}
 		try {
-			const data = await res.text();
-			console.log(data);
+			const apiClient = getApiClient();
+			const result = await apiClient.auth.keys.create();
+			console.log(result);
 			location.reload();
-		} catch (err) {
-			console.error(err);
+		} catch (error) {
+			console.error(error);
 		}
 	}
 
 	async function delete_key(id: string) {
-		const res = await fetch(`/api/keys/${id}/delete`, {
-			method: "DELETE",
-			headers: {
-				"Content-Type": "application/json",
-			},
-		});
 		try {
-			const data = await res.json();
-			if (data.error) throw new Error(data.error);
+			const apiClient = getApiClient();
+			await apiClient.auth.keys.revoke(id);
 			location.reload();
-		} catch (err) {
-			console.error(err);
-			alert(err);
+		} catch (error) {
+			console.error(error);
+			alert(error);
 		}
 	}
 

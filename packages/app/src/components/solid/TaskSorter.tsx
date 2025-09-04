@@ -8,8 +8,8 @@ import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagSelect } from "@/components/solid/TagPicker";
-import { TaskCard } from "@/components/solid/TaskCard";
 import { getApiClient } from "@/utils/api-client";
+import { TaskCard } from "./TaskCard";
 
 const options = ["upcoming", "recent", "priority", "progress"] as const;
 
@@ -123,18 +123,14 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 	async function selectView(view: TaskView) {
 		setView(view);
 
-		const body = JSON.stringify({ task_view: view, id: user_id });
-		const response = await fetch("/api/user/update_view", {
-			method: "PATCH",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body,
-		});
-
-		if (!response.ok) {
-			console.error("Failed to update user view", await response.text());
-			return;
+		try {
+			const apiClient = getApiClient();
+			await apiClient.user.updatePreferences({
+				id: user_id,
+				task_view: view,
+			});
+		} catch (error) {
+			console.error("Failed to update user view", error);
 		}
 	}
 

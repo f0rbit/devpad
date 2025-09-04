@@ -64,14 +64,17 @@ const _mode = project ? "edit" : "create";
 </section>
 
 <script>
+	import { getApiClient } from "@/utils/api-client";
 	import type { UpsertProject } from "@devpad/schema";
+import { undefined } from "astro:schema";
+	
 	async function create_project() {
 		document.getElementById("error")!.innerText = "";
 		const get_value = (id: string) => {
 			return (document.getElementById(id) as HTMLInputElement | undefined)?.value ?? null;
 		};
 		// extract elements from form
-		const project_id = get_value("project_id") ?? null;
+		const project_id = get_value("project_id")!;
 		const status = get_value("status") ?? "development";
 		const name = get_value("name") ?? project_id;
 		const icon_url = get_value("icon_url") ?? null;
@@ -82,12 +85,12 @@ const _mode = project ? "edit" : "create";
 		const github_repo_id = get_value("github_repo_id") ?? null;
 		const visibility = get_value("visibility") ?? "private";
 
-		const owner_id = document.getElementById("project-settings")?.dataset?.user ?? null;
+		const owner_id = document.getElementById("project-settings")?.dataset.user!;
 		const pid = document.getElementById("project-settings")?.dataset?.pid ?? null;
 
 		// submit POST request
-		const body = JSON.stringify({
-			id: pid ?? undefined,
+		const body: UpsertProject = {
+			id: pid!,
 			project_id,
 			status: status.toUpperCase() as UpsertProject["status"],
 			name,
@@ -100,26 +103,18 @@ const _mode = project ? "edit" : "create";
 			visibility: visibility.toUpperCase() as UpsertProject["visibility"],
 			owner_id,
 			deleted: false,
-		} as UpsertProject);
+			specification: null,
+			current_version: null,
+		};
 
-		const method = "PATCH";
-		const url = "/api/project/upsert";
-		const response = await fetch(url, { method, body });
-
-		// if error, display error
-		if (!response || !response.ok) {
-			document.getElementById("error")!.innerText = "Error submitting request";
-			return;
-		}
-
-		// otherwise goto new project
 		try {
-			await response.json();
+			const apiClient = getApiClient();
+			await apiClient.projects.upsert(body);
 			// go to project page
 			window.location.href = `/project/${project_id}`;
-		} catch (err) {
-			document.getElementById("error")!.innerText = "Error parsing result";
-			console.error(err);
+		} catch (error) {
+			document.getElementById("error")!.innerText = "Error submitting request";
+			console.error(error);
 			return;
 		}
 	}

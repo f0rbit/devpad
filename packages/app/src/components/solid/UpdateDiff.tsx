@@ -4,6 +4,7 @@ import ChevronUp from "lucide-solid/icons/chevron-up";
 import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
+import { getApiClient } from "@/utils/api-client";
 
 interface Props {
 	items: UpdateData[];
@@ -68,24 +69,34 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 			{} as Record<UpdateAction, string[]>
 		);
 
-		const url = `/api/project/scan_status?project_id=${project_id}`;
-		const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: grouped, id: update_id, titles: titles(), approved: true }) });
-		if (response.ok) {
+		try {
+			const apiClient = getApiClient();
+			await apiClient.projects.scan.updateStatus(project_id, {
+				id: update_id,
+				actions: grouped,
+				titles: titles(),
+				approved: true,
+			});
 			location.reload();
-		} else {
+		} catch (error) {
 			console.error("Failed to save actions");
-			console.error(await response.json());
+			console.error(error);
 		}
 	};
 
 	const ignoreUpdate = async () => {
-		const url = `/api/project/scan_status?project_id=${project_id}`;
-		const response = await fetch(url, { method: "POST", body: JSON.stringify({ actions: {}, id: update_id, titles: {}, approved: false }) });
-		if (response.ok) {
+		try {
+			const apiClient = getApiClient();
+			await apiClient.projects.scan.updateStatus(project_id, {
+				id: update_id,
+				actions: {},
+				titles: {},
+				approved: false,
+			});
 			location.reload();
-		} else {
+		} catch (error) {
 			console.error("Failed to save actions");
-			console.error(await response.json());
+			console.error(error);
 		}
 	};
 

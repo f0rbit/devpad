@@ -168,4 +168,25 @@ export class ApiClient {
 	public history() {
 		return this.request_history;
 	}
+
+	public url(): string {
+		return this.base_url;
+	}
+
+	public headers(): Record<string, string> {
+		const isJWT = this.api_key.startsWith("jwt:");
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+
+		if (isJWT) {
+			// JWT token in Authorization header
+			headers.Authorization = `Bearer ${this.api_key.replace("jwt:", "")}`;
+		} else {
+			// API key in X-API-KEY header
+			headers["X-API-KEY"] = this.api_key;
+		}
+
+		return headers;
+	}
 }

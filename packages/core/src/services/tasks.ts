@@ -1,4 +1,4 @@
-import type { UpdateData } from "@devpad/schema";
+import type { UpdateData, UpsertTodo, UpsertTag } from "@devpad/schema";
 import { type ActionType } from "@devpad/schema/database";
 import { taskRepository, type Task, type _FetchedTask } from "../data/task-repository";
 
@@ -30,6 +30,6 @@ export async function getTasksByTag(tag_id: string): Promise<Task[]> {
 	return taskRepository.getTasksByTag(tag_id);
 }
 
-export async function upsertTask(data: any, tags: any[], owner_id: string): Promise<Task | null> {
+export async function upsertTask(data: UpsertTodo, tags: UpsertTag[], owner_id: string): Promise<Task | null> {
 	return taskRepository.upsertTask(data, tags, owner_id);
 }

@@ -68,19 +68,24 @@ export class ApiClient {
 		 */
 		keys: {
 			/**
+			 * List all API keys
+			 */
+			list: () => this.httpClient.get<{ keys: Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at: string | null }> }>("/auth/keys"),
+
+			/**
 			 * Generate a new API key
 			 */
-			create: () => this.httpClient.post<{ api_key: string }>("/auth/keys"),
+			create: (name?: string) => this.httpClient.post<{ message: string; key: string }>("/auth/keys", { body: name ? { name } : {} }),
 
 			/**
 			 * Revoke an API key
 			 */
-			revoke: (key_id: string) => this.httpClient.delete<void>("/auth/keys", { query: { key_id } }),
+			revoke: (key_id: string) => this.httpClient.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`),
 
 			/**
 			 * Remove an API key (alias for revoke)
 			 */
-			remove: (key_id: string) => this.httpClient.delete<void>("/auth/keys", { query: { key_id } }),
+			remove: (key_id: string) => this.httpClient.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`),
 		},
 
 		// === BACKWARD COMPATIBILITY METHODS ===
@@ -229,6 +234,37 @@ export class ApiClient {
 				this.httpClient.patch<void>("/projects/spec", {
 					body: { project_id: projectId, specification: spec },
 				}),
+		},
+
+		/**
+		 * Nested scan object for project scanning operations
+		 */
+		scan: {
+			/**
+			 * Initiate repository scan and stream results
+			 */
+			start: (projectId: string) => {
+				// Return Response object for streaming
+				const baseUrl = this.httpClient.url();
+				const headers = this.httpClient.headers();
+				return fetch(`${baseUrl}/projects/scan?project_id=${projectId}`, {
+					method: "POST",
+					headers,
+				});
+			},
+
+			/**
+			 * Process scan status updates
+			 */
+			updateStatus: (
+				projectId: string,
+				data: {
+					id: number;
+					actions: Record<string, string[]>;
+					titles: Record<string, string>;
+					approved: boolean;
+				}
+			) => this.httpClient.post<{ success: boolean }>(`/projects/scan_status?project_id=${projectId}`, { body: data }),
 		},
 
 		// === BACKWARD COMPATIBILITY METHODS ===
@@ -426,12 +462,22 @@ export class ApiClient {
 	}
 
 	/**
+	 * User namespace - handles user preferences and settings
+	 */
+	public readonly user = {
+		/**
+		 * Update user preferences
+		 */
+		preferences: (data: { id: string; task_view?: string; name?: string; email_verified?: boolean }) => this.httpClient.patch<{ id: string; name: string; task_view: string }>("/user/preferences", { body: data }),
+	};
+
+	/**
 	 * GitHub namespace - handles GitHub integration operations
 	 */
 	public readonly github = {
 		/**
 		 * List user repositories from GitHub
 		 */
-		repos: () => this.httpClient.get<any[]>("/repos"),
+		repos: () => this.httpClient.get<Array<{ id: number; name: string; full_name: string; private: boolean; html_url: string }>>("/repos"),
 	};
 }

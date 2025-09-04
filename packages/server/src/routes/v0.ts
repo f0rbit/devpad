@@ -15,13 +15,22 @@ import {
 	upsertTag,
 	upsertTask,
 	log,
+	createApiKey,
+	deleteApiKey,
+	getAPIKeys,
+	updateUserPreferences,
+	getUserById,
+	initiateScan,
+	processScanResults,
 } from "@devpad/core";
-import { save_config_request, save_tags_request, upsert_project, upsert_todo } from "@devpad/schema";
+import { save_config_request, save_tags_request, upsert_project, upsert_todo, update_user, type UpsertTag } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { db } from "@devpad/schema/database/server";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
+import { stream } from "hono/streaming";
+import { z } from "zod";
 
 import { type AuthContext, requireAuth } from "../middleware/auth";
 
@@ -202,7 +211,7 @@ app.patch("/tasks", requireAuth, zValidator("json", upsert_todo), async c => {
 		return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
 	}
 
-	let tags: any[] = [];
+	let tags: UpsertTag[] = [];
 	if (body.tags) {
 		const tag_parse = save_tags_request.safeParse(body.tags);
 		if (!tag_parse.success) {
@@ -421,11 +430,226 @@ app.get("/repos", requireAuth, async c => {
 		log.repos(" Fetching repositories from GitHub API");
 		// Get repositories using the stored GitHub access token
 		const repos = await getRepos(session.access_token);
-		log.repos(" Successfully fetched", repos.length, "repositories");
+		log.repos(` Successfully fetched ${repos.length} repositories`);
 		return c.json(repos);
-	} catch (error: any) {
-		log.error(" ERROR fetching repositories:", error.message);
-		return c.json({ error: "Failed to fetch repositories", details: error.message }, 500);
+	} catch (error: unknown) {
+		const errorMessage = error instanceof Error ? error.message : "Unknown error";
+		log.error(" ERROR fetching repositories:", errorMessage);
+		return c.json({ error: "Failed to fetch repositories", details: errorMessage }, 500);
+	}
+});
+
+// ============================================================================
+// AUTH/KEYS ENDPOINTS - Migrated from /api/keys/*
+// ============================================================================
+
+const createKeySchema = z.object({
+	name: z.string().min(1).max(100).optional(),
+});
+
+// GET /auth/keys - List all API keys for authenticated user
+app.get("/auth/keys", requireAuth, async c => {
+	const user = c.get("user");
+	if (!user) {
+		return c.json({ error: "Authentication required" }, 401);
+	}
+
+	try {
+		const keys = await getAPIKeys(user.id);
+		return c.json({ keys });
+	} catch (err) {
+		console.error("Get API keys error:", err);
+		return c.json({ error: "Failed to fetch API keys" }, 500);
+	}
+});
+
+// POST /auth/keys - Create new API key for authenticated user
+app.post("/auth/keys", requireAuth, async c => {
+	const user = c.get("user");
+	if (!user) {
+		return c.json({ error: "Authentication required" }, 401);
+	}
+
+	try {
+		const body = await c.req.json();
+		const parsed = createKeySchema.safeParse(body);
+
+		if (!parsed.success) {
+			return c.json(
+				{
+					error: "Invalid request body",
+					details: parsed.error.issues,
+				},
+				400
+			);
+		}
+
+		const { key, error } = await createApiKey(user.id, parsed.data.name || "API Key");
+		if (error) {
+			return c.json({ error }, 400);
+		}
+
+		return c.json({
+			message: "API key created successfully",
+			key,
+		});
+	} catch (err) {
+		console.error("Create API key error:", err);
+		return c.json({ error: "Failed to create API key" }, 500);
+	}
+});
+
+// DELETE /auth/keys/:key_id - Delete API key by ID
+app.delete("/auth/keys/:key_id", requireAuth, async c => {
+	const user = c.get("user");
+	if (!user) {
+		return c.json({ error: "Authentication required" }, 401);
+	}
+
+	const keyId = c.req.param("key_id");
+	if (!keyId) {
+		return c.json({ error: "Key ID required" }, 400);
+	}
+
+	try {
+		const { success, error } = await deleteApiKey(keyId);
+		if (error) {
+			return c.json({ error }, 400);
+		}
+		if (!success) {
+			return c.json({ error: "API key not found" }, 404);
+		}
+
+		return c.json({
+			message: "API key deleted successfully",
+			success: true,
+		});
+	} catch (err) {
+		console.error("Delete API key error:", err);
+		return c.json({ error: "Failed to delete API key" }, 500);
+	}
+});
+
+// ============================================================================
+// PROJECT SCAN ENDPOINTS - Migrated from /api/project/*
+// ============================================================================
+
+const scanStatusSchema = z.object({
+	id: z.number(),
+	actions: z.record(z.string(), z.array(z.string())), // UpdateAction -> task_id[]
+	titles: z.record(z.string(), z.string()), // task_id -> title
+	approved: z.boolean(),
+});
+
+// POST /projects/scan - Initiate repository scan and stream results
+app.post("/projects/scan", requireAuth, async c => {
+	try {
+		const user = c.get("user");
+		const session = c.get("session");
+
+		if (!user || !session?.access_token) {
+			return c.json({ error: "Authentication required" }, 401);
+		}
+
+		const projectId = c.req.query("project_id");
+		if (!projectId) {
+			return c.json({ error: "project_id parameter required" }, 400);
+		}
+
+		// Stream the scan results
+		return stream(c, async stream => {
+			try {
+				for await (const chunk of initiateScan(projectId, user.id, session.access_token)) {
+					await stream.write(chunk);
+				}
+			} catch (error) {
+				log.error("Scan streaming error:", error);
+				await stream.write("error: scan failed\n");
+			}
+		});
+	} catch (error) {
+		log.error("Project scan error:", error);
+		return c.json({ error: "Scan failed" }, 500);
+	}
+});
+
+// POST /projects/scan_status - Process scan status updates and task actions
+app.post("/projects/scan_status", requireAuth, async c => {
+	try {
+		const user = c.get("user");
+
+		if (!user) {
+			return c.json({ error: "Authentication required" }, 401);
+		}
+
+		const projectId = c.req.query("project_id");
+		if (!projectId) {
+			return c.json({ error: "project_id parameter required" }, 400);
+		}
+
+		const body = await c.req.json();
+		const parsed = scanStatusSchema.safeParse(body);
+
+		if (!parsed.success) {
+			return c.json({ error: "Invalid request body", details: parsed.error }, 400);
+		}
+
+		const { id: updateId, actions, titles, approved } = parsed.data;
+
+		// Process the scan results
+		const result = await processScanResults(projectId, user.id, updateId, actions, titles, approved);
+
+		if (!result.success) {
+			return c.json({ error: result.error }, 400);
+		}
+
+		return c.json({ success: true });
+	} catch (error) {
+		log.error("Scan status error:", error);
+		return c.json({ error: "Failed to process scan status" }, 500);
+	}
+});
+
+// ============================================================================
+// USER ENDPOINTS - Migrated from /api/user/*
+// ============================================================================
+
+// PATCH /user/preferences - Update user preferences
+app.patch("/user/preferences", requireAuth, zValidator("json", update_user), async c => {
+	try {
+		const user = c.get("user");
+		const data = c.req.valid("json");
+
+		if (!user) {
+			return c.json({ error: "Not authenticated" }, 401);
+		}
+
+		// Verify user can only update their own data
+		if (user.id !== data.id) {
+			return c.json({ error: "Forbidden" }, 403);
+		}
+
+		// Get full user data first
+		const fullUser = await getUserById(user.id);
+		if (!fullUser) {
+			return c.json({ error: "User not found" }, 404);
+		}
+
+		// Update user preferences
+		const updatedUser = await updateUserPreferences(user.id, {
+			task_view: data.task_view,
+			name: data.name,
+			email: data.email_verified ? fullUser.email || undefined : undefined,
+		});
+
+		return c.json({
+			id: updatedUser.id,
+			name: updatedUser.name,
+			task_view: updatedUser.task_view,
+		});
+	} catch (error) {
+		console.error("User update error:", error);
+		return c.json({ error: "Failed to update user" }, 500);
 	}
 });
 
