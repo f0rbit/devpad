@@ -13,7 +13,7 @@ import { getApiClient } from "@/utils/api-client";
 import { PROGRESS_OPTIONS, PRIORITY_OPTIONS, VISIBILITY_OPTIONS, type Progress, type Priority, type Visibility } from "@/utils/task-status";
 
 interface Props {
-	task: TaskWithDetails;
+	task: TaskWithDetails | null;
 	user_tags: TagWithTypedColor[];
 	current_tags: UpsertTag[];
 	history: HistoryAction[];
@@ -23,15 +23,15 @@ interface Props {
 
 const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map }: Props) => {
 	const [state, setState] = createStore({
-		title: task.task?.title ?? "",
-		summary: task.task?.summary ?? null,
-		description: task.task?.description ?? null,
-		progress: (task.task?.progress ?? "UNSTARTED") as Progress,
-		visibility: (task.task?.visibility ?? "PRIVATE") as Visibility,
-		start_time: task.task?.start_time ?? null,
-		end_time: task.task?.end_time ?? null,
-		priority: (task.task?.priority ?? "LOW") as Priority,
-		project_id: task.task?.project_id ?? null,
+		title: task?.task?.title ?? "",
+		summary: task?.task?.summary ?? null,
+		description: task?.task?.description ?? null,
+		progress: (task?.task?.progress ?? "UNSTARTED") as Progress,
+		visibility: (task?.task?.visibility ?? "PRIVATE") as Visibility,
+		start_time: task?.task?.start_time ?? null,
+		end_time: task?.task?.end_time ?? null,
+		priority: (task?.task?.priority ?? "LOW") as Priority,
+		project_id: task?.task?.project_id ?? null,
 	});
 	const [currentTags, setCurrentTags] = createSignal(current_tags);
 	const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
@@ -44,7 +44,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		try {
 			const apiClient = getApiClient();
 			const result = await apiClient.tasks.upsert({
-				id: task.task?.id ?? null,
+				id: task?.task?.id ?? null,
 				title: state.title,
 				summary: state.summary === "" ? null : state.summary,
 				description: state.description === "" ? null : state.description,
@@ -59,7 +59,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			});
 
 			setRequestState("success");
-			if (task.task?.id == null) {
+			if (task?.task?.id == null) {
 				const new_id = result.task.id;
 				// redirect to new task page
 				window.location.href = `/todo/${new_id}`;
@@ -76,9 +76,9 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 
 	return (
 		<div>
-			<h4>{task.task ? "edit task" : "new task"}</h4>
+			<h4>{task?.task ? "edit task" : "new task"}</h4>
 			<br />
-			<div class="editor" data-todo-id={task.task?.id ?? null} data-user-id={user_id}>
+			<div class="editor" data-todo-id={task?.task?.id ?? null} data-user-id={user_id}>
 				<label for="title">Title</label>
 				<input type="text" id="title" name="title" value={state.title} onInput={e => setState({ title: e.target.value })} />
 				<label for="summary">Summary</label>
@@ -153,7 +153,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<br />
 			<br />
 			<div id="response" class="response"></div>
-			{task.codebase_tasks && (
+			{task?.codebase_tasks && (
 				<>
 					<br />
 					<h5>linked code</h5>

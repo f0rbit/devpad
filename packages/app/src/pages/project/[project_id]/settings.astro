@@ -4,6 +4,7 @@ import PageLayout from '../../../layouts/PageLayout.astro';
 import ProjectLayout from '../../../layouts/ProjectLayout.astro';
 import ProjectSettings from '../../../components/ProjectSettings.astro';
 import ConfigEditor from '../../../components/solid/ConfigEditor';
+import { TagWithTypedColor } from "@devpad/schema";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -27,14 +28,14 @@ if (owner && repo) {
 	}
 }
 
-const available_tags = await getActiveUserTags(user.id);
+const available_tags = await getActiveUserTags(user.id) as TagWithTypedColor[];
 ---
 
 <PageLayout title={`Settings - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
 		<div class="flex-col" style="gap: 5px">
 			<h5>project settings</h5>
-			<ProjectSettings project={project} back={`/project/${project_id}`} />
+			<ProjectSettings project={project} />
 			<br />
 			<h5>scanning settings</h5>
 			<ConfigEditor id={project.id} config={config!} branches={branches} scan_branch={project.scan_branch} user_tags={available_tags} client:load />

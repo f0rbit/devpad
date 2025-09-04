@@ -2,7 +2,6 @@ import type { MiddlewareHandler } from "astro";
 import { defineMiddleware } from "astro:middleware";
 import { verifyRequestOrigin } from "lucia";
 import { log } from "@devpad/core";
-import { log } from "@devpad/core";
 
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];

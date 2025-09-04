@@ -2,11 +2,12 @@
 import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import ProjectSettings from '@/components/ProjectSettings.astro';
+import type ApiClient from "@devpad/api";
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-let repos_result = [];
+let repos_result: Awaited<ReturnType<ApiClient['github']['repos']>>  = [];
 try {
 	const apiClient = getServerApiClient(Astro.locals);
 	repos_result = await apiClient.github.repos();
@@ -28,7 +29,7 @@ try {
 		<br />
 		<h5>settings</h5>
 		<div>
-			<ProjectSettings project={null} back={"/project"} />
+			<ProjectSettings project={null} />
 		</div>
 		<br />
 	</main>

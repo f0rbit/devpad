@@ -13,11 +13,7 @@ try {
 	const apiClient = getServerApiClient(Astro.locals);
 	
 	// Get projects and convert to map format
-	const projects = await apiClient.projects.list();
-	project_map = projects.reduce((acc, project) => {
-		acc[project.project_id] = project;
-		return acc;
-	}, {} as Record<string, any>);
+	project_map = await apiClient.projects.map();
 	
 	// Get tags using API client
 	user_tags = await apiClient.tags.list();
@@ -31,7 +27,7 @@ try {
 <PageLayout title={"New Task - devpad"}>
 	<main>
 		<TaskEditor
-			task={{ task: null, codebase_tasks: null, tags: [] }}
+			task={null}
 			user_tags={user_tags}
 			current_tags={[]}
 			history={[]}

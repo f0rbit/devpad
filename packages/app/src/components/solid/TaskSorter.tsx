@@ -125,7 +125,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 
 		try {
 			const apiClient = getApiClient();
-			await apiClient.user.updatePreferences({
+			await apiClient.user.preferences({
 				id: user_id,
 				task_view: view,
 			});

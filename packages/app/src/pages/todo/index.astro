@@ -1,15 +1,16 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
-import PageLayout from '@/layouts/PageLayout.astro';
-import { TaskSorter } from '@/components/solid/TaskSorter';
-import GithubLogin from '@/components/solid/GithubLogin';
+import type { Project, TaskWithDetails } from "@devpad/schema";
 import Plus from "lucide-solid/icons/plus";
 import Tag from "lucide-solid/icons/tag";
+import GithubLogin from '@/components/solid/GithubLogin';
+import { TaskSorter } from '@/components/solid/TaskSorter';
+import PageLayout from '@/layouts/PageLayout.astro';
+import { getServerApiClient } from "@/utils/api-client";
 
 const user = Astro.locals.user;
 
-let project_map = {};
-let tasks = [];
+let project_map: Record<string, Project> = {};
+let tasks: TaskWithDetails[] = [];
 let tags = [];
 
 if (user) {
@@ -21,7 +22,7 @@ if (user) {
 		project_map = projects.reduce((acc, project) => {
 			acc[project.project_id] = project;
 			return acc;
-		}, {} as Record<string, any>);
+		}, {} as Record<string, Project>);
 		
 		// Get tasks and tags in parallel
 		[tasks, tags] = await Promise.all([

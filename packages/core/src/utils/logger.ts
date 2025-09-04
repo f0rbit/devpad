@@ -16,7 +16,6 @@ interface DebugConfig {
 	jwt: boolean;
 	database: boolean;
 	startup: boolean;
-	startup: boolean;
 }
 
 // 🎯 CENTRAL DEBUG CONFIGURATION - Control all logging from here
@@ -72,7 +71,6 @@ const debugConfig = getDebugConfig();
  * Import this in any package to get consistent logging behavior
  */
 export const log = {
-
 	/**
 	 * Application startup messages (migrations, server start, config)
 	 */
@@ -98,19 +96,6 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * Task operations (create, update, delete, history)
 	 */
@@ -120,20 +105,6 @@ export const log = {
 				console.log(`📋 [TASKS] ${message}`, data);
 			} else {
 				console.log(`📋 [TASKS] ${message}`);
-			}
-		}
-	},
-
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
 			}
 		}
 	},
@@ -149,20 +120,6 @@ export const log = {
 			}
 		}
 	},
-
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * GitHub repository operations
 	 */
@@ -172,20 +129,6 @@ export const log = {
 				console.log(`🐙 [REPOS] ${message}`, data);
 			} else {
 				console.log(`🐙 [REPOS] ${message}`);
-			}
-		}
-	},
-
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
 			}
 		}
 	},
@@ -202,19 +145,6 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * General API operations
 	 */
@@ -228,19 +158,6 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * Server startup & configuration
 	 */
@@ -254,19 +171,6 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * Codebase scanning operations
 	 */
@@ -280,19 +184,6 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * GitHub API interactions
 	 */
@@ -306,45 +197,19 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * JWT token operations
 	 */
 	jwt: (message: string, data?: any) => {
 		if (debugConfig.jwt) {
 			if (data) {
-				console.log(`🎟️  [JWT] ${message}`, data);
+				console.log(`🎟  [JWT] ${message}`, data);
 			} else {
-				console.log(`🎟️  [JWT] ${message}`);
+				console.log(`🎟  [JWT] ${message}`);
 			}
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * Database operations
 	 */
@@ -354,33 +219,6 @@ export const log = {
 				console.log(`💾 [DATABASE] ${message}`, data);
 			} else {
 				console.log(`💾 [DATABASE] ${message}`);
-			}
-		}
-	},
-
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
-	/**
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
 			}
 		}
 	},
@@ -396,51 +234,25 @@ export const log = {
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * Always log important info (can't be disabled)
 	 */
 	info: (message: string, data?: any) => {
 		if (data) {
-			console.log(`ℹ️  [INFO] ${message}`, data);
+			console.log(`i  [INFO] ${message}`, data);
 		} else {
-			console.log(`ℹ️  [INFO] ${message}`);
+			console.log(`i  [INFO] ${message}`);
 		}
 	},
 
-
-	/**
-	 * Application startup messages (migrations, server start, config)
-	 */
-	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
-			if (data) {
-				console.log(`🚀 [STARTUP] ${message}`, data);
-			} else {
-				console.log(`🚀 [STARTUP] ${message}`);
-			}
-		}
-	},
 	/**
 	 * Always log warnings (can't be disabled)
 	 */
 	warn: (message: string, data?: any) => {
 		if (data) {
-			console.warn(`⚠️  [WARN] ${message}`, data);
+			console.warn(`!  [WARN] ${message}`, data);
 		} else {
-			console.warn(`⚠️  [WARN] ${message}`);
+			console.warn(`!  [WARN] ${message}`);
 		}
 	},
 };

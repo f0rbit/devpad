@@ -114,6 +114,14 @@ export class ApiClient {
 			}
 		},
 
+		map: async (filters?: { private?: boolean }): Promise<Record<string, Project>> => {
+			const projects = await this.projects.list(filters);
+			return projects.reduce((acc, project) => {
+				acc[project.project_id] = project;
+				return acc;
+			}, {} as Record<string, Project>);
+		},
+
 		/**
 		 * Get project by ID
 		 */

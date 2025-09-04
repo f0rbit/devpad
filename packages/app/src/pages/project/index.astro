@@ -1,12 +1,13 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
-import PageLayout from '@/layouts/PageLayout.astro';
-import GithubLogin from "@/components/solid/GithubLogin";
+import type { Project } from "@devpad/schema";
 import ExternalLink from "lucide-solid/icons/external-link";
+import GithubLogin from "@/components/solid/GithubLogin";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { getServerApiClient } from "@/utils/api-client";
 
 const user = Astro.locals.user;
 
-let projects = [];
+let projects: Project[] = [];
 if (user) {
 	try {
 		const apiClient = getServerApiClient(Astro.locals);
