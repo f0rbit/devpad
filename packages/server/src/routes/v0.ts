@@ -1,4 +1,4 @@
-import { getProject, getProjectById, getProjectTasks, getSpecification, getTask, getTasksByTag, getUserProjects, getUserTasks, upsertProject, upsertTag, upsertTask } from "@devpad/core";
+import { getActiveUserTags, getProject, getProjectById, getProjectTasks, getSpecification, getTask, getTasksByTag, getUserProjectMap, getUserProjects, getUserTasks, upsertProject, upsertTag, upsertTask } from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_project, upsert_todo } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { db } from "@devpad/schema/database/server";
@@ -210,6 +210,30 @@ app.patch("/tasks/save_tags", requireAuth, zValidator("json", save_tags_request)
 	} catch (err) {
 		console.error("Error saving tags:", err);
 		return c.json({ error: "Error saving tags" }, 500);
+	}
+});
+
+// Tags endpoints
+app.get("/tags", requireAuth, async c => {
+	try {
+		const user = c.get("user")!;
+		const tags = await getActiveUserTags(user.id);
+		return c.json(tags);
+	} catch (error: any) {
+		console.error("ERROR in GET /tags:", error);
+		return c.json({ error: "Internal Server Error", details: error.message }, 500);
+	}
+});
+
+// Projects Map endpoint (for convenience)
+app.get("/projects/map", requireAuth, async c => {
+	try {
+		const user = c.get("user")!;
+		const projectMap = await getUserProjectMap(user.id);
+		return c.json(projectMap);
+	} catch (error: any) {
+		console.error("ERROR in GET /projects/map:", error);
+		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });
 

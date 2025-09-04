@@ -23,15 +23,16 @@ export type AuthContext = {
 export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
 	console.log(`🔍 [SERVER-AUTH] Processing ${c.req.method} ${c.req.path}`);
 
-	// CSRF protection for non-GET requests (skip in test environment)
+	// CSRF protection for non-GET requests (skip in development and test)
+	const isDev = process.env.NODE_ENV === "development";
 	const isTest = process.env.NODE_ENV === "test";
-	if (c.req.method !== "GET" && !isTest) {
+	if (c.req.method !== "GET" && !isTest && !isDev) {
 		const originHeader = c.req.header("Origin");
 		const hostHeader = c.req.header("Host");
 
-		console.log(`🔍 [SERVER-AUTH] CSRF check:`, { originHeader, hostHeader, isTest });
+		console.log(`🔍 [SERVER-AUTH] CSRF check:`, { originHeader, hostHeader, isDev, isTest });
 		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
-			console.error("❌ [SERVER-AUTH] Invalid origin", { originHeader, hostHeader, isTest, nodeEnv: process.env.NODE_ENV });
+			console.error("❌ [SERVER-AUTH] Invalid origin", { originHeader, hostHeader, isDev, isTest, nodeEnv: process.env.NODE_ENV });
 			return c.json({ error: "Invalid origin" }, 403);
 		}
 	}

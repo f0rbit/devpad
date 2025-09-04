@@ -19,32 +19,35 @@ export function getApiClient(): ApiClient {
 	const serverUrl = import.meta.env.PUBLIC_API_SERVER_URL || `${window.location.origin}/api/v0`;
 	console.log("🌐 [API-CLIENT] Server URL:", serverUrl);
 
-	// Try to get API key first (takes priority)
-	const apiKey = getApiKey();
+	// Try JWT token first (session-based auth for normal users)
 	const jwtToken = getJwtToken();
+	const apiKey = getApiKey();
 
 	console.log("🔍 [API-CLIENT] Auth tokens found:", {
-		hasApiKey: !!apiKey,
 		hasJwtToken: !!jwtToken,
-		apiKeyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : null,
+		hasApiKey: !!apiKey,
 		jwtPreview: jwtToken ? `${jwtToken.substring(0, 20)}...` : null,
+		apiKeyPreview: apiKey ? `${apiKey.substring(0, 10)}...` : null,
 	});
 
-	if (apiKey) {
-		console.log("🗝️  [API-CLIENT] Using API key authentication");
+	// Priority 1: JWT token (session mode for OAuth users)
+	if (jwtToken) {
+		console.log("🎟️  [API-CLIENT] Using JWT token authentication (session mode)");
 		_apiClient = new ApiClient({
 			base_url: serverUrl,
-			api_key: apiKey,
+			api_key: `jwt:${jwtToken}`,
+			auth_mode: "session",
 		});
 		return _apiClient;
 	}
 
-	// If no API key, try JWT token
-	if (jwtToken) {
-		console.log("🎟️  [API-CLIENT] Using JWT token authentication");
+	// Priority 2: API key (key mode for API users)
+	if (apiKey) {
+		console.log("🗝️  [API-CLIENT] Using API key authentication (key mode)");
 		_apiClient = new ApiClient({
 			base_url: serverUrl,
-			api_key: `jwt:${jwtToken}`, // Use a special prefix to indicate JWT
+			api_key: apiKey,
+			auth_mode: "key",
 		});
 		return _apiClient;
 	}
@@ -161,4 +164,62 @@ export function hasApiKey(): boolean {
  */
 export function hasAuth(): boolean {
 	return getApiKey() !== null || getJwtToken() !== null;
+}
+
+/**
+ * Get the current authentication mode
+ */
+export function getAuthMode(): "session" | "key" | null {
+	const jwtToken = getJwtToken();
+	const apiKey = getApiKey();
+
+	if (jwtToken) return "session";
+	if (apiKey) return "key";
+	return null;
+}
+
+/**
+ * Create an API client for server-side use (Astro SSR)
+ * This bypasses browser-specific token discovery and uses provided tokens directly
+ */
+export function createServerApiClient(options: { jwtToken?: string; apiKey?: string; baseUrl?: string }): ApiClient {
+	const serverUrl = options.baseUrl || process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
+
+	console.log("🌐 [SERVER-API-CLIENT] Creating server API client");
+	console.log("🔍 [SERVER-API-CLIENT] Auth tokens:", {
+		hasJwtToken: !!options.jwtToken,
+		hasApiKey: !!options.apiKey,
+	});
+
+	// Priority: JWT first, then API key
+	if (options.jwtToken) {
+		console.log("🎟️  [SERVER-API-CLIENT] Using JWT token authentication (session mode)");
+		return new ApiClient({
+			base_url: serverUrl,
+			api_key: `jwt:${options.jwtToken}`,
+			auth_mode: "session",
+		});
+	}
+
+	if (options.apiKey) {
+		console.log("🗝️  [SERVER-API-CLIENT] Using API key authentication (key mode)");
+		return new ApiClient({
+			base_url: serverUrl,
+			api_key: options.apiKey,
+			auth_mode: "key",
+		});
+	}
+
+	console.error("❌ [SERVER-API-CLIENT] No authentication provided");
+	throw new Error("No authentication provided for server API client");
+}
+
+/**
+ * Create an API client from Astro.locals (convenience function)
+ */
+export function getServerApiClient(locals: any): ApiClient {
+	return createServerApiClient({
+		jwtToken: locals.jwtToken,
+		baseUrl: process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0",
+	});
 }

@@ -1,5 +1,5 @@
 ---
-import { getUserProjectMap, getActiveUserTags, getUserTasks } from "@devpad/core";
+import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import { TaskSorter } from '@/components/solid/TaskSorter';
 import GithubLogin from '@/components/solid/GithubLogin';
@@ -8,10 +8,33 @@ import Tag from "lucide-solid/icons/tag";
 
 const user = Astro.locals.user;
 
-const project_map = user ? await getUserProjectMap(user?.id) : {};
-const tasks = user ? await getUserTasks(user?.id) : [];
+let project_map = {};
+let tasks = [];
+let tags = [];
 
-const tags = user ? await getActiveUserTags(user?.id) : [];
+if (user) {
+	try {
+		const apiClient = getServerApiClient(Astro.locals);
+		
+		// Get projects list and convert to map format
+		const projects = await apiClient.projects.list();
+		project_map = projects.reduce((acc, project) => {
+			acc[project.project_id] = project;
+			return acc;
+		}, {} as Record<string, any>);
+		
+		// Get tasks and tags in parallel
+		[tasks, tags] = await Promise.all([
+			apiClient.tasks.list(),
+			apiClient.tags.list()
+		]);
+	} catch (error) {
+		console.error("Error fetching user data:", error);
+		project_map = {};
+		tasks = [];
+		tags = [];
+	}
+}
 
 const keywords = [
 	// One-word keywords

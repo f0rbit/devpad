@@ -2,21 +2,29 @@ import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, Upsert
 import { ApiClient as HttpClient } from "./request";
 
 /**
+ * Authentication mode for the API client
+ */
+export type AuthMode = "session" | "key";
+
+/**
  * Main API client with clean nested objects
  * Provides 100% backward compatibility with better organization
  */
 export class ApiClient {
 	private httpClient: HttpClient;
 	private _api_key: string;
+	private _auth_mode: AuthMode;
 
 	constructor(options: {
 		base_url?: string;
 		api_key: string;
+		auth_mode?: AuthMode;
 		max_history_size?: number;
 	}) {
 		const v0_base_url = options.base_url || "http://localhost:4321/api/v0";
 
 		this._api_key = options.api_key;
+		this._auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
 		this.httpClient = new HttpClient({
 			base_url: v0_base_url,
 			api_key: options.api_key,
@@ -366,11 +374,19 @@ export class ApiClient {
 	};
 
 	/**
-	 * Tags namespace - minimal implementation as tags are managed through tasks
+	 * Tags namespace - handles tag operations
 	 */
 	public readonly tags = {
+		/**
+		 * List all active user tags
+		 */
+		list: () => this.httpClient.get<any[]>("/tags"),
+
+		/**
+		 * Create or update a tag
+		 */
 		upsert: (_data: UpsertTag): Promise<never> => {
-			throw new Error("Tags endpoint not yet implemented - tags are managed through tasks");
+			throw new Error("Tags upsert endpoint not yet implemented - tags are managed through tasks");
 		},
 
 		create: (data: UpsertTag) => this.tags.upsert(data),
@@ -390,5 +406,12 @@ export class ApiClient {
 	 */
 	public getApiKey(): string {
 		return this._api_key;
+	}
+
+	/**
+	 * Get the authentication mode
+	 */
+	public getAuthMode(): AuthMode {
+		return this._auth_mode;
 	}
 }

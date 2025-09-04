@@ -100,12 +100,13 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 
 	if (jwtToken) {
 		console.log("[MIDDLEWARE] 🔄 JWT token in URL - storing in cookie and redirecting");
-		// Store JWT token and redirect without token in URL
+		// Store JWT token with secure settings (accessible to both server and client)
+		const secure = context.site?.protocol === "https:" ? "; Secure" : "";
 		const response = new Response(null, {
 			status: 302,
 			headers: {
 				Location: context.url.pathname,
-				"Set-Cookie": `jwt-token=${jwtToken}; Path=/; HttpOnly; SameSite=Lax${context.site?.protocol === "https:" ? "; Secure" : ""}`,
+				"Set-Cookie": `jwt-token=${jwtToken}; Path=/; SameSite=Lax${secure}; Max-Age=86400`,
 			},
 		});
 		return response;
@@ -149,6 +150,19 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 
 				context.locals.user = authData.user;
 				context.locals.session = { id: "verified" } as any; // Minimal session object
+				context.locals.jwtToken = storedJWT; // Pass JWT token for server-side API calls
+
+				// Update existing HttpOnly cookie to be accessible to client-side JS
+				// This is needed for users who logged in before we changed the cookie settings
+				if (storedJWT) {
+					context.cookies.set("jwt-token", storedJWT, {
+						path: "/",
+						sameSite: "lax",
+						secure: context.site?.protocol === "https:",
+						maxAge: 86400,
+						httpOnly: false, // Make it accessible to JavaScript
+					});
+				}
 			} else {
 				const errorData = await response.text();
 				console.log("[MIDDLEWARE] ❌ Auth failed:", errorData);

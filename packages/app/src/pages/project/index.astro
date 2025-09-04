@@ -1,12 +1,22 @@
 ---
-import { getUserProjects } from "@devpad/core";
+import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import GithubLogin from "@/components/solid/GithubLogin";
 import ExternalLink from "lucide-solid/icons/external-link";
 
 const user = Astro.locals.user;
 
-const projects = user ? await getUserProjects(user.id) : [];
+let projects = [];
+if (user) {
+	try {
+		const apiClient = getServerApiClient(Astro.locals);
+		projects = await apiClient.projects.list();
+	} catch (error) {
+		console.error("Error fetching user projects:", error);
+		projects = [];
+	}
+}
+
 const codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
 // const deleted = projects.filter((p) => p.visibility == "DELETED");
 //
