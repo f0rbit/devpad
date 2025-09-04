@@ -1,4 +1,5 @@
 import { startServer } from "./server";
+import { log } from "@devpad/core";
 
 // Local development configuration
 const options = {
@@ -13,7 +14,7 @@ const options = {
 	environment: "development",
 };
 
-console.log("🛠️  Starting DevPad API server for local development");
+log.startup("🛠️  Starting DevPad API server for local development");
 console.log("📝 Note: Run Astro dev server separately for frontend");
 
 startServer(options).catch(error => {

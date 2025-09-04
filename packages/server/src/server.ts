@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
+import { log } from "@devpad/core";
 import { authMiddleware } from "./middleware/auth";
 
 // Import route modules
@@ -42,12 +43,12 @@ export interface DatabaseOptions {
  * Initialize database and run migrations
  */
 export async function migrateDb(options: DatabaseOptions): Promise<void> {
-	console.log("🌳 Database file:", options.databaseFile);
+	log.startup("🌳 Database file:", options.databaseFile);
 
 	const sqlite = new Database(options.databaseFile);
 	const db = drizzle(sqlite);
 
-	console.log("⌛️ Running migrations...");
+	log.startup("⌛️ Running migrations...");
 
 	const defaultPaths = ["./packages/schema/src/database/drizzle", "../schema/src/database/drizzle", "../../schema/src/database/drizzle", "./src/database/drizzle"];
 
@@ -57,11 +58,11 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 	for (const path of migrationPaths) {
 		try {
 			migrate(db, { migrationsFolder: path });
-			console.log(`✅ Migrations complete from ${path}`);
+			log.startup(`✅ Migrations complete from ${path}`);
 			migrationsRun = true;
 			break;
 		} catch (error) {
-			console.log(`⚠️ Migration path ${path} not found, trying next...`);
+			log.startup(`⚠️ Migration path ${path} not found, trying next...`);
 		}
 	}
 
@@ -124,7 +125,7 @@ export function createApp(options: ServerOptions = {}): Hono {
 
 	// Static file serving (optional)
 	if (options.enableStatic && options.staticPath) {
-		console.log(`📁 Serving static files from: ${options.staticPath}`);
+		log.startup(`📁 Serving static files from: ${options.staticPath}`);
 
 		app.use(
 			"/*",
@@ -186,16 +187,16 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
 	const app = createApp(options);
 
 	// Log startup information
-	console.log(`🚀 ${environment} server starting on port ${port}`);
+	log.startup(`🚀 ${environment} server starting on port ${port}`);
 
 	if (options.enableStatic) {
-		console.log(`📁 Static files: ${options.staticPath}`);
+		log.startup(`📁 Static files: ${options.staticPath}`);
 	} else {
-		console.log(`🔧 API-only mode (static files served elsewhere)`);
+		log.startup(`🔧 API-only mode (static files served elsewhere)`);
 	}
 
-	console.log(`🎯 API routes: /api/*`);
-	console.log(`🌐 CORS origins: ${options.corsOrigins?.join(", ") || "default"}`);
+	log.startup(`🎯 API routes: /api/*`);
+	log.startup(`🌐 CORS origins: ${options.corsOrigins?.join(", ") || "default"}`);
 
 	// Start the server
 	const server = Bun.serve({
@@ -203,7 +204,7 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
 		fetch: app.fetch,
 	});
 
-	console.log(`✅ Server running at http://localhost:${server.port}`);
+	log.startup(`✅ Server running at http://localhost:${server.port}`);
 }
 
 /**
