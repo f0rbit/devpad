@@ -1,4 +1,4 @@
-import { getUserById } from "@devpad/core";
+import { getUserById, log } from "@devpad/core";
 import { lucia } from "@devpad/core/auth";
 import { getUserByAPIKey } from "@devpad/core/auth/keys";
 import { verifyJWT } from "@devpad/core/auth/jwt";
@@ -21,7 +21,7 @@ export type AuthContext = {
 };
 
 export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(async (c, next) => {
-	console.log(`🔍 [SERVER-AUTH] Processing ${c.req.method} ${c.req.path}`);
+	log.auth(`Processing ${c.req.method} ${c.req.path}`);
 
 	// CSRF protection for non-GET requests (skip in development and test)
 	const isDev = process.env.NODE_ENV === "development";
@@ -30,61 +30,61 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 		const originHeader = c.req.header("Origin");
 		const hostHeader = c.req.header("Host");
 
-		console.log(`🔍 [SERVER-AUTH] CSRF check:`, { originHeader, hostHeader, isDev, isTest });
+		log.auth(`CSRF check:`, { originHeader, hostHeader, isDev, isTest });
 		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
-			console.error("❌ [SERVER-AUTH] Invalid origin", { originHeader, hostHeader, isDev, isTest, nodeEnv: process.env.NODE_ENV });
+			log.error("Invalid origin", { originHeader, hostHeader, isDev, isTest, nodeEnv: process.env.NODE_ENV });
 			return c.json({ error: "Invalid origin" }, 403);
 		}
 	}
 
 	// Check for API key authentication first
 	const authHeader = c.req.header("Authorization");
-	console.log("[AUTH_MIDDLEWARE] 🔑 Auth header:", authHeader ? `Bearer ${authHeader.split(" ")[1]?.substring(0, 10)}...` : "none");
+	log.auth("🔑 Auth header:", authHeader ? `Bearer ${authHeader.split(" ")[1]?.substring(0, 10)}...` : "none");
 
 	if (authHeader?.startsWith("Bearer ")) {
 		const token = authHeader.split(" ")[1];
 		if (token) {
 			// Check if token has JWT prefix
 			if (token.startsWith("jwt:")) {
-				console.log("[AUTH_MIDDLEWARE] 🎟️  JWT token detected");
+				log.auth("🎟️  JWT token detected");
 				// JWT token
 				const jwtToken = token.substring(4);
 				const jwtPayload = verifyJWT(jwtToken);
 
-				console.log("[AUTH_MIDDLEWARE] 🔍 JWT verification result:", jwtPayload ? "valid" : "invalid");
+				log.auth("🔍 JWT verification result:", jwtPayload ? "valid" : "invalid");
 
 				if (jwtPayload) {
-					console.log("[AUTH_MIDDLEWARE] 👤 JWT payload:", { userId: jwtPayload.userId, sessionId: jwtPayload.sessionId });
+					log.auth("👤 JWT payload:", { userId: jwtPayload.userId, sessionId: jwtPayload.sessionId });
 
 					// JWT authentication successful
 					const fullUser = await getUserById(jwtPayload.userId);
 
-					console.log("[AUTH_MIDDLEWARE] 📋 User lookup result:", fullUser ? "found" : "not found");
+					log.auth("📋 User lookup result:", fullUser ? "found" : "not found");
 
 					if (fullUser) {
 						c.set("user", fullUser as any);
 
 						// Load the full session with access token
 						const { session } = await lucia.validateSession(jwtPayload.sessionId);
-						console.log("[AUTH_MIDDLEWARE] 🔍 Session lookup result:", session ? "found" : "not found");
+						log.auth("🔍 Session lookup result:", session ? "found" : "not found");
 
 						c.set("session", session);
-						console.log("[AUTH_MIDDLEWARE] ✅ JWT auth successful for user:", fullUser.id);
+						log.auth("✅ JWT auth successful for user:", fullUser.id);
 						return next();
 					}
 				}
 			} else {
-				console.log("[AUTH_MIDDLEWARE] 🗝️  API key detected");
+				log.auth("🗝️  API key detected");
 				// Regular API key
 				const { user_id, error } = await getUserByAPIKey(token);
 
-				console.log("[AUTH_MIDDLEWARE] 🔍 API key verification result:", error ? error : user_id ? "valid" : "invalid");
+				log.auth("🔍 API key verification result:", error ? error : user_id ? "valid" : "invalid");
 
 				if (!error && user_id) {
 					// API key authentication successful
 					const fullUser = await getUserById(user_id);
 
-					console.log("[AUTH_MIDDLEWARE] 📋 User lookup result:", fullUser ? "found" : "not found");
+					log.auth("📋 User lookup result:", fullUser ? "found" : "not found");
 
 					if (fullUser) {
 						c.set("user", fullUser as any);
@@ -92,7 +92,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 						c.set("user", null);
 					}
 					c.set("session", null);
-					console.log("[AUTH_MIDDLEWARE] ✅ API key auth successful for user:", user_id);
+					log.auth("✅ API key auth successful for user:", user_id);
 					return next();
 				}
 			}
@@ -100,22 +100,22 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 	}
 
 	// Fall back to session-based authentication
-	console.log("[AUTH_MIDDLEWARE] 🍪 Checking for session cookies");
+	log.auth("🍪 Checking for session cookies");
 	const sessionId = getCookie(c, lucia.sessionCookieName) ?? null;
 
-	console.log("[AUTH_MIDDLEWARE] 🔍 Session cookie:", sessionId ? `${sessionId.substring(0, 10)}...` : "none");
+	log.auth("🔍 Session cookie:", sessionId ? `${sessionId.substring(0, 10)}...` : "none");
 
 	if (!sessionId) {
-		console.log("[AUTH_MIDDLEWARE] 🚫 No session cookie found - setting null auth");
+		log.auth("🚫 No session cookie found - setting null auth");
 		c.set("user", null);
 		c.set("session", null);
 		return next();
 	}
 
-	console.log("[AUTH_MIDDLEWARE] 🔐 Validating session with Lucia");
+	log.auth("🔐 Validating session with Lucia");
 	const { session, user } = await lucia.validateSession(sessionId);
 
-	console.log("[AUTH_MIDDLEWARE] 📊 Session validation result:", {
+	log.auth("📊 Session validation result:", {
 		hasSession: !!session,
 		hasUser: !!user,
 		userId: user?.id,
@@ -125,7 +125,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 
 	// Handle session refresh
 	if (session?.fresh) {
-		console.log("[AUTH_MIDDLEWARE] 🔄 Refreshing session cookie");
+		log.auth("🔄 Refreshing session cookie");
 		const sessionCookie = lucia.createSessionCookie(session.id);
 		c.header(
 			"Set-Cookie",
@@ -136,7 +136,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 	}
 
 	if (!session) {
-		console.log("[AUTH_MIDDLEWARE] 🗑️  Clearing invalid session cookie");
+		log.auth("🗑️  Clearing invalid session cookie");
 		const sessionCookie = lucia.createBlankSessionCookie();
 		c.header(
 			"Set-Cookie",
@@ -149,7 +149,7 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 	c.set("user", user);
 	c.set("session", session);
 
-	console.log("[AUTH_MIDDLEWARE] 🏁 Final auth state:", {
+	log.auth("🏁 Final auth state:", {
 		hasUser: !!user,
 		hasSession: !!session,
 		authMethod: "session",

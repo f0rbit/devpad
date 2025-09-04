@@ -1,6 +1,8 @@
 import type { MiddlewareHandler } from "astro";
 import { defineMiddleware } from "astro:middleware";
 import { verifyRequestOrigin } from "lucia";
+import { log } from "@devpad/core";
+import { log } from "@devpad/core";
 
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];
@@ -9,7 +11,7 @@ const API_SERVER_URL = import.meta.env.PUBLIC_API_SERVER_URL || "http://localhos
 const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "") || "http://localhost:3001";
 
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
-	console.log(`🔍 [MIDDLEWARE] Processing ${context.request.method} ${context.url.pathname}`);
+	log.middleware(` Processing ${context.request.method} ${context.url.pathname}`);
 
 	if (context.request.method !== "GET") {
 		const originHeader = context.request.headers.get("Origin");
@@ -17,9 +19,9 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 		// check for missing or invalid headers
 		const checks = [!originHeader, !hostHeader, !verifyRequestOrigin(originHeader!, [hostHeader!])];
 		const ignore = origin_ignore.find(p => context.url.pathname.startsWith(p));
-		console.log(`🔍 [MIDDLEWARE] CSRF check:`, { originHeader, hostHeader, ignore });
+		log.middleware(` CSRF check:`, { originHeader, hostHeader, ignore });
 		if (checks.some(c => c) && !ignore) {
-			console.error("❌ [MIDDLEWARE] Invalid origin", { originHeader, hostHeader });
+			log.error(" Invalid origin", { originHeader, hostHeader });
 			return new Response("Invalid origin", {
 				status: 403,
 			});
@@ -28,27 +30,27 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 
 	// Handle session history for GET requests
 	if (context.request.method === "GET" && !history_ignore.find(p => context.url.pathname.includes(p))) {
-		console.log(`📋 [MIDDLEWARE] Processing history for ${context.url.pathname}`);
+		log.middleware(` Processing history for ${context.url.pathname}`);
 		// Get existing history from cookie
 		const historyCookie = context.cookies.get("nav-history")?.value;
 		let history: string[] = [];
 
 		try {
 			history = historyCookie ? JSON.parse(decodeURIComponent(historyCookie)) : [];
-			console.log(`📋 [MIDDLEWARE] Current history:`, history);
+			log.middleware(` Current history:`, history);
 		} catch {
 			history = [];
-			console.log(`📋 [MIDDLEWARE] Failed to parse history, starting fresh`);
+			log.middleware(` Failed to parse history, starting fresh`);
 		}
 
 		if (context.url.searchParams.get("back") === "true") {
 			// Remove the last page for back navigation
 			history.pop();
-			console.log(`📋 [MIDDLEWARE] Back navigation, history now:`, history);
+			log.middleware(` Back navigation, history now:`, history);
 		} else if (context.url.pathname !== history.at(-1)) {
 			// Don't add the same page twice
 			history.push(context.url.pathname);
-			console.log(`📋 [MIDDLEWARE] Added to history:`, history);
+			log.middleware(` Added to history:`, history);
 		}
 
 		// Clean up history
@@ -71,7 +73,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 		context.locals.history = history;
 	}
 
-	console.log("[MIDDLEWARE] 🔐 Starting auth check for:", context.url.pathname);
+	log.middleware("🔐 Starting auth check for:", context.url.pathname);
 
 	// Initialize user as null
 	context.locals.user = null;
@@ -88,7 +90,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 
 	const storedJWT = context.cookies.get("jwt-token")?.value;
 
-	console.log("[MIDDLEWARE] 🍪 Auth cookies found:", {
+	log.middleware(" 🍪 Auth cookies found:", {
 		hasJwtToken: !!jwtToken,
 		hasSessionCookie: !!sessionCookie,
 		hasStoredJWT: !!storedJWT,
@@ -99,7 +101,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	});
 
 	if (jwtToken) {
-		console.log("[MIDDLEWARE] 🔄 JWT token in URL - storing in cookie and redirecting");
+		log.middleware(" 🔄 JWT token in URL - storing in cookie and redirecting");
 		// Store JWT token with secure settings (accessible to both server and client)
 		const secure = context.site?.protocol === "https:" ? "; Secure" : "";
 		const response = new Response(null, {
@@ -113,7 +115,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	}
 
 	if (storedJWT || sessionCookie) {
-		console.log("[MIDDLEWARE] 📞 Making API call to verify auth");
+		log.middleware(" 📞 Making API call to verify auth");
 
 		try {
 			// Call API to verify authentication
@@ -121,7 +123,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 			// Use the detected cookie name for the header
 			const cookieHeader = sessionCookie ? (sessionCookie1 ? `auth-session=${sessionCookie}` : sessionCookie2 ? `auth_session=${sessionCookie}` : sessionCookie3 ? `lucia_session=${sessionCookie}` : undefined) : undefined;
 
-			console.log("[MIDDLEWARE] 📡 Auth request headers:", {
+			log.middleware(" 📡 Auth request headers:", {
 				hasAuthHeader: !!authHeader,
 				hasCookieHeader: !!cookieHeader,
 				apiUrl: `${API_SERVER_BASE}/api/auth/verify`,
@@ -135,14 +137,14 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 				},
 			});
 
-			console.log("[MIDDLEWARE] 📋 API response:", {
+			log.middleware(" 📋 API response:", {
 				status: response.status,
 				ok: response.ok,
 			});
 
 			if (response.ok) {
 				const authData = await response.json();
-				console.log("[MIDDLEWARE] ✅ Auth successful:", {
+				log.middleware(" ✅ Auth successful:", {
 					authenticated: authData.authenticated,
 					hasUser: !!authData.user,
 					userId: authData.user?.id,
@@ -165,17 +167,17 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 				}
 			} else {
 				const errorData = await response.text();
-				console.log("[MIDDLEWARE] ❌ Auth failed:", errorData);
+				log.middleware(" ❌ Auth failed:", errorData);
 			}
 		} catch (error) {
 			// API unreachable or error - continue without auth
-			console.error("[MIDDLEWARE] 🚨 Auth verification failed:", error);
+			log.error(" 🚨 Auth verification failed:", error);
 		}
 	} else {
-		console.log("[MIDDLEWARE] 🚫 No auth tokens found");
+		log.middleware(" 🚫 No auth tokens found");
 	}
 
-	console.log("[MIDDLEWARE] 🏁 Final auth state:", {
+	log.middleware(" 🏁 Final auth state:", {
 		hasUser: !!context.locals.user,
 		hasSession: !!context.locals.session,
 		userId: context.locals.user?.id,

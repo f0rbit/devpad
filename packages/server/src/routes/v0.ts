@@ -14,6 +14,7 @@ import {
 	upsertProject,
 	upsertTag,
 	upsertTask,
+	log,
 } from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_project, upsert_todo } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
@@ -74,7 +75,7 @@ app.get("/projects", requireAuth, async c => {
 		const projects = await getUserProjects(user.id);
 		return c.json(projects);
 	} catch (error: any) {
-		console.error("ERROR in GET /projects:", error);
+		log.error("GET /projects error:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });
@@ -87,7 +88,7 @@ app.get("/projects/public", requireAuth, async c => {
 		const publicProjects = projects.filter(project => project.visibility === "PUBLIC");
 		return c.json(publicProjects);
 	} catch (error: any) {
-		console.error("ERROR in GET /projects/public:", error);
+		log.error("GET /projects error/public:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });
@@ -186,7 +187,7 @@ app.get("/tasks/history/:task_id", requireAuth, async c => {
 		const history = await getTaskHistory(task_id);
 		return c.json(history);
 	} catch (error: any) {
-		console.error("ERROR in GET /tasks/history:", error);
+		log.error("GET /tasks error/history:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });
@@ -264,7 +265,7 @@ app.get("/tags", requireAuth, async c => {
 		const tags = await getActiveUserTags(user.id);
 		return c.json(tags);
 	} catch (error: any) {
-		console.error("ERROR in GET /tags:", error);
+		log.error("GET /tags error:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });
@@ -276,7 +277,7 @@ app.get("/projects/map", requireAuth, async c => {
 		const projectMap = await getUserProjectMap(user.id);
 		return c.json(projectMap);
 	} catch (error: any) {
-		console.error("ERROR in GET /projects/map:", error);
+		log.error("GET /projects error/map:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });
@@ -404,7 +405,7 @@ app.get("/repos", requireAuth, async c => {
 		const user = c.get("user");
 		const session = c.get("session");
 
-		console.log("🔍 [REPOS] Request details:", {
+		log.repos(" Request details:", {
 			hasUser: !!user,
 			hasSession: !!session,
 			hasAccessToken: !!session?.access_token,
@@ -413,17 +414,17 @@ app.get("/repos", requireAuth, async c => {
 
 		// Check if we have a session with access token
 		if (!session?.access_token) {
-			console.error("❌ [REPOS] No GitHub access token available in session");
+			log.error(" No GitHub access token available in session");
 			return c.json({ error: "GitHub access token not available. Please re-authenticate with GitHub." }, 401);
 		}
 
-		console.log("🐙 [REPOS] Fetching repositories from GitHub API");
+		log.repos(" Fetching repositories from GitHub API");
 		// Get repositories using the stored GitHub access token
 		const repos = await getRepos(session.access_token);
-		console.log("✅ [REPOS] Successfully fetched", repos.length, "repositories");
+		log.repos(" Successfully fetched", repos.length, "repositories");
 		return c.json(repos);
 	} catch (error: any) {
-		console.error("❌ [REPOS] ERROR fetching repositories:", error.message);
+		log.error(" ERROR fetching repositories:", error.message);
 		return c.json({ error: "Failed to fetch repositories", details: error.message }, 500);
 	}
 });

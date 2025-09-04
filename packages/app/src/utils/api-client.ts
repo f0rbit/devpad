@@ -1,4 +1,5 @@
 import ApiClient from "@devpad/api";
+import { log } from "@devpad/core";
 
 // Global API client instance
 let _apiClient: ApiClient | null = null;
@@ -8,22 +9,22 @@ let _apiClient: ApiClient | null = null;
  * This function handles both API key and JWT authentication
  */
 export function getApiClient(): ApiClient {
-	console.log("🔧 [API-CLIENT] Getting API client");
+	log.api("🔧 [API-CLIENT] Getting API client");
 
 	if (_apiClient) {
-		console.log("✅ [API-CLIENT] Returning existing client");
+		log.api(" Returning existing client");
 		return _apiClient;
 	}
 
 	// Get API server URL from environment variable or default to current origin + /api/v0
 	const serverUrl = import.meta.env.PUBLIC_API_SERVER_URL || `${window.location.origin}/api/v0`;
-	console.log("🌐 [API-CLIENT] Server URL:", serverUrl);
+	log.api(" Server URL:", serverUrl);
 
 	// Try JWT token first (session-based auth for normal users)
 	const jwtToken = getJwtToken();
 	const apiKey = getApiKey();
 
-	console.log("🔍 [API-CLIENT] Auth tokens found:", {
+	log.api(" Auth tokens found:", {
 		hasJwtToken: !!jwtToken,
 		hasApiKey: !!apiKey,
 		jwtPreview: jwtToken ? `${jwtToken.substring(0, 20)}...` : null,
@@ -32,7 +33,7 @@ export function getApiClient(): ApiClient {
 
 	// Priority 1: JWT token (session mode for OAuth users)
 	if (jwtToken) {
-		console.log("🎟️  [API-CLIENT] Using JWT token authentication (session mode)");
+		log.api(" Using JWT token authentication (session mode)");
 		_apiClient = new ApiClient({
 			base_url: serverUrl,
 			api_key: `jwt:${jwtToken}`,
@@ -43,7 +44,7 @@ export function getApiClient(): ApiClient {
 
 	// Priority 2: API key (key mode for API users)
 	if (apiKey) {
-		console.log("🗝️  [API-CLIENT] Using API key authentication (key mode)");
+		log.api(" Using API key authentication (key mode)");
 		_apiClient = new ApiClient({
 			base_url: serverUrl,
 			api_key: apiKey,
@@ -52,7 +53,7 @@ export function getApiClient(): ApiClient {
 		return _apiClient;
 	}
 
-	console.error("❌ [API-CLIENT] No authentication found");
+	log.error(" No authentication found");
 	throw new Error("No authentication found. Please log in or provide an API key.");
 }
 
@@ -61,19 +62,19 @@ export function getApiClient(): ApiClient {
  * Priority: localStorage > sessionStorage > meta tag > cookie
  */
 function getApiKey(): string | null {
-	console.log("🔑 [API-CLIENT] Looking for API key");
+	log.api(" Looking for API key");
 	// Try localStorage first (persistent)
 	if (typeof window !== "undefined") {
 		const stored = localStorage.getItem("devpad_api_key");
 		if (stored) {
-			console.log("✅ [API-CLIENT] Found API key in localStorage");
+			log.api(" Found API key in localStorage");
 			return stored;
 		}
 
 		// Try sessionStorage (session only)
 		const session = sessionStorage.getItem("devpad_api_key");
 		if (session) {
-			console.log("✅ [API-CLIENT] Found API key in sessionStorage");
+			log.api(" Found API key in sessionStorage");
 			return session;
 		}
 
@@ -82,7 +83,7 @@ function getApiKey(): string | null {
 		if (meta) {
 			const key = meta.getAttribute("content");
 			if (key) {
-				console.log("✅ [API-CLIENT] Found API key in meta tag");
+				log.api(" Found API key in meta tag");
 				// Store it for future use
 				localStorage.setItem("devpad_api_key", key);
 				return key;
@@ -94,13 +95,13 @@ function getApiKey(): string | null {
 		for (const cookie of cookies) {
 			const [name, value] = cookie.trim().split("=");
 			if (name === "devpad_api_key") {
-				console.log("✅ [API-CLIENT] Found API key in cookie");
+				log.api(" Found API key in cookie");
 				localStorage.setItem("devpad_api_key", value);
 				return value;
 			}
 		}
 
-		console.log("❌ [API-CLIENT] No API key found in any storage");
+		log.api(" No API key found in any storage");
 	}
 
 	return null;
@@ -139,15 +140,15 @@ export function clearApiKey() {
 function getJwtToken(): string | null {
 	if (typeof window !== "undefined") {
 		const cookies = document.cookie.split(";");
-		console.log("🍪 [API-CLIENT] Checking cookies for JWT token:", cookies.length);
+		log.api(" Checking cookies for JWT token:", cookies.length);
 		for (const cookie of cookies) {
 			const [name, value] = cookie.trim().split("=");
 			if (name === "jwt-token") {
-				console.log("🎟️  [API-CLIENT] Found JWT token in cookie");
+				log.api(" Found JWT token in cookie");
 				return value;
 			}
 		}
-		console.log("❌ [API-CLIENT] No JWT token found in cookies");
+		log.api(" No JWT token found in cookies");
 	}
 	return null;
 }
