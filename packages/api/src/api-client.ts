@@ -424,4 +424,14 @@ export class ApiClient {
 	public getAuthMode(): AuthMode {
 		return this._auth_mode;
 	}
+
+	/**
+	 * GitHub namespace - handles GitHub integration operations
+	 */
+	public readonly github = {
+		/**
+		 * List user repositories from GitHub
+		 */
+		repos: () => this.httpClient.get<any[]>("/repos"),
+	};
 }

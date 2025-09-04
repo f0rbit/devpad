@@ -63,8 +63,12 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 
 					if (fullUser) {
 						c.set("user", fullUser as any);
-						// Create a minimal session object for JWT
-						c.set("session", { id: jwtPayload.sessionId });
+
+						// Load the full session with access token
+						const { session } = await lucia.validateSession(jwtPayload.sessionId);
+						console.log("[AUTH_MIDDLEWARE] 🔍 Session lookup result:", session ? "found" : "not found");
+
+						c.set("session", session);
 						console.log("[AUTH_MIDDLEWARE] ✅ JWT auth successful for user:", fullUser.id);
 						return next();
 					}

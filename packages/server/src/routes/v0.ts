@@ -1,4 +1,20 @@
-import { getActiveUserTags, getProject, getProjectById, getProjectTasks, getSpecification, getTask, getTaskHistory, getTasksByTag, getUserProjectMap, getUserProjects, getUserTasks, upsertProject, upsertTag, upsertTask } from "@devpad/core";
+import {
+	getActiveUserTags,
+	getProject,
+	getProjectById,
+	getProjectTasks,
+	getRepos,
+	getSpecification,
+	getTask,
+	getTaskHistory,
+	getTasksByTag,
+	getUserProjectMap,
+	getUserProjects,
+	getUserTasks,
+	upsertProject,
+	upsertTag,
+	upsertTask,
+} from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_project, upsert_todo } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { db } from "@devpad/schema/database/server";
@@ -379,6 +395,36 @@ app.patch("/projects/save_config", requireAuth, zValidator("json", save_config_r
 	} catch (err) {
 		console.error("Error saving configuration:", err);
 		return c.json({ error: "Error saving configuration" }, 500);
+	}
+});
+
+// GitHub repositories endpoint
+app.get("/repos", requireAuth, async c => {
+	try {
+		const user = c.get("user");
+		const session = c.get("session");
+
+		console.log("🔍 [REPOS] Request details:", {
+			hasUser: !!user,
+			hasSession: !!session,
+			hasAccessToken: !!session?.access_token,
+			userId: user?.id,
+		});
+
+		// Check if we have a session with access token
+		if (!session?.access_token) {
+			console.error("❌ [REPOS] No GitHub access token available in session");
+			return c.json({ error: "GitHub access token not available. Please re-authenticate with GitHub." }, 401);
+		}
+
+		console.log("🐙 [REPOS] Fetching repositories from GitHub API");
+		// Get repositories using the stored GitHub access token
+		const repos = await getRepos(session.access_token);
+		console.log("✅ [REPOS] Successfully fetched", repos.length, "repositories");
+		return c.json(repos);
+	} catch (error: any) {
+		console.error("❌ [REPOS] ERROR fetching repositories:", error.message);
+		return c.json({ error: "Failed to fetch repositories", details: error.message }, 500);
 	}
 });
 
