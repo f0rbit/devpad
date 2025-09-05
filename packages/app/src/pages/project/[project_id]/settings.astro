@@ -1,5 +1,5 @@
 ---
-import { getBranches, getProject, getProjectConfig, getActiveUserTags } from "@devpad/core";
+import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '../../../layouts/PageLayout.astro';
 import ProjectLayout from '../../../layouts/ProjectLayout.astro';
 import ProjectSettings from '../../../components/ProjectSettings.astro';
@@ -12,23 +12,51 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project, error } = await getProject(user.id, project_id);
+const apiClient = getServerApiClient(Astro.locals);
+
+let project;
+let error: string | null = null;
+try {
+	project = await apiClient.getByName(project_id);
+	if (!project) {
+		error = "Project not found";
+	} else if (project.owner_id !== user.id) {
+		error = "Access denied";
+	}
+} catch (err) {
+	console.error("Failed to fetch project:", err);
+	error = "Failed to fetch project";
+}
 if (error) return new Response(null, { status: 500, statusText: error });
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 
-const { config, error: config_error } = await getProjectConfig(project.id);
+let config;
+let config_error: string | null = null;
+try {
+	config = await apiClient.projects.config.load(project.id);
+} catch (err) {
+	console.error("Failed to load project config:", err);
+	config_error = "Failed to load project config";
+}
 if (config_error) return new Response(null, { status: 500, statusText: config_error });
 
 const [owner, repo] = project.repo_url ? project.repo_url.split("/").slice(-2) : [null, null];
 
+// TODO: Need to add getBranches to API client or create a separate service call
 let branches: any[] | null = null;
-if (owner && repo) {
-	if (Astro.locals.session?.access_token) {
-		branches = await getBranches(owner, repo, Astro.locals.session.access_token);
-	}
-}
+// if (owner && repo) {
+// 	if (Astro.locals.session?.access_token) {
+// 		branches = await getBranches(owner, repo, Astro.locals.session.access_token);
+// 	}
+// }
 
-const available_tags = await getActiveUserTags(user.id) as TagWithTypedColor[];
+let available_tags: TagWithTypedColor[] = [];
+try {
+	available_tags = await apiClient.tags.list() as TagWithTypedColor[];
+} catch (err) {
+	console.error("Failed to load tags:", err);
+	// Continue with empty tags array
+}
 ---
 
 <PageLayout title={`Settings - ${project_id}`}>

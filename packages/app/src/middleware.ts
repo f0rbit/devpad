@@ -1,7 +1,12 @@
 import type { MiddlewareHandler } from "astro";
 import { defineMiddleware } from "astro:middleware";
 import { verifyRequestOrigin } from "lucia";
-import { log } from "@devpad/core";
+
+// Browser-safe logger for middleware
+const log = {
+	middleware: typeof console !== "undefined" ? console.log.bind(console, "[MIDDLEWARE]") : () => {},
+	error: typeof console !== "undefined" ? console.error.bind(console, "[MIDDLEWARE]") : () => {},
+};
 
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];

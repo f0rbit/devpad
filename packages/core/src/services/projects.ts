@@ -80,14 +80,24 @@ export async function upsertProject(data: UpsertProject, owner_id: string, acces
 		// the new_project is imported from github and doesn't have a specification, import it from the README
 		if (fetch_specification && !data.specification && access_token) {
 			console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
-			// we need to get OWNER and REPO from the repo_url
-			const { getSpecification } = await import("./github");
-			const slices = repo_url.split("/");
-			const repo = slices.at(-1);
-			const owner = slices.at(-2);
-			if (!repo || !owner) throw new Error("Invalid repo_url");
-			const readme = await getSpecification(owner, repo, access_token);
-			data.specification = readme;
+			try {
+				// we need to get OWNER and REPO from the repo_url
+				const { getSpecification } = await import("./github");
+				const slices = repo_url.split("/");
+				const repo = slices.at(-1);
+				const owner = slices.at(-2);
+				if (!repo || !owner) throw new Error("Invalid repo_url");
+
+				const readme = await getSpecification(owner, repo, access_token);
+				data.specification = readme;
+				console.log(`✅ Successfully fetched README for ${owner}/${repo}`);
+			} catch (error) {
+				// Handle case where repository has no README or other GitHub API errors
+				console.log(`⚠️  Could not fetch README for project ${data.project_id}:`, error instanceof Error ? error.message : String(error));
+				console.log(`📝 Project will be created without specification - user can add it manually later`);
+				// Continue with project creation even if README fetch fails
+				data.specification = null;
+			}
 		}
 	}
 

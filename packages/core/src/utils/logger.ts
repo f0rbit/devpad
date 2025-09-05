@@ -20,9 +20,9 @@ interface DebugConfig {
 
 // 🎯 CENTRAL DEBUG CONFIGURATION - Control all logging from here
 const DEBUG_LOGS: DebugConfig = {
-	auth: true, // Authentication flows (login, logout, sessions)
+	auth: false, // Authentication flows (login, logout, sessions)
 	tasks: false, // Task operations (create, update, delete)
-	projects: true, // Project operations (create, update, scan)
+	projects: false, // Project operations (create, update, scan)
 	repos: false, // GitHub repository operations
 	middleware: false, // Request middleware processing
 	api: false, // General API operations
@@ -30,7 +30,7 @@ const DEBUG_LOGS: DebugConfig = {
 	scanning: false, // Codebase scanning operations
 	github: false, // GitHub API interactions
 	jwt: false, // JWT token operations
-	database: true, // Database operations
+	database: false, // Database operations
 	startup: false, // Application startup messages
 };
 

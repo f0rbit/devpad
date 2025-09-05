@@ -1,8 +1,8 @@
 ---
-
-import { getProject } from "@devpad/core";
+import { Project } from "@devpad/schema";
 import PageLayout from '@/layouts/PageLayout.astro';
 import ProjectLayout from '@/layouts/ProjectLayout.astro';
+import { getServerApiClient } from "@/utils/api-client";
 
 const { project_id } = Astro.params;
 
@@ -11,10 +11,22 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-// want to fetch the project from db
-const { project, error } = await getProject(user.id, project_id);
-
-if (error) return new Response(null, { status: 500, statusText: error });
+// Get server API client and fetch project by name (project_id is the human-readable name)
+const apiClient = getServerApiClient(Astro.locals);
+let project: Project | null = null;
+try {
+	project = await apiClient.projects.getByName(project_id);
+	if (!project) {
+		return new Response(null, { status: 404, statusText: "Project not found" });
+	}
+	// Verify user ownership
+	if (project.owner_id !== user.id) {
+		return new Response(null, { status: 403, statusText: "Access denied" });
+	}
+} catch (error) {
+	console.error("Failed to fetch project:", error);
+	return new Response(null, { status: 500, statusText: "Failed to fetch project" });
+}
 ---
 
 <PageLayout title={`${project_id} - devpad`}>
