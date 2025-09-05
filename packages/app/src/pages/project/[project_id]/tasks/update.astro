@@ -1,5 +1,6 @@
 ---
-import { getProject, getRecentUpdate, getProjectTasks, type Task, _FetchedTask, TaskWithDetails } from "@devpad/core";
+import { getServerApiClient } from "@/utils/api-client";
+import type { Task, TaskWithDetails } from "@devpad/schema";
 import PageLayout from '@/layouts/PageLayout.astro';
 import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro';
 import { UpdateDiffList } from '@/components/solid/UpdateDiff';
@@ -9,25 +10,42 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project: found_project, error } = await getProject(user.id, project_id);
-if (error) return new Response(null, { status: 500, statusText: error });
-if (!found_project) return new Response(null, { status: 404, statusText: "Project not found" });
+const apiClient = getServerApiClient(Astro.locals);
 
-const project_uuid = found_project.id;
+let project;
+let project_tasks: TaskWithDetails[] = [];
+let codebase_task_map: Record<string, TaskWithDetails> = {};
+let update = null;
 
-const project_tasks = await getProjectTasks(project_uuid);
-// build a map of task.codebases_tasks.id -> task
-const codebase_task_map = project_tasks.reduce(
-	(acc, task) => {
-		if (!task.codebase_tasks) return acc;
-		acc[task.codebase_tasks.id] = task;
-		return acc;
-	},
-	{} as Record<string, TaskWithDetails>
-);
+try {
+	project = await apiClient.getByName(project_id);
+	if (!project) {
+		return new Response(null, { status: 404, statusText: "Project not found" });
+	}
+	if (project.owner_id !== user.id) {
+		return new Response(null, { status: 403, statusText: "Access denied" });
+	}
 
-// get the most recent todo_update for the project and render it
-const update = await getRecentUpdate(found_project);
+	// Get project tasks
+	project_tasks = await apiClient.tasks.getByProject(project.id);
+	
+	// Build a map of task.codebases_tasks.id -> task
+	codebase_task_map = project_tasks.reduce(
+		(acc, task) => {
+			if (!task.codebase_tasks) return acc;
+			acc[task.codebase_tasks.id] = task;
+			return acc;
+		},
+		{} as Record<string, TaskWithDetails>
+	);
+
+	// TODO: Need to implement getRecentUpdate API endpoint
+	// const update = await getRecentUpdate(found_project);
+	update = null; // Temporarily disabled until API endpoint is implemented
+} catch (error) {
+	console.error("Failed to load project tasks update data:", error);
+	return new Response(null, { status: 500, statusText: "Failed to load project data" });
+}
 
 const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse(update.data) : update.data) : null;
 ---

@@ -30,6 +30,7 @@ export const upsert_todo = z.object({
 	priority: z.union([z.literal("LOW"), z.literal("MEDIUM"), z.literal("HIGH")]).optional(),
 	owner_id: z.string(),
 	project_id: z.string().optional().nullable(),
+	goal_id: z.string().optional().nullable(),
 });
 
 export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
@@ -90,4 +91,24 @@ export const config_schema = z.object({
 		})
 	),
 	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
+});
+
+export const upsert_milestone = z.object({
+	id: z.string().optional().nullable(),
+	project_id: z.string(),
+	name: z.string().min(1).max(200),
+	description: z.string().nullable().optional(),
+	target_time: z.string().nullable().optional(),
+	target_version: z.string().nullable().optional(),
+	finished_at: z.string().nullable().optional(),
+	after_id: z.string().nullable().optional(),
+});
+
+export const upsert_goal = z.object({
+	id: z.string().optional().nullable(),
+	milestone_id: z.string(),
+	name: z.string().min(1).max(200),
+	description: z.string().nullable().optional(),
+	target_time: z.string().nullable().optional(),
+	finished_at: z.string().nullable().optional(),
 });

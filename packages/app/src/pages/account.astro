@@ -1,5 +1,5 @@
 ---
-import { getAPIKeys, getUserHistory } from "@devpad/core";
+import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 
@@ -9,8 +9,17 @@ if (!user) {
 	return new Response(null, { status: 401, statusText: "Unauthorized" });
 }
 
-const keys = user ? await getAPIKeys(user.id) : [];
-const user_history = await getUserHistory(user.id);
+const apiClient = getServerApiClient(Astro.locals);
+
+let keys = [];
+let user_history = [];
+try {
+	const keysResponse = await apiClient.auth.keys.list();
+	keys = keysResponse.keys || [];
+	user_history = await apiClient.user.history();
+} catch (error) {
+	console.error("Failed to load account data:", error);
+}
 ---
 
 <PageLayout title="Account - devpad">

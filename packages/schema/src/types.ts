@@ -1,7 +1,7 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { z } from "zod";
-import type { action, api_key, codebase_tasks, ignore_path, project, session, tag, tag_config, task, task_tag, todo_updates, tracker_result, user } from "./database/schema.js";
-import type { config_schema, project_config, save_config_request, save_tags_request, update_action, update_user, upsert_project, upsert_tag, upsert_todo } from "./validation.js";
+import type { action, api_key, codebase_tasks, goal, ignore_path, milestone, project, session, tag, tag_config, task, task_tag, todo_updates, tracker_result, user } from "./database/schema.js";
+import type { config_schema, project_config, save_config_request, save_tags_request, update_action, update_user, upsert_goal, upsert_milestone, upsert_project, upsert_tag, upsert_todo } from "./validation.js";
 
 // Database table select types (inferred from Drizzle schema)
 export type User = InferSelectModel<typeof user>;
@@ -10,6 +10,8 @@ export type ApiKey = InferSelectModel<typeof api_key>;
 export type Project = InferSelectModel<typeof project>;
 export type Task = InferSelectModel<typeof task>;
 export type Tag = InferSelectModel<typeof tag>;
+export type Milestone = InferSelectModel<typeof milestone>;
+export type Goal = InferSelectModel<typeof goal>;
 export type TaskTag = InferSelectModel<typeof task_tag>;
 export type Action = InferSelectModel<typeof action>;
 export type CodebaseTask = InferSelectModel<typeof codebase_tasks>;
@@ -25,6 +27,8 @@ export type InsertApiKey = InferInsertModel<typeof api_key>;
 export type InsertProject = InferInsertModel<typeof project>;
 export type InsertTask = InferInsertModel<typeof task>;
 export type InsertTag = InferInsertModel<typeof tag>;
+export type InsertMilestone = InferInsertModel<typeof milestone>;
+export type InsertGoal = InferInsertModel<typeof goal>;
 export type InsertTaskTag = InferInsertModel<typeof task_tag>;
 export type InsertAction = InferInsertModel<typeof action>;
 export type InsertCodebaseTask = InferInsertModel<typeof codebase_tasks>;
@@ -37,6 +41,8 @@ export type InsertIgnorePath = InferInsertModel<typeof ignore_path>;
 export type UpsertProject = z.infer<typeof upsert_project>;
 export type UpsertTodo = z.infer<typeof upsert_todo>;
 export type UpsertTag = z.infer<typeof upsert_tag>;
+export type UpsertMilestone = z.infer<typeof upsert_milestone>;
+export type UpsertGoal = z.infer<typeof upsert_goal>;
 export type UpdateAction = z.infer<typeof update_action>;
 export type ProjectConfig = z.infer<typeof project_config>;
 export type SaveConfigRequest = z.infer<typeof save_config_request>;

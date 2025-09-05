@@ -2,7 +2,9 @@
 
 // Re-export types from schema for convenience
 export type {
+	Goal,
 	HistoryAction,
+	Milestone,
 	Project,
 	ProjectWithTasks,
 	ScanStatus,
@@ -13,6 +15,8 @@ export type {
 	TaskWithDetails,
 	UpdateAction,
 	UpdateData,
+	UpsertGoal,
+	UpsertMilestone,
 	UpsertProject,
 	UpsertTag,
 	UpsertTodo,

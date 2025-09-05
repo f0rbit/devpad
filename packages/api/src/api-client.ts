@@ -116,10 +116,13 @@ export class ApiClient {
 
 		map: async (filters?: { private?: boolean }): Promise<Record<string, Project>> => {
 			const projects = await this.projects.list(filters);
-			return projects.reduce((acc, project) => {
-				acc[project.project_id] = project;
-				return acc;
-			}, {} as Record<string, Project>);
+			return projects.reduce(
+				(acc, project) => {
+					acc[project.project_id] = project;
+					return acc;
+				},
+				{} as Record<string, Project>
+			);
 		},
 
 		/**
@@ -275,6 +278,11 @@ export class ApiClient {
 			) => this.httpClient.post<{ success: boolean }>(`/projects/scan_status?project_id=${projectId}`, { body: data }),
 		},
 
+		/**
+		 * Get project history
+		 */
+		history: (projectId: string) => this.httpClient.get<any[]>(`/projects/${projectId}/history`),
+
 		// === BACKWARD COMPATIBILITY METHODS ===
 		getById: async (id: string) => {
 			const project = await this.projects.find(id);
@@ -428,6 +436,83 @@ export class ApiClient {
 	};
 
 	/**
+	 * Milestones namespace - handles milestone operations
+	 */
+	public readonly milestones = {
+		/**
+		 * List milestones for authenticated user
+		 */
+		list: () => this.httpClient.get<any[]>("/milestones"),
+
+		/**
+		 * Get milestone by ID
+		 */
+		find: async (id: string) => {
+			try {
+				return await this.httpClient.get<any>(`/milestones/${id}`);
+			} catch (error) {
+				return null;
+			}
+		},
+
+		/**
+		 * Create new milestone
+		 */
+		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string }) => this.httpClient.post<any>("/milestones", { body: data }),
+
+		/**
+		 * Update milestone
+		 */
+		update: (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }) => this.httpClient.patch<any>(`/milestones/${id}`, { body: { ...data, id } }),
+
+		/**
+		 * Delete milestone (soft delete)
+		 */
+		delete: (id: string) => this.httpClient.delete<{ success: boolean; message: string }>(`/milestones/${id}`),
+
+		/**
+		 * Get goals for a milestone
+		 */
+		goals: (id: string) => this.httpClient.get<any[]>(`/milestones/${id}/goals`),
+	};
+
+	/**
+	 * Goals namespace - handles goal operations
+	 */
+	public readonly goals = {
+		/**
+		 * List goals for authenticated user
+		 */
+		list: () => this.httpClient.get<any[]>("/goals"),
+
+		/**
+		 * Get goal by ID
+		 */
+		find: async (id: string) => {
+			try {
+				return await this.httpClient.get<any>(`/goals/${id}`);
+			} catch (error) {
+				return null;
+			}
+		},
+
+		/**
+		 * Create new goal
+		 */
+		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string }) => this.httpClient.post<any>("/goals", { body: data }),
+
+		/**
+		 * Update goal
+		 */
+		update: (id: string, data: { name?: string; description?: string; target_time?: string }) => this.httpClient.patch<any>(`/goals/${id}`, { body: { ...data, id } }),
+
+		/**
+		 * Delete goal (soft delete)
+		 */
+		delete: (id: string) => this.httpClient.delete<{ success: boolean; message: string }>(`/goals/${id}`),
+	};
+
+	/**
 	 * Tags namespace - handles tag operations
 	 */
 	public readonly tags = {
@@ -477,6 +562,11 @@ export class ApiClient {
 		 * Update user preferences
 		 */
 		preferences: (data: { id: string; task_view?: string; name?: string; email_verified?: boolean }) => this.httpClient.patch<{ id: string; name: string; task_view: string }>("/user/preferences", { body: data }),
+
+		/**
+		 * Get user activity history
+		 */
+		history: () => this.httpClient.get<any[]>("/user/history"),
 	};
 
 	/**
@@ -487,5 +577,10 @@ export class ApiClient {
 		 * List user repositories from GitHub
 		 */
 		repos: () => this.httpClient.get<Array<{ id: number; name: string; full_name: string; private: boolean; html_url: string }>>("/repos"),
+
+		/**
+		 * Get repository branches
+		 */
+		branches: (owner: string, repo: string) => this.httpClient.get<Array<{ name: string; commit: { sha: string; url: string; message: string } }>>(`/repos/${owner}/${repo}/branches`),
 	};
 }

@@ -1,5 +1,5 @@
 ---
-import { getProjectHistory, getProject } from "@devpad/core";
+import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import ProjectLayout from '@/layouts/ProjectLayout.astro';
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
@@ -11,14 +11,25 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project: found_project, error } = await getProject(user.id, project_id);
-if (error) return new Response(null, { status: 500, statusText: error });
-if (!found_project) return new Response(null, { status: 404, statusText: "Project not found" });
+const apiClient = getServerApiClient(Astro.locals);
 
-const project_uuid = found_project.id;
+let project;
+let history = [];
+try {
+	project = await apiClient.getByName(project_id);
+	if (!project) {
+		return new Response(null, { status: 404, statusText: "Project not found" });
+	}
+	if (project.owner_id !== user.id) {
+		return new Response(null, { status: 403, statusText: "Access denied" });
+	}
 
-// get all updates as well
-const history = await getProjectHistory(project_uuid);
+	// Get project history
+	history = await apiClient.projects.history(project_id);
+} catch (error) {
+	console.error("Failed to load project history:", error);
+	return new Response(null, { status: 500, statusText: "Failed to load project data" });
+}
 ---
 
 <PageLayout title={`History - ${project_id}`}>

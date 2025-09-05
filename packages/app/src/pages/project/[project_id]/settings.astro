@@ -42,13 +42,15 @@ if (config_error) return new Response(null, { status: 500, statusText: config_er
 
 const [owner, repo] = project.repo_url ? project.repo_url.split("/").slice(-2) : [null, null];
 
-// TODO: Need to add getBranches to API client or create a separate service call
 let branches: any[] | null = null;
-// if (owner && repo) {
-// 	if (Astro.locals.session?.access_token) {
-// 		branches = await getBranches(owner, repo, Astro.locals.session.access_token);
-// 	}
-// }
+if (owner && repo) {
+	try {
+		branches = await apiClient.github.branches(owner, repo);
+	} catch (error) {
+		console.error("Failed to fetch branches:", error);
+		// Continue with null branches - this is not a critical failure
+	}
+}
 
 let available_tags: TagWithTypedColor[] = [];
 try {
