@@ -1,6 +1,7 @@
 import type { UpsertProject } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { projectRepository, type Project } from "../data/project-repository";
+import { log } from "../utils/logger";
 
 export async function getUserProjects(user_id: string): Promise<Project[]> {
 	return projectRepository.getUserProjects(user_id);
@@ -39,8 +40,38 @@ export async function getProjectConfig(project_id: string) {
 export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
 
 export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string): Promise<Project> {
+	log.projects("🔧 [upsertProject] Called with:", {
+		hasId: !!data.id,
+		hasProjectId: !!data.project_id,
+		projectId: data.project_id,
+		id: data.id,
+		name: data.name,
+		ownerId: owner_id,
+		dataOwnerId: data.owner_id,
+		visibility: data.visibility,
+		status: data.status,
+		hasAccessToken: !!access_token,
+		hasRepoUrl: !!data.repo_url,
+		hasRepoId: !!data.repo_id,
+	});
+	log.projects("🔧 [upsertProject] Called with:", {
+		hasId: !!data.id,
+		hasProjectId: !!data.project_id,
+		projectId: data.project_id,
+		id: data.id,
+		name: data.name,
+		ownerId: owner_id,
+		dataOwnerId: data.owner_id,
+		visibility: data.visibility,
+		status: data.status,
+		hasAccessToken: !!access_token,
+		hasRepoUrl: !!data.repo_url,
+		hasRepoId: !!data.repo_id,
+	});
+
 	// Handle GitHub specification fetching if needed
 	if (access_token) {
+		log.projects("🔍 [upsertProject] Has access token, checking GitHub integration");
 		const previous = data.id ? (await getProjectById(data.id)).project : null;
 		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
 		const repo_url = data.repo_url ?? previous?.repo_url;
@@ -60,5 +91,13 @@ export async function upsertProject(data: UpsertProject, owner_id: string, acces
 		}
 	}
 
-	return projectRepository.upsertProject(data, owner_id);
+	log.projects("📝 [upsertProject] Calling projectRepository.upsertProject");
+	const result = await projectRepository.upsertProject(data, owner_id);
+
+	log.projects("✅ [upsertProject] Repository upsert completed", {
+		resultId: result.id,
+		resultName: result.name,
+	});
+
+	return result;
 }

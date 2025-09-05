@@ -2,6 +2,7 @@ import type { TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
 import { db, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/server";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { BaseRepository } from "./base-repository";
+import { log } from "../utils/logger";
 
 export type Project = typeof project.$inferSelect;
 
@@ -199,23 +200,55 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 	}
 
 	async upsertProject(data: UpsertProject, owner_id: string): Promise<Project> {
+		log.projects("🗂️  [ProjectRepository] upsertProject called", {
+			hasId: !!data.id,
+			hasProjectId: !!data.project_id,
+			projectId: data.project_id,
+			id: data.id,
+			name: data.name,
+			ownerId: owner_id,
+			dataOwnerId: data.owner_id,
+		});
+
+		log.projects("🔍 [ProjectRepository] Looking up previous project...");
 		const previous = await (async () => {
-			if (!data.id) return null;
-			return (await this.getProjectById(data.id)).project ?? null;
+			if (!data.id) {
+				log.projects("📭 [ProjectRepository] No data.id provided, no previous project");
+				return null;
+			}
+			log.projects("🔎 [ProjectRepository] Fetching existing project by ID:", data.id);
+			const result = (await this.getProjectById(data.id)).project ?? null;
+			if (result) {
+				log.projects("✅ [ProjectRepository] Found existing project", {
+					existingId: result.id,
+					existingOwnerId: result.owner_id,
+					existingProjectId: result.project_id,
+				});
+			} else {
+				log.projects("📭 [ProjectRepository] No existing project found");
+			}
+			return result;
 		})();
 
 		// authorize
 		if (previous && previous.owner_id !== owner_id) {
+			log.projects("❌ [ProjectRepository] Authorization failed - owner mismatch", {
+				previousOwnerId: previous.owner_id,
+				requestOwnerId: owner_id,
+			});
 			throw new Error("Unauthorized: User does not own this project");
 		}
 
 		const final_owner_id = data.owner_id ?? previous?.owner_id ?? owner_id;
+		log.projects("🔧 [ProjectRepository] Determined final owner_id:", final_owner_id);
 
 		if (!final_owner_id) {
+			log.projects("❌ [ProjectRepository] No owner_id available");
 			throw new Error("Bad Request: No owner_id provided");
 		}
 
 		const exists = !!previous;
+		log.projects("📊 [ProjectRepository] Project existence:", { exists, hasId: !!data.id });
 
 		const upsert = {
 			...data,
@@ -224,29 +257,86 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 			owner_id: final_owner_id,
 		};
 
+		// Remove any null values that could cause database issues
+		const cleanUpsert = Object.fromEntries(Object.entries(upsert).filter(([_, value]) => value !== null)) as typeof upsert;
+
+		log.projects("🧹 [ProjectRepository] Cleaned upsert data", {
+			originalKeys: Object.keys(upsert),
+			cleanedKeys: Object.keys(cleanUpsert),
+			removedNulls: Object.keys(upsert).filter(key => upsert[key as keyof typeof upsert] === null),
+		});
+
+		log.projects("🔄 [ProjectRepository] Prepared upsert data", {
+			hasCleanUpsertId: !!cleanUpsert.id,
+			cleanUpsertProjectId: cleanUpsert.project_id,
+			cleanUpsertName: cleanUpsert.name,
+			cleanUpsertOwnerId: cleanUpsert.owner_id,
+		});
+
 		let result: Project | null = null;
-		if (exists && upsert.id) {
-			// perform update
-			result = await this.updateById(upsert.id, upsert);
-		} else {
-			// perform insert with conflict handling
+		if (exists && cleanUpsert.id) {
+			log.projects("🔄 [ProjectRepository] Performing UPDATE operation");
 			try {
+				result = await this.updateById(cleanUpsert.id, cleanUpsert);
+				log.projects("✅ [ProjectRepository] UPDATE completed", {
+					resultId: result?.id,
+					resultName: result?.name,
+				});
+			} catch (error) {
+				log.projects("💥 [ProjectRepository] UPDATE failed", {
+					error: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined,
+				});
+				throw error;
+			}
+		} else {
+			log.projects("➕ [ProjectRepository] Performing INSERT with conflict handling");
+			log.projects("📊 [ProjectRepository] Clean upsert data details:", {
+				hasId: !!cleanUpsert.id,
+				id: cleanUpsert.id,
+				project_id: cleanUpsert.project_id,
+				name: cleanUpsert.name,
+				owner_id: cleanUpsert.owner_id,
+				status: cleanUpsert.status,
+				visibility: cleanUpsert.visibility,
+				dataType: typeof cleanUpsert,
+			});
+
+			try {
+				log.database("🔄 [ProjectRepository] Executing INSERT with conflict handling...");
 				const res = await db
 					.insert(project)
-					.values(upsert as any)
+					.values(cleanUpsert as any)
 					.onConflictDoUpdate({
 						target: [project.id],
-						set: upsert as any,
+						set: cleanUpsert as any,
 					})
 					.returning();
+
 				result = (res[0] as Project) || null;
+				log.projects("✅ [ProjectRepository] INSERT completed", {
+					resultId: result?.id,
+					resultName: result?.name,
+					resultProjectId: result?.project_id,
+				});
 			} catch (error) {
-				console.error("Error upserting project:", error);
+				log.projects("💥 [ProjectRepository] INSERT failed", {
+					errorType: error instanceof Error ? error.constructor.name : typeof error,
+					error: error instanceof Error ? error.message : String(error),
+					stack: error instanceof Error ? error.stack : undefined,
+				});
+
+				// Log the exact values that were being inserted
+				console.error("Failed INSERT clean values:", JSON.stringify(cleanUpsert, null, 2));
+				console.error("Full INSERT error:", error);
 				throw error;
 			}
 		}
 
-		if (!result) throw new Error("Project upsert failed");
+		if (!result) {
+			log.projects("💥 [ProjectRepository] No result from upsert operation");
+			throw new Error("Project upsert failed");
+		}
 
 		const new_project = result;
 		const project_id = new_project.id;

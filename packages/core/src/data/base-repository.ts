@@ -1,6 +1,7 @@
 import { db } from "@devpad/schema/database/server";
 import { action, type ActionType } from "@devpad/schema/database";
 import { eq, and, type SQL } from "drizzle-orm";
+import { log } from "../utils/logger";
 
 /**
  * Base repository class providing common database operations
@@ -81,16 +82,35 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 	 * Update a record by ID
 	 */
 	protected async updateById(id: string, data: Partial<TInsert>, idField: string = "id"): Promise<TSelect | null> {
+		log.database("💾 [BaseRepository] updateById called", {
+			id,
+			idField,
+			dataKeys: data ? Object.keys(data) : [],
+			tableName: (this.table as any)._.name || "unknown",
+		});
+
 		try {
+			log.database("🔄 [BaseRepository] Executing update query...");
 			const result = await db
 				.update(this.table as any)
 				.set(data as any)
 				.where(eq((this.table as any)[idField], id))
 				.returning();
-			return ((result as any)[0] as TSelect) || null;
+
+			const record = ((result as any)[0] as TSelect) || null;
+			log.database("✅ [BaseRepository] Update completed", {
+				success: !!record,
+				recordId: record ? (record as any)[idField] : null,
+			});
+
+			return record;
 		} catch (error) {
+			log.database("💥 [BaseRepository] Update failed", {
+				error: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
+			});
 			console.error(`Error updating record ${id}:`, error);
-			return null;
+			throw error; // Re-throw instead of returning null
 		}
 	}
 

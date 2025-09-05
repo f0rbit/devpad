@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const upsert_project = z.object({
-	id: z.string().optional(),
+	id: z.string().optional().nullable(),
 	project_id: z.string(),
 	owner_id: z.string().optional(),
 	name: z.string(),

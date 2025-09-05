@@ -102,36 +102,135 @@ app.get("/projects/public", requireAuth, async c => {
 	}
 });
 
-app.patch("/projects", requireAuth, zValidator("json", upsert_project), async c => {
-	const user = c.get("user")!;
-	const data = c.req.valid("json");
+// PATCH /projects with comprehensive logging
+app.patch(
+	"/projects",
+	requireAuth,
+	async (c, next) => {
+		log.projects("🔍 [PATCH /projects] Starting request processing...");
 
-	// Assert that the owner_id matches the authenticated user
-	if (data.owner_id && data.owner_id !== user.id) {
-		// console.log("Unauthorized: owner_id mismatch", { user_id: user.id, owner_id: data.owner_id });
-		return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
-	}
+		try {
+			// Read raw body for debugging
+			const rawBody = await c.req.text();
+			log.projects("📥 [PATCH /projects] Raw request body:", rawBody);
 
-	try {
-		// Get access token from session if available
-		const session = c.get("session");
-		const access_token = session?.access_token;
-		const newProject = await upsertProject(data, user.id, access_token);
+			// Parse and validate manually to see exact validation errors
+			try {
+				const parsedBody = JSON.parse(rawBody);
+				log.projects("✅ [PATCH /projects] JSON parsing successful");
 
-		return c.json(newProject);
-	} catch (err) {
-		console.error(err);
-		if (err instanceof Error) {
-			if (err.message.includes("Unauthorized")) {
-				return c.json({ error: err.message }, 401);
+				// Manual schema validation for detailed error reporting
+				const validationResult = upsert_project.safeParse(parsedBody);
+				if (!validationResult.success) {
+					log.projects("❌ [PATCH /projects] VALIDATION FAILED - Schema errors:", {
+						totalErrors: validationResult.error.errors.length,
+						errors: validationResult.error.errors.map(err => ({
+							path: err.path.join("."),
+							message: err.message,
+							code: err.code,
+						})),
+						formattedErrors: validationResult.error.format(),
+					});
+
+					return c.json(
+						{
+							error: "Schema validation failed",
+							details: validationResult.error.errors,
+							formatted: validationResult.error.format(),
+						},
+						400
+					);
+				} else {
+					log.projects("✅ [PATCH /projects] Manual validation PASSED");
+				}
+			} catch (parseErr) {
+				log.projects("❌ [PATCH /projects] JSON parsing failed:", parseErr);
+				return c.json({ error: "Invalid JSON" }, 400);
 			}
-			if (err.message.includes("Bad Request")) {
-				return c.json({ error: err.message }, 400);
-			}
+
+			// Rebuild request for zValidator
+			const newReq = new Request(c.req.url, {
+				method: c.req.method,
+				headers: c.req.raw.headers,
+				body: rawBody,
+			});
+			(c.req as any).raw = newReq;
+		} catch (err) {
+			log.projects("❌ [PATCH /projects] Pre-validation error:", err);
+			return c.json({ error: "Request processing error" }, 500);
 		}
-		return c.json({ error: "Internal Server Error" }, 500);
+
+		await next();
+	},
+	zValidator("json", upsert_project),
+	async c => {
+		try {
+			log.projects("🎯 [PATCH /projects] Entering main handler...");
+
+			log.projects("🔍 [PATCH /projects] Getting user from context...");
+			const user = c.get("user");
+			if (!user) {
+				log.projects("❌ [PATCH /projects] No user in context");
+				return c.json({ error: "No authenticated user" }, 401);
+			}
+			log.projects("✅ [PATCH /projects] User found:", user.id);
+
+			log.projects("📋 [PATCH /projects] Getting validated data...");
+			const data = c.req.valid("json");
+			log.projects("📊 [PATCH /projects] Handler data:", {
+				userId: user.id,
+				dataKeys: Object.keys(data),
+				projectId: data.project_id,
+				name: data.name,
+				ownerId: data.owner_id,
+			});
+
+			// Verify ownership
+			if (data.owner_id && data.owner_id !== user.id) {
+				log.projects("❌ [PATCH /projects] Owner ID mismatch");
+				return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
+			}
+
+			log.projects("🔑 [PATCH /projects] Getting session and access token...");
+			const session = c.get("session");
+			const access_token = session?.access_token;
+			log.projects("🔑 [PATCH /projects] Session info:", {
+				hasSession: !!session,
+				hasAccessToken: !!access_token,
+			});
+
+			log.projects("🚀 [PATCH /projects] Calling upsertProject...");
+			const newProject = await upsertProject(data, user.id, access_token);
+
+			log.projects("✅ [PATCH /projects] Success!", {
+				newProjectId: newProject.id,
+				newProjectName: newProject.name,
+			});
+			return c.json(newProject);
+		} catch (err) {
+			log.projects("💥 [PATCH /projects] Handler error:", {
+				errorType: err instanceof Error ? err.constructor.name : typeof err,
+				error: err instanceof Error ? err.message : String(err),
+				stack: err instanceof Error ? err.stack : undefined,
+			});
+
+			console.error("Full error object:", err);
+
+			if (err instanceof Error) {
+				if (err.message.includes("Unauthorized")) return c.json({ error: err.message }, 401);
+				if (err.message.includes("Bad Request")) return c.json({ error: err.message }, 400);
+			}
+
+			return c.json(
+				{
+					error: "Internal Server Error",
+					details: err instanceof Error ? err.message : String(err),
+				},
+				500
+			);
+		}
 	}
-});
+);
 
 // Tasks endpoints
 app.get("/tasks", requireAuth, async c => {
@@ -242,9 +341,19 @@ app.patch("/tasks/save_tags", requireAuth, zValidator("json", save_tags_request)
 	const user = c.get("user")!;
 	const data = c.req.valid("json");
 
-	// Ensure all tags belong to the authenticated user
-	for (const tag_data of data) {
-		if (tag_data.owner_id !== user.id) {
+	console.log("🔄 [PATCH /tasks/save_tags] Request received", {
+		userId: user.id,
+		userName: user.name,
+		tagCount: data.length,
+	});
+
+	// Verify ownership for each tag
+	for (const tag of data) {
+		if (tag.owner_id && tag.owner_id !== user.id) {
+			console.log("❌ [PATCH /tasks/save_tags] Owner ID mismatch", {
+				user_id: user.id,
+				owner_id: tag.owner_id,
+			});
 			return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
 		}
 	}

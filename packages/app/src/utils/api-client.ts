@@ -1,5 +1,10 @@
 import ApiClient from "@devpad/api";
-import { log } from "@devpad/core";
+
+// Browser-safe logger (no server dependencies)
+const log = {
+	api: typeof window !== "undefined" ? console.log.bind(console, "[API-CLIENT]") : () => {},
+	error: typeof window !== "undefined" ? console.error.bind(console, "[API-CLIENT]") : () => {},
+};
 
 // Global API client instance
 let _apiClient: ApiClient | null = null;
