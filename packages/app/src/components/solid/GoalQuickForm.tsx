@@ -46,43 +46,18 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 
 			let result: Goal;
 			if (mode === "create") {
-				const response = await fetch("/api/v0/goals", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${(apiClient as any)._api_key}`,
-					},
-					body: JSON.stringify({
-						milestone_id: state.milestone_id,
-						name: state.name.trim(),
-						description: state.description.trim() || undefined,
-						target_time: state.target_time || undefined,
-					}),
+				result = await apiClient.goals.create({
+					milestone_id: state.milestone_id,
+					name: state.name.trim(),
+					description: state.description.trim() || undefined,
+					target_time: state.target_time || undefined,
 				});
-
-				if (!response.ok) {
-					throw new Error("Failed to create goal");
-				}
-				result = await response.json();
 			} else {
-				const response = await fetch(`/api/v0/goals/${goal!.id}`, {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${(apiClient as any)._api_key}`,
-					},
-					body: JSON.stringify({
-						id: goal!.id,
-						name: state.name.trim(),
-						description: state.description.trim() || undefined,
-						target_time: state.target_time || undefined,
-					}),
+				result = await apiClient.goals.update(goal!.id, {
+					name: state.name.trim(),
+					description: state.description.trim() || undefined,
+					target_time: state.target_time || undefined,
 				});
-
-				if (!response.ok) {
-					throw new Error("Failed to update goal");
-				}
-				result = await response.json();
 			}
 
 			setRequestState("success");

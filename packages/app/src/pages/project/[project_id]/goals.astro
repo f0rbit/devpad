@@ -37,6 +37,6 @@ if (!project) return new Response(null, { status: 404, statusText: "Project not 
 <PageLayout title={`Milestones & Goals - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
 		<h5>project goals</h5>
-		<MilestonesManager projectId={project.id} initialMilestones={milestones} client:load />
+		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} client:load />
 	</ProjectLayout>
 </PageLayout>

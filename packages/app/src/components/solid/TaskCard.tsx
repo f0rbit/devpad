@@ -31,14 +31,8 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	onMount(async () => {
 		try {
 			const apiClient = getApiClient();
-			const response = await fetch(`/api/v0/goals/${goal_id}`, {
-				headers: {
-					Authorization: `Bearer ${(apiClient as any)._api_key}`,
-				},
-			});
-
-			if (response.ok) {
-				const goal = await response.json();
+			const goal = await apiClient.goals.find(goal_id);
+			if (goal) {
 				setGoalName(goal.name);
 			}
 		} catch (error) {

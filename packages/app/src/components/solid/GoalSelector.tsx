@@ -48,30 +48,19 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 		try {
 			const apiClient = getApiClient();
 
-			// Get project milestones using direct fetch
-			const milestonesResponse = await fetch(`/api/v0/projects/${project_id}/milestones`, {
-				headers: {
-					Authorization: `Bearer ${(apiClient as any)._api_key}`,
-				},
-			});
-
-			if (!milestonesResponse.ok) {
-				throw new Error("Failed to fetch milestones");
-			}
-
-			const projectMilestones: Milestone[] = await milestonesResponse.json();
+			// Get project milestones using API client
+			const projectMilestones: Milestone[] = await apiClient.milestones.getByProject(project_id);
 
 			// Get goals for each milestone
 			const milestonesWithGoals: MilestoneWithGoals[] = await Promise.all(
 				projectMilestones.map(async (milestone: Milestone) => {
-					const goalsResponse = await fetch(`/api/v0/milestones/${milestone.id}/goals`, {
-						headers: {
-							Authorization: `Bearer ${(apiClient as any)._api_key}`,
-						},
-					});
-
-					const goals = goalsResponse.ok ? await goalsResponse.json() : [];
-					return { ...milestone, goals };
+					try {
+						const goals = await apiClient.milestones.goals(milestone.id);
+						return { ...milestone, goals };
+					} catch (error) {
+						console.error(`Failed to load goals for milestone ${milestone.id}:`, error);
+						return { ...milestone, goals: [] };
+					}
 				})
 			);
 
