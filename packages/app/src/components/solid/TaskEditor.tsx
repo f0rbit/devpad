@@ -8,6 +8,7 @@ import { createSignal, For } from "solid-js";
 import { createStore } from "solid-js/store";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
+import { GoalSelector } from "@/components/solid/GoalSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
 import { getApiClient } from "@/utils/api-client";
 import { PROGRESS_OPTIONS, PRIORITY_OPTIONS, VISIBILITY_OPTIONS, type Progress, type Priority, type Visibility } from "@/utils/task-status";
@@ -32,6 +33,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		end_time: task?.task?.end_time ?? null,
 		priority: (task?.task?.priority ?? "LOW") as Priority,
 		project_id: task?.task?.project_id ?? null,
+		goal_id: task?.task?.goal_id ?? null,
 	});
 	const [currentTags, setCurrentTags] = createSignal(current_tags);
 	const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
@@ -55,8 +57,9 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				priority: state.priority,
 				owner_id: user_id,
 				project_id: state.project_id,
+				goal_id: state.goal_id,
 				tags: currentTags(),
-			});
+			} as any);
 
 			setRequestState("success");
 			if (task?.task?.id == null) {
@@ -104,6 +107,8 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 					</label>
 					<ProjectSelector project_map={project_map} default_id={state.project_id} callback={p => setState({ project_id: p })} disabled={project_disabled()} />
 				</div>
+				<label for="goal-selector">Goal</label>
+				<GoalSelector project_id={state.project_id} goal_id={state.goal_id} onChange={goal_id => setState({ goal_id })} disabled={project_disabled()} />
 				<label for="end_time">End Time</label>
 				<input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={e => setState({ end_time: e.target.value })} />
 			</div>

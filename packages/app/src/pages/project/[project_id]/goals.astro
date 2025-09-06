@@ -23,7 +23,7 @@ try {
 	} else if (project.owner_id !== user.id) {
 		error = "Access denied";
 	} else {
-		milestones = await apiClient.milestones.getByProject(project.project_id);
+		milestones = await apiClient.milestones.getByProject(project.id);
 		console.log("[SERVER] Successfully fetched milestones:", milestones);
 	}
 } catch (err) {

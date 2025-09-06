@@ -56,6 +56,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 	const [search, setSearch] = createSignal("");
 	const [project, setProject] = createSignal<string | null>(null); // id of selected project
 	const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
+	const [goal, setGoal] = createSignal<string | null>(null); // id of selected goal
 	const [view, setView] = createSignal<TaskView>(defaultView ?? "list");
 
 	// sort tasks based on selected option
@@ -81,6 +82,11 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 		const search_tag = tag();
 		if (search_tag != null && search_tag !== "") {
 			filtered = filtered.filter(task => task.tags.some(tag_id => tag_id === search_tag));
+		}
+
+		const search_goal = goal();
+		if (search_goal != null && search_goal !== "") {
+			filtered = filtered.filter(task => task.task.goal_id === search_goal);
 		}
 
 		if (selectedOption() === "upcoming") {

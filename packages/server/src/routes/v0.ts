@@ -1042,7 +1042,7 @@ app.get("/projects/:id/milestones", requireAuth, async c => {
 		}
 
 		// Verify project ownership
-		const { project, error } = await getProject(user.id, project_id);
+		const { project, error } = await getProjectById(project_id);
 		if (error) {
 			return c.json({ error }, 500);
 		}

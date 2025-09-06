@@ -6,10 +6,12 @@ import Circle from "lucide-solid/icons/circle";
 import CircleCheck from "lucide-solid/icons/circle-check";
 import CircleDot from "lucide-solid/icons/circle-dot";
 import Link from "lucide-solid/icons/link";
+import Target from "lucide-solid/icons/target";
 import Square from "lucide-solid/icons/square";
 import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
-import { For } from "solid-js";
+import { For, createSignal, onMount } from "solid-js";
+import { getApiClient } from "@/utils/api-client";
 import { TagBadge } from "@/components/solid/TagEditor";
 import { advanceTaskProgress, formatDueDate, getPriorityClass, getProgressIconType, isPastDue, isProgressClickable } from "@/utils/task-status";
 
@@ -22,6 +24,37 @@ interface Props {
 	update?: (id: string, updates: any) => void;
 	draw_project?: boolean;
 }
+
+const GoalInfo = ({ goal_id }: { goal_id: string }) => {
+	const [goalName, setGoalName] = createSignal<string | null>(null);
+
+	onMount(async () => {
+		try {
+			const apiClient = getApiClient();
+			const response = await fetch(`/api/v0/goals/${goal_id}`, {
+				headers: {
+					Authorization: `Bearer ${(apiClient as any)._api_key}`,
+				},
+			});
+
+			if (response.ok) {
+				const goal = await response.json();
+				setGoalName(goal.name);
+			}
+		} catch (error) {
+			console.error("Failed to fetch goal:", error);
+		}
+	});
+
+	if (!goalName()) return null;
+
+	return (
+		<div style="display: flex; align-items: center; gap: 3px;" title={`Goal: ${goalName()}`}>
+			<Target size={14} />
+			<span style={{ "font-size": "small", color: "var(--text-secondary)" }}>{goalName()}</span>
+		</div>
+	);
+};
 
 export const TaskCard = (props: Props) => {
 	const { task: fetched_task, project, user_tags } = props;
@@ -81,6 +114,7 @@ export const TaskCard = (props: Props) => {
 					)}
 					<Clock />
 					<DueDate date={task.end_time} />
+					{task.goal_id && <GoalInfo goal_id={task.goal_id} />}
 					{project_name && props.draw_project && (
 						<a href={`/project/${project_name}/tasks`}>
 							<span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>
