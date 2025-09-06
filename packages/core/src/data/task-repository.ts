@@ -167,6 +167,20 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 			throw new Error("Unauthorized: User does not own this task");
 		}
 
+		// Validate goal_id if provided
+		if (data.goal_id) {
+			const { goalRepository } = await import("./goal-repository");
+			const goal = await goalRepository.getGoal(data.goal_id);
+			if (!goal) {
+				throw new Error(`Goal with id ${data.goal_id} does not exist`);
+			}
+			// Ensure goal belongs to the same project
+			const task_project_id = data.project_id ?? previous?.project_id;
+			if (goal.project_id !== task_project_id) {
+				throw new Error(`Goal ${data.goal_id} does not belong to project ${task_project_id}`);
+			}
+		}
+
 		let tag_ids: string[] = [];
 
 		if (tags && tags.length > 0) {

@@ -86,7 +86,7 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 			id,
 			idField,
 			dataKeys: data ? Object.keys(data) : [],
-			tableName: (this.table as any)._.name || "unknown",
+			tableName: (this.table as any)?._?.name || "unknown",
 		});
 
 		try {

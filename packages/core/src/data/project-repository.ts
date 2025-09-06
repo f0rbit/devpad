@@ -37,10 +37,7 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 
 		try {
 			const result = await this.findById(project_id);
-			if (!result) {
-				return { project: null, error: "Couldn't find project" };
-			}
-
+			// Not finding a project is not an error, just return null project
 			return { project: result, error: null };
 		} catch (err) {
 			console.error("Error getting project by ID:", err);
@@ -331,11 +328,6 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 				console.error("Full INSERT error:", error);
 				throw error;
 			}
-		}
-
-		if (!result) {
-			log.projects("💥 [ProjectRepository] No result from upsert operation");
-			throw new Error("Project upsert failed");
 		}
 
 		const new_project = result;

@@ -105,12 +105,9 @@ function MilestoneCard(props: { milestone: Milestone; projectSlug: string; goals
 }
 
 export default function MilestonesManager(props: Props) {
-	const [milestones, setMilestones] = createSignal<Milestone[]>(props.initialMilestones || []);
-	const [goalsMap, setGoalsMap] = createSignal<Record<string, Goal[]>>(props.initialGoalsMap || {});
+	const [milestones] = createSignal<Milestone[]>(props.initialMilestones || []);
+	const [goalsMap] = createSignal<Record<string, Goal[]>>(props.initialGoalsMap || {});
 
-	const handleAddMilestone = () => {
-		window.location.href = `/project/${props.projectSlug}/milestone/new`;
-	};
 
 	return (
 		<section>
@@ -123,10 +120,7 @@ export default function MilestonesManager(props: Props) {
 				<p class="description">No milestones yet</p>
 			</Show>
 
-			<a role="button" onClick={handleAddMilestone}>
-				<Plus class="lucide" />
-				Create Milestone
-			</a>
+			<a href={`/project/${props.projectSlug}/milestone/new`}>+ create</a>
 		</section>
 	);
 }

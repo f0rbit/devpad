@@ -23,6 +23,8 @@ import {
 	upsertProject,
 	upsertTag,
 	upsertTask,
+	deleteMilestone,
+	deleteGoal,
 	log,
 	createApiKey,
 	deleteApiKey,
@@ -1016,8 +1018,7 @@ app.delete("/milestones/:id", requireAuth, async c => {
 			return c.json({ error: "Missing milestone ID" }, 400);
 		}
 
-		// Implementation will be added when we import deleteMilestone
-		// await deleteMilestone(milestone_id, user.id);
+		await deleteMilestone(milestone_id, user.id);
 		return c.json({ success: true, message: "Milestone deleted" });
 	} catch (error: any) {
 		console.error("Delete milestone error:", error);
@@ -1161,8 +1162,7 @@ app.delete("/goals/:id", requireAuth, async c => {
 			return c.json({ error: "Missing goal ID" }, 400);
 		}
 
-		// Implementation will be added when we import deleteGoal
-		// await deleteGoal(goal_id, user.id);
+		await deleteGoal(goal_id, user.id);
 		return c.json({ success: true, message: "Goal deleted" });
 	} catch (error: any) {
 		console.error("Delete goal error:", error);
