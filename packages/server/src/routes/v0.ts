@@ -274,6 +274,76 @@ app.get("/projects/:project_id/history", requireAuth, async c => {
 	}
 });
 
+// GET /projects/config - Get project configuration (tags, ignore paths, scan branch)
+app.get("/projects/config", requireAuth, async c => {
+	const user = c.get("user")!;
+	const project_id = c.req.query("project_id");
+
+	if (!project_id) {
+		return c.json({ error: "Missing project_id parameter" }, 400);
+	}
+
+	try {
+		// Get project to verify ownership
+		const { project, error } = await getProjectById(project_id);
+		if (error) {
+			return c.json({ error }, 500);
+		}
+		if (!project) {
+			return c.json({ error: "Project not found" }, 404);
+		}
+		if (project.owner_id !== user.id) {
+			return c.json({ error: "Unauthorized" }, 401);
+		}
+
+		// Get tag configuration
+		const tag_configs = await db
+			.select({
+				tag_id: tag_config.tag_id,
+				match: tag_config.match,
+				tag_name: tag.title,
+				tag_color: tag.color,
+			})
+			.from(tag_config)
+			.leftJoin(tag, eq(tag_config.tag_id, tag.id))
+			.where(eq(tag_config.project_id, project_id));
+
+		// Group by tag
+		const tags = Object.values(
+			tag_configs.reduce(
+				(acc, config) => {
+					if (!acc[config.tag_id]) {
+						acc[config.tag_id] = {
+							name: config.tag_name || "Unknown",
+							color: config.tag_color,
+							match: [],
+						};
+					}
+					if (config.match) {
+						acc[config.tag_id].match.push(config.match);
+					}
+					return acc;
+				},
+				{} as Record<string, any>
+			)
+		);
+
+		// Get ignore paths
+		const ignore_paths = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, project_id));
+
+		return c.json({
+			config: {
+				tags: tags,
+				ignore: ignore_paths.map(p => p.path),
+			},
+			scan_branch: project.scan_branch || "main",
+		});
+	} catch (error: any) {
+		console.error("GET /projects/config error:", error);
+		return c.json({ error: "Internal Server Error", details: error.message }, 500);
+	}
+});
+
 // Tasks endpoints
 app.get("/tasks", requireAuth, async c => {
 	const user = c.get("user")!;
