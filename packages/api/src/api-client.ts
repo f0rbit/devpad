@@ -1,5 +1,6 @@
-import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema";
+import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal } from "@devpad/schema";
 import { ApiClient as HttpClient } from "./request";
+import { wrap, type Result } from "./result";
 
 /**
  * Authentication mode for the API client
@@ -7,8 +8,8 @@ import { ApiClient as HttpClient } from "./request";
 export type AuthMode = "session" | "key";
 
 /**
- * Main API client with clean nested objects
- * Provides 100% backward compatibility with better organization
+ * API client with Result-wrapped operations for clean error handling
+ * All methods return Result<T, name> types with context-aware property names
  */
 export class ApiClient {
 	private httpClient: HttpClient;
@@ -33,509 +34,326 @@ export class ApiClient {
 	}
 
 	/**
-	 * Auth namespace - handles authentication and session management
+	 * Auth namespace with Result-wrapped operations
 	 */
 	public readonly auth = {
 		/**
 		 * Get current session information
 		 */
-		session: () =>
-			this.httpClient.get<{
-				authenticated: boolean;
-				user: {
-					id: string;
-					name: string;
-					email?: string;
-					github_id: number;
-					image_url?: string;
-					task_view: string;
-				} | null;
-				session: { id: string } | null;
-			}>("/auth/session"),
+		session: (): Promise<Result<{ authenticated: boolean; user: any; session: any }, "session">> => wrap(() => this.httpClient.get<{ authenticated: boolean; user: any; session: any }>("/auth/session"), "session"),
 
 		/**
 		 * Login (redirect to OAuth)
 		 */
-		login: () => this.httpClient.get<void>("/auth/login"),
+		login: (): Promise<Result<void, "result">> => wrap(() => this.httpClient.get<void>("/auth/login"), "result"),
 
 		/**
 		 * Logout
 		 */
-		logout: () => this.httpClient.get<void>("/auth/logout"),
+		logout: (): Promise<Result<void, "result">> => wrap(() => this.httpClient.get<void>("/auth/logout"), "result"),
 
 		/**
-		 * Nested keys object for API key management
+		 * API key management
 		 */
 		keys: {
 			/**
 			 * List all API keys
 			 */
-			list: () => this.httpClient.get<{ keys: Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at: string | null }> }>("/auth/keys"),
+			list: (): Promise<Result<{ keys: Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at: string | null }> }, "keys">> => wrap(() => this.httpClient.get<{ keys: Array<any> }>("/auth/keys"), "keys"),
 
 			/**
 			 * Generate a new API key
 			 */
-			create: (name?: string) => this.httpClient.post<{ message: string; key: string }>("/auth/keys", { body: name ? { name } : {} }),
+			create: (name?: string): Promise<Result<{ message: string; key: string }, "key">> => wrap(() => this.httpClient.post<{ message: string; key: string }>("/auth/keys", { body: name ? { name } : {} }), "key"),
 
 			/**
 			 * Revoke an API key
 			 */
-			revoke: (key_id: string) => this.httpClient.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`),
+			revoke: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.httpClient.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`), "result"),
 
 			/**
 			 * Remove an API key (alias for revoke)
 			 */
-			remove: (key_id: string) => this.httpClient.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`),
+			remove: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.httpClient.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`), "result"),
 		},
 
-		// === BACKWARD COMPATIBILITY METHODS ===
+		// Legacy methods (keeping for now)
 		generateApiKey: () => this.auth.keys.create(),
 		revokeApiKey: (key_id: string) => this.auth.keys.revoke(key_id),
 		getSession: () => this.auth.session(),
 	};
 
 	/**
-	 * Projects namespace - handles project CRUD operations
+	 * Projects namespace with Result-wrapped operations
 	 */
 	public readonly projects = {
 		/**
 		 * List projects with optional filtering
 		 */
-		list: (filters?: { private?: boolean }): Promise<Project[]> => {
-			if (filters?.private === true) {
-				// Get all projects (includes private)
-				return this.httpClient.get<Project[]>("/projects");
-			} else if (filters?.private === false) {
-				// Get only public projects
-				return this.httpClient.get<Project[]>("/projects/public");
-			} else {
-				// Default: get all projects
-				return this.httpClient.get<Project[]>("/projects");
-			}
-		},
+		list: (filters?: { private?: boolean }): Promise<Result<Project[], "projects">> =>
+			wrap(() => {
+				if (filters?.private === true) {
+					return this.httpClient.get<Project[]>("/projects");
+				} else if (filters?.private === false) {
+					return this.httpClient.get<Project[]>("/projects/public");
+				} else {
+					return this.httpClient.get<Project[]>("/projects");
+				}
+			}, "projects"),
 
-		map: async (filters?: { private?: boolean }): Promise<Record<string, Project>> => {
-			const projects = await this.projects.list(filters);
-			return projects.reduce(
-				(acc, project) => {
-					acc[project.project_id] = project;
-					return acc;
-				},
-				{} as Record<string, Project>
-			);
-		},
+		/**
+		 * Get project map
+		 */
+		map: async (filters?: { private?: boolean }): Promise<Result<Record<string, Project>, "project_map">> =>
+			wrap(async () => {
+				const { projects, error } = await this.projects.list(filters);
+				if (error) throw new Error(error.message);
+				return projects!.reduce(
+					(acc, project) => {
+						acc[project.project_id] = project;
+						return acc;
+					},
+					{} as Record<string, Project>
+				);
+			}, "project_map"),
 
 		/**
 		 * Get project by ID
 		 */
-		find: async (id: string): Promise<Project | null> => {
-			try {
-				return await this.httpClient.get<Project>("/projects", { query: { id } });
-			} catch (error) {
-				// If 404, return null instead of throwing
-				return null;
-			}
-		},
+		find: (id: string): Promise<Result<Project | null, "project">> =>
+			wrap(async () => {
+				try {
+					return await this.httpClient.get<Project>("/projects", { query: { id } });
+				} catch (error) {
+					return null;
+				}
+			}, "project"),
+
+		/**
+		 * Get project by name
+		 */
+		getByName: (name: string): Promise<Result<Project, "project">> => wrap(() => this.httpClient.get<Project>("/projects", { query: { name } }), "project"),
+
+		/**
+		 * Get project by ID (throws if not found)
+		 */
+		getById: (id: string): Promise<Result<Project, "project">> => wrap(() => this.httpClient.get<Project>("/projects", { query: { id } }), "project"),
 
 		/**
 		 * Create a new project
 		 */
-		create: (data: Omit<UpsertProject, "id">) => this.httpClient.patch<Project>("/projects", { body: data }),
+		create: (data: Omit<UpsertProject, "id">): Promise<Result<Project, "project">> => wrap(() => this.httpClient.patch<Project>("/projects", { body: data }), "project"),
 
 		/**
-		 * Update an existing project - supports both new and legacy signatures
+		 * Update an existing project
 		 */
-		update: async (idOrData: string | UpsertProject, changes?: Partial<Omit<UpsertProject, "id" | "project_id">>): Promise<Project> => {
-			// Handle backward compatibility: update(data)
-			if (typeof idOrData === "object" && idOrData.id) {
-				return this.httpClient.patch<Project>("/projects", { body: idOrData });
-			}
+		update: async (idOrData: string | UpsertProject, changes?: Partial<Omit<UpsertProject, "id" | "project_id">>): Promise<Result<Project, "project">> =>
+			wrap(async () => {
+				// Handle backward compatibility: update(data)
+				if (typeof idOrData === "object" && idOrData.id) {
+					return this.httpClient.patch<Project>("/projects", { body: idOrData });
+				}
 
-			// Handle new clean interface: update(id, changes)
-			const id = idOrData as string;
-			if (!changes) {
-				throw new Error("Changes parameter required for update");
-			}
+				// Handle new clean interface: update(id, changes)
+				const id = idOrData as string;
+				if (!changes) {
+					throw new Error("Changes parameter required for update");
+				}
 
-			// Fetch the existing project to get current values
-			const existing = await this.projects.find(id);
-			if (!existing) {
-				throw new Error(`Project with id ${id} not found`);
-			}
+				// Fetch the existing project to get current values
+				const { project, error } = await this.projects.find(id);
+				if (error) throw new Error(error.message);
+				if (!project) throw new Error(`Project with id ${id} not found`);
 
-			// Merge changes with existing project data
-			const updateData: UpsertProject = {
-				id: existing.id,
-				project_id: existing.project_id,
-				owner_id: existing.owner_id,
-				name: existing.name,
-				description: existing.description,
-				specification: existing.specification,
-				repo_url: existing.repo_url,
-				repo_id: existing.repo_id,
-				icon_url: existing.icon_url,
-				status: existing.status,
-				deleted: existing.deleted,
-				link_url: existing.link_url,
-				link_text: existing.link_text,
-				visibility: existing.visibility,
-				current_version: existing.current_version,
-				...changes,
-			};
+				// Merge changes with existing project data
+				const updateData: UpsertProject = {
+					id: project.id,
+					project_id: project.project_id,
+					owner_id: project.owner_id,
+					name: project.name,
+					description: project.description,
+					specification: project.specification,
+					repo_url: project.repo_url,
+					repo_id: project.repo_id,
+					icon_url: project.icon_url,
+					status: project.status,
+					deleted: project.deleted,
+					link_url: project.link_url,
+					link_text: project.link_text,
+					visibility: project.visibility,
+					current_version: project.current_version,
+					...changes,
+				};
 
-			return this.httpClient.patch<Project>("/projects", { body: updateData });
-		},
-
-		/**
-		 * Delete a project (soft delete via visibility)
-		 */
-		remove: async (id: string): Promise<void> => {
-			await this.projects.update(id, { visibility: "DELETED" });
-		},
+				return this.httpClient.patch<Project>("/projects", { body: updateData });
+			}, "project"),
 
 		/**
-		 * Archive a project
-		 */
-		archive: async (id: string): Promise<Project> => {
-			return this.projects.update(id, { visibility: "ARCHIVED" });
-		},
-
-		/**
-		 * Publish a project (make it public)
-		 */
-		publish: async (id: string): Promise<Project> => {
-			return this.projects.update(id, { visibility: "PUBLIC" });
-		},
-
-		/**
-		 * Make a project private
-		 */
-		make_private: async (id: string): Promise<Project> => {
-			return this.projects.update(id, { visibility: "PRIVATE" });
-		},
-
-		/**
-		 * Nested config object for project configuration
+		 * Project configuration operations
 		 */
 		config: {
 			/**
 			 * Get project configuration
 			 */
-			load: (project_id: string) => this.httpClient.get<ProjectConfig | null>("/projects/config", { query: { project_id } }),
+			load: (project_id: string): Promise<Result<ProjectConfig | null, "config">> => wrap(() => this.httpClient.get<ProjectConfig | null>("/projects/config", { query: { project_id } }), "config"),
 
 			/**
 			 * Save project configuration
 			 */
-			save: (request: SaveConfigRequest) => this.httpClient.patch<void>("/projects/save_config", { body: request }),
+			save: (request: SaveConfigRequest): Promise<Result<void, "result">> => wrap(() => this.httpClient.patch<void>("/projects/save_config", { body: request }), "result"),
 		},
 
 		/**
-		 * Nested specification object for project specs
+		 * Legacy methods (keeping for compatibility)
 		 */
-		specification: {
-			/**
-			 * Load project specification
-			 */
-			load: (projectId: string) => this.httpClient.get<string>("/projects/fetch_spec", { query: { project_id: projectId } }),
-
-			/**
-			 * Update project specification
-			 */
-			update: (projectId: string, spec: string) =>
-				this.httpClient.patch<void>("/projects/spec", {
-					body: { project_id: projectId, specification: spec },
-				}),
-		},
-
-		/**
-		 * Nested scan object for project scanning operations
-		 */
-		scan: {
-			/**
-			 * Initiate repository scan and stream results
-			 */
-			start: (projectId: string) => {
-				// Return Response object for streaming
-				const baseUrl = this.httpClient.url();
-				const headers = this.httpClient.headers();
-				return fetch(`${baseUrl}/projects/scan?project_id=${projectId}`, {
-					method: "POST",
-					headers,
-				});
-			},
-
-			/**
-			 * Process scan status updates
-			 */
-			updateStatus: (
-				projectId: string,
-				data: {
-					id: number;
-					actions: Record<string, string[]>;
-					titles: Record<string, string>;
-					approved: boolean;
-				}
-			) => this.httpClient.post<{ success: boolean }>(`/projects/scan_status?project_id=${projectId}`, { body: data }),
-		},
-
-		/**
-		 * Get project history
-		 */
-		history: (projectId: string) => this.httpClient.get<any[]>(`/projects/${projectId}/history`),
-
-		// === BACKWARD COMPATIBILITY METHODS ===
-		getById: async (id: string) => {
-			const project = await this.projects.find(id);
-			if (!project) throw new Error(`Project with id ${id} not found`);
-			return project;
-		},
-
-		getByName: (name: string) => this.httpClient.get<Project>("/projects", { query: { name } }),
-
-		upsert: (data: UpsertProject) => this.httpClient.patch<Project>("/projects", { body: data }),
-
-		upsertProject: (data: UpsertProject) => this.projects.upsert(data),
-
-		deleteProject: (data: Omit<UpsertProject, "archived">) => {
-			return this.httpClient.patch<Project>("/projects", { body: { ...data, deleted: true } });
-		},
-
-		saveConfig: (request: SaveConfigRequest) => this.projects.config.save(request),
-
-		fetchSpecification: (projectId: string) => this.projects.specification.load(projectId),
+		upsert: (data: UpsertProject): Promise<Result<Project, "project">> => wrap(() => this.httpClient.patch<Project>("/projects", { body: data }), "project"),
 	};
 
 	/**
-	 * Tasks namespace - handles task operations
-	 */
-	public readonly tasks = {
-		/**
-		 * List tasks with optional filtering
-		 */
-		list: (filters?: { project_id?: string; tag_id?: string }): Promise<TaskWithDetails[]> => {
-			const query: Record<string, string> = {};
-			if (filters?.project_id) query.project = filters.project_id;
-			if (filters?.tag_id) query.tag = filters.tag_id;
-
-			return this.httpClient.get<TaskWithDetails[]>("/tasks", Object.keys(query).length > 0 ? { query } : {});
-		},
-
-		/**
-		 * Get task by ID
-		 */
-		find: async (id: string): Promise<TaskWithDetails | null> => {
-			try {
-				return await this.httpClient.get<TaskWithDetails>("/tasks", { query: { id } });
-			} catch (error) {
-				// If 404, return null instead of throwing
-				return null;
-			}
-		},
-
-		/**
-		 * Create a new task
-		 */
-		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }) => {
-			return this.httpClient.patch<TaskWithDetails>("/tasks", { body: data });
-		},
-
-		/**
-		 * Update an existing task
-		 */
-		update: async (id: string, changes: Partial<Omit<UpsertTodo, "id">> & { tags?: UpsertTag[] }): Promise<TaskWithDetails> => {
-			// Fetch existing task to merge changes
-			const existing = await this.tasks.find(id);
-			if (!existing) {
-				throw new Error(`Task with id ${id} not found`);
-			}
-
-			const updateData = {
-				id,
-				title: existing.task.title,
-				summary: existing.task.summary,
-				description: existing.task.description,
-				progress: existing.task.progress,
-				visibility: existing.task.visibility,
-				start_time: existing.task.start_time,
-				end_time: existing.task.end_time,
-				priority: existing.task.priority,
-				owner_id: existing.task.owner_id,
-				project_id: existing.task.project_id,
-				...changes,
-			};
-
-			return this.httpClient.patch<TaskWithDetails>("/tasks", { body: updateData });
-		},
-
-		/**
-		 * Delete a task (soft delete via visibility)
-		 */
-		remove: async (id: string): Promise<void> => {
-			await this.tasks.update(id, { visibility: "DELETED" });
-		},
-
-		/**
-		 * Mark task as completed
-		 */
-		complete: async (id: string): Promise<TaskWithDetails> => {
-			return this.tasks.update(id, { progress: "COMPLETED" });
-		},
-
-		/**
-		 * Start a task (mark as in progress)
-		 */
-		start: async (id: string): Promise<TaskWithDetails> => {
-			return this.tasks.update(id, { progress: "IN_PROGRESS" });
-		},
-
-		/**
-		 * Archive a task
-		 */
-		archive: async (id: string): Promise<TaskWithDetails> => {
-			return this.tasks.update(id, { visibility: "ARCHIVED" });
-		},
-
-		/**
-		 * Save tags (clean method)
-		 */
-		save_tags: (tags: UpsertTag[]): Promise<UpsertTag[]> => this.httpClient.patch<UpsertTag[]>("/tasks/save_tags", { body: tags }),
-
-		/**
-		 * History namespace for task history operations
-		 */
-		history: {
-			/**
-			 * Get task history by task ID
-			 */
-			get: (task_id: string) => this.httpClient.get<any[]>(`/tasks/history/${task_id}`),
-		},
-
-		// === BACKWARD COMPATIBILITY METHODS ===
-		getById: async (id: string) => {
-			const task = await this.tasks.find(id);
-			if (!task) throw new Error(`Task with id ${id} not found`);
-			return task;
-		},
-
-		getByProject: (project_id: string) => this.httpClient.get<TaskWithDetails[]>("/tasks", { query: { project: project_id } }),
-
-		getByTag: (tag_id: string) => this.httpClient.get<TaskWithDetails[]>("/tasks", { query: { tag: tag_id } }),
-
-		upsert: (data: UpsertTodo & { tags?: UpsertTag[] }) => this.httpClient.patch<TaskWithDetails>("/tasks", { body: data }),
-
-		deleteTask: (task: TaskWithDetails) => {
-			return this.httpClient.patch<TaskWithDetails>("/tasks", {
-				body: {
-					...task.task,
-					visibility: "DELETED",
-				},
-			});
-		},
-
-		saveTags: (tags: UpsertTag[]) => this.tasks.save_tags(tags),
-	};
-
-	/**
-	 * Milestones namespace - handles milestone operations
+	 * Milestones namespace with Result-wrapped operations
 	 */
 	public readonly milestones = {
 		/**
 		 * List milestones for authenticated user
 		 */
-		list: () => this.httpClient.get<any[]>("/milestones"),
+		list: (): Promise<Result<Milestone[], "milestones">> => wrap(() => this.httpClient.get<any[]>("/milestones"), "milestones"),
 
 		/**
 		 * Get milestones by project ID
 		 */
-		getByProject: (project_id: string) => this.httpClient.get<any[]>(`/projects/${project_id}/milestones`),
+		getByProject: (project_id: string): Promise<Result<Milestone[], "milestones">> => wrap(() => this.httpClient.get<any[]>(`/projects/${project_id}/milestones`), "milestones"),
 
 		/**
 		 * Get milestone by ID
 		 */
-		find: async (id: string) => {
-			try {
-				return await this.httpClient.get<any>(`/milestones/${id}`);
-			} catch (error) {
-				return null;
-			}
-		},
+		find: (id: string): Promise<Result<Milestone | null, "milestone">> =>
+			wrap(async () => {
+				try {
+					return await this.httpClient.get<any>(`/milestones/${id}`);
+				} catch (error) {
+					return null;
+				}
+			}, "milestone"),
 
 		/**
 		 * Create new milestone
 		 */
-		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string }) => this.httpClient.post<any>("/milestones", { body: data }),
+		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string }): Promise<Result<Milestone, "milestone">> =>
+			wrap(() => this.httpClient.post<any>("/milestones", { body: data }), "milestone"),
 
 		/**
 		 * Update milestone
 		 */
-		update: (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }) => this.httpClient.patch<any>(`/milestones/${id}`, { body: { ...data, id } }),
+		update: (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }): Promise<Result<Milestone, "milestone">> =>
+			wrap(() => this.httpClient.patch<any>(`/milestones/${id}`, { body: { ...data, id } }), "milestone"),
 
 		/**
 		 * Delete milestone (soft delete)
 		 */
-		delete: (id: string) => this.httpClient.delete<{ success: boolean; message: string }>(`/milestones/${id}`),
+		delete: (id: string): Promise<Result<{ success: boolean; message: string }, "result">> => wrap(() => this.httpClient.delete<{ success: boolean; message: string }>(`/milestones/${id}`), "result"),
 
 		/**
 		 * Get goals for a milestone
 		 */
-		goals: (id: string) => this.httpClient.get<any[]>(`/milestones/${id}/goals`),
+		goals: (id: string): Promise<Result<Goal[], "goals">> => wrap(() => this.httpClient.get<any[]>(`/milestones/${id}/goals`), "goals"),
 	};
 
 	/**
-	 * Goals namespace - handles goal operations
+	 * Goals namespace with Result-wrapped operations
 	 */
 	public readonly goals = {
 		/**
 		 * List goals for authenticated user
 		 */
-		list: () => this.httpClient.get<any[]>("/goals"),
+		list: (): Promise<Result<Goal[], "goals">> => wrap(() => this.httpClient.get<any[]>("/goals"), "goals"),
 
 		/**
 		 * Get goal by ID
 		 */
-		find: async (id: string) => {
-			try {
-				return await this.httpClient.get<any>(`/goals/${id}`);
-			} catch (error) {
-				return null;
-			}
-		},
+		find: (id: string): Promise<Result<Goal | null, "goal">> =>
+			wrap(async () => {
+				try {
+					return await this.httpClient.get<any>(`/goals/${id}`);
+				} catch (error) {
+					return null;
+				}
+			}, "goal"),
 
 		/**
 		 * Create new goal
 		 */
-		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string }) => this.httpClient.post<any>("/goals", { body: data }),
+		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string }): Promise<Result<Goal, "goal">> => wrap(() => this.httpClient.post<any>("/goals", { body: data }), "goal"),
 
 		/**
 		 * Update goal
 		 */
-		update: (id: string, data: { name?: string; description?: string; target_time?: string }) => this.httpClient.patch<any>(`/goals/${id}`, { body: { ...data, id } }),
+		update: (id: string, data: { name?: string; description?: string; target_time?: string }): Promise<Result<Goal, "goal">> => wrap(() => this.httpClient.patch<any>(`/goals/${id}`, { body: { ...data, id } }), "goal"),
 
 		/**
 		 * Delete goal (soft delete)
 		 */
-		delete: (id: string) => this.httpClient.delete<{ success: boolean; message: string }>(`/goals/${id}`),
+		delete: (id: string): Promise<Result<{ success: boolean; message: string }, "result">> => wrap(() => this.httpClient.delete<{ success: boolean; message: string }>(`/goals/${id}`), "result"),
 	};
 
 	/**
-	 * Tags namespace - handles tag operations
+	 * Tasks namespace with Result-wrapped operations
 	 */
-	public readonly tags = {
+	public readonly tasks = {
 		/**
-		 * List all active user tags
+		 * List tasks with optional filtering
 		 */
-		list: () => this.httpClient.get<any[]>("/tags"),
+		list: (filters?: { project_id?: string; tag_id?: string }): Promise<Result<TaskWithDetails[], "tasks">> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (filters?.project_id) query.project = filters.project_id;
+				if (filters?.tag_id) query.tag = filters.tag_id;
+				return this.httpClient.get<TaskWithDetails[]>("/tasks", Object.keys(query).length > 0 ? { query } : {});
+			}, "tasks"),
 
 		/**
-		 * Create or update a tag
+		 * Get task by ID
 		 */
-		upsert: (_data: UpsertTag): Promise<never> => {
-			throw new Error("Tags upsert endpoint not yet implemented - tags are managed through tasks");
-		},
+		find: (id: string): Promise<Result<TaskWithDetails | null, "task">> =>
+			wrap(async () => {
+				try {
+					return await this.httpClient.get<TaskWithDetails>("/tasks", { query: { id } });
+				} catch (error) {
+					return null;
+				}
+			}, "task"),
 
-		create: (data: UpsertTag) => this.tags.upsert(data),
+		/**
+		 * Create a new task
+		 */
+		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> => wrap(() => this.httpClient.patch<TaskWithDetails>("/tasks", { body: data }), "task"),
 
-		update: (_tag_id: string, data: UpsertTag) => this.tags.upsert(data),
+		/**
+		 * Update an existing task
+		 */
+		update: async (id: string, changes: Partial<Omit<UpsertTodo, "id">> & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> =>
+			wrap(async () => {
+				// Fetch existing task to merge changes
+				const { task, error } = await this.tasks.find(id);
+				if (error) throw new Error(error.message);
+				if (!task) throw new Error(`Task with id ${id} not found`);
+
+				const updateData = {
+					id,
+					title: task.task.title,
+					summary: task.task.summary,
+					description: task.task.description,
+					progress: task.task.progress,
+					visibility: task.task.visibility,
+					start_time: task.task.start_time,
+					end_time: task.task.end_time,
+					priority: task.task.priority,
+					owner_id: task.task.owner_id,
+					project_id: task.task.project_id,
+					...changes,
+				};
+
+				return this.httpClient.patch<TaskWithDetails>("/tasks", { body: updateData });
+			}, "task"),
 	};
 
 	/**
@@ -558,34 +376,4 @@ export class ApiClient {
 	public getAuthMode(): AuthMode {
 		return this._auth_mode;
 	}
-
-	/**
-	 * User namespace - handles user preferences and settings
-	 */
-	public readonly user = {
-		/**
-		 * Update user preferences
-		 */
-		preferences: (data: { id: string; task_view?: string; name?: string; email_verified?: boolean }) => this.httpClient.patch<{ id: string; name: string; task_view: string }>("/user/preferences", { body: data }),
-
-		/**
-		 * Get user activity history
-		 */
-		history: () => this.httpClient.get<any[]>("/user/history"),
-	};
-
-	/**
-	 * GitHub namespace - handles GitHub integration operations
-	 */
-	public readonly github = {
-		/**
-		 * List user repositories from GitHub
-		 */
-		repos: () => this.httpClient.get<Array<{ id: number; name: string; full_name: string; private: boolean; html_url: string }>>("/repos"),
-
-		/**
-		 * Get repository branches
-		 */
-		branches: (owner: string, repo: string) => this.httpClient.get<Array<{ name: string; commit: { sha: string; url: string; message: string } }>>(`/repos/${owner}/${repo}/branches`),
-	};
 }

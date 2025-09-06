@@ -11,45 +11,37 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const apiClient = getServerApiClient(Astro.locals);
+const api_client = getServerApiClient(Astro.locals);
 
-let project: Project | null = null;
-let milestones = [];
-let goalsMap = {};
-let error: string | null = null;
-try {
-	project = await apiClient.projects.getByName(project_id);
-	if (!project) {
-		error = "Project not found";
-	} else if (project.owner_id !== user.id) {
-		error = "Access denied";
-	} else {
-		milestones = await apiClient.milestones.getByProject(project.id);
-		console.log("[SERVER] Successfully fetched milestones:", milestones);
-		
-		// Fetch goals for each milestone
-		for (const milestone of milestones) {
-			try {
-				const goals = await apiClient.milestones.goals(milestone.id);
-				goalsMap[milestone.id] = goals;
-				console.log(`[SERVER] Successfully fetched ${goals.length} goals for milestone ${milestone.name}`);
-			} catch (goalError) {
-				console.error(`[SERVER] Failed to fetch goals for milestone ${milestone.id}:`, goalError);
-				goalsMap[milestone.id] = [];
-			}
-		}
-	}
-} catch (err) {
-	console.error("Failed to fetch project:", err);
-	error = "Failed to fetch project";
-}
-if (error) return new Response(null, { status: 500, statusText: error });
+// Beautiful clean error handling with Result types!
+const { project, error } = await api_client.projects.getByName(project_id);
+if (error) return new Response(null, { status: 500, statusText: error.message });
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+
+// Check ownership
+if (project.owner_id !== user.id) {
+	return new Response(null, { status: 403, statusText: "Access denied" });
+}
+
+const { milestones, error: milestones_error } = await api_client.milestones.getByProject(project.id);
+if (milestones_error) {
+	console.error("Failed to fetch milestones:", milestones_error.message);
+}
+
+// Fetch goals for each milestone
+const goals_map = {};
+for (const milestone of milestones || []) {
+	const { goals, error: goals_error } = await api_client.milestones.goals(milestone.id);
+	goals_map[milestone.id] = goals || [];
+	if (goals_error) {
+		console.error(`Failed to fetch goals for milestone ${milestone.id}:`, goals_error.message);
+	}
+}
 ---
 
 <PageLayout title={`Milestones & Goals - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
 		<h5>project goals</h5>
-		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} initialGoalsMap={goalsMap} client:load />
+		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} initialGoalsMap={goals_map} client:load />
 	</ProjectLayout>
 </PageLayout>
