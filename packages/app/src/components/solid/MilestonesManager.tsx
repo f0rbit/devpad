@@ -6,6 +6,7 @@ interface Props {
 	projectId: string;
 	projectSlug: string;
 	initialMilestones?: Milestone[];
+	initialGoalsMap?: Record<string, Goal[]>;
 }
 
 function MilestoneCard(props: { milestone: Milestone; projectSlug: string; goals: Goal[] }) {
@@ -105,16 +106,7 @@ function MilestoneCard(props: { milestone: Milestone; projectSlug: string; goals
 
 export default function MilestonesManager(props: Props) {
 	const [milestones, setMilestones] = createSignal<Milestone[]>(props.initialMilestones || []);
-	const [goalsMap, setGoalsMap] = createSignal<Record<string, Goal[]>>({});
-
-	// Load goals for all milestones on mount
-	if (typeof window !== "undefined") {
-		props.initialMilestones?.forEach(milestone => {
-			// This would be better done server-side, but for now we'll keep it simple
-			// The goals will be loaded when the user interacts with each milestone
-			setGoalsMap(prev => ({ ...prev, [milestone.id]: [] }));
-		});
-	}
+	const [goalsMap, setGoalsMap] = createSignal<Record<string, Goal[]>>(props.initialGoalsMap || {});
 
 	const handleAddMilestone = () => {
 		window.location.href = `/project/${props.projectSlug}/milestone/new`;

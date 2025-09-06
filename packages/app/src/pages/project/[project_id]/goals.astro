@@ -15,6 +15,7 @@ const apiClient = getServerApiClient(Astro.locals);
 
 let project: Project | null = null;
 let milestones = [];
+let goalsMap = {};
 let error: string | null = null;
 try {
 	project = await apiClient.projects.getByName(project_id);
@@ -25,6 +26,18 @@ try {
 	} else {
 		milestones = await apiClient.milestones.getByProject(project.id);
 		console.log("[SERVER] Successfully fetched milestones:", milestones);
+		
+		// Fetch goals for each milestone
+		for (const milestone of milestones) {
+			try {
+				const goals = await apiClient.milestones.goals(milestone.id);
+				goalsMap[milestone.id] = goals;
+				console.log(`[SERVER] Successfully fetched ${goals.length} goals for milestone ${milestone.name}`);
+			} catch (goalError) {
+				console.error(`[SERVER] Failed to fetch goals for milestone ${milestone.id}:`, goalError);
+				goalsMap[milestone.id] = [];
+			}
+		}
 	}
 } catch (err) {
 	console.error("Failed to fetch project:", err);
@@ -37,6 +50,6 @@ if (!project) return new Response(null, { status: 404, statusText: "Project not 
 <PageLayout title={`Milestones & Goals - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
 		<h5>project goals</h5>
-		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} client:load />
+		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} initialGoalsMap={goalsMap} client:load />
 	</ProjectLayout>
 </PageLayout>
