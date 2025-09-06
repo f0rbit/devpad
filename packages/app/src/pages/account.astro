@@ -14,7 +14,7 @@ const apiClient = getServerApiClient(Astro.locals);
 let keys = [];
 let user_history = [];
 try {
-	const keysResponse = await apiClient.auth.keys.list();
+	const keysResponse = await apiClient.keys.list();
 	keys = keysResponse.keys || [];
 	user_history = await apiClient.user.history();
 } catch (error) {

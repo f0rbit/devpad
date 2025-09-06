@@ -16,7 +16,7 @@ const apiClient = getServerApiClient(Astro.locals);
 let project;
 let history = [];
 try {
-	project = await apiClient.getByName(project_id);
+	project = await apiClient.projects.getByName(project_id);
 	if (!project) {
 		return new Response(null, { status: 404, statusText: "Project not found" });
 	}

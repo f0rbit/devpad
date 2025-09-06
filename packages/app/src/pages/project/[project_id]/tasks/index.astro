@@ -15,7 +15,7 @@ const apiClient = getServerApiClient(Astro.locals);
 let project;
 let error: string | null = null;
 try {
-	project = await apiClient.getByName(project_id);
+	project = await apiClient.projects.getByName(project_id);
 	if (!project) {
 		error = "Project not found";
 	} else if (project.owner_id !== user.id) {
