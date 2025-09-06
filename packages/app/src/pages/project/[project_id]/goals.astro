@@ -1,70 +1,42 @@
 ---
-import { Project } from "@devpad/schema";
-import PageLayout from '@/layouts/PageLayout.astro';
 import { getServerApiClient } from "@/utils/api-client";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import MilestonesManager from "@/components/solid/MilestonesManager";
+import { Project } from "@devpad/schema";
 
 const { project_id } = Astro.params;
-
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-// Get server API client and fetch project by name (project_id is the human-readable name)
 const apiClient = getServerApiClient(Astro.locals);
+
 let project: Project | null = null;
+let milestones = [];
+let error: string | null = null;
 try {
 	project = await apiClient.projects.getByName(project_id);
 	if (!project) {
-		return new Response(null, { status: 404, statusText: "Project not found" });
+		error = "Project not found";
+	} else if (project.owner_id !== user.id) {
+		error = "Access denied";
+	} else {
+		milestones = await apiClient.milestones.getByProject(project.project_id);
+		console.log("[SERVER] Successfully fetched milestones:", milestones);
 	}
-} catch (error) {
-	console.error("Failed to fetch project:", error);
-	return new Response(null, { status: 500, statusText: "Internal server error" });
+} catch (err) {
+	console.error("Failed to fetch project:", err);
+	error = "Failed to fetch project";
 }
+if (error) return new Response(null, { status: 500, statusText: error });
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 ---
 
-<PageLayout title={`Milestones & Goals - ${project?.name || project_id}`}>
-	<div class="container mx-auto p-6">
-		<div class="mb-6">
-			<div class="flex items-center justify-between mb-4">
-				<div>
-					<h1 class="text-2xl font-bold text-gray-900 mb-2">Milestones & Goals</h1>
-					<p class="text-gray-600">Organize your project tasks into milestones and goals for better tracking.</p>
-				</div>
-				<a 
-					href={`/project/${project_id}`}
-					class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg transition-colors"
-				>
-					← Back to Project
-				</a>
-			</div>
-		</div>
-
-		<div id="milestones-container" class="space-y-6">
-			<!-- Milestones will be loaded here by client-side component -->
-		</div>
-
-		<!-- Add new milestone button -->
-		<button 
-			id="add-milestone-btn"
-			class="mt-6 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-		>
-			+ Add Milestone
-		</button>
-	</div>
-
-	<script define:vars={{ projectId: project.id }}>
-		import MilestonesManager from '@/components/solid/MilestonesManager';
-		import { render } from 'solid-js/web';
-
-		// Wait for DOM to load
-		document.addEventListener('DOMContentLoaded', () => {
-			// Mount the Milestones Manager component
-			const container = document.getElementById('milestones-container');
-			if (container && projectId) {
-				render(() => MilestonesManager({ projectId }), container);
-			}
-		});
-	</script>
+<PageLayout title={`Milestones & Goals - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<h5>project goals</h5>
+		<MilestonesManager projectId={project.id} initialMilestones={milestones} client:load />
+	</ProjectLayout>
 </PageLayout>

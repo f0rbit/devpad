@@ -2,6 +2,7 @@ import { describe, expect, test, beforeEach } from "bun:test";
 import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
 import { expectValidArray, expectMatchesPartial } from "../shared/assertions";
 import { TestDataFactory } from "./factories";
+import { TEST_USER_ID } from "./setup";
 import type { Milestone, Goal, UpsertMilestone, UpsertGoal, Project } from "@devpad/schema";
 
 // Helper function for API error assertions
@@ -499,6 +500,202 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(goalResponse.status).toBe(404);
+		});
+	});
+
+	describe("Task-Goal Integration", () => {
+		let testMilestone: Milestone;
+		let testGoal: Goal;
+
+		beforeEach(async () => {
+			testMilestone = await testInstance.createTestMilestone(testProject.id);
+			testGoal = await testInstance.createTestGoal(testMilestone.id);
+		});
+
+		test("should create task with goal relationship", async () => {
+			const taskData = {
+				title: `Test Task ${Date.now()}`,
+				summary: "Test task with goal",
+				progress: "UNSTARTED",
+				visibility: "PRIVATE",
+				priority: "LOW",
+				owner_id: TEST_USER_ID,
+				project_id: testProject.id,
+				goal_id: testGoal.id,
+			};
+
+			const response = await fetch("http://localhost:3001/api/v0/tasks", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+				},
+				body: JSON.stringify(taskData),
+			});
+
+			expect(response.ok).toBe(true);
+			const task = await response.json();
+
+			expect(task.task.goal_id).toBe(testGoal.id);
+			expect(task.task.project_id).toBe(testProject.id);
+
+			// Task will be cleaned up automatically
+		});
+
+		test("should modify task goal relationship", async () => {
+			// Create task without goal
+			const taskData = {
+				title: `Test Task ${Date.now()}`,
+				owner_id: TEST_USER_ID,
+				project_id: testProject.id,
+			};
+
+			const createResponse = await fetch("http://localhost:3001/api/v0/tasks", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+				},
+				body: JSON.stringify(taskData),
+			});
+
+			expect(createResponse.ok).toBe(true);
+			const task = await createResponse.json();
+			expect(task.task.goal_id).toBeNull();
+
+			// Update task to add goal
+			const updateData = {
+				...task.task,
+				goal_id: testGoal.id,
+			};
+
+			const updateResponse = await fetch("http://localhost:3001/api/v0/tasks", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+				},
+				body: JSON.stringify(updateData),
+			});
+
+			expect(updateResponse.ok).toBe(true);
+			const updatedTask = await updateResponse.json();
+			expect(updatedTask.task.goal_id).toBe(testGoal.id);
+
+			// Update task to remove goal
+			const removeData = {
+				...updatedTask.task,
+				goal_id: null,
+			};
+
+			const removeResponse = await fetch("http://localhost:3001/api/v0/tasks", {
+				method: "PATCH",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+				},
+				body: JSON.stringify(removeData),
+			});
+
+			expect(removeResponse.ok).toBe(true);
+			const finalTask = await removeResponse.json();
+			expect(finalTask.task.goal_id).toBeNull();
+
+			// Task will be cleaned up automatically
+		});
+
+		test("should filter tasks by goal", async () => {
+			const goal2 = await testInstance.createTestGoal(testMilestone.id);
+
+			// Create tasks with different goals
+			const task1Data = {
+				title: "Task 1",
+				owner_id: TEST_USER_ID,
+				project_id: testProject.id,
+				goal_id: testGoal.id,
+			};
+
+			const task2Data = {
+				title: "Task 2",
+				owner_id: TEST_USER_ID,
+				project_id: testProject.id,
+				goal_id: testGoal.id,
+			};
+
+			const task3Data = {
+				title: "Task 3",
+				owner_id: TEST_USER_ID,
+				project_id: testProject.id,
+				goal_id: goal2.id,
+			};
+
+			const task4Data = {
+				title: "Task 4",
+				owner_id: TEST_USER_ID,
+				project_id: testProject.id,
+			};
+
+			// Create all tasks
+			const tasks = await Promise.all([
+				fetch("http://localhost:3001/api/v0/tasks", {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					},
+					body: JSON.stringify(task1Data),
+				}),
+				fetch("http://localhost:3001/api/v0/tasks", {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					},
+					body: JSON.stringify(task2Data),
+				}),
+				fetch("http://localhost:3001/api/v0/tasks", {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					},
+					body: JSON.stringify(task3Data),
+				}),
+				fetch("http://localhost:3001/api/v0/tasks", {
+					method: "PATCH",
+					headers: {
+						"Content-Type": "application/json",
+						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					},
+					body: JSON.stringify(task4Data),
+				}),
+			]);
+
+			// Parse responses
+			const taskResults = await Promise.all(tasks.map(r => r.json()));
+			// Tasks will be cleaned up automatically by test teardown
+
+			// Get all project tasks
+			const allTasksResponse = await fetch(`http://localhost:3001/api/v0/tasks?project=${testProject.id}`, {
+				headers: {
+					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+				},
+			});
+
+			expect(allTasksResponse.ok).toBe(true);
+			const allTasks = await allTasksResponse.json();
+
+			// Filter by testGoal (should have 2 tasks)
+			const goal1Tasks = allTasks.filter((task: any) => task.task.goal_id === testGoal.id);
+			expect(goal1Tasks.length).toBe(2);
+
+			// Filter by goal2 (should have 1 task)
+			const goal2Tasks = allTasks.filter((task: any) => task.task.goal_id === goal2.id);
+			expect(goal2Tasks.length).toBe(1);
+
+			// Filter by no goal (should have 1 task)
+			const noGoalTasks = allTasks.filter((task: any) => task.task.goal_id === null);
+			expect(noGoalTasks.length).toBe(1);
 		});
 	});
 });

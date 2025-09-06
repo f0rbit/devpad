@@ -1,6 +1,6 @@
 ---
 import { getServerApiClient } from "@/utils/api-client";
-import type { Project } from "@devpad/schema";
+import type { Project, TaskWithDetails } from "@devpad/schema";
 import PageLayout from '@/layouts/PageLayout.astro';
 import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro';
 import { TaskSorter } from '@/components/solid/TaskSorter';
@@ -12,7 +12,7 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-let project;
+let project: Project | null = null;
 let error: string | null = null;
 try {
 	project = await apiClient.projects.getByName(project_id);
@@ -31,7 +31,7 @@ if (!project) return new Response(null, { status: 404, statusText: "Project not 
 const project_map = {} as Record<string, Project>;
 project_map[project.id] = project;
 
-let tasks = [];
+let tasks: TaskWithDetails[] = [];
 let tags = [];
 try {
 	tasks = await apiClient.tasks.getByProject(project.id);

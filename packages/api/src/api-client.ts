@@ -445,6 +445,11 @@ export class ApiClient {
 		list: () => this.httpClient.get<any[]>("/milestones"),
 
 		/**
+		 * Get milestones by project ID
+		 */
+		getByProject: (project_id: string) => this.httpClient.get<any[]>(`/projects/${project_id}/milestones`),
+
+		/**
 		 * Get milestone by ID
 		 */
 		find: async (id: string) => {
