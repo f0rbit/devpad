@@ -1,5 +1,7 @@
 # Development Guidelines for devpad Codebase
 
+Please don't be super agreeable with whatever I say - if you think there's an issue with my suggestions, push back & suggest better alternatives. I may be wrong upon occasion challenge me. But then once we've come to a decision - let's disagree & commit and move forward.
+
 ## Build & Test Commands
 - Dev server: `bun dev` (root) or `cd packages/app && bun dev`
 - Build all: `bun build` (builds all packages)
