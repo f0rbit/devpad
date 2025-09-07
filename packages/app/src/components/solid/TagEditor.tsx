@@ -228,3 +228,6 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>; c
 		</div>
 	);
 }
+
+// Default export for Astro compatibility
+export default TagEditor;

@@ -1,11 +1,13 @@
 # Development Guidelines for devpad Codebase
 
+THIS PROJECT IS CALLED "devpad" NOT "DevPad". PLEASE UTILISE CORRECT CAPITLISATION: "devpad"
+
 Please don't be super agreeable with whatever I say - if you think there's an issue with my suggestions, push back & suggest better alternatives. I may be wrong upon occasion challenge me. But then once we've come to a decision - let's disagree & commit and move forward.
 
 ## Build & Test Commands
 - Dev server: `bun dev` (root) or `cd packages/app && bun dev`
 - Build all: `bun build` (builds all packages)
-- Format only: `bun format` (DO NOT use `bun lint:fix` - breaks Astro imports)
+- Formatting guidelines are defined in `biome.json` - DO NOT RUN `bun lint:fix` - this will break astro imports
 - Type check: `cd packages/app && bun check`
 - Unit tests: `make unit` or `bun test unit`
 - Integration tests: `make integration` (sequential) or `bun test integration/`
