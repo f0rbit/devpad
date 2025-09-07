@@ -209,6 +209,11 @@ export class ApiClient {
 		},
 
 		/**
+		 * Get project history
+		 */
+		history: (project_id: string): Promise<Result<any[], "history">> => wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`), "history"),
+
+		/**
 		 * Legacy methods (keeping for compatibility)
 		 */
 		upsert: (data: UpsertProject): Promise<Result<Project, "project">> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data }), "project"),
@@ -217,11 +222,6 @@ export class ApiClient {
 		 * Fetch project specification from GitHub
 		 */
 		fetchSpecification: (project_id: string): Promise<Result<string, "specification">> => wrap(() => this.clients.projects.get<string>("/projects/fetch_spec", { query: { project_id } }), "specification"),
-
-		/**
-		 * Save project configuration
-		 */
-		saveConfig: (request: SaveConfigRequest): Promise<Result<void, "result">> => wrap(() => this.clients.projects.patch<void>("/projects/save_config", { body: request }), "result"),
 
 		/**
 		 * Delete project (soft delete)
@@ -431,9 +431,39 @@ export class ApiClient {
 	 */
 	public readonly github = {
 		/**
+		 * List repositories for authenticated user
+		 */
+		repos: (): Promise<Result<any[], "repos">> => wrap(() => this.clients.github.get<any[]>("/repos"), "repos"),
+
+		/**
 		 * List branches for a GitHub repository
 		 */
-		branches: (owner: string, repo: string): Promise<Result<any[], "branches">> => wrap(() => this.clients.github.get<any[]>(`/github/branches`, { query: { owner, repo } }), "branches"),
+		branches: (owner: string, repo: string): Promise<Result<any[], "branches">> => wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`), "branches"),
+	};
+
+	/**
+	 * User namespace with Result-wrapped operations
+	 */
+	public readonly user = {
+		/**
+		 * Get user activity history
+		 */
+		history: (): Promise<Result<any[], "history">> => wrap(() => this.clients.auth.get<any[]>("/user/history"), "history"),
+
+		/**
+		 * Update user preferences
+		 */
+		preferences: (data: { id: string; task_view: string }): Promise<Result<any, "result">> => wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data }), "result"),
+	};
+
+	/**
+	 * Keys namespace with Result-wrapped operations
+	 */
+	public readonly keys = {
+		/**
+		 * List API keys for authenticated user
+		 */
+		list: (): Promise<Result<{ keys: any[] }, "keys">> => wrap(() => this.clients.auth.get<{ keys: any[] }>("/auth/keys"), "keys"),
 	};
 
 	/**

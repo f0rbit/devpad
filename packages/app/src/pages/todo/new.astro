@@ -1,27 +1,18 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
 import PageLayout from '@/layouts/PageLayout.astro';
 import TaskEditor from '@/components/solid/TaskEditor';
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-let project_map = {};
-let user_tags = [];
+const apiClient = getServerApiClient(Astro.locals);
 
-try {
-	const apiClient = getServerApiClient(Astro.locals);
-	
-	// Get projects and convert to map format
-	project_map = await apiClient.projects.map();
-	
-	// Get tags using API client
-	user_tags = await apiClient.tags.list();
-} catch (error) {
-	console.error("Error fetching user data:", error);
-	project_map = {};
-	user_tags = [];
-}
+const { project_map, error: projectMapError } = await apiClient.projects.map();
+if (projectMapError) return rethrow(projectMapError);
+
+const { tags: user_tags, error: tagsError } = await apiClient.tags.list();
+if (tagsError) return rethrow(tagsError);
 ---
 
 <PageLayout title={"New Task - devpad"}>

@@ -11,15 +11,11 @@ if (!user) {
 
 const apiClient = getServerApiClient(Astro.locals);
 
-let keys = [];
-let user_history = [];
-try {
-	const keysResponse = await apiClient.keys.list();
-	keys = keysResponse.keys || [];
-	user_history = await apiClient.user.history();
-} catch (error) {
-	console.error("Failed to load account data:", error);
-}
+const { keys, error: keysError } = await apiClient.keys.list();
+if (keysError) return rethrow(keysError);
+
+const { history: user_history, error: historyError } = await apiClient.user.history();
+if (historyError) return rethrow(historyError);
 ---
 
 <PageLayout title="Account - devpad">

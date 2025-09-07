@@ -29,6 +29,6 @@ if (tags_error) return rethrow(tags_error);
 
 <PageLayout title={`Tasks - ${project_id}`}>
 	<ProjectTasksLayout project_id={project_id}>
-		<TaskSorter tasks={tasks} project_map={project_map} defaultOption={"recent"} tags={tags} user_id={user.id} defaultView={user.task_view} client:load />
+		<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"recent"} tags={tags} user_id={user.id} defaultView={user.task_view || "list"} />
 	</ProjectTasksLayout>
 </PageLayout>

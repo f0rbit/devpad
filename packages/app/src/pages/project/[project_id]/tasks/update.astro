@@ -1,5 +1,5 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
 import type { Task, TaskWithDetails } from "@devpad/schema";
 import PageLayout from '@/layouts/PageLayout.astro';
 import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro';
@@ -12,40 +12,26 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-let project;
-let project_tasks: TaskWithDetails[] = [];
-let codebase_task_map: Record<string, TaskWithDetails> = {};
-let update = null;
+const { project, error: projectError } = await apiClient.projects.getByName(project_id);
+if (projectError) return rethrow(projectError);
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 
-try {
-	project = await apiClient.projects.getByName(project_id);
-	if (!project) {
-		return new Response(null, { status: 404, statusText: "Project not found" });
-	}
-	if (project.owner_id !== user.id) {
-		return new Response(null, { status: 403, statusText: "Access denied" });
-	}
-
-	// Get project tasks
-	project_tasks = await apiClient.tasks.getByProject(project.id);
+const { tasks: project_tasks, error: tasksError } = await apiClient.tasks.getByProject(project.id);
+if (tasksError) return rethrow(tasksError);
 	
-	// Build a map of task.codebases_tasks.id -> task
-	codebase_task_map = project_tasks.reduce(
-		(acc, task) => {
-			if (!task.codebase_tasks) return acc;
-			acc[task.codebase_tasks.id] = task;
-			return acc;
-		},
-		{} as Record<string, TaskWithDetails>
-	);
+// Build a map of task.codebases_tasks.id -> task
+const codebase_task_map = project_tasks.reduce(
+	(acc, task) => {
+		if (!task.codebase_tasks) return acc;
+		acc[task.codebase_tasks.id] = task;
+		return acc;
+	},
+	{} as Record<string, TaskWithDetails>
+);
 
-	// TODO: Need to implement getRecentUpdate API endpoint
-	// const update = await getRecentUpdate(found_project);
-	update = null; // Temporarily disabled until API endpoint is implemented
-} catch (error) {
-	console.error("Failed to load project tasks update data:", error);
-	return new Response(null, { status: 500, statusText: "Failed to load project data" });
-}
+// TODO: Implement update fetching once the API endpoint is available
+const update = null; // Temporarily disabled until API endpoint is implemented
 
 const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse(update.data) : update.data) : null;
 ---
