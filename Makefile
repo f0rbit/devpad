@@ -12,12 +12,15 @@ integration:
 
 test: unit integration
 
-coverage:
-	@./scripts/coverage.sh
+coverage: coverage/lcov.info
 
-coverage-stats:
-	@if [ ! -d coverage ]; then echo "❌ No coverage data found. Run 'make coverage' first."; exit 1; fi
-	@./scripts/coverage-stats.sh
+coverage/lcov.info:
+	@./scripts/test-coverage.sh
+
+coverage-report:
+	@./scripts/coverage-report.sh
+
+.PHONY: coverage coverage-report
 
 help:
 	@echo "📦 DevPad Build & Test Commands"

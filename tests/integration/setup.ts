@@ -4,7 +4,6 @@
  */
 
 import { beforeAll, afterAll } from "bun:test";
-import fs from "node:fs";
 import path from "node:path";
 import ApiClient from "@devpad/api";
 import { TEST_USER_ID, DEBUG_LOGGING, log, setupTestDatabase, createTestUser, cleanupTestDatabase, waitForServer } from "../shared/test-utils";
@@ -104,7 +103,7 @@ export async function performCleanup(): Promise<void> {
 
 	// Stop Hono server
 	if (honoServer) {
-		honoServer.kill("SIGTERM");
+		honoServer.stop();
 		honoServer = null;
 		log("✅ Hono server stopped");
 	}
@@ -154,24 +153,10 @@ process.on("uncaughtException", cleanup);
 process.on("unhandledRejection", cleanup);
 
 /**
- * Start the Hono server for testing
+ * Start the Hono server for testing - in-process version
  */
 async function startHonoServer(): Promise<void> {
-	log("🚀 Starting shared Hono dev server...");
-
-	const serverDir = path.resolve(path.join(__dirname, "..", "..", "packages", "server"));
-	log(`📁 Server directory: ${serverDir}`);
-
-	// Check if server directory exists
-	if (!fs.existsSync(serverDir)) {
-		throw new Error(`Server directory not found: ${serverDir}`);
-	}
-
-	// Check if server package.json exists
-	const serverPackageJson = path.join(serverDir, "package.json");
-	if (!fs.existsSync(serverPackageJson)) {
-		throw new Error(`Server package.json not found: ${serverPackageJson}`);
-	}
+	log("🚀 Starting shared Hono server in-process...");
 
 	log(`🔧 Environment variables:`);
 	log(`  NODE_ENV: ${process.env.NODE_ENV}`);
@@ -179,54 +164,40 @@ async function startHonoServer(): Promise<void> {
 	log(`  DATABASE_URL: ${process.env.DATABASE_URL}`);
 	log(`  PORT: 3001`);
 
-	const { spawn } = await import("node:child_process");
+	// Import server functions
+	const { createApp, migrateDb } = await import("../../packages/server/src/server.js");
 
-	const logFile = fs.createWriteStream(path.join(serverDir, "server.log"), { flags: "a" });
-
-	log("🎬 Spawning server process...");
-	honoServer = spawn("bun", ["dev"], {
-		cwd: serverDir,
-		stdio: ["pipe", "pipe", "pipe"],
-		env: {
-			...process.env,
-			NODE_ENV: "test",
-			DATABASE_FILE: process.env.DATABASE_FILE,
-			DATABASE_URL: process.env.DATABASE_URL,
-			PORT: "3001",
-			RUN_MIGRATIONS: "true",
-		},
-	});
-
-	log(`📊 Server process spawned with PID: ${honoServer.pid}`);
-
-	// Always pipe output to log file, and conditionally to console
-	honoServer.stdout?.pipe(logFile);
-	honoServer.stderr?.pipe(logFile);
-
-	if (DEBUG_LOGGING) {
-		// In debug mode, also pipe to console
-		honoServer.stdout?.on("data", (data: Buffer) => {
-			process.stdout.write(data);
-		});
-		honoServer.stderr?.on("data", (data: Buffer) => {
-			process.stderr.write(data);
-		});
+	// Run migrations first
+	const databaseFile = process.env.DATABASE_FILE;
+	if (!databaseFile) {
+		throw new Error("DATABASE_FILE environment variable is required");
 	}
 
-	// Handle process errors
-	honoServer.on("error", (error: any) => {
-		log("❌ Hono server process error:", error);
-		throw error;
+	log("⌛️ Running database migrations...");
+	await migrateDb({
+		databaseFile,
+		migrationPaths: ["./packages/schema/src/database/drizzle"],
+	});
+	log("✅ Database migrations completed");
+
+	// Create the Hono app
+	const app = createApp({
+		runMigrations: false, // Already done above
+		enableStatic: false,
+		corsOrigins: ["http://localhost:4321", "http://localhost:3000", "http://localhost:5173"],
+		port: 3001,
+		environment: "test",
 	});
 
-	// Handle process exit
-	honoServer.on("exit", (code: number | null, signal: string | null) => {
-		log(`🛑 Hono server process exited with code ${code}, signal ${signal}`);
+	log("🎬 Starting in-process server...");
+
+	// Start the server using Bun.serve
+	honoServer = Bun.serve({
+		port: 3001,
+		fetch: app.fetch,
 	});
 
-	// Give the server a moment to start before checking
-	log("⏳ Waiting 2 seconds for server process to initialize...");
-	await new Promise(resolve => setTimeout(resolve, 2000));
+	log(`📊 Server started in-process on port ${honoServer.port}`);
 
 	// Wait for server to be ready
 	await waitForServer("http://localhost:3001/health");
