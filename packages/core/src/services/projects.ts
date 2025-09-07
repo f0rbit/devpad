@@ -1,7 +1,6 @@
 import type { UpsertProject } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { projectRepository, type Project } from "../data/project-repository";
-import { log } from "../utils/logger";
 
 export async function getUserProjects(user_id: string): Promise<Project[]> {
 	return projectRepository.getUserProjects(user_id);
@@ -40,38 +39,8 @@ export async function getProjectConfig(project_id: string) {
 export type ProjectConfig = Awaited<ReturnType<typeof getProjectConfig>>;
 
 export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string): Promise<Project> {
-	log.projects("🔧 [upsertProject] Called with:", {
-		hasId: !!data.id,
-		hasProjectId: !!data.project_id,
-		projectId: data.project_id,
-		id: data.id,
-		name: data.name,
-		ownerId: owner_id,
-		dataOwnerId: data.owner_id,
-		visibility: data.visibility,
-		status: data.status,
-		hasAccessToken: !!access_token,
-		hasRepoUrl: !!data.repo_url,
-		hasRepoId: !!data.repo_id,
-	});
-	log.projects("🔧 [upsertProject] Called with:", {
-		hasId: !!data.id,
-		hasProjectId: !!data.project_id,
-		projectId: data.project_id,
-		id: data.id,
-		name: data.name,
-		ownerId: owner_id,
-		dataOwnerId: data.owner_id,
-		visibility: data.visibility,
-		status: data.status,
-		hasAccessToken: !!access_token,
-		hasRepoUrl: !!data.repo_url,
-		hasRepoId: !!data.repo_id,
-	});
-
 	// Handle GitHub specification fetching if needed
 	if (access_token) {
-		log.projects("🔍 [upsertProject] Has access token, checking GitHub integration");
 		const previous = data.id ? (await getProjectById(data.id)).project : null;
 		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
 		const repo_url = data.repo_url ?? previous?.repo_url;
@@ -79,7 +48,6 @@ export async function upsertProject(data: UpsertProject, owner_id: string, acces
 
 		// the new_project is imported from github and doesn't have a specification, import it from the README
 		if (fetch_specification && !data.specification && access_token) {
-			console.log(`Updating specification for project: ${data.project_id ?? previous?.project_id}`);
 			try {
 				// we need to get OWNER and REPO from the repo_url
 				const { getSpecification } = await import("./github");
@@ -90,24 +58,13 @@ export async function upsertProject(data: UpsertProject, owner_id: string, acces
 
 				const readme = await getSpecification(owner, repo, access_token);
 				data.specification = readme;
-				console.log(`✅ Successfully fetched README for ${owner}/${repo}`);
 			} catch (error) {
 				// Handle case where repository has no README or other GitHub API errors
-				console.log(`⚠️  Could not fetch README for project ${data.project_id}:`, error instanceof Error ? error.message : String(error));
-				console.log(`📝 Project will be created without specification - user can add it manually later`);
 				// Continue with project creation even if README fetch fails
 				data.specification = null;
 			}
 		}
 	}
 
-	log.projects("📝 [upsertProject] Calling projectRepository.upsertProject");
-	const result = await projectRepository.upsertProject(data, owner_id);
-
-	log.projects("✅ [upsertProject] Repository upsert completed", {
-		resultId: result.id,
-		resultName: result.name,
-	});
-
-	return result;
+	return projectRepository.upsertProject(data, owner_id);
 }

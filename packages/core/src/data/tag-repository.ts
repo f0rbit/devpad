@@ -20,7 +20,6 @@ export class TagRepository extends BaseRepository<typeof tag, Tag, UpsertTag> {
 				.where(and(eq(tag.owner_id, user_id), or(isNull(tag.deleted), eq(tag.deleted, false))));
 			return result as Tag[];
 		} catch (error) {
-			console.error("Error getting active user tags:", error);
 			return [];
 		}
 	}
@@ -39,7 +38,6 @@ export class TagRepository extends BaseRepository<typeof tag, Tag, UpsertTag> {
 
 			return tags as Tag[];
 		} catch (error) {
-			console.error("Error getting task tags:", error);
 			return [];
 		}
 	}
@@ -53,7 +51,6 @@ export class TagRepository extends BaseRepository<typeof tag, Tag, UpsertTag> {
 				.returning({ id: tag.id });
 			return res[0].id;
 		} catch (error) {
-			console.error("Error upserting tag:", error);
 			throw error;
 		}
 	}
@@ -81,7 +78,6 @@ export class TagRepository extends BaseRepository<typeof tag, Tag, UpsertTag> {
 			await db.insert(task_tag).values({ task_id, tag_id }).onConflictDoNothing();
 			return true;
 		} catch (error) {
-			console.error("Failed to link task to tag:", error);
 			return false;
 		}
 	}

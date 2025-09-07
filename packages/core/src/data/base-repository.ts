@@ -25,7 +25,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 				.where(eq((this.table as any)[idField], id));
 			return (result[0] as TSelect) || null;
 		} catch (error) {
-			console.error(`Error finding record by ID ${id}:`, error);
 			return null;
 		}
 	}
@@ -41,7 +40,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 				.where(eq((this.table as any)[field], value));
 			return result as TSelect[];
 		} catch (error) {
-			console.error(`Error finding records by ${field}:`, error);
 			return [];
 		}
 	}
@@ -57,7 +55,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 				.where(and(...conditions));
 			return result as TSelect[];
 		} catch (error) {
-			console.error("Error finding records with conditions:", error);
 			return [];
 		}
 	}
@@ -73,7 +70,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 				.returning();
 			return ((result as any)[0] as TSelect) || null;
 		} catch (error) {
-			console.error("Error inserting record:", error);
 			return null;
 		}
 	}
@@ -109,7 +105,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 				error: error instanceof Error ? error.message : String(error),
 				stack: error instanceof Error ? error.stack : undefined,
 			});
-			console.error(`Error updating record ${id}:`, error);
 			throw error; // Re-throw instead of returning null
 		}
 	}
@@ -123,7 +118,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 			console.log("inserted action", actionData.type);
 			return true;
 		} catch (error) {
-			console.error("Error adding action:", error);
 			return false;
 		}
 	}
@@ -139,7 +133,6 @@ export abstract class BaseRepository<TTable, TSelect, TInsert> {
 				.where(and(eq((this.table as any)[idField], resourceId), eq((this.table as any)[ownerField], userId)));
 			return result.length > 0;
 		} catch (error) {
-			console.error("Error checking ownership:", error);
 			return false;
 		}
 	}

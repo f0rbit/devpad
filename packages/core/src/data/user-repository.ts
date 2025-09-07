@@ -33,7 +33,6 @@ export class UserRepository extends BaseRepository<typeof user, User, UpdateUser
 			const users = await db.select().from(user).where(eq(user.github_id, githubId)).limit(1);
 			return users.length > 0 ? users[0] : null;
 		} catch (error) {
-			console.error("Error getting user by GitHub ID:", error);
 			return null;
 		}
 	}
@@ -43,7 +42,6 @@ export class UserRepository extends BaseRepository<typeof user, User, UpdateUser
 			const users = await db.select().from(user).where(eq(user.email, email)).limit(1);
 			return users.length > 0 ? users[0] : null;
 		} catch (error) {
-			console.error("Error getting user by email:", error);
 			return null;
 		}
 	}

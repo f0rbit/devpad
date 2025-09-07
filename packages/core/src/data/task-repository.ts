@@ -55,7 +55,6 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 
 			return tasks;
 		} catch (error) {
-			console.error("Error fetching tasks with details:", error);
 			return [];
 		}
 	}
@@ -78,7 +77,6 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 
 			return this.fetchTasksWithDetails([inArray(task.id, task_ids)]);
 		} catch (error) {
-			console.error("Error getting tasks by tag:", error);
 			return [];
 		}
 	}
@@ -88,7 +86,6 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 			const tasks = await this.fetchTasksWithDetails([eq(task.id, task_id)]);
 			return tasks[0] || null;
 		} catch (error) {
-			console.error("Error getting single task:", error);
 			return null;
 		}
 	}
@@ -118,7 +115,6 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 				data,
 			});
 		} catch (error) {
-			console.error("Error adding task action:", error);
 			return false;
 		}
 	}
@@ -145,7 +141,6 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 				}
 			}
 		} catch (error) {
-			console.error("Error getting upserted task map:", error);
 		}
 
 		return result;
@@ -221,7 +216,6 @@ if (milestone.project_id !== task_project_id) {
 					.returning();
 				result = res[0] || null;
 			} catch (error) {
-				console.error("Error upserting task:", error);
 				throw error;
 			}
 		}
@@ -273,7 +267,6 @@ if (milestone.project_id !== task_project_id) {
 			// Update the updated_at time on each link
 			await db.update(task_tag).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(eq(task_tag.task_id, task_id));
 		} catch (error) {
-			console.error("Error upserting task tags:", error);
 		}
 	}
 }

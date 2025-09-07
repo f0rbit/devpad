@@ -25,7 +25,6 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 
 			return { project: result[0], error: null };
 		} catch (err) {
-			console.error("Error getting project:", err);
 			return { project: null, error: "Internal Server Error" };
 		}
 	}
@@ -40,7 +39,6 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 			// Not finding a project is not an error, just return null project
 			return { project: result, error: null };
 		} catch (err) {
-			console.error("Error getting project by ID:", err);
 			return { project: null, error: "Internal Server Error" };
 		}
 	}
@@ -76,11 +74,9 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 		const DEBUG_THIS = true;
 		const { owner_id: user_id, id } = project;
 		if (!user_id) {
-			if (DEBUG_THIS) console.error("No owner_id ID");
 			return null;
 		}
 		if (!id) {
-			if (DEBUG_THIS) console.error("No project ID");
 			return null;
 		}
 
@@ -93,7 +89,6 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 			.limit(1);
 
 		if (!updates || !updates[0]) {
-			if (DEBUG_THIS) console.error("No updates found");
 			return null;
 		}
 
@@ -324,8 +319,6 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 				});
 
 				// Log the exact values that were being inserted
-				console.error("Failed INSERT clean values:", JSON.stringify(cleanUpsert, null, 2));
-				console.error("Full INSERT error:", error);
 				throw error;
 			}
 		}

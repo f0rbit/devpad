@@ -24,8 +24,14 @@ export class ApiClient {
 	private base_url: string;
 	private api_key: string;
 	private request_history: BufferedQueue<RequestHistoryEntry>;
+	private category: string = "api";
 
-	constructor(options: { base_url: string; api_key: string; max_history_size?: number }) {
+	constructor(options: {
+		base_url: string;
+		api_key: string;
+		max_history_size?: number;
+		category?: string;
+	}) {
 		if (!options.api_key) {
 			throw new Error("API key is required");
 		}
@@ -36,6 +42,7 @@ export class ApiClient {
 
 		this.base_url = options.base_url;
 		this.api_key = options.api_key;
+		this.category = options.category || "api";
 		this.request_history = new ArrayBufferedQueue<RequestHistoryEntry>(options.max_history_size ?? 5);
 	}
 
@@ -51,16 +58,27 @@ export class ApiClient {
 		return url.toString();
 	}
 
+	private generateRequestId(): string {
+		return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+	}
+
 	private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
 		const { method = "GET", headers = {}, body, query } = options;
-
 		const url = this.buildUrl(path, query);
+		const requestId = this.generateRequestId();
 		const startTime = Date.now();
 		const timestamp = new Date().toISOString();
+
+		// Log request start
+		console.log(`[DEBUG][${this.category}] ${method} ${path} [${requestId}]`, {
+			body,
+			query,
+		});
 
 		const request_headers: Record<string, string> = {
 			"Content-Type": "application/json",
 			Authorization: `Bearer ${this.api_key}`,
+			"X-Request-ID": requestId,
 			...headers,
 		};
 
@@ -91,6 +109,13 @@ export class ApiClient {
 			historyEntry.duration = duration;
 
 			if (!response.ok) {
+				console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
+					status: response.status,
+					duration: `${duration}ms`,
+					body,
+					query,
+				});
+
 				try {
 					// Use centralized error handling
 					handleHttpResponse(response);
@@ -108,22 +133,38 @@ export class ApiClient {
 			this.request_history.add(historyEntry);
 
 			// Handle response parsing
+			let result: T;
 			if (response.status === HTTP_STATUS.NO_CONTENT) {
-				return undefined as T;
+				result = undefined as T;
+			} else {
+				const text = await response.text();
+				if (!text || text.trim() === "" || text.trim() === "null") {
+					result = undefined as T;
+				} else {
+					try {
+						result = JSON.parse(text) as T;
+					} catch (parseError) {
+						result = text as T;
+					}
+				}
 			}
 
-			const text = await response.text();
-			if (!text || text.trim() === "" || text.trim() === "null") {
-				return undefined as T;
-			}
+			// Log success
+			console.log(`[INFO][${this.category}] ${method} ${path} [${requestId}] completed`, {
+				status: response.status,
+				duration: `${duration}ms`,
+			});
 
-			try {
-				return JSON.parse(text) as T;
-			} catch (parseError) {
-				return text as T;
-			}
+			return result;
 		} catch (error) {
-			console.error("API Request Error:", error);
+			const duration = Date.now() - startTime;
+
+			console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
+				duration: `${duration}ms`,
+				error: error instanceof Error ? error.message : String(error),
+				body,
+				query,
+			});
 
 			// If this is already an API error, just re-throw it (already added to history above)
 			if (error instanceof ApiError || error instanceof AuthenticationError) {
@@ -131,7 +172,6 @@ export class ApiClient {
 			}
 
 			// Handle network error
-			const duration = Date.now() - startTime;
 			historyEntry.duration = duration;
 
 			try {
