@@ -88,11 +88,6 @@ export class ApiClient {
 			 */
 			remove: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`), "result"),
 		},
-
-		// Legacy methods (keeping for now)
-		generateApiKey: () => this.auth.keys.create(),
-		revokeApiKey: (key_id: string) => this.auth.keys.revoke(key_id),
-		getSession: () => this.auth.session(),
 	};
 
 	/**
@@ -103,15 +98,7 @@ export class ApiClient {
 		 * List projects with optional filtering
 		 */
 		list: (filters?: { private?: boolean }): Promise<Result<Project[], "projects">> =>
-			wrap(() => {
-				if (filters?.private === true) {
-					return this.clients.projects.get<Project[]>("/projects");
-				} else if (filters?.private === false) {
-					return this.clients.projects.get<Project[]>("/projects/public");
-				} else {
-					return this.clients.projects.get<Project[]>("/projects");
-				}
-			}, "projects"),
+			wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects"), "projects"),
 
 		/**
 		 * Get project map
@@ -209,11 +196,6 @@ export class ApiClient {
 		},
 
 		/**
-		 * Save project configuration (alias for compatibility)
-		 */
-		saveConfig: (request: SaveConfigRequest): Promise<Result<void, "result">> => wrap(() => this.clients.projects.patch<void>("/projects/save_config", { body: request }), "result"),
-
-		/**
 		 * Scanning operations
 		 */
 		scan: {
@@ -236,7 +218,7 @@ export class ApiClient {
 		/**
 		 * Fetch project specification from GitHub
 		 */
-		fetchSpecification: (project_id: string): Promise<Result<string, "specification">> => wrap(() => this.clients.projects.get<string>("/projects/fetch_spec", { query: { project_id } }), "specification"),
+		specification: (project_id: string): Promise<Result<string, "specification">> => wrap(() => this.clients.projects.get<string>("/projects/fetch_spec", { query: { project_id } }), "specification"),
 
 		/**
 		 * Delete project (soft delete)

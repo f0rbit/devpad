@@ -1,10 +1,13 @@
 import type { Project, ProjectConfig, TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { db, project, action, ignore_path, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, not, sql } from "drizzle-orm";
 
 export async function getUserProjects(user_id: string): Promise<Project[]> {
-	const result = await db.select().from(project).where(eq(project.owner_id, user_id));
+	const result = await db
+		.select()
+		.from(project)
+		.where(and(eq(project.owner_id, user_id), not(eq(project.visibility, "DELETED"))));
 	return result;
 }
 
