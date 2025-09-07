@@ -351,6 +351,11 @@ export class ApiClient {
 		find: (id: string): Promise<Result<TaskWithDetails | null, "task">> => wrap(() => this.httpClient.get<any>("/tasks", { query: { id } }), "task"),
 
 		/**
+		 * Get tasks by project ID
+		 */
+		getByProject: (project_id: string): Promise<Result<TaskWithDetails[], "tasks">> => wrap(() => this.httpClient.get<TaskWithDetails[]>(`/projects/${project_id}/tasks`), "tasks"),
+
+		/**
 		 * Create a new task
 		 */
 		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> => wrap(() => this.httpClient.patch<TaskWithDetails>("/tasks", { body: data }), "task"),
@@ -407,6 +412,16 @@ export class ApiClient {
 		 * List tags for authenticated user
 		 */
 		list: (): Promise<Result<TagWithTypedColor[], "tags">> => wrap(() => this.httpClient.get<TagWithTypedColor[]>("/tags"), "tags"),
+	};
+
+	/**
+	 * GitHub namespace with Result-wrapped operations
+	 */
+	public readonly github = {
+		/**
+		 * List branches for a GitHub repository
+		 */
+		branches: (owner: string, repo: string): Promise<Result<any[], "branches">> => wrap(() => this.httpClient.get<any[]>(`/github/branches`, { query: { owner, repo } }), "branches"),
 	};
 
 	/**

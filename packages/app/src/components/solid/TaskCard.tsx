@@ -31,8 +31,8 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	onMount(async () => {
 		try {
 			const apiClient = getApiClient();
-			const goal = await apiClient.goals.find(goal_id);
-			if (goal) {
+			const { goal, error } = await apiClient.goals.find(goal_id);
+			if (!error && goal) {
 				setGoalName(goal.name);
 			}
 		} catch (error) {

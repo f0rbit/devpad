@@ -12,23 +12,10 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-let project: Project | null = null;
-let error: string | null = null;
-
-try {
-	project = await apiClient.projects.getByName(project_id);
-	if (!project) {
-		error = "Project not found";
-	} else if (project.owner_id !== user.id) {
-		error = "Access denied";
-	}
-} catch (err) {
-	console.error("Failed to fetch project:", err);
-	error = "Failed to fetch project";
-}
-
-if (error) return new Response(null, { status: 500, statusText: error });
+const { project, error: projectError } = await apiClient.projects.getByName(project_id);
+if (projectError) return rethrow(projectError);
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
 ---
 
 <PageLayout title={`New Milestone - ${project_id}`}>

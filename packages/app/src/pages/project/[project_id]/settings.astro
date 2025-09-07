@@ -1,5 +1,5 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
 import PageLayout from '../../../layouts/PageLayout.astro';
 import ProjectLayout from '../../../layouts/ProjectLayout.astro';
 import ProjectSettings from '../../../components/ProjectSettings.astro';
@@ -14,51 +14,27 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-let project;
-let error: string | null = null;
-try {
-	project = await apiClient.projects.getByName(project_id);
-	if (!project) {
-		error = "Project not found";
-	} else if (project.owner_id !== user.id) {
-		error = "Access denied";
-	}
-} catch (err) {
-	console.error("Failed to fetch project:", err);
-	error = "Failed to fetch project";
-}
-if (error) return new Response(null, { status: 500, statusText: error });
+const { project, error: projectError } = await apiClient.projects.getByName(project_id);
+if (projectError) return rethrow(projectError);
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
 
-let config;
-let config_error: string | null = null;
-try {
-	config = await apiClient.projects.config.load(project.id);
-} catch (err) {
-	console.error("Failed to load project config:", err);
-	config_error = "Failed to load project config";
-}
-if (config_error) return new Response(null, { status: 500, statusText: config_error });
+const { config, error: configError } = await apiClient.projects.config.load(project.id);
+if (configError) return rethrow(configError);
 
 const [owner, repo] = project.repo_url ? project.repo_url.split("/").slice(-2) : [null, null];
 
 let branches: any[] | null = null;
 if (owner && repo) {
-	try {
-		branches = await apiClient.github.branches(owner, repo);
-	} catch (error) {
-		console.error("Failed to fetch branches:", error);
-		// Continue with null branches - this is not a critical failure
+	const { branches: fetchedBranches, error: branchesError } = await apiClient.github.branches(owner, repo);
+	if (!branchesError) {
+		branches = fetchedBranches;
 	}
+	// Continue with null branches if there's an error - this is not a critical failure
 }
 
-let available_tags: TagWithTypedColor[] = [];
-try {
-	available_tags = await apiClient.tags.list() as TagWithTypedColor[];
-} catch (err) {
-	console.error("Failed to load tags:", err);
-	// Continue with empty tags array
-}
+const { tags: available_tags, error: tags_error } = await apiClient.tags.list();
+if (tags_error) return rethrow(tags_error);
 ---
 
 <PageLayout title={`Settings - ${project_id}`}>

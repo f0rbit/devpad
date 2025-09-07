@@ -1,5 +1,5 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { Project, Milestone } from "@devpad/schema";
@@ -12,29 +12,14 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-let project: Project | null = null;
-let milestone: Milestone | null = null;
-let error: string | null = null;
+const { project, error: projectError } = await apiClient.projects.getByName(project_id);
+if (projectError) return rethrow(projectError);
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
 
-try {
-	project = await apiClient.projects.getByName(project_id);
-	if (!project) {
-		error = "Project not found";
-	} else if (project.owner_id !== user.id) {
-		error = "Access denied";
-	} else {
-		milestone = await apiClient.milestones.find(milestone_id);
-		if (!milestone) {
-			error = "Milestone not found";
-		}
-	}
-} catch (err) {
-	console.error("Failed to fetch data:", err);
-	error = "Failed to fetch data";
-}
-
-if (error) return new Response(null, { status: 500, statusText: error });
-if (!project || !milestone) return new Response(null, { status: 404, statusText: "Not found" });
+const { milestone, error: milestoneError } = await apiClient.milestones.find(milestone_id);
+if (milestoneError) return rethrow(milestoneError);
+if (!milestone) return new Response(null, { status: 404, statusText: "Milestone not found" });
 ---
 
 <PageLayout title={`Edit Milestone - ${project_id}`}>
