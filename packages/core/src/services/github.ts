@@ -3,7 +3,21 @@ import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
 import { GitHub } from "arctic";
 import { inArray } from "drizzle-orm";
-import type { GitHubBranch } from "../data/interfaces.js";
+
+// Use proper Octokit types instead of custom interface
+type GitHubBranchFromAPI = Endpoints["GET /repos/{owner}/{repo}/branches"]["response"]["data"][0];
+
+// Extend the API type with our enriched commit data
+export interface GitHubBranch extends GitHubBranchFromAPI {
+	commit: GitHubBranchFromAPI["commit"] & {
+		message: string;
+		author_name: string;
+		author_email: string;
+		date: string;
+		avatar_url: string | null;
+		author_user: string;
+	};
+}
 
 export const github = new GitHub(Bun.env.GITHUB_CLIENT_ID!, Bun.env.GITHUB_CLIENT_SECRET!);
 

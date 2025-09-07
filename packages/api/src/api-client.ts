@@ -209,6 +209,21 @@ export class ApiClient {
 		},
 
 		/**
+		 * Save project configuration (alias for compatibility)
+		 */
+		saveConfig: (request: SaveConfigRequest): Promise<Result<void, "result">> => wrap(() => this.clients.projects.patch<void>("/projects/save_config", { body: request }), "result"),
+
+		/**
+		 * Scanning operations
+		 */
+		scan: {
+			/**
+			 * Update scan status
+			 */
+			updateStatus: (project_id: string, data: any): Promise<Result<void, "result">> => wrap(() => this.clients.projects.post<void>(`/projects/${project_id}/scan/status`, { body: data }), "result"),
+		},
+
+		/**
 		 * Get project history
 		 */
 		history: (project_id: string): Promise<Result<any[], "history">> => wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`), "history"),
@@ -399,6 +414,16 @@ export class ApiClient {
 
 				return this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: updateData });
 			}, "task"),
+
+		/**
+		 * Upsert task (create or update)
+		 */
+		upsert: (data: UpsertTodo & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data }), "task"),
+
+		/**
+		 * Save tags for tasks
+		 */
+		saveTags: (data: any): Promise<Result<void, "result">> => wrap(() => this.clients.tasks.post<void>("/tasks/save_tags", { body: data }), "result"),
 
 		/**
 		 * Delete task (soft delete)

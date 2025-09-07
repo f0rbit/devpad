@@ -2,12 +2,20 @@
 
 import child_process from "node:child_process";
 import { readdir } from "node:fs/promises";
+import type { ProjectConfig } from "@devpad/schema";
 import { codebase_tasks, db, todo_updates, tracker_result } from "@devpad/schema/database/server";
 import { and, desc, eq } from "drizzle-orm";
 import { getBranches, getRepo } from "./github.js";
-import type { ProjectConfig } from "./projects.js";
 
-export async function* scanRepo(repo_url: string, access_token: string, folder_id: string, config: ProjectConfig) {
+// Type for the return value of getProjectConfig function
+type ProjectConfigResult = {
+	id: string | null;
+	scan_branch: string | null;
+	error: string | null;
+	config: ProjectConfig | null;
+};
+
+export async function* scanRepo(repo_url: string, access_token: string, folder_id: string, config: ProjectConfigResult) {
 	const { id: project_id, scan_branch: branch, error: config_error } = config;
 	if (config_error) {
 		console.error("scan_repo: error fetching project config", config_error);
