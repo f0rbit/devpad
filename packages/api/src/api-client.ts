@@ -1,4 +1,4 @@
-import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal } from "@devpad/schema";
+import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal, HistoryAction, TagWithTypedColor } from "@devpad/schema";
 import { ApiClient as HttpClient } from "./request";
 import { wrap, type Result } from "./result";
 
@@ -387,6 +387,26 @@ export class ApiClient {
 		 * Delete task (soft delete)
 		 */
 		deleteTask: (task: TaskWithDetails): Promise<Result<void, "result">> => wrap(() => this.httpClient.patch<void>("/tasks", { body: { ...task.task, deleted: true } }), "result"),
+
+		/**
+		 * Task history operations
+		 */
+		history: {
+			/**
+			 * Get task history by task ID
+			 */
+			get: (task_id: string): Promise<Result<HistoryAction[], "history">> => wrap(() => this.httpClient.get<HistoryAction[]>(`/tasks/history/${task_id}`), "history"),
+		},
+	};
+
+	/**
+	 * Tags namespace with Result-wrapped operations
+	 */
+	public readonly tags = {
+		/**
+		 * List tags for authenticated user
+		 */
+		list: (): Promise<Result<TagWithTypedColor[], "tags">> => wrap(() => this.httpClient.get<TagWithTypedColor[]>("/tags"), "tags"),
 	};
 
 	/**

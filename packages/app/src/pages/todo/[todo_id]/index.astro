@@ -9,46 +9,32 @@ if (!todo_id) return new Response(null, { status: 404, statusText: "Task not fou
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-let found = null;
-let user_tags = [];
-let project_map = {};
-let task_history = [];
+const api_client = getServerApiClient(Astro.locals);
 
-try {
-	const apiClient = getServerApiClient(Astro.locals);
-	
-	// Get task by ID using the API client
-	found = await apiClient.tasks.find(todo_id);
+const { task, error: task_error } = await api_client.tasks.find(todo_id);
+if (task_error) return rethrow(task_error);
+if (!task || !task.task) return new Response(null, { status: 404, statusText: "Task not found" });
+if (task.task.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-	if (!found || !found.task) return new Response(null, { status: 404, statusText: "Task not found" });
-	if (found.task.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Unauthorized" });
+const { project_map, error: project_error } = await api_client.projects.map();
+if (project_error) return rethrow(project_error);
 
-	// Get projects and convert to map format  
-	const projects = await apiClient.projects.list();
-	project_map = projects.reduce((acc, project) => {
-		acc[project.project_id] = project;
-		return acc;
-	}, {} as Record<string, any>);
+const { tags: user_tags, error: tags_error } = await api_client.tags.list();
+if (tags_error) return rethrow(tags_error);
 
-	// Get tags and task history using API client
-	[user_tags, task_history] = await Promise.all([
-		apiClient.tags.list(),
-		apiClient.tasks.history.get(todo_id)
-	]);
-} catch (error) {
-	console.error("Error fetching task data:", error);
-	return new Response(null, { status: 500, statusText: "Internal Server Error" });
-}
+const { history: task_history, error: history_error } = await api_client.tasks.history.get(todo_id);
+if (history_error) return rethrow(history_error);
 
-const { tags } = found;
+
+const { tags } = task;
 
 // tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
 const tag_map = new Map(user_tags.map(t => [t.id, t]));
 const current_tags = tags.map(tag_id => tag_map.get(tag_id)!) ?? [];
 ---
 
-<PageLayout title={`${found.task?.title ?? "New Task"} - devpad`}>
+<PageLayout title={`${task.task?.title ?? "New Task"} - devpad`}>
 	<main>
-		<TaskEditor task={found} user_tags={user_tags} current_tags={current_tags.filter(Boolean)} history={task_history} user_id={user.id} project_map={project_map} client:load />
+		<TaskEditor task={task} user_tags={user_tags} current_tags={current_tags.filter(Boolean)} history={task_history} user_id={user.id} project_map={project_map} client:load />
 	</main>
 </PageLayout>

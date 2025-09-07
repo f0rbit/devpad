@@ -1,4 +1,4 @@
-import ApiClient from "@devpad/api";
+import ApiClient, { Result } from "@devpad/api";
 
 // Browser-safe logger (no server dependencies)
 const log = {
@@ -228,4 +228,8 @@ export function getServerApiClient(locals: any): ApiClient {
 		jwtToken: locals.jwtToken,
 		baseUrl: process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0",
 	});
+}
+
+export function rethrow<T>(error: Result<T, string>['error']) {
+	return new Response(error?.code, { status: error?.status_code, statusText: error?.code});
 }
