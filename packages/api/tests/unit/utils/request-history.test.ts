@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { ApiClient, type RequestHistoryEntry } from "../../../src/utils/request";
+import { ApiClient, type RequestHistoryEntry } from "../../../src/request";
 
 describe("ApiClient request history", () => {
 	let client: ApiClient;

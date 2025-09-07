@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ApiClient } from "../../../src/utils/request";
+import { ApiClient } from "../../../src/request";
 
 describe("ApiClient validation and construction", () => {
 	test("should construct with valid api key", () => {

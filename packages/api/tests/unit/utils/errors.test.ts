@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { ApiError, AuthenticationError, NetworkError, ValidationError } from "../../../src/utils/errors";
+import { ApiError, AuthenticationError, NetworkError, ValidationError } from "../../../src/errors";
 
 describe("ApiError", () => {
 	test("should create basic error with message", () => {
