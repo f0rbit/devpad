@@ -51,4 +51,9 @@ database/*.db
 *.d.ts.map
 
 dist
+
+# Astro
 .astro/
+
+# Coverage reports
+coverage/

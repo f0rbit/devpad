@@ -160,11 +160,30 @@ async function startHonoServer(): Promise<void> {
 	log("🚀 Starting shared Hono dev server...");
 
 	const serverDir = path.resolve(path.join(__dirname, "..", "..", "packages", "server"));
+	log(`📁 Server directory: ${serverDir}`);
+
+	// Check if server directory exists
+	if (!fs.existsSync(serverDir)) {
+		throw new Error(`Server directory not found: ${serverDir}`);
+	}
+
+	// Check if server package.json exists
+	const serverPackageJson = path.join(serverDir, "package.json");
+	if (!fs.existsSync(serverPackageJson)) {
+		throw new Error(`Server package.json not found: ${serverPackageJson}`);
+	}
+
+	log(`🔧 Environment variables:`);
+	log(`  NODE_ENV: ${process.env.NODE_ENV}`);
+	log(`  DATABASE_FILE: ${process.env.DATABASE_FILE}`);
+	log(`  DATABASE_URL: ${process.env.DATABASE_URL}`);
+	log(`  PORT: 3001`);
 
 	const { spawn } = await import("node:child_process");
 
 	const logFile = fs.createWriteStream(path.join(serverDir, "server.log"), { flags: "a" });
 
+	log("🎬 Spawning server process...");
 	honoServer = spawn("bun", ["dev"], {
 		cwd: serverDir,
 		stdio: ["pipe", "pipe", "pipe"],
@@ -178,26 +197,36 @@ async function startHonoServer(): Promise<void> {
 		},
 	});
 
-	if (!DEBUG_LOGGING) {
-		// Pipe stdout and stderr to the log file
-		honoServer.stdout?.pipe(logFile);
-		honoServer.stderr?.pipe(logFile);
-	} else {
-		// In debug mode, pipe to console as well
+	log(`📊 Server process spawned with PID: ${honoServer.pid}`);
+
+	// Always pipe output to log file, and conditionally to console
+	honoServer.stdout?.pipe(logFile);
+	honoServer.stderr?.pipe(logFile);
+
+	if (DEBUG_LOGGING) {
+		// In debug mode, also pipe to console
 		honoServer.stdout?.on("data", (data: Buffer) => {
-			logFile.write(data);
 			process.stdout.write(data);
 		});
 		honoServer.stderr?.on("data", (data: Buffer) => {
-			logFile.write(data);
 			process.stderr.write(data);
 		});
 	}
 
 	// Handle process errors
 	honoServer.on("error", (error: any) => {
-		console.error("❌ Hono server error:", error);
+		log("❌ Hono server process error:", error);
+		throw error;
 	});
+
+	// Handle process exit
+	honoServer.on("exit", (code: number | null, signal: string | null) => {
+		log(`🛑 Hono server process exited with code ${code}, signal ${signal}`);
+	});
+
+	// Give the server a moment to start before checking
+	log("⏳ Waiting 2 seconds for server process to initialize...");
+	await new Promise(resolve => setTimeout(resolve, 2000));
 
 	// Wait for server to be ready
 	await waitForServer("http://localhost:3001/health");

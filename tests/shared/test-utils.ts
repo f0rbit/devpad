@@ -40,20 +40,19 @@ export async function setupTestDatabase(dbPath: string): Promise<void> {
 		}
 		currentDir = path.dirname(currentDir);
 	}
-	
+
 	const migrationsFolder = path.join(currentDir, "packages", "schema", "src", "database", "drizzle");
 	log("🔍 Migration folder:", migrationsFolder);
-	
+
 	if (!fs.existsSync(migrationsFolder)) {
 		throw new Error(`Migration folder not found: ${migrationsFolder}`);
 	}
-	
+
 	migrate(db, { migrationsFolder });
 
 	sqlite.close();
 	log("✅ Test database setup complete");
 }
-
 
 export async function createTestUser(dbPath: string): Promise<string> {
 	log("👤 Creating test user and API key...");
@@ -95,20 +94,39 @@ export function cleanupTestDatabase(dbPath: string): void {
 
 export async function waitForServer(url: string, maxAttempts = 30): Promise<void> {
 	let attempts = 0;
+	log(`🔄 Waiting for server at ${url} (max ${maxAttempts} attempts)`);
 
 	while (attempts < maxAttempts) {
 		try {
+			log(`  Attempt ${attempts + 1}/${maxAttempts}: Checking ${url}...`);
+
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 3000);
+
 			const response = await fetch(url, {
-				signal: AbortSignal.timeout(2000),
+				signal: controller.signal,
 			});
+
+			clearTimeout(timeoutId);
+
+			log(`  Response status: ${response.status} ${response.statusText}`);
+
 			if (response.ok) {
 				log("✅ Server started and responding");
 				return;
+			} else {
+				log(`  Server responded but with error status: ${response.status}`);
 			}
-		} catch (_error) {
-			// Server not ready yet, continue waiting
+		} catch (error: any) {
+			log(`  Error connecting to server: ${error.name}: ${error.message}`);
+			if (error.name === "AbortError") {
+				log(`  Request timed out after 3 seconds`);
+			} else if (error.code === "ECONNREFUSED") {
+				log(`  Connection refused - server not ready yet`);
+			}
 		}
 
+		log(`  Waiting 1 second before next attempt...`);
 		await new Promise(resolve => setTimeout(resolve, 1000));
 		attempts++;
 	}
