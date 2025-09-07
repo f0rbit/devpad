@@ -203,19 +203,13 @@ describe("Milestones & Goals Integration Tests", () => {
 				target_version: "v2.0.0",
 			};
 
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${createdMilestone.id}`, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-				body: JSON.stringify(updateData),
-			});
+			const { milestone: updatedMilestone, error } = await testInstance.client.milestones.update(createdMilestone.id, updateData);
+			if (error) {
+				throw new Error(`Failed to update milestone: ${error.message}`);
+			}
 
-			expect(response.ok).toBe(true);
-			const updatedMilestone = await response.json();
-			expectMatchesPartial(updatedMilestone, updateData);
-			expect(updatedMilestone.id).toBe(createdMilestone.id);
+			expectMatchesPartial(updatedMilestone!, updateData);
+			expect(updatedMilestone!.id).toBe(createdMilestone.id);
 		});
 
 		test("should delete a milestone", async () => {
@@ -330,35 +324,30 @@ describe("Milestones & Goals Integration Tests", () => {
 				target_time: "2024-08-31",
 			};
 
-			const response = await fetch(`http://localhost:3001/api/v0/goals/${createdGoal.id}`, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-				body: JSON.stringify(updateData),
-			});
+			const { goal: updatedGoal, error } = await testInstance.client.goals.update(createdGoal.id, updateData);
+			if (error) {
+				throw new Error(`Failed to update goal: ${error.message}`);
+			}
 
-			expect(response.ok).toBe(true);
-			const updatedGoal = await response.json();
-			expectMatchesPartial(updatedGoal, updateData);
-			expect(updatedGoal.id).toBe(createdGoal.id);
+			expectMatchesPartial(updatedGoal!, updateData);
+			expect(updatedGoal!.id).toBe(createdGoal.id);
 			expect(updatedGoal.milestone_id).toBe(testMilestone.id);
 		});
 
 		test("should delete a goal", async () => {
 			const createdGoal = await testInstance.createTestGoal(testMilestone.id);
 
-			await testInstance.deleteTestGoal(createdGoal.id);
+			const { result, error } = await testInstance.client.goals.delete(createdGoal.id);
+			if (error) {
+				throw new Error(`Failed to delete goal: ${error.message}`);
+			}
+
+			expect(result!.success).toBe(true);
 
 			// Verify goal is deleted by trying to fetch it
-			const response = await fetch(`http://localhost:3001/api/v0/goals/${createdGoal.id}`, {
-				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-			});
-
-			expect(response.status).toBe(404);
+			const { goal: fetchedGoal, error: fetchError } = await testInstance.client.goals.find(createdGoal.id);
+			// Should return null for deleted goal
+			expect(fetchedGoal).toBeNull();
 		});
 
 		test("should get goals for a specific milestone", async () => {
@@ -493,13 +482,10 @@ describe("Milestones & Goals Integration Tests", () => {
 			await testInstance.deleteTestMilestone(milestone.id);
 
 			// Verify the goal is also deleted/inaccessible
-			const goalResponse = await fetch(`http://localhost:3001/api/v0/goals/${goal.id}`, {
-				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-			});
+			const { goal: deletedGoal, error } = await testInstance.client.goals.find(goal.id);
 
-			expect(goalResponse.status).toBe(404);
+			expect(deletedGoal).toBeNull();
+			expect(error).not.toBeNull();
 		});
 	});
 
@@ -524,20 +510,12 @@ describe("Milestones & Goals Integration Tests", () => {
 				goal_id: testGoal.id,
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/tasks", {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-				body: JSON.stringify(taskData),
-			});
+			const { task, error } = await testInstance.client.tasks.create(taskData);
 
-			expect(response.ok).toBe(true);
-			const task = await response.json();
-
-			expect(task.task.goal_id).toBe(testGoal.id);
-			expect(task.task.project_id).toBe(testProject.id);
+			expect(error).toBeNull();
+			expect(task).not.toBeNull();
+			expect(task?.task.goal_id).toBe(testGoal.id);
+			expect(task?.task.project_id).toBe(testProject.id);
 
 			// Task will be cleaned up automatically
 		});
@@ -550,56 +528,27 @@ describe("Milestones & Goals Integration Tests", () => {
 				project_id: testProject.id,
 			};
 
-			const createResponse = await fetch("http://localhost:3001/api/v0/tasks", {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-				body: JSON.stringify(taskData),
-			});
+			const { task: createdTask, error: createError } = await testInstance.client.tasks.create(taskData);
 
-			expect(createResponse.ok).toBe(true);
-			const task = await createResponse.json();
-			expect(task.task.goal_id).toBeNull();
+			expect(createError).toBeNull();
+			expect(createdTask).not.toBeNull();
+			expect(createdTask?.task.goal_id).toBeNull();
 
 			// Update task to add goal
-			const updateData = {
-				...task.task,
+			const { task: updatedTask, error: updateError } = await testInstance.client.tasks.update(createdTask!.task.id, {
 				goal_id: testGoal.id,
-			};
-
-			const updateResponse = await fetch("http://localhost:3001/api/v0/tasks", {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-				body: JSON.stringify(updateData),
 			});
 
-			expect(updateResponse.ok).toBe(true);
-			const updatedTask = await updateResponse.json();
-			expect(updatedTask.task.goal_id).toBe(testGoal.id);
+			expect(updateError).toBeNull();
+			expect(updatedTask?.task.goal_id).toBe(testGoal.id);
 
 			// Update task to remove goal
-			const removeData = {
-				...updatedTask.task,
+			const { task: finalTask, error: finalError } = await testInstance.client.tasks.update(updatedTask!.task.id, {
 				goal_id: null,
-			};
-
-			const removeResponse = await fetch("http://localhost:3001/api/v0/tasks", {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-				body: JSON.stringify(removeData),
 			});
 
-			expect(removeResponse.ok).toBe(true);
-			const finalTask = await removeResponse.json();
-			expect(finalTask.task.goal_id).toBeNull();
+			expect(finalError).toBeNull();
+			expect(finalTask?.task.goal_id).toBeNull();
 
 			// Task will be cleaned up automatically
 		});
@@ -636,54 +585,20 @@ describe("Milestones & Goals Integration Tests", () => {
 			};
 
 			// Create all tasks
-			const tasks = await Promise.all([
-				fetch("http://localhost:3001/api/v0/tasks", {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-					},
-					body: JSON.stringify(task1Data),
-				}),
-				fetch("http://localhost:3001/api/v0/tasks", {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-					},
-					body: JSON.stringify(task2Data),
-				}),
-				fetch("http://localhost:3001/api/v0/tasks", {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-					},
-					body: JSON.stringify(task3Data),
-				}),
-				fetch("http://localhost:3001/api/v0/tasks", {
-					method: "PATCH",
-					headers: {
-						"Content-Type": "application/json",
-						Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-					},
-					body: JSON.stringify(task4Data),
-				}),
-			]);
+			const taskResults = await Promise.all([testInstance.client.tasks.create(task1Data), testInstance.client.tasks.create(task2Data), testInstance.client.tasks.create(task3Data), testInstance.client.tasks.create(task4Data)]);
 
-			// Parse responses
-			const taskResults = await Promise.all(tasks.map(r => r.json()));
+			// Verify task creation was successful
+			for (const result of taskResults) {
+				expect(result.error).toBeNull();
+				expect(result.task).not.toBeNull();
+			}
 			// Tasks will be cleaned up automatically by test teardown
 
 			// Get all project tasks
-			const allTasksResponse = await fetch(`http://localhost:3001/api/v0/tasks?project=${testProject.id}`, {
-				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
-				},
-			});
+			const { tasks: allTasks, error: tasksError } = await testInstance.client.tasks.list({ project_id: testProject.id });
 
-			expect(allTasksResponse.ok).toBe(true);
-			const allTasks = await allTasksResponse.json();
+			expect(tasksError).toBeNull();
+			expect(allTasks).not.toBeNull();
 
 			// Filter by testGoal (should have 2 tasks)
 			const goal1Tasks = allTasks.filter((task: any) => task.task.goal_id === testGoal.id);

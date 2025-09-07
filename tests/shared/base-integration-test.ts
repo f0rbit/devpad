@@ -72,21 +72,27 @@ export abstract class BaseIntegrationTest {
 	/**
 	 * Create a project and automatically register it for cleanup
 	 */
-	public async createAndRegisterProject(projectData: any): Promise<Project> {
-		const project = await this.client.projects.create(projectData);
-		this.registerProject(project);
-		log(`📋 Created and registered project: ${project.name} (${project.id})`);
-		return project;
+	public async createAndRegisterProject(project_data: any): Promise<Project> {
+		const { project, error } = await this.client.projects.create(project_data);
+		if (error) {
+			throw new Error(`Failed to create project: ${error.message}`);
+		}
+		this.registerProject(project!);
+		log(`📋 Created and registered project: ${project!.name} (${project!.id})`);
+		return project!;
 	}
 
 	/**
 	 * Create a task and automatically register it for cleanup
 	 */
-	public async createAndRegisterTask(taskData: any): Promise<TaskWithDetails> {
-		const task = await this.client.tasks.create(taskData);
-		this.registerTask(task);
-		log(`✅ Created and registered task: ${task.task.title} (${task.task.id})`);
-		return task;
+	public async createAndRegisterTask(task_data: any): Promise<TaskWithDetails> {
+		const { task, error } = await this.client.tasks.create(task_data);
+		if (error) {
+			throw new Error(`Failed to create task: ${error.message}`);
+		}
+		this.registerTask(task!);
+		log(`✅ Created and registered task: ${task!.task.title} (${task!.task.id})`);
+		return task!;
 	}
 
 	/**
@@ -94,7 +100,10 @@ export abstract class BaseIntegrationTest {
 	 */
 	protected async manualCleanupProject(project: Project): Promise<void> {
 		try {
-			await this.client.projects.deleteProject(project);
+			const { error } = await this.client.projects.deleteProject(project);
+			if (error) {
+				throw new Error(`Failed to delete project: ${error.message}`);
+			}
 			log(`🗑️ Manually cleaned up project: ${project.name} (${project.id})`);
 		} catch (error) {
 			log(`⚠️ Failed to manually cleanup project ${project.id}:`, error);
@@ -106,7 +115,10 @@ export abstract class BaseIntegrationTest {
 	 */
 	protected async manualCleanupTask(task: TaskWithDetails): Promise<void> {
 		try {
-			await this.client.tasks.deleteTask(task);
+			const { error } = await this.client.tasks.deleteTask(task);
+			if (error) {
+				throw new Error(`Failed to delete task: ${error.message}`);
+			}
 			log(`🗑️ Manually cleaned up task: ${task.task.title} (${task.task.id})`);
 		} catch (error) {
 			log(`⚠️ Failed to manually cleanup task ${task.task.id}:`, error);
@@ -122,19 +134,19 @@ export abstract class BaseIntegrationTest {
  *   // Test methods here
  * }
  *
- * const testInstance = new MyIntegrationTest();
- * setupBaseIntegrationTest(testInstance);
+ * const test_instance = new MyIntegrationTest();
+ * setupBaseIntegrationTest(test_instance);
  *
  * describe("My Integration Tests", () => {
  *   // Your tests here
  * });
  */
-export function setupBaseIntegrationTest(testInstance: BaseIntegrationTest): void {
+export function setupBaseIntegrationTest(test_instance: BaseIntegrationTest): void {
 	beforeAll(async () => {
-		await (testInstance as any).setupTest();
+		await (test_instance as any).setupTest();
 	});
 
 	afterAll(async () => {
-		await (testInstance as any).teardownTest();
+		await (test_instance as any).teardownTest();
 	});
 }

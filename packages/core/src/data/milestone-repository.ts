@@ -2,6 +2,7 @@ import type { UpsertMilestone } from "@devpad/schema";
 import { db, milestone, project } from "@devpad/schema/database/server";
 import { and, desc, eq } from "drizzle-orm";
 import { BaseRepository } from "./base-repository";
+import { goalRepository } from "./goal-repository";
 import { log } from "../utils/logger";
 
 export type Milestone = typeof milestone.$inferSelect;
@@ -148,7 +149,15 @@ export class MilestoneRepository extends BaseRepository<typeof milestone, Milest
 			throw new Error("Unauthorized: User does not own this milestone");
 		}
 
-		// Soft delete
+		// First, cascade delete all goals associated with this milestone
+		try {
+			await goalRepository.deleteGoalsByMilestone(milestone_id, owner_id);
+		} catch (error) {
+			log.error("Error deleting goals for milestone:", error);
+			// Continue with milestone deletion even if goal deletion fails
+		}
+
+		// Soft delete the milestone
 		await this.updateById(milestone_id, {
 			deleted: true,
 			updated_at: new Date().toISOString(),

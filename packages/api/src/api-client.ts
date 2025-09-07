@@ -120,14 +120,7 @@ export class ApiClient {
 		/**
 		 * Get project by ID
 		 */
-		find: (id: string): Promise<Result<Project | null, "project">> =>
-			wrap(async () => {
-				try {
-					return await this.httpClient.get<Project>("/projects", { query: { id } });
-				} catch (error) {
-					return null;
-				}
-			}, "project"),
+		find: (id: string): Promise<Result<Project | null, "project">> => wrap(() => this.httpClient.get<any>("/projects", { query: { id } }), "project"),
 
 		/**
 		 * Get project by name
@@ -207,6 +200,21 @@ export class ApiClient {
 		 * Legacy methods (keeping for compatibility)
 		 */
 		upsert: (data: UpsertProject): Promise<Result<Project, "project">> => wrap(() => this.httpClient.patch<Project>("/projects", { body: data }), "project"),
+
+		/**
+		 * Fetch project specification from GitHub
+		 */
+		fetchSpecification: (project_id: string): Promise<Result<string, "specification">> => wrap(() => this.httpClient.get<string>("/projects/fetch_spec", { query: { project_id } }), "specification"),
+
+		/**
+		 * Save project configuration
+		 */
+		saveConfig: (request: SaveConfigRequest): Promise<Result<void, "result">> => wrap(() => this.httpClient.patch<void>("/projects/save_config", { body: request }), "result"),
+
+		/**
+		 * Delete project (soft delete)
+		 */
+		deleteProject: (project: Project): Promise<Result<void, "result">> => wrap(() => this.httpClient.patch<void>("/projects", { body: { ...project, deleted: true } }), "result"),
 	};
 
 	/**
@@ -244,8 +252,25 @@ export class ApiClient {
 		/**
 		 * Update milestone
 		 */
-		update: (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }): Promise<Result<Milestone, "milestone">> =>
-			wrap(() => this.httpClient.patch<any>(`/milestones/${id}`, { body: { ...data, id } }), "milestone"),
+		update: async (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }): Promise<Result<Milestone, "milestone">> =>
+			wrap(async () => {
+				// Fetch the existing milestone to get required fields
+				const { milestone, error } = await this.milestones.find(id);
+				if (error) throw new Error(error.message);
+				if (!milestone) throw new Error(`Milestone with id ${id} not found`);
+
+				// Merge changes with existing milestone data
+				const updateData = {
+					id: milestone.id,
+					project_id: milestone.project_id,
+					name: data.name ?? milestone.name,
+					description: data.description ?? milestone.description,
+					target_time: data.target_time ?? milestone.target_time,
+					target_version: data.target_version ?? milestone.target_version,
+				};
+
+				return this.httpClient.patch<any>(`/milestones/${id}`, { body: updateData });
+			}, "milestone"),
 
 		/**
 		 * Delete milestone (soft delete)
@@ -270,14 +295,7 @@ export class ApiClient {
 		/**
 		 * Get goal by ID
 		 */
-		find: (id: string): Promise<Result<Goal | null, "goal">> =>
-			wrap(async () => {
-				try {
-					return await this.httpClient.get<any>(`/goals/${id}`);
-				} catch (error) {
-					return null;
-				}
-			}, "goal"),
+		find: (id: string): Promise<Result<Goal | null, "goal">> => wrap(() => this.httpClient.get<any>(`/goals/${id}`), "goal"),
 
 		/**
 		 * Create new goal
@@ -287,7 +305,24 @@ export class ApiClient {
 		/**
 		 * Update goal
 		 */
-		update: (id: string, data: { name?: string; description?: string; target_time?: string }): Promise<Result<Goal, "goal">> => wrap(() => this.httpClient.patch<any>(`/goals/${id}`, { body: { ...data, id } }), "goal"),
+		update: async (id: string, data: { name?: string; description?: string; target_time?: string }): Promise<Result<Goal, "goal">> =>
+			wrap(async () => {
+				// Fetch the existing goal to get required fields
+				const { goal, error } = await this.goals.find(id);
+				if (error) throw new Error(error.message);
+				if (!goal) throw new Error(`Goal with id ${id} not found`);
+
+				// Merge changes with existing goal data
+				const updateData = {
+					id: goal.id,
+					milestone_id: goal.milestone_id,
+					name: data.name ?? goal.name,
+					description: data.description ?? goal.description,
+					target_time: data.target_time ?? goal.target_time,
+				};
+
+				return this.httpClient.patch<any>(`/goals/${id}`, { body: updateData });
+			}, "goal"),
 
 		/**
 		 * Delete goal (soft delete)
@@ -313,14 +348,7 @@ export class ApiClient {
 		/**
 		 * Get task by ID
 		 */
-		find: (id: string): Promise<Result<TaskWithDetails | null, "task">> =>
-			wrap(async () => {
-				try {
-					return await this.httpClient.get<TaskWithDetails>("/tasks", { query: { id } });
-				} catch (error) {
-					return null;
-				}
-			}, "task"),
+		find: (id: string): Promise<Result<TaskWithDetails | null, "task">> => wrap(() => this.httpClient.get<any>("/tasks", { query: { id } }), "task"),
 
 		/**
 		 * Create a new task
@@ -354,6 +382,11 @@ export class ApiClient {
 
 				return this.httpClient.patch<TaskWithDetails>("/tasks", { body: updateData });
 			}, "task"),
+
+		/**
+		 * Delete task (soft delete)
+		 */
+		deleteTask: (task: TaskWithDetails): Promise<Result<void, "result">> => wrap(() => this.httpClient.patch<void>("/tasks", { body: { ...task.task, deleted: true } }), "result"),
 	};
 
 	/**

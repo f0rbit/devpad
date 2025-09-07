@@ -170,14 +170,20 @@ export class TaskRepository extends BaseRepository<typeof task, _FetchedTask, an
 		// Validate goal_id if provided
 		if (data.goal_id) {
 			const { goalRepository } = await import("./goal-repository");
-			const goal = await goalRepository.getGoal(data.goal_id);
-			if (!goal) {
+			const { goal, error } = await goalRepository.getGoal(data.goal_id);
+			if (error || !goal) {
 				throw new Error(`Goal with id ${data.goal_id} does not exist`);
 			}
 			// Ensure goal belongs to the same project
 			const task_project_id = data.project_id ?? previous?.project_id;
-			if (goal.project_id !== task_project_id) {
-				throw new Error(`Goal ${data.goal_id} does not belong to project ${task_project_id}`);
+			// Get milestone to resolve project_id (goals belong to milestones)
+const { milestoneRepository } = await import("./milestone-repository");
+const { milestone, error: milestoneError } = await milestoneRepository.getMilestone(goal.milestone_id);
+if (milestoneError || !milestone) {
+throw new Error(`Milestone for goal ${data.goal_id} does not exist`);
+}
+if (milestone.project_id !== task_project_id) {
+				throw new Error(`Goal ${data.goal_id} belongs to project ${milestone.project_id}, but task belongs to project ${task_project_id}`);
 			}
 		}
 

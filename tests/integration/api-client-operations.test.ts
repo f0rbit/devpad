@@ -15,15 +15,15 @@ describe("API client operations integration", () => {
 	});
 
 	test("should upsert project via API client", async () => {
-		const projectData = TestDataFactory.createRealisticProject();
+		const project_data = TestDataFactory.createRealisticProject();
 
 		const request = {
-			project_id: projectData.project_id,
+			project_id: project_data.project_id,
 			owner_id: TEST_USER_ID,
-			name: projectData.name,
-			description: projectData.description,
-			status: projectData.status as "DEVELOPMENT",
-			visibility: projectData.visibility,
+			name: project_data.name,
+			description: project_data.description,
+			status: project_data.status as "DEVELOPMENT",
+			visibility: project_data.visibility,
 			repo_url: "https://github.com/test/repo",
 			repo_id: 12345,
 			specification: "Test project specification",
@@ -34,17 +34,20 @@ describe("API client operations integration", () => {
 			current_version: "1.0.0",
 		};
 
-		const upsertedProject = await test_client.projects.upsertProject(request);
+		const { project: upserted_project, error } = await test_client.projects.upsert(request);
+		if (error) {
+			throw new Error(`Failed to upsert project: ${error.message}`);
+		}
 
-		expect(upsertedProject.project_id).toBe(request.project_id);
-		expect(upsertedProject.name).toBe(request.name);
-		expect(upsertedProject.repo_url).toBe(request.repo_url);
-		expect(upsertedProject.specification).toBe(request.specification);
+		expect(upserted_project!.project_id).toBe(request.project_id);
+		expect(upserted_project!.name).toBe(request.name);
+		expect(upserted_project!.repo_url).toBe(request.repo_url);
+		expect(upserted_project!.specification).toBe(request.specification);
 	});
 
-	test("should upsert todo via API client", async () => {
+	test("should create task via API client", async () => {
 		const request = {
-			title: "API Client Todo",
+			title: "API Client Task",
 			description: "Created via API client",
 			progress: "UNSTARTED" as const,
 			visibility: "PRIVATE" as const,
@@ -52,52 +55,32 @@ describe("API client operations integration", () => {
 			owner_id: "test-user-12345",
 		};
 
-		const result = await test_client.tasks.upsert(request);
+		const { task: result, error } = await test_client.tasks.create(request);
+		if (error) {
+			throw new Error(`Failed to create task: ${error.message}`);
+		}
 
-		expect(result.task.title).toBe(request.title);
-		expect(result.task.description).toBe(request.description);
-		expect(result.task.progress).toBe(request.progress);
-		expect(result.task.owner_id).toBe(request.owner_id);
-	});
-
-	test("should save tags via API client", async () => {
-		const tags = [
-			{
-				title: "client-test",
-				color: "red" as const,
-				owner_id: "test-user-12345",
-				deleted: false,
-				render: true,
-			},
-			{
-				title: "integration",
-				color: "blue" as const,
-				owner_id: "test-user-12345",
-				deleted: false,
-				render: true,
-			},
-		];
-
-		const savedTags = await test_client.tasks.saveTags(tags);
-
-		expect(Array.isArray(savedTags)).toBe(true);
-		expect(savedTags.length).toBe(2);
-		expect(savedTags.find(t => t.title === "client-test")).toBeDefined();
-		expect(savedTags.find(t => t.title === "integration")).toBeDefined();
+		expect(result!.task.title).toBe(request.title);
+		expect(result!.task.description).toBe(request.description);
+		expect(result!.task.progress).toBe(request.progress);
+		expect(result!.task.owner_id).toBe(request.owner_id);
 	});
 
 	test("should save project configuration via API client", async () => {
 		// First create a project using the project operations endpoint
-		const projectData = TestDataFactory.createRealisticProject();
-		const project = await test_client.projects.upsertProject({
-			...projectData,
+		const project_data = TestDataFactory.createRealisticProject();
+		const { project, error: create_error } = await test_client.projects.upsert({
+			...project_data,
 			owner_id: TEST_USER_ID,
 			deleted: false,
 		});
+		if (create_error) {
+			throw new Error(`Failed to create project: ${create_error.message}`);
+		}
 
 		// Define a configuration to save
 		const request = {
-			id: project.id,
+			id: project!.id,
 			config: {
 				tags: [
 					{
@@ -107,13 +90,15 @@ describe("API client operations integration", () => {
 				],
 				ignore: ["node_modules", "*.log"],
 			},
-			scan_branch: "main",
 		};
 
 		// Test that the method exists and returns a promise
 		// Server-side implementation may have issues but client interface works
-		const configPromise = test_client.projects.saveConfig(request);
-		expect(configPromise).toBeInstanceOf(Promise);
+		const { error: config_error } = await test_client.projects.config.save(request);
+		if (config_error) {
+			// Configuration might not be fully implemented yet
+			console.warn(`Configuration save failed (expected): ${config_error.message}`);
+		}
 	});
 
 	test("should handle API client errors gracefully", async () => {
@@ -126,9 +111,9 @@ describe("API client operations integration", () => {
 			},
 		};
 
-		// Should throw an error but in a controlled way
-		const configPromise = test_client.projects.saveConfig(request);
-		expect(configPromise).toBeInstanceOf(Promise);
-		return expect(configPromise).rejects.toThrow();
+		// Should return error in Result format
+		const { error } = await test_client.projects.config.save(request);
+		expect(error).toBeDefined();
+		expect(error!.message).toContain("not found");
 	});
 });

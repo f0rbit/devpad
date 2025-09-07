@@ -10,20 +10,20 @@ type CleanupFunction = () => Promise<void>;
  */
 export class CleanupManager {
 	private client: ApiClient;
-	private cleanupFunctions: Map<string, CleanupFunction[]>;
+	private cleanup_functions: Map<string, CleanupFunction[]>;
 
 	constructor(client: ApiClient) {
 		this.client = client;
-		this.cleanupFunctions = new Map<string, CleanupFunction[]>();
+		this.cleanup_functions = new Map<string, CleanupFunction[]>();
 	}
 
 	/**
 	 * Register a generic cleanup function
 	 */
-	registerCleanup(key: string, cleanupFn: CleanupFunction): void {
-		const existing = this.cleanupFunctions.get(key) || [];
-		existing.push(cleanupFn);
-		this.cleanupFunctions.set(key, existing);
+	registerCleanup(key: string, cleanup_fn: CleanupFunction): void {
+		const existing = this.cleanup_functions.get(key) || [];
+		existing.push(cleanup_fn);
+		this.cleanup_functions.set(key, existing);
 	}
 
 	/**
@@ -32,8 +32,12 @@ export class CleanupManager {
 	registerProject(project: Project): void {
 		this.registerCleanup("projects", async () => {
 			try {
-				await this.client.projects.deleteProject(project);
-				log(`✅ Cleaned up project: ${project.name} (${project.id})`);
+				const { error } = await this.client.projects.update(project.id, { deleted: true });
+				if (error) {
+					log(`⚠️ Failed to cleanup project ${project.id}: ${error.message}`);
+				} else {
+					log(`✅ Cleaned up project: ${project.name} (${project.id})`);
+				}
 			} catch (error) {
 				log(`⚠️ Failed to cleanup project ${project.id}:`, error);
 			}
@@ -46,8 +50,12 @@ export class CleanupManager {
 	registerTask(task: TaskWithDetails): void {
 		this.registerCleanup("tasks", async () => {
 			try {
-				await this.client.tasks.deleteTask(task);
-				log(`✅ Cleaned up task: ${task.task.title} (${task.task.id})`);
+				const { error } = await this.client.tasks.deleteTask(task);
+				if (error) {
+					log(`⚠️ Failed to cleanup task ${task.task.id}: ${error.message}`);
+				} else {
+					log(`✅ Cleaned up task: ${task.task.title} (${task.task.id})`);
+				}
 			} catch (error) {
 				log(`⚠️ Failed to cleanup task ${task.task.id}:`, error);
 			}
@@ -75,26 +83,26 @@ export class CleanupManager {
 		log("🧹 Starting cleanup of all test resources...");
 
 		// Clean up in reverse dependency order: tasks -> tags -> projects
-		const cleanupOrder = ["tasks", "tags", "projects"];
+		const cleanup_order = ["tasks", "tags", "projects"];
 
-		for (const key of cleanupOrder) {
-			const cleanupFns = this.cleanupFunctions.get(key) || [];
-			if (cleanupFns.length > 0) {
-				log(`🧹 Cleaning up ${cleanupFns.length} ${key}...`);
-				await Promise.all(cleanupFns.map(fn => fn()));
+		for (const key of cleanup_order) {
+			const cleanup_fns = this.cleanup_functions.get(key) || [];
+			if (cleanup_fns.length > 0) {
+				log(`🧹 Cleaning up ${cleanup_fns.length} ${key}...`);
+				await Promise.all(cleanup_fns.map(fn => fn()));
 			}
 		}
 
 		// Clean up any other registered functions
-		for (const [key, cleanupFns] of this.cleanupFunctions.entries()) {
-			if (!cleanupOrder.includes(key)) {
-				log(`🧹 Cleaning up ${cleanupFns.length} ${key}...`);
-				await Promise.all(cleanupFns.map(fn => fn()));
+		for (const [key, cleanup_fns] of this.cleanup_functions.entries()) {
+			if (!cleanup_order.includes(key)) {
+				log(`🧹 Cleaning up ${cleanup_fns.length} ${key}...`);
+				await Promise.all(cleanup_fns.map(fn => fn()));
 			}
 		}
 
 		// Clear all registered cleanup functions
-		this.cleanupFunctions.clear();
+		this.cleanup_functions.clear();
 		log("✅ Cleanup completed");
 	}
 
@@ -103,7 +111,7 @@ export class CleanupManager {
 	 */
 	getResourceCounts(): Record<string, number> {
 		const counts: Record<string, number> = {};
-		for (const [key, functions] of this.cleanupFunctions.entries()) {
+		for (const [key, functions] of this.cleanup_functions.entries()) {
 			counts[key] = functions.length;
 		}
 		return counts;

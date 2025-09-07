@@ -31,14 +31,29 @@ export async function setupTestDatabase(dbPath: string): Promise<void> {
 	const sqlite = new Database(dbPath);
 	const db = drizzle(sqlite, { schema });
 
-	const baseDir = path.resolve(process.cwd());
-	const migrationsFolder = path.join(baseDir, "packages", "schema", "src", "database", "drizzle");
+	// Find the project root by looking for package.json
+	let currentDir = __dirname;
+	while (currentDir !== path.dirname(currentDir)) {
+		const packageJsonPath = path.join(currentDir, "package.json");
+		if (fs.existsSync(packageJsonPath)) {
+			break;
+		}
+		currentDir = path.dirname(currentDir);
+	}
+	
+	const migrationsFolder = path.join(currentDir, "packages", "schema", "src", "database", "drizzle");
 	log("🔍 Migration folder:", migrationsFolder);
+	
+	if (!fs.existsSync(migrationsFolder)) {
+		throw new Error(`Migration folder not found: ${migrationsFolder}`);
+	}
+	
 	migrate(db, { migrationsFolder });
 
 	sqlite.close();
 	log("✅ Test database setup complete");
 }
+
 
 export async function createTestUser(dbPath: string): Promise<string> {
 	log("👤 Creating test user and API key...");

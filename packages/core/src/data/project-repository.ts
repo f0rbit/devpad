@@ -330,6 +330,10 @@ export class ProjectRepository extends BaseRepository<typeof project, Project, U
 			}
 		}
 
+		if (!result) {
+			throw new Error("Project operation failed - no result returned");
+		}
+
 		const new_project = result;
 		const project_id = new_project.id;
 

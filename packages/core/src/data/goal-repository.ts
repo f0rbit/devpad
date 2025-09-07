@@ -161,6 +161,35 @@ export class GoalRepository extends BaseRepository<typeof goal, Goal, UpsertGoal
 		} as any);
 	}
 
+	async deleteGoalsByMilestone(milestone_id: string, owner_id: string): Promise<void> {
+		log.projects("🗑️ [GoalRepository] deleteGoalsByMilestone called", {
+			milestoneId: milestone_id,
+			ownerId: owner_id,
+		});
+
+		// Verify milestone ownership through project relationship
+		const milestoneProject = await db.select({ owner_id: project.owner_id }).from(milestone).innerJoin(project, eq(milestone.project_id, project.id)).where(eq(milestone.id, milestone_id)).limit(1);
+
+		if (!milestoneProject.length) {
+			throw new Error("Milestone not found");
+		}
+
+		if (milestoneProject[0].owner_id !== owner_id) {
+			throw new Error("Unauthorized: User does not own this milestone");
+		}
+
+		// Soft delete all goals for this milestone
+		await db
+			.update(goal)
+			.set({
+				deleted: true,
+				updated_at: new Date().toISOString(),
+			})
+			.where(and(eq(goal.milestone_id, milestone_id), eq(goal.deleted, false)));
+
+		log.projects("✅ [GoalRepository] Goals soft deleted for milestone");
+	}
+
 	async completeGoal(goal_id: string, owner_id: string): Promise<Goal> {
 		// Verify ownership
 		const goalMilestoneProject = await db
