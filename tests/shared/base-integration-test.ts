@@ -22,7 +22,7 @@ export abstract class BaseIntegrationTest {
 	 */
 	public async setupTest(): Promise<void> {
 		log(`🧪 Setting up integration test: ${this.constructor.name}`);
-		this.client = getSharedApiClient();
+		this.client = await getSharedApiClient();
 		this.cleanup = new CleanupManager(this.client);
 		log(`✅ Test setup completed for: ${this.constructor.name}`);
 	}

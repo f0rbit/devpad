@@ -16,42 +16,16 @@ export { TEST_USER_ID, DEBUG_LOGGING };
 let honoServer: any = null;
 let testApiKey: string | null = null;
 let testClient: ApiClient | null = null;
+let setupPromise: Promise<void> | null = null;
+let isSetupComplete = false;
 
 /**
- * Get the shared API client instance - created during global setup
+ * Perform the actual setup logic
  */
-export function getSharedApiClient(): ApiClient {
-	if (!testClient) {
-		throw new Error("Shared API client not available. Ensure global setup has run.");
-	}
-	return testClient;
-}
+async function performSetup(): Promise<void> {
+	if (isSetupComplete) return;
 
-/**
- * Legacy function for backward compatibility - now uses shared client
- */
-export async function setupIntegrationTests(): Promise<ApiClient> {
-	return getSharedApiClient();
-}
-
-/**
- * No-op teardown since server cleanup is handled globally
- */
-export async function teardownIntegrationTests(): Promise<void> {
-	// No-op - global teardown handles server cleanup
-	return;
-}
-
-/**
- * Legacy export for compatibility
- */
-export { getSharedApiClient as testClient };
-
-/**
- * Global setup - runs once before all test files
- */
-beforeAll(async () => {
-	log("🌍 Starting global integration test setup...");
+	log("🌍 Starting integration test setup...");
 
 	// Set environment variables early
 	const baseDir = path.resolve(process.cwd());
@@ -78,14 +52,55 @@ beforeAll(async () => {
 		api_key: testApiKey,
 	});
 
-	log("🌍 Global integration test setup completed - server will remain running for all tests");
-});
+	isSetupComplete = true;
+	log("🌍 Integration test setup completed - server ready for all tests");
+}
 
 /**
- * Global teardown - runs once after all test files complete
+ * Ensure setup is complete (lazy initialization)
  */
-afterAll(async () => {
-	log("🌍 Starting global integration test teardown...");
+async function ensureSetup(): Promise<void> {
+	if (setupPromise) return setupPromise;
+
+	setupPromise = performSetup();
+	return setupPromise;
+}
+
+/**
+ * Get the shared API client instance - lazily initializes if needed
+ */
+export async function getSharedApiClient(): Promise<ApiClient> {
+	await ensureSetup();
+	return testClient!;
+}
+
+/**
+ * Legacy function for backward compatibility - now uses lazy initialization
+ */
+export async function setupIntegrationTests(): Promise<ApiClient> {
+	return await getSharedApiClient();
+}
+
+/**
+ * No-op teardown since server cleanup is handled globally
+ */
+export async function teardownIntegrationTests(): Promise<void> {
+	// No-op - global teardown handles server cleanup
+	return;
+}
+
+/**
+ * Legacy export for compatibility
+ */
+export { getSharedApiClient as testClient };
+
+/**
+ * Perform cleanup of server and database
+ */
+export async function performCleanup(): Promise<void> {
+	if (!isSetupComplete) return; // Nothing to clean up
+
+	log("🌍 Starting integration test cleanup...");
 
 	// Stop Hono server
 	if (honoServer) {
@@ -102,25 +117,41 @@ afterAll(async () => {
 	// Reset global state
 	testApiKey = null;
 	testClient = null;
+	setupPromise = null;
+	isSetupComplete = false;
 
-	log("🌍 Global integration test teardown completed");
+	log("🌍 Integration test cleanup completed");
+}
+
+/**
+ * Global setup - runs once before all test files (when running `make integration`)
+ */
+beforeAll(async () => {
+	log("🌍 Global beforeAll detected - using shared server setup");
+	// Just ensure setup is done, lazy initialization will handle it
+	await ensureSetup();
 });
 
 /**
- * Handle process exit gracefully
+ * Global teardown - runs once after all test files complete (when running `make integration`)
+ */
+afterAll(async () => {
+	log("🌍 Global afterAll detected - cleaning up shared server");
+	await performCleanup();
+});
+
+/**
+ * Handle process exit gracefully - ensures server cleanup on any exit
  */
 const cleanup = async () => {
-	if (honoServer) {
-		log("🔄 Process exit - cleaning up server...");
-		honoServer.kill("SIGTERM");
-		const dbPath = path.join(process.cwd(), "database", "test.db");
-		cleanupTestDatabase(dbPath);
-	}
+	await performCleanup();
 };
 
 process.on("exit", cleanup);
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
+process.on("uncaughtException", cleanup);
+process.on("unhandledRejection", cleanup);
 
 /**
  * Start the Hono server for testing

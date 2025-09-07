@@ -35,11 +35,11 @@ export class ApiClient {
 		};
 
 		this.clients = {
+			auth: new HttpClient({ ...clientOptions, category: "auth" }),
 			projects: new HttpClient({ ...clientOptions, category: "projects" }),
 			tasks: new HttpClient({ ...clientOptions, category: "tasks" }),
 			milestones: new HttpClient({ ...clientOptions, category: "milestones" }),
 			goals: new HttpClient({ ...clientOptions, category: "goals" }),
-			auth: new HttpClient({ ...clientOptions, category: "auth" }),
 			github: new HttpClient({ ...clientOptions, category: "github" }),
 			tags: new HttpClient({ ...clientOptions, category: "tags" }),
 		} as const;
