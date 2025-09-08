@@ -16,7 +16,26 @@ function zodToMCPSchema(schema: z.ZodSchema) {
 	}) as any;
 	// Remove the $schema property that zod-to-json-schema adds
 	const { $schema, ...cleanSchema } = jsonSchema;
-	return cleanSchema;
+
+	if (jsonSchema.type === "object") return jsonSchema;
+
+	// Ensure every tool schema is an object
+	return {
+		type: "object",
+		properties: {
+			value: cleanSchema, // wrap non-objects under "value"
+		},
+		required: [],
+	};
+}
+
+function assertObjectRootSchema(tools: any[]) {
+	tools.forEach((tool, i) => {
+		if (tool.inputSchema.type !== "object") {
+			console.error(`! Tool ${i} (${tool.name}) has non-object root type: ${tool.inputSchema.type}`);
+		}
+	});
+	return tools;
 }
 
 // Simple filter schemas that aren't in @devpad/schema yet
@@ -64,6 +83,105 @@ const upsert_todo_with_tags = upsert_todo.extend({
 	tags: z.array(upsert_tag).optional().describe("Tags to associate with the task"),
 });
 
+const tools = [
+	// Projects
+	{
+		name: "devpad_projects_list",
+		description: "List all projects (or only public ones)",
+		inputSchema: zodToMCPSchema(project_filters),
+	},
+	{
+		name: "devpad_projects_get",
+		description: "Get project by ID or name",
+		inputSchema: zodToMCPSchema(project_by_id_or_name),
+	},
+	{
+		name: "devpad_projects_upsert",
+		description: "Create or update a project (set deleted=true to delete)",
+		inputSchema: zodToMCPSchema(upsert_project),
+	},
+	{
+		name: "devpad_projects_config_save",
+		description: "Save project configuration",
+		inputSchema: zodToMCPSchema(save_config_request),
+	},
+
+	// Tasks
+	{
+		name: "devpad_tasks_list",
+		description: "List tasks, optionally filtered by project or tag",
+		inputSchema: zodToMCPSchema(task_filters),
+	},
+	{
+		name: "devpad_tasks_get",
+		description: "Get task by ID",
+		inputSchema: zodToMCPSchema(task_by_id),
+	},
+	{
+		name: "devpad_tasks_upsert",
+		description: "Create or update a task (set deleted=true to delete)",
+		inputSchema: zodToMCPSchema(upsert_todo_with_tags),
+	},
+	{
+		name: "devpad_tasks_save_tags",
+		description: "Save tags for tasks",
+		inputSchema: zodToMCPSchema(save_tags_request),
+	},
+
+	// Milestones
+	{
+		name: "devpad_milestones_list",
+		description: "List milestones for authenticated user or by project",
+		inputSchema: zodToMCPSchema(milestone_filters),
+	},
+	{
+		name: "devpad_milestones_get",
+		description: "Get milestone by ID",
+		inputSchema: zodToMCPSchema(milestone_by_id),
+	},
+	{
+		name: "devpad_milestones_upsert",
+		description: "Create or update a milestone",
+		inputSchema: zodToMCPSchema(upsert_milestone),
+	},
+
+	// Goals
+	{
+		name: "devpad_goals_list",
+		description: "List goals for authenticated user",
+		inputSchema: zodToMCPSchema(z.object({})),
+	},
+	{
+		name: "devpad_goals_get",
+		description: "Get goal by ID",
+		inputSchema: zodToMCPSchema(goal_by_id),
+	},
+	{
+		name: "devpad_goals_upsert",
+		description: "Create or update a goal",
+		inputSchema: zodToMCPSchema(upsert_goal),
+	},
+
+	// Tags
+	{
+		name: "devpad_tags_list",
+		description: "List tags for authenticated user",
+		inputSchema: zodToMCPSchema(z.object({})),
+	},
+
+	// GitHub integration
+	{
+		name: "devpad_github_repos",
+		description: "List GitHub repositories for authenticated user",
+		inputSchema: zodToMCPSchema(z.object({})),
+	},
+	{
+		name: "devpad_github_branches",
+		description: "List branches for a GitHub repository",
+		inputSchema: zodToMCPSchema(github_branches),
+	},
+];
+
 class DevpadMCPServer {
 	private server: Server;
 	private apiClient: ApiClient;
@@ -99,106 +217,7 @@ class DevpadMCPServer {
 
 	private setupHandlers() {
 		this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-			return {
-				tools: [
-					// Projects
-					{
-						name: "devpad_projects_list",
-						description: "List all projects (or only public ones)",
-						inputSchema: zodToMCPSchema(project_filters),
-					},
-					{
-						name: "devpad_projects_get",
-						description: "Get project by ID or name",
-						inputSchema: zodToMCPSchema(project_by_id_or_name),
-					},
-					{
-						name: "devpad_projects_upsert",
-						description: "Create or update a project (set deleted=true to delete)",
-						inputSchema: zodToMCPSchema(upsert_project),
-					},
-					{
-						name: "devpad_projects_config_save",
-						description: "Save project configuration",
-						inputSchema: zodToMCPSchema(save_config_request),
-					},
-
-					// Tasks
-					{
-						name: "devpad_tasks_list",
-						description: "List tasks, optionally filtered by project or tag",
-						inputSchema: zodToMCPSchema(task_filters),
-					},
-					{
-						name: "devpad_tasks_get",
-						description: "Get task by ID",
-						inputSchema: zodToMCPSchema(task_by_id),
-					},
-					{
-						name: "devpad_tasks_upsert",
-						description: "Create or update a task (set deleted=true to delete)",
-						inputSchema: zodToMCPSchema(upsert_todo_with_tags),
-					},
-					{
-						name: "devpad_tasks_save_tags",
-						description: "Save tags for tasks",
-						inputSchema: zodToMCPSchema(save_tags_request),
-					},
-
-					// Milestones
-					{
-						name: "devpad_milestones_list",
-						description: "List milestones for authenticated user or by project",
-						inputSchema: zodToMCPSchema(milestone_filters),
-					},
-					{
-						name: "devpad_milestones_get",
-						description: "Get milestone by ID",
-						inputSchema: zodToMCPSchema(milestone_by_id),
-					},
-					{
-						name: "devpad_milestones_upsert",
-						description: "Create or update a milestone",
-						inputSchema: zodToMCPSchema(upsert_milestone),
-					},
-
-					// Goals
-					{
-						name: "devpad_goals_list",
-						description: "List goals for authenticated user",
-						inputSchema: zodToMCPSchema(z.object({})),
-					},
-					{
-						name: "devpad_goals_get",
-						description: "Get goal by ID",
-						inputSchema: zodToMCPSchema(goal_by_id),
-					},
-					{
-						name: "devpad_goals_upsert",
-						description: "Create or update a goal",
-						inputSchema: zodToMCPSchema(upsert_goal),
-					},
-
-					// Tags
-					{
-						name: "devpad_tags_list",
-						description: "List tags for authenticated user",
-						inputSchema: zodToMCPSchema(z.object({})),
-					},
-
-					// GitHub integration
-					{
-						name: "devpad_github_repos",
-						description: "List GitHub repositories for authenticated user",
-						inputSchema: zodToMCPSchema(z.object({})),
-					},
-					{
-						name: "devpad_github_branches",
-						description: "List branches for a GitHub repository",
-						inputSchema: zodToMCPSchema(github_branches),
-					},
-				],
-			};
+			return { tools };
 		});
 
 		this.server.setRequestHandler(CallToolRequestSchema, async request => {
@@ -539,6 +558,7 @@ class DevpadMCPServer {
 }
 
 async function main() {
+	assertObjectRootSchema(tools);
 	const server = new DevpadMCPServer();
 	await server.run();
 }
