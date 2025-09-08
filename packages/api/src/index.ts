@@ -15,4 +15,6 @@ export type { ApiError, AuthenticationError, NetworkError, ValidationError } fro
 export type { RequestHistoryEntry, RequestOptions } from "./request";
 export type { AuthMode } from "./api-client";
 export { wrap, type Result, type Success, type Failure } from "./result";
+export { tools, getTool, toolNames, type ToolDefinition } from "./tools";
+export { ApiClient };
 export default ApiClient;
