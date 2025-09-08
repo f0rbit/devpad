@@ -2,6 +2,8 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"module": "ESNext",
+		"outDir": "./dist",
+		"rootDir": "./src",
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -13,7 +15,8 @@
 		"noUnusedParameters": true,
 		"noImplicitReturns": true,
 		"noFallthroughCasesInSwitch": true,
-		"types": ["bun-types"]
+		"declaration": true,
+		"types": ["bun-types", "node"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "**/*.spec.ts"]
