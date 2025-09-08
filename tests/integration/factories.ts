@@ -2,7 +2,7 @@ import type { Nullable, Project, Tag, Task, UpsertProject, UpsertTag, UpsertTodo
 import { TEST_USER_ID } from "./setup";
 
 type UpsertTaskOverrides = Nullable<UpsertTodo> & Partial<Pick<UpsertTodo, "id" | "owner_id" | "title" | "progress" | "priority" | "visibility" | "project_id">>;
-type UpsertProjectOverrides = Nullable<UpsertProject> & Partial<Pick<UpsertProject, "id" | "owner_id" | "description" | "status">>;
+type UpsertProjectOverrides = Partial<UpsertProject>;
 
 export class TestDataFactory {
 	private static counter = 0;
@@ -23,8 +23,8 @@ export class TestDataFactory {
 			visibility: overrides.visibility ?? "PRIVATE",
 			deleted: overrides.deleted ?? false,
 			scan_branch: null,
-			specification: overrides.specification,
-			current_version: overrides.current_version,
+			specification: overrides.specification ?? null,
+			current_version: overrides.current_version ?? null,
 			icon_url: null,
 			link_text: null,
 			link_url: null,

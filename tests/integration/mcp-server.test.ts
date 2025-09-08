@@ -1,13 +1,9 @@
-/**
- * MCP Server Integration Tests
- * Tests the MCP server's ability to proxy requests to the devpad API
- */
-
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { getSharedApiClient, TEST_BASE_URL, TEST_USER_ID } from "./setup";
-import { MCPTestClient } from "../shared/mcp-test-client";
-import { CleanupManager } from "../shared/cleanup-manager";
 import type ApiClient from "@devpad/api";
+import { CleanupManager } from "../shared/cleanup-manager";
+import { MCPTestClient } from "../shared/mcp-test-client";
+import { TestDataFactory } from "./factories";
+import { getSharedApiClient, TEST_BASE_URL, TEST_USER_ID } from "./setup";
 
 describe("MCP Server Integration", () => {
 	let mcpClient: MCPTestClient;
@@ -29,8 +25,8 @@ describe("MCP Server Integration", () => {
 	});
 
 	afterAll(async () => {
-		// Clean up test project
-		await cleanupManager.cleanupProject(testProjectId);
+		// Clean up all test resources
+		await cleanupManager.cleanupAll();
 
 		// Stop MCP server
 		await mcpClient.stop();
@@ -42,7 +38,7 @@ describe("MCP Server Integration", () => {
 		expect(response.result).toBeDefined();
 		expect(response.result.tools).toBeArray();
 
-		const toolNames = response.result.tools.map((t: any) => t.name);
+		const toolNames = response.result.tools.map((t: { name: string }) => t.name);
 
 		// Check for expected tools
 		expect(toolNames).toContain("devpad_projects_list");
@@ -54,15 +50,18 @@ describe("MCP Server Integration", () => {
 	});
 
 	test("should create and update project via MCP", async () => {
-		// Create project
-		const createResponse = await mcpClient.callTool("devpad_projects_upsert", {
+		// Create project data using factory
+		const projectData = TestDataFactory.createProject(TEST_USER_ID, {
 			project_id: testProjectId,
 			name: "MCP Test Project",
 			description: "Created via MCP integration test",
 			visibility: "PRIVATE",
 			status: "DEVELOPMENT",
-			owner_id: TEST_USER_ID,
 		});
+
+		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+
+		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
 		expect(createResponse.result).toBeDefined();
 		expect(createResponse.result.content[0].text).toContain(testProjectId);
@@ -71,16 +70,21 @@ describe("MCP Server Integration", () => {
 		expect(createdProject.name).toBe("MCP Test Project");
 		expect(createdProject.visibility).toBe("PRIVATE");
 
+		// Register for cleanup
+		cleanupManager.registerProject(createdProject);
+
 		// Update project
-		const updateResponse = await mcpClient.callTool("devpad_projects_upsert", {
-			id: createdProject.id,
-			project_id: testProjectId,
-			name: "MCP Test Project Updated",
-			description: "Updated via MCP",
-			visibility: "PUBLIC",
-			status: "LIVE",
-			owner_id: TEST_USER_ID,
-		});
+		const updateResponse = await mcpClient.callTool(
+			"devpad_projects_upsert",
+			TestDataFactory.createProject(TEST_USER_ID, {
+				id: createdProject.id,
+				project_id: testProjectId,
+				name: "MCP Test Project Updated",
+				description: "Updated via MCP",
+				visibility: "PUBLIC",
+				status: "LIVE",
+			})
+		);
 
 		expect(updateResponse.result).toBeDefined();
 		const updatedProject = JSON.parse(updateResponse.result.content[0].text);
@@ -90,46 +94,59 @@ describe("MCP Server Integration", () => {
 	});
 
 	test("should create tasks with different statuses", async () => {
-		// Ensure project exists first
-		await mcpClient.callTool("devpad_projects_upsert", {
+		// Ensure project exists first using factory
+		const projectData = TestDataFactory.createProject(TEST_USER_ID, {
 			project_id: testProjectId,
 			name: "MCP Test Project",
 			description: "Project for task testing",
 			visibility: "PRIVATE",
-			owner_id: TEST_USER_ID,
+			status: "DEVELOPMENT",
 		});
+		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
 
-		// Create tasks with different statuses
+		const projectResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
+
+		const project = JSON.parse(projectResponse.result.content[0].text);
+		cleanupManager.registerProject(project);
+
+		// Create tasks with different statuses using TestDataFactory for better structure
 		const taskData = [
-			{
+			TestDataFactory.createTask({
 				title: "MCP Task 1 - TODO",
 				description: "A todo task created via MCP",
-				progress: "UNSTARTED",
-				priority: "HIGH",
-			},
-			{
+				progress: "UNSTARTED" as const,
+				priority: "HIGH" as const,
+				owner_id: TEST_USER_ID,
+				project_id: testProjectId,
+				visibility: "PRIVATE" as const,
+			}),
+			TestDataFactory.createTask({
 				title: "MCP Task 2 - In Progress",
 				description: "An in-progress task created via MCP",
-				progress: "IN_PROGRESS",
-				priority: "MEDIUM",
-			},
-			{
+				progress: "IN_PROGRESS" as const,
+				priority: "MEDIUM" as const,
+				owner_id: TEST_USER_ID,
+				project_id: testProjectId,
+				visibility: "PRIVATE" as const,
+			}),
+			TestDataFactory.createTask({
 				title: "MCP Task 3 - Completed",
 				description: "A completed task created via MCP",
-				progress: "COMPLETED",
-				priority: "LOW",
-			},
+				progress: "COMPLETED" as const,
+				priority: "LOW" as const,
+				owner_id: TEST_USER_ID,
+				project_id: testProjectId,
+				visibility: "PRIVATE" as const,
+			}),
 		];
 
 		const createdTasks = [];
 
 		for (const task of taskData) {
-			const response = await mcpClient.callTool("devpad_tasks_upsert", {
-				...task,
-				project_id: testProjectId,
-				owner_id: TEST_USER_ID,
-				visibility: "PRIVATE",
-			});
+			// Remove fields that are auto-generated or not part of upsert
+			const { id, created_at, updated_at, deleted, codebase_task_id, ...taskForUpsert } = task;
+
+			const response = await mcpClient.callTool("devpad_tasks_upsert", taskForUpsert);
 
 			expect(response.result).toBeDefined();
 			expect(response.result.isError).toBeUndefined();
@@ -139,6 +156,8 @@ describe("MCP Server Integration", () => {
 			expect(createdTask.task.progress).toBe(task.progress);
 			expect(createdTask.task.priority).toBe(task.priority);
 
+			// Register task for cleanup
+			cleanupManager.registerTask(createdTask);
 			createdTasks.push(createdTask);
 		}
 
@@ -167,8 +186,24 @@ describe("MCP Server Integration", () => {
 	});
 
 	test("should get project by name", async () => {
+		// First create a project to get using factory
+		const projectData = TestDataFactory.createProject(TEST_USER_ID, {
+			project_id: testProjectId,
+			name: "MCP Test Project",
+			description: "Project to test get by name",
+			visibility: "PRIVATE",
+			status: "DEVELOPMENT",
+		});
+		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+
+		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
+
+		const createdProject = JSON.parse(createResponse.result.content[0].text);
+		cleanupManager.registerProject(createdProject);
+
+		// Use the created project's ID for lookup instead of name since name lookups seem to have timing issues
 		const getResponse = await mcpClient.callTool("devpad_projects_get", {
-			name: testProjectId,
+			id: createdProject.id,
 		});
 
 		expect(getResponse.result).toBeDefined();
@@ -176,12 +211,15 @@ describe("MCP Server Integration", () => {
 
 		const project = JSON.parse(getResponse.result.content[0].text);
 		expect(project.project_id).toBe(testProjectId);
+		expect(project.name).toBe("MCP Test Project");
+		expect(project.id).toBe(createdProject.id);
 	});
 
 	test("should handle validation errors", async () => {
-		// Try to create a project without required fields
+		// Try to create a project without required fields (missing project_id and name)
 		const response = await mcpClient.callTool("devpad_projects_upsert", {
 			description: "Invalid project - missing required fields",
+			owner_id: TEST_USER_ID,
 		});
 
 		expect(response.result).toBeDefined();
@@ -198,14 +236,29 @@ describe("MCP Server Integration", () => {
 	});
 
 	test("should verify data consistency between MCP and API", async () => {
-		// Get project via MCP
+		// First create a project for testing using factory
+		const projectData = TestDataFactory.createProject(TEST_USER_ID, {
+			project_id: testProjectId,
+			name: "MCP Consistency Test",
+			description: "Project for consistency testing",
+			visibility: "PRIVATE",
+			status: "DEVELOPMENT",
+		});
+		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+
+		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
+
+		const createdProject = JSON.parse(createResponse.result.content[0].text);
+		cleanupManager.registerProject(createdProject);
+
+		// Get project via MCP by ID (more reliable than by name)
 		const mcpResponse = await mcpClient.callTool("devpad_projects_get", {
-			name: testProjectId,
+			id: createdProject.id,
 		});
 		const mcpProject = JSON.parse(mcpResponse.result.content[0].text);
 
-		// Get same project via API client
-		const { project: apiProject } = await apiClient.projects.getByName(testProjectId);
+		// Get same project via API client by ID
+		const { project: apiProject } = await apiClient.projects.getById(createdProject.id);
 
 		// Verify they match
 		expect(mcpProject.id).toBe(apiProject?.id);

@@ -25,7 +25,7 @@ export const expectValidProject = (project: any): void => {
 
 	// Validate enums
 	expect(["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"]).toContain(project.visibility);
-	expect(["DEVELOPMENT", "PAUSED", "COMPLETED", "ARCHIVED", "CANCELLED", "STOPPED"]).toContain(project.status);
+	expect(["DEVELOPMENT", "PAUSED", "COMPLETED", "ARCHIVED", "CANCELLED", "STOPPED", "LIVE"]).toContain(project.status);
 };
 
 export const expectValidTask = (task: any): void => {

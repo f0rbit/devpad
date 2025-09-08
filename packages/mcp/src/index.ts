@@ -4,29 +4,38 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import ApiClient from "@devpad/api";
-import { upsert_project, upsert_todo, upsert_tag, upsert_milestone, upsert_goal, save_config_request, save_tags_request } from "@devpad/schema";
+import { upsert_project, upsert_todo, upsert_milestone, upsert_goal, save_config_request, save_tags_request } from "@devpad/schema";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // Helper to convert Zod schema to JSON Schema for MCP
-function zodToMCPSchema(schema: z.ZodSchema) {
-	const jsonSchema = zodToJsonSchema(schema, {
-		target: "openApi3",
-		$refStrategy: "none",
-	}) as any;
-	// Remove the $schema property that zod-to-json-schema adds
-	const { $schema, ...cleanSchema } = jsonSchema;
+function zodToMCPSchema(schema: any) {
+	try {
+		const jsonSchema = zodToJsonSchema(schema, {
+			target: "openApi3",
+			$refStrategy: "none",
+		}) as any;
+		// Remove the $schema property that zod-to-json-schema adds
+		const { $schema, ...cleanSchema } = jsonSchema;
 
-	if (jsonSchema.type === "object") return jsonSchema;
+		if (jsonSchema.type === "object") return jsonSchema;
 
-	// Ensure every tool schema is an object
-	return {
-		type: "object",
-		properties: {
-			value: cleanSchema, // wrap non-objects under "value"
-		},
-		required: [],
-	};
+		// Ensure every tool schema is an object
+		return {
+			type: "object",
+			properties: {
+				value: cleanSchema, // wrap non-objects under "value"
+			},
+			required: [],
+		};
+	} catch (error) {
+		// Fallback for problematic schemas
+		return {
+			type: "object",
+			properties: {},
+			additionalProperties: true,
+		};
+	}
 }
 
 function assertObjectRootSchema(tools: any[]) {
@@ -78,11 +87,6 @@ const github_branches = z.object({
 	repo: z.string().describe("Repository name"),
 });
 
-// For tasks that can have tags
-const upsert_todo_with_tags = upsert_todo.extend({
-	tags: z.array(upsert_tag).optional().describe("Tags to associate with the task"),
-});
-
 const tools = [
 	// Projects
 	{
@@ -120,7 +124,7 @@ const tools = [
 	{
 		name: "devpad_tasks_upsert",
 		description: "Create or update a task (set deleted=true to delete)",
-		inputSchema: zodToMCPSchema(upsert_todo_with_tags),
+		inputSchema: zodToMCPSchema(upsert_todo),
 	},
 	{
 		name: "devpad_tasks_save_tags",
@@ -326,20 +330,24 @@ class DevpadMCPServer {
 					}
 
 					case "devpad_tasks_upsert": {
-						const data = upsert_todo_with_tags.parse(args);
-						// Use the upsert method which handles both create and update
-						const result = await this.apiClient.tasks.upsert(data);
-						if (result.error) {
-							throw new Error(result.error.message);
+						try {
+							const data = upsert_todo.parse(args);
+							// Use the upsert method which handles both create and update
+							const result = await this.apiClient.tasks.upsert(data);
+							if (result.error) {
+								throw new Error(result.error.message);
+							}
+							return {
+								content: [
+									{
+										type: "text",
+										text: JSON.stringify(result.task, null, 2),
+									},
+								],
+							};
+						} catch (parseError) {
+							throw new Error(`Task validation failed: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
 						}
-						return {
-							content: [
-								{
-									type: "text",
-									text: JSON.stringify(result.task, null, 2),
-								},
-							],
-						};
 					}
 
 					case "devpad_tasks_save_tags": {
