@@ -1,0 +1,36 @@
+{
+	"name": "@devpad/mcp",
+	"version": "0.1.0",
+	"description": "MCP server for devpad - exposes devpad API functionality via Model Context Protocol",
+	"type": "module",
+	"main": "dist/index.js",
+	"bin": {
+		"devpad-mcp": "dist/index.js"
+	},
+	"scripts": {
+		"build": "bun build src/index.ts --outdir dist --target node",
+		"dev": "bun run src/index.ts",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@devpad/api": "workspace:*",
+		"@devpad/schema": "workspace:*",
+		"@modelcontextprotocol/sdk": "^1.17.5",
+		"zod": "^3.22.4",
+		"zod-to-json-schema": "^3.24.6"
+	},
+	"devDependencies": {
+		"@types/node": "^24.3.0",
+		"typescript": "^5.0.0"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"keywords": [
+		"mcp",
+		"devpad",
+		"todo",
+		"project-management"
+	]
+}
