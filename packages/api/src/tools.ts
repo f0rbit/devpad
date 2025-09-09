@@ -268,6 +268,212 @@ export const tools: Record<string, ToolDefinition> = {
 			return result.branches;
 		},
 	},
+
+	// Auth operations
+	devpad_auth_session: {
+		name: "devpad_auth_session",
+		description: "Get current session information",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.auth.session();
+			if (result.error) throw new Error(result.error.message);
+			return result.session;
+		},
+	},
+
+	devpad_auth_keys_list: {
+		name: "devpad_auth_keys_list",
+		description: "List API keys",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.auth.keys.list();
+			if (result.error) throw new Error(result.error.message);
+			return result.keys;
+		},
+	},
+
+	devpad_auth_keys_create: {
+		name: "devpad_auth_keys_create",
+		description: "Create a new API key",
+		inputSchema: z.object({
+			name: z.string().optional().describe("Name for the API key"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.auth.keys.create(input.name);
+			if (result.error) throw new Error(result.error.message);
+			return result.key;
+		},
+	},
+
+	devpad_auth_keys_revoke: {
+		name: "devpad_auth_keys_revoke",
+		description: "Revoke an API key",
+		inputSchema: z.object({
+			key_id: z.string().describe("API key ID to revoke"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.auth.keys.revoke(input.key_id);
+			if (result.error) throw new Error(result.error.message);
+			return result.result;
+		},
+	},
+
+	// Additional project operations
+	devpad_projects_delete: {
+		name: "devpad_projects_delete",
+		description: "Delete a project",
+		inputSchema: z.object({
+			id: z.string().describe("Project ID"),
+		}),
+		execute: async (client, input) => {
+			// First get the project to have all required fields
+			const getResult = await client.projects.find(input.id);
+			if (getResult.error) throw new Error(getResult.error.message);
+			if (!getResult.project) throw new Error(`Project ${input.id} not found`);
+
+			const result = await client.projects.deleteProject(getResult.project);
+			if (result.error) throw new Error(result.error.message);
+			return { success: true };
+		},
+	},
+
+	devpad_projects_history: {
+		name: "devpad_projects_history",
+		description: "Get project history",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.projects.history(input.project_id);
+			if (result.error) throw new Error(result.error.message);
+			return result.history;
+		},
+	},
+
+	devpad_projects_specification: {
+		name: "devpad_projects_specification",
+		description: "Fetch project specification from GitHub",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.projects.specification(input.project_id);
+			if (result.error) throw new Error(result.error.message);
+			return result.specification;
+		},
+	},
+
+	devpad_projects_config_load: {
+		name: "devpad_projects_config_load",
+		description: "Load project configuration",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.projects.config.load(input.project_id);
+			if (result.error) throw new Error(result.error.message);
+			return result.config;
+		},
+	},
+
+	// Additional milestone operations
+	devpad_milestones_delete: {
+		name: "devpad_milestones_delete",
+		description: "Delete a milestone",
+		inputSchema: z.object({
+			id: z.string().describe("Milestone ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.milestones.delete(input.id);
+			if (result.error) throw new Error(result.error.message);
+			return result.result;
+		},
+	},
+
+	devpad_milestones_goals: {
+		name: "devpad_milestones_goals",
+		description: "Get goals for a milestone",
+		inputSchema: z.object({
+			id: z.string().describe("Milestone ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.milestones.goals(input.id);
+			if (result.error) throw new Error(result.error.message);
+			return result.goals;
+		},
+	},
+
+	// Additional goal operations
+	devpad_goals_delete: {
+		name: "devpad_goals_delete",
+		description: "Delete a goal",
+		inputSchema: z.object({
+			id: z.string().describe("Goal ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.goals.delete(input.id);
+			if (result.error) throw new Error(result.error.message);
+			return result.result;
+		},
+	},
+
+	// Additional task operations
+	devpad_tasks_delete: {
+		name: "devpad_tasks_delete",
+		description: "Delete a task",
+		inputSchema: z.object({
+			id: z.string().describe("Task ID"),
+		}),
+		execute: async (client, input) => {
+			// First get the task to have all required fields
+			const getResult = await client.tasks.find(input.id);
+			if (getResult.error) throw new Error(getResult.error.message);
+			if (!getResult.task) throw new Error(`Task ${input.id} not found`);
+
+			const result = await client.tasks.deleteTask(getResult.task);
+			if (result.error) throw new Error(result.error.message);
+			return { success: true };
+		},
+	},
+
+	devpad_tasks_history: {
+		name: "devpad_tasks_history",
+		description: "Get task history",
+		inputSchema: z.object({
+			task_id: z.string().describe("Task ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.tasks.history.get(input.task_id);
+			if (result.error) throw new Error(result.error.message);
+			return result.history;
+		},
+	},
+
+	// User operations
+	devpad_user_history: {
+		name: "devpad_user_history",
+		description: "Get user activity history",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.user.history();
+			if (result.error) throw new Error(result.error.message);
+			return result.history;
+		},
+	},
+
+	devpad_user_preferences: {
+		name: "devpad_user_preferences",
+		description: "Update user preferences",
+		inputSchema: z.object({
+			id: z.string().describe("User ID"),
+			task_view: z.enum(["list", "grid"]).describe("Task view preference"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.user.preferences(input);
+			if (result.error) throw new Error(result.error.message);
+			return result.result;
+		},
+	},
 };
 
 // Helper to convert Zod schema to JSON Schema for MCP

@@ -131,14 +131,34 @@ projects
 
 		const spinner = ora("Deleting project...").start();
 		try {
-			const tool = getTool("devpad_projects_upsert");
+			const tool = getTool("devpad_projects_delete");
 			if (!tool) throw new Error("Tool not found");
 
 			const client = getApiClient();
-			await tool.execute(client, { id, deleted: true });
+			await tool.execute(client, { id });
 			spinner.succeed("Project deleted");
 		} catch (error) {
 			spinner.fail("Failed to delete project");
+			handleError(error);
+		}
+	});
+
+projects
+	.command("history <id>")
+	.description("Get project history")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async (id, options) => {
+		const spinner = ora("Fetching project history...").start();
+		try {
+			const tool = getTool("devpad_projects_history");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, { project_id: id });
+			spinner.succeed("Project history fetched");
+			formatOutput(result, options.format);
+		} catch (error) {
+			spinner.fail("Failed to fetch project history");
 			handleError(error);
 		}
 	});
@@ -259,6 +279,50 @@ tasks
 			spinner.succeed(`Task "${result.title}" marked as todo`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
+			handleError(error);
+		}
+	});
+
+tasks
+	.command("delete <id>")
+	.description("Delete a task")
+	.option("-y, --yes", "Skip confirmation", false)
+	.action(async (id, options) => {
+		if (!options.yes) {
+			console.log(chalk.yellow("Are you sure you want to delete this task? Use --yes to confirm"));
+			return;
+		}
+
+		const spinner = ora("Deleting task...").start();
+		try {
+			const tool = getTool("devpad_tasks_delete");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			await tool.execute(client, { id });
+			spinner.succeed("Task deleted");
+		} catch (error) {
+			spinner.fail("Failed to delete task");
+			handleError(error);
+		}
+	});
+
+tasks
+	.command("history <id>")
+	.description("Get task history")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async (id, options) => {
+		const spinner = ora("Fetching task history...").start();
+		try {
+			const tool = getTool("devpad_tasks_history");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, { task_id: id });
+			spinner.succeed("Task history fetched");
+			formatOutput(result, options.format);
+		} catch (error) {
+			spinner.fail("Failed to fetch task history");
 			handleError(error);
 		}
 	});
@@ -431,6 +495,134 @@ github
 			formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch branches");
+			handleError(error);
+		}
+	});
+
+// Auth command group
+const auth = program.command("auth").description("Authentication and API key management");
+
+auth.command("session")
+	.description("Get current session information")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async options => {
+		const spinner = ora("Fetching session info...").start();
+		try {
+			const tool = getTool("devpad_auth_session");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, {});
+			spinner.succeed("Session info fetched");
+			formatOutput(result, options.format);
+		} catch (error) {
+			spinner.fail("Failed to fetch session info");
+			handleError(error);
+		}
+	});
+
+auth.command("keys")
+	.description("List API keys")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async options => {
+		const spinner = ora("Fetching API keys...").start();
+		try {
+			const tool = getTool("devpad_auth_keys_list");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, {});
+			spinner.succeed("API keys fetched");
+			formatOutput(result, options.format);
+		} catch (error) {
+			spinner.fail("Failed to fetch API keys");
+			handleError(error);
+		}
+	});
+
+auth.command("create-key")
+	.description("Create a new API key")
+	.option("-n, --name <name>", "Name for the API key")
+	.action(async options => {
+		const spinner = ora("Creating API key...").start();
+		try {
+			const tool = getTool("devpad_auth_keys_create");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, { name: options.name });
+			spinner.succeed("API key created");
+			console.log(chalk.green(`Key: ${result.key}`));
+			console.log(chalk.yellow("Store this key securely - it won't be shown again!"));
+		} catch (error) {
+			spinner.fail("Failed to create API key");
+			handleError(error);
+		}
+	});
+
+auth.command("revoke-key <key_id>")
+	.description("Revoke an API key")
+	.option("-y, --yes", "Skip confirmation", false)
+	.action(async (key_id, options) => {
+		if (!options.yes) {
+			console.log(chalk.yellow("Are you sure you want to revoke this API key? Use --yes to confirm"));
+			return;
+		}
+
+		const spinner = ora("Revoking API key...").start();
+		try {
+			const tool = getTool("devpad_auth_keys_revoke");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			await tool.execute(client, { key_id });
+			spinner.succeed("API key revoked");
+		} catch (error) {
+			spinner.fail("Failed to revoke API key");
+			handleError(error);
+		}
+	});
+
+// User command group
+const user = program.command("user").description("User preferences and history");
+
+user.command("history")
+	.description("Get user activity history")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async options => {
+		const spinner = ora("Fetching user history...").start();
+		try {
+			const tool = getTool("devpad_user_history");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, {});
+			spinner.succeed("User history fetched");
+			formatOutput(result, options.format);
+		} catch (error) {
+			spinner.fail("Failed to fetch user history");
+			handleError(error);
+		}
+	});
+
+user.command("preferences")
+	.description("Update user preferences")
+	.requiredOption("-u, --user-id <id>", "User ID")
+	.requiredOption("-v, --view <view>", "Task view preference (list|grid)")
+	.action(async options => {
+		const spinner = ora("Updating preferences...").start();
+		try {
+			const tool = getTool("devpad_user_preferences");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			await tool.execute(client, {
+				id: options.userId,
+				task_view: options.view,
+			});
+			spinner.succeed("Preferences updated");
+		} catch (error) {
+			spinner.fail("Failed to update preferences");
 			handleError(error);
 		}
 	});
