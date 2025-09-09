@@ -1,15 +1,46 @@
 {
 	"name": "@devpad/cli",
 	"version": "0.1.0",
-	"description": "Command line interface for Devpad project management",
+	"description": "Command line interface for devpad project management",
 	"type": "module",
 	"main": "dist/index.js",
 	"bin": {
 		"devpad": "./dist/index.js"
 	},
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"scripts": {
 		"build": "bunx tsc",
-		"test": "bun test"
+		"test": "bun test",
+		"prepublishOnly": "bun run build"
+	},
+	"keywords": [
+		"devpad",
+		"cli",
+		"command-line",
+		"project-management",
+		"task-management",
+		"todo"
+	],
+	"author": {
+		"name": "f0rbit",
+		"url": "https://github.com/f0rbit"
+	},
+	"license": "MIT",
+	"homepage": "https://devpad.tools",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/devpad.git",
+		"directory": "packages/cli"
+	},
+	"bugs": {
+		"url": "https://github.com/f0rbit/devpad/issues"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
 		"@devpad/api": "workspace:*",
@@ -24,6 +55,8 @@
 		"@types/node": "^20.11.24",
 		"bun-types": "latest",
 		"typescript": "^5.9.2"
+	},
+	"engines": {
+		"node": ">=18.0.0"
 	}
-}
 }

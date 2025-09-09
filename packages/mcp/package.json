@@ -10,7 +10,8 @@
 	"scripts": {
 		"build": "bun build src/index.ts --outdir dist --target node",
 		"dev": "bun run src/index.ts",
-		"clean": "rm -rf dist"
+		"clean": "rm -rf dist",
+		"prepublishOnly": "bun run build"
 	},
 	"dependencies": {
 		"@devpad/api": "workspace:*",
@@ -29,8 +30,32 @@
 	],
 	"keywords": [
 		"mcp",
+		"model-context-protocol",
 		"devpad",
 		"todo",
-		"project-management"
-	]
+		"project-management",
+		"task-management",
+		"ai-tools"
+	],
+	"author": {
+		"name": "f0rbit",
+		"url": "https://github.com/f0rbit"
+	},
+	"license": "MIT",
+	"homepage": "https://devpad.tools",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/devpad.git",
+		"directory": "packages/mcp"
+	},
+	"bugs": {
+		"url": "https://github.com/f0rbit/devpad/issues"
+	},
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	}
 }

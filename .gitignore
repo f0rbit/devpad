@@ -46,10 +46,6 @@ database/*.db
 *.log
 *.db
 
-*.d.ts
-*.js
-*.d.ts.map
-
 dist
 
 # Astro
