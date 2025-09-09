@@ -42,6 +42,11 @@ jobs:
           cd ../mcp && bun run build
           cd ../app && bun run build
         
+      - name: Setup test environment
+        run: |
+          # Ensure todo-tracker binary has execute permissions
+          chmod +x todo-tracker
+        
       - name: Run unit tests
         run: make unit
         env:

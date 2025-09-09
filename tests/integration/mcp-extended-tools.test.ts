@@ -14,7 +14,7 @@ describe("MCP Extended Tools Integration", () => {
 		// Create API client for verification
 		apiClient = new ApiClient({
 			api_key: testApiKey,
-			base_url: "http://localhost:3000/api/v0",
+			base_url: "http://localhost:3001/api/v0",
 		});
 
 		// Start MCP client
