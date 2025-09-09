@@ -269,55 +269,6 @@ export const tools: Record<string, ToolDefinition> = {
 		},
 	},
 
-	// Auth operations
-	devpad_auth_session: {
-		name: "devpad_auth_session",
-		description: "Get current session information",
-		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.auth.session();
-			if (result.error) throw new Error(result.error.message);
-			return result.session;
-		},
-	},
-
-	devpad_auth_keys_list: {
-		name: "devpad_auth_keys_list",
-		description: "List API keys",
-		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.auth.keys.list();
-			if (result.error) throw new Error(result.error.message);
-			return result.keys;
-		},
-	},
-
-	devpad_auth_keys_create: {
-		name: "devpad_auth_keys_create",
-		description: "Create a new API key",
-		inputSchema: z.object({
-			name: z.string().optional().describe("Name for the API key"),
-		}),
-		execute: async (client, input) => {
-			const result = await client.auth.keys.create(input.name);
-			if (result.error) throw new Error(result.error.message);
-			return result.key;
-		},
-	},
-
-	devpad_auth_keys_revoke: {
-		name: "devpad_auth_keys_revoke",
-		description: "Revoke an API key",
-		inputSchema: z.object({
-			key_id: z.string().describe("API key ID to revoke"),
-		}),
-		execute: async (client, input) => {
-			const result = await client.auth.keys.revoke(input.key_id);
-			if (result.error) throw new Error(result.error.message);
-			return result.result;
-		},
-	},
-
 	// Additional project operations
 	devpad_projects_delete: {
 		name: "devpad_projects_delete",
