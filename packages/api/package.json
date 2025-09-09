@@ -47,9 +47,6 @@
 	"bugs": {
 		"url": "https://github.com/f0rbit/devpad/issues"
 	},
-	"publishConfig": {
-		"access": "public"
-	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
 		"drizzle-orm": "^0.30.6",
