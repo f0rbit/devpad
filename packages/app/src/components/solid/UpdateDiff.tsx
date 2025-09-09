@@ -25,10 +25,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const _items = JSON.parse(JSON.stringify(items)) as UpdateData[];
 	const mapped_items = _items.map(item => {
 		const task = tasks[item.id];
-		if (task) {
-			item.task = task;
-		}
-		return item;
+		return task ? { ...item, task } : item;
 	});
 
 	const { same = [], others = [] } = Object.groupBy(mapped_items, u => (u.type === "SAME" || u.type === "MOVE" ? "same" : "others"));

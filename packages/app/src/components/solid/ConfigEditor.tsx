@@ -235,7 +235,7 @@ const TodoScannerConfig = ({
 								<For each={tag().match}>
 									{(match, matchIndex) => (
 										<div class="flex-row" style="gap: 10px">
-											<input type="text" placeholder="Match Pattern" value={match} onChange={e => updateMatch(index, matchIndex(), e.target.value)} />
+											<input type="text" placeholder="Match Pattern" value={match} onInput={e => updateMatch(index, matchIndex(), e.target.value)} />
 											<a role="button" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
 												<Minus />
 											</a>

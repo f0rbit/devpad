@@ -32,7 +32,7 @@ const last_updated = (a: TaskType, b: TaskType) => {
 
 const by_priority = (a: TaskType, b: TaskType) => {
 	const priority_map = { LOW: 0, MEDIUM: 1, HIGH: 2 };
-	return priority_map[b.task?.priority] - priority_map[a.task?.priority];
+	return priority_map[b.task?.priority ?? 0] - priority_map[a.task?.priority ?? 0];
 };
 
 const by_progress = (a: TaskType, b: TaskType) => {

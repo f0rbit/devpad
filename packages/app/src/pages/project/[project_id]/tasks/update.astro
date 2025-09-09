@@ -48,7 +48,7 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 </PageLayout>
 
 <script is:inline define:vars={{ project_id: project.id }}>
-	import { getApiClient } from "../../../../utils/api-client";
+	import { getApiClient } from "@/utils/api-client";
 	
 	function hook_check() {
 		const update_check = document.getElementById("update-check");

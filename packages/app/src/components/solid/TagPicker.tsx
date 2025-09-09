@@ -2,7 +2,7 @@
 
 import type { TagWithTypedColor as Tag, UpsertTag } from "@devpad/schema";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, createEffect } from "solid-js";
 import { TagBadge } from "@/components/solid/TagEditor";
 
 export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag | null) => void }) {
@@ -33,6 +33,16 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 	const [tags, setTags] = createSignal(currentTags);
 	let input!: HTMLInputElement;
 	let container!: HTMLDivElement;
+	let isInitialMount = true;
+
+	createEffect(() => {
+		const currentTagsValue = tags();
+		// Skip the initial mount to avoid calling onChange unnecessarily
+		if (!isInitialMount) {
+			onChange(currentTagsValue);
+		}
+		isInitialMount = false;
+	});
 
 	function add() {
 		const value = input.value.trim();
@@ -66,18 +76,17 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 		setTags([...tags(), id]);
 		input.value = "";
 		input.focus();
-
-		onChange(tags());
 	}
 
 	function removeTag(tag: UpsertTag) {
 		if (tag.id == null) {
 			// filter by name
-			setTags(tags().filter(t => t.title !== tag.title));
+			const newTags = tags().filter(t => t.title !== tag.title);
+			setTags(newTags);
 		} else {
-			setTags(tags().filter(t => t.id !== tag.id));
+			const newTags = tags().filter(t => t.id !== tag.id);
+			setTags(newTags);
 		}
-		onChange(tags());
 	}
 
 	return (
