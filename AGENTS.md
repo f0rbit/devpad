@@ -2,6 +2,8 @@
 
 THIS PROJECT IS CALLED "devpad" NOT "DevPad". PLEASE UTILISE CORRECT CAPITLISATION: "devpad"
 
+NEVER EVER MAKE ANY COMMITS OR EVERY DO A GIT PUSH/PULL OR MERGE/REBASE!!!!
+
 Please don't be super agreeable with whatever I say - if you think there's an issue with my suggestions, push back & suggest better alternatives. I may be wrong upon occasion challenge me. But then once we've come to a decision - let's disagree & commit and move forward.
 
 ## Build & Test Commands
