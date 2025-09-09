@@ -31,8 +31,16 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
         
-      - name: Build packages
-        run: bun run build
+      - name: Build packages in order
+        run: |
+          # Build packages in dependency order
+          cd packages/schema && bun run build
+          cd ../core && bun run build
+          cd ../api && bun run build
+          cd ../cli && bun run build
+          cd ../server && bun run build
+          cd ../mcp && bun run build
+          cd ../app && bun run build
         
       - name: Run unit tests
         run: make unit
