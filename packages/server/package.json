@@ -1,6 +1,6 @@
 {
 	"name": "@devpad/server",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"type": "module",
 	"scripts": {
 		"dev": "bun --watch src/local.ts",
@@ -13,6 +13,7 @@
 		"@devpad/schema": "workspace:*",
 		"@hono/node-server": "^1.13.1",
 		"@hono/zod-validator": "^0.7.2",
+		"@lucia-auth/adapter-drizzle": "^1.1.0",
 		"arctic": "^1.9.2",
 		"hono": "^4.6.3",
 		"jsonwebtoken": "^9.0.2",

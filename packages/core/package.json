@@ -1,6 +1,6 @@
 {
 	"name": "@devpad/core",
-	"version": "0.1.0",
+	"version": "1.0.0",
 	"description": "Core business logic and services for Devpad",
 	"type": "module",
 	"main": "dist/index.js",

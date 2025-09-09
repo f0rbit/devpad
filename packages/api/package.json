@@ -1,19 +1,16 @@
 {
 	"name": "@devpad/api",
-	"version": "0.1.0",
-	"description": "TypeScript client library for the Devpad API - project and task management made simple",
-	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		}
+	"version": "1.0.0",
+	"author": {
+		"name": "f0rbit",
+		"url": "https://github.com/f0rbit"
 	},
-	"files": [
-		"dist"
-	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/devpad.git",
+		"directory": "packages/api"
+	},
+	"main": "dist/index.js",
 	"scripts": {
 		"build": "bunx tsc",
 		"build:watch": "bunx tsc --watch",
@@ -25,31 +22,8 @@
 		"prepublishOnly": "bun run build",
 		"clean": "rm -rf dist"
 	},
-	"keywords": [
-		"devpad",
-		"api",
-		"client",
-		"typescript",
-		"project-management",
-		"task-management"
-	],
-	"author": {
-		"name": "f0rbit",
-		"url": "https://github.com/f0rbit"
-	},
-	"license": "MIT",
-	"homepage": "https://devpad.tools",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/f0rbit/devpad.git",
-		"directory": "packages/api"
-	},
-	"bugs": {
-		"url": "https://github.com/f0rbit/devpad/issues"
-	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
-		"drizzle-orm": "^0.30.6",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
@@ -58,14 +32,36 @@
 		"eslint": "^8.57.0",
 		"typescript": "^5.9.2"
 	},
-	"peerDependencies": {
-		"drizzle-orm": "^0.30.6"
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
 	},
+	"bugs": {
+		"url": "https://github.com/f0rbit/devpad/issues"
+	},
+	"description": "TypeScript client library for the devpad API - project and task management made simple",
 	"engines": {
 		"node": ">=18.0.0"
 	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://devpad.tools",
+	"keywords": [
+		"devpad",
+		"api",
+		"client",
+		"typescript",
+		"project-management",
+		"task-management"
+	],
+	"license": "MIT",
 	"publishConfig": {
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
-	}
+	},
+	"type": "module",
+	"types": "dist/index.d.ts"
 }
