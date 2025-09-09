@@ -255,8 +255,8 @@ app.get("/projects/:project_id/history", requireAuth, async c => {
 	}
 
 	try {
-		// Get project to verify ownership
-		const { project, error } = await getProject(user.id, project_id);
+		// Get project to verify ownership (project_id is UUID)
+		const { project, error } = await getProjectById(project_id);
 		if (error) {
 			return c.json({ error }, 500);
 		}
