@@ -56,7 +56,7 @@ class DevpadMCPServer {
 	private server: Server;
 	private apiClient: ApiClient;
 
-	constructor() {
+	constructor(api_key?: string, base_url?: string) {
 		this.server = new Server(
 			{
 				name: "devpad-mcp-server",
@@ -69,17 +69,17 @@ class DevpadMCPServer {
 			}
 		);
 
-		const apiKey = process.env.DEVPAD_API_KEY;
-		const baseUrl = process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v0";
+		// Use provided parameters or fall back to environment variables
+		const final_api_key = api_key || process.env.DEVPAD_API_KEY;
+		const final_base_url = base_url || process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v0";
 
-		if (!apiKey) {
-			console.error("DEVPAD_API_KEY environment variable is required");
-			process.exit(1);
+		if (!final_api_key) {
+			throw new Error("DEVPAD_API_KEY is required");
 		}
 
 		this.apiClient = new ApiClient({
-			api_key: apiKey,
-			base_url: baseUrl,
+			api_key: final_api_key,
+			base_url: final_base_url,
 		});
 
 		this.setupHandlers();
@@ -103,23 +103,23 @@ class DevpadMCPServer {
 				const input = tool.inputSchema.parse(args);
 
 				// Execute the tool
-				const result = await tool.execute(this.apiClient, input);
+				const tool_result = await tool.execute(this.apiClient, input);
 
 				return {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify(result, null, 2),
+							text: JSON.stringify(tool_result, null, 2),
 						},
 					],
 				};
 			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : "Unknown error";
+				const error_message = error instanceof Error ? error.message : "Unknown error";
 				return {
 					content: [
 						{
 							type: "text",
-							text: `Error: ${errorMessage}`,
+							text: `Error: ${error_message}`,
 						},
 					],
 					isError: true,
@@ -133,6 +133,65 @@ class DevpadMCPServer {
 		await this.server.connect(transport);
 		console.error("devpad MCP server running on stdio");
 	}
+
+	/**
+	 * In-memory interface for testing - processes JSON-RPC requests directly
+	 * @param request JSON-RPC request object
+	 * @returns JSON-RPC response object
+	 */
+	async processRequest(request: any): Promise<any> {
+		try {
+			let result: any;
+			if (request.method === "tools/list") {
+				result = { tools };
+			} else if (request.method === "tools/call") {
+				const { name, arguments: args } = request.params;
+
+				const tool = getTool(name);
+				if (!tool) {
+					throw new Error(`Unknown tool: ${name}`);
+				}
+
+				// Parse and validate input
+				const input = tool.inputSchema.parse(args);
+
+				// Execute the tool
+				const tool_result = await tool.execute(this.apiClient, input);
+
+				result = {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(tool_result, null, 2),
+						},
+					],
+				};
+			} else {
+				throw new Error(`Unknown method: ${request.method}`);
+			}
+
+			return {
+				jsonrpc: "2.0",
+				id: request.id,
+				result,
+			};
+		} catch (error) {
+			const error_message = error instanceof Error ? error.message : "Unknown error";
+			return {
+				jsonrpc: "2.0",
+				id: request.id,
+				result: {
+					content: [
+						{
+							type: "text",
+							text: `Error: ${error_message}`,
+						},
+					],
+					isError: true,
+				},
+			};
+		}
+	}
 }
 
 async function main() {
@@ -140,6 +199,9 @@ async function main() {
 	const server = new DevpadMCPServer();
 	await server.run();
 }
+
+// Export the server class for testing
+export { DevpadMCPServer };
 
 // Check if this file is being run directly
 if (process.argv[1] === new URL(import.meta.url).pathname) {
