@@ -1,4 +1,4 @@
-import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal, HistoryAction, TagWithTypedColor } from "@devpad/schema";
+import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal, HistoryAction, TagWithTypedColor, ApiKey } from "@devpad/schema";
 import { ApiClient as HttpClient } from "./request";
 import { wrap, type Result } from "./result";
 
@@ -71,7 +71,7 @@ export class ApiClient {
 			/**
 			 * List all API keys
 			 */
-			list: (): Promise<Result<{ keys: Array<{ id: string; name: string; prefix: string; created_at: string; last_used_at: string | null }> }, "keys">> => wrap(() => this.clients.auth.get<{ keys: Array<any> }>("/auth/keys"), "keys"),
+			list: (): Promise<Result<ApiKey[], "keys">> => wrap(() => this.clients.auth.get<ApiKey[]>("/auth/keys"), "keys"),
 
 			/**
 			 * Generate a new API key
@@ -362,7 +362,7 @@ export class ApiClient {
 		/**
 		 * Get tasks by project ID
 		 */
-		getByProject: (project_id: string): Promise<Result<TaskWithDetails[], "tasks">> => wrap(() => this.clients.tasks.get<TaskWithDetails[]>(`/projects/${project_id}/tasks`), "tasks"),
+		getByProject: (project_id: string): Promise<Result<TaskWithDetails[], "tasks">> => wrap(() => this.clients.tasks.get<TaskWithDetails[]>(`/tasks`, { query: { project: project_id }}), "tasks"),
 
 		/**
 		 * Create a new task
@@ -461,16 +461,6 @@ export class ApiClient {
 		 * Update user preferences
 		 */
 		preferences: (data: { id: string; task_view: string }): Promise<Result<any, "result">> => wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data }), "result"),
-	};
-
-	/**
-	 * Keys namespace with Result-wrapped operations
-	 */
-	public readonly keys = {
-		/**
-		 * List API keys for authenticated user
-		 */
-		list: (): Promise<Result<{ keys: any[] }, "keys">> => wrap(() => this.clients.auth.get<{ keys: any[] }>("/auth/keys"), "keys"),
 	};
 
 	/**

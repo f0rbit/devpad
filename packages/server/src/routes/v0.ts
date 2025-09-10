@@ -709,7 +709,7 @@ app.get("/auth/keys", requireAuth, async c => {
 
 	try {
 		const keys = await getAPIKeys(user.id);
-		return c.json({ keys });
+		return c.json(keys);
 	} catch (err) {
 		console.error("Get API keys error:", err);
 		return c.json({ error: "Failed to fetch API keys" }, 500);

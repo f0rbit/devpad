@@ -172,20 +172,6 @@ describe("API client operations integration", () => {
 		});
 	});
 
-	describe("Keys endpoints", () => {
-		test("should list API keys", async () => {
-			const { keys, error } = await test_client.keys.list();
-
-			if (error) {
-				console.warn(`Keys list endpoint error (might be expected): ${error.message}`);
-				expect(error.message).toBeDefined();
-			} else {
-				expect(keys).toBeDefined();
-				expect(Array.isArray(keys.keys)).toBe(true);
-			}
-		});
-	});
-
 	describe("Auth.keys endpoints", () => {
 		test("should list API keys via auth namespace", async () => {
 			const { keys, error } = await test_client.auth.keys.list();
@@ -195,7 +181,7 @@ describe("API client operations integration", () => {
 				expect(error.message).toBeDefined();
 			} else {
 				expect(keys).toBeDefined();
-				expect(Array.isArray(keys.keys)).toBe(true);
+				expect(Array.isArray(keys)).toBe(true);
 			}
 		});
 
