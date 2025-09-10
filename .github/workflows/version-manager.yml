@@ -76,5 +76,5 @@ jobs:
           git add VERSION VERSION_PR 2>/dev/null || true
           git diff --staged --quiet || {
             git commit -m "chore: update version to ${{ steps.version.outputs.version }}"
-            git push origin versions
+            git push origin versions || git push origin versions --force-with-lease
           }
