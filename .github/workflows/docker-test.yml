@@ -1,0 +1,144 @@
+name: Docker Build Test
+
+on:
+  pull_request:
+    paths:
+      - 'packages/**'
+      - 'deployment/**'
+      - 'package.json'
+      - 'bun.lockb'
+      - '.github/workflows/docker-test.yml'
+      - '.github/workflows/deploy-*.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver-opts: |
+            network=host
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=pr,prefix=pr-
+      
+      - name: Build Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          push: false
+          load: true
+          tags: devpad-test:pr-${{ github.event.pull_request.number }}
+          cache-from: |
+            type=gha,scope=staging
+            type=gha,scope=pr-${{ github.event.pull_request.number }}
+            type=registry,ref=ghcr.io/${{ github.repository }}:staging
+          cache-to: type=gha,mode=max,scope=pr-${{ github.event.pull_request.number }}
+      
+      - name: Start test container
+        id: start
+        run: |
+          docker run -d \
+            --name devpad-test \
+            --health-cmd "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1" \
+            --health-interval 5s \
+            --health-timeout 10s \
+            --health-retries 12 \
+            -p 3000:3000 \
+            -e NODE_ENV=test \
+            -e DATABASE_FILE=/app/data/test.db \
+            devpad-test:pr-${{ github.event.pull_request.number }}
+          
+          echo "Container started, waiting for health check..."
+      
+      - name: Wait for container health
+        id: health
+        timeout-minutes: 2
+        run: |
+          ATTEMPTS=0
+          MAX_ATTEMPTS=24
+          
+          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+            ATTEMPTS=$((ATTEMPTS + 1))
+            echo "Health check attempt $ATTEMPTS/$MAX_ATTEMPTS..."
+            
+            # Check container health status
+            HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' devpad-test 2>/dev/null || echo "not-found")
+            
+            if [ "$HEALTH_STATUS" = "healthy" ]; then
+              echo "✅ Container is healthy!"
+              exit 0
+            elif [ "$HEALTH_STATUS" = "unhealthy" ]; then
+              echo "❌ Container is unhealthy!"
+              echo "Container logs:"
+              docker logs devpad-test --tail 50
+              exit 1
+            fi
+            
+            sleep 5
+          done
+          
+          echo "❌ Container failed to become healthy after $MAX_ATTEMPTS attempts"
+          echo "Container status:"
+          docker inspect devpad-test --format='{{json .State}}' | jq .
+          echo "Container logs:"
+          docker logs devpad-test --tail 50
+          exit 1
+      
+      - name: Test API endpoints
+        run: |
+          echo "Testing health endpoint..."
+          curl -f http://localhost:3000/health || exit 1
+          
+          echo "Testing main page..."
+          curl -f http://localhost:3000/ -o /dev/null || exit 1
+          
+          echo "✅ All endpoints responding correctly!"
+      
+      - name: Display container logs on failure
+        if: failure()
+        run: |
+          echo "=== Container Logs ==="
+          docker logs devpad-test || echo "Failed to get logs"
+          echo "=== Container Inspect ==="
+          docker inspect devpad-test || echo "Failed to inspect"
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop devpad-test || true
+          docker rm devpad-test || true
+      
+      - name: Push image to registry (cache only)
+        if: success()
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}-cache
+          cache-from: type=gha,scope=pr-${{ github.event.pull_request.number }}
+          cache-to: type=gha,mode=max,scope=staging
+          platforms: linux/amd64
