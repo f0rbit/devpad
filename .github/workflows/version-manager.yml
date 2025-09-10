@@ -1,0 +1,80 @@
+name: Version Manager
+
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: 'The calculated version'
+        value: ${{ jobs.manage-version.outputs.version }}
+      image-tag:
+        description: 'The Docker image tag'
+        value: ${{ jobs.manage-version.outputs.image-tag }}
+    inputs:
+      custom-version:
+        description: 'Custom version override'
+        required: false
+        type: string
+
+jobs:
+  manage-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image-tag: ${{ steps.version.outputs.image-tag }}
+    steps:
+      - name: Checkout versions branch
+        uses: actions/checkout@v4
+        with:
+          ref: versions
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Checkout main for commit history
+        run: |
+          git fetch origin main --depth=50
+          
+      - name: Calculate version
+        id: version
+        run: |
+          # Read version components from versions branch
+          MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
+          RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
+          
+          # If custom version provided, use it
+          if [ -n "${{ inputs.custom-version }}" ]; then
+            VERSION="${{ inputs.custom-version }}"
+          else
+            # Get the PR number from the commit message or use incremental counter
+            PR_NUMBER=""
+            if [ "${{ github.event_name }}" = "push" ]; then
+              # Try to extract PR number from main branch commit message
+              PR_NUMBER=$(git log origin/main -1 --pretty=%B | grep -oP '(?<=#)\d+' | head -1)
+            fi
+            
+            # If no PR number found, use incremental counter
+            if [ -z "$PR_NUMBER" ]; then
+              # Read last PR counter or start from 0
+              LAST_PR=$(cat VERSION_PR 2>/dev/null || echo "0")
+              PR_NUMBER=$((LAST_PR + 1))
+              echo "$PR_NUMBER" > VERSION_PR
+            fi
+            
+            VERSION="${MAJOR}.${RELEASE}.${PR_NUMBER}"
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "image-tag=${VERSION}-staging" >> $GITHUB_OUTPUT
+          echo "📦 Version: ${VERSION}"
+          
+      - name: Update version files on versions branch
+        run: |
+          echo "${{ steps.version.outputs.version }}" > VERSION
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add VERSION VERSION_PR 2>/dev/null || true
+          git diff --staged --quiet || {
+            git commit -m "chore: update version to ${{ steps.version.outputs.version }}"
+            git push origin versions
+          }

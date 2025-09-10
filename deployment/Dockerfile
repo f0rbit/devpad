@@ -24,6 +24,18 @@ COPY --from=go-builder /todo-tracker/todo-tracker .
 # Install all workspace dependencies
 RUN bun install --frozen-lockfile
 
+# Build all packages in correct order
+# First build schema package
+WORKDIR /app/packages/schema
+RUN bun run build
+
+# Build other packages that depend on schema
+WORKDIR /app/packages/api
+RUN bun run build
+
+WORKDIR /app/packages/core
+RUN bun run build
+
 # Build the Astro app (creates dist folder with static assets and SSR handler)
 WORKDIR /app/packages/app
 RUN bun run build
@@ -32,7 +44,7 @@ RUN bun run build
 WORKDIR /app/packages/server
 RUN bun run build:production
 
-# Third stage: Production runtime
+# Production runtime stage
 FROM oven/bun:1.1.37-slim as runtime
 
 # Install system dependencies

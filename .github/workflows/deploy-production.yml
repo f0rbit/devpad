@@ -30,17 +30,19 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       prev_version: ${{ steps.version.outputs.prev_version }}
     steps:
-      - name: Checkout code
+      - name: Checkout versions branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: versions
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Calculate production version
         id: version
         run: |
-          # Read version components
-          MAJOR=$(cat .github/VERSION_MAJOR)
-          PREV_RELEASE=$(cat .github/VERSION_RELEASE)
+          # Read version components from versions branch
+          MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
+          PREV_RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
           
           # Calculate new release number
           if [ "${{ github.event.inputs.skip_promotion }}" = "true" ]; then
@@ -66,17 +68,18 @@ jobs:
           echo "📦 New Version: ${VERSION}"
           echo "📦 Previous Version: ${PREV_VERSION}"
           
-      - name: Update version files
+      - name: Update version files on versions branch
         if: github.event.inputs.skip_promotion != 'true'
         run: |
-          echo "${{ steps.version.outputs.version }}" > .github/VERSION
-          echo "${{ steps.version.outputs.release }}" > .github/VERSION_RELEASE
+          echo "${{ steps.version.outputs.version }}" > VERSION
+          echo "${{ steps.version.outputs.release }}" > VERSION_RELEASE
+          echo "0" > VERSION_PR  # Reset PR counter for new release
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/VERSION .github/VERSION_RELEASE
-          git commit -m "chore: bump production version to ${{ steps.version.outputs.version }} [skip ci]"
-          git push || echo "No changes to push"
+          git add VERSION VERSION_RELEASE VERSION_PR
+          git commit -m "chore: bump production version to ${{ steps.version.outputs.version }}"
+          git push origin versions
 
   promote-staging-to-production:
     runs-on: ubuntu-latest
