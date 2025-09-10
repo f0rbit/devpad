@@ -444,47 +444,48 @@ jobs:
           # Push all tags
           git push origin --tags
           
-      - name: Create GitHub Release
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const version = '${{ needs.detect-changes.outputs.new_version }}';
-            const packages = '${{ needs.detect-changes.outputs.changed_packages }}'.split(',');
-            
-            const packageList = packages.map(p => `- @devpad/${p}`).join('\n');
-            const npmLinks = packages.map(p => 
-              `- [@devpad/${p}](https://www.npmjs.com/package/@devpad/${p}/v/${version})`
-            ).join('\n');
-            
-            const body = `## 📦 Package Release v${version}
-            
-            ### Published Packages
-            ${packageList}
-            
-            ### NPM Links
-            ${npmLinks}
-            
-            ### Installation
-            \`\`\`bash
-            # Install specific packages
-            ${packages.map(p => `npm install @devpad/${p}@${version}`).join('\n')}
-            \`\`\`
-            
-            ### Changelog
-            - Updated packages to version ${version}
-            - See individual package changelogs for details
-            `;
-            
-            await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: `v${version}`,
-              name: `devpad Packages v${version}`,
-              body: body,
-              draft: false,
-              prerelease: false
-            });
+      # GitHub releases are created manually - only publish to npm
+      # - name: Create GitHub Release
+      #   if: github.event.inputs.dry_run != 'true'
+      #   uses: actions/github-script@v7
+      #   with:
+      #     script: |
+      #       const version = '${{ needs.detect-changes.outputs.new_version }}';
+      #       const packages = '${{ needs.detect-changes.outputs.changed_packages }}'.split(',');
+      #       
+      #       const packageList = packages.map(p => `- @devpad/${p}`).join('\n');
+      #       const npmLinks = packages.map(p => 
+      #         `- [@devpad/${p}](https://www.npmjs.com/package/@devpad/${p}/v/${version})`
+      #       ).join('\n');
+      #       
+      #       const body = `## 📦 Package Release v${version}
+      #       
+      #       ### Published Packages
+      #       ${packageList}
+      #       
+      #       ### NPM Links
+      #       ${npmLinks}
+      #       
+      #       ### Installation
+      #       \`\`\`bash
+      #       # Install specific packages
+      #       ${packages.map(p => `npm install @devpad/${p}@${version}`).join('\n')}
+      #       \`\`\`
+      #       
+      #       ### Changelog
+      #       - Updated packages to version ${version}
+      #       - See individual package changelogs for details
+      #       `;
+      #       
+      #       await github.rest.repos.createRelease({
+      #         owner: context.repo.owner,
+      #         repo: context.repo.repo,
+      #         tag_name: `v${version}`,
+      #         name: `devpad Packages v${version}`,
+      #         body: body,
+      #         draft: false,
+      #         prerelease: false
+      #       });
             
       - name: Summary
         run: |
