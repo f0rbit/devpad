@@ -1,0 +1,6 @@
+---
+// Handle logout - clear JWT token and redirect
+Astro.cookies.delete("jwt-token", { path: "/" });
+
+return Astro.redirect("/");
+---

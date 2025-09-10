@@ -1,0 +1,30 @@
+---
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+import PageLayout from '@/layouts/PageLayout.astro';
+import TaskEditor from '@/components/solid/TaskEditor';
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const apiClient = getServerApiClient(Astro.locals);
+
+const { project_map, error: projectMapError } = await apiClient.projects.map();
+if (projectMapError) return rethrow(projectMapError);
+
+const { tags: user_tags, error: tagsError } = await apiClient.tags.list();
+if (tagsError) return rethrow(tagsError);
+---
+
+<PageLayout title={"New Task - devpad"}>
+	<main>
+		<TaskEditor
+			task={null}
+			user_tags={user_tags}
+			current_tags={[]}
+			history={[]}
+			user_id={user.id}
+			project_map={project_map}
+			client:load
+		/>
+	</main>
+</PageLayout>

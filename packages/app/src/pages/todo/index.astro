@@ -1,0 +1,149 @@
+---
+import type { Project, TagWithTypedColor, TaskWithDetails } from "@devpad/schema";
+import Plus from "lucide-solid/icons/plus";
+import Tag from "lucide-solid/icons/tag";
+import GithubLogin from "@/components/solid/GithubLogin";
+import { TaskSorter } from "@/components/solid/TaskSorter";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+
+const user = Astro.locals.user;
+
+let project_map: Record<string, Project> = {};
+let tasks: TaskWithDetails[] = [];
+let tags: TagWithTypedColor[] = [];
+
+if (user) {
+	const api_client = getServerApiClient(Astro.locals);
+
+	// Get projects list and convert to map format
+	const { project_map, error: project_error } = await api_client.projects.map();
+	if (project_error) rethrow(project_error);
+
+	const { tasks, error: tasks_error } = await api_client.tasks.list();
+	if (tasks_error) rethrow(tasks_error);
+
+	const { tags, error: tags_error } = await api_client.tags.list();
+	if (tags_error) rethrow(tags_error);
+}
+
+const keywords = [
+	// One-word keywords
+	"tasks",
+	"todo",
+	"tracking",
+	"priorities",
+	"automation",
+
+	// Two-word keywords
+	"task management",
+	"todo tracking",
+	"code scanning",
+	"task priorities",
+	"due dates",
+	"task automation",
+	"task filtering",
+	"todo comments",
+	"task updates",
+	"task editor",
+	"task organization",
+	"project tasks",
+	"task integration",
+	"task visibility",
+	"task progress",
+
+	// Three-word keywords
+	"todo comment scanning",
+	"task priority management",
+	"codebase task tracking",
+	"task organization tools",
+	"task management system",
+];
+---
+
+<PageLayout
+	title="Tasks - devpad"
+	description="Streamline your task management with devpad. Track, organize, and prioritize tasks effortlessly. Automatically scan your codebase for TODO comments, assign priorities, set due dates, and integrate seamlessly with your projects."
+	keywords={keywords}
+	canonical="https://devpad.tools/todo"
+>
+	{
+		user ? (
+			<main>
+				<div class="flex-row">
+					<h3>upcoming tasks</h3>
+					<a href="/todo/new" style="font-size: small;" class="flex-row">
+						<Plus />
+						new task
+					</a>
+					<a href="/todo/tags" style="margin-left: auto; font-size: small;" class="flex-row">
+						<Tag />
+						tags
+					</a>
+				</div>
+				<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"upcoming"} tags={tags} user_id={user.id} defaultView={user.task_view || "list"} />
+				<br />
+				<br />
+			</main>
+		) : (
+			<main class="landing-page" style="display: grid; gap: 100px; justify-items: center">
+				<br />
+				<section id="keep-track">
+					<h2 style="text-align: center; font-size: 2rem; margin-bottom: 50px;">keep track.</h2>
+					<div class="mobile-grid">
+						<div style="display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center;">
+							<p>
+								manage your tasks with precision. track progress, set priorities, and organize your workflow in one intuitive interface. devpad helps you stay on top of your to-do
+								list with automatic scanning and smart task management features.
+							</p>
+							<GithubLogin size={30} client:load />
+						</div>
+						<img src="/task-view.png" alt="Task management interface" />
+					</div>
+				</section>
+
+				<section id="scanning" style="display: flex; flex-direction: column; gap: 25px;">
+					<h2 style="text-align: center; font-size: 1.5rem;">automatic scanning</h2>
+					<div class="mobile-grid">
+						<img src="/scan-update.png" alt="Code scanning process" />
+						<p>
+							automatically scan your codebase for todo comments and convert them into trackable tasks. review and update tasks with just enough verification to keep your workflow
+							smooth. scanning updates tasks with the latest code changes and allows you to filter tasks by project or priority.
+						</p>
+					</div>
+				</section>
+
+				<section id="tagging" style="display: flex; flex-direction: column; gap: 25px;">
+					<h2 style="text-align: center; font-size: 1.5rem;">tagging</h2>
+					<div class="mobile-grid">
+						<p>
+							organize your tasks with custom tags. create categories, filter tasks, and prioritize your work with a flexible tagging system. tags help you quickly find and manage
+							related tasks across multiple projects.
+						</p>
+						<img src="/tag-editor.png" alt="Task tagging interface" />
+					</div>
+				</section>
+
+				<section id="projects" style="display: flex; flex-direction: column; gap: 25px;">
+					<h2 style="text-align: center; font-size: 1.5rem;">projects</h2>
+					<div class="mobile-grid">
+						<img src="/project-api.png" alt="Project integration" />
+						<p>
+							link your tasks to specific projects and track progress in one place. devpad integrates seamlessly with your project management workflow, allowing you to set
+							milestones, track updates, and maintain clear project visibility.
+						</p>
+					</div>
+				</section>
+
+				<section id="cta">
+					<div style="display: flex; flex-direction: column; justify-content: center; gap: 25px; align-items: center;">
+						<h2 style="text-align: center;">let's get started</h2>
+						<GithubLogin size={30} client:load />
+					</div>
+				</section>
+				<br />
+				<br />
+			</main>
+		)
+	}
+</PageLayout>

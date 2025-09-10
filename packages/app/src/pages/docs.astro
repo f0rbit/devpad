@@ -1,0 +1,251 @@
+---
+export const prerender = true;
+
+import PageLayout from '@/layouts/PageLayout.astro';
+import { Code } from "astro:components";
+
+const keywords = [
+	// One-word keywords
+	"API",
+	"docs",
+	"documentation",
+	"integration",
+	"features",
+
+	// Two-word keywords
+	"API documentation",
+	"devpad API",
+	"task management",
+	"project management",
+	"code scanning",
+	"API integration",
+	"API examples",
+	"developer tools",
+	"API endpoints",
+	"task tracking",
+	"project visibility",
+	"API usage",
+	"API guide",
+	"API reference",
+	"API features",
+
+	// Three-word keywords
+	"devpad API documentation",
+	"project management API",
+	"task management API",
+	"API integration guide",
+	"codebase scanning API",
+];
+---
+
+<PageLayout
+	title="API docs - devpad"
+	description="Explore the devpad API documentation to integrate project and task management into your workflow. Learn how to fetch project data, manage tasks, and utilize powerful features like codebase scanning and API integration with detailed examples."
+	keywords={keywords}
+	canonical="https://devpad.tools/docs"
+>
+	<h3>API</h3>
+	<div class="flex-col" style="gap: 5px;">
+		<span>The API is available at <a href="https://devpad.tools/api/v0">devpad.tools/api/v0</a></span>
+		<span>You should put an <code>API_KEY</code> in the <code>Authorization</code> header for each request in this format:</span>
+		<Code code={`Authorization: Bearer <API_KEY>`} lang="http" />
+		<span>API keys are generated on the <a href="/account">account</a> page.</span>
+	</div>
+	<br />
+	<div class="flex-col">
+		<section>
+			<h4>projects</h4>
+			<p>
+				This endpoint fetches the data associated with each project. Note that only projects with <code>visibility == "PUBLIC"</code> will be returned in
+				<code>/projects</code> (with no query params)
+			</p>
+			<div class="flex-col" style="gap: 10px;">
+				<div>
+					<code>GET /projects</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Array&ltProject&gt</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>GET /projects?id=&ltstring&gt - id is project.id</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Project</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>404 - Not Found</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>GET /projects?name=&ltstring&gt - name is project.project_id</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Project</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>404 - Not Found</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>PATCH /projects - Create or update a project</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Project (created or updated project)</code></p>
+						<p class="flex-row"><code>400 - Bad Request (validation error)</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+					<p style="margin-top: 8px; font-size: 14px;">Request body should contain a partial Project object. Omit <code>id</code> for creation, include <code>id</code> for updates.</p>
+				</div>
+			</div>
+
+			<pre><Code code={`type Project = {
+    id: string;
+    project_id: string;
+    owner_id: string;
+    name: string;
+    description: string | null;
+    specification: string | null;
+    repo_url: string | null;
+    repo_id: number | null;
+    icon_url: string | null;
+    status: "DEVELOPMENT" | "PAUSED" | "RELEASED" | "LIVE" | "FINISHED" | "ABANDONED" | "STOPPED";
+    deleted: boolean;
+    link_url: string | null;
+    link_text: string | null;
+    visibility: "PUBLIC" | "PRIVATE" | "HIDDEN" | "ARCHIVED" | "DRAFT" | "DELETED";
+    current_version: string | null;
+    scan_branch: string | null;
+};`} lang="ts" /></pre>
+		</section>
+		<section>
+			<h4>tasks</h4>
+			<p>
+				This endpoint retrieves task information. Note that only tasks with <code>visibility == "PUBLIC"</code> will be returned in <code>/tasks</code> (with no query params)
+			</p>
+			<div class="flex-col" style="gap: 10px;">
+				<div>
+					<code>GET /tasks</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>GET /tasks?id=&ltstring&gt - id is task.id</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - TaskUnion</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>404 - Not Found</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>GET /tasks?tag=&ltstring&gt - tag is tag.id</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>404 - Not Found</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>GET /tasks?project=&ltstring&gt - project is task.project_id</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Array&ltTaskUnion&gt</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>404 - Not Found</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+				</div>
+				<div>
+					<code>PATCH /tasks - Create or update a task</code>
+					<ul style="padding-left: 20px;">
+						<p class="flex-row"><code>200 - Task (created or updated task)</code></p>
+						<p class="flex-row"><code>400 - Bad Request (validation error)</code></p>
+						<p class="flex-row"><code>401 - Unauthorized</code></p>
+						<p class="flex-row"><code>500 - Internal Server Error</code></p>
+					</ul>
+					<p style="margin-top: 8px; font-size: 14px;">Request body should contain a task object with <code>owner_id</code>. Omit <code>id</code> for creation, include <code>id</code> for updates. Can optionally include <code>tags</code> array.</p>
+				</div>
+			</div>
+
+			<pre><Code code={`type Task = {
+    id: string;
+    owner_id: string;
+    title: string;
+    progress: "UNSTARTED" | "IN_PROGRESS" | "COMPLETED";
+    visibility: "PUBLIC" | "PRIVATE" | "HIDDEN" | "ARCHIVED" | "DRAFT" | "DELETED";
+    goal_id: string | null;
+    project_id: string | null;
+    description: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    summary: string | null;
+    codebase_task_id: string | null;
+    priority: "LOW" | "MEDIUM" | "HIGH";
+    created_at: string | null;
+    updated_at: string | null;
+};
+
+type CodebaseTask = {
+    id: string;
+    branch: string | null;
+    commit_sha: string | null;
+    commit_msg: string | null;
+    commit_url: string | null;
+    type: string | null;
+    text: string | null;
+    file: string | null;
+    line: number | null;
+    context: string[] | null;
+    created_at: string;
+    updated_at: string;
+    deleted: boolean;
+    recent_scan_id: number | null;
+};
+  
+type TaskUnion = {
+    task: Task;
+    codebase_tasks: CodebaseTask | null;
+    tags: string[];
+};
+
+type Tag = {
+    id: string;
+    title: string;
+    color: string | null;
+    deleted: boolean;
+    render: boolean;
+    owner_id: string;
+};`} lang="ts" /></pre>
+		</section>
+	</div>
+</PageLayout>
+
+<style>
+	.flex-col {
+		display: flex;
+		flex-direction: column;
+		gap: 24px;
+	}
+
+	section {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	ul {
+		list-style-type: none;
+		padding: 0;
+		margin: 0;
+		gap: 2px;
+	}
+
+	li {
+		margin-bottom: 5px;
+	}
+
+	ul li:last-child {
+		margin-bottom: 0;
+	}
+</style>

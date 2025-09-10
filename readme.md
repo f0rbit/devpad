@@ -33,7 +33,13 @@ The docker file will run an [index.ts](/deployment/index.ts) script that does a 
 4. Run dev server with `bun dev`
 
 ### Testing
-Currently, there is only end-to-end tests of the projects API, with a seeded test database. This is run via `bun test` from the `/app` directory.
+Integration tests are available for the projects and tasks APIs, with automated test database setup. Run tests with `make integration` from the root directory.
+
+Unit tests are available for individual components. Run with `make unit` from the root directory.
+
+### Scripts
+- `scripts/debug-migrations.ts` - Run database migrations
+- `scripts/create-test-user.ts` - Create a test user and API key for development
 
 ## API
 

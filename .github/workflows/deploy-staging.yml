@@ -1,0 +1,226 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Custom version (leave empty for auto)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: staging-deployment
+  cancel-in-progress: false
+
+jobs:
+  calculate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image-tag: ${{ steps.version.outputs.image-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Calculate version
+        id: version
+        run: |
+          # Read version components
+          MAJOR=$(cat .github/VERSION_MAJOR)
+          RELEASE=$(cat .github/VERSION_RELEASE)
+          
+          # If custom version provided, use it
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            # Get the PR number from the commit message or use incremental counter
+            PR_NUMBER=""
+            if [ "${{ github.event_name }}" = "push" ]; then
+              # Try to extract PR number from commit message
+              PR_NUMBER=$(git log -1 --pretty=%B | grep -oP '(?<=#)\d+' | head -1)
+            fi
+            
+            # If no PR number found, use incremental counter based on commits since last release
+            if [ -z "$PR_NUMBER" ]; then
+              # Count commits on main since last tag
+              LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+              COMMITS_SINCE=$(git rev-list ${LAST_TAG}..HEAD --count)
+              PR_NUMBER=$((COMMITS_SINCE + 1))
+            fi
+            
+            VERSION="${MAJOR}.${RELEASE}.${PR_NUMBER}"
+          fi
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "image-tag=${VERSION}-staging" >> $GITHUB_OUTPUT
+          echo "📦 Version: ${VERSION}"
+          
+      - name: Update VERSION file
+        run: |
+          echo "${{ steps.version.outputs.version }}" > .github/VERSION
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/VERSION
+          git diff --staged --quiet || git commit -m "chore: update VERSION to ${{ steps.version.outputs.version }} [skip ci]"
+          git push || echo "No changes to push"
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: calculate-version
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.image-tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.calculate-version.outputs.version }}
+            
+  deploy-to-staging:
+    runs-on: ubuntu-latest
+    needs: [calculate-version, build-and-push]
+    environment:
+      name: staging
+      url: https://staging.devpad.tools
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Deploy to staging VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST_STAGING }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Navigate to deployment directory
+            cd /var/deploy/devpad-staging
+            
+            # Pull latest staging image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+            
+            # Stop existing container gracefully
+            docker stop devpad-staging || true
+            docker rm devpad-staging || true
+            
+            # Start new container
+            docker run -d \
+              --name devpad-staging \
+              --restart unless-stopped \
+              -p 3001:3000 \
+              -v /var/data/devpad-staging:/app/data \
+              -e NODE_ENV=staging \
+              -e DATABASE_FILE=/app/data/devpad-staging.db \
+              -e CORS_ORIGINS="https://staging.devpad.tools" \
+              -e VERSION=${{ needs.calculate-version.outputs.version }} \
+              --label "traefik.enable=true" \
+              --label "traefik.http.routers.devpad-staging.rule=Host(\`staging.devpad.tools\`)" \
+              --label "traefik.http.routers.devpad-staging.tls=true" \
+              --label "traefik.http.routers.devpad-staging.tls.certresolver=letsencrypt" \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+            
+            # Wait for health check
+            sleep 10
+            curl -f http://localhost:3001/health || exit 1
+            
+            echo "✅ Staging deployment successful!"
+            
+      - name: Run smoke tests
+        run: |
+          # Wait for service to be ready
+          sleep 15
+          
+          # Test health endpoint
+          curl -f https://staging.devpad.tools/health || exit 1
+          
+          # Test API endpoint
+          curl -f https://staging.devpad.tools/api/health || exit 1
+          
+          echo "✅ Smoke tests passed!"
+          
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Staging Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ needs.calculate-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Staging" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** https://staging.devpad.tools" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.image-tag }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Commit Info" >> $GITHUB_STEP_SUMMARY
+          echo "**SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Message:** ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
+          
+  rollback-on-failure:
+    runs-on: ubuntu-latest
+    needs: [deploy-to-staging]
+    if: failure()
+    steps:
+      - name: Rollback staging deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST_STAGING }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/deploy/devpad-staging
+            
+            # Get previous image
+            PREVIOUS_IMAGE=$(docker ps -a --filter "name=devpad-staging" --format "{{.Image}}" | head -2 | tail -1)
+            
+            if [ -n "$PREVIOUS_IMAGE" ]; then
+              echo "Rolling back to previous image: $PREVIOUS_IMAGE"
+              docker stop devpad-staging || true
+              docker rm devpad-staging || true
+              docker run -d \
+                --name devpad-staging \
+                --restart unless-stopped \
+                -p 3001:3000 \
+                -v /var/data/devpad-staging:/app/data \
+                -e NODE_ENV=staging \
+                -e DATABASE_FILE=/app/data/devpad-staging.db \
+                -e CORS_ORIGINS="https://staging.devpad.tools" \
+                --label "traefik.enable=true" \
+                --label "traefik.http.routers.devpad-staging.rule=Host(\`staging.devpad.tools\`)" \
+                --label "traefik.http.routers.devpad-staging.tls=true" \
+                --label "traefik.http.routers.devpad-staging.tls.certresolver=letsencrypt" \
+                $PREVIOUS_IMAGE
+              echo "✅ Rollback completed"
+            else
+              echo "❌ No previous image found for rollback"
+              exit 1
+            fi

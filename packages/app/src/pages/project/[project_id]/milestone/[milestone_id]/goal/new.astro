@@ -1,0 +1,107 @@
+---
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { Project, Milestone } from "@devpad/schema";
+
+const { project_id, milestone_id } = Astro.params;
+if (!project_id || !milestone_id) return new Response(null, { status: 404, statusText: "Not found" });
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const apiClient = getServerApiClient(Astro.locals);
+
+const { project, error: projectError } = await apiClient.projects.getByName(project_id);
+if (projectError) return rethrow(projectError);
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
+
+const { milestone, error: milestoneError } = await apiClient.milestones.find(milestone_id);
+if (milestoneError) return rethrow(milestoneError);
+if (!milestone) return new Response(null, { status: 404, statusText: "Milestone not found" });
+---
+
+<PageLayout title={`New Goal - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<h5>create goal for {milestone.name}</h5>
+		<section id="goal-form" data-milestone-id={milestone.id}>
+			<div class="flex-row">
+				<label for="name">name</label>
+				<input id="name" type="text" placeholder="Goal name" required />
+			</div>
+
+			<div class="flex-row">
+				<label for="description">description</label>
+				<textarea id="description" placeholder="Optional description" rows={3}></textarea>
+			</div>
+
+			<div class="flex-row">
+				<label for="target-time">target date</label>
+				<input id="target-time" type="datetime-local" />
+			</div>
+
+			<div class="flex-row">
+				<a role="button" id="submit-goal">Create Goal</a>
+				<a role="button" id="cancel-goal">Cancel</a>
+			</div>
+
+			<div>
+				<p id="error" style="color: red;"></p>
+			</div>
+		</section>
+	</ProjectLayout>
+</PageLayout>
+
+<script>
+	import { getApiClient } from "@/utils/api-client";
+
+	async function createGoal() {
+		const errorEl = document.getElementById("error") as HTMLParagraphElement;
+		errorEl.innerText = "";
+
+		const getValue = (id: string) => {
+			return (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement)?.value?.trim() || null;
+		};
+
+		const name = getValue("name");
+		const description = getValue("description");
+		const target_time = getValue("target-time");
+		
+		if (!name) {
+			errorEl.innerText = "Goal name is required";
+			return;
+		}
+
+		const milestoneId = document.getElementById("goal-form")?.dataset.milestoneId;
+		if (!milestoneId) {
+			errorEl.innerText = "Milestone ID not found";
+			return;
+		}
+
+		try {
+			const apiClient = getApiClient();
+			await apiClient.goals.create({
+				milestone_id: milestoneId,
+				name,
+				description,
+				target_time,
+			});
+
+			// Navigate back to goals page
+			const projectSlug = window.location.pathname.split('/')[2];
+			window.location.href = `/project/${projectSlug}/goals`;
+		} catch (error) {
+			console.error("Failed to create goal:", error);
+			errorEl.innerText = "Failed to create goal";
+		}
+	}
+
+	function cancelGoal() {
+		const projectSlug = window.location.pathname.split('/')[2];
+		window.location.href = `/project/${projectSlug}/goals`;
+	}
+
+	document.getElementById("submit-goal")?.addEventListener("click", createGoal);
+	document.getElementById("cancel-goal")?.addEventListener("click", cancelGoal);
+</script>

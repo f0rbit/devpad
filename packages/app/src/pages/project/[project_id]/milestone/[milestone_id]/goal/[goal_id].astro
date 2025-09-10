@@ -1,0 +1,305 @@
+---
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { TaskSorter } from "@/components/solid/TaskSorter";
+import TargetDate from "lucide-solid/icons/target";
+
+const { project_id, milestone_id, goal_id } = Astro.params;
+if (!project_id || !milestone_id || !goal_id) {
+	return new Response(null, { status: 404, statusText: "Invalid parameters" });
+}
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const apiClient = getServerApiClient(Astro.locals);
+
+const { project, error: projectError } = await apiClient.projects.getByName(project_id);
+if (projectError) return rethrow(projectError);
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
+
+const { milestone, error: milestoneError } = await apiClient.milestones.find(milestone_id);
+if (milestoneError) return rethrow(milestoneError);
+if (!milestone) return new Response(null, { status: 404, statusText: "Milestone not found" });
+
+const { goal, error: goalError } = await apiClient.goals.find(goal_id);
+if (goalError) return rethrow(goalError);
+if (!goal) return new Response(null, { status: 404, statusText: "Goal not found" });
+
+if (goal.milestone_id !== milestone.id) {
+	return new Response(null, { status: 400, statusText: "Goal does not belong to this milestone" });
+}
+
+const project_map = {};
+project_map[project.id] = project;
+
+const { tasks: allTasks, error: tasksError } = await apiClient.tasks.list();
+if (tasksError) return rethrow(tasksError);
+
+const { tags, error: tagsError } = await apiClient.tags.list();
+if (tagsError) return rethrow(tagsError);
+
+const tasks = allTasks?.filter(task => task.task.goal_id === goal_id) || [];
+
+const totalTasks = tasks.length;
+const completedTasks = tasks.filter(task => task.task.progress === "COMPLETED").length;
+const inProgressTasks = tasks.filter(task => task.task.progress === "IN_PROGRESS").length;
+const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+const targetDate = goal.target_time ? new Date(goal.target_time).toLocaleDateString() : null;
+const isOverdue = goal.target_time && new Date(goal.target_time) < new Date() && !goal.finished_at;
+---
+
+<PageLayout title={`${goal.name} - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<div class="goal-header">
+			<div class="breadcrumb">
+				<a href={`/project/${project_id}/goals`}>Goals</a>
+				<span>/</span>
+				<a href={`/project/${project_id}/milestone/${milestone_id}`}>{milestone.name}</a>
+				<span>/</span>
+				<span>{goal.name}</span>
+			</div>
+			
+			<div class="goal-summary">
+				<div class="goal-title">
+					<h1>{goal.name}</h1>
+					{goal.finished_at && <span class="status-badge completed">Completed</span>}
+					{!goal.finished_at && isOverdue && <span class="status-badge overdue">Overdue</span>}
+				</div>
+				
+				<div class="goal-meta">
+					<div class="progress-section">
+						<div class="progress-bar">
+							<div class="progress-fill" style={`width: ${progressPercentage}%`}></div>
+						</div>
+						<div class="progress-stats">
+							<span class="progress-text">{progressPercentage}% complete</span>
+							<span class="task-counts">
+								{completedTasks}/{totalTasks} tasks completed
+								{inProgressTasks > 0 && ` · ${inProgressTasks} in progress`}
+							</span>
+						</div>
+					</div>
+					
+					{targetDate && (
+						<div class="target-date">
+							<TargetDate />
+							<span class={isOverdue ? "overdue" : ""}>
+								Target: {targetDate}
+							</span>
+						</div>
+					)}
+				</div>
+				
+				{goal.description && (
+					<div class="goal-description">
+						<p>{goal.description}</p>
+					</div>
+				)}
+			</div>
+		</div>
+
+		<div class="goal-tasks">
+			<h3>Tasks ({totalTasks})</h3>
+			{totalTasks > 0 ? (
+				<TaskSorter 
+					client:load
+					tasks={tasks} 
+					project_map={project_map} 
+					defaultOption="upcoming" 
+					tags={tags} 
+					user_id={user.id} 
+					defaultView={user.task_view || "list"}
+				/>
+			) : (
+				<div class="empty-state">
+					<p>No tasks are associated with this goal yet.</p>
+					<a href="/todo/new" class="btn btn-primary">Create a task</a>
+				</div>
+			)}
+		</div>
+	</ProjectLayout>
+</PageLayout>
+
+<style>
+	.goal-header {
+		margin-bottom: 2rem;
+	}
+
+	.breadcrumb {
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+		margin-bottom: 1rem;
+	}
+
+	.breadcrumb a {
+		color: var(--text-primary);
+		text-decoration: none;
+	}
+
+	.breadcrumb a:hover {
+		text-decoration: underline;
+	}
+
+	.breadcrumb span {
+		margin: 0 0.5rem;
+	}
+
+	.goal-summary {
+		background: var(--input-background);
+		border: 1px solid var(--input-border);
+		border-radius: 8px;
+		padding: 1.5rem;
+	}
+
+	.goal-title {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+
+	.goal-title h1 {
+		margin: 0;
+		font-size: 1.5rem;
+	}
+
+	.status-badge {
+		padding: 0.25rem 0.5rem;
+		border-radius: 4px;
+		font-size: 0.75rem;
+		font-weight: 500;
+		text-transform: uppercase;
+	}
+
+	.status-badge.completed {
+		background: var(--success-background, #d4edda);
+		color: var(--success-text, #155724);
+		border: 1px solid var(--success-border, #c3e6cb);
+	}
+
+	.status-badge.overdue {
+		background: var(--error-background, #f8d7da);
+		color: var(--error-text, #721c24);
+		border: 1px solid var(--error-border, #f5c6cb);
+	}
+
+	.goal-meta {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	.progress-section {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.progress-bar {
+		width: 100%;
+		height: 8px;
+		background: var(--input-border);
+		border-radius: 4px;
+		overflow: hidden;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--accent-color, #0066cc);
+		transition: width 0.3s ease;
+	}
+
+	.progress-stats {
+		display: flex;
+		justify-content: space-between;
+		font-size: 0.875rem;
+	}
+
+	.progress-text {
+		font-weight: 500;
+		color: var(--text-primary);
+	}
+
+	.task-counts {
+		color: var(--text-secondary);
+	}
+
+	.target-date {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		color: var(--text-secondary);
+	}
+
+	.target-date .overdue {
+		color: var(--error-text, #dc3545);
+		font-weight: 500;
+	}
+
+	.goal-description {
+		margin-top: 1rem;
+		padding-top: 1rem;
+		border-top: 1px solid var(--input-border);
+	}
+
+	.goal-description p {
+		margin: 0;
+		line-height: 1.5;
+		color: var(--text-secondary);
+	}
+
+	.goal-tasks h3 {
+		margin-bottom: 1rem;
+	}
+
+	.empty-state {
+		text-align: center;
+		padding: 3rem 1rem;
+		border: 1px solid var(--input-border);
+		border-radius: 8px;
+		background: var(--input-background);
+	}
+
+	.empty-state p {
+		margin-bottom: 1rem;
+		color: var(--text-secondary);
+	}
+
+	.btn {
+		display: inline-block;
+		padding: 0.5rem 1rem;
+		border-radius: 4px;
+		text-decoration: none;
+		font-weight: 500;
+		transition: all 0.2s ease;
+	}
+
+	.btn-primary {
+		background: var(--accent-color, #0066cc);
+		color: white;
+		border: 1px solid var(--accent-color, #0066cc);
+	}
+
+	.btn-primary:hover {
+		background: var(--accent-color-hover, #0056b3);
+		border-color: var(--accent-color-hover, #0056b3);
+	}
+
+	@media (min-width: 768px) {
+		.goal-meta {
+			flex-direction: row;
+			justify-content: space-between;
+			align-items: center;
+		}
+
+		.progress-section {
+			flex: 1;
+			max-width: 300px;
+		}
+	}
+</style>

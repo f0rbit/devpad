@@ -1,0 +1,17 @@
+[test]
+# Global setup for integration tests - starts single shared server
+preload = ["./tests/integration/setup.ts"]
+
+# Coverage configuration
+coverageSkipTestFiles = true
+coveragePathIgnorePatterns = [
+  "**/tests/**",
+  "**/node_modules/**",
+  "**/*.config.*",
+  "**/*.test.*",
+  "**/*.spec.*",
+  "tests/shared/**",
+  "tests/integration/**"
+]
+coverageReporter = ["text", "lcov"]
+coverageDir = "coverage"

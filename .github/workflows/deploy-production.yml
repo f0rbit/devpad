@@ -1,0 +1,291 @@
+name: Deploy Production
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to deploy (leave empty to use latest staging)'
+        required: false
+        type: string
+      skip_promotion:
+        description: 'Skip staging promotion (use existing production image)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  calculate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prev_version: ${{ steps.version.outputs.prev_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Calculate production version
+        id: version
+        run: |
+          # Read version components
+          MAJOR=$(cat .github/VERSION_MAJOR)
+          PREV_RELEASE=$(cat .github/VERSION_RELEASE)
+          
+          # Calculate new release number
+          if [ "${{ github.event.inputs.skip_promotion }}" = "true" ]; then
+            # Use existing release number
+            RELEASE=$PREV_RELEASE
+          else
+            # Increment release number
+            RELEASE=$((PREV_RELEASE + 1))
+          fi
+          
+          # Determine version
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${MAJOR}.${RELEASE}.0"
+          fi
+          
+          PREV_VERSION="${MAJOR}.${PREV_RELEASE}.0"
+          
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "prev_version=${PREV_VERSION}" >> $GITHUB_OUTPUT
+          echo "release=${RELEASE}" >> $GITHUB_OUTPUT
+          echo "📦 New Version: ${VERSION}"
+          echo "📦 Previous Version: ${PREV_VERSION}"
+          
+      - name: Update version files
+        if: github.event.inputs.skip_promotion != 'true'
+        run: |
+          echo "${{ steps.version.outputs.version }}" > .github/VERSION
+          echo "${{ steps.version.outputs.release }}" > .github/VERSION_RELEASE
+          
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .github/VERSION .github/VERSION_RELEASE
+          git commit -m "chore: bump production version to ${{ steps.version.outputs.version }} [skip ci]"
+          git push || echo "No changes to push"
+
+  promote-staging-to-production:
+    runs-on: ubuntu-latest
+    needs: calculate-version
+    if: github.event.inputs.skip_promotion != 'true'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Promote staging image to production
+        run: |
+          # Pull the current staging image
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+          
+          # Tag it with production tags
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:stable
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging \
+                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+          
+          # Push all tags
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:stable
+          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+          
+          echo "✅ Promoted staging to production version ${{ needs.calculate-version.outputs.version }}"
+
+  deploy-to-production:
+    runs-on: ubuntu-latest
+    needs: [calculate-version, promote-staging-to-production]
+    if: always() && (needs.promote-staging-to-production.result == 'success' || needs.promote-staging-to-production.result == 'skipped')
+    environment:
+      name: production
+      url: https://devpad.tools
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Deploy to production VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Navigate to deployment directory
+            cd /var/deploy/devpad
+            
+            # Backup current version tag
+            CURRENT_VERSION=$(docker inspect devpad-production --format='{{.Config.Labels.version}}' 2>/dev/null || echo "unknown")
+            echo "Current version: $CURRENT_VERSION"
+            
+            # Pull latest production image
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+            
+            # Blue-green deployment
+            # Start new container on different port
+            docker run -d \
+              --name devpad-production-new \
+              --restart unless-stopped \
+              -p 3002:3000 \
+              -v /var/data/devpad-production:/app/data \
+              -e NODE_ENV=production \
+              -e DATABASE_FILE=/app/data/devpad.db \
+              -e CORS_ORIGINS="https://devpad.tools,https://www.devpad.tools" \
+              -e VERSION=${{ needs.calculate-version.outputs.version }} \
+              --label version=${{ needs.calculate-version.outputs.version }} \
+              --label "traefik.enable=true" \
+              --label "traefik.http.routers.devpad-production.rule=Host(\`devpad.tools\`) || Host(\`www.devpad.tools\`)" \
+              --label "traefik.http.routers.devpad-production.tls=true" \
+              --label "traefik.http.routers.devpad-production.tls.certresolver=letsencrypt" \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+            
+            # Wait for new container to be healthy
+            sleep 10
+            for i in {1..30}; do
+              if curl -f http://localhost:3002/health; then
+                echo "✅ New container is healthy"
+                break
+              fi
+              if [ $i -eq 30 ]; then
+                echo "❌ New container failed health check"
+                docker stop devpad-production-new
+                docker rm devpad-production-new
+                exit 1
+              fi
+              sleep 2
+            done
+            
+            # Switch traffic to new container
+            docker stop devpad-production || true
+            docker rm devpad-production || true
+            docker rename devpad-production-new devpad-production
+            
+            # Update port mapping (restart with correct port)
+            docker stop devpad-production
+            docker rm devpad-production
+            docker run -d \
+              --name devpad-production \
+              --restart unless-stopped \
+              -p 3000:3000 \
+              -v /var/data/devpad-production:/app/data \
+              -e NODE_ENV=production \
+              -e DATABASE_FILE=/app/data/devpad.db \
+              -e CORS_ORIGINS="https://devpad.tools,https://www.devpad.tools" \
+              -e VERSION=${{ needs.calculate-version.outputs.version }} \
+              --label version=${{ needs.calculate-version.outputs.version }} \
+              --label "traefik.enable=true" \
+              --label "traefik.http.routers.devpad-production.rule=Host(\`devpad.tools\`) || Host(\`www.devpad.tools\`)" \
+              --label "traefik.http.routers.devpad-production.tls=true" \
+              --label "traefik.http.routers.devpad-production.tls.certresolver=letsencrypt" \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+            
+            # Clean up old images (keep last 5)
+            docker image prune -f
+            docker images | grep devpad | tail -n +6 | awk '{print $3}' | xargs -r docker rmi || true
+            
+            echo "✅ Production deployment successful!"
+            
+      - name: Run smoke tests
+        run: |
+          # Wait for service to be ready
+          sleep 15
+          
+          # Test health endpoint
+          curl -f https://devpad.tools/health || exit 1
+          
+          # Test API endpoint
+          curl -f https://devpad.tools/api/health || exit 1
+          
+          echo "✅ Production smoke tests passed!"
+          
+      - name: Create deployment summary
+        run: |
+          echo "## 🎉 Production Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** \`${{ needs.calculate-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Previous Version:** \`${{ needs.calculate-version.outputs.prev_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** https://devpad.tools" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "### Release Info" >> $GITHUB_STEP_SUMMARY
+            echo "**Release Name:** ${{ github.event.release.name }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Release Tag:** ${{ github.event.release.tag_name }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Author:** ${{ github.event.release.author.login }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+  rollback-on-failure:
+    runs-on: ubuntu-latest
+    needs: [calculate-version, deploy-to-production]
+    if: failure()
+    steps:
+      - name: Rollback production deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /var/deploy/devpad
+            
+            echo "⚠️ Rolling back to version ${{ needs.calculate-version.outputs.prev_version }}"
+            
+            # Stop failed deployment
+            docker stop devpad-production || true
+            docker rm devpad-production || true
+            
+            # Pull and start previous version
+            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.prev_version }}
+            docker run -d \
+              --name devpad-production \
+              --restart unless-stopped \
+              -p 3000:3000 \
+              -v /var/data/devpad-production:/app/data \
+              -e NODE_ENV=production \
+              -e DATABASE_FILE=/app/data/devpad.db \
+              -e CORS_ORIGINS="https://devpad.tools,https://www.devpad.tools" \
+              -e VERSION=${{ needs.calculate-version.outputs.prev_version }} \
+              --label version=${{ needs.calculate-version.outputs.prev_version }} \
+              --label "traefik.enable=true" \
+              --label "traefik.http.routers.devpad-production.rule=Host(\`devpad.tools\`) || Host(\`www.devpad.tools\`)" \
+              --label "traefik.http.routers.devpad-production.tls=true" \
+              --label "traefik.http.routers.devpad-production.tls.certresolver=letsencrypt" \
+              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.prev_version }}
+            
+            # Tag the failed version for investigation
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }} \
+                      ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:failed-${{ needs.calculate-version.outputs.version }}
+            
+            echo "✅ Rollback to ${{ needs.calculate-version.outputs.prev_version }} completed"
+            
+      - name: Notify rollback
+        run: |
+          echo "## ⚠️ Production Deployment Rolled Back" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Failed Version:** \`${{ needs.calculate-version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Rolled Back To:** \`${{ needs.calculate-version.outputs.prev_version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please investigate the failure before attempting another deployment." >> $GITHUB_STEP_SUMMARY

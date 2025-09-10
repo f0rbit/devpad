@@ -1,0 +1,47 @@
+---
+import { getServerApiClient } from "@/utils/api-client";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import MilestonesManager from "@/components/solid/MilestonesManager";
+import { Project } from "@devpad/schema";
+
+const { project_id } = Astro.params;
+if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const api_client = getServerApiClient(Astro.locals);
+
+// Beautiful clean error handling with Result types!
+const { project, error } = await api_client.projects.getByName(project_id);
+if (error) return new Response(null, { status: 500, statusText: error.message });
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+
+// Check ownership
+if (project.owner_id !== user.id) {
+	return new Response(null, { status: 403, statusText: "Access denied" });
+}
+
+const { milestones, error: milestones_error } = await api_client.milestones.getByProject(project.id);
+if (milestones_error) {
+	console.error("Failed to fetch milestones:", milestones_error.message);
+}
+
+// Fetch goals for each milestone
+const goals_map = {};
+for (const milestone of milestones || []) {
+	const { goals, error: goals_error } = await api_client.milestones.goals(milestone.id);
+	goals_map[milestone.id] = goals || [];
+	if (goals_error) {
+		console.error(`Failed to fetch goals for milestone ${milestone.id}:`, goals_error.message);
+	}
+}
+---
+
+<PageLayout title={`Milestones & Goals - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<h5>project goals</h5>
+		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} initialGoalsMap={goals_map} client:load />
+	</ProjectLayout>
+</PageLayout>

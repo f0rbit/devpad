@@ -1,0 +1,79 @@
+---
+import Layout from './Layout.astro';
+import DevpadLogo from "@/components/solid/DevpadLogo";
+import GithubLogin from "@/components/solid/GithubLogin";
+import ArrowLeft from "lucide-solid/icons/arrow-left";
+
+interface Props {
+	title: string;
+	description?: string;
+	keywords?: string[];
+	canonical?: string;
+}
+const user = Astro.locals.user;
+
+const { title, description, keywords, canonical } = Astro.props;
+
+const logout_pages = [
+	{ name: "home", href: "/" },
+	{ name: "docs", href: "/docs" },
+	{ name: "projects", href: "/project" },
+	{ name: "tasks", href: "/todo" },
+];
+
+const login_pages = [
+	{ name: "home", href: "/" },
+	{ name: "docs", href: "/docs" },
+	{ name: "projects", href: "/project" },
+	{ name: "tasks", href: "/todo" },
+	{ name: "account", href: "/account" },
+];
+
+const pages = user ? login_pages : logout_pages;
+
+// get the active page (excluding home)
+const search_pages = pages.filter(p => p.href !== "/");
+const active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "home";
+
+const history = Astro.locals.history ?? [];
+const last_page = history.at(-2) ?? null;
+---
+
+<Layout title={title} description={description} keywords={keywords} canonical={canonical}>
+	<body>
+		<div id="container">
+			<header style="position: relative">
+				<a href="/" class={active == "home" ? "active" : ""}>
+					<h5 class="flex-row">
+						<DevpadLogo size={18} />
+						<span>devpad</span>
+					</h5>
+				</a>
+				{
+					last_page && (
+						<a href={`${last_page}?back=true`} class="last-page" title="Go Back">
+							<ArrowLeft />
+						</a>
+					)
+				}
+				<nav>
+					{
+						search_pages.map((p) => (
+							<a href={p.href} class={active == p.name ? "active" : ""}>
+								{p.name}
+							</a>
+						))
+					}
+					{!user && <GithubLogin client:load />}
+				</nav>
+			</header>
+			<br />
+			<slot />
+		</div>
+		<br />
+		<br />
+		<footer>
+			<p>© 2025 devpad</p>
+		</footer>
+	</body>
+</Layout>

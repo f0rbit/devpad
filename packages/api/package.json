@@ -1,0 +1,67 @@
+{
+	"name": "@devpad/api",
+	"version": "1.0.0",
+	"author": {
+		"name": "f0rbit",
+		"url": "https://github.com/f0rbit"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/f0rbit/devpad.git",
+		"directory": "packages/api"
+	},
+	"main": "dist/index.js",
+	"scripts": {
+		"build": "bunx tsc",
+		"build:watch": "bunx tsc --watch",
+		"test": "bun test",
+		"test:unit": "bun test tests/unit/",
+		"test:integration": "bun test tests/integration/",
+		"test:coverage": "bun test --coverage",
+		"lint": "bun run eslint",
+		"prepublishOnly": "bun run build",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@devpad/schema": "workspace:*",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"@types/node": "^20.11.24",
+		"bun-types": "latest",
+		"eslint": "^8.57.0",
+		"typescript": "^5.9.2"
+	},
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		}
+	},
+	"bugs": {
+		"url": "https://github.com/f0rbit/devpad/issues"
+	},
+	"description": "TypeScript client library for the devpad API - project and task management made simple",
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"files": [
+		"dist"
+	],
+	"homepage": "https://devpad.tools",
+	"keywords": [
+		"devpad",
+		"api",
+		"client",
+		"typescript",
+		"project-management",
+		"task-management"
+	],
+	"license": "MIT",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"type": "module",
+	"types": "dist/index.d.ts"
+}

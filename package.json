@@ -1,0 +1,33 @@
+{
+	"name": "devpad-monorepo",
+	"version": "1.0.0",
+	"description": "Devpad project management tool monorepo",
+	"private": true,
+	"type": "module",
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"build": "bun run --filter=@devpad/* build",
+		"dev": "bun run --filter=@devpad/app dev",
+		"dev:server": "bun run --filter=@devpad/server dev",
+		"dev:all": "concurrently \"bun run dev\" \"bun run dev:server\"",
+		"test": "bun run --filter=@devpad/* test",
+		"integration": "cd tests && bun test integration/",
+		"clean": "bun run --filter=@devpad/* clean",
+		"format": "biome format . --write",
+		"format:check": "biome format .",
+		"lint": "biome check .",
+		"lint:fix": "biome check . --write",
+		"coverage:view": "genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html",
+		"deploy:production": "bun deployment/production.ts",
+		"deploy:serverless": "bun deployment/serverless.ts",
+		"deploy:migrate": "bun deployment/migrate.ts"
+	},
+	"packageManager": "bun@1.0.0",
+	"devDependencies": {
+		"@biomejs/biome": "^2.2.2",
+		"@types/node": "^24.3.0",
+		"concurrently": "^9.2.1"
+	}
+}
