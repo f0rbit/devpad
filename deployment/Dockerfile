@@ -18,6 +18,7 @@ WORKDIR /app
 # Copy workspace configuration and source code
 COPY package.json bun.lockb ./
 COPY packages/ packages/
+COPY deployment/ deployment/
 COPY todo-config.json .
 COPY --from=go-builder /todo-tracker/todo-tracker .
 
@@ -61,6 +62,7 @@ COPY todo-config.json .
 # Copy built applications and dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/deployment ./deployment
 
 # Set environment variables
 ENV NODE_ENV=production
