@@ -12,6 +12,7 @@ services:
       - DATABASE_FILE=/app/data/devpad.db
       - STATIC_FILES_PATH=./packages/app/dist/client
       - CORS_ORIGINS=https://devpad.tools,https://www.devpad.tools
+      - FRONTEND_URL=https://devpad.tools
     volumes:
       - devpad_production_data:/app/data
       - /var/log/devpad/production:/app/logs

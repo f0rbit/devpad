@@ -12,6 +12,7 @@ services:
       DATABASE_FILE: /app/data/devpad-staging.db
       STATIC_FILES_PATH: ./packages/app/dist/client
       CORS_ORIGINS: https://staging.devpad.tools
+      FRONTEND_URL: https://staging.devpad.tools
       MODE: production
       GITHUB_CLIENT_SECRET:
       GITHUB_CLIENT_ID:

@@ -62,7 +62,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=staging
           build-args: |
             VERSION=${{ needs.calculate-version.outputs.version }}
-            PUBLIC_API_SERVER_URL="https://staging.devpad.tools/api/v0"
+            PUBLIC_API_SERVER_URL=https://staging.devpad.tools/api/v0
             
   deploy-to-staging:
     runs-on: ubuntu-latest
