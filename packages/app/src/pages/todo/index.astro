@@ -1,40 +1,30 @@
 ---
-import type { Project, TaskWithDetails } from "@devpad/schema";
+import type { Project, TagWithTypedColor, TaskWithDetails } from "@devpad/schema";
 import Plus from "lucide-solid/icons/plus";
 import Tag from "lucide-solid/icons/tag";
-import GithubLogin from '@/components/solid/GithubLogin';
-import { TaskSorter } from '@/components/solid/TaskSorter';
-import PageLayout from '@/layouts/PageLayout.astro';
-import { getServerApiClient } from "@/utils/api-client";
+import GithubLogin from "@/components/solid/GithubLogin";
+import { TaskSorter } from "@/components/solid/TaskSorter";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
 
 const user = Astro.locals.user;
 
 let project_map: Record<string, Project> = {};
 let tasks: TaskWithDetails[] = [];
-let tags = [];
+let tags: TagWithTypedColor[] = [];
 
 if (user) {
-	try {
-		const apiClient = getServerApiClient(Astro.locals);
-		
-		// Get projects list and convert to map format
-		const projects = await apiClient.projects.list();
-		project_map = projects.reduce((acc, project) => {
-			acc[project.project_id] = project;
-			return acc;
-		}, {} as Record<string, Project>);
-		
-		// Get tasks and tags in parallel
-		[tasks, tags] = await Promise.all([
-			apiClient.tasks.list(),
-			apiClient.tags.list()
-		]);
-	} catch (error) {
-		console.error("Error fetching user data:", error);
-		project_map = {};
-		tasks = [];
-		tags = [];
-	}
+	const api_client = getServerApiClient(Astro.locals);
+
+	// Get projects list and convert to map format
+	const { project_map, error: project_error } = await api_client.projects.map();
+	if (project_error) rethrow(project_error);
+
+	const { tasks, error: tasks_error } = await api_client.tasks.list();
+	if (tasks_error) rethrow(tasks_error);
+
+	const { tags, error: tags_error } = await api_client.tags.list();
+	if (tags_error) rethrow(tags_error);
 }
 
 const keywords = [

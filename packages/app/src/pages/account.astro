@@ -9,13 +9,13 @@ if (!user) {
 	return new Response(null, { status: 401, statusText: "Unauthorized" });
 }
 
-const apiClient = getServerApiClient(Astro.locals);
+const api_client = getServerApiClient(Astro.locals);
 
-const { keys, error: keysError } = await apiClient.keys.list();
-if (keysError) return rethrow(keysError);
+const { keys, error: keys_error } = await api_client.auth.keys.list();
+if (keys_error) return rethrow(keys_error);
 
-const { history: user_history, error: historyError } = await apiClient.user.history();
-if (historyError) return rethrow(historyError);
+const { history: user_history, error: history_error } = await api_client.user.history();
+if (history_error) return rethrow(history_error);
 ---
 
 <PageLayout title="Account - devpad">

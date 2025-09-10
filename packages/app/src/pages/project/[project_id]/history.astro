@@ -11,15 +11,15 @@ if (!project_id) return new Response(null, { status: 404, statusText: "Project n
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const apiClient = getServerApiClient(Astro.locals);
+const api_client = getServerApiClient(Astro.locals);
 
-const { project, error: projectError } = await apiClient.projects.getByName(project_id);
-if (projectError) return rethrow(projectError);
+const { project, error: project_error } = await api_client.projects.getByName(project_id);
+if (project_error) return rethrow(project_error);
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 
-const { history, error: historyError } = await apiClient.projects.history(project_id);
-if (historyError) return rethrow(historyError);
+const { history, error: history_error } = await api_client.projects.history(project.id);
+if (history_error) return rethrow(history_error);
 ---
 
 <PageLayout title={`History - ${project_id}`}>
