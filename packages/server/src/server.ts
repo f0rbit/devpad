@@ -128,16 +128,34 @@ export function createApp(options: ServerOptions = {}): Hono {
 			})
 		);
 
-		// SPA fallback - serve index.html for non-API routes
+		// Don't use SPA fallback - Astro SSR generates separate HTML files for each route
+		// This prevents all routes from showing the index page
 		app.use("/*", async c => {
 			if (!c.req.path.startsWith("/api/")) {
+				// Try to serve the specific HTML file for this route
+				const path = c.req.path === "/" ? "/index.html" : c.req.path;
 				try {
-					const indexFile = Bun.file(`${options.staticPath}/index.html`);
-					if (await indexFile.exists()) {
-						return c.html(await indexFile.text());
+					// Try exact path first
+					const file = Bun.file(`${options.staticPath}${path}`);
+					if (await file.exists()) {
+						const content = await file.text();
+						const contentType = path.endsWith(".css") ? "text/css" : path.endsWith(".js") ? "application/javascript" : path.endsWith(".json") ? "application/json" : path.endsWith(".html") ? "text/html" : "text/plain";
+						return c.text(content, 200, { "Content-Type": contentType });
+					}
+					// Try with .html extension
+					if (!path.includes(".")) {
+						const htmlFile = Bun.file(`${options.staticPath}${path}.html`);
+						if (await htmlFile.exists()) {
+							return c.html(await htmlFile.text());
+						}
+						// Try as directory with index.html
+						const indexFile = Bun.file(`${options.staticPath}${path}/index.html`);
+						if (await indexFile.exists()) {
+							return c.html(await indexFile.text());
+						}
 					}
 				} catch (error) {
-					console.error("Error serving index.html:", error);
+					console.error("Error serving file:", error);
 				}
 			}
 			return c.text("Not Found", 404);
