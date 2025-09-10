@@ -104,9 +104,21 @@ jobs:
               --label "traefik.http.routers.devpad-staging.tls.certresolver=letsencrypt" \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
             
-            # Wait for health check
-            sleep 10
-            curl -f http://localhost:3001/health || exit 1
+            # Wait for container to start and check health
+            echo "Waiting for container to be healthy..."
+            for i in {1..30}; do
+              if curl -f http://localhost:3001/health 2>/dev/null; then
+                echo "✅ Health check passed!"
+                break
+              elif [ $i -eq 30 ]; then
+                echo "❌ Health check failed after 30 attempts"
+                docker logs devpad-staging --tail 50
+                exit 1
+              else
+                echo "Attempt $i/30: Waiting for service to be ready..."
+                sleep 2
+              fi
+            done
             
             echo "✅ Staging deployment successful!"
             
