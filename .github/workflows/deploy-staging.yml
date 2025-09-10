@@ -123,7 +123,7 @@ jobs:
           curl -f https://staging.devpad.tools/health || exit 1
           
           # Test API endpoint
-          curl -f https://staging.devpad.tools/api/health || exit 1
+          curl -f https://staging.devpad.tools/api/v0 || exit 1
           
           echo "✅ Smoke tests passed!"
           

@@ -218,7 +218,7 @@ jobs:
           curl -f https://devpad.tools/health || exit 1
           
           # Test API endpoint
-          curl -f https://devpad.tools/api/health || exit 1
+          curl -f https://devpad.tools/api/v0 || exit 1
           
           echo "✅ Production smoke tests passed!"
           
