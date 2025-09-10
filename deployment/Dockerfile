@@ -1,5 +1,5 @@
 # First stage: Build todo-tracker application from go source code
-FROM golang:1.22.1 as go-builder
+FROM golang:1.22.1 AS go-builder
 
 WORKDIR /todo-tracker
 RUN apt-get update && apt-get install -y git
@@ -7,7 +7,7 @@ RUN git clone https://github.com/f0rbit/todo-tracker.git .
 RUN go build -o todo-tracker
 
 # Second stage: Build the application
-FROM oven/bun:1.1.37 as builder
+FROM oven/bun:1.1.37 AS builder
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y unzip
@@ -42,10 +42,10 @@ RUN bun run build
 
 # Build the Hono server for production
 WORKDIR /app/packages/server
-RUN bun run build:production
+RUN bun run build
 
 # Production runtime stage
-FROM oven/bun:1.1.37-slim as runtime
+FROM oven/bun:1.1.37-slim AS runtime
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
