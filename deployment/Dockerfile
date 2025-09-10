@@ -65,7 +65,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/deployment ./deployment
 
-# Set environment variables
+# Set default environment variables (can be overridden at runtime)
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATABASE_FILE=/app/data/devpad.db
@@ -74,12 +74,12 @@ ENV STATIC_FILES_PATH=./packages/app/dist/client
 # Create data directory for SQLite
 RUN mkdir -p /app/data
 
-# Expose port
+# Expose port (this is just documentation, actual port is set at runtime)
 EXPOSE 3000
 
-# Health check using curl
+# Health check using curl with PORT variable
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-3000}/health || exit 1
 
 # Start the production server
 WORKDIR /app

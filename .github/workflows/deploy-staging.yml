@@ -84,39 +84,32 @@ jobs:
             # Navigate to deployment directory
             cd /var/deploy/devpad-staging
             
-            # Pull latest staging image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+            # Set VERSION environment variable
+            export VERSION=${{ needs.calculate-version.outputs.version }}
             
-            # Stop existing container gracefully
-            docker stop devpad-staging || true
-            docker rm devpad-staging || true
+            # Pull latest image
+            docker-compose -f docker-compose.staging.yml pull
+            
+            # Stop and remove old container
+            docker-compose -f docker-compose.staging.yml down
             
             # Start new container
-            docker run -d \
-              --name devpad-staging \
-              --restart unless-stopped \
-              -p 127.0.0.1:3001:3000 \
-              -v /var/data/devpad-staging:/app/data \
-              -e NODE_ENV=staging \
-              -e DATABASE_FILE=/app/data/devpad-staging.db \
-              -e CORS_ORIGINS="https://staging.devpad.tools" \
-              -e VERSION=${{ needs.calculate-version.outputs.version }} \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+            docker-compose -f docker-compose.staging.yml up -d
             
-            # Wait for container to start and check health
+            # Wait for health check
             echo "Waiting for container to be healthy..."
             for i in {1..30}; do
-              if curl -f http://localhost:3001/health 2>/dev/null; then
-                echo "✅ Health check passed!"
-                break
-              elif [ $i -eq 30 ]; then
-                echo "❌ Health check failed after 30 attempts"
-                docker logs devpad-staging --tail 50
-                exit 1
-              else
-                echo "Attempt $i/30: Waiting for service to be ready..."
-                sleep 2
-              fi
+                if docker-compose -f docker-compose.staging.yml exec -T devpad-staging curl -f http://localhost:17365/health 2>/dev/null; then
+                    echo "✅ Health check passed!"
+                    break
+                elif [ $i -eq 30 ]; then
+                    echo "❌ Health check failed after 30 attempts"
+                    docker-compose -f docker-compose.staging.yml logs --tail 50
+                    exit 1
+                else
+                    echo "Attempt $i/30: Waiting for service to be ready..."
+                    sleep 2
+                fi
             done
             
             echo "✅ Staging deployment successful!"
@@ -147,40 +140,3 @@ jobs:
           echo "**SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Author:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
           echo "**Message:** ${{ github.event.head_commit.message }}" >> $GITHUB_STEP_SUMMARY
-          
-  rollback-on-failure:
-    runs-on: ubuntu-latest
-    needs: [deploy-to-staging]
-    if: failure()
-    steps:
-      - name: Rollback staging deployment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST_STAGING }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            cd /var/deploy/devpad-staging
-            
-            # Get previous image
-            PREVIOUS_IMAGE=$(docker ps -a --filter "name=devpad-staging" --format "{{.Image}}" | head -2 | tail -1)
-            
-            if [ -n "$PREVIOUS_IMAGE" ]; then
-              echo "Rolling back to previous image: $PREVIOUS_IMAGE"
-              docker stop devpad-staging || true
-              docker rm devpad-staging || true
-              docker run -d \
-                --name devpad-staging \
-                --restart unless-stopped \
-                -p 127.0.0.1:3001:3000 \
-                -v /var/data/devpad-staging:/app/data \
-                -e NODE_ENV=staging \
-                -e DATABASE_FILE=/app/data/devpad-staging.db \
-                -e CORS_ORIGINS="https://staging.devpad.tools" \
-                $PREVIOUS_IMAGE
-              echo "✅ Rollback completed"
-            else
-              echo "❌ No previous image found for rollback"
-              exit 1
-            fi
