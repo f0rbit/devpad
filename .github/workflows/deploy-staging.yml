@@ -55,8 +55,11 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.image-tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: |
+            type=gha,scope=staging
+            type=gha,scope=pr-*
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
+          cache-to: type=gha,mode=max,scope=staging
           build-args: |
             VERSION=${{ needs.calculate-version.outputs.version }}
             
