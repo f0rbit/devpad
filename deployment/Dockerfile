@@ -51,6 +51,7 @@ FROM oven/bun:1.1.37-slim AS runtime
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -76,9 +77,9 @@ RUN mkdir -p /app/data
 # Expose port
 EXPOSE 3000
 
-# Health check using wget (available in slim image)
+# Health check using curl
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+    CMD curl -f http://localhost:3000/health || exit 1
 
 # Start the production server
 WORKDIR /app
