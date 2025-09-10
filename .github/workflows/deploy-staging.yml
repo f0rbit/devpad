@@ -95,16 +95,12 @@ jobs:
             docker run -d \
               --name devpad-staging \
               --restart unless-stopped \
-              -p 3001:3000 \
+              -p 127.0.0.1:3001:3000 \
               -v /var/data/devpad-staging:/app/data \
               -e NODE_ENV=staging \
               -e DATABASE_FILE=/app/data/devpad-staging.db \
               -e CORS_ORIGINS="https://staging.devpad.tools" \
               -e VERSION=${{ needs.calculate-version.outputs.version }} \
-              --label "traefik.enable=true" \
-              --label "traefik.http.routers.devpad-staging.rule=Host(\`staging.devpad.tools\`)" \
-              --label "traefik.http.routers.devpad-staging.tls=true" \
-              --label "traefik.http.routers.devpad-staging.tls.certresolver=letsencrypt" \
               ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:staging
             
             # Wait for container to start and check health
@@ -177,15 +173,11 @@ jobs:
               docker run -d \
                 --name devpad-staging \
                 --restart unless-stopped \
-                -p 3001:3000 \
+                -p 127.0.0.1:3001:3000 \
                 -v /var/data/devpad-staging:/app/data \
                 -e NODE_ENV=staging \
                 -e DATABASE_FILE=/app/data/devpad-staging.db \
                 -e CORS_ORIGINS="https://staging.devpad.tools" \
-                --label "traefik.enable=true" \
-                --label "traefik.http.routers.devpad-staging.rule=Host(\`staging.devpad.tools\`)" \
-                --label "traefik.http.routers.devpad-staging.tls=true" \
-                --label "traefik.http.routers.devpad-staging.tls.certresolver=letsencrypt" \
                 $PREVIOUS_IMAGE
               echo "✅ Rollback completed"
             else
