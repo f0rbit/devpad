@@ -7,7 +7,9 @@ services:
       dockerfile: deployment/Dockerfile
       args:
         # Set the API server URL for local testing
-        PUBLIC_API_SERVER_URL: http://localhost:3000
+        PUBLIC_API_SERVER_URL: http://localhost:3000/api/v0
+    env_file:
+      - ../deployment/.env.local
     ports:
       - "3000:3000"
     environment:
@@ -15,14 +17,9 @@ services:
       - PORT=3000
       - DATABASE_FILE=/app/data/devpad.db
       - STATIC_FILES_PATH=./packages/app/dist/client
+      - PUBLIC_API_SERVER_URL=http://localhost:3000/api/v0
       - FRONTEND_URL=http://localhost:3000
-      - JWT_SECRET=local-testing-secret-please-change-in-production
-      - SESSION_SECRET=local-testing-session-secret-please-change
-      # OAuth settings (optional for local testing)
-      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
-      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
-      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
-      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - MODE=production
     volumes:
       - devpad_local_data:/app/data
     restart: unless-stopped
