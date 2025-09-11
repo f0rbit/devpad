@@ -160,6 +160,7 @@ export class ApiClient {
 			const duration = Date.now() - startTime;
 
 			console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
+				url,
 				duration: `${duration}ms`,
 				error: error instanceof Error ? error.message : String(error),
 				body,
