@@ -10,9 +10,10 @@ const user = Astro.locals.user;
 let projects: Project[] = [];
 
 if (user) {
-    const api_client = getServerApiClient(Astro.locals);
-    const { projects, error } = await api_client.projects.list();
-    if (error) return rethrow(error);
+	const api_client = getServerApiClient(Astro.locals);
+	const { projects: fetched, error } = await api_client.projects.list();
+	if (error) return rethrow(error);
+	projects = fetched;
 }
 
 const codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
