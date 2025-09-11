@@ -113,7 +113,7 @@ export function createApp(options: ServerOptions = {}): Hono {
 
 	// Serve static files first - this needs to come before SSR handler
 	// When running from packages/server directory, the path is ../app/dist/client/
-	app.use("/*", serveStatic({ root: "../app/dist/client/" }));
+	app.use("/*", serveStatic({ root: options.staticPath }));
 
 	// Use the SSR handler for everything that's not a static file or API
 	// The handler is a Hono middleware that expects (ctx, next, locals)
