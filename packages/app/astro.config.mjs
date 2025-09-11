@@ -3,24 +3,22 @@ import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import { defineConfig } from "astro/config";
 
-const site = "https://devpad.tools";
+const site = Bun.env.SITE_URL ?? "https://devpad.tools";
 
 // https://astro.build/config
 export default defineConfig({
 	server: { port: Bun.env.PORT ? Number(Bun.env.PORT) : 3000 },
-	site: "https://devpad.tools",
+	site,
 	output: "server",
-	adapter: node({
-		mode: "standalone",
-	}),
+	adapter: node({ mode: "middleware" }),
 	integrations: [
 		solidJs(),
 		sitemap({
 			customPages: [`${site}/`, `${site}/docs/`],
 		}),
 	],
-	experimental: {
-		session: { driver: "fs" },
+	session: {
+		driver: "fs"
 	},
 	vite: {
 		build: {

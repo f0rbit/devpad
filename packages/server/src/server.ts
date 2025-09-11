@@ -7,6 +7,7 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { log } from "@devpad/core";
 import { authMiddleware } from "./middleware/auth";
+import { handler as ssrHandler } from "../../app/dist/server/entry.mjs";
 
 // Import route modules
 import authRoutes from "./routes/auth";
@@ -17,8 +18,6 @@ export interface ServerOptions {
 	runMigrations?: boolean;
 	/** Migration folder paths to try (in order) */
 	migrationPaths?: string[];
-	/** Enable static file serving */
-	enableStatic?: boolean;
 	/** Path to static files */
 	staticPath?: string;
 	/** CORS allowed origins */
@@ -36,6 +35,8 @@ export interface DatabaseOptions {
 	migrationPaths?: string[];
 }
 
+const DEFAULT_ORIGINS = ["http://localhost:4321", "http://localhost:3000", "https://devpad.tools", "https://staging.devpad.tools"];
+
 /**
  * Initialize database and run migrations
  */
@@ -45,7 +46,7 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 	const sqlite = new Database(options.databaseFile);
 	const db = drizzle(sqlite);
 
-	log.startup("⌛️ Running migrations...");
+	log.startup("⌛ Running migrations...");
 
 	const defaultPaths = ["./packages/schema/src/database/drizzle", "../schema/src/database/drizzle", "../../schema/src/database/drizzle", "./src/database/drizzle"];
 
@@ -59,7 +60,7 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 			migrationsRun = true;
 			break;
 		} catch (error) {
-			log.startup(`⚠️ Migration path ${path} not found, trying next...`);
+			log.startup(`! Migration path ${path} not found, trying next...`);
 		}
 	}
 
@@ -75,18 +76,14 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 export function createApp(options: ServerOptions = {}): Hono {
 	const app = new Hono();
 
-	// Global middleware
 	app.use("*", logger());
 
-	// CORS configuration
-	const defaultOrigins = ["http://localhost:4321", "http://localhost:3000", "https://devpad.tools"];
-
-	const allowedOrigins = options.corsOrigins || process.env.CORS_ORIGINS?.split(",") || defaultOrigins;
+	const ALLOWED_ORIGINS = options.corsOrigins || process.env.CORS_ORIGINS?.split(",") || DEFAULT_ORIGINS;
 
 	app.use(
 		"*",
 		cors({
-			origin: process.env.NODE_ENV === "test" ? origin => origin || "*" : allowedOrigins,
+			origin: process.env.NODE_ENV === "test" ? origin => origin || "*" : ALLOWED_ORIGINS,
 			credentials: true,
 		})
 	);
@@ -114,61 +111,17 @@ export function createApp(options: ServerOptions = {}): Hono {
 	// API Routes
 	app.route("/api/v0", v0Routes);
 
-	// Static file serving (optional)
-	if (options.enableStatic && options.staticPath) {
-		log.startup(`📁 Serving static files from: ${options.staticPath}`);
+	// Serve static files from dist/client
+	app.use(serveStatic({ root: "../../app/dist/client/" }));
 
-		app.use(
-			"/*",
-			serveStatic({
-				root: options.staticPath,
-				rewriteRequestPath: path => {
-					return path.replace(/^\//, "");
-				},
-			})
-		);
-
-		// Don't use SPA fallback - Astro SSR generates separate HTML files for each route
-		// This prevents all routes from showing the index page
-		app.use("/*", async c => {
-			if (!c.req.path.startsWith("/api/")) {
-				// Try to serve the specific HTML file for this route
-				const path = c.req.path === "/" ? "/index.html" : c.req.path;
-				try {
-					// Try exact path first
-					const file = Bun.file(`${options.staticPath}${path}`);
-					if (await file.exists()) {
-						const content = await file.text();
-						const contentType = path.endsWith(".css") ? "text/css" : path.endsWith(".js") ? "application/javascript" : path.endsWith(".json") ? "application/json" : path.endsWith(".html") ? "text/html" : "text/plain";
-						return c.text(content, 200, { "Content-Type": contentType });
-					}
-					// Try with .html extension
-					if (!path.includes(".")) {
-						const htmlFile = Bun.file(`${options.staticPath}${path}.html`);
-						if (await htmlFile.exists()) {
-							return c.html(await htmlFile.text());
-						}
-						// Try as directory with index.html
-						const indexFile = Bun.file(`${options.staticPath}${path}/index.html`);
-						if (await indexFile.exists()) {
-							return c.html(await indexFile.text());
-						}
-					}
-				} catch (error) {
-					console.error("Error serving file:", error);
-				}
-			}
-			return c.text("Not Found", 404);
-		});
-	} else {
-		// API-only mode fallback
-		app.use("/*", async c => {
-			if (c.req.path.startsWith("/api/")) {
-				return c.text("API endpoint not found", 404);
-			}
-			return c.text("Static content should be served by CDN", 404);
-		});
-	}
+	// Use the SSR handler for everything else - just like Express
+	app.use(ssrHandler);
+	app.use("/*", async c => {
+		if (c.req.path.startsWith("/api/")) {
+			return c.text("API endpoint not found", 404);
+		}
+		return c.text("Static content should be served by CDN", 404);
+	});
 
 	return app;
 }
@@ -197,12 +150,6 @@ export async function startServer(options: ServerOptions = {}): Promise<void> {
 
 	// Log startup information
 	log.startup(`🚀 ${environment} server starting on port ${port}`);
-
-	if (options.enableStatic) {
-		log.startup(`📁 Static files: ${options.staticPath}`);
-	} else {
-		log.startup(`🔧 API-only mode (static files served elsewhere)`);
-	}
 
 	log.startup(`🎯 API routes: /api/*`);
 	log.startup(`🌐 CORS origins: ${options.corsOrigins?.join(", ") || "default"}`);

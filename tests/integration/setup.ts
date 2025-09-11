@@ -183,7 +183,6 @@ async function startHonoServer(): Promise<void> {
 	// Create the Hono app
 	const app = createApp({
 		runMigrations: false, // Already done above
-		enableStatic: false,
 		corsOrigins: ["http://localhost:4321", "http://localhost:3000", "http://localhost:5173"],
 		port: 3001,
 		environment: "test",
