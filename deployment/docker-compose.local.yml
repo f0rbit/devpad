@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  devpad:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+      args:
+        # Set the API server URL for local testing
+        PUBLIC_API_SERVER_URL: http://localhost:3000
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_FILE=/app/data/devpad.db
+      - STATIC_FILES_PATH=./packages/app/dist/client
+      - FRONTEND_URL=http://localhost:3000
+      - JWT_SECRET=local-testing-secret-please-change-in-production
+      - SESSION_SECRET=local-testing-session-secret-please-change
+      # OAuth settings (optional for local testing)
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+    volumes:
+      - devpad_local_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  devpad_local_data:

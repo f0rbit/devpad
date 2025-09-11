@@ -53,3 +53,8 @@ dist
 
 # Coverage reports
 coverage/
+
+# Playwright artifacts
+.playwright/
+playwright-report/
+test-results/

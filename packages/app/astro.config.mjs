@@ -1,7 +1,7 @@
-import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import solidJs from "@astrojs/solid-js";
 import { defineConfig } from "astro/config";
+import honoAstro from "hono-astro-adapter";
 
 const site = Bun.env.SITE_URL ?? "https://devpad.tools";
 
@@ -10,7 +10,7 @@ export default defineConfig({
 	server: { port: Bun.env.PORT ? Number(Bun.env.PORT) : 3000 },
 	site,
 	output: "server",
-	adapter: node({ mode: "middleware" }),
+	adapter: honoAstro(),
 	integrations: [
 		solidJs(),
 		sitemap({
@@ -18,7 +18,7 @@ export default defineConfig({
 		}),
 	],
 	session: {
-		driver: "fs"
+		driver: "fs",
 	},
 	vite: {
 		build: {

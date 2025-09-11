@@ -48,13 +48,13 @@ jobs:
           chmod +x todo-tracker
         
       - name: Run unit tests
-        run: make unit
+        run: bun run test:unit
         env:
           DATABASE_FILE: ./test.db
           NODE_ENV: test
         
       - name: Run integration tests
-        run: make integration
+        run: bun run test:integration
         env:
           DATABASE_FILE: ./test.db
           NODE_ENV: test
@@ -62,10 +62,10 @@ jobs:
       - name: Generate coverage report
         if: github.event_name == 'pull_request'
         run: |
-          make coverage
+          bun run coverage
           echo "### Test Coverage Report" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          ./scripts/coverage-report.sh >> $GITHUB_STEP_SUMMARY 2>&1 || true
+          bun run coverage:report >> $GITHUB_STEP_SUMMARY 2>&1 || true
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
         

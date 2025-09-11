@@ -111,16 +111,21 @@ export function createApp(options: ServerOptions = {}): Hono {
 	// API Routes
 	app.route("/api/v0", v0Routes);
 
-	// Serve static files from dist/client
-	app.use(serveStatic({ root: "../../app/dist/client/" }));
+	// Serve static files first - this needs to come before SSR handler
+	// When running from packages/server directory, the path is ../app/dist/client/
+	app.use("/*", serveStatic({ root: "../app/dist/client/" }));
 
-	// Use the SSR handler for everything else - just like Express
+	// Use the SSR handler for everything that's not a static file or API
+	// The handler is a Hono middleware that expects (ctx, next, locals)
 	app.use(ssrHandler);
-	app.use("/*", async c => {
+
+	// Final 404 handler for any unmatched routes (shouldn't be reached if SSR handles 404s)
+	app.notFound(c => {
 		if (c.req.path.startsWith("/api/")) {
 			return c.text("API endpoint not found", 404);
 		}
-		return c.text("Static content should be served by CDN", 404);
+		// The SSR handler should handle 404 pages, but just in case
+		return c.text("Page not found", 404);
 	});
 
 	return app;
