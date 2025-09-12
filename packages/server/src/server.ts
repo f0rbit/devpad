@@ -8,6 +8,7 @@ import { logger } from "hono/logger";
 import { log } from "@devpad/core";
 import { authMiddleware } from "./middleware/auth";
 import { handler as ssrHandler } from "../../app/dist/server/entry.mjs";
+import fs from "fs";
 
 // Import route modules
 import authRoutes from "./routes/auth";
@@ -41,6 +42,50 @@ const DEFAULT_ORIGINS = ["http://localhost:4321", "http://localhost:3000", "http
  * Initialize database and run migrations
  */
 export async function migrateDb(options: DatabaseOptions): Promise<void> {
+	// Debug logging
+	console.log("🔍 Debug - Current working directory:", process.cwd());
+	console.log("🔍 Debug - DATABASE_FILE env:", process.env.DATABASE_FILE);
+	console.log("🔍 Debug - Using database file:", options.databaseFile);
+
+	// List files in current directory
+	try {
+		console.log("🔍 Debug - Files in /app:");
+		const appFiles = fs.readdirSync("/app");
+		appFiles.forEach(f => console.log("  -", f));
+
+		if (fs.existsSync("/app/packages")) {
+			console.log("🔍 Debug - Files in /app/packages:");
+			const pkgFiles = fs.readdirSync("/app/packages");
+			pkgFiles.forEach(f => console.log("  -", f));
+
+			if (fs.existsSync("/app/packages/schema")) {
+				console.log("🔍 Debug - Files in /app/packages/schema:");
+				const schemaFiles = fs.readdirSync("/app/packages/schema");
+				schemaFiles.forEach(f => console.log("  -", f));
+
+				if (fs.existsSync("/app/packages/schema/dist")) {
+					console.log("🔍 Debug - Files in /app/packages/schema/dist:");
+					const distFiles = fs.readdirSync("/app/packages/schema/dist");
+					distFiles.forEach(f => console.log("  -", f));
+				}
+
+				if (fs.existsSync("/app/packages/schema/src")) {
+					console.log("🔍 Debug - Files in /app/packages/schema/src:");
+					const srcFiles = fs.readdirSync("/app/packages/schema/src");
+					srcFiles.forEach(f => console.log("  -", f));
+
+					if (fs.existsSync("/app/packages/schema/src/database")) {
+						console.log("🔍 Debug - Files in /app/packages/schema/src/database:");
+						const dbFiles = fs.readdirSync("/app/packages/schema/src/database");
+						dbFiles.forEach(f => console.log("  -", f));
+					}
+				}
+			}
+		}
+	} catch (e) {
+		console.log("🔍 Debug - Error listing files:", e);
+	}
+
 	log.startup("🌳 Database file:", options.databaseFile);
 
 	const sqlite = new Database(options.databaseFile);
@@ -58,16 +103,18 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 	];
 
 	const migrationPaths = options.migrationPaths || defaultPaths;
+	console.log("🔍 Debug - Will check migration paths:", migrationPaths);
 
 	let migrationsRun = false;
 	for (const path of migrationPaths) {
 		try {
+			console.log(`🔍 Debug - Checking migration path: ${path}`);
 			migrate(db, { migrationsFolder: path });
 			log.startup(`✅ Migrations complete from ${path}`);
 			migrationsRun = true;
 			break;
-		} catch (error) {
-			log.startup(`! Migration path ${path} not found, trying next...`);
+		} catch (error: any) {
+			console.log(`🔍 Debug - Migration path ${path} failed:`, error.message);
 		}
 	}
 
