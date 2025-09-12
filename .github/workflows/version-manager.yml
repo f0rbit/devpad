@@ -1,4 +1,16 @@
 name: Version Manager
+# 
+# Versioning Strategy:
+# - MAJOR.RELEASE.PATCH format (e.g., 1.2.3)
+# - MAJOR: Major version, manually incremented for breaking changes
+# - RELEASE: Incremented on each production deployment
+# - PATCH: Incremented on each merge to main (staging deployment), reset to 0 on production release
+#
+# Example flow:
+# - Main branch merges: 1.0.1, 1.0.2, 1.0.3 (staging)
+# - Production release: 1.1.0 (RELEASE incremented, PATCH reset)
+# - Next main merges: 1.1.1, 1.1.2 (staging)
+# - Next production: 1.2.0
 
 on:
   workflow_call:
@@ -43,28 +55,26 @@ jobs:
           # If custom version provided, use it
           if [ -n "${{ inputs.custom-version }}" ]; then
             VERSION="${{ inputs.custom-version }}"
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "image-tag=${VERSION}-staging" >> $GITHUB_OUTPUT
           else
-            # Get the PR number from the commit message or use incremental counter
-            PR_NUMBER=""
-            if [ "${{ github.event_name }}" = "push" ]; then
-              # Try to extract PR number from main branch commit message
-              PR_NUMBER=$(git log origin/main -1 --pretty=%B | grep -oP '(?<=#)\d+' | head -1)
-            fi
+            # For staging deployments, increment the patch version (third number)
+            # This represents the number of merges to main since the last production release
+            LAST_PATCH=$(cat VERSION_PR 2>/dev/null || echo "0")
+            PATCH=$((LAST_PATCH + 1))
             
-            # If no PR number found, use incremental counter
-            if [ -z "$PR_NUMBER" ]; then
-              # Read last PR counter or start from 0
-              LAST_PR=$(cat VERSION_PR 2>/dev/null || echo "0")
-              PR_NUMBER=$((LAST_PR + 1))
-              echo "$PR_NUMBER" > VERSION_PR
-            fi
+            # Save the new patch number
+            echo "$PATCH" > VERSION_PR
             
-            VERSION="${MAJOR}.${RELEASE}.${PR_NUMBER}"
+            # Create version string
+            VERSION="${MAJOR}.${RELEASE}.${PATCH}"
+            
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "image-tag=${VERSION}-staging" >> $GITHUB_OUTPUT
           fi
           
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "image-tag=${VERSION}-staging" >> $GITHUB_OUTPUT
           echo "📦 Version: ${VERSION}"
+          echo "📦 Components: Major=${MAJOR}, Release=${RELEASE}, Patch=${PATCH:-custom}"
           
       - name: Update version files on versions branch
         run: |
