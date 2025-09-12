@@ -157,7 +157,7 @@ jobs:
             # Wait for health check
             echo "Waiting for container to be healthy..."
             for i in {1..30}; do
-                if docker-compose -f docker-compose.production.yml exec -T devpad-production curl -f http://localhost:3000/health 2>/dev/null; then
+                if docker-compose -f docker-compose.production.yml exec -T devpad-production curl -f http://localhost:17364/health 2>/dev/null; then
                     echo "✅ Health check passed!"
                     break
                 elif [ $i -eq 30 ]; then
