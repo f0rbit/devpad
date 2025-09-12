@@ -167,8 +167,26 @@ jobs:
       - name: Install dependencies
         run: bun install
         
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> $GITHUB_OUTPUT
+        
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+        
       - name: Install Playwright browsers
         run: bunx playwright install chromium --with-deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        
+      - name: Install Playwright system dependencies only
+        run: bunx playwright install-deps chromium
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
         
       - name: Run E2E tests against staging
         id: e2e
