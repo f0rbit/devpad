@@ -34,6 +34,9 @@ RUN bun install --frozen-lockfile
 # First build schema package
 WORKDIR /app/packages/schema
 RUN bun run build
+# Copy migration files (not included in build output)
+RUN mkdir -p dist/database/drizzle && \
+    cp -r src/database/drizzle/* dist/database/drizzle/ 2>/dev/null || true
 
 # Build other packages that depend on schema
 WORKDIR /app/packages/api

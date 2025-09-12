@@ -48,7 +48,14 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 
 	log.startup("⌛ Running migrations...");
 
-	const defaultPaths = ["./packages/schema/src/database/drizzle", "../schema/src/database/drizzle", "../../schema/src/database/drizzle", "./src/database/drizzle"];
+	const defaultPaths = [
+		"./packages/schema/dist/database/drizzle", // Docker built location
+		"./packages/schema/src/database/drizzle", // Docker source location
+		"../schema/dist/database/drizzle", // Relative built
+		"../schema/src/database/drizzle", // Relative source
+		"../../schema/src/database/drizzle", // Development
+		"./src/database/drizzle", // Fallback
+	];
 
 	const migrationPaths = options.migrationPaths || defaultPaths;
 
