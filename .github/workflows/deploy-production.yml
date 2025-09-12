@@ -56,15 +56,32 @@ jobs:
           # Determine version
           if [ -n "${{ github.event.inputs.version }}" ]; then
             VERSION="${{ github.event.inputs.version }}"
+            # Extract components from custom version (e.g., "1.3.1" -> MAJOR=1, RELEASE=3, PATCH=1)
+            IFS='.' read -r OVERRIDE_MAJOR OVERRIDE_RELEASE OVERRIDE_PATCH <<< "$VERSION"
+            
+            # Update MAJOR if different
+            if [ "$OVERRIDE_MAJOR" != "$MAJOR" ]; then
+              echo "⚠️ Major version override: $MAJOR -> $OVERRIDE_MAJOR"
+              MAJOR=$OVERRIDE_MAJOR
+            fi
+            
+            # Always use the RELEASE from the override
+            RELEASE=$OVERRIDE_RELEASE
+            PATCH=${OVERRIDE_PATCH:-0}
+            
+            echo "📝 Custom version components: MAJOR=$MAJOR, RELEASE=$RELEASE, PATCH=$PATCH"
           else
             VERSION="${MAJOR}.${RELEASE}.0"
+            PATCH=0
           fi
           
           PREV_VERSION="${MAJOR}.${PREV_RELEASE}.0"
           
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "prev_version=${PREV_VERSION}" >> $GITHUB_OUTPUT
+          echo "major=${MAJOR}" >> $GITHUB_OUTPUT
           echo "release=${RELEASE}" >> $GITHUB_OUTPUT
+          echo "patch=${PATCH}" >> $GITHUB_OUTPUT
           echo "📦 New Version: ${VERSION}"
           echo "📦 Previous Version: ${PREV_VERSION}"
           
@@ -72,12 +89,13 @@ jobs:
         if: github.event.inputs.skip_promotion != 'true'
         run: |
           echo "${{ steps.version.outputs.version }}" > VERSION
+          echo "${{ steps.version.outputs.major }}" > VERSION_MAJOR
           echo "${{ steps.version.outputs.release }}" > VERSION_RELEASE
-          echo "0" > VERSION_PR  # Reset PR counter for new release
+          echo "${{ steps.version.outputs.patch }}" > VERSION_PR
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION VERSION_RELEASE VERSION_PR
+          git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR
           git commit -m "chore: bump production version to ${{ steps.version.outputs.version }}"
           git push origin versions
 
