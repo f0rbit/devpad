@@ -138,70 +138,37 @@ jobs:
             # Navigate to deployment directory
             cd /var/deploy/devpad
             
-            # Backup current version tag
-            CURRENT_VERSION=$(docker inspect devpad-production --format='{{.Config.Labels.version}}' 2>/dev/null || echo "unknown")
-            echo "Current version: $CURRENT_VERSION"
+            # Save new version
+            echo "${{ needs.calculate-version.outputs.version }}" > VERSION
+            export VERSION=${{ needs.calculate-version.outputs.version }}
             
-            # Pull latest production image
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+            # Tag current running image as previous before updating
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-previous || true
             
-            # Blue-green deployment
-            # Start new container on different port
-            docker run -d \
-              --name devpad-production-new \
-              --restart unless-stopped \
-              -p 3002:3000 \
-              -v /var/data/devpad-production:/app/data \
-              -e NODE_ENV=production \
-              -e DATABASE_FILE=/app/data/devpad.db \
-              -e CORS_ORIGINS="https://devpad.tools,https://www.devpad.tools" \
-              -e VERSION=${{ needs.calculate-version.outputs.version }} \
-              --label version=${{ needs.calculate-version.outputs.version }} \
-              --label "traefik.enable=true" \
-              --label "traefik.http.routers.devpad-production.rule=Host(\`devpad.tools\`) || Host(\`www.devpad.tools\`)" \
-              --label "traefik.http.routers.devpad-production.tls=true" \
-              --label "traefik.http.routers.devpad-production.tls.certresolver=letsencrypt" \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
+            # Pull latest image
+            docker-compose -f docker-compose.production.yml pull
             
-            # Wait for new container to be healthy
-            sleep 10
+            # Stop and remove old container
+            docker-compose -f docker-compose.production.yml down
+            
+            # Start new container
+            docker-compose -f docker-compose.production.yml up -d
+            
+            # Wait for health check
+            echo "Waiting for container to be healthy..."
             for i in {1..30}; do
-              if curl -f http://localhost:3002/health; then
-                echo "✅ New container is healthy"
-                break
-              fi
-              if [ $i -eq 30 ]; then
-                echo "❌ New container failed health check"
-                docker stop devpad-production-new
-                docker rm devpad-production-new
-                exit 1
-              fi
-              sleep 2
+                if docker-compose -f docker-compose.production.yml exec -T devpad-production curl -f http://localhost:3000/health 2>/dev/null; then
+                    echo "✅ Health check passed!"
+                    break
+                elif [ $i -eq 30 ]; then
+                    echo "❌ Health check failed after 30 attempts"
+                    docker-compose -f docker-compose.production.yml logs --tail 50
+                    exit 1
+                else
+                    echo "Attempt $i/30: Waiting for service to be ready..."
+                    sleep 2
+                fi
             done
-            
-            # Switch traffic to new container
-            docker stop devpad-production || true
-            docker rm devpad-production || true
-            docker rename devpad-production-new devpad-production
-            
-            # Update port mapping (restart with correct port)
-            docker stop devpad-production
-            docker rm devpad-production
-            docker run -d \
-              --name devpad-production \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              -v /var/data/devpad-production:/app/data \
-              -e NODE_ENV=production \
-              -e DATABASE_FILE=/app/data/devpad.db \
-              -e CORS_ORIGINS="https://devpad.tools,https://www.devpad.tools" \
-              -e VERSION=${{ needs.calculate-version.outputs.version }} \
-              --label version=${{ needs.calculate-version.outputs.version }} \
-              --label "traefik.enable=true" \
-              --label "traefik.http.routers.devpad-production.rule=Host(\`devpad.tools\`) || Host(\`www.devpad.tools\`)" \
-              --label "traefik.http.routers.devpad-production.tls=true" \
-              --label "traefik.http.routers.devpad-production.tls.certresolver=letsencrypt" \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }}
             
             # Clean up old images (keep last 5)
             docker image prune -f
@@ -256,27 +223,34 @@ jobs:
             
             echo "⚠️ Rolling back to version ${{ needs.calculate-version.outputs.prev_version }}"
             
-            # Stop failed deployment
-            docker stop devpad-production || true
-            docker rm devpad-production || true
+            # Restore previous version
+            echo "${{ needs.calculate-version.outputs.prev_version }}" > VERSION
+            export VERSION=${{ needs.calculate-version.outputs.prev_version }}
             
-            # Pull and start previous version
-            docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.prev_version }}
-            docker run -d \
-              --name devpad-production \
-              --restart unless-stopped \
-              -p 3000:3000 \
-              -v /var/data/devpad-production:/app/data \
-              -e NODE_ENV=production \
-              -e DATABASE_FILE=/app/data/devpad.db \
-              -e CORS_ORIGINS="https://devpad.tools,https://www.devpad.tools" \
-              -e VERSION=${{ needs.calculate-version.outputs.prev_version }} \
-              --label version=${{ needs.calculate-version.outputs.prev_version }} \
-              --label "traefik.enable=true" \
-              --label "traefik.http.routers.devpad-production.rule=Host(\`devpad.tools\`) || Host(\`www.devpad.tools\`)" \
-              --label "traefik.http.routers.devpad-production.tls=true" \
-              --label "traefik.http.routers.devpad-production.tls.certresolver=letsencrypt" \
-              ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.prev_version }}
+            # Use the previous image
+            docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production-previous ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            
+            # Stop current container
+            docker-compose -f docker-compose.production.yml down
+            
+            # Start with previous version
+            docker-compose -f docker-compose.production.yml up -d
+            
+            # Wait for health check
+            echo "Waiting for rollback container to be healthy..."
+            for i in {1..30}; do
+                if docker-compose -f docker-compose.production.yml exec -T devpad-production curl -f http://localhost:3000/health 2>/dev/null; then
+                    echo "✅ Rollback health check passed!"
+                    break
+                elif [ $i -eq 30 ]; then
+                    echo "❌ Rollback health check failed!"
+                    docker-compose -f docker-compose.production.yml logs --tail 50
+                    exit 1
+                else
+                    echo "Attempt $i/30: Waiting for rollback to be ready..."
+                    sleep 2
+                fi
+            done
             
             # Tag the failed version for investigation
             docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.calculate-version.outputs.version }} \
