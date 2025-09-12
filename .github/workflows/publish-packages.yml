@@ -181,10 +181,10 @@ jobs:
           cd packages/schema && bun run build
           cd ../core && bun run build
           cd ../api && bun run build
-          cd ../cli && bun run build
+          cd ../app && bun run build
           cd ../server && bun run build
           cd ../mcp && bun run build
-          cd ../app && bun run build
+          cd ../cli && bun run build
           cd ../..
           
       - name: Run tests
