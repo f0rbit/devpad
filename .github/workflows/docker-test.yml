@@ -131,22 +131,23 @@ jobs:
         id: playwright-version
         run: echo "version=$(bunx playwright --version | awk '{print $2}')" >> $GITHUB_OUTPUT
       
-      - name: Cache Playwright browsers
+      - name: Cache Playwright browsers and dependencies marker
         uses: actions/cache@v4
         id: playwright-cache
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          path: |
+            ~/.cache/ms-playwright
+            ~/playwright-deps-installed
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-deps-v1
           restore-keys: |
+            playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}-
             playwright-${{ runner.os }}-
       
-      - name: Install Playwright browsers
-        run: bunx playwright install chromium --with-deps
+      - name: Install Playwright browsers and dependencies
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-      
-      - name: Install Playwright system dependencies only
-        run: bunx playwright install-deps chromium
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: |
+          bunx playwright install chromium --with-deps
+          touch ~/playwright-deps-installed
       
       - name: Run E2E tests
         run: TEST_ENV=docker bun run e2e
