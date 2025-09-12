@@ -55,6 +55,18 @@ jobs:
           # If custom version provided, use it
           if [ -n "${{ inputs.custom-version }}" ]; then
             VERSION="${{ inputs.custom-version }}"
+            
+            # Extract components from custom version
+            IFS='.' read -r CUSTOM_MAJOR CUSTOM_RELEASE CUSTOM_PATCH <<< "$VERSION"
+            
+            # Update version files if components differ
+            if [ "$CUSTOM_MAJOR" != "$MAJOR" ] || [ "$CUSTOM_RELEASE" != "$RELEASE" ]; then
+              echo "⚠️ Custom version override: updating version components"
+              echo "$CUSTOM_MAJOR" > VERSION_MAJOR
+              echo "$CUSTOM_RELEASE" > VERSION_RELEASE
+              echo "${CUSTOM_PATCH:-0}" > VERSION_PR
+            fi
+            
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
             echo "image-tag=${VERSION}-staging" >> $GITHUB_OUTPUT
           else
@@ -83,7 +95,8 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add VERSION VERSION_PR 2>/dev/null || true
+          # Add all version files (they may have been updated by custom version logic)
+          git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR 2>/dev/null || true
           git diff --staged --quiet || {
             git commit -m "chore: update version to ${{ steps.version.outputs.version }}"
             git push origin versions || git push origin versions --force-with-lease
