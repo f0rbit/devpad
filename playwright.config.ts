@@ -1,4 +1,4 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
 
 /**
  * E2E test configuration for multiple environments:
@@ -20,8 +20,8 @@ const environments = {
 			url: "http://localhost:3001",
 			reuseExistingServer: !process.env.CI,
 			timeout: 60 * 1000,
-			stdout: "pipe",
-			stderr: "pipe",
+			stdout: "pipe" as const,
+			stderr: "pipe" as const,
 		},
 	},
 	docker: {
@@ -55,37 +55,15 @@ export default defineConfig({
 	/* Global test timeout */
 	globalTimeout: 10 * 60 * 1000, // 10 minutes
 	/* Reporter to use. See https://playwright.dev/docs/test-reporters */
-	reporter: [["html", { outputFolder: ".playwright/playwright-report" }], ["list"], ...(process.env.CI ? [["github" as any]] : [])],
-	/* Configure test artifacts output */
-	outputDir: ".playwright/test-results",
-	/* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+	reporter: process.env.CI ? [["html", { outputFolder: ".playwright/playwright-report", open: "never" }], ["list"], ["github"]] : [["html", { outputFolder: ".playwright/playwright-report", open: "never" }], ["list"]],
+
+	/* Shared settings for all projects */
 	use: {
-		/* Base URL to use in actions like \`await page.goto('/')\`. */
+		/* Base URL to use in actions like `await page.goto('/')` */
 		baseURL: config.baseURL,
 		/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
 		trace: "on-first-retry",
-		screenshot: "only-on-failure",
-		video: "retain-on-failure",
-		/* Add some tolerance for staging environment */
-		actionTimeout: TEST_ENV === "staging" ? 15 * 1000 : 10 * 1000,
 	},
-
-	/* Configure projects for major browsers */
-	projects: [
-		{
-			name: "chromium",
-			use: { ...devices["Desktop Chrome"] },
-		},
-		// Uncomment to test on more browsers
-		// {
-		// 	name: "firefox",
-		// 	use: { ...devices["Desktop Firefox"] },
-		// },
-		// {
-		// 	name: "webkit",
-		// 	use: { ...devices["Desktop Safari"] },
-		// },
-	],
 
 	/* Run your local dev server before starting the tests (only for local environment) */
 	webServer: config.webServer,

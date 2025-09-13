@@ -11,11 +11,11 @@ const log = {
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];
 
-if (!Bun.env.PUBLIC_API_SERVER_URL) {
+if (!process.env.PUBLIC_API_SERVER_URL) {
 	throw new Error("PUBLIC_API_SERVER_URL environment variable is not set");
 }
 
-const API_SERVER_URL = Bun.env.PUBLIC_API_SERVER_URL;
+const API_SERVER_URL = process.env.PUBLIC_API_SERVER_URL;
 const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "");
 
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
@@ -92,6 +92,32 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	context.locals.user = null;
 	context.locals.session = null;
 
+	// Check for test user injection (only works when NODE_ENV=test or TEST_MODE=enabled)
+	// Note: We check process.env directly here since this runs on the server
+	const isTestEnv = process.env.NODE_ENV === "test" || process.env.TEST_MODE === "enabled";
+	const hasTestHeader = context.request.headers.get("X-Test-User") === "true";
+
+	if (isTestEnv && hasTestHeader) {
+		log.middleware("🧪 TEST MODE: Injecting mock user");
+		// Import test user constants dynamically to avoid bundling in production
+		const { TEST_USER, TEST_SESSION, TEST_JWT_TOKEN } = await import("@devpad/core");
+
+		context.locals.user = TEST_USER as any;
+		context.locals.session = TEST_SESSION as any;
+		context.locals.jwtToken = TEST_JWT_TOKEN;
+
+		// Set cookie for client-side API access
+		context.cookies.set("jwt-token", TEST_JWT_TOKEN, {
+			path: "/",
+			sameSite: "lax",
+			maxAge: 86400,
+			httpOnly: false, // Allow client-side access
+		});
+
+		// Skip rest of auth flow for test user
+		return next();
+	}
+
 	// Check for JWT token in localStorage (handled client-side) or session cookie
 	const jwtToken = context.url.searchParams.get("token"); // From OAuth callback
 
@@ -136,9 +162,13 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 			// Use the detected cookie name for the header
 			const cookieHeader = sessionCookie ? (sessionCookie1 ? `auth-session=${sessionCookie}` : sessionCookie2 ? `auth_session=${sessionCookie}` : sessionCookie3 ? `lucia_session=${sessionCookie}` : undefined) : undefined;
 
+			// Pass through X-Test-User header if present (for test environments)
+			const testUserHeader = context.request.headers.get("X-Test-User");
+
 			log.middleware(" 📡 Auth request headers:", {
 				hasAuthHeader: !!authHeader,
 				hasCookieHeader: !!cookieHeader,
+				hasTestHeader: !!testUserHeader,
 				apiUrl: `${API_SERVER_BASE}/api/auth/verify`,
 			});
 
@@ -146,6 +176,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 				headers: {
 					...(authHeader && { Authorization: authHeader }),
 					...(cookieHeader && { Cookie: cookieHeader }),
+					...(testUserHeader && { "X-Test-User": testUserHeader }),
 					"Content-Type": "application/json",
 				},
 			});
@@ -166,6 +197,18 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 				context.locals.user = authData.user;
 				context.locals.session = { id: "verified" } as any; // Minimal session object
 				context.locals.jwtToken = storedJWT; // Pass JWT token for server-side API calls
+
+				// If this is a test user, ensure the JWT cookie is set for client-side
+				if (authData.user?.id === "test-user-e2e") {
+					log.middleware(" 🧪 Test user detected, setting test JWT cookie");
+					context.cookies.set("jwt-token", "test-jwt-token", {
+						path: "/",
+						sameSite: "lax",
+						maxAge: 86400,
+						httpOnly: false, // Allow client-side access
+					});
+					context.locals.jwtToken = "test-jwt-token";
+				}
 
 				// Update existing HttpOnly cookie to be accessible to client-side JS
 				// This is needed for users who logged in before we changed the cookie settings

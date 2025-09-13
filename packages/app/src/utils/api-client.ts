@@ -222,11 +222,11 @@ export function createServerApiClient(options: { jwt?: string; key?: string; ser
  * Create an API client from Astro.locals (convenience function)
  */
 export function getServerApiClient(locals: any): ApiClient {
-	if (!Bun.env.PUBLIC_API_SERVER_URL) throw new Error("undefined PUBLIC_API_SERVER_URL");
+	if (!process.env.PUBLIC_API_SERVER_URL) throw new Error("PUBLIC_API_SERVER_URL is not set");
 
 	return createServerApiClient({
 		jwt: locals.jwtToken,
-		server_url: Bun.env.PUBLIC_API_SERVER_URL
+		server_url: process.env.PUBLIC_API_SERVER_URL,
 	});
 }
 

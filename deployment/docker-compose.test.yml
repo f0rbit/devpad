@@ -12,6 +12,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=test
+      - TEST_MODE=enabled
       - PORT=3000
       - DATABASE_FILE=/app/data/test.db
       - STATIC_FILES_PATH=./packages/app/dist/client

@@ -130,7 +130,16 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 export function createApp(options: ServerOptions = {}): Hono {
 	const app = new Hono();
 
-	app.use("*", logger());
+	// Logger middleware - skip health checks to reduce noise
+	// Logger middleware - skip health checks to reduce noise
+	app.use("*", async (c, next) => {
+		// Skip logging for health check endpoints to reduce noise
+		if (c.req.path === "/health") {
+			return next();
+		}
+		// Apply logger middleware for all other routes
+		return logger()(c, next);
+	});
 
 	const ALLOWED_ORIGINS = options.corsOrigins || process.env.CORS_ORIGINS?.split(",") || DEFAULT_ORIGINS;
 

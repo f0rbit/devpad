@@ -8,6 +8,7 @@ services:
       - "17365:17365"
     environment:
       NODE_ENV: staging
+      TEST_MODE: ${TEST_MODE:-disabled}
       PORT: 17365
       DATABASE_FILE: /app/data/devpad-staging.db
       STATIC_FILES_PATH: ./packages/app/dist/client

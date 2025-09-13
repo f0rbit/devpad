@@ -187,7 +187,7 @@ export class ApiClient {
 			/**
 			 * Get project configuration
 			 */
-			load: (project_id: string): Promise<Result<ProjectConfig | null, "config">> => wrap(() => this.clients.projects.get<ProjectConfig | null>("/projects/config", { query: { project_id } }), "config"),
+			load: (project_id: string): Promise<Result<ProjectConfig, "config">> => wrap(() => this.clients.projects.get<ProjectConfig>("/projects/config", { query: { project_id } }), "config"),
 
 			/**
 			 * Save project configuration

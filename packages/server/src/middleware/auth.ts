@@ -1,4 +1,4 @@
-import { getUserById, log } from "@devpad/core";
+import { getUserById, log, shouldInjectTestUser, TEST_USER, TEST_SESSION, isTestJwtToken } from "@devpad/core";
 import { lucia } from "@devpad/core/auth";
 import { getUserByAPIKey } from "@devpad/core/auth/keys";
 import { verifyJWT } from "@devpad/core/auth/jwt";
@@ -26,6 +26,15 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 	// CSRF protection for non-GET requests (skip in development and test)
 	const isDev = process.env.NODE_ENV === "development";
 	const isTest = process.env.NODE_ENV === "test";
+
+	// Check for test user injection (only works in test environment)
+	if (shouldInjectTestUser(c.req.raw.headers)) {
+		log.auth("🧪 TEST MODE: Injecting mock user");
+		c.set("user", TEST_USER as any);
+		c.set("session", TEST_SESSION as any);
+		return next();
+	}
+
 	if (c.req.method !== "GET" && !isTest && !isDev) {
 		const originHeader = c.req.header("Origin");
 		const rawHostHeader = c.req.header("Host");
@@ -53,6 +62,14 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 				log.auth("🎟️  JWT token detected");
 				// JWT token
 				const jwtToken = token.substring(4);
+
+				// Special case for test JWT (only in test environment)
+				if (isTestJwtToken(jwtToken) && process.env.NODE_ENV === "test") {
+					log.auth("🧪 TEST MODE: Test JWT token detected");
+					c.set("user", TEST_USER as any);
+					c.set("session", TEST_SESSION as any);
+					return next();
+				}
 				const jwtPayload = verifyJWT(jwtToken);
 
 				log.auth("🔍 JWT verification result:", jwtPayload ? "valid" : "invalid");
