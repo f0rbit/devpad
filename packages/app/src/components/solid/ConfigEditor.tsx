@@ -158,7 +158,7 @@ const TodoScannerConfig = ({
 
 		try {
 			const apiClient = getApiClient();
-			await apiClient.projects.saveConfig({
+			await apiClient.projects.config.save({
 				config: {
 					tags: config.tags.filter(tag => tag.name && tag.match.length > 0),
 					ignore: config.ignore.filter(path => path.trim()),

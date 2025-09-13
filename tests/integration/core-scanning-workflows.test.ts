@@ -220,7 +220,7 @@ describe("Core Scanning Workflows", () => {
 
 		// 2. Test specification fetching (this will likely fail with external dependencies but we can test the API)
 		try {
-			const { specification, error } = await testInstance.client.projects.fetchSpecification(project.id);
+			const { specification, error } = await testInstance.client.projects.specification(project.id);
 			if (error) {
 				// Expected to fail due to GitHub API dependencies in test environment
 				expect(error).toBeDefined();
@@ -258,7 +258,7 @@ describe("Core Scanning Workflows", () => {
 
 		// This tests the API endpoint even if the underlying functionality isn't fully implemented
 		try {
-			const { error } = await testInstance.client.projects.saveConfig(configRequest);
+			const { error } = await testInstance.client.projects.config.save(configRequest);
 			if (error) {
 				// Might fail due to missing implementation but we're testing the API structure
 				expect(error).toBeDefined();
