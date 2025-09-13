@@ -142,14 +142,4 @@ jobs:
         run: |
            docker compose -f deployment/docker-compose.test.yml down -v || true
       
-      - name: Push image to registry (cache only)
-        if: success()
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./deployment/Dockerfile
-          push: true
-          tags: ghcr.io/${{ github.repository }}:pr-${{ github.event.pull_request.number }}-cache
-          cache-from: type=gha,scope=pr-${{ github.event.pull_request.number }}
-          cache-to: type=gha,mode=max,scope=staging
-          platforms: linux/amd64
+
