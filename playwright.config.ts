@@ -25,7 +25,7 @@ const environments = {
 		},
 	},
 	docker: {
-		baseURL: "http://localhost:3000",
+		baseURL: "http://0.0.0.0:3000",
 		webServer: undefined, // Docker Compose should be running externally
 	},
 	staging: {
