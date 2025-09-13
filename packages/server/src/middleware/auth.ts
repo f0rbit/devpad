@@ -28,11 +28,15 @@ export const authMiddleware = createMiddleware<{ Variables: AuthVariables }>(asy
 	const isTest = process.env.NODE_ENV === "test";
 	if (c.req.method !== "GET" && !isTest && !isDev) {
 		const originHeader = c.req.header("Origin");
-		const hostHeader = c.req.header("Host");
+		const rawHostHeader = c.req.header("Host");
 
-		log.auth(`CSRF check:`, { originHeader, hostHeader, isDev, isTest });
+		// Handle duplicate Host headers (e.g., from load balancers/proxies)
+		// Take the first value and remove duplicates
+		const hostHeader = rawHostHeader?.split(",")[0]?.trim();
+
+		log.auth(`CSRF check:`, { originHeader, hostHeader: rawHostHeader, parsedHost: hostHeader, isDev, isTest });
 		if (!originHeader || !hostHeader || !verifyRequestOrigin(originHeader, [hostHeader])) {
-			log.error("Invalid origin", { originHeader, hostHeader, isDev, isTest, nodeEnv: process.env.NODE_ENV });
+			log.error("Invalid origin", { originHeader, hostHeader: rawHostHeader, parsedHost: hostHeader, isDev, isTest, nodeEnv: process.env.NODE_ENV });
 			return c.json({ error: "Invalid origin" }, 403);
 		}
 	}

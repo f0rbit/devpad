@@ -23,13 +23,18 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 
 	if (context.request.method !== "GET") {
 		const originHeader = context.request.headers.get("Origin");
-		const hostHeader = context.request.headers.get("Host");
+		const rawHostHeader = context.request.headers.get("Host");
+
+		// Handle duplicate Host headers (e.g., from load balancers/proxies)
+		// Take the first value and remove duplicates
+		const hostHeader = rawHostHeader?.split(",")[0]?.trim();
+
 		// check for missing or invalid headers
 		const checks = [!originHeader, !hostHeader, !verifyRequestOrigin(originHeader!, [hostHeader!])];
 		const ignore = origin_ignore.find(p => context.url.pathname.startsWith(p));
-		log.middleware(` CSRF check:`, { originHeader, hostHeader, ignore });
+		log.middleware(` CSRF check:`, { originHeader, hostHeader: rawHostHeader, parsedHost: hostHeader, ignore });
 		if (checks.some(c => c) && !ignore) {
-			log.error(" Invalid origin", { originHeader, hostHeader });
+			log.error(" Invalid origin", { originHeader, hostHeader: rawHostHeader, parsedHost: hostHeader });
 			return new Response("Invalid origin", {
 				status: 403,
 			});
