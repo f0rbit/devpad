@@ -35,6 +35,7 @@ import {
 	getProjectHistory,
 	initiateScan,
 	processScanResults,
+	isTestUser,
 } from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo, update_user, type UpsertTag } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
@@ -645,6 +646,12 @@ app.get("/repos", requireAuth, async c => {
 			hasAccessToken: !!session?.access_token,
 			userId: user?.id,
 		});
+
+		// Return empty array for test users
+		if (isTestUser(user)) {
+			log.repos(" Test user detected, returning empty repos array");
+			return c.json([]);
+		}
 
 		// Check if we have a session with access token
 		if (!session?.access_token) {
