@@ -29,7 +29,7 @@ export const TEST_JWT_TOKEN = "test-jwt-token";
  */
 export function shouldInjectTestUser(headers: Headers | Record<string, string>): boolean {
 	// Only inject in test environment with special header
-	const isTestEnv = process.env.NODE_ENV === "test";
+	const isTestEnv = process.env.NODE_ENV === "test" || process.env.TEST_MODE === "enabled";
 	const hasTestHeader = headers instanceof Headers ? headers.get("X-Test-User") === "true" : headers["X-Test-User"] === "true" || headers["x-test-user"] === "true";
 
 	return isTestEnv && hasTestHeader;

@@ -92,9 +92,9 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	context.locals.user = null;
 	context.locals.session = null;
 
-	// Check for test user injection (only works when NODE_ENV=test)
+	// Check for test user injection (only works when NODE_ENV=test or TEST_MODE=enabled)
 	// Note: We check process.env directly here since this runs on the server
-	const isTestEnv = process.env.NODE_ENV === "test";
+	const isTestEnv = process.env.NODE_ENV === "test" || process.env.TEST_MODE === "enabled";
 	const hasTestHeader = context.request.headers.get("X-Test-User") === "true";
 
 	if (isTestEnv && hasTestHeader) {
