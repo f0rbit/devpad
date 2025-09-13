@@ -25,7 +25,7 @@ jobs:
         id: start
         run: |
            # Use docker-compose-local for testing
-           docker-compose -f deployment/docker-compose.local.yml up -d --build
+           docker compose -f deployment/docker-compose.local.yml up -d --build
            echo "Container started with docker-compose, waiting for health check..."
       
       - name: Wait for container health
@@ -40,7 +40,7 @@ jobs:
              echo "Health check attempt $ATTEMPTS/$MAX_ATTEMPTS..."
 
              # Check container health status using docker-compose
-             HEALTH_STATUS=$(docker-compose -f deployment/docker-compose.local.yml ps devpad --format json | jq -r '.[0].State' 2>/dev/null || echo "not-running")
+             HEALTH_STATUS=$(docker compose -f deployment/docker-compose.local.yml ps devpad --format json | jq -r '.[0].State' 2>/dev/null || echo "not-running")
 
              if [ "$HEALTH_STATUS" = "running" ]; then
                # Additional health check via HTTP
@@ -55,9 +55,9 @@ jobs:
 
            echo "❌ Container failed to become healthy after $MAX_ATTEMPTS attempts"
            echo "Container status:"
-           docker-compose -f deployment/docker-compose.local.yml ps
+           docker compose -f deployment/docker-compose.local.yml ps
            echo "Container logs:"
-           docker-compose -f deployment/docker-compose.local.yml logs --tail 50
+           docker compose -f deployment/docker-compose.local.yml logs --tail 50
            exit 1
       
       - name: Test API endpoints
@@ -117,14 +117,14 @@ jobs:
         if: failure()
         run: |
            echo "=== Container Logs ==="
-           docker-compose -f deployment/docker-compose.local.yml logs --tail 50 || echo "Failed to get logs"
+           docker compose -f deployment/docker-compose.local.yml logs --tail 50 || echo "Failed to get logs"
            echo "=== Container Status ==="
-           docker-compose -f deployment/docker-compose.local.yml ps || echo "Failed to get status"
+           docker compose -f deployment/docker-compose.local.yml ps || echo "Failed to get status"
 
       - name: Cleanup
         if: always()
         run: |
-           docker-compose -f deployment/docker-compose.local.yml down -v || true
+           docker compose -f deployment/docker-compose.local.yml down -v || true
       
       - name: Push image to registry (cache only)
         if: success()
