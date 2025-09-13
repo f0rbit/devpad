@@ -28,7 +28,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsc",
+		"build": "tsc && cp -r src/database/drizzle dist/database/",
 		"dev": "tsc --watch",
 		"clean": "rm -rf dist"
 	},

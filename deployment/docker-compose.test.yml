@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  devpad:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+      args:
+        # Set the API server URL for local testing
+        PUBLIC_API_SERVER_URL: http://0.0.0.0:3000/api/v0
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=test
+      - PORT=3000
+      - DATABASE_FILE=/app/data/test.db
+      - STATIC_FILES_PATH=./packages/app/dist/client
+      - PUBLIC_API_SERVER_URL=http://0.0.0.0:3000/api/v0
+      - FRONTEND_URL=http://0.0.0.0:3000
+      - MODE=production
+    volumes:
+      - devpad_local_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://0.0.0.0:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+volumes:
+  devpad_local_data:
