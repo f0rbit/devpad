@@ -44,7 +44,7 @@ jobs:
 
              if [ "$HEALTH_STATUS" = "running" ]; then
                # Additional health check via HTTP
-               if curl -f http://localhost:3000/health >/dev/null 2>&1; then
+               if curl -f http://0.0.0.0:3000/health >/dev/null 2>&1; then
                  echo "✅ Container is healthy!"
                  exit 0
                fi
@@ -63,10 +63,10 @@ jobs:
       - name: Test API endpoints
         run: |
           echo "Testing health endpoint..."
-          curl -f http://localhost:3000/health || exit 1
+          curl -f http://0.0.0.0:3000/health || exit 1
           
           echo "Testing main page..."
-          curl -f http://localhost:3000/api/v0 -o /dev/null || exit 1
+          curl -f http://0.0.0.0:3000/api/v0 -o /dev/null || exit 1
           
           echo "✅ All endpoints responding correctly!"
       
