@@ -42,7 +42,7 @@ jobs:
              # Check container health status using docker-compose
              HEALTH_STATUS=$(docker compose -f deployment/docker-compose.test.yml ps devpad --format json | jq -r '.[0].State' 2>/dev/null || echo "not-running")
 
-             if [ "$HEALTH_STATUS" = "running" ]; then
+             if [ "$HEALTH_STATUS" = "running" ] || [ "$HEALTH_STATUS" = "healthy" ]; then
                # Additional health check via HTTP
                if curl -f http://0.0.0.0:3000/health >/dev/null 2>&1; then
                  echo "✅ Container is healthy!"
