@@ -314,34 +314,36 @@ app.get("/projects/config", requireAuth, async c => {
 		const tags = Object.values(
 			tag_configs.reduce(
 				(acc, config) => {
-					if (!acc[config.tag_id]) {
-						acc[config.tag_id] = {
+					// get ref to avoid LSP errors
+					const tag_id = config.tag_id;
+					if (!acc[tag_id]) {
+						acc[tag_id] = {
 							name: config.tag_name || "Unknown",
 							color: config.tag_color,
-							match: [],
+							match: [config.match],
 						};
-					}
-					if (config.match) {
-						acc[config.tag_id].match.push(config.match);
+					} else {
+						acc[tag_id].match.push(config.match);
 					}
 					return acc;
 				},
-				{} as Record<string, any>
+				{} as Record<string, { name: string; match: string[]; color: string | null }>
 			)
 		);
 
 		// Get ignore paths
 		const ignore_paths = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, project_id));
 
-		return c.json({
-			config: {
-				tags: tags,
-				ignore: ignore_paths.map(p => p.path),
-			},
-			scan_branch: project.scan_branch || "main",
-		});
+		const project_config = {
+			config: { tags, ignore: ignore_paths.map(p => p.path) },
+			scan_branch: project.scan_branch ?? "main",
+		};
+
+		log.projects("🔑 [GET /projects/config] Successfully fetched project config", project_config);
+
+		return c.json(project_config);
 	} catch (error: any) {
-		console.error("GET /projects/config error:", error);
+		log.error("GET /projects/config error:", error);
 		return c.json({ error: "Internal Server Error", details: error.message }, 500);
 	}
 });

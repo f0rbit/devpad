@@ -1,9 +1,9 @@
 ---
 import { getServerApiClient, rethrow } from "@/utils/api-client";
-import PageLayout from '../../../layouts/PageLayout.astro';
-import ProjectLayout from '../../../layouts/ProjectLayout.astro';
-import ProjectSettings from '../../../components/ProjectSettings.astro';
-import ConfigEditor from '../../../components/solid/ConfigEditor';
+import PageLayout from "../../../layouts/PageLayout.astro";
+import ProjectLayout from "../../../layouts/ProjectLayout.astro";
+import ProjectSettings from "../../../components/ProjectSettings.astro";
+import ConfigEditor from "../../../components/solid/ConfigEditor";
 import { TagWithTypedColor } from "@devpad/schema";
 
 const { project_id } = Astro.params;
@@ -44,7 +44,7 @@ if (tags_error) return rethrow(tags_error);
 			<ProjectSettings project={project} />
 			<br />
 			<h5>scanning settings</h5>
-			<ConfigEditor id={project.id} config={config!} branches={branches} scan_branch={project.scan_branch} user_tags={available_tags} client:load />
+			<ConfigEditor id={project.id} config={config} branches={branches} scan_branch={project.scan_branch} user_tags={available_tags} client:load />
 		</div>
 	</ProjectLayout>
 </PageLayout>
