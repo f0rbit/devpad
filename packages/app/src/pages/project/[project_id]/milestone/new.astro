@@ -5,7 +5,7 @@ import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { Project } from "@devpad/schema";
 
 const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+if (!project_id) return new Response(null, { status: 404, statusText: "Not found" });
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
@@ -83,13 +83,19 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 
 		try {
 			const apiClient = getApiClient();
-			await apiClient.milestones.create({
-				project_id: projectId,
+			const { milestone, error } = await apiClient.milestones.create({
 				name,
 				description,
 				target_version,
 				target_time,
+				project_id: projectId,
 			});
+
+			if (error) {
+				console.error("Failed to create milestone:", error);
+				errorEl.innerText = error.message || "Failed to create milestone";
+				return;
+			}
 
 			// Navigate back to goals page
 			const projectSlug = window.location.pathname.split('/')[2];

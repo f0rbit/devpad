@@ -63,9 +63,13 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 
 			setRequestState("success");
 			if (task?.task?.id == null) {
-				const new_id = result.task.id;
+				const new_id = result.task?.task?.id;
 				// redirect to new task page
-				window.location.href = `/todo/${new_id}`;
+				if (new_id) {
+					window.location.href = `/todo/${new_id}`;
+				} else {
+					console.error("Failed to get new task ID from result:", result);
+				}
 			}
 		} catch (error) {
 			console.error("Error saving task:", error);
