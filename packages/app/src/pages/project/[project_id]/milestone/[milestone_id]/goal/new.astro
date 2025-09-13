@@ -2,7 +2,6 @@
 import { getServerApiClient, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { Project, Milestone } from "@devpad/schema";
 
 const { project_id, milestone_id } = Astro.params;
 if (!project_id || !milestone_id) return new Response(null, { status: 404, statusText: "Not found" });
@@ -81,12 +80,18 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 		try {
 			const apiClient = getApiClient();
-			await apiClient.goals.create({
-				milestone_id: milestoneId,
+			const { goal, error } = await apiClient.goals.create({
 				name,
 				description,
 				target_time,
+				milestone_id: milestoneId,
 			});
+
+			if (error) {
+				console.error("Failed to create goal:", error);
+				errorEl.innerText = error.message || "Failed to create goal";
+				return;
+			}
 
 			// Navigate back to goals page
 			const projectSlug = window.location.pathname.split('/')[2];
