@@ -23,6 +23,9 @@ COPY todo-config.json .
 COPY --from=go-builder /todo-tracker/todo-tracker .
 
 # Build the Astro app (creates dist folder with static assets and SSR handler)
+# Accept PUBLIC_API_SERVER_URL as a build argument
+ARG PUBLIC_API_SERVER_URL
+ENV PUBLIC_API_SERVER_URL=${PUBLIC_API_SERVER_URL}
 
 # Install all workspace dependencies
 RUN bun install --frozen-lockfile

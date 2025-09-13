@@ -188,30 +188,28 @@ export function getAuthMode(): "session" | "key" | null {
  * Create an API client for server-side use (Astro SSR)
  * This bypasses browser-specific token discovery and uses provided tokens directly
  */
-export function createServerApiClient(options: { jwtToken?: string; apiKey?: string; baseUrl?: string }): ApiClient {
-	const serverUrl = options.baseUrl || process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
-
+export function createServerApiClient(options: { jwt?: string; key?: string; server_url: string }): ApiClient {
 	console.log("🌐 [SERVER-API-CLIENT] Creating server API client");
 	console.log("🔍 [SERVER-API-CLIENT] Auth tokens:", {
-		hasJwtToken: !!options.jwtToken,
-		hasApiKey: !!options.apiKey,
+		hasJwtToken: !!options.jwt,
+		hasApiKey: !!options.key,
 	});
 
 	// Priority: JWT first, then API key
-	if (options.jwtToken) {
+	if (options.jwt) {
 		console.log("🎟️  [SERVER-API-CLIENT] Using JWT token authentication (session mode)");
 		return new ApiClient({
-			base_url: serverUrl,
-			api_key: `jwt:${options.jwtToken}`,
+			base_url: options.server_url,
+			api_key: `jwt:${options.jwt}`,
 			auth_mode: "session",
 		});
 	}
 
-	if (options.apiKey) {
+	if (options.key) {
 		console.log("🗝️  [SERVER-API-CLIENT] Using API key authentication (key mode)");
 		return new ApiClient({
-			base_url: serverUrl,
-			api_key: options.apiKey,
+			base_url: options.server_url,
+			api_key: options.key,
 			auth_mode: "key",
 		});
 	}
@@ -224,9 +222,11 @@ export function createServerApiClient(options: { jwtToken?: string; apiKey?: str
  * Create an API client from Astro.locals (convenience function)
  */
 export function getServerApiClient(locals: any): ApiClient {
+	if (!Bun.env.PUBLIC_API_SERVER_URL) throw new Error("undefined PUBLIC_API_SERVER_URL");
+
 	return createServerApiClient({
-		jwtToken: locals.jwtToken,
-		baseUrl: process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0",
+		jwt: locals.jwtToken,
+		server_url: Bun.env.PUBLIC_API_SERVER_URL
 	});
 }
 

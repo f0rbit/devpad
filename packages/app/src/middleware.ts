@@ -11,8 +11,12 @@ const log = {
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];
 
-const API_SERVER_URL = process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
-const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "") || "http://localhost:3001";
+if (!Bun.env.PUBLIC_API_SERVER_URL) {
+	throw new Error("PUBLIC_API_SERVER_URL environment variable is not set");
+}
+
+const API_SERVER_URL = Bun.env.PUBLIC_API_SERVER_URL;
+const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "");
 
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
 	log.middleware(` Processing ${context.request.method} ${context.url.pathname}`);

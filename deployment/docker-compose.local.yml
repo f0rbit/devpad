@@ -13,9 +13,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=test
       - PORT=3000
-      - DATABASE_FILE=/app/data/devpad.db
+      - DATABASE_FILE=/app/data/test.db
       - STATIC_FILES_PATH=./packages/app/dist/client
       - PUBLIC_API_SERVER_URL=http://localhost:3000/api/v0
       - FRONTEND_URL=http://localhost:3000
