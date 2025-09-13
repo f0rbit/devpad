@@ -13,6 +13,7 @@ services:
       - STATIC_FILES_PATH=./packages/app/dist/client
       - CORS_ORIGINS=https://devpad.tools,https://www.devpad.tools
       - FRONTEND_URL=https://devpad.tools
+      - PUBLIC_API_SERVER_URL=https://devpad.tools/api/v0
     volumes:
       - devpad_production_data:/app/data
       - /var/log/devpad/production:/app/logs

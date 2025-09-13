@@ -14,6 +14,7 @@ services:
       CORS_ORIGINS: https://staging.devpad.tools
       FRONTEND_URL: https://staging.devpad.tools
       MODE: production
+      PUBLIC_API_SERVER_URL: https://staging.devpad.tools/api/v0
       GITHUB_CLIENT_SECRET:
       GITHUB_CLIENT_ID:
     volumes:
