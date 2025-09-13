@@ -21,93 +21,46 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            network=host
+
       
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+       - name: Start test container with docker-compose
+         id: start
+         run: |
+           # Use docker-compose-local for testing
+           docker-compose -f deployment/docker-compose.local.yml up -d --build
+           echo "Container started with docker-compose, waiting for health check..."
       
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=pr,prefix=pr-
-      
-      - name: Build Docker image
-        id: build
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./deployment/Dockerfile
-          push: false
-          load: true
-          tags: devpad-test:pr-${{ github.event.pull_request.number }}
-          cache-from: |
-            type=gha,scope=staging
-            type=gha,scope=pr-${{ github.event.pull_request.number }}
-            type=registry,ref=ghcr.io/${{ github.repository }}:staging
-          cache-to: type=gha,mode=max,scope=pr-${{ github.event.pull_request.number }}
-          build-args: |
-            PUBLIC_API_SERVER_URL="https://localhost:3000/api/v0"
-      
-      - name: Start test container
-        id: start
-        run: |
-          docker run -d \
-            --name devpad-test \
-            --health-cmd "curl -f http://localhost:3000/health || exit 1" \
-            --health-interval 5s \
-            --health-timeout 10s \
-            --health-retries 12 \
-            -p 3000:3000 \
-            -e NODE_ENV=test \
-            -e DATABASE_FILE=/app/data/test.db \
-            devpad-test:pr-${{ github.event.pull_request.number }}
-          
-          echo "Container started, waiting for health check..."
-      
-      - name: Wait for container health
-        id: health
-        timeout-minutes: 2
-        run: |
-          ATTEMPTS=0
-          MAX_ATTEMPTS=24
-          
-          while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
-            ATTEMPTS=$((ATTEMPTS + 1))
-            echo "Health check attempt $ATTEMPTS/$MAX_ATTEMPTS..."
-            
-            # Check container health status
-            HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' devpad-test 2>/dev/null || echo "not-found")
-            
-            if [ "$HEALTH_STATUS" = "healthy" ]; then
-              echo "✅ Container is healthy!"
-              exit 0
-            elif [ "$HEALTH_STATUS" = "unhealthy" ]; then
-              echo "❌ Container is unhealthy!"
-              echo "Container logs:"
-              docker logs devpad-test --tail 50
-              exit 1
-            fi
-            
-            sleep 5
-          done
-          
-          echo "❌ Container failed to become healthy after $MAX_ATTEMPTS attempts"
-          echo "Container status:"
-          docker inspect devpad-test --format='{{json .State}}' | jq .
-          echo "Container logs:"
-          docker logs devpad-test --tail 50
-          exit 1
+       - name: Wait for container health
+         id: health
+         timeout-minutes: 2
+         run: |
+           ATTEMPTS=0
+           MAX_ATTEMPTS=24
+
+           while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]; do
+             ATTEMPTS=$((ATTEMPTS + 1))
+             echo "Health check attempt $ATTEMPTS/$MAX_ATTEMPTS..."
+
+             # Check container health status using docker-compose
+             HEALTH_STATUS=$(docker-compose -f deployment/docker-compose.local.yml ps devpad --format json | jq -r '.[0].State' 2>/dev/null || echo "not-running")
+
+             if [ "$HEALTH_STATUS" = "running" ]; then
+               # Additional health check via HTTP
+               if curl -f http://localhost:3000/health >/dev/null 2>&1; then
+                 echo "✅ Container is healthy!"
+                 exit 0
+               fi
+             fi
+
+             sleep 5
+           done
+
+           echo "❌ Container failed to become healthy after $MAX_ATTEMPTS attempts"
+           echo "Container status:"
+           docker-compose -f deployment/docker-compose.local.yml ps
+           echo "Container logs:"
+           docker-compose -f deployment/docker-compose.local.yml logs --tail 50
+           exit 1
       
       - name: Test API endpoints
         run: |
@@ -162,19 +115,18 @@ jobs:
           path: .playwright/
           retention-days: 7
       
-      - name: Display container logs on failure
-        if: failure()
-        run: |
-          echo "=== Container Logs ==="
-          docker logs devpad-test || echo "Failed to get logs"
-          echo "=== Container Inspect ==="
-          docker inspect devpad-test || echo "Failed to inspect"
-      
-      - name: Cleanup
-        if: always()
-        run: |
-          docker stop devpad-test || true
-          docker rm devpad-test || true
+       - name: Display container logs on failure
+         if: failure()
+         run: |
+           echo "=== Container Logs ==="
+           docker-compose -f deployment/docker-compose.local.yml logs --tail 50 || echo "Failed to get logs"
+           echo "=== Container Status ==="
+           docker-compose -f deployment/docker-compose.local.yml ps || echo "Failed to get status"
+
+       - name: Cleanup
+         if: always()
+         run: |
+           docker-compose -f deployment/docker-compose.local.yml down -v || true
       
       - name: Push image to registry (cache only)
         if: success()
