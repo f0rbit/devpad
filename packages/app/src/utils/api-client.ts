@@ -21,8 +21,8 @@ export function getApiClient(): ApiClient {
 		return _apiClient;
 	}
 
-	// Get API server URL from environment variable or default to current origin + /api/v0
-	const serverUrl = import.meta.env.PUBLIC_API_SERVER_URL || `${window.location.origin}/api/v0`;
+	// Use current origin for API calls (works for both staging and production)
+	const serverUrl = `${window.location.origin}/api/v0`;
 	log.api(" Server URL:", serverUrl);
 
 	// Try JWT token first (session-based auth for normal users)
@@ -230,6 +230,6 @@ export function getServerApiClient(locals: any): ApiClient {
 	});
 }
 
-export function rethrow<T>(error: Result<T, string>['error']) {
-	return new Response(error?.code, { status: error?.status_code, statusText: error?.code});
+export function rethrow<T>(error: Result<T, string>["error"]) {
+	return new Response(error?.code, { status: error?.status_code, statusText: error?.code });
 }

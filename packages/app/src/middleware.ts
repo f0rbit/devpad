@@ -11,7 +11,7 @@ const log = {
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];
 
-const API_SERVER_URL = import.meta.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
+const API_SERVER_URL = process.env.PUBLIC_API_SERVER_URL || "http://localhost:3001/api/v0";
 const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "") || "http://localhost:3001";
 
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
