@@ -11,11 +11,11 @@ const log = {
 const history_ignore = ["/api", "/favicon", "/images", "/public"];
 const origin_ignore = ["/api"];
 
-if (!Bun.env.PUBLIC_API_SERVER_URL) {
+if (!process.env.PUBLIC_API_SERVER_URL) {
 	throw new Error("PUBLIC_API_SERVER_URL environment variable is not set");
 }
 
-const API_SERVER_URL = Bun.env.PUBLIC_API_SERVER_URL;
+const API_SERVER_URL = process.env.PUBLIC_API_SERVER_URL;
 const API_SERVER_BASE = API_SERVER_URL.replace("/api/v0", "");
 
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
