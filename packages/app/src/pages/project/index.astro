@@ -5,15 +5,21 @@ import PageLayout from "@/layouts/PageLayout.astro";
 import { getServerApiClient, rethrow } from "@/utils/api-client";
 import { Project } from "@devpad/schema";
 
-const user = Astro.locals.user;
+let user = Astro.locals.user;
 
 let projects: Project[] = [];
 
 if (user) {
-	const api_client = getServerApiClient(Astro.locals);
-	const { projects: fetched, error } = await api_client.projects.list();
-	if (error) return rethrow(error);
-	projects = fetched;
+	try {
+		const api_client = getServerApiClient(Astro.locals);
+		const { projects: fetched, error } = await api_client.projects.list();
+		if (error) return rethrow(error);
+		projects = fetched;
+	} catch (error) {
+		// the error here is that the user is not logged in/authenticated.
+		// which we can safely ignore since this is optional.
+		user = null;
+	}
 }
 
 const codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
