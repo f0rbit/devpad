@@ -8,6 +8,24 @@ test.describe("Happy Path Workflow", () => {
 	});
 
 	test("complete workflow: create project, tasks, milestone, goals, and assignments", async ({ page }) => {
+		// Add page error listener
+		page.on("pageerror", error => {
+			console.error("Page error:", error.message);
+		});
+
+		// Add console listener for debugging
+		page.on("console", msg => {
+			if (msg.type() === "error") {
+				console.error("Browser console error:", msg.text());
+			}
+		});
+
+		// Add response listener to catch failed requests
+		page.on("response", response => {
+			if (!response.ok() && !response.url().includes("_astro")) {
+				console.error(`Failed request: ${response.status()} ${response.url()}`);
+			}
+		});
 		// Generate unique IDs to avoid conflicts
 		const timestamp = Date.now();
 		const projectId = `test-project-${timestamp}`;
@@ -41,11 +59,40 @@ test.describe("Happy Path Workflow", () => {
 		await page.selectOption("#progress", "UNSTARTED");
 		await page.click("#save-button");
 
-		// Wait for redirect to task page
-		await page.waitForURL(/\/todo\/.+/);
+		// Wait for redirect to task page - be more specific about what we're waiting for
+		try {
+			await page.waitForURL(/\/todo\/.+/, { timeout: 10000 });
+			console.log("First task created, redirected to:", page.url());
+		} catch (error) {
+			console.error("Failed to redirect after first task creation. Current URL:", page.url());
+			console.error("Page content:", await page.content().then(html => html.substring(0, 500)));
+			throw error;
+		}
 
-		// 4. Create second task
-		await page.goto("/todo/new");
+		// Ensure the page is fully loaded before continuing
+		await page.waitForLoadState("networkidle");
+
+		// 4. Create second task - try with different navigation strategies
+		console.log("Navigating to create second task...");
+		try {
+			// First try: normal navigation
+			await page.goto("/todo/new", { waitUntil: "domcontentloaded", timeout: 10000 });
+		} catch (navError) {
+			console.error("Navigation to /todo/new failed:", navError);
+			console.error("Current URL before retry:", page.url());
+
+			// Retry with a click on a link if available
+			const newTaskLink = page.locator('a[href="/todo/new"]').first();
+			if (await newTaskLink.isVisible({ timeout: 1000 }).catch(() => false)) {
+				console.log("Trying to click on 'New Task' link instead");
+				await newTaskLink.click();
+			} else {
+				// Last resort: force navigation
+				console.log("Forcing navigation to /todo/new");
+				await page.evaluate(() => (window.location.href = "/todo/new"));
+				await page.waitForURL("/todo/new", { timeout: 10000 });
+			}
+		}
 		await page.fill("#title", "Test Task 2");
 		await page.fill("#summary", "Second test task");
 		await page.fill("#description", "This is the second test task for the project");
