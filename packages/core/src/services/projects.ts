@@ -191,11 +191,32 @@ export async function getProjectConfig(project_id: string) {
 // ProjectConfig type is now imported from @devpad/schema
 
 export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string): Promise<Project> {
-	// Handle GitHub specification fetching if needed
+	// Handle GitHub integration if needed
 	if (access_token) {
 		const previous = data.id ? (await getProjectById(data.id)).project : null;
-		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
 		const repo_url = data.repo_url ?? previous?.repo_url;
+
+		// If we have a repo_url but no repo_id, fetch the repo_id from GitHub
+		if (repo_url && !data.repo_id && !previous?.repo_id) {
+			try {
+				// Parse owner and repo from the URL
+				const urlParts = repo_url.replace(/\/$/, "").split("/");
+				const repo = urlParts.at(-1);
+				const owner = urlParts.at(-2);
+
+				if (repo && owner) {
+					const { getRepoMetadata } = await import("./github");
+					const repoData = await getRepoMetadata(owner, repo, access_token);
+					data.repo_id = repoData.id;
+					console.log(`Fetched GitHub repo ID ${data.repo_id} for ${owner}/${repo}`);
+				}
+			} catch (error) {
+				console.error("Failed to fetch GitHub repo ID:", error);
+				// Continue without repo_id if fetch fails
+			}
+		}
+
+		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
 		const fetch_specification = github_linked && repo_url && (!previous || !previous.specification);
 
 		// the new_project is imported from github and doesn't have a specification, import it from the README

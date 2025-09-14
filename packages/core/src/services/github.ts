@@ -52,6 +52,23 @@ export async function getRepos(access_token: string) {
 	}
 }
 
+/**
+ * Get repository metadata from GitHub
+ */
+export async function getRepoMetadata(owner: string, repo: string, access_token: string) {
+	try {
+		const octokit = createOctokit(access_token);
+		const response = await octokit.rest.repos.get({
+			owner,
+			repo,
+		});
+		return response.data;
+	} catch (error: any) {
+		console.error("Error getting repo metadata:", error);
+		throw new GitHubError("Failed to fetch repository metadata", error.status, error);
+	}
+}
+
 export async function getRepo(owner: string, repo: string, access_token: string, branch?: string | null) {
 	try {
 		const octokit = createOctokit(access_token);
