@@ -130,11 +130,10 @@ export async function migrateDb(options: DatabaseOptions): Promise<void> {
 export function createApp(options: ServerOptions = {}): Hono {
 	const app = new Hono();
 
-	// Logger middleware - skip health checks to reduce noise
-	// Logger middleware - skip health checks to reduce noise
+	// Logger middleware - skip health checks and assets to reduce noise
 	app.use("*", async (c, next) => {
-		// Skip logging for health check endpoints to reduce noise
-		if (c.req.path === "/health") {
+		// Skip logging for health check endpoints and static assets to reduce noise
+		if (c.req.path === "/health" || c.req.path.startsWith("/_astro")) {
 			return next();
 		}
 		// Apply logger middleware for all other routes

@@ -1,10 +1,5 @@
 import ApiClient, { Result } from "@devpad/api";
-
-// Browser-safe logger (no server dependencies)
-const log = {
-	api: typeof window !== "undefined" ? console.log.bind(console, "[API-CLIENT]") : () => {},
-	error: typeof window !== "undefined" ? console.error.bind(console, "[API-CLIENT]") : () => {},
-};
+import { log } from "@devpad/core/logger";
 
 // Global API client instance
 let _apiClient: ApiClient | null = null;
@@ -189,15 +184,14 @@ export function getAuthMode(): "session" | "key" | null {
  * This bypasses browser-specific token discovery and uses provided tokens directly
  */
 export function createServerApiClient(options: { jwt?: string; key?: string; server_url: string }): ApiClient {
-	console.log("🌐 [SERVER-API-CLIENT] Creating server API client");
-	console.log("🔍 [SERVER-API-CLIENT] Auth tokens:", {
+	log.auth("Creating server API client", {
 		hasJwtToken: !!options.jwt,
 		hasApiKey: !!options.key,
 	});
 
 	// Priority: JWT first, then API key
 	if (options.jwt) {
-		console.log("🎟️  [SERVER-API-CLIENT] Using JWT token authentication (session mode)");
+		log.auth("Using JWT token authentication (session mode)");
 		return new ApiClient({
 			base_url: options.server_url,
 			api_key: `jwt:${options.jwt}`,
@@ -206,7 +200,7 @@ export function createServerApiClient(options: { jwt?: string; key?: string; ser
 	}
 
 	if (options.key) {
-		console.log("🗝️  [SERVER-API-CLIENT] Using API key authentication (key mode)");
+		log.auth("Using API key authentication (key mode)");
 		return new ApiClient({
 			base_url: options.server_url,
 			api_key: options.key,
@@ -214,7 +208,7 @@ export function createServerApiClient(options: { jwt?: string; key?: string; ser
 		});
 	}
 
-	console.error("❌ [SERVER-API-CLIENT] No authentication provided");
+	log.error("[AUTH] No authentication provided");
 	throw new Error("No authentication provided for server API client");
 }
 
