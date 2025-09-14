@@ -11,6 +11,7 @@ import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { GoalSelector } from "@/components/solid/GoalSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
 import { getApiClient } from "@/utils/api-client";
+import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { PROGRESS_OPTIONS, PRIORITY_OPTIONS, VISIBILITY_OPTIONS, type Progress, type Priority, type Visibility } from "@/utils/task-status";
 
 interface Props {
@@ -181,30 +182,8 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 };
 
 const LinkedCode = ({ code }: { code: NonNullable<TaskWithDetails["codebase_tasks"]> }) => {
-	// format <path>:<line>
-	let path = "unknown:?";
-	if (code.file) {
-		path = code.file;
-		if (code.line) {
-			path += `:${code.line}`;
-		}
-	}
-
-	const buildContext = (context: string[]) => {
-		if (!context) return null;
-		const minWhitespace = context.reduce((acc, line) => {
-			if (line.trim() === "") return acc;
-			const whitespace = line.match(/^\s*/);
-			if (whitespace) {
-				return Math.min(acc, whitespace[0].length);
-			}
-			return acc;
-		}, Infinity);
-
-		return context.map(line => line.slice(minWhitespace)).join("\n");
-	};
-
-	const context = code.context ? buildContext(code.context as string[]) : null;
+	const path = formatCodeLocation(code.file, code.line);
+	const context = buildCodeContext(code.context);
 
 	return (
 		<div class="flex-col" style={{ gap: "2px" }}>

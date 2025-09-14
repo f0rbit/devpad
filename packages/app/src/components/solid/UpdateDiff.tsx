@@ -5,6 +5,7 @@ import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
 import { getApiClient } from "@/utils/api-client";
+import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 
 interface Props {
 	items: UpdateData[];
@@ -141,43 +142,12 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 
 	const title: string | null = update?.task?.task?.title ?? null;
 
-	// format <path>:<line>
-	let path = "unknown:?";
-	if (data.new?.file) {
-		path = data.new.file;
-		if (data.new.line) {
-			path += `:${data.new.line}`;
-		}
-	} else if (data.old?.file) {
-		path = data.old.file;
-		if (data.old.line) {
-			path += `:${data.old.line}`;
-		}
-	}
+	// Determine the path based on new or old data
+	const path = data.new?.file ? formatCodeLocation(data.new.file, data.new.line) : data.old?.file ? formatCodeLocation(data.old.file, data.old.line) : "unknown:?";
 
-	const build_context = (context: string[]) => {
-		if (!context) return null;
-		const min_whitespace = context.reduce((acc, line) => {
-			if (line.trim() === "") return acc;
-			const whitespace = line.match(/^\s*/);
-			if (whitespace) {
-				return Math.min(acc, whitespace[0].length);
-			}
-			return acc;
-		}, Infinity);
-
-		return context.map(line => line.slice(min_whitespace)).join("\n");
-	};
-
-	let old_context = null;
-	let new_context = null;
-
-	if (data.new?.context) {
-		new_context = build_context(data.new.context);
-	}
-	if (data.old?.context) {
-		old_context = build_context(data.old.context);
-	}
+	// Build contexts for old and new code
+	const old_context = data.old?.context ? buildCodeContext(data.old.context) : null;
+	const new_context = data.new?.context ? buildCodeContext(data.new.context) : null;
 
 	/** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
 	let _old_filetype = "" as any;
