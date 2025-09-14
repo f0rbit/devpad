@@ -232,7 +232,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			const milestone1 = await testInstance.createTestMilestone(testProject.id, { name: "Project Milestone 1" });
 			const milestone2 = await testInstance.createTestMilestone(testProject.id, { name: "Project Milestone 2" });
 
-			const response = await fetch(`http://localhost:3001/api/v0/projects/${testProject.id}/milestones`, {
+			const response = await fetch(`http://localhost:3001/api/v0/projects/${testProject.project_id}/milestones`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},

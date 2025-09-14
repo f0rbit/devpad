@@ -924,9 +924,10 @@ app.patch("/user/preferences", requireAuth, zValidator("json", update_user), asy
 
 		// Update user preferences
 		const updatedUser = await updateUserPreferences(user.id, {
+			id: user.id,
 			task_view: data.task_view,
 			name: data.name,
-			email: data.email_verified ? fullUser.email || undefined : undefined,
+			email_verified: data.email_verified,
 		});
 
 		return c.json({
@@ -1077,15 +1078,12 @@ app.get("/projects/:id/milestones", requireAuth, async c => {
 		}
 
 		// Verify project ownership
-		const { project, error } = await getProjectById(project_id);
+		const { project, error } = await getProject(user.id, project_id);
 		if (error) {
 			return c.json({ error }, 500);
 		}
 		if (!project) {
 			return c.json({ error: "Project not found" }, 404);
-		}
-		if (project.owner_id !== user.id) {
-			return c.json({ error: "Unauthorized" }, 401);
 		}
 
 		const milestones = await getProjectMilestones(project.id);

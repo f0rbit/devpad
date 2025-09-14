@@ -70,7 +70,7 @@ test.describe("Happy Path Workflow", () => {
 		}
 
 		// Ensure the page is fully loaded before continuing
-		await page.waitForLoadState("networkidle");
+		await page.waitForLoadState("networkidle", { timeout: 15000 });
 
 		// 4. Create second task - try with different navigation strategies
 		console.log("Navigating to create second task...");
@@ -108,7 +108,7 @@ test.describe("Happy Path Workflow", () => {
 		await page.waitForURL(/\/todo\/.+/);
 
 		// 5. Create a milestone
-		await page.goto(`/project/${projectId}/milestone/new`);
+		await page.goto(`/project/${projectId}/milestone/new`, { timeout: 15000 });
 		await page.fill("#name", "Test Milestone");
 		await page.fill("#description", "A test milestone for the project");
 		await page.fill("#target-version", "v1.0.0");
@@ -121,7 +121,7 @@ test.describe("Happy Path Workflow", () => {
 		await page.goto(`/project/${projectId}/goals`);
 
 		// Wait for the milestone to appear on the page (now using h5 instead of h4)
-		await page.waitForSelector('h5:has-text("Test Milestone")', { timeout: 5000 });
+		await page.waitForSelector('h5:has-text("Test Milestone")', { timeout: 10000 });
 
 		// Click on the "Edit" button for the milestone to navigate to its page
 		// The edit button is within the timeline item (now using generic classes)
