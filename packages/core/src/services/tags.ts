@@ -43,7 +43,7 @@ export async function upsertTag(data: UpsertTag): Promise<string> {
 	const result = await db
 		.insert(tag)
 		.values(upsert as any)
-		.onConflictDoUpdate({ target: [tag.id], set: upsert as any })
+		.onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: upsert as any })
 		.returning();
 
 	return result[0]?.id || "";
