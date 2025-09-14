@@ -67,6 +67,8 @@ export interface TagWithColor {
 	count?: number;
 }
 
+export type GetConfigResult = { config: ProjectConfig; scan_branch: string };
+
 // Tag color constants (moved from validation.ts)
 export const TAG_COLOURS = {
 	red: { colour: "#F28B82", text: "#faeeef", border: "#F5A5A5" },

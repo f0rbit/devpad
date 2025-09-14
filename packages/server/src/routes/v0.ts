@@ -37,7 +37,7 @@ import {
 	processScanResults,
 	isTestUser,
 } from "@devpad/core";
-import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo, update_user, type UpsertTag } from "@devpad/schema";
+import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo, update_user, type UpsertTag, GetConfigResult } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { db } from "@devpad/schema/database/server";
 import { zValidator } from "@hono/zod-validator";
@@ -338,7 +338,7 @@ app.get("/projects/config", requireAuth, async c => {
 		const project_config = {
 			config: { tags, ignore: ignore_paths.map(p => p.path) },
 			scan_branch: project.scan_branch ?? "main",
-		};
+		} as GetConfigResult;
 
 		log.projects("🔑 [GET /projects/config] Successfully fetched project config", project_config);
 
@@ -558,6 +558,7 @@ app.patch("/projects/save_config", requireAuth, zValidator("json", save_config_r
 
 	// Verify project ownership
 	const { project: found, error } = await getProjectById(data.id);
+	log.projects(`PATCH /projects/save_config ${data.id}`, { found, error });
 	if (error) return c.json({ error }, 500);
 	if (!found) return c.json({ error: "Project not found" }, 404);
 	if (found.owner_id !== user.id) return c.json({ error: "Unauthorized" }, 401);

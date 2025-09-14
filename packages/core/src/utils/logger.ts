@@ -22,15 +22,15 @@ interface DebugConfig {
 const DEBUG_LOGS: DebugConfig = {
 	auth: false, // Authentication flows (login, logout, sessions)
 	tasks: false, // Task operations (create, update, delete)
-	projects: false, // Project operations (create, update, scan)
-	repos: false, // GitHub repository operations
+	projects: true, // Project operations (create, update, scan)
+	repos: true, // GitHub repository operations
 	middleware: false, // Request middleware processing
 	api: false, // General API operations
 	server: false, // Server startup & configuration
-	scanning: false, // Codebase scanning operations
-	github: false, // GitHub API interactions
+	scanning: true, // Codebase scanning operations
+	github: true, // GitHub API interactions
 	jwt: false, // JWT token operations
-	database: false, // Database operations
+	database: true, // Database operations
 	startup: false, // Application startup messages
 };
 
