@@ -2,7 +2,7 @@ import { db, project, todo_updates, tracker_result, codebase_tasks, task } from 
 import { and, eq, desc } from "drizzle-orm";
 import { getProjectConfig } from "./projects.js";
 import { scanRepo } from "./scanner.js";
-import { upsertTask } from "./tasks.js";
+import { upsertTask, addTaskAction } from "./tasks.js";
 import type { TodoUpdate, TrackerResult, UpdateData, UpsertTodo } from "@devpad/schema";
 
 // Make todo-tracker path configurable
@@ -119,18 +119,75 @@ async function handleCreateAction(updateItem: any, titles: Record<string, string
 
 // Helper function to process a single scan item
 async function processScanItem(updateItem: any, actions: Record<string, string[]>, titles: Record<string, string>, userId: string, projectId: string, newId: number): Promise<void> {
-	const itemActions = actions[updateItem.id] || [];
+	// Find which action applies to this item
+	// actions is structured as { "CREATE": ["id1", "id2"], "CONFIRM": ["id3"] }
+	let itemAction: string | null = null;
 
-	for (const action of itemActions) {
-		switch (action) {
-			case "CREATE":
-				await handleCreateAction(updateItem, titles, userId, projectId, newId);
-				break;
-			case "CONFIRM":
-				// Just update the codebase_tasks entry to refresh metadata
-				await upsertCodebaseTask(updateItem, newId);
-				break;
+	for (const [action, itemIds] of Object.entries(actions)) {
+		if (itemIds.includes(updateItem.id)) {
+			itemAction = action;
+			break;
 		}
+	}
+
+	if (!itemAction) {
+		// No action specified for this item, skip it
+		return;
+	}
+
+	switch (itemAction) {
+		case "CREATE":
+			await handleCreateAction(updateItem, titles, userId, projectId, newId);
+			break;
+		case "CONFIRM":
+			// Just update the codebase_tasks entry to refresh metadata
+			await upsertCodebaseTask(updateItem, newId);
+			break;
+		case "UNLINK":
+			// Unlink the task from codebase by setting codebase_task_id to null
+			const unlinkTasks = await db.select().from(task).where(eq(task.codebase_task_id, updateItem.id));
+			if (unlinkTasks.length > 0) {
+				await db.update(task).set({ codebase_task_id: null }).where(eq(task.codebase_task_id, updateItem.id));
+				await addTaskAction({
+					owner_id: userId,
+					task_id: unlinkTasks[0].id,
+					type: "UPDATE_TASK",
+					description: "Task unlinked from codebase (via scan)",
+					project_id: projectId,
+				});
+			}
+			break;
+		case "DELETE":
+			// Mark task as deleted
+			const deleteTasks = await db.select().from(task).where(eq(task.codebase_task_id, updateItem.id));
+			if (deleteTasks.length > 0) {
+				await db.update(task).set({ visibility: "DELETED", codebase_task_id: null }).where(eq(task.codebase_task_id, updateItem.id));
+				await addTaskAction({
+					owner_id: userId,
+					task_id: deleteTasks[0].id,
+					type: "DELETE_TASK",
+					description: "Task deleted (via scan)",
+					project_id: projectId,
+				});
+			}
+			break;
+		case "COMPLETE":
+			// Mark task as completed
+			const completeTasks = await db.select().from(task).where(eq(task.codebase_task_id, updateItem.id));
+			if (completeTasks.length > 0) {
+				await db.update(task).set({ progress: "COMPLETED" }).where(eq(task.codebase_task_id, updateItem.id));
+				await addTaskAction({
+					owner_id: userId,
+					task_id: completeTasks[0].id,
+					type: "UPDATE_TASK",
+					description: "Task completed (via scan)",
+					project_id: projectId,
+				});
+			}
+			break;
+		case "IGNORE":
+			// Do nothing, just skip this item
+			break;
 	}
 }
 
