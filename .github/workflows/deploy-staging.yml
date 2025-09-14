@@ -189,10 +189,10 @@ jobs:
           bunx playwright install chromium --with-deps
           touch ~/playwright-deps-installed
         
-      - name: Run E2E tests against staging
-        id: e2e
-        run: |
-          TEST_ENV=staging bun run e2e
+       - name: Run E2E tests against staging
+         id: e2e
+         run: |
+           bun run e2e:staging
         env:
           CI: true
           NODE_ENV: test
