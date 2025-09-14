@@ -58,7 +58,7 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 	
 	function hook_check() {
 		const update_check = document.getElementById("update-check")!;
-		const project_id = update_check.dataset['project-id'] as string;
+		const project_id = update_check.dataset['projectId'] as string;
 		if (!update_check) return;
 		const output = document.getElementById("output");
 		if (!output) throw new Error("Output element not found");
