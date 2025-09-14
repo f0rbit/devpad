@@ -44,8 +44,12 @@ jobs:
         
       - name: Setup test environment
         run: |
-          # Ensure todo-tracker binary has execute permissions
-          chmod +x todo-tracker
+          # Build todo-tracker binary for Linux
+          git clone https://github.com/f0rbit/todo-tracker.git /tmp/todo-tracker
+          cd /tmp/todo-tracker
+          go build -o todo-tracker
+          mv todo-tracker $GITHUB_WORKSPACE/todo-tracker
+          chmod +x $GITHUB_WORKSPACE/todo-tracker
         
       - name: Run unit tests
         run: bun run test:unit

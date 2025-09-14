@@ -92,7 +92,7 @@ jobs:
               echo "Saved previous version: $(cat VERSION.previous)"
             fi
             
-       - name: Deploy to staging VPS
+      - name: Deploy to staging VPS
         id: deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -189,7 +189,7 @@ jobs:
           bunx playwright install chromium --with-deps
           touch ~/playwright-deps-installed
         
-       - name: Run E2E tests against staging
+      - name: Run E2E tests against staging
         id: e2e
         run: |
           TEST_ENV=staging bun run e2e

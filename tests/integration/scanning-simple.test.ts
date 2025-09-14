@@ -2,8 +2,7 @@ import { describe, expect, test } from "bun:test";
 import path from "node:path";
 
 describe("Repository Scanning - Binary Test", () => {
-	// TODO: build the todo-tracker application in workflows (or publish todo-tracker somewhere & pull it down)
-	test.skip("should run todo-tracker binary and return structured results", async () => {
+	test("should run todo-tracker binary and return structured results", async () => {
 		// Get the project root path
 		const projectRoot = path.resolve(process.cwd());
 		const configPath = path.join(projectRoot, "todo-config.json");
@@ -22,7 +21,6 @@ describe("Repository Scanning - Binary Test", () => {
 		expect(binaryExists).toBe(true);
 
 		// Test the binary execution
-
 		try {
 			// Run todo-tracker directly
 			const child_process = await import("node:child_process");
@@ -34,6 +32,7 @@ describe("Repository Scanning - Binary Test", () => {
 			const output = child_process.execSync(command, {
 				encoding: "utf8",
 				cwd: projectRoot,
+				timeout: 5000, // 5 second timeout
 			});
 
 			console.log("✅ Command completed successfully");
@@ -42,14 +41,35 @@ describe("Repository Scanning - Binary Test", () => {
 			// Verify output is non-empty
 			expect(output.length).toBeGreaterThan(0);
 
-			// Parse as JSON
+			// Parse as JSON - handle mixed output (errors + JSON)
 			let parsedOutput;
 			try {
-				parsedOutput = JSON.parse(output);
+				// Extract JSON from output (might have stderr mixed in)
+				const lines = output.split("\n").filter(line => line.trim());
+				let jsonStart = -1;
+
+				// Find the start of JSON array
+				for (let i = 0; i < lines.length; i++) {
+					const line = lines[i].trim();
+					if (line.startsWith("[")) {
+						jsonStart = i;
+						break;
+					}
+				}
+
+				if (jsonStart === -1) {
+					throw new Error("No JSON array found in output");
+				}
+
+				// Reconstruct JSON from found start
+				const jsonLines = lines.slice(jsonStart);
+				const jsonString = jsonLines.join("\n");
+
+				parsedOutput = JSON.parse(jsonString);
 			} catch (parseError) {
 				console.error("❌ Failed to parse output as JSON:", parseError);
 				console.log("🔍 Raw output preview:", output.substring(0, 500));
-				throw new Error("Output is not valid JSON");
+				throw new Error(`Output is not valid JSON: ${parseError}`);
 			}
 
 			// Verify structure
@@ -90,6 +110,32 @@ describe("Repository Scanning - Binary Test", () => {
 			console.log("✅ Binary scan test completed successfully");
 		} catch (error) {
 			console.error("❌ Binary execution failed:", error);
+			console.error("Error details:", {
+				code: (error as any).status,
+				signal: (error as any).signal,
+				stderr: (error as any).stderr?.toString(),
+				stdout: (error as any).stdout?.toString(),
+			});
+
+			// Check if it's a permission issue
+			if ((error as any).code === 126) {
+				console.error("🚫 Permission denied - binary is not executable");
+				throw new Error("Binary is not executable - check file permissions");
+			}
+			// Check if it's a file not found issue
+			if ((error as any).code === 127 || (error as any).code === "ENOENT") {
+				console.error("📄 Binary not found or not executable");
+				console.error("💡 In CI: The binary should be built in the 'Setup test environment' step");
+				console.error("💡 Locally: Run 'git clone https://github.com/f0rbit/todo-tracker.git /tmp/todo-tracker && cd /tmp/todo-tracker && go build -o ./todo-tracker && mv ./todo-tracker /path/to/devpad/'");
+				throw new Error("Binary not found - check if todo-tracker exists and is executable");
+			}
+
+			// Check for format/architecture mismatch (rare but possible)
+			if ((error as any).stderr?.includes("cannot execute binary file") || (error as any).stderr?.includes("Exec format error") || (error as any).code === 8) {
+				console.error("🚫 Binary architecture mismatch");
+				console.error("💡 Please rebuild the binary for your platform: go build -o todo-tracker");
+				throw new Error("Binary architecture mismatch - rebuild todo-tracker for your platform");
+			}
 			throw error;
 		}
 	});

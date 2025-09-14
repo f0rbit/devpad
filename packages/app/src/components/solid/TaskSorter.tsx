@@ -219,7 +219,7 @@ function ListView({ tasks, project_map, user_tags, update }: ListProps) {
 					if (task.task.project_id) project = project_map[task.task.project_id];
 					return (
 						<li>
-							<TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
+							<TaskCard task={task} project={project} user_tags={user_tags} view="list" update={update} draw_project={Object.keys(project_map).length > 1} />
 						</li>
 					);
 				}}
@@ -236,8 +236,8 @@ function GridView({ tasks, project_map, user_tags, update }: ListProps) {
 					let project = null;
 					if (task.task.project_id) project = project_map[task.task.project_id];
 					return (
-						<li style={{ border: "1px solid var(--input-border)", "border-radius": "4px", padding: "7px" }}>
-							<TaskCard task={task} project={project} user_tags={user_tags} update={update} draw_project={Object.keys(project_map).length > 1} />
+						<li>
+							<TaskCard task={task} project={project} user_tags={user_tags} view="grid" update={update} draw_project={Object.keys(project_map).length > 1} />
 						</li>
 					);
 				}}

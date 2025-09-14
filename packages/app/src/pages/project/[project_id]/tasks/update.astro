@@ -30,8 +30,14 @@ const codebase_task_map = project_tasks.reduce(
 	{} as Record<string, TaskWithDetails>
 );
 
-// TODO: Implement update fetching once the API endpoint is available
-const update = null; // Temporarily disabled until API endpoint is implemented
+// Get pending scan updates for this project
+const { updates: pending_updates, error: updatesError } = await apiClient.projects.scan.updates(project.id);
+if (updatesError) {
+	console.error("Error fetching updates:", updatesError);
+}
+
+// Get the most recent pending update
+const update = pending_updates && pending_updates.length > 0 ? pending_updates[0] : null;
 
 const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse(update.data) : update.data) : null;
 ---
@@ -47,46 +53,51 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 	</ProjectTasksLayout>
 </PageLayout>
 
-<script is:inline define:vars={{ project_id: project.id }}>
+<script>
 	import { getApiClient } from "@/utils/api-client";
 	
 	function hook_check() {
-		const update_check = document.getElementById("update-check");
+		const update_check = document.getElementById("update-check")!;
+		const project_id = update_check.dataset['projectId'] as string;
 		if (!update_check) return;
 		const output = document.getElementById("output");
 		if (!output) throw new Error("Output element not found");
 		update_check.addEventListener("click", async () => {
 			const apiClient = getApiClient();
-			const response = await apiClient.projects.scan.start(project_id);
-			if (!response.ok || !response.body) {
-				output.innerText = "Error: " + response.statusText;
-				return;
-			}
-			output.innerText = "";
-			const reader = response.body.getReader();
-
-			const read_data = async function* () {
-				let done = false;
-				while (!done) {
-					const { done: d, value: v } = await reader.read();
-					done = d;
-					const value = new TextDecoder().decode(v);
-					const lines = value.split("\n");
+			try {
+				const stream = await apiClient.projects.scan.initiate(project_id);
+				output.innerText = "";
+				
+				const reader = stream.getReader();
+				
+				const read_data = async function* () {
+					let done = false;
+					while (!done) {
+						const { done: d, value } = await reader.read();
+						done = d;
+						if (value) {
+							yield value;
+						}
+					}
+				};
+				
+				for await (const chunk of read_data()) {
+					const lines = chunk.split("\n");
 					for (const line of lines) {
-						if (line.length > 1) yield line;
+						if (line.trim().length > 0) {
+							output.innerText += line + "\n";
+							await new Promise((resolve) => setTimeout(resolve, 10));
+						}
 					}
 				}
-
-				if ((output.innerText = "done")) {
-					setTimeout(() => {
-						window.location.reload();
-					}, 1000);
-				}
-			};
-
-			for await (const line of read_data()) {
-				output.innerText = line;
-				await new Promise((resolve) => setTimeout(resolve, 10));
+				
+				output.innerText += "Scan completed! Reloading page...";
+				setTimeout(() => {
+					window.location.reload();
+				}, 1000);
+			} catch (error) {
+				console.error("Scan error:", error);
+				output.innerText = "Error: " + (error instanceof Error ? error.message : "Unknown error");
 			}
 		});
 	}

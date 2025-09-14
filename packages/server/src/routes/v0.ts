@@ -35,9 +35,11 @@ import {
 	getProjectHistory,
 	initiateScan,
 	processScanResults,
+	getPendingUpdates,
+	getScanHistory,
 	isTestUser,
 } from "@devpad/core";
-import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo, update_user, type UpsertTag } from "@devpad/schema";
+import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo, update_user, type UpsertTag, GetConfigResult } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { db } from "@devpad/schema/database/server";
 import { zValidator } from "@hono/zod-validator";
@@ -338,7 +340,7 @@ app.get("/projects/config", requireAuth, async c => {
 		const project_config = {
 			config: { tags, ignore: ignore_paths.map(p => p.path) },
 			scan_branch: project.scan_branch ?? "main",
-		};
+		} as GetConfigResult;
 
 		log.projects("🔑 [GET /projects/config] Successfully fetched project config", project_config);
 
@@ -558,6 +560,7 @@ app.patch("/projects/save_config", requireAuth, zValidator("json", save_config_r
 
 	// Verify project ownership
 	const { project: found, error } = await getProjectById(data.id);
+	log.projects(`PATCH /projects/save_config ${data.id}`, { found, error });
 	if (error) return c.json({ error }, 500);
 	if (!found) return c.json({ error: "Project not found" }, 404);
 	if (found.owner_id !== user.id) return c.json({ error: "Unauthorized" }, 401);
@@ -835,6 +838,28 @@ app.post("/projects/scan", requireAuth, async c => {
 	}
 });
 
+// GET /projects/updates - Get pending scan updates
+app.get("/projects/updates", requireAuth, async c => {
+	try {
+		const user = c.get("user");
+		const projectId = c.req.query("project_id");
+
+		if (!user) {
+			return c.json({ error: "Authentication required" }, 401);
+		}
+
+		if (!projectId) {
+			return c.json({ error: "project_id required" }, 400);
+		}
+
+		const updates = await getPendingUpdates(projectId, user.id);
+		return c.json({ updates });
+	} catch (error: any) {
+		log.error("GET /projects/updates error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
 // POST /projects/scan_status - Process scan status updates and task actions
 app.post("/projects/scan_status", requireAuth, async c => {
 	try {
@@ -899,9 +924,10 @@ app.patch("/user/preferences", requireAuth, zValidator("json", update_user), asy
 
 		// Update user preferences
 		const updatedUser = await updateUserPreferences(user.id, {
+			id: user.id,
 			task_view: data.task_view,
 			name: data.name,
-			email: data.email_verified ? fullUser.email || undefined : undefined,
+			email_verified: data.email_verified,
 		});
 
 		return c.json({

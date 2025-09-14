@@ -1,4 +1,4 @@
-import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal, HistoryAction, TagWithTypedColor, ApiKey } from "@devpad/schema";
+import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal, HistoryAction, TagWithTypedColor, ApiKey, GetConfigResult } from "@devpad/schema";
 import { ApiClient as HttpClient } from "./request";
 import { wrap, type Result } from "./result";
 
@@ -97,8 +97,7 @@ export class ApiClient {
 		/**
 		 * List projects with optional filtering
 		 */
-		list: (filters?: { private?: boolean }): Promise<Result<Project[], "projects">> =>
-			wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects"), "projects"),
+		list: (filters?: { private?: boolean }): Promise<Result<Project[], "projects">> => wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects"), "projects"),
 
 		/**
 		 * Get project map
@@ -187,7 +186,7 @@ export class ApiClient {
 			/**
 			 * Get project configuration
 			 */
-			load: (project_id: string): Promise<Result<ProjectConfig, "config">> => wrap(() => this.clients.projects.get<ProjectConfig>("/projects/config", { query: { project_id } }), "config"),
+			load: (project_id: string): Promise<Result<GetConfigResult, "config">> => wrap(() => this.clients.projects.get<GetConfigResult>("/projects/config", { query: { project_id } }), "config"),
 
 			/**
 			 * Save project configuration
@@ -200,9 +199,31 @@ export class ApiClient {
 		 */
 		scan: {
 			/**
-			 * Update scan status
+			 * Initiate a repository scan (returns stream)
 			 */
-			updateStatus: (project_id: string, data: any): Promise<Result<void, "result">> => wrap(() => this.clients.projects.post<void>(`/projects/${project_id}/scan/status`, { body: data }), "result"),
+			initiate: async (project_id: string): Promise<ReadableStream<string>> => {
+				const response = await fetch(`${this.clients.projects.url()}/projects/scan?project_id=${project_id}`, {
+					method: "POST",
+					headers: this.clients.projects.headers(),
+				});
+
+				if (!response.body) {
+					throw new Error("No response body");
+				}
+
+				const stream = response.body.pipeThrough(new TextDecoderStream());
+				return stream;
+			},
+
+			/**
+			 * Get pending scan updates for a project
+			 */
+			updates: (project_id: string): Promise<Result<any[], "updates">> => wrap(() => this.clients.projects.get<{ updates: any[] }>("/projects/updates", { query: { project_id } }).then(response => response.updates), "updates"),
+
+			/**
+			 * Process scan results
+			 */
+			update: (project_id: string, data: any): Promise<Result<void, "result">> => wrap(() => this.clients.projects.post<void>("/projects/scan_status", { query: { project_id }, body: data }), "result"),
 		},
 
 		/**
@@ -362,7 +383,7 @@ export class ApiClient {
 		/**
 		 * Get tasks by project ID
 		 */
-		getByProject: (project_id: string): Promise<Result<TaskWithDetails[], "tasks">> => wrap(() => this.clients.tasks.get<TaskWithDetails[]>(`/tasks`, { query: { project: project_id }}), "tasks"),
+		getByProject: (project_id: string): Promise<Result<TaskWithDetails[], "tasks">> => wrap(() => this.clients.tasks.get<TaskWithDetails[]>(`/tasks`, { query: { project: project_id } }), "tasks"),
 
 		/**
 		 * Create a new task

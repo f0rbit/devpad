@@ -1,6 +1,6 @@
 /**
- * System-wide configurable debug logging
- * Centralized logging configuration for all DevPad packages
+ * Browser-safe logger for client-side code
+ * This version doesn't use process.env and is safe to import in client-side bundles
  */
 
 interface DebugConfig {
@@ -18,64 +18,32 @@ interface DebugConfig {
 	startup: boolean;
 }
 
-// 🎯 CENTRAL DEBUG CONFIGURATION - Control all logging from here
-const DEBUG_LOGS: DebugConfig = {
-	auth: false, // Authentication flows (login, logout, sessions)
-	tasks: false, // Task operations (create, update, delete)
-	projects: true, // Project operations (create, update, scan)
-	repos: true, // GitHub repository operations
-	middleware: false, // Request middleware processing
-	api: false, // General API operations
-	server: false, // Server startup & configuration
-	scanning: true, // Codebase scanning operations
-	github: true, // GitHub API interactions
-	jwt: false, // JWT token operations
-	database: true, // Database operations
-	startup: false, // Application startup messages
+// Simple client-side debug configuration (no process.env access)
+const CLIENT_DEBUG_LOGS: DebugConfig = {
+	auth: false,
+	tasks: false,
+	projects: false,
+	repos: false,
+	middleware: false,
+	api: false,
+	server: false,
+	scanning: false,
+	github: false,
+	jwt: false,
+	database: false,
+	startup: false,
 };
 
 /**
- * Environment-based debug control
- * Set DEBUG_CATEGORIES="auth,projects,scanning" to enable specific categories
- * Set DEBUG_ALL=true to enable all logging
- */
-function getDebugConfig(): DebugConfig {
-	// Enable all logging if DEBUG_ALL is set
-	if (process.env.DEBUG_ALL === "true") {
-		const allEnabled = {} as DebugConfig;
-		Object.keys(DEBUG_LOGS).forEach(key => {
-			allEnabled[key as keyof DebugConfig] = true;
-		});
-		return allEnabled;
-	}
-
-	const envDebug = process.env.DEBUG_CATEGORIES;
-	if (!envDebug) return DEBUG_LOGS;
-
-	// Parse comma-separated categories from environment
-	const enabledCategories = envDebug.split(",").map(s => s.trim());
-	const config = { ...DEBUG_LOGS };
-
-	// Reset all to false, then enable only specified categories
-	Object.keys(config).forEach(key => {
-		config[key as keyof DebugConfig] = enabledCategories.includes(key);
-	});
-
-	return config;
-}
-
-const debugConfig = getDebugConfig();
-
-/**
- * System-wide configurable logger with category-based filtering
- * Import this in any package to get consistent logging behavior
+ * Browser-safe logger with category-based filtering
+ * Safe to import in client-side code (no server dependencies)
  */
 export const log = {
 	/**
 	 * Application startup messages (migrations, server start, config)
 	 */
 	startup: (message: string, data?: any) => {
-		if (debugConfig.startup) {
+		if (CLIENT_DEBUG_LOGS.startup && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🚀 [STARTUP] ${message}`, data);
 			} else {
@@ -87,7 +55,7 @@ export const log = {
 	 * Authentication & JWT flows (login, logout, sessions, tokens)
 	 */
 	auth: (message: string, data?: any) => {
-		if (debugConfig.auth) {
+		if (CLIENT_DEBUG_LOGS.auth && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🔐 [AUTH] ${message}`, data);
 			} else {
@@ -100,7 +68,7 @@ export const log = {
 	 * Task operations (create, update, delete, history)
 	 */
 	tasks: (message: string, data?: any) => {
-		if (debugConfig.tasks) {
+		if (CLIENT_DEBUG_LOGS.tasks && typeof console !== "undefined") {
 			if (data) {
 				console.log(`📋 [TASKS] ${message}`, data);
 			} else {
@@ -112,7 +80,7 @@ export const log = {
 	 * Project operations (create, update, config, scan)
 	 */
 	projects: (message: string, data?: any) => {
-		if (debugConfig.projects) {
+		if (CLIENT_DEBUG_LOGS.projects && typeof console !== "undefined") {
 			if (data) {
 				console.log(`📁 [PROJECTS] ${message}`, data);
 			} else {
@@ -124,7 +92,7 @@ export const log = {
 	 * GitHub repository operations
 	 */
 	repos: (message: string, data?: any) => {
-		if (debugConfig.repos) {
+		if (CLIENT_DEBUG_LOGS.repos && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🐙 [REPOS] ${message}`, data);
 			} else {
@@ -136,7 +104,7 @@ export const log = {
 	 * Request middleware processing
 	 */
 	middleware: (message: string, data?: any) => {
-		if (debugConfig.middleware) {
+		if (CLIENT_DEBUG_LOGS.middleware && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🔍 [MIDDLEWARE] ${message}`, data);
 			} else {
@@ -149,7 +117,7 @@ export const log = {
 	 * General API operations
 	 */
 	api: (message: string, data?: any) => {
-		if (debugConfig.api) {
+		if (CLIENT_DEBUG_LOGS.api && typeof console !== "undefined") {
 			if (data) {
 				console.log(`📡 [API] ${message}`, data);
 			} else {
@@ -162,7 +130,7 @@ export const log = {
 	 * Server startup & configuration
 	 */
 	server: (message: string, data?: any) => {
-		if (debugConfig.server) {
+		if (CLIENT_DEBUG_LOGS.server && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🌐 [SERVER] ${message}`, data);
 			} else {
@@ -175,7 +143,7 @@ export const log = {
 	 * Codebase scanning operations
 	 */
 	scanning: (message: string, data?: any) => {
-		if (debugConfig.scanning) {
+		if (CLIENT_DEBUG_LOGS.scanning && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🔍 [SCANNING] ${message}`, data);
 			} else {
@@ -188,7 +156,7 @@ export const log = {
 	 * GitHub API interactions
 	 */
 	github: (message: string, data?: any) => {
-		if (debugConfig.github) {
+		if (CLIENT_DEBUG_LOGS.github && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🐙 [GITHUB] ${message}`, data);
 			} else {
@@ -201,7 +169,7 @@ export const log = {
 	 * JWT token operations
 	 */
 	jwt: (message: string, data?: any) => {
-		if (debugConfig.jwt) {
+		if (CLIENT_DEBUG_LOGS.jwt && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🎟  [JWT] ${message}`, data);
 			} else {
@@ -214,7 +182,7 @@ export const log = {
 	 * Database operations
 	 */
 	database: (message: string, data?: any) => {
-		if (debugConfig.database) {
+		if (CLIENT_DEBUG_LOGS.database && typeof console !== "undefined") {
 			if (data) {
 				console.log(`💾 [DATABASE] ${message}`, data);
 			} else {
@@ -227,10 +195,12 @@ export const log = {
 	 * Always log errors (can't be disabled)
 	 */
 	error: (message: string, error?: any) => {
-		if (error) {
-			console.error(`❌ [ERROR] ${message}`, error);
-		} else {
-			console.error(`❌ [ERROR] ${message}`);
+		if (typeof console !== "undefined") {
+			if (error) {
+				console.error(`❌ [ERROR] ${message}`, error);
+			} else {
+				console.error(`❌ [ERROR] ${message}`);
+			}
 		}
 	},
 
@@ -238,10 +208,12 @@ export const log = {
 	 * Always log important info (can't be disabled)
 	 */
 	info: (message: string, data?: any) => {
-		if (data) {
-			console.log(`i  [INFO] ${message}`, data);
-		} else {
-			console.log(`i  [INFO] ${message}`);
+		if (typeof console !== "undefined") {
+			if (data) {
+				console.log(`i  [INFO] ${message}`, data);
+			} else {
+				console.log(`i  [INFO] ${message}`);
+			}
 		}
 	},
 
@@ -249,10 +221,12 @@ export const log = {
 	 * Always log warnings (can't be disabled)
 	 */
 	warn: (message: string, data?: any) => {
-		if (data) {
-			console.warn(`!  [WARN] ${message}`, data);
-		} else {
-			console.warn(`!  [WARN] ${message}`);
+		if (typeof console !== "undefined") {
+			if (data) {
+				console.warn(`!  [WARN] ${message}`, data);
+			} else {
+				console.warn(`!  [WARN] ${message}`);
+			}
 		}
 	},
 };

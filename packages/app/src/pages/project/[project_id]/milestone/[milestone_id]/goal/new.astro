@@ -37,7 +37,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 			<div class="flex-row">
 				<label for="target-time">target date</label>
-				<input id="target-time" type="datetime-local" />
+				<input id="target-time" type="date" />
 			</div>
 
 			<div class="flex-row">
@@ -65,7 +65,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 		const name = getValue("name");
 		const description = getValue("description");
-		const target_time = getValue("target-time");
+		const target_time = getValue("target-time") ? getValue("target-time") + "T00:00:00.000Z" : null;
 		
 		if (!name) {
 			errorEl.innerText = "Goal name is required";

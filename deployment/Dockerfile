@@ -57,6 +57,7 @@ FROM oven/bun:1.1.37-slim AS runtime
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

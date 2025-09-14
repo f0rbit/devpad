@@ -67,6 +67,8 @@ export interface TagWithColor {
 	count?: number;
 }
 
+export type GetConfigResult = { config: ProjectConfig; scan_branch: string };
+
 // Tag color constants (moved from validation.ts)
 export const TAG_COLOURS = {
 	red: { colour: "#F28B82", text: "#faeeef", border: "#F5A5A5" },
@@ -108,6 +110,29 @@ export type Nullable<T> = {
 
 export type TaskView = "list" | "grid";
 export type ScanStatus = "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED";
+
+// Scanning request/response types
+export interface ScanStatusRequest {
+	project_id: string;
+	update_id: number;
+	actions: Record<string, string[]>; // UpdateAction -> task_id[]
+	titles: Record<string, string>; // task_id -> title
+	approved: boolean;
+}
+
+export interface ScanUpdate {
+	id: number;
+	project_id: string;
+	old_id: number | null;
+	new_id: number;
+	data: string;
+	status: "PENDING" | "ACCEPTED" | "REJECTED" | "IGNORED";
+	branch?: string;
+	commit_sha?: string;
+	commit_msg?: string;
+	commit_url?: string;
+	created_at: string;
+}
 
 // History action type
 export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & {

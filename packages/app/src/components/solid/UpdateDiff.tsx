@@ -68,7 +68,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 
 		try {
 			const apiClient = getApiClient();
-			await apiClient.projects.scan.updateStatus(project_id, {
+			await apiClient.projects.scan.update(project_id, {
 				id: update_id,
 				actions: grouped,
 				titles: titles(),
@@ -84,11 +84,11 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const ignoreUpdate = async () => {
 		try {
 			const apiClient = getApiClient();
-			await apiClient.projects.scan.updateStatus(project_id, {
+			await apiClient.projects.scan.update(project_id, {
 				id: update_id,
 				actions: {},
 				titles: {},
-				approved: false,
+				approved: true,
 			});
 			location.reload();
 		} catch (error) {

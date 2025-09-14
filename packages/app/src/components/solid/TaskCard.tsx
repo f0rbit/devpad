@@ -80,8 +80,12 @@ export const TaskCard = (props: Props) => {
 
 	const has_linked = !!fetched_task.codebase_tasks;
 
+	// Only apply card styling in grid view
+	const cardClass = props.view === "grid" ? "card" : "";
+	const containerClass = cardClass ? `${cardClass} flex-col` : "flex-col";
+
 	return (
-		<div class="flex-col" style={{ gap: "3px", height: "100%" }}>
+		<div class={containerClass} style={{ gap: "3px", height: "100%" }}>
 			<div>
 				<span class="progress-icon">
 					<TaskProgress progress={task.progress} onClick={progress} type="box" />

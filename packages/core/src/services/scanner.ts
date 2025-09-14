@@ -7,6 +7,11 @@ import { codebase_tasks, db, todo_updates, tracker_result } from "@devpad/schema
 import { and, desc, eq } from "drizzle-orm";
 import { getBranches, getRepo } from "./github.js";
 
+// Make todo-tracker path configurable
+const getTodoTrackerPath = () => {
+	return process.env.TODO_TRACKER_PATH || "./todo-tracker";
+};
+
 // Type for the return value of getProjectConfig function
 type ProjectConfigResult = {
 	id: string | null;
@@ -91,9 +96,14 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 
 	// console.log("folder_path: ", folder_path);
 
+	// Make todo-tracker path configurable
+	const getTodoTrackerPath = () => {
+		return process.env.TODO_TRACKER_PATH || "./todo-tracker";
+	};
+
 	// generate the todo-tracker parse
 	yield "scanning repo\n";
-	child_process.execSync(`../todo-tracker parse ${folder_path} ${config_path} > ${unzipped_path}/new-output.json`);
+	child_process.execSync(`${getTodoTrackerPath()} parse ${folder_path} ${config_path} > ${unzipped_path}/new-output.json`);
 
 	yield "saving output\n";
 	// for now, lets return response of the new-output.json file
@@ -130,14 +140,16 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 	if (old_id.length === 1 && old_id[0].data) {
 		// fetch all the codebase tasks from the old_id
 		const existing_tasks = await db.select().from(codebase_tasks).where(eq(codebase_tasks.recent_scan_id, old_id[0].id));
-		old_data = existing_tasks;
 
-		// rename field 'type' to 'tag' in old_data
-		old_data = old_data.map(item => {
-			item.tag = item.type;
-			delete item.type;
-			return item;
-		});
+		// transform to todo-tracker format
+		old_data = existing_tasks.map(item => ({
+			id: item.id,
+			file: item.file,
+			line: item.line,
+			tag: item.type,
+			text: item.text,
+			context: item.context ? JSON.parse(item.context as string) : [],
+		}));
 	}
 
 	// write old data to old-output.json
@@ -148,7 +160,7 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 	// run diff script and write to diff-output.json
 	yield "running diff\n";
 	try {
-		child_process.execSync(`../todo-tracker diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json 2> ${unzipped_path}/err.out`);
+		child_process.execSync(`${getTodoTrackerPath()} diff ${unzipped_path}/old-output.json ${unzipped_path}/new-output.json > ${unzipped_path}/diff-output.json 2> ${unzipped_path}/err.out`);
 	} catch (e) {
 		console.error(e);
 		yield "error running diff\n";

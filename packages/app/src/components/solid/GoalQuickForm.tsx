@@ -44,20 +44,24 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 		try {
 			const apiClient = getApiClient();
 
-			let result: Goal;
+			let result;
 			if (mode === "create") {
-				result = await apiClient.goals.create({
+				const { goal: createdGoal, error } = await apiClient.goals.create({
 					milestone_id: state.milestone_id,
 					name: state.name.trim(),
 					description: state.description.trim() || undefined,
 					target_time: state.target_time || undefined,
 				});
+				if (error) throw new Error(error.message);
+				result = createdGoal;
 			} else {
-				result = await apiClient.goals.update(goal!.id, {
+				const { goal: updatedGoal, error } = await apiClient.goals.update(goal!.id, {
 					name: state.name.trim(),
 					description: state.description.trim() || undefined,
 					target_time: state.target_time || undefined,
 				});
+				if (error) throw new Error(error.message);
+				result = updatedGoal;
 			}
 
 			setRequestState("success");
@@ -108,7 +112,13 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 
 					<div class="form-group">
 						<label for="goal-target-time">Target Date</label>
-						<input type="datetime-local" id="goal-target-time" value={state.target_time} onInput={e => setState({ target_time: e.target.value })} disabled={requestState() === "loading"} />
+						<input
+							type="date"
+							id="goal-target-time"
+							value={state.target_time ? state.target_time.split("T")[0] : ""}
+							onInput={e => setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" })}
+							disabled={requestState() === "loading"}
+						/>
 					</div>
 
 					<Show when={errorMessage()}>
