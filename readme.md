@@ -28,9 +28,10 @@ The docker file will run an [index.ts](/deployment/index.ts) script that does a 
 
 ### Development
 1. Download repo
-2. Install dependencies. `cd app && bun install`
-3. Setup `.env` file [.env.example](/app/.env.example)
-4. Run dev server with `bun dev`
+2. Install dependencies. `bun install`
+3. Setup `.env` file [.env.example](/packages/app/.env.example)
+4. Build the todo-tracker binary: `./scripts/build-todo-tracker.sh` (required for scanning tests)
+5. Run dev server with `bun dev`
 
 ### Testing
 Integration tests are available for the projects and tasks APIs, with automated test database setup. Run tests with `make integration` from the root directory.
