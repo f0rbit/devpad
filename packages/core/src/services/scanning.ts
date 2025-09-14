@@ -100,7 +100,7 @@ export async function processScanResults(projectId: string, userId: string, upda
 		if (approved) {
 			// Get the diff data from todo_updates, not tracker_result
 			const updateData = updateQuery[0];
-			let updateItems: UpdateData[];
+			let updateItems: any[];
 
 			try {
 				updateItems = typeof updateData.data === "string" ? JSON.parse(updateData.data) : updateData.data;
@@ -110,117 +110,93 @@ export async function processScanResults(projectId: string, userId: string, upda
 					updateItems.slice(0, 3).map(item => ({
 						id: item.id,
 						type: item.type,
-						hasData: !!item.data,
-						dataKeys: item.data ? Object.keys(item.data) : [],
+						tag: item.tag,
+						text: item.data?.new?.text || "unknown",
 					}))
 				);
-			} catch (error) {
-				console.error("Failed to parse update data:", error);
-				return { success: false, error: "Failed to parse update data" };
-			}
-			// Process each action
-			for (const [action, taskIds] of Object.entries(actions)) {
-				for (const taskId of taskIds) {
-					const updateItem = updateItems.find(item => item.id === taskId);
-					if (!updateItem) continue;
 
-					console.log(`Processing action ${action} for taskId ${taskId}:`, JSON.stringify(updateItem, null, 2));
+				// Process each item in the diff
+				for (const updateItem of updateItems) {
+					// Get the action for this item
+					const itemActions = actions[updateItem.id] || [];
 
-					switch (action) {
-						case "CREATE": {
-							// Create new task from scan data
-							const newText = updateItem.data?.new?.text || (updateItem as any).text || "Untitled TODO";
-							const title = titles[taskId] || newText.substring(0, 100);
-							const newTaskData: UpsertTodo = {
-								title,
-								description: newText,
-								progress: "UNSTARTED",
-								priority: "LOW",
-								owner_id: userId,
-								project_id: projectId,
-							};
+					for (const action of itemActions) {
+						switch (action) {
+							case "CREATE": {
+								// Create a new task and link to codebase_tasks
+								const title = titles[updateItem.id] || updateItem.data?.new?.text || "Untitled Task";
+								const newText = updateItem.data?.new?.text || "";
 
-							const newTask = await upsertTask(
-								newTaskData,
-								[
-									{
-										title: updateItem.tag,
-										color: null,
-										deleted: false,
-										owner_id: userId,
-										render: true,
-									},
-								],
-								userId
-							);
+								const newTaskData: UpsertTodo = {
+									title,
+									description: newText,
+									progress: "UNSTARTED",
+									priority: "LOW",
+									owner_id: userId,
+									project_id: projectId,
+								};
 
-							if (newTask) {
-								// Create codebase_tasks entry linking task to scan data
-								await db.insert(codebase_tasks).values({
+								const newTask = await upsertTask(newTaskData, [], userId);
+								if (!newTask || !newTask.task) {
+									console.error("Failed to create task");
+									continue;
+								}
+
+								// Create/update codebase_tasks entry with upsert logic
+								const values = {
 									id: updateItem.id,
 									text: newText,
-									line: updateItem.data?.new?.line || (updateItem as any).line || 0,
-									file: updateItem.data?.new?.file || (updateItem as any).file || "unknown",
-									type: updateItem.tag || (updateItem as any).type,
-									context: updateItem.data?.new?.context || (updateItem as any).context || null,
+									line: updateItem.data?.new?.line || 0,
+									file: updateItem.data?.new?.file || "unknown",
+									type: updateItem.tag || "todo",
+									context: updateItem.data?.new?.context ? JSON.stringify(updateItem.data.new.context) : null,
 									recent_scan_id: newId,
-								});
+									updated_at: new Date().toISOString(),
+								};
+
+								await db
+									.insert(codebase_tasks)
+									.values(values)
+									.onConflictDoUpdate({
+										target: [codebase_tasks.id],
+										set: values,
+									});
 
 								// Link task to codebase_tasks entry
 								await db.update(task).set({ codebase_task_id: updateItem.id }).where(eq(task.id, newTask.task.id));
+								break;
 							}
-							break;
-						}
-						case "CONFIRM": {
-							// Update existing task if title changed
-							if (titles[taskId]) {
-								const existingTask = await db.select().from(task).where(eq(task.codebase_task_id, taskId));
+							case "CONFIRM": {
+								// Just update the codebase_tasks entry to refresh metadata
+								const newText = updateItem.data?.new?.text || "";
 
-								if (existingTask.length > 0) {
-									await db
-										.update(task)
-										.set({
-											title: titles[taskId],
-											updated_at: new Date().toISOString(),
-										})
-										.where(eq(task.id, existingTask[0].id));
-								}
-							}
-							break;
-						}
-						case "COMPLETE":
-						case "DELETE": {
-							// Mark task as completed
-							const taskToComplete = await db.select().from(task).where(eq(task.codebase_task_id, taskId));
+								const values = {
+									id: updateItem.id,
+									text: newText,
+									line: updateItem.data?.new?.line || 0,
+									file: updateItem.data?.new?.file || "unknown",
+									type: updateItem.tag || "todo",
+									context: updateItem.data?.new?.context ? JSON.stringify(updateItem.data.new.context) : null,
+									recent_scan_id: newId,
+									updated_at: new Date().toISOString(),
+								};
 
-							if (taskToComplete.length > 0) {
 								await db
-									.update(task)
-									.set({
-										progress: "COMPLETED",
-										updated_at: new Date().toISOString(),
-									})
-									.where(eq(task.id, taskToComplete[0].id));
+									.insert(codebase_tasks)
+									.values(values)
+									.onConflictDoUpdate({
+										target: [codebase_tasks.id],
+										set: values,
+									});
+								break;
 							}
-							break;
 						}
-						case "UNLINK":
-							// Remove codebase_tasks link but keep the task
-							await db.delete(codebase_tasks).where(eq(codebase_tasks.id, taskId));
-							break;
-
-						case "IGNORE":
-							// Do nothing - user chose to ignore this item
-							break;
-
-						default:
-							console.warn(`Unknown action: ${action} for task ${taskId}`);
-							break;
 					}
 				}
+			} catch (error) {
+				console.error("Error processing scan results:", error);
+				return { success: false, error: "Failed to process scan results" };
 			}
-
-			console.log(`✅ Processed ${Object.keys(actions).length} action types with ${Object.values(actions).flat().length} total items`);
 		}
 
 		return { success: true };
