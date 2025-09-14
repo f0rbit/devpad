@@ -513,6 +513,212 @@ article {
 	gap: 0.25rem;
 }
 
+/* Reusable timeline dot primitives */
+.timeline-dot {
+	position: absolute;
+	left: -23.5px;
+	top: 0.5rem;
+	width: 1rem;
+	height: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.timeline-marker {
+	width: 0.5rem;
+	height: 0.5rem;
+	background: var(--input-border);
+	border-radius: 50%;
+	outline: 2px solid var(--bg-primary);
+}
+
+.drag-handle {
+	width: 1rem;
+	height: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--input-background);
+	border: 1px solid var(--input-border);
+	border-radius: 50%;
+	color: var(--text-tertiary);
+}
+
+.drag-handle:hover {
+	background: var(--input-border);
+	color: var(--text-secondary);
+}
+
+/* Card primitive - reusable container */
+.card {
+	border: 1px solid var(--input-border);
+	border-radius: 4px;
+	padding: 7px;
+}
+
+/* Hover-reveal pattern - reusable for edit icons */
+.hover-reveal {
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.card:hover .hover-reveal {
+	opacity: 1;
+}
+
+/* Interactive row primitive */
+.interactive-row {
+	padding: 6px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+
+.interactive-row:hover {
+	background: var(--bg-primary);
+}
+
+.milestones-container {
+	/* Use existing timeline styles but override some spacing */
+	gap: 2rem;
+}
+
+.milestone-item {
+	position: relative;
+	display: flex;
+	flex-direction: row;
+	gap: 1rem;
+	align-items: flex-start;
+}
+
+.timeline-dot {
+	position: absolute;
+	left: -23.5px;
+	top: 0.5rem;
+	width: 1rem;
+	height: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.15s;
+}
+
+.timeline-marker {
+	width: 0.5rem;
+	height: 0.5rem;
+	background: var(--input-border);
+	border-radius: 50%;
+	outline: 2px solid var(--bg-primary);
+}
+
+.drag-handle {
+	width: 1rem;
+	height: 1rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--input-background);
+	border: 1px solid var(--input-border);
+	border-radius: 50%;
+	color: var(--text-tertiary);
+}
+
+.drag-handle:hover {
+	background: var(--input-border);
+	color: var(--text-secondary);
+}
+
+.milestone-content {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	width: 100%;
+	border: 1px solid var(--input-border);
+	border-radius: 4px;
+	padding: 12px;
+	background: var(--input-background);
+}
+
+.milestone-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 1rem;
+}
+
+.milestone-title-section {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.milestone-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.due-date {
+	color: var(--text-tertiary);
+	font-size: smaller;
+}
+
+.edit-icon {
+	opacity: 0;
+	transition: opacity 0.15s;
+}
+
+.milestone-content:hover .edit-icon {
+	opacity: 1;
+}
+
+.goals-list {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.goal-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+	transition: background-color 0.15s;
+}
+
+.goal-row:hover {
+	background: var(--bg-primary);
+}
+
+.goal-name {
+	color: var(--text-secondary);
+}
+
+.goal-due-date {
+	color: var(--text-tertiary);
+	font-size: smaller;
+}
+
+.add-goal-btn,
+.create-milestone-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--text-link);
+	font-size: smaller;
+}
+
+.create-milestone-container {
+	margin-left: 30px; /* Align with milestone content */
+}
+
 .progress-icon {
 	display: inline-flex;
 	vertical-align: text-bottom;

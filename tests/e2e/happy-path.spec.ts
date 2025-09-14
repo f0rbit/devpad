@@ -120,13 +120,13 @@ test.describe("Happy Path Workflow", () => {
 		// Navigate to goals page to get milestone information
 		await page.goto(`/project/${projectId}/goals`);
 
-		// Wait for the milestone to appear on the page
-		await page.waitForSelector('h4:has-text("Test Milestone")', { timeout: 5000 });
+		// Wait for the milestone to appear on the page (now using h5 instead of h4)
+		await page.waitForSelector('h5:has-text("Test Milestone")', { timeout: 5000 });
 
 		// Click on the "Edit" button for the milestone to navigate to its page
-		// The edit button is within the same section as the h4 with "Test Milestone"
-		const milestoneSection = page.locator("section").filter({ has: page.locator('h4:has-text("Test Milestone")') });
-		await milestoneSection.locator('a[role="button"][title="Edit milestone"]').click();
+		// The edit button is within the timeline item (now using generic classes)
+		const milestoneItem = page.locator(".timeline-item").filter({ has: page.locator('h5:has-text("Test Milestone")') });
+		await milestoneItem.locator(".hover-reveal").click();
 
 		// Now we're on the milestone edit page, extract the ID from the URL
 		await page.waitForURL(/\/milestone\/.+$/);
@@ -167,7 +167,7 @@ test.describe("Happy Path Workflow", () => {
 		await page.goto(`/project/${projectId}/goals`);
 		// Wait for the page to load
 		await page.waitForTimeout(2000);
-		// Verify the milestone exists by checking for the heading
-		await expect(page.locator('h4:has-text("Test Milestone")')).toBeVisible();
+		// Verify the milestone exists by checking for the heading (now h5)
+		await expect(page.locator('h5:has-text("Test Milestone")')).toBeVisible();
 	});
 });

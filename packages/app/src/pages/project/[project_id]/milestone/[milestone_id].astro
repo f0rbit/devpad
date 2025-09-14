@@ -43,7 +43,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 			<div class="flex-row">
 				<label for="target-time">target date</label>
-				<input id="target-time" type="datetime-local" value={milestone.target_time || ""} />
+				<input id="target-time" type="date" value={milestone.target_time ? milestone.target_time.split('T')[0] : ""} />
 			</div>
 
 			<div class="flex-row">
@@ -73,7 +73,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 		const name = getValue("name");
 		const description = getValue("description");
 		const target_version = getValue("target-version");
-		const target_time = getValue("target-time");
+		const target_time = getValue("target-time") ? getValue("target-time") + "T00:00:00.000Z" : null;
 		
 		if (!name) {
 			errorEl.innerText = "Milestone name is required";
