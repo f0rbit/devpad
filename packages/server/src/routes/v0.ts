@@ -35,6 +35,8 @@ import {
 	getProjectHistory,
 	initiateScan,
 	processScanResults,
+	getPendingUpdates,
+	getScanHistory,
 	isTestUser,
 } from "@devpad/core";
 import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo, update_user, type UpsertTag, GetConfigResult } from "@devpad/schema";
@@ -833,6 +835,28 @@ app.post("/projects/scan", requireAuth, async c => {
 	} catch (error) {
 		log.error("Project scan error:", error);
 		return c.json({ error: "Scan failed" }, 500);
+	}
+});
+
+// GET /projects/updates - Get pending scan updates
+app.get("/projects/updates", requireAuth, async c => {
+	try {
+		const user = c.get("user");
+		const projectId = c.req.query("project_id");
+
+		if (!user) {
+			return c.json({ error: "Authentication required" }, 401);
+		}
+
+		if (!projectId) {
+			return c.json({ error: "project_id required" }, 400);
+		}
+
+		const updates = await getPendingUpdates(projectId, user.id);
+		return c.json({ updates });
+	} catch (error: any) {
+		log.error("GET /projects/updates error:", error);
+		return c.json({ error: error.message }, 500);
 	}
 });
 

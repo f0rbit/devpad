@@ -57,6 +57,9 @@ const _mode = project ? "edit" : "create";
 	</div>
 	<div>
 		<a role="button" id="submit">{_mode == "create" ? "create" : "save"}</a>
+		{_mode == "edit" && project?.repo_url && (
+			<a role="button" id="scan-repo">scan repository</a>
+		)}
 	</div>
 	<div>
 		<p id="error"></p>
@@ -119,6 +122,50 @@ const _mode = project ? "edit" : "create";
 	}
 
 	document.getElementById("submit")?.addEventListener("click", create_project);
+	
+	// Add scan repository functionality
+	async function scanRepository() {
+		const scanButton = document.getElementById("scan-repo");
+		const errorElement = document.getElementById("error");
+		
+		if (!scanButton || !errorElement) return;
+		
+		const projectId = document.getElementById("project-settings")?.dataset?.pid;
+		if (!projectId) {
+			errorElement.innerText = "No project ID found";
+			return;
+		}
+		
+		scanButton.textContent = "scanning...";
+		scanButton.setAttribute("disabled", "true");
+		errorElement.innerText = "";
+		
+		try {
+			const apiClient = getApiClient();
+			const stream = await apiClient.projects.scan.initiate(projectId);
+			const reader = stream.getReader();
+			
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+				
+				// You could show progress here if needed
+				console.log("Scan progress:", value);
+			}
+			
+			errorElement.innerText = "Scan completed! Check updates page for results.";
+			scanButton.textContent = "scan repository";
+			scanButton.removeAttribute("disabled");
+			
+		} catch (error) {
+			console.error("Scan error:", error);
+			errorElement.innerText = "Error scanning repository: " + (error instanceof Error ? error.message : "Unknown error");
+			scanButton.textContent = "scan repository";
+			scanButton.removeAttribute("disabled");
+		}
+	}
+	
+	document.getElementById("scan-repo")?.addEventListener("click", scanRepository);
 </script>
 
 <style scoped>

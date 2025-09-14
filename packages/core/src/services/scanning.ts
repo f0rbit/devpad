@@ -1,7 +1,13 @@
 import { db, project, todo_updates, tracker_result } from "@devpad/schema/database/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 import { getProjectConfig } from "./projects.js";
 import { scanRepo } from "./scanner.js";
+import type { TodoUpdate, TrackerResult } from "@devpad/schema";
+
+// Make todo-tracker path configurable
+const getTodoTrackerPath = () => {
+	return process.env.TODO_TRACKER_PATH || "./todo-tracker";
+};
 
 /**
  * Initiate repository scan - returns async generator for streaming results
@@ -131,7 +137,7 @@ export async function* scanLocalRepo(projectId: string, localPath: string, confi
 
 		// Run todo-tracker directly on the local path
 		try {
-			child_process.execSync(`./todo-tracker parse ${localPath} ${todoConfigPath} > ${tempPath}-output.json`, {
+			child_process.execSync(`${getTodoTrackerPath()} parse ${localPath} ${todoConfigPath} > ${tempPath}-output.json`, {
 				cwd: localPath, // Execute from the project root where the binary is located
 			});
 		} catch (e) {
@@ -175,4 +181,43 @@ export async function* scanLocalRepo(projectId: string, localPath: string, confi
 		console.error("Local scan error:", error);
 		yield "error: local scan failed\n";
 	}
+}
+
+/**
+ * Get pending scan updates for a project
+ */
+export async function getPendingUpdates(projectId: string, userId: string): Promise<TodoUpdate[]> {
+	// Validate project ownership
+	const projectQuery = await db
+		.select()
+		.from(project)
+		.where(and(eq(project.id, projectId), eq(project.owner_id, userId)));
+
+	if (projectQuery.length !== 1) {
+		throw new Error("Project not found or access denied");
+	}
+
+	// Get pending updates
+	return await db
+		.select()
+		.from(todo_updates)
+		.where(and(eq(todo_updates.project_id, projectId), eq(todo_updates.status, "PENDING")))
+		.orderBy(desc(todo_updates.created_at));
+}
+
+/**
+ * Get scan history for a project
+ */
+export async function getScanHistory(projectId: string, userId: string): Promise<TrackerResult[]> {
+	// Validate ownership first
+	const projectQuery = await db
+		.select()
+		.from(project)
+		.where(and(eq(project.id, projectId), eq(project.owner_id, userId)));
+
+	if (projectQuery.length !== 1) {
+		throw new Error("Project not found or access denied");
+	}
+
+	return await db.select().from(tracker_result).where(eq(tracker_result.project_id, projectId)).orderBy(desc(tracker_result.created_at));
 }
