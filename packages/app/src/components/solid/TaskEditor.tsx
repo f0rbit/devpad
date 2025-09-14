@@ -21,9 +21,10 @@ interface Props {
 	history: HistoryAction[];
 	user_id: string;
 	project_map: Record<string, Project>;
+	default_project_id?: string | null;
 }
 
-const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map }: Props) => {
+const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map, default_project_id }: Props) => {
 	const [state, setState] = createStore({
 		title: task?.task?.title ?? "",
 		summary: task?.task?.summary ?? null,
@@ -33,13 +34,13 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		start_time: task?.task?.start_time ?? null,
 		end_time: task?.task?.end_time ?? null,
 		priority: (task?.task?.priority ?? "LOW") as Priority,
-		project_id: task?.task?.project_id ?? null,
+		project_id: default_project_id ?? task?.task?.project_id ?? null,
 		goal_id: task?.task?.goal_id ?? null,
 	});
 	const [currentTags, setCurrentTags] = createSignal(current_tags);
 	const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
 
-	const project_disabled = () => !!(task?.task?.project_id && task?.codebase_tasks);
+	const project_disabled = () => (!!(task?.task?.project_id && task?.codebase_tasks)) || !!default_project_id;
 
 	const saveTask = async () => {
 		setRequestState("loading");
