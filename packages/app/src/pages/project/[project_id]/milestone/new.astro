@@ -62,13 +62,14 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 		errorEl.innerText = "";
 
 		const getValue = (id: string) => {
-			return (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement)?.value?.trim() || null;
+			return (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement)?.value?.trim() ?? null;
 		};
 
 		const name = getValue("name");
 		const description = getValue("description");
 		const target_version = getValue("target-version");
-		const target_time = getValue("target-time") ? getValue("target-time") + "T00:00:00.000Z" : null;
+		const tt = getValue("target-time");
+		const target_time = tt ? tt + "T00:00:00.000Z" : undefined;
 		
 		if (!name) {
 			errorEl.innerText = "Milestone name is required";
