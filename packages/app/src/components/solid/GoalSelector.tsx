@@ -7,7 +7,7 @@ import { getApiClient } from "@/utils/api-client";
 import { GoalQuickForm } from "./GoalQuickForm";
 
 interface Props {
-	project_id: string | null;
+	project_id: string | null; // Database ID, not slug
 	goal_id: string | null;
 	onChange: (goal_id: string | null) => void;
 	disabled?: boolean;
@@ -53,11 +53,13 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 			setLoading(false);
 			return;
 		}
-		const with_goals = await Promise.all(milestones.map(async (m) => {
-			const { goals, error } = await api_client.milestones.goals(m.id);
-			if (error) return { ...m, goals: [] };
-			return { ...m, goals };
-		}));
+		const with_goals = await Promise.all(
+			milestones.map(async m => {
+				const { goals, error } = await api_client.milestones.goals(m.id);
+				if (error) return { ...m, goals: [] };
+				return { ...m, goals };
+			})
+		);
 		setLoading(false);
 		setMilestones(with_goals);
 	};

@@ -23,7 +23,7 @@ if (project.owner_id !== user.id) {
 	return new Response(null, { status: 403, statusText: "Access denied" });
 }
 
-const { milestones, error: milestones_error } = await api_client.milestones.getByProject(project_id);
+const { milestones, error: milestones_error } = await api_client.milestones.getByProject(project.id);
 if (milestones_error) {
 	console.error("Failed to fetch milestones:", milestones_error.message);
 }
