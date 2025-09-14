@@ -2,8 +2,7 @@ import { describe, expect, test } from "bun:test";
 import path from "node:path";
 
 describe("Repository Scanning - Binary Test", () => {
-	// TODO: build the todo-tracker application in workflows (or publish todo-tracker somewhere & pull it down)
-	test.skip("should run todo-tracker binary and return structured results", async () => {
+	test("should run todo-tracker binary and return structured results", async () => {
 		// Get the project root path
 		const projectRoot = path.resolve(process.cwd());
 		const configPath = path.join(projectRoot, "todo-config.json");
