@@ -52,8 +52,8 @@ test.describe("Happy Path Workflow", () => {
 		await page.fill("#summary", "First test task");
 		await page.fill("#description", "This is the first test task for the project");
 
-		// Select the project using the project selector
-		await page.selectOption("#project-selector", projectId);
+		// Select the project using the project selector (by text content since we use database IDs as values now)
+		await page.selectOption("#project-selector", { label: "Test Project" });
 
 		// Progress is in the main editor, priority is in More Options (which we'll skip)
 		await page.selectOption("#progress", "UNSTARTED");
@@ -97,8 +97,8 @@ test.describe("Happy Path Workflow", () => {
 		await page.fill("#summary", "Second test task");
 		await page.fill("#description", "This is the second test task for the project");
 
-		// Select the project using the project selector
-		await page.selectOption("#project-selector", projectId);
+		// Select the project using the project selector (by text content since we use database IDs as values now)
+		await page.selectOption("#project-selector", { label: "Test Project" });
 
 		// Progress is in the main editor, priority is in More Options (which we'll skip)
 		await page.selectOption("#progress", "UNSTARTED");
