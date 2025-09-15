@@ -507,18 +507,6 @@ app.get("/tags", requireAuth, async c => {
 	}
 });
 
-// Projects Map endpoint (for convenience)
-app.get("/projects/map", requireAuth, async c => {
-	try {
-		const user = c.get("user")!;
-		const projectMap = await getUserProjectMap(user.id);
-		return c.json(projectMap);
-	} catch (error: any) {
-		log.error("GET /projects error/map:", error);
-		return c.json({ error: "Internal Server Error", details: error.message }, 500);
-	}
-});
-
 // Project-specific endpoints
 app.get("/projects/fetch_spec", requireAuth, async c => {
 	const user = c.get("user")!;

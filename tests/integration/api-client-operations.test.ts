@@ -236,8 +236,8 @@ describe("API client operations integration", () => {
 			expect(project_map).toBeDefined();
 			expect(typeof project_map).toBe("object");
 			// Verify our created project is in the map
-			expect(project_map![project!.project_id]).toBeDefined();
-			expect(project_map![project!.project_id].name).toBe(project!.name);
+			expect(project_map![project!.id]).toBeDefined();
+			expect(project_map![project!.id].name).toBe(project!.name);
 		});
 
 		test("should get project history", async () => {

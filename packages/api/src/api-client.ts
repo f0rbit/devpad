@@ -108,7 +108,7 @@ export class ApiClient {
 				if (error) throw new Error(error.message);
 				return projects!.reduce(
 					(acc, project) => {
-						acc[project.project_id] = project;
+						acc[project.id] = project;
 						return acc;
 					},
 					{} as Record<string, Project>
