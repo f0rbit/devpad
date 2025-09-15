@@ -2,7 +2,7 @@ import type { Project } from "@devpad/schema";
 import { createEffect, createSignal, For } from "solid-js";
 
 /** solid-js component called <ProjectSelector>, given a map of projects via `project_map`,
- * render a <select> element with the name of each project, and on change call `callback(project_id)`, the prop also accepts `default` as a project_id, otherwise the selected value is -1
+ * render a <select> element with the name of each project, and on change call `callback(project_id)`, the prop also accepts `default_id` as a project database ID, otherwise the selected value is empty string
  */
 export function ProjectSelector({ project_map, default_id, callback, disabled }: { project_map: Record<string, Project>; default_id: string | null; callback: (project_id: string | null) => void; disabled: boolean }) {
 	const [selected, setSelected] = createSignal<string>(default_id ?? "");
