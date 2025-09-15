@@ -6,6 +6,7 @@ import type { ProjectConfig } from "@devpad/schema";
 import { codebase_tasks, db, todo_updates, tracker_result } from "@devpad/schema/database/server";
 import { and, desc, eq } from "drizzle-orm";
 import { getBranches, getRepo } from "./github.js";
+import { parseContextToArray } from "../utils/context-parser";
 
 // Make todo-tracker path configurable
 const getTodoTrackerPath = () => {
@@ -148,7 +149,7 @@ export async function* scanRepo(repo_url: string, access_token: string, folder_i
 			line: item.line,
 			tag: item.type,
 			text: item.text,
-			context: item.context ? JSON.parse(item.context as string) : [],
+			context: parseContextToArray(item.context),
 		}));
 	}
 

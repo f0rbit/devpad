@@ -25,6 +25,10 @@
 		"./logger": {
 			"types": "./dist/utils/client-logger.d.ts",
 			"import": "./dist/utils/client-logger.js"
+		},
+		"./utils/context": {
+			"types": "./dist/utils/context-parser.d.ts",
+			"import": "./dist/utils/context-parser.js"
 		}
 	},
 	"files": [
