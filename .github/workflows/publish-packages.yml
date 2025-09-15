@@ -8,7 +8,6 @@ on:
       - 'packages/cli/**'
       - 'packages/mcp/**'
       - 'packages/schema/**'
-      - '.github/VERSION'
   workflow_dispatch:
     inputs:
       packages:
@@ -36,25 +35,30 @@ env:
   BUN_VERSION: 'latest'
 
 jobs:
-  detect-changes:
-    name: Detect Changed Packages
+  get-version:
+    name: Get Version from Versions Branch
     runs-on: ubuntu-latest
     outputs:
-      changed_packages: ${{ steps.detect.outputs.packages }}
-      should_publish: ${{ steps.detect.outputs.should_publish }}
       current_version: ${{ steps.version.outputs.current }}
       new_version: ${{ steps.version.outputs.new }}
     
     steps:
-      - name: Checkout code
+      - name: Checkout versions branch
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: versions
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Get current version
         id: version
         run: |
-          CURRENT_VERSION=$(cat .github/VERSION)
+          # Read version components from versions branch
+          MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
+          RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
+          LAST_PATCH=$(cat VERSION_PR 2>/dev/null || echo "0")
+          CURRENT_VERSION=$(cat VERSION 2>/dev/null || echo "${MAJOR}.${RELEASE}.${LAST_PATCH}")
+          
           echo "current=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
           
           # Calculate new version based on bump type
@@ -84,6 +88,22 @@ jobs:
           
           echo "new=${NEW_VERSION}" >> $GITHUB_OUTPUT
           echo "📦 Version: ${CURRENT_VERSION} → ${NEW_VERSION}"
+
+  detect-changes:
+    name: Detect Changed Packages  
+    runs-on: ubuntu-latest
+    needs: get-version
+    outputs:
+      changed_packages: ${{ steps.detect.outputs.packages }}
+      should_publish: ${{ steps.detect.outputs.should_publish }}
+      current_version: ${{ needs.get-version.outputs.current_version }}
+      new_version: ${{ needs.get-version.outputs.new_version }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
           
       - name: Detect changed packages
         id: detect
@@ -401,30 +421,35 @@ jobs:
     if: always() && needs.detect-changes.outputs.should_publish == 'true'
     
     steps:
-      - name: Checkout code
+      - name: Checkout versions branch
         uses: actions/checkout@v4
         with:
+          ref: versions
           token: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Update version and commit
+      - name: Update version files on versions branch
         if: github.event.inputs.dry_run != 'true'
         run: |
           VERSION="${{ needs.detect-changes.outputs.new_version }}"
-          echo "$VERSION" > .github/VERSION
+          echo "$VERSION" > VERSION
           
-          # Update VERSION_RELEASE if needed
+          # Update version components
           IFS='.' read -r major minor patch <<< "$VERSION"
-          CURRENT_MAJOR=$(cat .github/VERSION_MAJOR)
-          if [[ "$major" != "$CURRENT_MAJOR" ]]; then
-            echo "$major" > .github/VERSION_MAJOR
-            echo "0" > .github/VERSION_RELEASE
-          fi
+          echo "$major" > VERSION_MAJOR
+          echo "$minor" > VERSION_RELEASE
+          echo "$patch" > VERSION_PR
           
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/VERSION .github/VERSION_MAJOR .github/VERSION_RELEASE
-          git diff --staged --quiet || git commit -m "chore: bump packages to v${VERSION} [skip ci]"
-          git push || echo "No changes to push"
+          git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR
+          git diff --staged --quiet || git commit -m "chore: bump npm packages to v${VERSION} [skip ci]"
+          git push origin versions || echo "No changes to push"
+          
+      - name: Checkout main for tagging
+        if: github.event.inputs.dry_run != 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           
       - name: Create git tags
         if: github.event.inputs.dry_run != 'true'
