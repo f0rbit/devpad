@@ -5,7 +5,6 @@ export * from "./github.js";
 export * from "./milestones.js";
 export * from "./goals.js";
 export * from "./projects.js";
-export * from "./scanner.js";
 export * from "./scanning.js";
 // Export specific functions for testing
 export { scanLocalRepo } from "./scanning.js";

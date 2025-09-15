@@ -2,6 +2,9 @@
  * Utility functions for handling code context and formatting
  */
 
+// Import the pure utility function from core without pulling in server dependencies
+// Using a specific export path that doesn't include server-side code
+import { parseContextToArray } from "@devpad/core/utils/context";
 /**
  * Builds a formatted context string from various input formats.
  * Handles JSON strings, arrays, and invalid data gracefully.
@@ -10,30 +13,15 @@
  * @returns Formatted context string with normalized indentation, or null if invalid
  */
 export function buildCodeContext(context: any): string | null {
-	if (!context) return null;
+	const contextArray = parseContextToArray(context);
 
-	// Handle if context is a string (JSON) that needs parsing
-	let contextArray: string[];
-	if (typeof context === "string") {
-		try {
-			contextArray = JSON.parse(context);
-		} catch {
-			// If it's not valid JSON, treat it as a single-line context
-			return context;
-		}
-	} else if (Array.isArray(context)) {
-		contextArray = context;
-	} else {
-		return null;
-	}
-
-	// Ensure we have a valid array
-	if (!Array.isArray(contextArray) || contextArray.length === 0) {
+	// Ensure we have a valid array with content
+	if (contextArray.length === 0) {
 		return null;
 	}
 
 	// Find the minimum whitespace to normalize indentation
-	const minWhitespace = contextArray.reduce((acc, line) => {
+	const minWhitespace = contextArray.reduce((acc: number, line: string) => {
 		// Skip empty lines when calculating minimum whitespace
 		if (typeof line !== "string" || line.trim() === "") return acc;
 
@@ -50,7 +38,7 @@ export function buildCodeContext(context: any): string | null {
 	}
 
 	// Remove the common indentation from all lines
-	return contextArray.map(line => (typeof line === "string" ? line.slice(minWhitespace) : "")).join("\n");
+	return contextArray.map((line: string) => (typeof line === "string" ? line.slice(minWhitespace) : "")).join("\n");
 }
 
 /**
