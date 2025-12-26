@@ -125,16 +125,13 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 const testInstance = new MilestonesGoalsIntegrationTest();
 setupBaseIntegrationTest(testInstance);
 
-// Test project setup
-let testProject: Project;
-
-beforeEach(async () => {
-	// Create a test project for milestone/goal operations
-	const projectData = TestDataFactory.createRealisticProject();
-	testProject = await testInstance.createAndRegisterProject(projectData);
-});
-
 describe("Milestones & Goals Integration Tests", () => {
+	let testProject: Project;
+
+	beforeEach(async () => {
+		const projectData = TestDataFactory.createRealisticProject();
+		testProject = await testInstance.createAndRegisterProject(projectData);
+	});
 	describe("milestone CRUD operations", () => {
 		test("should create a new milestone", async () => {
 			const milestoneData: UpsertMilestone = {
