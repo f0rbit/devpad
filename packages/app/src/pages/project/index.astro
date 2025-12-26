@@ -1,6 +1,7 @@
 ---
 import ExternalLink from "lucide-solid/icons/external-link";
 import GithubLogin from "@/components/solid/GithubLogin";
+import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { getServerApiClient, rethrow } from "@/utils/api-client";
 import { Project } from "@devpad/schema";
@@ -22,8 +23,6 @@ if (user) {
 	}
 }
 
-const codebases = projects.filter(p => p.visibility !== "DELETED").map(p => p.project_id);
-// const deleted = projects.filter((p) => p.visibility == "DELETED");
 //
 const keywords = [
 	// One-word keywords
@@ -64,19 +63,13 @@ const keywords = [
   {
     user && (
       <main>
-        {" "}
         <section>
-          <h3>projects</h3>
-          <ul>
-            {codebases.map((c) => (
-              <li>
-                <a href={`project/${c}`}>{c}</a>
-              </li>
-            ))}
-          </ul>
-          <br />
+          <div class="flex-row" style="justify-content: space-between; margin-bottom: 1rem;">
+            <h3>projects</h3>
+            <a href="/project/create">+ add</a>
+          </div>
+          <ProjectCardGrid projects={projects} client:load />
         </section>
-        <a href="/project/create">+ add</a>
       </main>
     )
 }
