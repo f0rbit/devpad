@@ -36,16 +36,13 @@ class TaskGoalLinkingIntegrationTest extends BaseIntegrationTest {
 const test_instance = new TaskGoalLinkingIntegrationTest();
 setupBaseIntegrationTest(test_instance);
 
-// Test data setup
-let test_project: Project;
-
-beforeEach(async () => {
-	// Create test project for task testing
-	const project_data = TestDataFactory.createRealisticProject();
-	test_project = await test_instance.createAndRegisterProject(project_data);
-});
-
 describe("Task-Goal Linking Integration Tests", () => {
+	let test_project: Project;
+
+	beforeEach(async () => {
+		const project_data = TestDataFactory.createRealisticProject();
+		test_project = await test_instance.createAndRegisterProject(project_data);
+	});
 	describe("task creation with goal assignment", () => {
 		test("should create a basic task (goal linking temporarily disabled)", async () => {
 			const task_data: Partial<UpsertTodo> = {

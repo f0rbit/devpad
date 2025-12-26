@@ -557,7 +557,7 @@ article {
 	border: 1px solid var(--input-border);
 	border-radius: 4px;
 	padding: 7px;
-	box-shadow: 0 7px 12px 0px rgba(0, 0, 0, 0.20);
+	box-shadow: 0 7px 12px 0px rgba(0, 0, 0, 0.2);
 }
 
 /* Hover-reveal pattern - reusable for edit icons */
@@ -568,6 +568,13 @@ article {
 
 .card:hover .hover-reveal {
 	opacity: 1;
+}
+
+/* Project Card Grid */
+.project-card-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 1rem;
 }
 
 /* Interactive row primitive */
