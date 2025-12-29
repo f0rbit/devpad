@@ -6,10 +6,14 @@ import { Lucia } from "lucia";
 // @ts-expect-error
 const adapter = new DrizzleSQLiteAdapter(db, session, user);
 
+const isProduction = Bun.env.MODE === "production";
+
 export const lucia = new Lucia(adapter, {
 	sessionCookie: {
 		attributes: {
-			secure: Bun.env.MODE === "production",
+			secure: isProduction,
+			sameSite: "lax",
+			domain: isProduction ? ".devpad.tools" : undefined,
 		},
 	},
 	getUserAttributes: attributes => {
