@@ -1,13 +1,25 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Happy Path Workflow", () => {
-	test.use({
-		extraHTTPHeaders: {
-			"X-Test-User": "true",
-		},
-	});
+	test("complete workflow: create project, tasks, milestone, goals, and assignments", async ({ page, context }) => {
+		// Add X-Test-User header only to same-origin requests using context route
+		// This avoids issues with page.route intercepting navigations
+		const baseUrl = process.env.TEST_ENV === "docker" ? "http://0.0.0.0:3000" : "http://localhost:4321";
+		await context.route(
+			url => {
+				const urlStr = url.toString();
+				return urlStr.startsWith(baseUrl) || urlStr.startsWith("http://localhost") || urlStr.startsWith("http://0.0.0.0");
+			},
+			async route => {
+				await route.continue({
+					headers: {
+						...route.request().headers(),
+						"X-Test-User": "true",
+					},
+				});
+			}
+		);
 
-	test("complete workflow: create project, tasks, milestone, goals, and assignments", async ({ page }) => {
 		// Add page error listener
 		page.on("pageerror", error => {
 			console.error("Page error:", error.message);
@@ -89,7 +101,9 @@ test.describe("Happy Path Workflow", () => {
 			} else {
 				// Last resort: force navigation
 				console.log("Forcing navigation to /todo/new");
-				await page.evaluate(() => (window.location.href = "/todo/new"));
+				await page.evaluate(() => {
+					window.location.href = "/todo/new";
+				});
 				await page.waitForURL("/todo/new", { timeout: 10000 });
 			}
 		}
@@ -107,8 +121,11 @@ test.describe("Happy Path Workflow", () => {
 		// Wait for redirect to task page
 		await page.waitForURL(/\/todo\/.+/);
 
+		// Wait for page to fully settle before navigating
+		await page.waitForLoadState("networkidle");
+
 		// 5. Create a milestone
-		await page.goto(`/project/${projectId}/milestone/new`, { timeout: 15000 });
+		await page.goto(`/project/${projectId}/milestone/new`, { timeout: 15000, waitUntil: "domcontentloaded" });
 		await page.fill("#name", "Test Milestone");
 		await page.fill("#description", "A test milestone for the project");
 		await page.fill("#target-version", "v1.0.0");
