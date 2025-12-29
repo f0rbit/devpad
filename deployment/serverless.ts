@@ -3,7 +3,7 @@ import { createServerExport } from "../packages/server/src/server";
 // Serverless deployment configuration (API-only)
 const options = {
 	runMigrations: false, // Migrations handled separately in serverless
-	corsOrigins: process.env.CORS_ORIGINS?.split(",") || ["https://devpad.tools", "https://www.devpad.tools", "https://app.devpad.tools"],
+	corsOrigins: process.env.CORS_ORIGINS?.split(",") || ["https://devpad.tools", "https://www.devpad.tools", "https://app.devpad.tools", "https://media.devpad.tools"],
 	port: Number(process.env.PORT) || 3000,
 	environment: "serverless",
 };

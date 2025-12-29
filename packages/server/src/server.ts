@@ -36,7 +36,7 @@ export interface DatabaseOptions {
 	migrationPaths?: string[];
 }
 
-const DEFAULT_ORIGINS = ["http://localhost:4321", "http://localhost:3000", "https://devpad.tools", "https://staging.devpad.tools"];
+const DEFAULT_ORIGINS = ["http://localhost:4321", "http://localhost:3000", "https://devpad.tools", "https://staging.devpad.tools", "https://media.devpad.tools"];
 
 /**
  * Initialize database and run migrations
@@ -147,6 +147,7 @@ export function createApp(options: ServerOptions = {}): Hono {
 		cors({
 			origin: process.env.NODE_ENV === "test" ? origin => origin || "*" : ALLOWED_ORIGINS,
 			credentials: true,
+			allowHeaders: ["Authorization", "Content-Type"],
 		})
 	);
 
