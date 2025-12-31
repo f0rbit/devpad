@@ -1,7 +1,19 @@
-import { createGitHubAuthUrl, getUserById, handleGitHubCallback, invalidateUserSession, lucia, generateJWT, log } from "@devpad/core";
+import { createGitHubAuthUrl, decodeOAuthState, getUserById, handleGitHubCallback, invalidateUserSession, lucia, generateJWT, log } from "@devpad/core";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AuthContext } from "../middleware/auth";
+
+const ALLOWED_REDIRECT_PATTERNS = [/^https:\/\/[a-z0-9-]+\.pages\.dev$/, /^https:\/\/blog\.devpad\.tools$/, /^https:\/\/devpad\.tools$/, /^https:\/\/staging\.devpad\.tools$/, /^http:\/\/localhost:\d+$/];
+
+function isAllowedRedirectUrl(url: string): boolean {
+	try {
+		const parsed = new URL(url);
+		const origin = parsed.origin;
+		return ALLOWED_REDIRECT_PATTERNS.some(pattern => pattern.test(origin));
+	} catch {
+		return false;
+	}
+}
 
 const app = new Hono<AuthContext>();
 
@@ -12,9 +24,15 @@ const app = new Hono<AuthContext>();
 app.get("/login", async c => {
 	log.auth("[LOGIN] Login endpoint called");
 	try {
-		const { url, state } = await createGitHubAuthUrl();
+		const return_to = c.req.query("return_to");
+		const mode = c.req.query("mode") as "jwt" | "session" | undefined;
 
-		log.auth("[🔗 [AUTH-LOGIN] Generated OAuth URL:", { state: state.substring(0, 10) + "..." });
+		const { url, state } = await createGitHubAuthUrl({
+			return_to: return_to && isAllowedRedirectUrl(return_to) ? return_to : undefined,
+			mode,
+		});
+
+		log.auth("[🔗 [AUTH-LOGIN] Generated OAuth URL:", { state: state.substring(0, 10) + "...", return_to, mode });
 
 		// Set secure state cookie for CSRF protection
 		setCookie(c, "github_oauth_state", state, {
@@ -82,6 +100,19 @@ app.get("/callback/github", async c => {
 			path: "/",
 			maxAge: 0,
 		});
+
+		// Decode state to check for mode=jwt and return_to
+		const decodedState = decodeOAuthState(state);
+		log.auth("[CALLBACK] Decoded OAuth state:", {
+			mode: decodedState.mode,
+			hasReturnTo: !!decodedState.return_to,
+		});
+
+		// Handle mode=jwt with custom return_to URL
+		if (decodedState.mode === "jwt" && decodedState.return_to && isAllowedRedirectUrl(decodedState.return_to)) {
+			log.auth("[🔀 [AUTH-CALLBACK] JWT mode redirect to custom return_to:", decodedState.return_to);
+			return c.redirect(`${decodedState.return_to}?token=${token}`);
+		}
 
 		// Check if we should redirect with JWT token (cross-domain) or use cookie (same-domain)
 		const frontendUrl = Bun.env.FRONTEND_URL || "http://localhost:3000"; // Default to frontend
@@ -255,7 +286,7 @@ app.get("/verify", async c => {
 		// Session-based auth (JWT or session cookie)
 		if (!user || !session) {
 			log.auth("[❌ [AUTH-VERIFY] No user/session found, returning unauthenticated");
-			return c.json({ authenticated: false }, 401);
+			return c.json({ authenticated: false, user: null }, 200);
 		}
 
 		log.auth("[VERIFY] Session/JWT authentication detected");

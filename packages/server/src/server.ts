@@ -38,6 +38,13 @@ export interface DatabaseOptions {
 
 const DEFAULT_ORIGINS = ["http://localhost:4321", "http://localhost:3000", "https://devpad.tools", "https://staging.devpad.tools", "https://media.devpad.tools"];
 
+const DYNAMIC_ORIGIN_PATTERNS = [/^https:\/\/[a-zA-Z0-9-]+\.pages\.dev$/, /^https:\/\/blog\.devpad\.tools$/];
+
+function isAllowedOrigin(origin: string, allowed_origins: string[]): boolean {
+	if (allowed_origins.includes(origin)) return true;
+	return DYNAMIC_ORIGIN_PATTERNS.some(pattern => pattern.test(origin));
+}
+
 /**
  * Initialize database and run migrations
  */
@@ -142,10 +149,15 @@ export function createApp(options: ServerOptions = {}): Hono {
 
 	const ALLOWED_ORIGINS = options.corsOrigins || process.env.CORS_ORIGINS?.split(",") || DEFAULT_ORIGINS;
 
+	const originValidator = (origin: string) => {
+		if (process.env.NODE_ENV === "test") return origin || "*";
+		return isAllowedOrigin(origin, ALLOWED_ORIGINS) ? origin : "";
+	};
+
 	app.use(
 		"*",
 		cors({
-			origin: process.env.NODE_ENV === "test" ? origin => origin || "*" : ALLOWED_ORIGINS,
+			origin: originValidator,
 			credentials: true,
 			allowHeaders: ["Authorization", "Content-Type"],
 		})
