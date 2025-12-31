@@ -17,6 +17,17 @@ export interface OAuthState {
 	state: string;
 }
 
+export interface OAuthParams {
+	return_to?: string;
+	mode?: "jwt" | "session";
+}
+
+export interface DecodedOAuthState {
+	csrf: string;
+	return_to?: string;
+	mode?: "jwt" | "session";
+}
+
 export interface OAuthCallbackResult {
 	user: {
 		id: string;
@@ -34,16 +45,37 @@ export interface OAuthCallbackResult {
 /**
  * Create GitHub OAuth authorization URL with state
  */
-export async function createGitHubAuthUrl(): Promise<OAuthState> {
-	const state = generateState();
-	const url = await github.createAuthorizationURL(state, {
+export async function createGitHubAuthUrl(params?: OAuthParams): Promise<OAuthState> {
+	const csrfState = generateState();
+
+	const stateData: DecodedOAuthState = {
+		csrf: csrfState,
+		return_to: params?.return_to,
+		mode: params?.mode,
+	};
+	const encodedState = Buffer.from(JSON.stringify(stateData)).toString("base64url");
+
+	const url = await github.createAuthorizationURL(encodedState, {
 		scopes: ["user:email", "repo"],
 	});
 
 	return {
 		url: url.toString(),
-		state,
+		state: encodedState,
 	};
+}
+
+/**
+ * Decode OAuth state from base64url encoded JSON
+ * Falls back to treating the state as a plain CSRF token for backwards compatibility
+ */
+export function decodeOAuthState(encodedState: string): DecodedOAuthState {
+	try {
+		const decoded = Buffer.from(encodedState, "base64url").toString("utf-8");
+		return JSON.parse(decoded);
+	} catch {
+		return { csrf: encodedState };
+	}
 }
 
 /**
