@@ -3,7 +3,14 @@ import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AuthContext } from "../middleware/auth";
 
-const ALLOWED_REDIRECT_PATTERNS = [/^https:\/\/[a-z0-9-]+\.pages\.dev$/, /^https:\/\/blog\.devpad\.tools$/, /^https:\/\/devpad\.tools$/, /^https:\/\/staging\.devpad\.tools$/, /^http:\/\/localhost:\d+$/];
+const ALLOWED_REDIRECT_PATTERNS = [
+	/^https:\/\/[a-z0-9-]+\.pages\.dev$/,
+	/^https:\/\/[a-z0-9-]+\.workers\.dev$/,
+	/^https:\/\/blog\.devpad\.tools$/,
+	/^https:\/\/devpad\.tools$/,
+	/^https:\/\/staging\.devpad\.tools$/,
+	/^http:\/\/localhost:\d+$/,
+];
 
 function isAllowedRedirectUrl(url: string): boolean {
 	try {
