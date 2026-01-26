@@ -1,13 +1,19 @@
-// Export all core services
-
+export * as actionD1 from "./action.d1.js";
 export * from "./action.js";
+export type { ServiceError } from "./errors.js";
+export * as githubD1 from "./github.d1.js";
 export * from "./github.js";
-export * from "./milestones.js";
+export * as goalsD1 from "./goals.d1.js";
 export * from "./goals.js";
+export * as milestonesD1 from "./milestones.d1.js";
+export * from "./milestones.js";
+export * as projectsD1 from "./projects.d1.js";
 export * from "./projects.js";
+export * as scanningD1 from "./scanning.d1.js";
 export * from "./scanning.js";
-// Export specific functions for testing
-export { scanLocalRepo } from "./scanning.js";
+export * as tagsD1 from "./tags.d1.js";
 export * from "./tags.js";
+export * as tasksD1 from "./tasks.d1.js";
 export * from "./tasks.js";
+export * as usersD1 from "./users.d1.js";
 export * from "./users.js";

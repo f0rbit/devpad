@@ -22,6 +22,10 @@
 			"types": "./dist/database/d1.d.ts",
 			"import": "./dist/database/d1.js"
 		},
+		"./database/schema": {
+			"types": "./dist/database/schema.d.ts",
+			"import": "./dist/database/schema.js"
+		},
 		"./database/unified": {
 			"types": "./dist/database/unified.d.ts",
 			"import": "./dist/database/unified.js"

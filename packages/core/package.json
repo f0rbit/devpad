@@ -42,6 +42,7 @@
 		"dev": "tsc --watch"
 	},
 	"dependencies": {
+		"@devpad/scanner": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@paralleldrive/cuid2": "^2.2.2",
 		"arctic": "^1.5.0",
