@@ -1,7 +1,7 @@
 ---
 import { getServerApiClient, rethrow } from "@/utils/api-client";
-import PageLayout from '@/layouts/PageLayout.astro';
-import TaskEditor from '@/components/solid/TaskEditor';
+import PageLayout from "@/layouts/PageLayout.astro";
+import TaskEditor from "@/components/solid/TaskEditor";
 
 const { todo_id } = Astro.params;
 if (!todo_id) return new Response(null, { status: 404, statusText: "Task not found" });
@@ -24,7 +24,6 @@ if (tags_error) return rethrow(tags_error);
 
 const { history: task_history, error: history_error } = await api_client.tasks.history.get(todo_id);
 if (history_error) return rethrow(history_error);
-
 
 const { tags } = task;
 

@@ -16,17 +16,17 @@ let tags: TagWithTypedColor[] = [];
 if (user) {
 	try {
 		const api_client = getServerApiClient(Astro.locals);
-	
+
 		// Get projects list and convert to map format
 		const { project_map: fetched_project_map, error: project_error } = await api_client.projects.map();
 		if (project_error) return rethrow(project_error);
-	
+
 		const { tasks: fetched_tasks, error: tasks_error } = await api_client.tasks.list();
 		if (tasks_error) return rethrow(tasks_error);
-	
+
 		const { tags: fetched_tags, error: tags_error } = await api_client.tags.list();
 		if (tags_error) return rethrow(tags_error);
-	
+
 		project_map = fetched_project_map;
 		tasks = fetched_tasks;
 		tags = fetched_tags;

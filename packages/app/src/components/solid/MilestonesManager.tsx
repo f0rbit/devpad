@@ -71,7 +71,9 @@ function MilestoneItem(props: { milestone: Milestone; projectSlug: string; goals
 
 				{/* Description using existing class */}
 				<Show when={props.milestone.description}>
-					<p class="task-summary" style="margin-top: -7px">{props.milestone.description}</p>
+					<p class="task-summary" style="margin-top: -7px">
+						{props.milestone.description}
+					</p>
 				</Show>
 
 				{/* Goals List using flex-col and interactive-row */}

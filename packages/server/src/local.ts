@@ -4,7 +4,7 @@ import { log } from "@devpad/core";
 // Local development configuration
 const options = {
 	runMigrations: true, // Always run migrations in local development
-    staticPath: "../app/dist/client",
+	staticPath: "../app/dist/client",
 	corsOrigins: [
 		"http://localhost:4321", // Astro dev server
 		"http://localhost:3000", // Alternative dev port

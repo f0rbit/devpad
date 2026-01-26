@@ -1,9 +1,9 @@
 ---
 import { getServerApiClient, rethrow } from "@/utils/api-client";
 import type { Task, TaskWithDetails } from "@devpad/schema";
-import PageLayout from '@/layouts/PageLayout.astro';
-import ProjectTasksLayout from '@/layouts/ProjectTasksLayout.astro';
-import { UpdateDiffList } from '@/components/solid/UpdateDiff';
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
+import { UpdateDiffList } from "@/components/solid/UpdateDiff";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -19,7 +19,7 @@ if (project.owner_id !== user.id) return new Response(null, { status: 403, statu
 
 const { tasks: project_tasks, error: tasksError } = await apiClient.tasks.getByProject(project.id);
 if (tasksError) return rethrow(tasksError);
-	
+
 // Build a map of task.codebases_tasks.id -> task
 const codebase_task_map = project_tasks.reduce(
 	(acc, task) => {

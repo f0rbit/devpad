@@ -33,7 +33,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 		try {
 			const apiClient = getApiClient();
 			const { specification, error } = await apiClient.projects.specification(project_id);
-            if (error) throw new Error(error.message);
+			if (error) throw new Error(error.message);
 			setMarkdown(specification ?? "");
 			setFetching("success");
 			setTimeout(() => {
