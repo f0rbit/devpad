@@ -18,6 +18,26 @@
 			"types": "./dist/database/server.d.ts",
 			"import": "./dist/database/server.js"
 		},
+		"./database/d1": {
+			"types": "./dist/database/d1.d.ts",
+			"import": "./dist/database/d1.js"
+		},
+		"./database/unified": {
+			"types": "./dist/database/unified.d.ts",
+			"import": "./dist/database/unified.js"
+		},
+		"./database/blog": {
+			"types": "./dist/database/blog.d.ts",
+			"import": "./dist/database/blog.js"
+		},
+		"./database/media": {
+			"types": "./dist/database/media.d.ts",
+			"import": "./dist/database/media.js"
+		},
+		"./bindings": {
+			"types": "./dist/bindings.d.ts",
+			"import": "./dist/bindings.js"
+		},
 		"./validation": {
 			"types": "./dist/validation/index.d.ts",
 			"import": "./dist/validation/index.js"
@@ -33,10 +53,12 @@
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
+		"@f0rbit/corpus": "^0.3.4",
 		"drizzle-orm": "^0.30.6",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20241205.0",
 		"@types/node": "^20.11.24",
 		"typescript": "^5.3.3"
 	}

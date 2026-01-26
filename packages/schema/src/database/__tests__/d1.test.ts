@@ -1,0 +1,100 @@
+import { describe, expect, it } from "bun:test";
+import type { Bindings } from "../../bindings.js";
+import * as blogSchema from "../blog.js";
+import { createD1Database } from "../d1.js";
+import * as mediaSchema from "../media.js";
+import * as devpadSchema from "../schema.js";
+import * as unified from "../unified.js";
+
+describe("createD1Database", () => {
+	it("is a callable function", () => {
+		expect(typeof createD1Database).toBe("function");
+	});
+});
+
+describe("unified schema exports", () => {
+	const devpad_tables = [
+		"user",
+		"session",
+		"api_key",
+		"project",
+		"action",
+		"tracker_result",
+		"todo_updates",
+		"milestone",
+		"goal",
+		"task",
+		"checklist",
+		"checklist_item",
+		"codebase_tasks",
+		"tag",
+		"task_tag",
+		"commit_detail",
+		"tag_config",
+		"ignore_path",
+	] as const;
+
+	const blog_tables = ["blog_users", "blog_posts", "blog_categories", "blog_tags", "blog_access_keys", "blog_integrations", "blog_fetch_links", "blog_projects_cache", "blog_post_projects"] as const;
+
+	const media_tables = ["media_users", "media_profiles", "media_accounts", "media_api_keys", "media_rate_limits", "media_account_settings", "media_profile_filters", "media_platform_credentials"] as const;
+
+	it("exports all devpad tables", () => {
+		for (const table of devpad_tables) {
+			expect(devpadSchema).toHaveProperty(table);
+		}
+	});
+
+	it("exports all blog tables", () => {
+		for (const table of blog_tables) {
+			expect(blogSchema).toHaveProperty(table);
+		}
+	});
+
+	it("exports all media tables", () => {
+		for (const table of media_tables) {
+			expect(mediaSchema).toHaveProperty(table);
+		}
+	});
+
+	it("re-exports all schemas from unified", () => {
+		for (const table of devpad_tables) {
+			expect(unified).toHaveProperty(table);
+		}
+		for (const table of blog_tables) {
+			expect(unified).toHaveProperty(table);
+		}
+		for (const table of media_tables) {
+			expect(unified).toHaveProperty(table);
+		}
+	});
+
+	it("re-exports createD1Database from unified", () => {
+		expect(unified).toHaveProperty("createD1Database");
+		expect(typeof unified.createD1Database).toBe("function");
+	});
+});
+
+describe("Bindings type", () => {
+	it("has the expected shape at type level", () => {
+		const mock_bindings: Bindings = {
+			DB: {} as D1Database,
+			BLOG_CORPUS_BUCKET: {} as R2Bucket,
+			MEDIA_CORPUS_BUCKET: {} as R2Bucket,
+			ENVIRONMENT: "test",
+			API_URL: "http://localhost",
+			FRONTEND_URL: "http://localhost",
+			GITHUB_CLIENT_ID: "id",
+			GITHUB_CLIENT_SECRET: "secret",
+			JWT_SECRET: "jwt",
+			ENCRYPTION_KEY: "key",
+		};
+
+		expect(mock_bindings.ENVIRONMENT).toBe("test");
+		expect(mock_bindings.API_URL).toBe("http://localhost");
+		expect(mock_bindings.FRONTEND_URL).toBe("http://localhost");
+		expect(mock_bindings.GITHUB_CLIENT_ID).toBe("id");
+		expect(mock_bindings.GITHUB_CLIENT_SECRET).toBe("secret");
+		expect(mock_bindings.JWT_SECRET).toBe("jwt");
+		expect(mock_bindings.ENCRYPTION_KEY).toBe("key");
+	});
+});
