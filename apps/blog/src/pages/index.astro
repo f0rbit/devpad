@@ -1,0 +1,862 @@
+---
+import { Button } from "@f0rbit/ui";
+import HowItWorks from "@/components/landing/HowItWorks";
+import BaseLayout from "@/layouts/base-layout.astro";
+import { api } from "@/lib/api";
+import ArrowRight from "lucide-astro/ArrowRight";
+import CalendarCheck from "lucide-astro/CalendarCheck";
+import FileText from "lucide-astro/FileText";
+import Github from "lucide-astro/Github";
+import History from "lucide-astro/History";
+import Plus from "lucide-astro/Plus";
+import RefreshCw from "lucide-astro/RefreshCw";
+import Sparkles from "lucide-astro/Sparkles";
+import Tag from "lucide-astro/Tag";
+
+const runtime = Astro.locals.runtime;
+const authRes = await api.ssr("/api/auth/session", Astro.request, {}, runtime);
+let isAuthenticated = false;
+if (authRes.ok) {
+	const authData = (await authRes.json()) as { authenticated?: boolean };
+	isAuthenticated = authData.authenticated === true;
+}
+---
+
+<BaseLayout title="Blog - devpad">
+  <div class="landing">
+    <!-- Navigation -->
+    <nav class="landing-nav">
+      <a href="/" class="landing-logo">blog</a>
+      {isAuthenticated ? (
+        <a href="/posts" style="text-decoration: none;">
+          <Button variant="primary">dashboard <ArrowRight size={16} /></Button>
+        </a>
+      ) : (
+        <a href="/auth/login" style="text-decoration: none;">
+          <Button variant="primary"><Github size={16} />login</Button>
+        </a>
+      )}
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="landing-hero">
+      <div class="hero-content">
+        <h1 class="landing-title">
+          blogging.<br />
+          <span class="landing-title-accent">for developers.</span>
+        </h1>
+        <p class="landing-tagline">
+          a blog platform built for devpad. link posts to your projects and tasks, write in markdown, and publish with full version control.
+        </p>
+        {isAuthenticated ? (
+          <a href="/posts" style="text-decoration: none;">
+            <Button variant="primary" size="lg">open dashboard</Button>
+          </a>
+        ) : (
+          <a href="/auth/login" style="text-decoration: none;">
+            <Button variant="primary" size="lg">get started</Button>
+          </a>
+        )}
+      </div>
+      <div class="hero-mockup">
+        <div class="mockup-window">
+          <div class="mockup-header">
+            <span class="mockup-dot"></span>
+            <span class="mockup-dot"></span>
+            <span class="mockup-dot"></span>
+          </div>
+          <div class="mockup-content">
+            <div class="mockup-editor">
+              <code class="typing-text"></code><span class="typing-cursor">|</span>
+            </div>
+            <div class="mockup-divider"></div>
+            <div class="mockup-preview">
+              <h1 class="preview-h1">hello world</h1>
+              <p class="preview-p">write your thoughts in <strong>markdown</strong>.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="landing-features">
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-header">
+            <FileText size={20} class="feature-icon" />
+            <h3>markdown editor</h3>
+          </div>
+          <p>write posts in markdown with a split-pane live preview. supports syntax highlighting, tables, and code blocks.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <History size={20} class="feature-icon" />
+            <h3>version history</h3>
+          </div>
+          <p>every save creates an immutable version. browse history, compare changes, and restore any previous state with one click.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <Sparkles size={20} class="feature-icon" />
+            <h3>project linking</h3>
+          </div>
+          <p>connect posts to your devpad projects. write devlogs, release notes, or tutorials tied directly to what you're building.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <CalendarCheck size={20} class="feature-icon" />
+            <h3>scheduled publishing</h3>
+          </div>
+          <p>set a publish date and time. posts automatically go live on schedule—no need to be at your desk.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <Tag size={20} class="feature-icon" />
+            <h3>categories & tags</h3>
+          </div>
+          <p>organize posts with nested categories and flexible tags. filter and find content across your entire blog.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-header">
+            <RefreshCw size={20} class="feature-icon" />
+            <h3>api access</h3>
+          </div>
+          <p>generate api tokens to read your published posts. build custom frontends or integrate with static site generators.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="landing-steps">
+      <h2 class="section-title">how it works</h2>
+      <HowItWorks client:load />
+    </section>
+
+    <!-- API Section -->
+    <section class="landing-api">
+      <h2 class="section-title">build your own frontend</h2>
+      <div class="api-steps">
+        <div class="api-step">
+          <div class="api-step__code">
+            <code><span class="terminal-prompt">&gt;</span> bun add @devpad/blog</code>
+          </div>
+          <div class="api-step__label">install</div>
+        </div>
+        <div class="api-step">
+          <div class="api-step__code">
+            <pre><code>const posts = await devpad
+    .blog
+    .getByProject('my-app')</code></pre>
+          </div>
+          <div class="api-step__label">fetch</div>
+        </div>
+        <div class="api-step">
+          <div class="api-step__code api-step__code--render">
+            <div class="render-preview">
+              <div class="render-line render-line--title"></div>
+              <div class="render-line render-line--short"></div>
+              <div class="render-line render-line--medium"></div>
+              <div class="render-line render-line--long"></div>
+            </div>
+          </div>
+          <div class="api-step__label">render</div>
+        </div>
+      </div>
+      <p class="api-tagline">full typescript support. works everywhere.</p>
+    </section>
+
+    <!-- Bottom CTA -->
+    <section class="landing-cta">
+      {isAuthenticated ? (
+        <>
+          <h2>ready to write something new?</h2>
+          <a href="/posts/new" style="text-decoration: none;">
+            <Button variant="primary" size="lg"><Plus size={18} />new post</Button>
+          </a>
+        </>
+      ) : (
+        <>
+          <h2>ready to start writing?</h2>
+          <a href="/auth/login" style="text-decoration: none;">
+            <Button variant="primary" size="lg"><Github size={18} />login</Button>
+          </a>
+        </>
+      )}
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+      <span>blog.devpad.tools</span>
+      <span class="footer-divider">&middot;</span>
+      <a href="https://devpad.tools">devpad.tools</a>
+      <span class="footer-divider">&middot;</span>
+      <a href="https://github.com/f0rbit/dev-blog">GitHub</a>
+    </footer>
+  </div>
+</BaseLayout>
+
+<style>
+  /* Override global body styles for landing page */
+  :global(body) {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  .landing {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* Navigation */
+  .landing-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .landing-logo {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--fg);
+    text-decoration: none;
+  }
+
+  /* Hero */
+  .landing-hero {
+    padding: 6rem 2rem 4rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .hero-content {
+    text-align: left;
+  }
+
+  .landing-title {
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    margin-bottom: 1.25rem;
+    color: var(--fg);
+  }
+
+  .landing-title-accent {
+    color: var(--fg-faint);
+  }
+
+  .landing-tagline {
+    font-size: clamp(1rem, 2vw, 1.125rem);
+    color: var(--fg-faint);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+  }
+
+  /* Editor Mockup */
+  .hero-mockup {
+    width: 100%;
+  }
+
+  .mockup-window {
+    background: var(--bg-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .mockup-header {
+    display: flex;
+    gap: 6px;
+    padding: 12px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mockup-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--border);
+  }
+
+  .mockup-dot:nth-child(1) {
+    background: #ff5f57;
+  }
+
+  .mockup-dot:nth-child(2) {
+    background: #febc2e;
+  }
+
+  .mockup-dot:nth-child(3) {
+    background: #28c840;
+  }
+
+  .mockup-content {
+    display: grid;
+    grid-template-columns: 1fr 1px 1fr;
+    min-height: 180px;
+  }
+
+  .mockup-editor {
+    padding: 1rem;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--fg-faint);
+    white-space: pre-wrap;
+    overflow: hidden;
+  }
+
+  .typing-text {
+    color: var(--fg);
+  }
+
+  .typing-cursor {
+    color: var(--fg);
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .mockup-divider {
+    background: var(--border);
+  }
+
+  .mockup-preview {
+    padding: 1rem;
+    color: var(--fg);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .mockup-preview.visible {
+    opacity: 1;
+  }
+
+  .preview-h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    color: var(--fg);
+  }
+
+  .preview-p {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--fg-faint);
+  }
+
+  .preview-p strong {
+    color: var(--fg);
+    font-weight: 600;
+  }
+
+  /* Features */
+  .landing-features {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+
+  .feature-card {
+    padding: 2rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  .feature-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .feature-icon {
+    flex-shrink: 0;
+    color: var(--fg-faint);
+  }
+
+  .feature-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  .feature-card p {
+    font-size: 0.875rem;
+    color: var(--fg-faint);
+    line-height: 1.5;
+  }
+
+  /* Steps */
+  .landing-steps {
+    padding: 4rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin-bottom: 3rem;
+    color: var(--fg);
+  }
+
+  /* API Section */
+  .landing-api {
+    padding: 4rem 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .api-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .api-step {
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .api-step__code {
+    flex: 1;
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 120px;
+    background: oklch(0.18 0.01 285);
+  }
+
+  .api-step__code code {
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 0.875rem;
+    color: var(--fg);
+  }
+
+  .api-step__code pre {
+    margin: 0;
+    text-align: left;
+  }
+
+  .api-step__code pre code {
+    line-height: 1.5;
+  }
+
+  .api-step__code--render {
+    padding: 1.5rem 2rem;
+  }
+
+  .terminal-prompt {
+    color: var(--fg-faint);
+    margin-right: 0.5rem;
+  }
+
+  .render-preview {
+    width: 100%;
+    max-width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+  }
+
+  .render-line {
+    height: 8px;
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  .render-line--title {
+    width: 70%;
+    height: 10px;
+    margin-bottom: 0.25rem;
+  }
+
+  .render-line--short {
+    width: 40%;
+  }
+
+  .render-line--medium {
+    width: 60%;
+  }
+
+  .render-line--long {
+    width: 85%;
+  }
+
+  .api-step__label {
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--fg-faint);
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+
+  .api-tagline {
+    font-size: 0.9375rem;
+    color: var(--fg-faint);
+  }
+
+  /* Bottom CTA */
+  .landing-cta {
+    text-align: center;
+    padding: 5rem 2rem;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .landing-cta h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--fg);
+  }
+
+  /* Footer */
+  .landing-footer {
+    padding: 2rem;
+    text-align: center;
+    color: var(--fg-faint);
+    font-size: 0.875rem;
+    margin-top: auto;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .landing-footer a {
+    color: var(--fg-faint);
+    text-decoration: none;
+  }
+
+  .landing-footer a:hover {
+    color: var(--fg);
+  }
+
+  .footer-divider {
+    margin: 0 0.75rem;
+    opacity: 0.5;
+  }
+
+  /* Tablet breakpoint */
+  @media (max-width: 900px) {
+    .feature-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .landing-nav {
+      padding: 1rem 1.5rem;
+    }
+
+    .landing-hero {
+      padding: 4rem 1.5rem 3rem;
+      grid-template-columns: 1fr;
+      gap: 2.5rem;
+    }
+
+    .hero-content {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .hero-mockup {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .mockup-content {
+      min-height: 160px;
+    }
+
+    .landing-features {
+      padding: 3rem 1.5rem;
+    }
+
+    .feature-grid {
+      gap: 1rem;
+    }
+
+    .feature-card {
+      padding: 1.5rem;
+    }
+
+    .landing-steps {
+      padding: 3rem 1.5rem;
+    }
+
+    .section-title {
+      margin-bottom: 2rem;
+    }
+
+    .landing-cta {
+      padding: 3.5rem 1.5rem;
+    }
+
+    .landing-cta h2 {
+      font-size: 1.5rem;
+    }
+
+    .landing-api {
+      padding: 3rem 1.5rem;
+    }
+
+    .api-steps {
+      gap: 1rem;
+    }
+
+    .api-step__code {
+      min-height: 100px;
+      padding: 1.25rem;
+    }
+
+    .api-step__code code {
+      font-size: 0.8125rem;
+    }
+  }
+
+  /* Mobile breakpoint */
+  @media (max-width: 480px) {
+    .landing-nav {
+      padding: 1rem;
+      gap: 0.5rem;
+    }
+
+    .landing-logo {
+      font-size: 1.25rem;
+    }
+
+    .landing-hero {
+      padding: 3rem 1rem 2rem;
+      gap: 2rem;
+    }
+
+    .landing-title {
+      font-size: clamp(1.75rem, 8vw, 2.5rem);
+    }
+
+    .landing-tagline {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero-mockup {
+      max-width: 100%;
+    }
+
+    .mockup-content {
+      grid-template-columns: 1fr;
+      min-height: auto;
+    }
+
+    .mockup-divider {
+      height: 1px;
+    }
+
+    .mockup-editor,
+    .mockup-preview {
+      padding: 0.875rem;
+    }
+
+    .mockup-editor {
+      font-size: 0.75rem;
+      min-height: 80px;
+    }
+
+    .preview-h1 {
+      font-size: 1.125rem;
+    }
+
+    .preview-p {
+      font-size: 0.8125rem;
+    }
+
+    .landing-features {
+      padding: 2rem 1rem;
+    }
+
+    .feature-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .feature-card {
+      padding: 1.25rem;
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+    }
+
+    .landing-steps {
+      padding: 2rem 1rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .landing-cta {
+      padding: 2.5rem 1rem;
+      margin-top: 1rem;
+    }
+
+    .landing-cta h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .landing-api {
+      padding: 2rem 1rem;
+    }
+
+    .api-steps {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .api-step__code {
+      min-height: 80px;
+      padding: 1rem;
+    }
+
+    .api-step__code code {
+      font-size: 0.8125rem;
+    }
+
+    .api-step__code--render {
+      padding: 1rem 1.5rem;
+    }
+
+    .render-preview {
+      max-width: 120px;
+    }
+
+    .api-step__label {
+      padding: 0.625rem;
+      font-size: 0.8125rem;
+    }
+
+    .api-tagline {
+      font-size: 0.875rem;
+    }
+
+    .landing-footer {
+      padding: 1.5rem 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.25rem;
+    }
+
+    .footer-divider {
+      margin: 0 0.5rem;
+    }
+  }
+</style>
+
+<script>
+  const TYPING_TEXT = `# hello world
+
+write your thoughts in **markdown**.`;
+
+  const TYPING_SPEED = 50;
+  const INITIAL_DELAY = 500;
+  const RESTART_DELAY = 3000;
+
+  const typeText = (element: Element, text: string, onComplete: () => void) => {
+    let index = 0;
+    
+    const tick = () => {
+      if (index >= text.length) {
+        onComplete();
+        return;
+      }
+      element.textContent = text.slice(0, index + 1);
+      index++;
+      setTimeout(tick, TYPING_SPEED);
+    };
+    
+    tick();
+  };
+
+  const init = () => {
+    const textElement = document.querySelector('.typing-text');
+    const previewElement = document.querySelector('.mockup-preview');
+    
+    if (!textElement || !previewElement) return;
+
+    const runAnimation = () => {
+      textElement.textContent = '';
+      previewElement.classList.remove('visible');
+      
+      setTimeout(() => {
+        typeText(textElement, TYPING_TEXT, () => {
+          previewElement.classList.add('visible');
+          setTimeout(runAnimation, RESTART_DELAY);
+        });
+      }, INITIAL_DELAY);
+    };
+
+    runAnimation();
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>

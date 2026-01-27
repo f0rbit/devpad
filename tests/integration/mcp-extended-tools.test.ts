@@ -1,8 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { MCPTestClient } from "../shared/mcp-test-client";
 import { ApiClient } from "@devpad/api";
-import { TEST_USER_ID } from "./setup";
+import { MCPTestClient } from "../shared/mcp-test-client";
 import { TestDataFactory } from "./factories";
+import { TEST_USER_ID } from "./setup";
 
 describe("MCP Extended Tools Integration", () => {
 	let mcp_client: MCPTestClient;
@@ -32,12 +32,12 @@ describe("MCP Extended Tools Integration", () => {
 		// Create API client for verification
 		api_client = new ApiClient({
 			api_key: test_api_key,
-			base_url: "http://localhost:3001/api/v0",
+			base_url: "http://localhost:3001/api/v1",
 		});
 
 		// Start MCP client (in-process mode for better coverage)
 		mcp_client = new MCPTestClient();
-		await mcp_client.start(test_api_key, "http://localhost:3001/api/v0");
+		await mcp_client.start(test_api_key, "http://localhost:3001/api/v1");
 	});
 
 	afterAll(async () => {

@@ -34,7 +34,7 @@ describe("unified schema exports", () => {
 		"ignore_path",
 	] as const;
 
-	const blog_tables = ["blog_users", "blog_posts", "blog_categories", "blog_tags", "blog_access_keys", "blog_integrations", "blog_fetch_links", "blog_projects_cache", "blog_post_projects"] as const;
+	const blog_tables = ["blog_users", "blog_posts", "blog_categories", "blog_tags", "blog_access_keys", "blog_integrations", "blog_fetch_links", "blog_post_projects"] as const;
 
 	const media_tables = ["media_users", "media_profiles", "media_accounts", "media_api_keys", "media_rate_limits", "media_account_settings", "media_profile_filters", "media_platform_credentials"] as const;
 
@@ -87,6 +87,10 @@ describe("Bindings type", () => {
 			GITHUB_CLIENT_SECRET: "secret",
 			JWT_SECRET: "jwt",
 			ENCRYPTION_KEY: "key",
+			REDDIT_CLIENT_ID: "reddit-id",
+			REDDIT_CLIENT_SECRET: "reddit-secret",
+			TWITTER_CLIENT_ID: "twitter-id",
+			TWITTER_CLIENT_SECRET: "twitter-secret",
 		};
 
 		expect(mock_bindings.ENVIRONMENT).toBe("test");

@@ -1,9 +1,9 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { Goal, Milestone, Project, UpsertGoal, UpsertMilestone } from "@devpad/schema";
+import { expectMatchesPartial, expectValidArray } from "../shared/assertions";
 import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
-import { expectValidArray, expectMatchesPartial } from "../shared/assertions";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
-import type { Milestone, Goal, UpsertMilestone, UpsertGoal, Project } from "@devpad/schema";
 
 // Helper function for API error assertions
 const expectValidApiError = (response: Response, expectedCodes: number[] = [400, 401, 404, 500]) => {
@@ -23,7 +23,7 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 			...milestoneData,
 		};
 
-		const response = await fetch("http://localhost:3001/api/v0/milestones", {
+		const response = await fetch("http://localhost:3001/api/v1/milestones", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -40,7 +40,7 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 		// Register milestone for cleanup via the CleanupManager
 		this.cleanup.registerCleanup("milestones", async () => {
 			try {
-				const deleteResponse = await fetch(`http://localhost:3001/api/v0/milestones/${milestone.id}`, {
+				const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}`, {
 					method: "DELETE",
 					headers: { Authorization: `Bearer ${this.client["_api_key"]}` },
 				});
@@ -63,7 +63,7 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 			...goalData,
 		};
 
-		const response = await fetch("http://localhost:3001/api/v0/goals", {
+		const response = await fetch("http://localhost:3001/api/v1/goals", {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
@@ -80,7 +80,7 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 		// Register goal for cleanup
 		this.cleanup.registerCleanup("goals", async () => {
 			try {
-				const deleteResponse = await fetch(`http://localhost:3001/api/v0/goals/${goal.id}`, {
+				const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${goal.id}`, {
 					method: "DELETE",
 					headers: { Authorization: `Bearer ${this.client["_api_key"]}` },
 				});
@@ -95,7 +95,7 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 	}
 
 	async deleteTestMilestone(milestoneId: string): Promise<void> {
-		const response = await fetch(`http://localhost:3001/api/v0/milestones/${milestoneId}`, {
+		const response = await fetch(`http://localhost:3001/api/v1/milestones/${milestoneId}`, {
 			method: "DELETE",
 			headers: {
 				Authorization: `Bearer ${this.client["_api_key"]}`,
@@ -108,7 +108,7 @@ class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
 	}
 
 	async deleteTestGoal(goalId: string): Promise<void> {
-		const response = await fetch(`http://localhost:3001/api/v0/goals/${goalId}`, {
+		const response = await fetch(`http://localhost:3001/api/v1/goals/${goalId}`, {
 			method: "DELETE",
 			headers: {
 				Authorization: `Bearer ${this.client["_api_key"]}`,
@@ -162,7 +162,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			await testInstance.createTestMilestone(testProject.id, { name: "Milestone 1" });
 			await testInstance.createTestMilestone(testProject.id, { name: "Milestone 2" });
 
-			const response = await fetch("http://localhost:3001/api/v0/milestones", {
+			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -180,7 +180,7 @@ describe("Milestones & Goals Integration Tests", () => {
 		test("should get milestone by ID", async () => {
 			const createdMilestone = await testInstance.createTestMilestone(testProject.id);
 
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${createdMilestone.id}`, {
+			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -215,7 +215,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			await testInstance.deleteTestMilestone(createdMilestone.id);
 
 			// Verify milestone is deleted by trying to fetch it
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${createdMilestone.id}`, {
+			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -229,7 +229,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			const milestone1 = await testInstance.createTestMilestone(testProject.id, { name: "Project Milestone 1" });
 			const milestone2 = await testInstance.createTestMilestone(testProject.id, { name: "Project Milestone 2" });
 
-			const response = await fetch(`http://localhost:3001/api/v0/projects/${testProject.id}/milestones`, {
+			const response = await fetch(`http://localhost:3001/api/v1/projects/${testProject.id}/milestones`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -281,7 +281,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			await testInstance.createTestGoal(testMilestone.id, { name: "Goal 1" });
 			await testInstance.createTestGoal(testMilestone.id, { name: "Goal 2" });
 
-			const response = await fetch("http://localhost:3001/api/v0/goals", {
+			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -300,7 +300,7 @@ describe("Milestones & Goals Integration Tests", () => {
 		test("should get goal by ID", async () => {
 			const createdGoal = await testInstance.createTestGoal(testMilestone.id);
 
-			const response = await fetch(`http://localhost:3001/api/v0/goals/${createdGoal.id}`, {
+			const response = await fetch(`http://localhost:3001/api/v1/goals/${createdGoal.id}`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -352,7 +352,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			const goal1 = await testInstance.createTestGoal(testMilestone.id, { name: "Milestone Goal 1" });
 			const goal2 = await testInstance.createTestGoal(testMilestone.id, { name: "Milestone Goal 2" });
 
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${testMilestone.id}/goals`, {
+			const response = await fetch(`http://localhost:3001/api/v1/milestones/${testMilestone.id}/goals`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},
@@ -376,7 +376,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				name: "Test Milestone",
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/milestones", {
+			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -394,7 +394,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				name: "Test Goal",
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/goals", {
+			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -412,7 +412,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				// Missing required 'name' field
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/milestones", {
+			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -431,7 +431,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				// Missing required 'name' field
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/goals", {
+			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
@@ -460,7 +460,7 @@ describe("Milestones & Goals Integration Tests", () => {
 			expect(goal.milestone_id).toBe(milestone.id); // Goal belongs to milestone
 
 			// Verify we can traverse the hierarchy
-			const milestoneGoalsResponse = await fetch(`http://localhost:3001/api/v0/milestones/${milestone.id}/goals`, {
+			const milestoneGoalsResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}/goals`, {
 				headers: {
 					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
 				},

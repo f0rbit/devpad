@@ -60,7 +60,7 @@ fi
 
 # Check build status
 echo -n "Checking if packages are built... "
-if [ -d "packages/app/dist" ] && [ -d "packages/server/dist" ]; then
+if [ -d "apps/main/dist" ] && [ -d "packages/server/dist" ]; then
   echo -e "${GREEN}✓${NC}"
 else
   echo -e "${YELLOW}⚠ Packages not built. Run: bun run build${NC}"

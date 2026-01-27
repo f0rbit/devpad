@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { expectMatchesPartial, expectSuccessfulResponse, expectValidApiError, expectValidArray, expectValidProject } from "../shared/assertions";
 import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
-import { expectValidProject, expectValidArray, expectMatchesPartial, expectSuccessfulResponse, expectValidApiError } from "../shared/assertions";
 import { TestDataFactory } from "./factories";
 
 class ProjectsIntegrationTest extends BaseIntegrationTest {}
@@ -12,11 +12,11 @@ setupBaseIntegrationTest(testInstance);
 describe("projects API client integration", () => {
 	test("should get API status", async () => {
 		// Test the basic API endpoint that should always work
-		const response = await fetch("http://localhost:3001/api/v0");
+		const response = await fetch("http://localhost:3001/api/v1");
 		expectSuccessfulResponse(response);
 
 		const data = await response.json();
-		expect(data.version).toBe("0");
+		expect(data.version).toBe("1");
 	});
 
 	test("should list projects", async () => {

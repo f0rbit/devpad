@@ -1,0 +1,63 @@
+---
+import AuthStatus from "../components/layout/auth-status";
+import { api } from "../lib/api";
+import BaseLayout from "./base-layout.astro";
+
+interface Props {
+	title?: string;
+}
+
+const { title = "Blog" } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+	{ href: "/posts", label: "posts" },
+	{ href: "/categories", label: "categories" },
+	{ href: "/settings", label: "settings" },
+];
+
+const isActive = (href: string) => {
+	if (href === "/") return currentPath === "/";
+	return currentPath.startsWith(href);
+};
+
+let authUser = null;
+let authAuthenticated = false;
+
+try {
+	const runtime = Astro.locals.runtime;
+	const authRes = await api.ssr("/api/auth/session", Astro.request, {}, runtime);
+	if (authRes.ok) {
+		const data = await authRes.json();
+		authAuthenticated = data.authenticated;
+		authUser = data.user;
+	}
+} catch (e) {
+	// Auth fetch failed silently
+}
+---
+
+<BaseLayout title={title}>
+	<div id="container" class="stack">
+		<header>
+			<nav>
+				<a href="/" class:list={{ active: isActive("/") }}>blog</a>
+				<span class="text-muted">|</span>
+				{navLinks.map((link) => (
+					<a href={link.href} class:list={{ active: isActive(link.href) }}>
+						{link.label}
+					</a>
+				))}
+			</nav>
+			<AuthStatus client:load initialUser={authUser} initialAuthenticated={authAuthenticated} />
+		</header>
+
+		<main>
+			<slot />
+		</main>
+	</div>
+
+	<footer>
+		<span class="text-sm text-muted">blog.devpad.tools</span>
+	</footer>
+</BaseLayout>

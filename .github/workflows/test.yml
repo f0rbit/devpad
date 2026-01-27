@@ -34,13 +34,13 @@ jobs:
       - name: Build packages in order
         run: |
           # Build packages in dependency order
-          cd packages/schema && bun run build
-          cd ../core && bun run build
-          cd ../api && bun run build
-          cd ../app && bun run build
-          cd ../cli && bun run build
-          cd ../server && bun run build
-          cd ../mcp && bun run build
+          cd packages/schema && bun run build && cd ../..
+          cd packages/core && bun run build && cd ../..
+          cd packages/api && bun run build && cd ../..
+          cd apps/main && bun run build && cd ../..
+          cd packages/cli && bun run build && cd ../..
+          cd packages/server && bun run build && cd ../..
+          cd packages/mcp && bun run build && cd ../..
         
       - name: Setup test environment
         run: |
@@ -75,7 +75,7 @@ jobs:
         
       - name: Type check
         run: |
-          cd packages/app
+          cd apps/main
           bun run check
         continue-on-error: true
         

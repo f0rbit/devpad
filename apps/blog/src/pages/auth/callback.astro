@@ -1,0 +1,39 @@
+---
+// This page handles the JWT callback from devpad
+// Sets httpOnly cookie on frontend domain for SSR auth
+
+const token = Astro.url.searchParams.get("token");
+
+if (token) {
+	// Set httpOnly cookie on the frontend domain for SSR requests
+	Astro.cookies.set("devpad_jwt", token, {
+		httpOnly: true,
+		secure: true,
+		sameSite: "lax",
+		path: "/",
+		maxAge: 60 * 60 * 24, // 24 hours
+	});
+}
+---
+
+<html>
+<head>
+  <title>Authenticating...</title>
+</head>
+<body>
+  <script define:vars={{ token }}>
+    // Also store in localStorage for client-side requests
+    if (token) {
+      localStorage.setItem('devpad_jwt', token);
+      window.location.href = '/posts';
+    } else if (localStorage.getItem('devpad_jwt')) {
+      window.location.href = '/posts';
+    } else {
+      window.location.href = '/auth/login';
+    }
+  </script>
+  <noscript>
+    <p>JavaScript is required for authentication. Please enable JavaScript and try again.</p>
+  </noscript>
+</body>
+</html>

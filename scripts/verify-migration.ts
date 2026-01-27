@@ -22,7 +22,7 @@ const DEVPAD_TABLES = [
 	"ignore_path",
 ] as const;
 
-const BLOG_TABLES = ["users", "blog_posts", "blog_categories", "blog_tags", "access_keys", "blog_integrations", "blog_fetch_links", "blog_projects_cache", "blog_post_projects"] as const;
+const BLOG_TABLES = ["users", "blog_posts", "blog_categories", "blog_tags", "access_keys", "blog_integrations", "blog_fetch_links", "blog_post_projects"] as const;
 
 const MEDIA_TABLES = ["media_users", "media_profiles", "media_accounts", "media_api_keys", "media_rate_limits", "media_account_settings", "media_profile_filters", "media_platform_credentials", "corpus_snapshots"] as const;
 

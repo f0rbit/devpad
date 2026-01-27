@@ -1,0 +1,75 @@
+---
+import PostEditor from "@/components/post/post-editor";
+import AppLayout from "@/layouts/app-layout.astro";
+import { api } from "@/lib/api";
+
+interface CategoryNode {
+	name: string;
+	parent: string | null;
+	children?: CategoryNode[];
+}
+
+interface Category {
+	name: string;
+	parent: string | null;
+}
+
+interface Project {
+	id: string;
+	name: string;
+	project_id: string;
+	description: string | null;
+}
+
+const flattenTree = (nodes: CategoryNode[]): Category[] => nodes.flatMap(n => [{ name: n.name, parent: n.parent }, ...flattenTree(n.children ?? [])]);
+
+let categories: Category[] = [];
+let projects: Project[] = [];
+
+try {
+	const runtime = Astro.locals.runtime;
+	const [catRes, projRes] = await Promise.all([api.ssr("/api/v1/blog/categories", Astro.request, {}, runtime), api.ssr("/api/v1/projects", Astro.request, {}, runtime)]);
+
+	if (catRes.ok) {
+		const data = (await catRes.json()) as { categories?: CategoryNode[] };
+		categories = flattenTree(data.categories ?? []);
+	}
+
+	if (projRes.ok) {
+		const data = (await projRes.json()) as { projects?: Project[] };
+		projects = data.projects ?? [];
+	}
+} catch (e) {
+	// Fetch failed silently
+}
+---
+
+<AppLayout title="New Post">
+	<section class="stack">
+		<header>
+			<h1 class="page-title row">
+				<a href="/posts" title="Back to posts" class="back-arrow">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+				</a>
+				New Post
+			</h1>
+		</header>
+
+		<div id="editor-container">
+			<PostEditor client:load categories={categories} projects={projects} />
+		</div>
+	</section>
+</AppLayout>
+
+<style>
+	.back-arrow {
+		display: flex;
+		align-items: center;
+		color: var(--text-muted);
+	}
+	.back-arrow:hover {
+		color: var(--text-link);
+	}
+</style>
+
+

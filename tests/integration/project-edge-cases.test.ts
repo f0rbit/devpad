@@ -101,7 +101,7 @@ describe("Project Edge Cases Integration", () => {
 
 			// Test public projects endpoint (this might not be implemented yet)
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/projects/public", {
+				const response = await fetch("http://localhost:3001/api/v1/projects/public", {
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
 						"Content-Type": "application/json",
@@ -210,7 +210,7 @@ describe("Project Edge Cases Integration", () => {
 	describe("Project Query Parameter Edge Cases", () => {
 		test("should handle malformed query parameters", async () => {
 			// Test direct API calls with malformed parameters
-			const testCases = ["http://localhost:3001/api/v0/projects?id=", "http://localhost:3001/api/v0/projects?name=", "http://localhost:3001/api/v0/projects?id=null", "http://localhost:3001/api/v0/projects?name=undefined"];
+			const testCases = ["http://localhost:3001/api/v1/projects?id=", "http://localhost:3001/api/v1/projects?name=", "http://localhost:3001/api/v1/projects?id=null", "http://localhost:3001/api/v1/projects?name=undefined"];
 
 			for (const url of testCases) {
 				const response = await fetch(url, {
@@ -255,7 +255,7 @@ describe("Project Edge Cases Integration", () => {
 
 			// Try to fetch specification for project without repo - should fail gracefully
 			try {
-				const response = await fetch(`http://localhost:3001/api/v0/projects/fetch_spec?project_id=${project.id}`, {
+				const response = await fetch(`http://localhost:3001/api/v1/projects/fetch_spec?project_id=${project.id}`, {
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
 					},

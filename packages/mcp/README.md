@@ -15,7 +15,7 @@ bunx @devpad/mcp
 ### Environment Variables
 
 - `DEVPAD_API_KEY` (required): Your devpad API key from https://devpad.tools/account
-- `DEVPAD_BASE_URL` (optional): Base URL for devpad API (defaults to https://devpad.tools/api/v0)
+- `DEVPAD_BASE_URL` (optional): Base URL for devpad API (defaults to https://devpad.tools/api/v1)
 
 ### Claude Desktop Configuration
 

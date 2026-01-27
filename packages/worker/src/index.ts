@@ -1,38 +1,114 @@
+import { healthRouter as blogHealthRouter, categoriesRouter, postsRouter, tagsRouter, tokensRouter } from "@devpad/blog-server";
+import { createContextFromBindings, createProviderFactory, handleCron, requestContextMiddleware } from "@devpad/media-server";
+import { connectionRoutes, credentialRoutes, authRoutes as mediaAuthRoutes, profileRoutes, timelineRoutes } from "@devpad/media-server/routes";
+import type { Bindings } from "@devpad/schema/bindings";
 import { Hono } from "hono";
-import type { AppContext, Bindings } from "./bindings.js";
+import { cors } from "hono/cors";
+import type { AppContext } from "./bindings.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { unifiedContextMiddleware } from "./middleware/context.js";
 import { dbMiddleware } from "./middleware/db.js";
 import authRoutes from "./routes/auth.js";
-import v0Routes from "./routes/v0.js";
+import v1Routes from "./routes/v1.js";
 
-const app = new Hono<AppContext>();
-
-app.get("/health", c => c.json({ status: "ok" }));
-
-app.use("/api/*", dbMiddleware);
-app.use("/api/*", authMiddleware);
-
-app.route("/api/v0", v0Routes);
-app.route("/api/auth", authRoutes);
-
-app.all("*", c => {
-	const host = c.req.header("host") || new URL(c.req.url).host;
-
-	if (host.includes("blog.devpad.tools")) {
-		return c.json({ message: "Blog frontend — coming in Phase 2" }, 501);
-	}
-	if (host.includes("media.devpad.tools")) {
-		return c.json({ message: "Media timeline frontend — coming in Phase 2" }, 501);
-	}
-
-	return c.json({ message: "devpad — Cloudflare Worker", version: "1.0.0" });
-});
-
-const scheduled: ExportedHandler<Bindings>["scheduled"] = async (event, _env, _ctx) => {
-	console.log("Cron triggered:", event.cron);
+type AstroHandler = {
+	fetch: (request: Request, env: any, ctx: ExecutionContext) => Promise<Response>;
 };
 
-export default {
-	fetch: app.fetch,
-	scheduled,
+type ApiHandler = {
+	fetch: (request: Request) => Promise<Response>;
 };
+
+type UnifiedHandlers = {
+	devpad: AstroHandler;
+	blog: AstroHandler;
+	media: AstroHandler;
+};
+
+const isApiRequest = (path: string) => path.startsWith("/api/") || path === "/health";
+
+const createApi = () => {
+	const app = new Hono<AppContext>();
+
+	app.use("*", requestContextMiddleware());
+
+	app.use(
+		"/api/*",
+		cors({
+			origin: origin => {
+				const allowed = ["http://localhost:4321", "http://localhost:3000", "https://media.devpad.tools", "https://devpad.tools", "https://blog.devpad.tools"];
+				if (!origin || allowed.includes(origin)) return origin;
+				if (origin.endsWith(".workers.dev") || origin.endsWith(".pages.dev")) return origin;
+				return null;
+			},
+			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+			allowHeaders: ["Content-Type", "Authorization", "Auth-Token"],
+			credentials: true,
+		})
+	);
+
+	app.use("*", dbMiddleware);
+	app.use("*", authMiddleware);
+	app.use("*", unifiedContextMiddleware);
+
+	app.get("/health", c => c.json({ status: "ok", timestamp: new Date().toISOString() }));
+
+	app.route("/api/auth", authRoutes);
+	app.route("/api/auth/platforms", mediaAuthRoutes);
+
+	app.route("/api/v1", v1Routes);
+
+	const blogRouter = new Hono<AppContext>();
+	blogRouter.route("/posts", postsRouter);
+	blogRouter.route("/tags", tagsRouter);
+	blogRouter.route("/categories", categoriesRouter);
+	blogRouter.route("/tokens", tokensRouter);
+
+	app.route("/api/v1/blog", blogRouter);
+
+	app.route("/api/v1/timeline", timelineRoutes);
+	app.route("/api/v1/connections", connectionRoutes);
+	app.route("/api/v1/credentials", credentialRoutes);
+	app.route("/api/v1/profiles", profileRoutes);
+
+	return app;
+};
+
+const hostnameFor = (request: Request) => {
+	const host = request.headers.get("host") || new URL(request.url).host;
+	return host.toLowerCase();
+};
+
+export function createUnifiedWorker(handlers: UnifiedHandlers) {
+	const api = createApi();
+
+	return {
+		async fetch(request: Request, env: Bindings, ctx: ExecutionContext): Promise<Response> {
+			const hostname = hostnameFor(request);
+			const path = new URL(request.url).pathname;
+
+			if (isApiRequest(path)) {
+				return api.fetch(request, env, ctx);
+			}
+
+			const apiHandler: ApiHandler = { fetch: (req: Request) => api.fetch(req, env, ctx) };
+
+			if (hostname.includes("blog.devpad.tools")) {
+				return handlers.blog.fetch(request, { ...env, API_HANDLER: apiHandler }, ctx);
+			}
+
+			if (hostname.includes("media.devpad.tools")) {
+				return handlers.media.fetch(request, { ...env, API_HANDLER: apiHandler }, ctx);
+			}
+
+			return handlers.devpad.fetch(request, { ...env, API_HANDLER: apiHandler }, ctx);
+		},
+
+		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {
+			const app_ctx = createContextFromBindings(env, createProviderFactory(env.DB));
+			ctx.waitUntil(handleCron(app_ctx));
+		},
+	};
+}
+
+export type { AstroHandler, ApiHandler, UnifiedHandlers };

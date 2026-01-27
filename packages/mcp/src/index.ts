@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
+import { ApiClient, getTool, tools as sharedTools } from "@devpad/api";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { ApiClient, tools as sharedTools, getTool } from "@devpad/api";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // Helper to convert Zod schema to JSON Schema for MCP
@@ -71,7 +71,7 @@ class DevpadMCPServer {
 
 		// Use provided parameters or fall back to environment variables
 		const final_api_key = api_key || process.env.DEVPAD_API_KEY;
-		const final_base_url = base_url || process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v0";
+		const final_base_url = base_url || process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v1";
 
 		if (!final_api_key) {
 			throw new Error("DEVPAD_API_KEY is required");

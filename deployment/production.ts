@@ -2,7 +2,7 @@ import { startServer } from "../packages/server/src/server";
 
 const options = {
 	runMigrations: true, // Auto-migrate on startup
-	staticPath: "./packages/app/dist/client",
+	staticPath: "./apps/main/dist/client",
 	corsOrigins: process.env.CORS_ORIGINS?.split(",") || ["https://devpad.tools", "https://www.devpad.tools", "https://staging.devpad.tools", "https://media.devpad.tools"],
 	migrationPaths: [
 		"./packages/schema/dist/database/drizzle", // Built location

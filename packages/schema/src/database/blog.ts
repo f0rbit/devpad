@@ -1,24 +1,12 @@
 import { sql } from "drizzle-orm";
 import { integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-export const blog_users = sqliteTable("users", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	github_id: integer("github_id").notNull().unique(),
-	username: text("username").notNull(),
-	email: text("email"),
-	avatar_url: text("avatar_url"),
-	created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-	updated_at: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-});
-
 export const blog_posts = sqliteTable(
 	"blog_posts",
 	{
 		id: integer("id").primaryKey({ autoIncrement: true }),
 		uuid: text("uuid").notNull().unique(),
-		author_id: integer("author_id")
-			.notNull()
-			.references(() => blog_users.id),
+		author_id: text("author_id").notNull(),
 		slug: text("slug").notNull(),
 		corpus_version: text("corpus_version"),
 		category: text("category").notNull().default("root"),
@@ -36,9 +24,7 @@ export const blog_categories = sqliteTable(
 	"blog_categories",
 	{
 		id: integer("id").primaryKey({ autoIncrement: true }),
-		owner_id: integer("owner_id")
-			.notNull()
-			.references(() => blog_users.id),
+		owner_id: text("owner_id").notNull(),
 		name: text("name").notNull(),
 		parent: text("parent").default("root"),
 	},
@@ -62,9 +48,7 @@ export const blog_tags = sqliteTable(
 
 export const blog_access_keys = sqliteTable("access_keys", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
-	user_id: integer("user_id")
-		.notNull()
-		.references(() => blog_users.id),
+	user_id: text("user_id").notNull(),
 	key_hash: text("key_hash").notNull().unique(),
 	name: text("name").notNull(),
 	note: text("note"),
@@ -74,9 +58,7 @@ export const blog_access_keys = sqliteTable("access_keys", {
 
 export const blog_integrations = sqliteTable("blog_integrations", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
-	user_id: integer("user_id")
-		.notNull()
-		.references(() => blog_users.id),
+	user_id: text("user_id").notNull(),
 	source: text("source").notNull(),
 	location: text("location").notNull(),
 	data: text("data", { mode: "json" }).$type<Record<string, unknown>>(),
@@ -101,16 +83,6 @@ export const blog_fetch_links = sqliteTable(
 		fetch_links_integration_identifier_unique: unique("fetch_links_integration_identifier_unique").on(table.integration_id, table.identifier),
 	})
 );
-
-export const blog_projects_cache = sqliteTable("blog_projects_cache", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	user_id: integer("user_id")
-		.notNull()
-		.references(() => blog_users.id),
-	status: text("status").notNull().default("pending"),
-	data: text("data", { mode: "json" }).$type<Record<string, unknown>>(),
-	fetched_at: integer("fetched_at", { mode: "timestamp" }),
-});
 
 export const blog_post_projects = sqliteTable(
 	"blog_post_projects",

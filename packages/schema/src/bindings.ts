@@ -9,4 +9,8 @@ export type Bindings = {
 	GITHUB_CLIENT_SECRET: string;
 	JWT_SECRET: string;
 	ENCRYPTION_KEY: string;
+	REDDIT_CLIENT_ID: string;
+	REDDIT_CLIENT_SECRET: string;
+	TWITTER_CLIENT_ID: string;
+	TWITTER_CLIENT_SECRET: string;
 };

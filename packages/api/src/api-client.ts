@@ -1,6 +1,6 @@
-import type { Project, ProjectConfig, SaveConfigRequest, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo, Milestone, Goal, HistoryAction, TagWithTypedColor, ApiKey, GetConfigResult } from "@devpad/schema";
+import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema";
 import { ApiClient as HttpClient } from "./request";
-import { wrap, type Result } from "./result";
+import { type Result, wrap } from "./result";
 
 /**
  * Authentication mode for the API client
@@ -22,14 +22,14 @@ export class ApiClient {
 		auth_mode?: AuthMode;
 		max_history_size?: number;
 	}) {
-		const v0_base_url = options.base_url || "http://localhost:4321/api/v0";
+		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
 		this._api_key = options.api_key;
 		this._auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
 
 		// Create category-specific HTTP clients
 		const clientOptions = {
-			base_url: v0_base_url,
+			base_url,
 			api_key: options.api_key,
 			max_history_size: options.max_history_size,
 		};
@@ -49,44 +49,14 @@ export class ApiClient {
 	 * Auth namespace with Result-wrapped operations
 	 */
 	public readonly auth = {
-		/**
-		 * Get current session information
-		 */
-		session: (): Promise<Result<{ authenticated: boolean; user: any; session: any }, "session">> => wrap(() => this.clients.auth.get<{ authenticated: boolean; user: any; session: any }>("/auth/session"), "session"),
-
-		/**
-		 * Login (redirect to OAuth)
-		 */
-		login: (): Promise<Result<void, "result">> => wrap(() => this.clients.auth.get<void>("/auth/login"), "result"),
-
-		/**
-		 * Logout
-		 */
-		logout: (): Promise<Result<void, "result">> => wrap(() => this.clients.auth.get<void>("/auth/logout"), "result"),
-
-		/**
-		 * API key management
-		 */
 		keys: {
-			/**
-			 * List all API keys
-			 */
-			list: (): Promise<Result<ApiKey[], "keys">> => wrap(() => this.clients.auth.get<ApiKey[]>("/auth/keys"), "keys"),
+			list: (): Promise<Result<ApiKey[], "keys">> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys"), "keys"),
 
-			/**
-			 * Generate a new API key
-			 */
-			create: (name?: string): Promise<Result<{ message: string; key: string }, "key">> => wrap(() => this.clients.auth.post<{ message: string; key: string }>("/auth/keys", { body: name ? { name } : {} }), "key"),
+			create: (name?: string): Promise<Result<{ message: string; key: string }, "key">> => wrap(() => this.clients.auth.post<{ message: string; key: string }>("/keys", { body: name ? { name } : {} }), "key"),
 
-			/**
-			 * Revoke an API key
-			 */
-			revoke: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`), "result"),
+			revoke: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`), "result"),
 
-			/**
-			 * Remove an API key (alias for revoke)
-			 */
-			remove: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/auth/keys/${key_id}`), "result"),
+			remove: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`), "result"),
 		},
 	};
 

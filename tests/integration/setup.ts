@@ -3,12 +3,12 @@
  * Uses bun's preload feature for single server instance across all tests
  */
 
-import { beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll } from "bun:test";
 import path from "node:path";
 import ApiClient from "@devpad/api";
-import { TEST_USER_ID, DEBUG_LOGGING, log, setupTestDatabase, createTestUser, cleanupTestDatabase, waitForServer } from "../shared/test-utils";
+import { cleanupTestDatabase, createTestUser, DEBUG_LOGGING, log, setupTestDatabase, TEST_USER_ID, waitForServer } from "../shared/test-utils";
 
-export const TEST_BASE_URL = "http://localhost:3001/api/v0";
+export const TEST_BASE_URL = "http://localhost:3001/api/v1";
 export { TEST_USER_ID, DEBUG_LOGGING };
 
 // Global shared server state

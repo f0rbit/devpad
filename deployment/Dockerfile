@@ -18,6 +18,7 @@ WORKDIR /app
 # Copy workspace configuration and source code
 COPY package.json bun.lockb ./
 COPY packages/ packages/
+COPY apps/ apps/
 COPY deployment/ deployment/
 COPY todo-config.json .
 COPY --from=go-builder /todo-tracker/todo-tracker .
@@ -43,7 +44,7 @@ WORKDIR /app/packages/core
 RUN bun run build
 
 
-WORKDIR /app/packages/app
+WORKDIR /app/apps/main
 RUN bun run build
 
 # Build the Hono server for production
@@ -69,13 +70,14 @@ COPY todo-config.json .
 # Copy built applications and dependencies
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps ./apps
 COPY --from=builder /app/deployment ./deployment
 
 # Set default environment variables (can be overridden at runtime)
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV DATABASE_FILE=/app/data/devpad.db
-ENV STATIC_FILES_PATH=./packages/app/dist/client
+ENV STATIC_FILES_PATH=./apps/main/dist/client
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data

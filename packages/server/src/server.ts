@@ -1,18 +1,18 @@
 import { Database } from "bun:sqlite";
+import { log } from "@devpad/core";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import fs from "fs";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { log } from "@devpad/core";
+import { handler as ssrHandler } from "../../../apps/main/dist/server/entry.mjs";
 import { authMiddleware } from "./middleware/auth";
-import { handler as ssrHandler } from "../../app/dist/server/entry.mjs";
-import fs from "fs";
 
 // Import route modules
 import authRoutes from "./routes/auth";
-import v0Routes from "./routes/v0";
+import v1Routes from "./routes/v1";
 
 export interface ServerOptions {
 	/** Enable database migrations on startup */
@@ -178,13 +178,13 @@ export function createApp(options: ServerOptions = {}): Hono {
 	app.use("/api/auth/session", authMiddleware);
 
 	// Apply auth middleware to other API routes
-	app.use("/api/v0/*", authMiddleware);
+	app.use("/api/v1/*", authMiddleware);
 
 	// Auth routes (login/callback public, verify/session protected by middleware above)
 	app.route("/api/auth", authRoutes);
 
 	// API Routes
-	app.route("/api/v0", v0Routes);
+	app.route("/api/v1", v1Routes);
 
 	// Serve static files first - this needs to come before SSR handler
 	// When running from packages/server directory, the path is ../app/dist/client/

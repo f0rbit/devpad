@@ -38,6 +38,14 @@
 			"types": "./dist/database/media.d.ts",
 			"import": "./dist/database/media.js"
 		},
+		"./blog": {
+			"types": "./dist/blog/index.d.ts",
+			"import": "./dist/blog/index.js"
+		},
+		"./media": {
+			"types": "./dist/media/index.d.ts",
+			"import": "./dist/media/index.js"
+		},
 		"./bindings": {
 			"types": "./dist/bindings.d.ts",
 			"import": "./dist/bindings.js"
@@ -58,7 +66,8 @@
 	},
 	"dependencies": {
 		"@f0rbit/corpus": "^0.3.4",
-		"drizzle-orm": "^0.30.6",
+		"drizzle-orm": "^0.44.7",
+		"drizzle-zod": "^0.7.0",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {

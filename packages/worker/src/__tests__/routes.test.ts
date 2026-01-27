@@ -28,9 +28,9 @@ const createTestApp = () => {
 		await next();
 	});
 
-	app.get("/api/v0/", c => c.json({ version: "0", status: "ok" }));
+	app.get("/api/v1/", c => c.json({ version: "1", status: "ok" }));
 
-	app.get("/api/v0/projects", requireAuth, async c => {
+	app.get("/api/v1/projects", requireAuth, async c => {
 		return c.json([]);
 	});
 
@@ -68,16 +68,16 @@ describe("worker route wiring", () => {
 		expect(body).toEqual({ status: "ok" });
 	});
 
-	it("GET /api/v0/ returns version info", async () => {
-		const response = await request(app, "/api/v0/");
+	it("GET /api/v1/ returns version info", async () => {
+		const response = await request(app, "/api/v1/");
 		expect(response.status).toBe(200);
 		const body = (await response.json()) as any;
-		expect(body.version).toBe("0");
+		expect(body.version).toBe("1");
 		expect(body.status).toBe("ok");
 	});
 
-	it("GET /api/v0/projects without auth returns 401", async () => {
-		const response = await request(app, "/api/v0/projects");
+	it("GET /api/v1/projects without auth returns 401", async () => {
+		const response = await request(app, "/api/v1/projects");
 		expect(response.status).toBe(401);
 		const body = (await response.json()) as any;
 		expect(body.error).toBe("Unauthorized");

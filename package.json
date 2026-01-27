@@ -5,13 +5,14 @@
 	"private": true,
 	"type": "module",
 	"workspaces": [
-		"packages/*"
+		"packages/*",
+		"apps/*"
 	],
 	"scripts": {
 		"build": "bun run --filter=@devpad/* build",
 		"build:api": "cd packages/schema && bun run build && cd ../api && bun run build",
 		"build:docker": "docker build -t devpad-app -f deployment/Dockerfile .",
-		"dev": "PUBLIC_API_SERVER_URL=localhost:3000/api/v0 bun run --filter=@devpad/app dev",
+		"dev": "PUBLIC_API_SERVER_URL=localhost:3000/api/v1 bun run --filter=@devpad/app dev",
 		"dev:server": "DATABASE_FILE=../../database/local.db bun run --filter=@devpad/server dev",
 		"dev:all": "DATABASE_FILE=database/local.db concurrently \"bun run dev\" \"bun run dev:server\"",
 		"test": "bun run --filter=@devpad/* test",
@@ -40,6 +41,7 @@
 		"format:check": "biome format .",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write",
+		"build:worker": "bun scripts/build-unified.ts",
 		"deploy:production": "bun deployment/production.ts",
 		"deploy:serverless": "bun deployment/serverless.ts",
 		"deploy:migrate": "bun deployment/migrate.ts"

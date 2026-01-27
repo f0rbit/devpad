@@ -53,3 +53,15 @@ bucket_name = "blog-devpad-corpus-preview"
 [[env.preview.r2_buckets]]
 binding = "MEDIA_CORPUS_BUCKET"
 bucket_name = "media-timeline-corpus-preview"
+
+# Secrets (set via `wrangler secret put`):
+# GITHUB_CLIENT_ID
+# GITHUB_CLIENT_SECRET
+# JWT_SECRET
+# ENCRYPTION_KEY
+# REDDIT_CLIENT_ID
+# REDDIT_CLIENT_SECRET
+# TWITTER_CLIENT_ID
+# TWITTER_CLIENT_SECRET
+#
+# For preview: `wrangler secret put <NAME> --env preview`

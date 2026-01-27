@@ -172,7 +172,7 @@ NODE_ENV=production
 PORT=3000
 DATABASE_FILE=/app/data/devpad.db
 CORS_ORIGINS=https://devpad.tools,https://www.devpad.tools
-STATIC_FILES_PATH=./packages/app/dist/client
+STATIC_FILES_PATH=./apps/main/dist/client
 ```
 
 #### Staging
@@ -181,7 +181,7 @@ NODE_ENV=staging
 PORT=3000
 DATABASE_FILE=/app/data/devpad-staging.db
 CORS_ORIGINS=https://staging.devpad.tools
-STATIC_FILES_PATH=./packages/app/dist/client
+STATIC_FILES_PATH=./apps/main/dist/client
 ```
 
 ### GitHub Secrets Required

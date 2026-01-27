@@ -7,15 +7,15 @@ NEVER EVER MAKE ANY COMMITS OR EVERY DO A GIT PUSH/PULL OR MERGE/REBASE!!!!
 Please don't be super agreeable with whatever I say - if you think there's an issue with my suggestions, push back & suggest better alternatives. I may be wrong upon occasion challenge me. But then once we've come to a decision - let's disagree & commit and move forward.
 
 ## Build & Test Commands
-- Dev server: `bun dev` (root) or `cd packages/app && bun dev`
+- Dev server: `bun dev` (root) or `cd apps/main && bun dev`
 - Build all: `bun build` (builds all packages)
 - Formatting guidelines are defined in `biome.json` - DO NOT RUN `bun lint:fix` - this will break astro imports
-- Type check: `cd packages/app && bun check`
+- Type check: `cd apps/main && bun check`
 - Unit tests: `make unit` or `bun test unit`
 - Integration tests: `make integration` (sequential) or `bun test integration/`
 - Single test: `bun test path/to/test.test.ts`
 - Coverage: `make coverage` then `make coverage-stats`
-- Database migrate: `cd packages/app && bun migrate`
+- Database migrate: `cd apps/main && bun migrate`
 
 ## Code Style & Architecture
 - Naming: snake_case (variables), camelCase (functions), PascalCase (classes/types)
@@ -44,6 +44,14 @@ Please don't be super agreeable with whatever I say - if you think there's an is
 ## Repository Structure & Key Files
 ```
 devpad/
+├── apps/
+│   ├── main/src/                       # devpad Astro frontend
+│   │   ├── components/solid/          # SolidJS components
+│   │   ├── pages/                     # Astro pages
+│   │   ├── layouts/                   # Page layouts
+│   │   └── utils/api-client.ts        # Frontend API client instance
+│   ├── blog/                          # Blog Astro frontend
+│   └── media/                         # Media timeline Astro frontend
 ├── packages/
 │   ├── api/src/
 │   │   ├── api-client.ts              # Main API client with Result-wrapped operations
@@ -65,11 +73,6 @@ devpad/
 │   │   └── database/
 │   │       ├── schema.ts              # Drizzle database schema
 │   │       └── migrate.ts             # Database migrations
-│   ├── app/src/
-│   │   ├── components/solid/          # SolidJS components
-│   │   ├── pages/                     # Astro pages
-│   │   ├── layouts/                   # Page layouts
-│   │   └── utils/api-client.ts        # Frontend API client instance
 │   └── server/src/
 │       ├── routes/
 │       │   ├── v0.ts                  # Main API routes

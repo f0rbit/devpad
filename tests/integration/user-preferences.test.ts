@@ -11,7 +11,7 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Profile Information", () => {
 		test("should get user profile information", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/user", {
+				const response = await fetch("http://localhost:3001/api/v1/user", {
 					method: "GET",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -42,7 +42,7 @@ describe("User Preferences & Profile Integration", () => {
 	describe("Task View Preferences", () => {
 		test("should update task view preference to grid", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/user/preferences", {
+				const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -72,7 +72,7 @@ describe("User Preferences & Profile Integration", () => {
 
 		test("should update task view preference to list", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/user/preferences", {
+				const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -105,7 +105,7 @@ describe("User Preferences & Profile Integration", () => {
 				const invalidViews = ["invalid", "table", "card", "", null];
 
 				for (const invalidView of invalidViews) {
-					const response = await fetch("http://localhost:3001/api/v0/user/preferences", {
+					const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 						method: "PATCH",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -181,7 +181,7 @@ describe("User Preferences & Profile Integration", () => {
 
 		test("should get user history via direct API call", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/user/history", {
+				const response = await fetch("http://localhost:3001/api/v1/user/history", {
 					method: "GET",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -210,7 +210,7 @@ describe("User Preferences & Profile Integration", () => {
 		test("should require authentication for preferences operations", async () => {
 			try {
 				// Test without authentication
-				const response = await fetch("http://localhost:3001/api/v0/user/preferences", {
+				const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
 						"Content-Type": "application/json",
@@ -233,7 +233,7 @@ describe("User Preferences & Profile Integration", () => {
 				const invalidIds = ["", "invalid-user", null, undefined];
 
 				for (const invalidId of invalidIds) {
-					const response = await fetch("http://localhost:3001/api/v0/user/preferences", {
+					const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 						method: "PATCH",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -263,7 +263,7 @@ describe("User Preferences & Profile Integration", () => {
 		test("should handle missing user profile gracefully", async () => {
 			try {
 				// Test with potentially invalid/expired token (still authenticated but maybe edge case)
-				const response = await fetch("http://localhost:3001/api/v0/user", {
+				const response = await fetch("http://localhost:3001/api/v1/user", {
 					method: "GET",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -287,7 +287,7 @@ describe("User Preferences & Profile Integration", () => {
 			try {
 				// Test concurrent preference updates
 				const updatePromises = Array.from({ length: 5 }, (_, i) =>
-					fetch("http://localhost:3001/api/v0/user/preferences", {
+					fetch("http://localhost:3001/api/v1/user/preferences", {
 						method: "PATCH",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -322,7 +322,7 @@ describe("User Preferences & Profile Integration", () => {
 		test("should maintain preference consistency across requests", async () => {
 			try {
 				// Set a preference
-				const setResponse = await fetch("http://localhost:3001/api/v0/user/preferences", {
+				const setResponse = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -341,7 +341,7 @@ describe("User Preferences & Profile Integration", () => {
 
 				if (setResponse.ok) {
 					// Get user profile to check if preference was saved
-					const profileResponse = await fetch("http://localhost:3001/api/v0/user", {
+					const profileResponse = await fetch("http://localhost:3001/api/v1/user", {
 						method: "GET",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,

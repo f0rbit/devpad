@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import worker from "../index.js";
+import { createUnifiedWorker } from "../index.js";
 
 const MOCK_ENV = {
 	DB: {} as any,
@@ -12,7 +12,38 @@ const MOCK_ENV = {
 	GITHUB_CLIENT_SECRET: "test-client-secret",
 	JWT_SECRET: "test-jwt-secret",
 	ENCRYPTION_KEY: "test-encryption-key",
+	REDDIT_CLIENT_ID: "test-reddit-id",
+	REDDIT_CLIENT_SECRET: "test-reddit-secret",
+	TWITTER_CLIENT_ID: "test-twitter-id",
+	TWITTER_CLIENT_SECRET: "test-twitter-secret",
 };
+
+const stub_astro_handler = (label: string) => ({
+	fetch: async (_request: Request, _env: any, _ctx: ExecutionContext) =>
+		new Response(JSON.stringify({ message: `${label} — Phase 2 — not yet wired` }), {
+			status: 501,
+			headers: { "Content-Type": "application/json" },
+		}),
+});
+
+const devpad_handler = {
+	fetch: async (request: Request, _env: any, _ctx: ExecutionContext) => {
+		const url = new URL(request.url);
+		if (url.pathname === "/") {
+			return new Response(JSON.stringify({ message: "devpad — Cloudflare Worker", version: "1.0.0" }), {
+				status: 200,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+		return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
+	},
+};
+
+const worker = createUnifiedWorker({
+	devpad: devpad_handler,
+	blog: stub_astro_handler("blog"),
+	media: stub_astro_handler("media"),
+});
 
 const request = (path: string, options?: RequestInit) => new Request(`http://localhost${path}`, options);
 

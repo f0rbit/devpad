@@ -29,7 +29,7 @@ The docker file will run an [index.ts](/deployment/index.ts) script that does a 
 ### Development
 1. Download repo
 2. Install dependencies. `bun install`
-3. Setup `.env` file [.env.example](/packages/app/.env.example)
+3. Setup `.env` file [.env.example](/apps/main/.env.example)
 4. Build the todo-tracker binary: `./scripts/build-todo-tracker.sh` (required for scanning tests)
 5. Run dev server with `bun dev`
 

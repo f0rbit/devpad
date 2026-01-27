@@ -11,7 +11,7 @@ describe("API Key Management Integration", () => {
 	describe("API Key Creation", () => {
 		test("should create a new API key", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/keys", {
+				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "POST",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -43,7 +43,7 @@ describe("API Key Management Integration", () => {
 
 		test("should create API key with optional name", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/keys", {
+				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "POST",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -72,7 +72,7 @@ describe("API Key Management Integration", () => {
 	describe("API Key Listing", () => {
 		test("should list user API keys", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/keys", {
+				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "GET",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -102,7 +102,7 @@ describe("API Key Management Integration", () => {
 		test("should delete API key by ID", async () => {
 			try {
 				// First try to create a key to delete
-				const createResponse = await fetch("http://localhost:3001/api/v0/keys", {
+				const createResponse = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "POST",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -123,7 +123,7 @@ describe("API Key Management Integration", () => {
 					const keyId = createdKey.id;
 
 					// Now try to delete it
-					const deleteResponse = await fetch(`http://localhost:3001/api/v0/keys/${keyId}`, {
+					const deleteResponse = await fetch(`http://localhost:3001/api/v1/keys/${keyId}`, {
 						method: "DELETE",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -145,7 +145,7 @@ describe("API Key Management Integration", () => {
 
 		test("should handle deletion of non-existent key", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/keys/non-existent-key", {
+				const response = await fetch("http://localhost:3001/api/v1/keys/non-existent-key", {
 					method: "DELETE",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -176,7 +176,7 @@ describe("API Key Management Integration", () => {
 				];
 
 				for (const payload of invalidPayloads) {
-					const response = await fetch("http://localhost:3001/api/v0/keys", {
+					const response = await fetch("http://localhost:3001/api/v1/keys", {
 						method: "POST",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -203,7 +203,7 @@ describe("API Key Management Integration", () => {
 		test("should require authentication for key operations", async () => {
 			try {
 				// Test without authentication
-				const response = await fetch("http://localhost:3001/api/v0/keys", {
+				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "GET",
 					headers: {
 						"Content-Type": "application/json",
@@ -219,7 +219,7 @@ describe("API Key Management Integration", () => {
 
 		test("should not expose full API key in responses", async () => {
 			try {
-				const response = await fetch("http://localhost:3001/api/v0/keys", {
+				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "GET",
 					headers: {
 						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -257,7 +257,7 @@ describe("API Key Management Integration", () => {
 			try {
 				// Test creating multiple keys concurrently
 				const createPromises = Array.from({ length: 3 }, (_, i) =>
-					fetch("http://localhost:3001/api/v0/keys", {
+					fetch("http://localhost:3001/api/v1/keys", {
 						method: "POST",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
@@ -292,7 +292,7 @@ describe("API Key Management Integration", () => {
 			try {
 				// Test rapid key creation (potential rate limiting scenario)
 				const rapidRequests = Array.from({ length: 10 }, (_, i) =>
-					fetch("http://localhost:3001/api/v0/keys", {
+					fetch("http://localhost:3001/api/v1/keys", {
 						method: "POST",
 						headers: {
 							Authorization: `Bearer ${testInstance.client.getApiKey()}`,

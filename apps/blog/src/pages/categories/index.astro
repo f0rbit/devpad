@@ -1,0 +1,48 @@
+---
+import CategoriesPage from "@/components/category/categories-page";
+import AppLayout from "@/layouts/app-layout.astro";
+import { api } from "@/lib/api";
+
+interface CategoryNode {
+	name: string;
+	parent: string | null;
+	children?: CategoryNode[];
+}
+
+interface Category {
+	id: number;
+	name: string;
+	parent: string | null;
+}
+
+const flattenTree = (nodes: CategoryNode[], id = 1): Category[] => nodes.flatMap((n, i) => [{ id: id + i, name: n.name, parent: n.parent }, ...flattenTree(n.children ?? [], id + i + 100)]);
+
+let categories: Category[] = [];
+let error: string | null = null;
+
+try {
+	const runtime = Astro.locals.runtime;
+	const response = await api.ssr("/api/v1/blog/categories", Astro.request, {}, runtime);
+
+	if (!response.ok) {
+		throw new Error("Failed to fetch categories");
+	}
+	const data = await response.json();
+	categories = flattenTree(data.categories ?? []);
+} catch (err) {
+	error = "Failed to load categories";
+}
+---
+
+<AppLayout title="Categories">
+	<section class="stack">
+		<header>
+			<h1 class="page-title">Categories</h1>
+		</header>
+		{error ? (
+			<div class="form-error">{error}</div>
+		) : (
+			<CategoriesPage client:load initialCategories={categories} />
+		)}
+	</section>
+</AppLayout>

@@ -1,0 +1,15 @@
+{
+	"extends": "astro/tsconfigs/strict",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["src/*"],
+			"@devpad/schema/media": ["../../packages/schema/src/media/index.ts"],
+			"@devpad/schema/database/media": ["../../packages/schema/src/database/media.ts"]
+		},
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js"
+	},
+	"include": ["src/**/*", "env.d.ts"],
+	"exclude": ["node_modules", "dist"]
+}

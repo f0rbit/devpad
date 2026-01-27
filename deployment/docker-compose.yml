@@ -11,7 +11,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_FILE=/app/data/devpad.db
-      - STATIC_FILES_PATH=./packages/app/dist/client
+      - STATIC_FILES_PATH=./apps/main/dist/client
       - FRONTEND_URL=http://localhost:3000
     volumes:
       - devpad_data:/app/data

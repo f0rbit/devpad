@@ -3,9 +3,9 @@
  * Tests the improved developer experience methods
  */
 
-import { describe, test, expect } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { describe, expect, test } from "bun:test";
 import { expectValidProject } from "../shared/assertions";
+import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
 
@@ -76,9 +76,9 @@ describe("Clean API Interface", () => {
 			expect(typeof test_instance.client.auth.keys.remove).toBe("function");
 		});
 
-		test("should support clean session method", async () => {
-			// Test the clean session interface
-			expect(typeof test_instance.client.auth.session).toBe("function");
+		test("should not expose removed session method", async () => {
+			// auth.session() was removed during API consolidation - sessions handled by worker middleware
+			expect(test_instance.client.auth.session).toBeUndefined();
 		});
 	});
 

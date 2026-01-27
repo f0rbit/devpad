@@ -1,0 +1,15 @@
+---
+// This page handles logout
+---
+
+<html>
+<head>
+  <title>Logging out...</title>
+</head>
+<body>
+  <script>
+    localStorage.removeItem('devpad_jwt');
+    window.location.href = '/';
+  </script>
+</body>
+</html>
