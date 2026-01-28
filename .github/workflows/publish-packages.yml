@@ -196,13 +196,9 @@ jobs:
           
       - name: Build packages
         run: |
-          # Build all packages in dependency order
           echo "Building packages in dependency order..."
           cd packages/schema && bun run build
-          cd ../core && bun run build
           cd ../api && bun run build
-          cd ../app && bun run build
-          cd ../server && bun run build
           cd ../mcp && bun run build
           cd ../cli && bun run build
           cd ../..
@@ -295,9 +291,7 @@ jobs:
       - name: Install and build
         run: |
           bun install --frozen-lockfile
-          # Build dependencies first
           cd packages/schema && bun run build
-          cd ../core && bun run build
           cd ../api && bun run build
           
       - name: Publish to npm
@@ -344,9 +338,7 @@ jobs:
       - name: Install and build
         run: |
           bun install --frozen-lockfile
-          # Build dependencies first
           cd packages/schema && bun run build
-          cd ../core && bun run build
           cd ../api && bun run build
           cd ../cli && bun run build
           
@@ -394,9 +386,7 @@ jobs:
       - name: Install and build
         run: |
           bun install --frozen-lockfile
-          # Build dependencies first
           cd packages/schema && bun run build
-          cd ../core && bun run build
           cd ../api && bun run build
           cd ../mcp && bun run build
           
