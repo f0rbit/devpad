@@ -4,7 +4,7 @@ import PageLayout from "../../../layouts/PageLayout.astro";
 import ProjectLayout from "../../../layouts/ProjectLayout.astro";
 import ProjectSettings from "../../../components/ProjectSettings.astro";
 import ConfigEditor from "../../../components/solid/ConfigEditor";
-import { TagWithTypedColor } from "@devpad/schema";
+
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });

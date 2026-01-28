@@ -3,7 +3,7 @@ import { getServerApiClient } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import MilestonesManager from "@/components/solid/MilestonesManager";
-import { Project } from "@devpad/schema";
+import { Project, Goal } from "@devpad/schema";
 
 const { project_id } = Astro.params;
 if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
@@ -29,7 +29,7 @@ if (milestones_error) {
 }
 
 // Fetch goals for each milestone
-const goals_map = {};
+const goals_map: Record<string, Goal[]> = {};
 for (const milestone of milestones || []) {
 	const { goals, error: goals_error } = await api_client.milestones.goals(milestone.id);
 	goals_map[milestone.id] = goals || [];
@@ -42,6 +42,6 @@ for (const milestone of milestones || []) {
 <PageLayout title={`Milestones & Goals - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
 		<h5>project goals</h5>
-		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones} initialGoalsMap={goals_map} client:load />
+		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones ?? undefined} initialGoalsMap={goals_map} client:load />
 	</ProjectLayout>
 </PageLayout>

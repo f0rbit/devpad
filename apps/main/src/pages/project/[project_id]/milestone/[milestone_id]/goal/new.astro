@@ -80,10 +80,10 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 		try {
 			const apiClient = getApiClient();
-			const { goal, error } = await apiClient.goals.create({
+			const { goal: _goal, error } = await apiClient.goals.create({
 				name,
-				description,
-				target_time,
+				description: description ?? undefined,
+				target_time: target_time ?? undefined,
 				milestone_id: milestoneId,
 			});
 

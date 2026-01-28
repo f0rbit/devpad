@@ -32,7 +32,7 @@ if (goal.milestone_id !== milestone.id) {
 	return new Response(null, { status: 400, statusText: "Goal does not belong to this milestone" });
 }
 
-const project_map = {};
+const project_map: Record<string, typeof project> = {};
 project_map[project.id] = project;
 
 const { tasks: allTasks, error: tasksError } = await apiClient.tasks.list();
