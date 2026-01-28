@@ -6,9 +6,9 @@ import Square from "lucide-solid/icons/square";
 import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { Show } from "solid-js";
-import { createOptimisticUpdate } from "@/utils/optimistic-updates";
 import { OptimisticStatus } from "@/components/solid/OptimisticStatus";
 import { getApiClient } from "@/utils/api-client";
+import { createOptimisticUpdate } from "@/utils/optimistic-updates";
 
 type Progress = Task["progress"];
 
@@ -35,6 +35,7 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 				progress: updatedTask.progress,
 				owner_id: updatedTask.owner_id,
 			});
+			if (!result.task) throw new Error(result.error?.message ?? "Failed to update task");
 			return result.task;
 		},
 		showSuccessToast: false, // No toast for quick actions

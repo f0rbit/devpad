@@ -149,18 +149,6 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	const old_context = data.old?.context ? buildCodeContext(data.old.context) : null;
 	const new_context = data.new?.context ? buildCodeContext(data.new.context) : null;
 
-	/** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
-	let _old_filetype = "" as any;
-	let _new_filetype = "" as any;
-	if (data.new?.file) {
-		const parts = data.new.file.split(".");
-		_new_filetype = parts[parts.length - 1];
-	}
-	if (data.old?.file) {
-		const parts = data.old.file.split(".");
-		_old_filetype = parts[parts.length - 1];
-	}
-
 	return (
 		<div class="flex-col" style="gap: 2px;">
 			<h5 class="flex-row">

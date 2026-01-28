@@ -56,7 +56,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 	const [search, setSearch] = createSignal("");
 	const [project, setProject] = createSignal<string | null>(null); // id of selected project
 	const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
-	const [goal, setGoal] = createSignal<string | null>(null); // id of selected goal
+	const [goal] = createSignal<string | null>(null); // id of selected goal
 	const [view, setView] = createSignal<TaskView>(defaultView ?? "list");
 
 	// sort tasks based on selected option
