@@ -1,9 +1,9 @@
+import type { Result } from "@f0rbit/corpus";
 import type { Backend } from "@f0rbit/corpus/cloudflare";
 import type { Database } from "../db";
 import type { GitHubFetchResult } from "../platforms/github";
 import type { TwitterFetchResult } from "../platforms/twitter";
 import type { ProviderError, ProviderFactory } from "../platforms/types";
-import type { Result } from "../utils";
 
 export type DrizzleDB = Database;
 

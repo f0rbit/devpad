@@ -1,15 +1,9 @@
+import { badRequest, forbidden } from "@devpad/worker/utils/response";
 import { Hono } from "hono";
 import { getAuth } from "../auth";
 import type { Bindings } from "../bindings";
-import { badRequest, forbidden } from "../http-errors";
-import type { AppContext } from "../infrastructure/context";
 import { timelineService } from "../services/timeline";
-import { getContext, handleResult } from "../utils/route-helpers";
-
-type Variables = {
-	user: { id: string; github_id: number; name: string; task_view: string } | null;
-	mediaContext: AppContext;
-};
+import { getContext, handleResult, type Variables } from "../utils/route-helpers";
 
 export const timelineRoutes = new Hono<{ Bindings: Bindings; Variables: Variables }>();
 

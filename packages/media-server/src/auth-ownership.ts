@@ -1,7 +1,7 @@
-import { type AccountId, type ProfileId, type UserId, accountId, accounts, errors, type ForbiddenError, type NotFoundError, profileId, profiles, userId } from "@devpad/schema/media";
+import { type AccountId, accountId, accounts, errors, type ForbiddenError, type NotFoundError, type ProfileId, profileId, profiles, type UserId, userId } from "@devpad/schema/media";
+import { ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { Database } from "./db";
-import { type Result, ok } from "./utils";
 
 export type OwnershipError = NotFoundError | ForbiddenError;
 

@@ -4,12 +4,7 @@ import type { AppContext } from "../infrastructure/context";
 import { type OAuthCallbackConfig, type OAuthSecrets, type OAuthState, oauth } from "../oauth-helpers";
 import { credential } from "../services/credentials";
 import { token } from "../token";
-import { getContext } from "../utils/route-helpers";
-
-type Variables = {
-	user: { id: string; github_id: number; name: string; task_view: string } | null;
-	mediaContext: AppContext;
-};
+import { getContext, type Variables } from "../utils/route-helpers";
 
 type RedditOAuthState = { byo?: boolean };
 

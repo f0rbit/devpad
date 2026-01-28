@@ -27,9 +27,7 @@ configureErrorLogging({
 
 export {
 	type AuthContext,
-	authMiddleware,
 	getAuth,
-	optionalAuthMiddleware,
 } from "./auth";
 export { type Bindings, createContextFromBindings } from "./bindings";
 export { type CronResult, handleCron, type ProviderFactory as CronProviderFactory } from "./cron";
@@ -60,4 +58,4 @@ export { authRoutes, connectionRoutes, profileRoutes, timelineRoutes, token } fr
 export * from "./services";
 export { secrets } from "./utils";
 // Route helpers
-export { handleResult, handleResultNoContent, handleResultWith, type ServiceError, type Variables } from "./utils/route-helpers";
+export { handleResult, handleResultNoContent, handleResultWith, response, type ServiceError, type Variables, valid } from "./utils/route-helpers";

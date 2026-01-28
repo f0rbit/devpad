@@ -1,18 +1,12 @@
 import { accountId, PlatformSchema, profileId, userId } from "@devpad/schema/media";
+import { badRequest, notFound, serverError } from "@devpad/worker/utils/response";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getAuth } from "../auth";
 import type { Bindings } from "../bindings";
-import { badRequest, notFound, serverError } from "../http-errors";
-import type { AppContext } from "../infrastructure/context";
 import { connection } from "../services/connections";
 import { safeWaitUntil } from "../utils";
-import { getContext, handleResult } from "../utils/route-helpers";
-
-type Variables = {
-	user: { id: string; github_id: number; name: string; task_view: string } | null;
-	mediaContext: AppContext;
-};
+import { getContext, handleResult, type Variables } from "../utils/route-helpers";
 
 const CreateConnectionBodySchema = z.object({
 	profile_id: z.string().min(1),

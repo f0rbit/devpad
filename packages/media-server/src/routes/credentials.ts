@@ -1,22 +1,17 @@
 import { accounts, type Platform, PlatformSchema, profiles } from "@devpad/schema/media";
+import { badRequest, notFound, serverError } from "@devpad/worker/utils/response";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getAuth } from "../auth";
 import type { Bindings } from "../bindings";
-import { badRequest, notFound, serverError } from "../http-errors";
 import type { AppContext } from "../infrastructure/context";
 import { createLogger } from "../logger";
 import { credential } from "../services/credentials";
 import { secrets, uuid } from "../utils";
-import { getContext } from "../utils/route-helpers";
+import { getContext, type Variables } from "../utils/route-helpers";
 
 const log = createLogger("credentials");
-
-type Variables = {
-	user: { id: string; github_id: number; name: string; task_view: string } | null;
-	mediaContext: AppContext;
-};
 
 const verifyProfileOwnership = async (ctx: AppContext, profileId: string, userId: string): Promise<boolean> => {
 	const profile = await ctx.db.select({ user_id: profiles.user_id }).from(profiles).where(eq(profiles.id, profileId)).get();

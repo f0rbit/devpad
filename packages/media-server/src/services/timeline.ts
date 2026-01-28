@@ -1,10 +1,10 @@
+import { accounts, DateGroupSchema, errors, profiles } from "@devpad/schema/media";
 import type { CorpusError as LibCorpusError } from "@f0rbit/corpus";
-import { DateGroupSchema, accounts, errors, profiles } from "@devpad/schema/media";
+import { err, ok, pipe, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { AppContext } from "../infrastructure/context";
 import { type CorpusError, RawDataSchema, store } from "../storage";
-import { type Result, err, ok, pipe } from "../utils";
 import type { ServiceError } from "../utils/route-helpers";
 
 const TimelineDataSchema = z.object({
@@ -33,7 +33,7 @@ type RawSnapshot = z.infer<typeof RawSnapshotSchema>;
 
 type TimelineGetError = { kind: "store_error"; status: 500 } | { kind: "not_found"; status: 404 } | { kind: "parse_error"; status: 500 };
 
-type RawRouteError = CorpusError | LibCorpusError | { kind: "validation_error"; message: string };
+type RawRouteError = CorpusError | LibCorpusError | { kind: "parse_error"; message: string };
 
 type TimelineOptions = {
 	from?: string;
@@ -111,7 +111,7 @@ const getRaw = async (ctx: AppContext, _userId: string, platform: string, accoun
 		})
 		.flat_map((raw): Result<RawSnapshot, RawRouteError> => {
 			const parsed = RawSnapshotSchema.safeParse(raw);
-			return parsed.success ? ok(parsed.data) : err({ kind: "validation_error", message: parsed.error.message });
+			return parsed.success ? ok(parsed.data) : err({ kind: "parse_error", message: parsed.error.message });
 		})
 		.map(snapshot => ({ meta: snapshot.meta, data: snapshot.data }))
 		.result();
@@ -121,7 +121,7 @@ const getRaw = async (ctx: AppContext, _userId: string, platform: string, accoun
 		if (error.kind === "store_error") {
 			return errors.storeError("create_raw_store", "Failed to create raw store");
 		}
-		if (error.kind === "validation_error") {
+		if (error.kind === "parse_error") {
 			return errors.parseError("Invalid raw data format");
 		}
 		if (error.kind === "not_found") {
