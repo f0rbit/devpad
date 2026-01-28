@@ -4,26 +4,24 @@ import type { z } from "zod";
 export {
 	media_account_settings as accountSettings,
 	media_accounts as accounts,
-	media_api_keys as apiKeys,
 	media_platform_credentials as platformCredentials,
 	media_profile_filters as profileFilters,
 	media_profiles as profiles,
 	media_rate_limits as rateLimits,
-	media_users as users,
 } from "../database/media.js";
+export { api_keys as apiKeys } from "../database/schema.js";
+export * from "../errors.js";
 export * from "./branded.js";
-export * from "./errors.js";
 
 import type {
 	media_account_settings as accountSettings,
 	media_accounts as accounts,
-	media_api_keys as apiKeys,
 	media_platform_credentials as platformCredentials,
 	media_profile_filters as profileFilters,
 	media_profiles as profiles,
 	media_rate_limits as rateLimits,
-	media_users as users,
 } from "../database/media.js";
+import type { api_keys as apiKeys } from "../database/schema.js";
 
 export type Profile = InferSelectModel<typeof profiles>;
 export type NewProfile = InferInsertModel<typeof profiles>;
@@ -183,9 +181,6 @@ export type YouTubeRaw = z.infer<typeof YouTubeRawSchema>;
 
 export type DevpadTask = z.infer<typeof DevpadTaskSchema>;
 export type DevpadRaw = z.infer<typeof DevpadRawSchema>;
-
-export type User = InferSelectModel<typeof users>;
-export type NewUser = InferInsertModel<typeof users>;
 
 export type Account = InferSelectModel<typeof accounts>;
 export type NewAccount = InferInsertModel<typeof accounts>;

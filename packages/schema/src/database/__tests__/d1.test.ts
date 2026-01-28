@@ -4,7 +4,6 @@ import * as blogSchema from "../blog.js";
 import { createD1Database } from "../d1.js";
 import * as mediaSchema from "../media.js";
 import * as devpadSchema from "../schema.js";
-import * as unified from "../unified.js";
 
 describe("createD1Database", () => {
 	it("is a callable function", () => {
@@ -16,7 +15,7 @@ describe("unified schema exports", () => {
 	const devpad_tables = [
 		"user",
 		"session",
-		"api_key",
+		"api_keys",
 		"project",
 		"action",
 		"tracker_result",
@@ -34,9 +33,9 @@ describe("unified schema exports", () => {
 		"ignore_path",
 	] as const;
 
-	const blog_tables = ["blog_users", "blog_posts", "blog_categories", "blog_tags", "blog_access_keys", "blog_integrations", "blog_fetch_links", "blog_post_projects"] as const;
+	const blog_tables = ["blog_posts", "blog_categories", "blog_tags", "blog_integrations", "blog_fetch_links", "blog_post_projects"] as const;
 
-	const media_tables = ["media_users", "media_profiles", "media_accounts", "media_api_keys", "media_rate_limits", "media_account_settings", "media_profile_filters", "media_platform_credentials"] as const;
+	const media_tables = ["media_profiles", "media_accounts", "media_rate_limits", "media_account_settings", "media_profile_filters", "media_platform_credentials"] as const;
 
 	it("exports all devpad tables", () => {
 		for (const table of devpad_tables) {
@@ -54,23 +53,6 @@ describe("unified schema exports", () => {
 		for (const table of media_tables) {
 			expect(mediaSchema).toHaveProperty(table);
 		}
-	});
-
-	it("re-exports all schemas from unified", () => {
-		for (const table of devpad_tables) {
-			expect(unified).toHaveProperty(table);
-		}
-		for (const table of blog_tables) {
-			expect(unified).toHaveProperty(table);
-		}
-		for (const table of media_tables) {
-			expect(unified).toHaveProperty(table);
-		}
-	});
-
-	it("re-exports createD1Database from unified", () => {
-		expect(unified).toHaveProperty("createD1Database");
-		expect(typeof unified.createD1Database).toBe("function");
 	});
 });
 

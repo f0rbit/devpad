@@ -4,21 +4,11 @@ export { corpus_snapshots } from "@f0rbit/corpus/schema";
 
 export type MediaPlatform = "github" | "bluesky" | "youtube" | "devpad" | "reddit" | "twitter";
 
-export const media_users = sqliteTable("media_users", {
-	id: text("id").primaryKey(),
-	email: text("email").unique(),
-	name: text("name"),
-	created_at: text("created_at").notNull(),
-	updated_at: text("updated_at").notNull(),
-});
-
 export const media_profiles = sqliteTable(
 	"media_profiles",
 	{
 		id: text("id").primaryKey(),
-		user_id: text("user_id")
-			.notNull()
-			.references(() => media_users.id),
+		user_id: text("user_id").notNull(),
 		slug: text("slug").notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
@@ -53,23 +43,6 @@ export const media_accounts = sqliteTable(
 	table => ({
 		profile_idx: index("idx_media_accounts_profile").on(table.profile_id),
 		profile_platform_user_idx: uniqueIndex("idx_media_accounts_profile_platform_user").on(table.profile_id, table.platform, table.platform_user_id),
-	})
-);
-
-export const media_api_keys = sqliteTable(
-	"media_api_keys",
-	{
-		id: text("id").primaryKey(),
-		user_id: text("user_id")
-			.notNull()
-			.references(() => media_users.id),
-		key_hash: text("key_hash").notNull().unique(),
-		name: text("name"),
-		last_used_at: text("last_used_at"),
-		created_at: text("created_at").notNull(),
-	},
-	table => ({
-		user_idx: index("idx_media_api_keys_user").on(table.user_id),
 	})
 );
 

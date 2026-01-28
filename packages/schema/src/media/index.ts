@@ -3,15 +3,14 @@ export {
 	type MediaPlatform,
 	media_account_settings as accountSettings,
 	media_accounts as accounts,
-	media_api_keys as apiKeys,
 	media_platform_credentials as platformCredentials,
 	media_profile_filters as profileFilters,
 	media_profiles as profiles,
 	media_rate_limits as rateLimits,
-	media_users as users,
 } from "../database/media.js";
+export { api_keys as apiKeys } from "../database/schema.js";
+export * from "../errors.js";
 export * from "./branded.js";
-export * from "./errors.js";
 export {
 	type GitHubMetaStore,
 	GitHubMetaStoreSchema,
@@ -155,12 +154,10 @@ export type {
 	NewProfile,
 	NewProfileFilter,
 	NewRateLimit,
-	NewUser,
 	PlatformCredential,
 	Profile,
 	ProfileFilter,
 	RateLimit,
-	User,
 	YouTubeRaw,
 	YouTubeThumbnail,
 	YouTubeVideo,
