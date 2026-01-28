@@ -1,17 +1,12 @@
+import type { DatabaseError, NotFoundError } from "@devpad/schema/errors";
 import { err, first, format_error, match, ok, type Result, to_nullable } from "@f0rbit/corpus";
 
-export type ServiceError = {
-	kind: "not_found" | "db_error" | "invalid_input" | "unauthorized" | "conflict";
-	message?: string;
-	resource?: string;
-};
-
 export const errors = {
-	db: (e: unknown) => ({
+	db: (e: unknown): DatabaseError => ({
 		kind: "db_error" as const,
 		message: format_error(e),
 	}),
-	missing: (resource: string) => ({
+	missing: (resource: string): NotFoundError => ({
 		kind: "not_found" as const,
 		resource,
 	}),

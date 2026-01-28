@@ -9,7 +9,7 @@ import { response, type Variables, valid } from "../utils/route-helpers";
 export type { CreatedToken, SanitizedToken };
 
 const TokenIdSchema = z.object({
-	id: z.coerce.number().int().positive(),
+	id: z.string().min(1),
 });
 
 export const tokensRouter = new Hono<{ Variables: Variables }>();

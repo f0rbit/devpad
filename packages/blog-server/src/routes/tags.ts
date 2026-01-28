@@ -3,8 +3,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { withAuth } from "../middleware/require-auth";
 import { createTagService, type TagWithCount } from "../services/tags";
-import { errorMap } from "../utils/errors";
-import { response, type Variables, valid } from "../utils/route-helpers";
+import { errorMap, response, type Variables, valid } from "../utils/route-helpers";
 
 export type { TagWithCount };
 
