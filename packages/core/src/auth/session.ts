@@ -22,7 +22,7 @@ export type SessionValidationResult = {
 	session: SessionData;
 };
 
-export type AuthError = { kind: "session_not_found" } | { kind: "session_expired" } | { kind: "user_not_found"; user_id: string } | { kind: "invalid_state" } | { kind: "database_error"; message: string };
+export type AuthError = { kind: "session_not_found" } | { kind: "session_expired" } | { kind: "not_found"; resource: string; user_id: string } | { kind: "invalid_state" } | { kind: "db_error"; message: string };
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_REFRESH_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000;
@@ -46,7 +46,7 @@ export async function createSession(db: any, user_id: string, access_token: stri
 		.returning()
 		.catch((e: Error) => e);
 
-	if (result instanceof Error) return err({ kind: "database_error", message: result.message });
+	if (result instanceof Error) return err({ kind: "db_error", message: result.message });
 
 	return ok({
 		id: session_id,
@@ -74,7 +74,7 @@ export async function validateSession(db: any, session_id: string): Promise<Resu
 		.where(eq(session.id, session_id))
 		.catch((e: Error) => e);
 
-	if (rows instanceof Error) return err({ kind: "database_error", message: rows.message });
+	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
 	if (!rows || rows.length === 0) return err({ kind: "session_not_found" });
 
@@ -137,7 +137,7 @@ export async function invalidateSession(db: any, session_id: string): Promise<Re
 		.where(eq(session.id, session_id))
 		.catch((e: Error) => e);
 
-	if (result instanceof Error) return err({ kind: "database_error", message: result.message });
+	if (result instanceof Error) return err({ kind: "db_error", message: result.message });
 
 	return ok(undefined);
 }
