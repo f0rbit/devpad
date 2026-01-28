@@ -94,8 +94,9 @@
 	"dependencies": {
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
+		"@devpad/worker": "workspace:*",
 		"@f0rbit/corpus": "^0.3.4",
-		"drizzle-orm": "^0.30.6",
+		"drizzle-orm": "^0.44.7",
 		"hono": "^4.6.0",
 		"zod": "^3.22.4"
 	},

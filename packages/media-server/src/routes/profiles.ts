@@ -1,17 +1,11 @@
 import { AddFilterSchema, CreateProfileSchema, profileId, UpdateProfileSchema, userId } from "@devpad/schema/media";
+import { badRequest } from "@devpad/worker/utils/response";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getAuth } from "../auth";
 import type { Bindings } from "../bindings";
-import { badRequest } from "../http-errors";
-import type { AppContext } from "../infrastructure/context";
 import { profile } from "../services/profiles";
-import { getContext, handleResult, handleResultNoContent } from "../utils/route-helpers";
-
-type Variables = {
-	user: { id: string; github_id: number; name: string; task_view: string } | null;
-	mediaContext: AppContext;
-};
+import { getContext, handleResult, handleResultNoContent, type Variables } from "../utils/route-helpers";
 
 const ProfileTimelineQuerySchema = z.object({
 	limit: z.coerce.number().int().min(1).max(500).optional().default(100),
@@ -39,8 +33,7 @@ profileRoutes.post("/", async c => {
 		return badRequest(c, "Invalid request body", parseResult.error.flatten());
 	}
 
-	const userInfo = { id: auth.user_id, name: auth.name, email: auth.email };
-	const result = await profile.create(ctx, userId(auth.user_id), userInfo, parseResult.data);
+	const result = await profile.create(ctx, userId(auth.user_id), parseResult.data);
 	return handleResult(c, result, 201);
 });
 
