@@ -1,87 +1,70 @@
 import type { Project, ProjectConfig, TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
-import { db, project, action, ignore_path, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/server";
+import { action, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/schema";
+import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, not, sql } from "drizzle-orm";
+import type { ServiceError } from "./errors.js";
 
-export async function getUserProjects(user_id: string): Promise<Project[]> {
+export async function getUserProjects(db: any, user_id: string): Promise<Result<Project[], ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
 		.where(and(eq(project.owner_id, user_id), not(eq(project.visibility, "DELETED"))));
-	return result;
+	return ok(result);
 }
 
-export async function getProject(user_id: string, project_id: string): Promise<{ project: Project | null; error: string | null }> {
-	try {
-		const result = await db
-			.select()
-			.from(project)
-			.where(and(eq(project.owner_id, user_id), eq(project.project_id, project_id)));
+export async function getProject(db: any, user_id: string, project_id: string): Promise<Result<Project, ServiceError>> {
+	const result = await db
+		.select()
+		.from(project)
+		.where(and(eq(project.owner_id, user_id), eq(project.project_id, project_id)));
 
-		if (!result || result.length === 0) {
-			return { project: null, error: "Couldn't find project" };
-		}
-
-		return { project: result[0], error: null };
-	} catch (err) {
-		return { project: null, error: "Internal Server Error" };
-	}
+	if (!result[0]) return err({ kind: "not_found", resource: "project", id: project_id });
+	return ok(result[0]);
 }
 
-export async function getProjectById(project_id: string): Promise<{ project: Project | null; error: string | null }> {
-	if (!project_id) {
-		return { project: null, error: "No project ID" };
-	}
+export async function getProjectById(db: any, project_id: string): Promise<Result<Project, ServiceError>> {
+	if (!project_id) return err({ kind: "validation", errors: { project_id: ["No project ID provided"] } });
 
-	try {
-		const result = await db.select().from(project).where(eq(project.id, project_id));
-
-		return { project: result[0] ?? null, error: null };
-	} catch (err) {
-		return { project: null, error: "Internal Server Error" };
-	}
+	const result = await db.select().from(project).where(eq(project.id, project_id));
+	if (!result[0]) return err({ kind: "not_found", resource: "project", id: project_id });
+	return ok(result[0]);
 }
 
-export async function getUserProjectMap(user_id: string): Promise<Record<string, Project>> {
-	const projects = await getUserProjects(user_id);
-	const project_map = {} as Record<string, Project>;
-	for (const p of projects) {
-		project_map[p.id] = p;
-	}
-	return project_map;
+export async function getUserProjectMap(db: any, user_id: string): Promise<Result<Record<string, Project>, ServiceError>> {
+	const projects_result = await getUserProjects(db, user_id);
+	if (!projects_result.ok) return projects_result;
+
+	const project_map = projects_result.value.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, Project>);
+	return ok(project_map);
 }
 
-export async function doesUserOwnProject(user_id: string, project_id: string): Promise<boolean> {
+export async function doesUserOwnProject(db: any, user_id: string, project_id: string): Promise<Result<boolean, ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
 		.where(and(eq(project.id, project_id), eq(project.owner_id, user_id)));
 
-	return result.length > 0;
+	return ok(result.length > 0);
 }
 
-export async function addProjectAction({ owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }): Promise<boolean> {
-	const user_owns = await doesUserOwnProject(owner_id, project_id);
-	if (!user_owns) return false;
+export async function addProjectAction(db: any, { owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+	const owns_result = await doesUserOwnProject(db, owner_id, project_id);
+	if (!owns_result.ok) return owns_result;
+	if (!owns_result.value) return ok(false);
 
-	try {
-		await db.insert(action).values({
-			owner_id,
-			type,
-			description,
-			data: JSON.stringify({ project_id }),
-		});
-		return true;
-	} catch {
-		return false;
-	}
+	await db.insert(action).values({
+		owner_id,
+		type,
+		description,
+		data: JSON.stringify({ project_id }),
+	});
+	return ok(true);
 }
 
-export async function getRecentUpdate(project: Project) {
-	const { owner_id: user_id, id } = project;
-	if (!user_id || !id) {
-		return null;
-	}
+export async function getRecentUpdate(db: any, project_data: Project): Promise<Result<(TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null }) | null, ServiceError>> {
+	const { owner_id: user_id, id } = project_data;
+	if (!user_id || !id) return ok(null);
 
 	const updates = await db
 		.select()
@@ -90,14 +73,9 @@ export async function getRecentUpdate(project: Project) {
 		.orderBy(desc(todo_updates.created_at))
 		.limit(1);
 
-	if (!updates || !updates[0]) {
-		return null;
-	}
+	if (!updates?.[0]) return ok(null);
 
-	const update = updates[0] as TodoUpdate & {
-		old_data: TrackerResult | null;
-		new_data: TrackerResult | null;
-	};
+	const update = updates[0] as TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null };
 	update.old_data = null;
 	update.new_data = null;
 
@@ -110,25 +88,14 @@ export async function getRecentUpdate(project: Project) {
 		if (new_?.[0]) update.new_data = new_[0];
 	}
 
-	return update;
+	return ok(update);
 }
 
-export async function getProjectConfig(project_id: string) {
-	const { project: projectData, error } = await getProjectById(project_id);
-	if (error)
-		return {
-			config: null,
-			id: null,
-			scan_branch: null,
-			error: `Error fetching project: ${error}`,
-		};
-	if (!projectData)
-		return {
-			config: null,
-			id: null,
-			scan_branch: null,
-			error: `Project not found`,
-		};
+export async function getProjectConfig(db: any, project_id: string): Promise<Result<{ id: string; config: ProjectConfig; scan_branch: string | null }, ServiceError>> {
+	const project_result = await getProjectById(db, project_id);
+	if (!project_result.ok) return project_result;
+
+	const project_data = project_result.value;
 
 	const tag_result = await db
 		.select({
@@ -141,116 +108,66 @@ export async function getProjectConfig(project_id: string) {
 		.where(eq(tag_config.project_id, project_id))
 		.groupBy(tag.id);
 
-	let tags:
-		| {
-				name: string;
-				match: string[];
-		  }[]
-		| null = null;
-	try {
-		tags = tag_result.map(row => ({
-			name: row.name,
-			match: JSON.parse(row.matches || "[]") as string[],
-		}));
-	} catch (_err) {
-		return {
-			config: null,
-			id: null,
-			scan_branch: null,
-			error: "Error parsing tag matches",
-		};
-	}
-	if (!tags)
-		return {
-			config: null,
-			id: null,
-			scan_branch: null,
-			error: "Error fetching tags",
-		};
+	const tags = tag_result.map((row: any) => ({
+		name: row.name as string,
+		match: JSON.parse(row.matches || "[]") as string[],
+	}));
 
-	const ignore_result = await db
-		.select({
-			path: ignore_path.path,
-		})
-		.from(ignore_path)
-		.where(eq(ignore_path.project_id, project_id));
+	const ignore_result = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, project_id));
 
-	const ignore = ignore_result.map(row => row.path);
+	const ignore = ignore_result.map((row: any) => row.path as string);
 
-	return {
+	return ok({
 		id: project_id,
-		config: {
-			tags,
-			ignore,
-		},
-		scan_branch: projectData.scan_branch,
-		error: null,
-	};
+		config: { tags, ignore },
+		scan_branch: project_data.scan_branch,
+	});
 }
 
-// ProjectConfig type is now imported from @devpad/schema
+export type GitHubClient = {
+	getRepoMetadata?: (owner: string, repo: string, access_token: string) => Promise<{ id: number }>;
+	getSpecification?: (owner: string, repo: string, access_token: string) => Promise<string>;
+};
 
-export async function upsertProject(data: UpsertProject, owner_id: string, access_token?: string): Promise<Project> {
-	// Handle GitHub integration if needed
-	if (access_token) {
-		const previous = data.id ? (await getProjectById(data.id)).project : null;
+export async function upsertProject(db: any, data: UpsertProject, owner_id: string, access_token?: string, github_client?: GitHubClient): Promise<Result<Project, ServiceError>> {
+	if (access_token && github_client) {
+		const prev_result = data.id ? await getProjectById(db, data.id) : null;
+		const previous = prev_result?.ok ? prev_result.value : null;
 		const repo_url = data.repo_url ?? previous?.repo_url;
 
-		// If we have a repo_url but no repo_id, fetch the repo_id from GitHub
-		if (repo_url && !data.repo_id && !previous?.repo_id) {
-			try {
-				// Parse owner and repo from the URL
-				const urlParts = repo_url.replace(/\/$/, "").split("/");
-				const repo = urlParts.at(-1);
-				const owner = urlParts.at(-2);
+		if (repo_url && !data.repo_id && !previous?.repo_id && github_client.getRepoMetadata) {
+			const url_parts = repo_url.replace(/\/$/, "").split("/");
+			const repo = url_parts.at(-1);
+			const owner = url_parts.at(-2);
 
-				if (repo && owner) {
-					const { getRepoMetadata } = await import("./github");
-					const repoData = await getRepoMetadata(owner, repo, access_token);
-					data.repo_id = repoData.id;
-					console.log(`Fetched GitHub repo ID ${data.repo_id} for ${owner}/${repo}`);
-				}
-			} catch (error) {
-				console.error("Failed to fetch GitHub repo ID:", error);
-				// Continue without repo_id if fetch fails
+			if (repo && owner) {
+				const repo_data = await github_client.getRepoMetadata(owner, repo, access_token);
+				data.repo_id = repo_data.id;
 			}
 		}
 
-		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
+		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous?.repo_url);
 		const fetch_specification = github_linked && repo_url && (!previous || !previous.specification);
 
-		// the new_project is imported from github and doesn't have a specification, import it from the README
-		if (fetch_specification && !data.specification && access_token) {
-			try {
-				// we need to get OWNER and REPO from the repo_url
-				const { getSpecification } = await import("./github");
-				const slices = repo_url.split("/");
-				const repo = slices.at(-1);
-				const owner = slices.at(-2);
-				if (!repo || !owner) throw new Error("Invalid repo_url");
-
-				const readme = await getSpecification(owner, repo, access_token);
-				data.specification = readme;
-			} catch (error) {
-				// Handle case where repository has no README or other GitHub API errors
-				// Continue with project creation even if README fetch fails
-				data.specification = null;
+		if (fetch_specification && !data.specification && github_client.getSpecification) {
+			const slices = repo_url!.split("/");
+			const repo = slices.at(-1);
+			const owner = slices.at(-2);
+			if (repo && owner) {
+				data.specification = await github_client.getSpecification(owner, repo, access_token).catch(() => null);
 			}
 		}
 	}
 
-	const previous = data.id ? (await getProjectById(data.id)).project : null;
+	const previous_result = data.id ? await getProjectById(db, data.id) : null;
+	const previous = previous_result?.ok ? previous_result.value : null;
 
-	// authorize
 	if (previous && previous.owner_id !== owner_id) {
-		throw new Error("Unauthorized: User does not own this project");
+		return err({ kind: "forbidden", reason: "User does not own this project" });
 	}
 
 	const final_owner_id = data.owner_id ?? previous?.owner_id ?? owner_id;
-
-	if (!final_owner_id) {
-		throw new Error("Bad Request: No owner_id provided");
-	}
+	if (!final_owner_id) return err({ kind: "validation", errors: { owner_id: ["No owner_id provided"] } });
 
 	const exists = !!previous;
 
@@ -261,62 +178,37 @@ export async function upsertProject(data: UpsertProject, owner_id: string, acces
 		owner_id: final_owner_id,
 	};
 
-	// Remove any null values that could cause database issues
-	const cleanUpsert = Object.fromEntries(Object.entries(upsert).filter(([_, value]) => value !== null)) as typeof upsert;
+	const clean_upsert = Object.fromEntries(Object.entries(upsert).filter(([_, value]) => value !== null)) as typeof upsert;
 
 	let result: Project | null = null;
-	if (exists && cleanUpsert.id) {
-		// Performing UPDATE operation
-		const updateResult = await db
+	if (exists && clean_upsert.id) {
+		const update_result = await db
 			.update(project)
-			.set(cleanUpsert as any)
-			.where(eq(project.id, cleanUpsert.id))
+			.set(clean_upsert as any)
+			.where(eq(project.id, clean_upsert.id))
 			.returning();
-		result = updateResult[0] || null;
+		result = update_result[0] || null;
 	} else {
-		// Performing INSERT with conflict handling
-		const insertResult = await db
+		const insert_result = await db
 			.insert(project)
-			.values(cleanUpsert as any)
-			.onConflictDoUpdate({
-				target: [project.id],
-				set: cleanUpsert as any,
-			})
+			.values(clean_upsert as any)
+			.onConflictDoUpdate({ target: [project.id], set: clean_upsert as any })
 			.returning();
-
-		result = insertResult[0] || null;
+		result = insert_result[0] || null;
 	}
 
-	if (!result) {
-		throw new Error("Project operation failed - no result returned");
-	}
+	if (!result) return err({ kind: "db_error", message: "Project operation failed - no result returned" });
 
 	const new_project = result;
-	const project_id = new_project.id;
+	const action_type: ActionType = !exists ? "CREATE_PROJECT" : "UPDATE_PROJECT";
+	const action_desc = !exists ? "Created project" : data.specification ? "Updated specification" : "Updated project settings";
 
-	// Add action logs
-	if (!exists) {
-		await addProjectAction({
-			owner_id: final_owner_id,
-			project_id,
-			type: "CREATE_PROJECT",
-			description: "Created project",
-		});
-	} else if (data.specification) {
-		await addProjectAction({
-			owner_id: final_owner_id,
-			project_id,
-			type: "UPDATE_PROJECT",
-			description: "Updated specification",
-		});
-	} else {
-		await addProjectAction({
-			owner_id: final_owner_id,
-			project_id,
-			type: "UPDATE_PROJECT",
-			description: "Updated project settings",
-		});
-	}
+	await addProjectAction(db, {
+		owner_id: final_owner_id,
+		project_id: new_project.id,
+		type: action_type,
+		description: action_desc,
+	});
 
-	return new_project;
+	return ok(new_project);
 }
