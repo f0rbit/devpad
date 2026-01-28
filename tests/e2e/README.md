@@ -21,7 +21,7 @@ bun run e2e:staging    # Test against staging environment
 
 ### 1. Local Development (`TEST_ENV=local`)
 - **URL**: http://localhost:3001
-- **Setup**: Automatically starts server via `bun start` in packages/server
+- **Setup**: Automatically starts server via `bun run dev` in packages/worker
 - **Database**: Uses test database at `database/test.db`
 - **Use Case**: Quick testing during development
 

@@ -46,16 +46,6 @@ export const blog_tags = sqliteTable(
 	})
 );
 
-export const blog_access_keys = sqliteTable("access_keys", {
-	id: integer("id").primaryKey({ autoIncrement: true }),
-	user_id: text("user_id").notNull(),
-	key_hash: text("key_hash").notNull().unique(),
-	name: text("name").notNull(),
-	note: text("note"),
-	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
-	created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-});
-
 export const blog_integrations = sqliteTable("blog_integrations", {
 	id: integer("id").primaryKey({ autoIncrement: true }),
 	user_id: text("user_id").notNull(),

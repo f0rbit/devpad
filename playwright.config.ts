@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 /**
  * E2E test configuration for multiple environments:
- * - local: Run against local dev server (bun start in packages/server)
+ * - local: Run against local dev server (packages/worker)
  * - docker: Run against Docker Compose setup (used in CI for PRs)
  * - staging: Run against staging deployment (after deploy to main)
  *
@@ -16,7 +16,7 @@ const environments = {
 	local: {
 		baseURL: "http://localhost:3001",
 		webServer: {
-			command: "cd packages/server && DATABASE_FILE=../../database/test.db bun start",
+			command: "cd packages/worker && DATABASE_FILE=../../database/test.db bun run dev",
 			url: "http://localhost:3001",
 			reuseExistingServer: !process.env.CI,
 			timeout: 60 * 1000,

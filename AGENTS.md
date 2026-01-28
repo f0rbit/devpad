@@ -39,7 +39,7 @@ Please don't be super agreeable with whatever I say - if you think there's an is
 - Frontend: Astro + SolidJS (functional components)
 - Backend: Bun + TypeScript (strict mode)
 - Database: SQLite + Drizzle ORM
-- Testing: Integration tests log to `packages/server/server.log` (use `DEBUG_LOGGING="true"` for stdout)
+- Testing: Integration tests log to `packages/worker/server.log` (use `DEBUG_LOGGING="true"` for stdout)
 
 ## Repository Structure & Key Files
 ```
@@ -73,9 +73,9 @@ devpad/
 │   │   └── database/
 │   │       ├── schema.ts              # Drizzle database schema
 │   │       └── migrate.ts             # Database migrations
-│   └── server/src/
+│   └── worker/src/
 │       ├── routes/
-│       │   ├── v0.ts                  # Main API routes
+│       │   ├── v1.ts                  # Main API routes
 │       │   └── auth.ts                # Authentication routes
 │       └── middleware/auth.ts         # Auth middleware
 ├── tests/
@@ -88,6 +88,6 @@ devpad/
 
 
 # Debugging
-When running integration tests, logs will get piped to `packages/server/server.log`, only read the logs if you're looking for errors.
+When running integration tests, logs will get piped to `packages/worker/server.log`, only read the logs if you're looking for errors.
 
 In the case where you want logs in stdout, specify the exact test suite you want to run in the command using bun specifically rather than `make integration` & pass `DEBUG_LOGGING="true"` as an env variable to the function.
