@@ -1,3 +1,10 @@
+export type AuthUser = {
+	id: string;
+	github_id: number;
+	name: string;
+	task_view: "list" | "grid";
+} | null;
+
 export type Bindings = {
 	DB: D1Database;
 	BLOG_CORPUS_BUCKET: R2Bucket;

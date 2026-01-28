@@ -18,7 +18,6 @@ export {
 	type StoreDefinition,
 } from "@f0rbit/corpus";
 export {
-	blog_access_keys,
 	blog_categories,
 	blog_fetch_links,
 	blog_integrations,
@@ -26,6 +25,7 @@ export {
 	blog_posts,
 	blog_tags,
 } from "../database/blog.js";
+export { api_keys } from "../database/schema.js";
 export {
 	corpusPath,
 	mapCorpusError,
