@@ -1,5 +1,5 @@
-import { keysD1 } from "@devpad/core/auth";
-import { actionD1, githubD1, goalsD1, milestonesD1, projectsD1, scanningD1, tagsD1, tasksD1, usersD1 } from "@devpad/core/services";
+import { keys } from "@devpad/core/auth";
+import { action, github, goals, milestones, projects, scanning, tags, tasks, users } from "@devpad/core/services";
 import { save_config_request, save_tags_request, update_user, upsert_goal, upsert_milestone, upsert_project, upsert_todo } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { zValidator } from "@hono/zod-validator";
@@ -20,7 +20,7 @@ app.get("/projects", requireAuth, async c => {
 	const query = c.req.query();
 
 	if (query.id) {
-		const result = await projectsD1.getProjectById(db, query.id);
+		const result = await projects.getProjectById(db, query.id);
 		if (!result.ok) {
 			if (result.error.kind === "not_found") return c.json(null, 404);
 			return c.json({ error: result.error.kind }, 500);
@@ -30,7 +30,7 @@ app.get("/projects", requireAuth, async c => {
 	}
 
 	if (query.name) {
-		const result = await projectsD1.getProject(db, auth_user.id, query.name);
+		const result = await projects.getProject(db, auth_user.id, query.name);
 		if (!result.ok) {
 			if (result.error.kind === "not_found") return c.json(null, 404);
 			return c.json({ error: result.error.kind }, 401);
@@ -38,7 +38,7 @@ app.get("/projects", requireAuth, async c => {
 		return c.json(result.value);
 	}
 
-	const result = await projectsD1.getUserProjects(db, auth_user.id);
+	const result = await projects.getUserProjects(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -47,7 +47,7 @@ app.get("/projects/public", requireAuth, async c => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
-	const result = await projectsD1.getUserProjects(db, auth_user.id);
+	const result = await projects.getUserProjects(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 
 	const public_projects = result.value.filter(p => p.visibility === "PUBLIC");
@@ -66,27 +66,27 @@ app.patch("/projects", requireAuth, zValidator("json", upsert_project), async c 
 	const session = c.get("session");
 	const access_token = session?.access_token;
 
-	const github_client: projectsD1.GitHubClient = {
+	const github_client: projects.GitHubClient = {
 		getRepoMetadata: access_token
 			? async (owner: string, repo: string, token: string) => {
-					const result = await githubD1.getRepoMetadata(owner, repo, token);
+					const result = await github.getRepoMetadata(owner, repo, token);
 					if (!result.ok) throw new Error("Failed to get repo metadata");
 					return result.value;
 				}
 			: undefined,
 		getSpecification: access_token
 			? async (owner: string, repo: string, token: string) => {
-					const result = await githubD1.getSpecification(owner, repo, token);
+					const result = await github.getSpecification(owner, repo, token);
 					if (!result.ok) throw new Error("Failed to get specification");
 					return result.value;
 				}
 			: undefined,
 	};
 
-	const result = await projectsD1.upsertProject(db, data, auth_user.id, access_token ?? undefined, github_client);
+	const result = await projects.upsertProject(db, data, auth_user.id, access_token ?? undefined, github_client);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "validation_error") return c.json({ error: result.error.message }, 400);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
@@ -99,11 +99,11 @@ app.get("/projects/:project_id/history", requireAuth, async c => {
 
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
 
-	const project_result = await projectsD1.getProjectById(db, project_id);
+	const project_result = await projects.getProjectById(db, project_id);
 	if (!project_result.ok) return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
-	const result = await actionD1.getProjectHistory(db, project_result.value.id);
+	const result = await action.getProjectHistory(db, project_result.value.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -115,7 +115,7 @@ app.get("/projects/config", requireAuth, async c => {
 
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
 
-	const project_result = await projectsD1.getProjectById(db, project_id);
+	const project_result = await projects.getProjectById(db, project_id);
 	if (!project_result.ok) return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
@@ -163,7 +163,7 @@ app.get("/tasks", requireAuth, async c => {
 	const query = c.req.query();
 
 	if (query.id) {
-		const result = await tasksD1.getTask(db, query.id);
+		const result = await tasks.getTask(db, query.id);
 		if (!result.ok) return c.json({ error: result.error.kind }, 500);
 		if (!result.value) return c.json(null, 404);
 		if (result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
@@ -171,18 +171,18 @@ app.get("/tasks", requireAuth, async c => {
 	}
 
 	if (query.tag) {
-		const result = await tasksD1.getTasksByTag(db, query.tag);
+		const result = await tasks.getTasksByTag(db, query.tag);
 		if (!result.ok) return c.json({ error: result.error.kind }, 500);
 		return c.json(result.value);
 	}
 
 	if (query.project) {
-		const result = await tasksD1.getProjectTasks(db, query.project);
+		const result = await tasks.getProjectTasks(db, query.project);
 		if (!result.ok) return c.json({ error: result.error.kind }, 500);
 		return c.json(result.value);
 	}
 
-	const result = await tasksD1.getUserTasks(db, auth_user.id);
+	const result = await tasks.getUserTasks(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -194,12 +194,12 @@ app.get("/tasks/history/:task_id", requireAuth, async c => {
 
 	if (!task_id) return c.json({ error: "Missing task_id parameter" }, 400);
 
-	const task_result = await tasksD1.getTask(db, task_id);
+	const task_result = await tasks.getTask(db, task_id);
 	if (!task_result.ok) return c.json({ error: task_result.error.kind }, 500);
 	if (!task_result.value) return c.json(null, 404);
 	if (task_result.value.task.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
-	const result = await actionD1.getTaskHistory(db, task_id);
+	const result = await action.getTaskHistory(db, task_id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -221,10 +221,10 @@ app.patch("/tasks", requireAuth, zValidator("json", upsert_todo), async c => {
 		tags = tag_parse.data;
 	}
 
-	const result = await tasksD1.upsertTask(db, data, tags, auth_user.id);
+	const result = await tasks.upsertTask(db, data, tags, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "validation_error") return c.json({ error: result.error.message }, 400);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
@@ -241,7 +241,7 @@ app.patch("/tasks/save_tags", requireAuth, zValidator("json", save_tags_request)
 		}
 	}
 
-	const results = await Promise.all(data.map(t => tagsD1.upsertTag(db, t)));
+	const results = await Promise.all(data.map(t => tags.upsertTag(db, t)));
 	const failed = results.find(r => !r.ok);
 	if (failed && !failed.ok) return c.json({ error: "Error saving tags" }, 500);
 
@@ -256,7 +256,7 @@ app.get("/tags", requireAuth, async c => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
-	const result = await tagsD1.getActiveUserTags(db, auth_user.id);
+	const result = await tags.getActiveUserTags(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -268,7 +268,7 @@ app.get("/projects/fetch_spec", requireAuth, async c => {
 
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
 
-	const project_result = await projectsD1.getProjectById(db, project_id);
+	const project_result = await projects.getProjectById(db, project_id);
 	if (!project_result.ok) return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
@@ -284,7 +284,7 @@ app.get("/projects/fetch_spec", requireAuth, async c => {
 	const access_token = session?.access_token;
 	if (!access_token) return c.json({ error: "GitHub access token required" }, 401);
 
-	const result = await githubD1.getSpecification(owner, repo, access_token);
+	const result = await github.getSpecification(owner, repo, access_token);
 	if (!result.ok) return c.json({ error: "Error fetching specification" }, 500);
 	return new Response(result.value);
 });
@@ -294,7 +294,7 @@ app.patch("/projects/save_config", requireAuth, zValidator("json", save_config_r
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
 
-	const found_result = await projectsD1.getProjectById(db, data.id);
+	const found_result = await projects.getProjectById(db, data.id);
 	if (!found_result.ok) {
 		if (found_result.error.kind === "not_found") return c.json({ error: "Project not found" }, 404);
 		return c.json({ error: found_result.error.kind }, 500);
@@ -307,7 +307,7 @@ app.patch("/projects/save_config", requireAuth, zValidator("json", save_config_r
 		let tag_ids: string[] = [];
 		if (data.config.tags.length > 0) {
 			const tag_promises = data.config.tags.map(async t => {
-				const tag_result = await tagsD1.upsertTag(db, { owner_id: auth_user.id, title: t.name, deleted: false, color: null, render: true });
+				const tag_result = await tags.upsertTag(db, { owner_id: auth_user.id, title: t.name, deleted: false, color: null, render: true });
 				if (!tag_result.ok) throw new Error("Failed to upsert tag");
 				const tag_id = tag_result.value;
 
@@ -370,7 +370,7 @@ app.get("/repos", requireAuth, async c => {
 		return c.json({ error: "GitHub access token not available. Please re-authenticate with GitHub." }, 401);
 	}
 
-	const result = await githubD1.getRepos(session.access_token);
+	const result = await github.getRepos(session.access_token);
 	if (!result.ok) return c.json({ error: "Failed to fetch repositories" }, 500);
 	return c.json(result.value);
 });
@@ -386,7 +386,7 @@ app.get("/repos/:owner/:repo/branches", requireAuth, async c => {
 	}
 	if (!owner || !repo) return c.json({ error: "Missing owner or repo parameter" }, 400);
 
-	const result = await githubD1.getBranches(db, owner, repo, session.access_token);
+	const result = await github.getBranches(db, owner, repo, session.access_token);
 	if (!result.ok) return c.json({ error: "Failed to fetch branches" }, 500);
 	return c.json(result.value);
 });
@@ -399,7 +399,7 @@ app.get("/keys", requireAuth, async c => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
-	const result = await keysD1.getAPIKeys(db, auth_user.id);
+	const result = await keys.getAPIKeys(db, auth_user.id);
 	if (!result.ok) return c.json({ error: "Failed to fetch API keys" }, 500);
 	return c.json(result.value);
 });
@@ -412,7 +412,7 @@ app.post("/keys", requireAuth, async c => {
 	const parsed = create_key_schema.safeParse(body);
 	if (!parsed.success) return c.json({ error: "Invalid request body", details: parsed.error.issues }, 400);
 
-	const result = await keysD1.createApiKey(db, auth_user.id);
+	const result = await keys.createApiKey(db, auth_user.id);
 	if (!result.ok) return c.json({ error: "Failed to create API key" }, 500);
 
 	return c.json({ message: "API key created successfully", key: result.value });
@@ -424,7 +424,7 @@ app.delete("/keys/:key_id", requireAuth, async c => {
 
 	if (!key_id) return c.json({ error: "Key ID required" }, 400);
 
-	const result = await keysD1.deleteApiKey(db, key_id);
+	const result = await keys.deleteApiKey(db, key_id);
 	if (!result.ok) {
 		if (result.error.kind === "not_found") return c.json({ error: "API key not found" }, 404);
 		return c.json({ error: "Failed to delete API key" }, 500);
@@ -445,7 +445,7 @@ app.post("/projects/scan", requireAuth, async c => {
 
 	return stream(c, async s => {
 		try {
-			for await (const chunk of scanningD1.initiateScan(db, project_id, auth_user.id, session.access_token!)) {
+			for await (const chunk of scanning.initiateScan(db, project_id, auth_user.id, session.access_token!)) {
 				await s.write(chunk);
 			}
 		} catch {
@@ -461,7 +461,7 @@ app.get("/projects/updates", requireAuth, async c => {
 
 	if (!project_id) return c.json({ error: "project_id required" }, 400);
 
-	const result = await scanningD1.getPendingUpdates(db, project_id, auth_user.id);
+	const result = await scanning.getPendingUpdates(db, project_id, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json({ updates: result.value });
 });
@@ -486,7 +486,7 @@ app.post("/projects/scan_status", requireAuth, async c => {
 
 	const { id: update_id, actions, titles, approved } = parsed.data;
 
-	const result = await scanningD1.processScanResults(db, project_id, auth_user.id, update_id, actions, titles, approved);
+	const result = await scanning.processScanResults(db, project_id, auth_user.id, update_id, actions, titles, approved);
 	if (!result.ok) return c.json({ error: result.error.kind }, 400);
 	return c.json({ success: true });
 });
@@ -498,11 +498,11 @@ app.patch("/user/preferences", requireAuth, zValidator("json", update_user), asy
 
 	if (auth_user.id !== data.id) return c.json({ error: "Forbidden" }, 403);
 
-	const user_result = await usersD1.getUserById(db, auth_user.id);
+	const user_result = await users.getUserById(db, auth_user.id);
 	if (!user_result.ok) return c.json({ error: user_result.error.kind }, 500);
 	if (!user_result.value) return c.json({ error: "User not found" }, 404);
 
-	const update_result = await usersD1.updateUserPreferences(db, auth_user.id, {
+	const update_result = await users.updateUserPreferences(db, auth_user.id, {
 		id: auth_user.id,
 		task_view: data.task_view,
 		name: data.name,
@@ -521,7 +521,7 @@ app.get("/user/history", requireAuth, async c => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
-	const result = await actionD1.getUserHistory(db, auth_user.id);
+	const result = await action.getUserHistory(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -530,7 +530,7 @@ app.get("/milestones", requireAuth, async c => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
-	const result = await milestonesD1.getUserMilestones(db, auth_user.id);
+	const result = await milestones.getUserMilestones(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -541,7 +541,7 @@ app.get("/milestones/:id", requireAuth, async c => {
 
 	if (!milestone_id) return c.json({ error: "Missing milestone ID" }, 400);
 
-	const result = await milestonesD1.getMilestone(db, milestone_id);
+	const result = await milestones.getMilestone(db, milestone_id);
 	if (!result.ok) {
 		if (result.error.kind === "not_found") return c.json({ error: "Milestone not found" }, 404);
 		return c.json({ error: result.error.kind }, 500);
@@ -555,9 +555,9 @@ app.post("/milestones", requireAuth, zValidator("json", upsert_milestone), async
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
 
-	const result = await milestonesD1.upsertMilestone(db, data, auth_user.id);
+	const result = await milestones.upsertMilestone(db, data, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -573,9 +573,9 @@ app.patch("/milestones/:id", requireAuth, zValidator("json", upsert_milestone), 
 	if (!milestone_id) return c.json({ error: "Missing milestone ID" }, 400);
 
 	const update_data = { ...data, id: milestone_id };
-	const result = await milestonesD1.upsertMilestone(db, update_data, auth_user.id);
+	const result = await milestones.upsertMilestone(db, update_data, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -589,9 +589,9 @@ app.delete("/milestones/:id", requireAuth, async c => {
 
 	if (!milestone_id) return c.json({ error: "Missing milestone ID" }, 400);
 
-	const result = await milestonesD1.deleteMilestone(db, milestone_id, auth_user.id);
+	const result = await milestones.deleteMilestone(db, milestone_id, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -605,14 +605,14 @@ app.get("/projects/:id/milestones", requireAuth, async c => {
 
 	if (!project_id) return c.json({ error: "Missing project ID" }, 400);
 
-	const project_result = await projectsD1.getProjectById(db, project_id);
+	const project_result = await projects.getProjectById(db, project_id);
 	if (!project_result.ok) {
 		if (project_result.error.kind === "not_found") return c.json({ error: "Project not found" }, 404);
 		return c.json({ error: project_result.error.kind }, 500);
 	}
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
-	const result = await milestonesD1.getProjectMilestones(db, project_result.value.id);
+	const result = await milestones.getProjectMilestones(db, project_result.value.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -621,7 +621,7 @@ app.get("/goals", requireAuth, async c => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
-	const result = await goalsD1.getUserGoals(db, auth_user.id);
+	const result = await goals.getUserGoals(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
@@ -632,7 +632,7 @@ app.get("/goals/:id", requireAuth, async c => {
 
 	if (!goal_id) return c.json({ error: "Missing goal ID" }, 400);
 
-	const result = await goalsD1.getGoal(db, goal_id);
+	const result = await goals.getGoal(db, goal_id);
 	if (!result.ok) {
 		if (result.error.kind === "not_found") return c.json({ error: "Goal not found" }, 404);
 		return c.json({ error: result.error.kind }, 500);
@@ -646,9 +646,9 @@ app.post("/goals", requireAuth, zValidator("json", upsert_goal), async c => {
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
 
-	const result = await goalsD1.upsertGoal(db, data, auth_user.id);
+	const result = await goals.upsertGoal(db, data, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -664,9 +664,9 @@ app.patch("/goals/:id", requireAuth, zValidator("json", upsert_goal), async c =>
 	if (!goal_id) return c.json({ error: "Missing goal ID" }, 400);
 
 	const update_data = { ...data, id: goal_id };
-	const result = await goalsD1.upsertGoal(db, update_data, auth_user.id);
+	const result = await goals.upsertGoal(db, update_data, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -680,9 +680,9 @@ app.delete("/goals/:id", requireAuth, async c => {
 
 	if (!goal_id) return c.json({ error: "Missing goal ID" }, 400);
 
-	const result = await goalsD1.deleteGoal(db, goal_id, auth_user.id);
+	const result = await goals.deleteGoal(db, goal_id, auth_user.id);
 	if (!result.ok) {
-		if (result.error.kind === "unauthorized") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -695,14 +695,14 @@ app.get("/milestones/:id/goals", requireAuth, async c => {
 
 	if (!milestone_id) return c.json({ error: "Missing milestone ID" }, 400);
 
-	const milestone_result = await milestonesD1.getMilestone(db, milestone_id);
+	const milestone_result = await milestones.getMilestone(db, milestone_id);
 	if (!milestone_result.ok) {
 		if (milestone_result.error.kind === "not_found") return c.json({ error: "Milestone not found" }, 404);
 		return c.json({ error: milestone_result.error.kind }, 500);
 	}
 	if (!milestone_result.value) return c.json({ error: "Milestone not found" }, 404);
 
-	const result = await goalsD1.getMilestoneGoals(db, milestone_id);
+	const result = await goals.getMilestoneGoals(db, milestone_id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });

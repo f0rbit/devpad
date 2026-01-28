@@ -4,18 +4,27 @@
 	"description": "Unified Cloudflare Worker for devpad, dev-blog, and media-timeline",
 	"type": "module",
 	"main": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./dev": "./src/dev.ts",
+		"./routes/v1": "./src/routes/v1.ts",
+		"./routes/auth": "./src/routes/auth.ts",
+		"./middleware/auth": "./src/middleware/auth.ts",
+		"./bindings": "./src/bindings.ts",
+		"./utils/response": "./src/utils/response.ts",
+		"./utils/cookies": "./src/utils/cookies.ts"
+	},
 	"scripts": {
-		"dev": "wrangler dev",
+		"dev": "bun --watch src/local.ts",
 		"build": "wrangler deploy --dry-run --outdir=dist",
 		"clean": "rm -rf dist",
 		"test": "bun test"
 	},
 	"dependencies": {
 		"@devpad/core": "workspace:*",
-		"@devpad/scanner": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@hono/zod-validator": "^0.4.1",
-		"drizzle-orm": "^0.30.6",
+		"drizzle-orm": "^0.44.7",
 		"hono": "^4.6.0",
 		"zod": "^3.22.4"
 	},

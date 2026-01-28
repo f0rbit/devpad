@@ -1,20 +1,12 @@
-import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, jwtWeb, keysD1, validateSession } from "@devpad/core/auth";
+import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, jwt, keys, validateSession } from "@devpad/core/auth";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppContext } from "../bindings.js";
+import { cookieConfig } from "../utils/cookies.js";
 
 const setNullAuth = (c: any) => {
 	c.set("user", null);
 	c.set("session", null);
-};
-
-const cookieConfig = (env: { ENVIRONMENT: string }) => {
-	const is_production = env.ENVIRONMENT === "production";
-	return {
-		secure: is_production,
-		domain: is_production ? ".devpad.tools" : undefined,
-		same_site: "lax" as const,
-	};
 };
 
 export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
@@ -27,7 +19,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 
 		if (token.startsWith("jwt:")) {
 			const jwt_token = token.slice(4);
-			const jwt_result = await jwtWeb.verifyJWT(env.JWT_SECRET, jwt_token);
+			const jwt_result = await jwt.verifyJWT(env.JWT_SECRET, jwt_token);
 			if (jwt_result.ok) {
 				const session_result = await validateSession(db, jwt_result.value.session_id);
 				if (session_result.ok) {
@@ -43,7 +35,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 			}
 		}
 
-		const key_result = await keysD1.getUserByApiKey(db, token);
+		const key_result = await keys.getUserByApiKey(db, token);
 		if (key_result.ok) {
 			c.set("user", {
 				id: key_result.value.id,

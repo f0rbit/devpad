@@ -1,8 +1,9 @@
-import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, invalidateSession, jwtWeb, oauthD1, validateSession } from "@devpad/core/auth";
-import { usersD1 } from "@devpad/core/services";
+import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, invalidateSession, jwt, oauth, validateSession } from "@devpad/core/auth";
+import { users } from "@devpad/core/services";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppContext } from "../bindings.js";
+import { cookieConfig } from "../utils/cookies.js";
 
 const ALLOWED_REDIRECT_PATTERNS = [
 	/^https:\/\/[a-z0-9.-]+\.pages\.dev$/,
@@ -22,15 +23,6 @@ const isAllowedRedirectUrl = (url: string): boolean => {
 	}
 };
 
-const cookieConfig = (env: { ENVIRONMENT: string }) => {
-	const is_production = env.ENVIRONMENT === "production";
-	return {
-		secure: is_production,
-		domain: is_production ? ".devpad.tools" : undefined,
-		same_site: "lax" as const,
-	};
-};
-
 const app = new Hono<AppContext>();
 
 app.get("/login", async c => {
@@ -44,7 +36,7 @@ app.get("/login", async c => {
 		JWT_SECRET: env.JWT_SECRET,
 	};
 
-	const result = oauthD1.createGitHubAuthUrl(oauth_env, {
+	const result = oauth.createGitHubAuthUrl(oauth_env, {
 		return_to: return_to && isAllowedRedirectUrl(return_to) ? return_to : undefined,
 		mode,
 	});
@@ -81,12 +73,12 @@ app.get("/callback/github", async c => {
 		JWT_SECRET: env.JWT_SECRET,
 	};
 
-	const callback_result = await oauthD1.handleGitHubCallback(db, oauth_env, code, state, stored_state);
+	const callback_result = await oauth.handleGitHubCallback(db, oauth_env, code, state, stored_state);
 	if (!callback_result.ok) return c.json({ error: "OAuth callback failed" }, 500);
 
 	const { user: oauth_user, accessToken, sessionId } = callback_result.value;
 
-	const jwt_result = await jwtWeb.generateJWT(env.JWT_SECRET, {
+	const jwt_result = await jwt.generateJWT(env.JWT_SECRET, {
 		user_id: oauth_user.id,
 		session_id: sessionId,
 	});
@@ -101,7 +93,7 @@ app.get("/callback/github", async c => {
 		maxAge: 0,
 	});
 
-	const decoded_state = oauthD1.decodeOAuthState(state);
+	const decoded_state = oauth.decodeOAuthState(state);
 
 	if (decoded_state.ok && decoded_state.value.mode === "jwt" && decoded_state.value.return_to && token) {
 		if (isAllowedRedirectUrl(decoded_state.value.return_to)) {
@@ -141,7 +133,7 @@ app.get("/session", async c => {
 		return c.json({ authenticated: false, user: null, session: null });
 	}
 
-	const full_user_result = await usersD1.getUserById(db, user.id);
+	const full_user_result = await users.getUserById(db, user.id);
 	const full_user = full_user_result.ok ? full_user_result.value : null;
 
 	return c.json({
@@ -171,7 +163,7 @@ app.get("/verify", async c => {
 	const session = c.get("session");
 
 	if (user && !session) {
-		const full_user_result = await usersD1.getUserById(db, user.id);
+		const full_user_result = await users.getUserById(db, user.id);
 		const full_user = full_user_result.ok ? full_user_result.value : null;
 
 		return c.json({
@@ -198,7 +190,7 @@ app.get("/verify", async c => {
 		return c.json({ authenticated: false, user: null }, 200);
 	}
 
-	const full_user_result = await usersD1.getUserById(db, user.id);
+	const full_user_result = await users.getUserById(db, user.id);
 	const full_user = full_user_result.ok ? full_user_result.value : null;
 
 	return c.json({

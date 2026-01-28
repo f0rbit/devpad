@@ -1,7 +1,8 @@
-import { healthRouter as blogHealthRouter, categoriesRouter, postsRouter, tagsRouter, tokensRouter } from "@devpad/blog-server";
+import { categoriesRouter, postsRouter, tagsRouter, tokensRouter } from "@devpad/blog-server";
 import { createContextFromBindings, createProviderFactory, handleCron, requestContextMiddleware } from "@devpad/media-server";
 import { connectionRoutes, credentialRoutes, authRoutes as mediaAuthRoutes, profileRoutes, timelineRoutes } from "@devpad/media-server/routes";
 import type { Bindings } from "@devpad/schema/bindings";
+import type { UnifiedDatabase } from "@devpad/schema/database/d1";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppContext } from "./bindings.js";
@@ -10,6 +11,11 @@ import { unifiedContextMiddleware } from "./middleware/context.js";
 import { dbMiddleware } from "./middleware/db.js";
 import authRoutes from "./routes/auth.js";
 import v1Routes from "./routes/v1.js";
+
+export type ApiOptions = {
+	db?: UnifiedDatabase;
+	contexts?: boolean;
+};
 
 type AstroHandler = {
 	fetch: (request: Request, env: any, ctx: ExecutionContext) => Promise<Response>;
@@ -27,7 +33,7 @@ type UnifiedHandlers = {
 
 const isApiRequest = (path: string) => path.startsWith("/api/") || path === "/health";
 
-const createApi = () => {
+export const createApi = (options?: ApiOptions) => {
 	const app = new Hono<AppContext>();
 
 	app.use("*", requestContextMiddleware());
@@ -47,9 +53,19 @@ const createApi = () => {
 		})
 	);
 
-	app.use("*", dbMiddleware);
+	if (options?.db) {
+		const injected_db = options.db;
+		app.use("*", async (c, next) => {
+			c.set("db", injected_db);
+			await next();
+		});
+	} else {
+		app.use("*", dbMiddleware);
+	}
 	app.use("*", authMiddleware);
-	app.use("*", unifiedContextMiddleware);
+	if (options?.contexts !== false) {
+		app.use("*", unifiedContextMiddleware);
+	}
 
 	app.get("/health", c => c.json({ status: "ok", timestamp: new Date().toISOString() }));
 
