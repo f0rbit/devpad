@@ -1,5 +1,5 @@
 import type { ApiError, AuthExpiredError, BadRequestError, NetworkError, ParseError, RateLimitedError } from "@devpad/schema/media";
-import type { Result } from "../utils";
+import type { Result } from "@f0rbit/corpus";
 
 export type ProviderError = RateLimitedError | AuthExpiredError | NetworkError | ApiError | ParseError | BadRequestError;
 

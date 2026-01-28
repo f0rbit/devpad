@@ -12,7 +12,7 @@ export * from "./types";
 export { normalizeYouTube, YouTubeMemoryProvider, YouTubeProvider, type YouTubeProviderConfig } from "./youtube";
 
 import { errors } from "@devpad/schema/media";
-import type { Result } from "../utils";
+import type { Result } from "@f0rbit/corpus";
 import { BlueskyProvider } from "./bluesky";
 import { DevpadProvider } from "./devpad";
 import type { Provider, ProviderError, ProviderFactory } from "./types";

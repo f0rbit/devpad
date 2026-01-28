@@ -1,7 +1,7 @@
-import { tasksD1 } from "@devpad/core/services";
+import { tasks } from "@devpad/core/services";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { DevpadRaw, DevpadTask, TaskPayload, TimelineItem } from "@devpad/schema/media";
-import { err, ok } from "../utils";
+import { err, ok } from "@f0rbit/corpus";
 import { BaseMemoryProvider } from "./memory-base";
 import type { FetchResult, Provider } from "./types";
 
@@ -52,7 +52,7 @@ export class DevpadProvider implements Provider<DevpadRaw> {
 
 	async fetch(_token: string): Promise<FetchResult<DevpadRaw>> {
 		const db = createD1Database(this.d1);
-		const result = await tasksD1.getUserTasks(db, this.user_id);
+		const result = await tasks.getUserTasks(db, this.user_id);
 		if (!result.ok) return err({ kind: "api_error", status: 500, message: result.error.kind });
 		const tasks = result.value.map(mapTaskToDevpadTask);
 		return ok({ tasks, fetched_at: new Date().toISOString() });

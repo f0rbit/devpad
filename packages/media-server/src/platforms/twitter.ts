@@ -1,8 +1,8 @@
 import { errors, type TweetMedia, type TwitterMetaStore, type TwitterTweet, type TwitterTweetsStore } from "@devpad/schema/media";
+import { err, ok, type Result } from "@f0rbit/corpus";
 import { Client, type ClientConfig } from "@xdevplatform/xdk";
 import { createLogger } from "../logger";
-import { type Result, err, ok } from "../utils";
-import { type ProviderError, mapHttpError } from "./types";
+import { mapHttpError, type ProviderError } from "./types";
 
 const log = createLogger("twitter");
 

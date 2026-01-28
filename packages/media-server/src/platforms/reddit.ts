@@ -1,8 +1,7 @@
 import type { RedditComment, RedditCommentsStore, RedditMetaStore, RedditPost, RedditPostsStore } from "@devpad/schema/media";
+import { err, type FetchError, ok, pipe, type Result } from "@f0rbit/corpus";
 import { createLogger } from "../logger";
-import type { Result } from "../utils";
-import { type FetchError, err, ok, pipe } from "../utils";
-import { type ProviderError, mapHttpError } from "./types";
+import { mapHttpError, type ProviderError } from "./types";
 
 const log = createLogger("reddit");
 

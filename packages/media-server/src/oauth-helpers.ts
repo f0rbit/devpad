@@ -1,17 +1,13 @@
 import { accounts, apiKeys, type BadRequestError, errors, type ParseError, type Platform, profiles } from "@devpad/schema/media";
+import { err, type FetchError, ok, pipe, type Result, to_nullable, try_catch, try_catch_async } from "@f0rbit/corpus";
 import { and, eq, or } from "drizzle-orm";
 import type { Context } from "hono";
 import type { Bindings } from "./bindings";
 import type { Database } from "./db";
 import type { AppContext } from "./infrastructure/context";
 import { createLogger } from "./logger";
-import { err, type FetchError, ok, pipe, type Result, secrets, to_nullable, try_catch, try_catch_async, uuid } from "./utils";
-import { getContext } from "./utils/route-helpers";
-
-type Variables = {
-	user: { id: string; github_id: number; name: string; task_view: string } | null;
-	mediaContext: AppContext;
-};
+import { secrets, uuid } from "./utils";
+import { getContext, type Variables } from "./utils/route-helpers";
 
 type HonoContext = Context<{ Bindings: Bindings; Variables: Variables }>;
 
@@ -105,7 +101,7 @@ export type OAuthUser = {
 	username: string;
 };
 
-export type OAuthError = { kind: "token_exchange_failed"; message: string } | { kind: "user_fetch_failed"; message: string } | { kind: "encryption_failed"; message: string } | { kind: "database_failed"; message: string };
+export type OAuthError = { kind: "token_exchange_failed"; message: string } | { kind: "user_fetch_failed"; message: string } | { kind: "encryption_failed"; message: string } | { kind: "db_error"; message: string };
 
 export type OAuthSecrets = { clientId: string | undefined; clientSecret: string | undefined };
 

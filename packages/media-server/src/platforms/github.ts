@@ -1,8 +1,8 @@
 import type { GitHubMetaStore, GitHubRepoCommit, GitHubRepoCommitsStore, GitHubRepoMeta, GitHubRepoPR, GitHubRepoPRsStore } from "@devpad/schema/media";
+import { err, ok, pipe, type Result } from "@f0rbit/corpus";
 import { Octokit } from "octokit";
 import { createLogger } from "../logger";
-import { type Result, err, ok, pipe } from "../utils";
-import { type ProviderError, mapHttpError, toProviderError } from "./types";
+import { mapHttpError, type ProviderError, toProviderError } from "./types";
 
 const log = createLogger("github");
 

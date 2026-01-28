@@ -1,6 +1,6 @@
-import { errors, type TimelineItem, type VideoPayload, type YouTubeRaw, type YouTubeVideo, YouTubeRawSchema } from "@devpad/schema/media";
+import { errors, type TimelineItem, type VideoPayload, type YouTubeRaw, YouTubeRawSchema, type YouTubeVideo } from "@devpad/schema/media";
+import { type FetchError, ok, pipe } from "@f0rbit/corpus";
 import { z } from "zod";
-import { type FetchError, ok, pipe } from "../utils";
 import { BaseMemoryProvider } from "./memory-base";
 import type { FetchResult, Provider, ProviderError } from "./types";
 import { mapHttpError } from "./types";

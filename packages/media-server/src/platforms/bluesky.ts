@@ -1,7 +1,7 @@
 import { type BlueskyFeedItem, type BlueskyRaw, BlueskyRawSchema, type PostPayload, type TimelineItem } from "@devpad/schema/media";
-import { type FetchError, err, ok, pipe } from "../utils";
+import { err, type FetchError, ok, pipe } from "@f0rbit/corpus";
 import { BaseMemoryProvider } from "./memory-base";
-import { type FetchResult, type Provider, type ProviderError, mapHttpError } from "./types";
+import { type FetchResult, mapHttpError, type Provider, type ProviderError } from "./types";
 
 // === PROVIDER (real API) ===
 

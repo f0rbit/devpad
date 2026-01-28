@@ -1,13 +1,12 @@
-import type { Backend } from "@f0rbit/corpus";
 import type { TimelineItem } from "@devpad/schema/media";
+import type { Backend, Result } from "@f0rbit/corpus";
 import type { AppContext } from "../infrastructure/context";
 import type { RawSnapshot } from "../sync";
-import type { Result } from "../utils";
 import type { ServiceError } from "../utils/route-helpers";
-import { type TimelineEntry, combineTimelines, groupByDate, groupCommits } from "./grouping";
+import { combineTimelines, groupByDate, groupCommits, type TimelineEntry } from "./grouping";
 import { loadGitHubDataForAccount, loadRedditDataForAccount, loadTwitterDataForAccount } from "./loaders";
-import { normalizeGitHub, normalizeReddit, normalizeTwitter, normalizers } from "./normalizers";
-import { type ProfileSettings, type ProfileTimelineError, type ProfileTimelineOptions, type ProfileTimelineResult, generateProfileTimeline, loadProfileSettings } from "./profile";
+import { normalizeGitHub, normalizeReddit, normalizers, normalizeTwitter } from "./normalizers";
+import { generateProfileTimeline, loadProfileSettings, type ProfileSettings, type ProfileTimelineError, type ProfileTimelineOptions, type ProfileTimelineResult } from "./profile";
 
 type TimelineOptions = {
 	from?: string;

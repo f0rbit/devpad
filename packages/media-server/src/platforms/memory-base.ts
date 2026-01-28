@@ -1,5 +1,5 @@
 import { errors } from "@devpad/schema/media";
-import { ok } from "../utils";
+import { ok } from "@f0rbit/corpus";
 import type { FetchResult } from "./types";
 
 export type MemoryProviderState = {
