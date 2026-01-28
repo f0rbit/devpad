@@ -1,7 +1,18 @@
 import { defineMiddleware } from "astro:middleware";
-import { log } from "@devpad/core";
+import { log } from "@devpad/core/logger";
+import type { AuthUser } from "@devpad/schema/bindings";
 import type { MiddlewareHandler } from "astro";
-import { verifyRequestOrigin } from "lucia";
+
+type AuthVerifyResponse = {
+	authenticated: boolean;
+	user: NonNullable<AuthUser>;
+};
+
+function verifyRequestOrigin(origin: string, allowed_hosts: string[]): boolean {
+	if (!origin) return false;
+	const origin_host = new URL(origin).host;
+	return allowed_hosts.some(host => host === origin_host);
+}
 
 const history_ignore = ["/api", "/favicon", "/images", "/public", "/_astro"];
 const origin_ignore = ["/api"];
@@ -95,10 +106,11 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	if (isTestEnv && hasTestHeader) {
 		log.middleware("🧪 TEST MODE: Injecting mock user");
 		// Import test user constants dynamically to avoid bundling in production
-		const { TEST_USER, TEST_SESSION, TEST_JWT_TOKEN } = await import("@devpad/core");
+		// @ts-expect-error
+		const { TEST_USER, TEST_SESSION, TEST_JWT_TOKEN } = await import("../../../tests/shared/test-user");
 
-		context.locals.user = TEST_USER as any;
-		context.locals.session = TEST_SESSION as any;
+		context.locals.user = TEST_USER as unknown as NonNullable<AuthUser>;
+		context.locals.session = TEST_SESSION as App.Locals["session"];
 		context.locals.jwtToken = TEST_JWT_TOKEN;
 
 		// Set cookie for client-side API access
@@ -182,7 +194,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 			});
 
 			if (response.ok) {
-				const authData = await response.json();
+				const authData = (await response.json()) as AuthVerifyResponse;
 				log.middleware(" ✅ Auth successful:", {
 					authenticated: authData.authenticated,
 					hasUser: !!authData.user,
@@ -190,8 +202,8 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 				});
 
 				context.locals.user = authData.user;
-				context.locals.session = { id: "verified" } as any; // Minimal session object
-				context.locals.jwtToken = storedJWT; // Pass JWT token for server-side API calls
+				context.locals.session = { id: "verified" };
+				context.locals.jwtToken = storedJWT ?? null; // Pass JWT token for server-side API calls
 
 				// If this is a test user, ensure the JWT cookie is set for client-side
 				if (authData.user?.id === "test-user-e2e") {
