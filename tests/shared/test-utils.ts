@@ -2,10 +2,8 @@ import { Database } from "bun:sqlite";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import * as schema from "@devpad/schema/database";
-import { api_key, user } from "@devpad/schema";
-import { drizzle } from "drizzle-orm/bun-sqlite";
-import { migrate } from "drizzle-orm/bun-sqlite/migrator";
+import { api_keys, user } from "@devpad/schema";
+import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 
 export const TEST_USER_ID = "test-user-12345";
 export const DEBUG_LOGGING = Bun.env.DEBUG_LOGGING === "true";
@@ -29,36 +27,28 @@ export async function setupTestDatabase(dbPath: string): Promise<void> {
 	log("🗄️ Setting up test database at:", dbPath);
 
 	const sqlite = new Database(dbPath);
-	const db = drizzle(sqlite, { schema });
 
-	// Find the project root by looking for package.json
 	let currentDir = __dirname;
 	while (currentDir !== path.dirname(currentDir)) {
-		const packageJsonPath = path.join(currentDir, "package.json");
-		if (fs.existsSync(packageJsonPath)) {
-			break;
-		}
+		if (fs.existsSync(path.join(currentDir, "package.json"))) break;
 		currentDir = path.dirname(currentDir);
 	}
 
 	const migrationsFolder = path.join(currentDir, "packages", "schema", "src", "database", "drizzle");
-	log("🔍 Migration folder:", migrationsFolder);
-
 	if (!fs.existsSync(migrationsFolder)) {
 		throw new Error(`Migration folder not found: ${migrationsFolder}`);
 	}
 
-	migrate(db, { migrationsFolder });
-
+	migrateBunDatabase(sqlite, migrationsFolder);
 	sqlite.close();
-	log("✅ Test database setup complete");
+	log("Test database setup complete");
 }
 
 export async function createTestUser(dbPath: string): Promise<string> {
 	log("👤 Creating test user and API key...");
 
 	const sqlite = new Database(dbPath);
-	const db = drizzle(sqlite, { schema });
+	const db = createBunDatabase(sqlite);
 
 	try {
 		const [testUser] = await db
@@ -71,10 +61,18 @@ export async function createTestUser(dbPath: string): Promise<string> {
 			})
 			.returning();
 
-		const apiKeyValue = crypto.randomBytes(32).toString("hex");
-		await db.insert(api_key).values({
-			owner_id: testUser.id,
-			hash: apiKeyValue,
+		const apiKeyValue = `devpad_${crypto.randomUUID()}`;
+		const encoder = new TextEncoder();
+		const data = encoder.encode(apiKeyValue);
+		const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", data);
+		const keyHash = Array.from(new Uint8Array(hashBuffer))
+			.map(b => b.toString(16).padStart(2, "0"))
+			.join("");
+
+		await db.insert(api_keys).values({
+			user_id: testUser.id,
+			key_hash: keyHash,
+			scope: "devpad",
 		});
 
 		sqlite.close();

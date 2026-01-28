@@ -152,53 +152,21 @@ process.on("SIGTERM", cleanup);
 process.on("uncaughtException", cleanup);
 process.on("unhandledRejection", cleanup);
 
-/**
- * Start the Hono server for testing - in-process version
- */
 async function startHonoServer(): Promise<void> {
-	log("🚀 Starting shared Hono server in-process...");
+	log("Starting shared Hono server in-process...");
 
-	log(`🔧 Environment variables:`);
-	log(`  NODE_ENV: ${process.env.NODE_ENV}`);
-	log(`  DATABASE_FILE: ${process.env.DATABASE_FILE}`);
-	log(`  DATABASE_URL: ${process.env.DATABASE_URL}`);
-	log(`  PORT: 3001`);
-
-	// Import server functions
-	const { createApp, migrateDb } = await import("../../packages/server/src/server.js");
-
-	// Run migrations first
 	const databaseFile = process.env.DATABASE_FILE;
 	if (!databaseFile) {
 		throw new Error("DATABASE_FILE environment variable is required");
 	}
 
-	log("⌛️ Running database migrations...");
-	await migrateDb({
-		databaseFile,
-		migrationPaths: ["./packages/schema/src/database/drizzle"],
-	});
-	log("✅ Database migrations completed");
+	const { createBunApp, migrateBunDb } = await import("../../packages/worker/src/dev.js");
 
-	// Create the Hono app
-	const app = createApp({
-		runMigrations: false, // Already done above
-		corsOrigins: ["http://localhost:4321", "http://localhost:3000", "http://localhost:5173"],
-		port: 3001,
-		environment: "test",
-	});
+	migrateBunDb({ database_file: databaseFile, migration_paths: ["./packages/schema/src/database/drizzle"] });
+	const { fetch } = createBunApp({ database_file: databaseFile });
 
-	log("🎬 Starting in-process server...");
+	honoServer = Bun.serve({ port: 3001, fetch });
 
-	// Start the server using Bun.serve
-	honoServer = Bun.serve({
-		port: 3001,
-		fetch: app.fetch,
-	});
-
-	log(`📊 Server started in-process on port ${honoServer.port}`);
-
-	// Wait for server to be ready
 	await waitForServer("http://localhost:3001/health");
-	log("✅ Shared Hono server started and responding");
+	log("Hono server started and responding");
 }
