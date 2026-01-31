@@ -1,7 +1,7 @@
-import { connections } from "@/utils/api";
 import { Button } from "@f0rbit/ui";
 import { Pause, Play, RefreshCw, Trash2 } from "lucide-solid";
-import { Show, createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { getClient } from "@/utils/client";
 
 type Props = {
 	accountId: string;
@@ -19,7 +19,7 @@ export default function ConnectionActions(props: Props) {
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		setError(null);
-		const result = await connections.refresh(props.accountId);
+		const result = await getClient().media.connections.refresh(props.accountId);
 		setRefreshing(false);
 		if (!result.ok) {
 			setError(result.error.message);
@@ -31,7 +31,7 @@ export default function ConnectionActions(props: Props) {
 	const handleToggle = async () => {
 		setToggling(true);
 		setError(null);
-		const result = await connections.update(props.accountId, { is_active: !props.isActive });
+		const result = await getClient().media.connections.updateStatus(props.accountId, !props.isActive);
 		setToggling(false);
 		if (!result.ok) {
 			setError(result.error.message);
@@ -44,7 +44,7 @@ export default function ConnectionActions(props: Props) {
 		if (!confirm("Remove this connection? This cannot be undone.")) return;
 		setDeleting(true);
 		setError(null);
-		const result = await connections.delete(props.accountId);
+		const result = await getClient().media.connections.delete(props.accountId);
 		setDeleting(false);
 		if (!result.ok) {
 			setError(result.error.message);

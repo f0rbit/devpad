@@ -2,7 +2,8 @@ import { Button, Chevron, Dropdown, DropdownDivider, DropdownItem, DropdownMenu,
 import { Check, Plus, Users } from "lucide-solid";
 import { createEffect, createResource, For, on, Show } from "solid-js";
 import { isServer } from "solid-js/web";
-import { initMockAuth, type ProfileSummary, profiles } from "../../utils/api";
+import { getClient } from "../../utils/client";
+import type { ProfileSummary } from "../../utils/types";
 
 type AuthState = { authenticated: true; profiles: ProfileSummary[] } | { authenticated: false };
 
@@ -22,9 +23,7 @@ const fetchAuthAndProfiles = async (initial?: AuthState): Promise<AuthState> => 
 		return { authenticated: false };
 	}
 
-	initMockAuth();
-
-	const result = await profiles.list();
+	const result = await getClient().media.profiles.list();
 	if (!result.ok) {
 		if (result.error.status === 401) {
 			return { authenticated: false };
@@ -32,7 +31,7 @@ const fetchAuthAndProfiles = async (initial?: AuthState): Promise<AuthState> => 
 		console.error("[ProfileSelector] Failed to fetch profiles:", result.error);
 		return { authenticated: true, profiles: [] };
 	}
-	return { authenticated: true, profiles: result.value.profiles };
+	return { authenticated: true, profiles: result.value as ProfileSummary[] };
 };
 
 const getSlugFromUrl = () => {

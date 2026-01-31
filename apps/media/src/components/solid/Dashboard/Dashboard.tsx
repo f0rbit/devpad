@@ -1,7 +1,8 @@
-import { type DashboardStats as Stats, calculateActivityByWeek, calculateContentTypes, calculateDashboardStats, calculatePlatformDistribution, getItemsForDate, getRecentItems } from "@/utils/analytics";
-import { type ApiResult, type ProfileTimelineResponse, initMockAuth, profiles } from "@/utils/api";
 import { Empty } from "@f0rbit/ui";
-import { Show, createResource, createSignal } from "solid-js";
+import { createResource, createSignal, Show } from "solid-js";
+import { calculateActivityByWeek, calculateContentTypes, calculateDashboardStats, calculatePlatformDistribution, getItemsForDate, getRecentItems, type DashboardStats as Stats } from "@/utils/analytics";
+import { getClient } from "@/utils/client";
+import type { ProfileTimelineResponse } from "@/utils/types";
 import { ResourceState } from "../ResourceState";
 import ActivityChart, { ActivityPreview } from "./ActivityChart";
 import ContentTypeList from "./ContentTypeList";
@@ -15,8 +16,6 @@ type DashboardProps = {
 };
 
 export default function Dashboard(props: DashboardProps) {
-	initMockAuth();
-
 	// Check if SSR provided data (even if empty - that's valid SSR data)
 	const hasSSRData = props.initialTimeline !== undefined;
 
@@ -36,9 +35,17 @@ export default function Dashboard(props: DashboardProps) {
 		},
 		async (slug): Promise<ProfileTimelineResponse | null> => {
 			if (!slug) return null;
-			const result: ApiResult<ProfileTimelineResponse> = await profiles.getTimeline(slug);
+			const result = await getClient().media.profiles.timeline(slug);
 			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
+			return {
+				meta: {
+					profile_id: "",
+					profile_slug: slug,
+					profile_name: "",
+					generated_at: result.value.generated_at,
+				},
+				data: { groups: result.value.groups },
+			};
 		},
 		{
 			initialValue: props.initialTimeline ?? undefined,

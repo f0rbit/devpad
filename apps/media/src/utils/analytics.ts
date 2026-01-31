@@ -1,4 +1,4 @@
-import type { CommitGroup, Platform, TimelineGroup, TimelineItem } from "@/utils/api";
+import type { CommitGroup, Platform, TimelineGroup, TimelineItem } from "@/utils/types";
 
 export type DashboardStats = {
 	totalEntries: number;

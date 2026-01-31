@@ -1,5 +1,5 @@
-import { connections } from "@/utils/api";
 import { createSignal } from "solid-js";
+import { getClient } from "@/utils/client";
 
 export function useSettings(accountId: string, onUpdate?: () => void) {
 	const [updating, setUpdating] = createSignal(false);
@@ -8,7 +8,7 @@ export function useSettings(accountId: string, onUpdate?: () => void) {
 	const updateSetting = async <T extends Record<string, unknown>>(key: keyof T, value: T[keyof T], currentSettings: T | null) => {
 		setUpdating(true);
 		try {
-			await connections.updateSettings(accountId, {
+			await getClient().media.connections.settings.update(accountId, {
 				...currentSettings,
 				[key]: value,
 			});

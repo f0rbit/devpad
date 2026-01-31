@@ -2,7 +2,8 @@
 import ConnectionList from "../../components/solid/ConnectionList";
 import ProfileList from "../../components/solid/ProfileList";
 import AppLayout from "../../layouts/AppLayout.astro";
-import { type ConnectionWithSettings, type ConnectionsWithSettingsResponse, type ProfileSummary, type ProfilesListResponse, api } from "../../utils/api";
+import { type ConnectionWithSettings, type ConnectionsWithSettingsResponse, type ProfileSummary, type ProfilesListResponse } from "../../utils/types";
+import { ssr } from "../../utils/ssr";
 
 const profileSlug = Astro.url.searchParams.get("profile");
 const runtime = Astro.locals.runtime;
@@ -11,7 +12,7 @@ let initialProfiles: ProfileSummary[] = [];
 let initialConnections: ConnectionWithSettings[] = [];
 
 try {
-	const profilesResult = await api.ssr<ProfilesListResponse>("/api/v1/profiles", Astro.request, {}, runtime);
+	const profilesResult = await ssr<ProfilesListResponse>("/api/v1/profiles", Astro.request, {}, runtime);
 
 	if (profilesResult.ok) {
 		initialProfiles = profilesResult.value.profiles;
@@ -19,7 +20,7 @@ try {
 		if (profileSlug) {
 			const currentProfile = initialProfiles.find(p => p.slug === profileSlug);
 			if (currentProfile) {
-				const connectionsResult = await api.ssr<ConnectionsWithSettingsResponse>(`/api/v1/connections?profile_id=${currentProfile.id}&include_settings=true`, Astro.request, {}, runtime);
+				const connectionsResult = await ssr<ConnectionsWithSettingsResponse>(`/api/v1/connections?profile_id=${currentProfile.id}&include_settings=true`, Astro.request, {}, runtime);
 
 				if (connectionsResult.ok) {
 					initialConnections = connectionsResult.value.accounts;

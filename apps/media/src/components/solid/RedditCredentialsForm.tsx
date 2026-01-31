@@ -1,6 +1,6 @@
-import { api } from "@/utils/api";
-import { Show, createSignal } from "solid-js";
 import { Button, FormField, Input } from "@f0rbit/ui";
+import { createSignal, Show } from "solid-js";
+import { getClient } from "@/utils/client";
 
 type RedditCredentialsFormProps = {
 	profileId: string;
@@ -32,24 +32,20 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 
 		setSubmitting(true);
 
-		try {
-			const result = await api.post<{ success: boolean; message?: string; error?: string }>("/credentials/reddit", {
-				profile_id: props.profileId,
-				reddit_username: redditUsername().trim(),
-				client_id: clientId().trim(),
-				client_secret: clientSecret().trim(),
-			});
+		const result = await getClient().media.credentials.save("reddit", {
+			profile_id: props.profileId,
+			reddit_username: redditUsername().trim(),
+			client_id: clientId().trim(),
+			client_secret: clientSecret().trim(),
+		});
 
-			if (result.ok) {
-				props.onSuccess();
-			} else {
-				setError(result.error.message);
-			}
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to save credentials");
-		} finally {
-			setSubmitting(false);
+		if (result.ok) {
+			props.onSuccess();
+		} else {
+			setError(result.error.message);
 		}
+
+		setSubmitting(false);
 	};
 
 	return (

@@ -1,5 +1,3 @@
-import { type ApiResult, type CommitGroup, type PRCommit, type ProfileTimelineResponse, type PullRequestPayload, type TimelineGroup, type TimelineItem, initMockAuth, profiles } from "@/utils/api";
-import { format } from "@/utils/formatters";
 import { Badge, Empty } from "@f0rbit/ui";
 import ArrowBigUp from "lucide-solid/icons/arrow-big-up";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -8,8 +6,11 @@ import GitCommit from "lucide-solid/icons/git-commit-horizontal";
 import GitPullRequest from "lucide-solid/icons/git-pull-request";
 import MessageSquareText from "lucide-solid/icons/message-square-text";
 import Reply from "lucide-solid/icons/reply";
-import { For, Match, Show, Switch, createContext, createResource, createSignal, useContext } from "solid-js";
+import { createContext, createResource, createSignal, For, Match, Show, Switch, useContext } from "solid-js";
 import { isServer } from "solid-js/web";
+import { getClient } from "@/utils/client";
+import { format } from "@/utils/formatters";
+import type { CommitGroup, PRCommit, PullRequestPayload, TimelineGroup, TimelineItem } from "@/utils/types";
 import { ResourceState } from "./ResourceState";
 
 const GithubUsernamesContext = createContext<string[]>([]);
@@ -52,11 +53,10 @@ export default function TimelineList(props: TimelineListProps) {
 		async (slug): Promise<TimelineData | null> => {
 			if (isServer) return null;
 			if (!slug) return null;
-			initMockAuth();
-			const result: ApiResult<ProfileTimelineResponse> = await profiles.getTimeline(slug);
+			const result = await getClient().media.profiles.timeline(slug);
 			if (!result.ok) throw new Error(result.error.message);
 			return {
-				groups: result.value.data.groups,
+				groups: result.value.groups,
 				githubUsernames: [],
 			};
 		},

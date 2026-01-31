@@ -1,8 +1,8 @@
-import type { ConnectionWithSettings } from "@/utils/api";
-import { apiUrls } from "@/utils/api";
-import { format } from "@/utils/formatters";
 import { Button, Status } from "@f0rbit/ui";
 import { Match, Show, Switch } from "solid-js";
+import { apiUrls } from "@/utils/client";
+import { format } from "@/utils/formatters";
+import type { ConnectionWithSettings } from "@/utils/types";
 import ConnectionActions from "./ConnectionActions";
 import PlatformIcon from "./PlatformIcon";
 import BlueskySettings from "./PlatformSettings/BlueskySettings";

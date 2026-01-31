@@ -1,6 +1,6 @@
-import { connections } from "@/utils/api";
 import { Checkbox, Collapsible } from "@f0rbit/ui";
-import { For, Show, createResource, createSignal } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
+import { getClient } from "@/utils/client";
 import { AsyncState } from "../ResourceState";
 import { useSettings } from "./useSettings";
 
@@ -21,9 +21,9 @@ export default function RedditSettings(props: Props) {
 	const [subredditUpdating, setSubredditUpdating] = createSignal<string | null>(null);
 
 	const [subreddits] = createResource(async () => {
-		const result = await connections.getSubreddits(props.accountId);
+		const result = await getClient().media.connections.subreddits(props.accountId);
 		if (!result.ok) return [];
-		return result.value.subreddits;
+		return result.value as string[];
 	});
 
 	const hiddenSubreddits = () => new Set(props.settings?.hidden_subreddits ?? []);

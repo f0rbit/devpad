@@ -1,8 +1,9 @@
-import { type Connection, connections } from "@/utils/api";
-import { format } from "@/utils/formatters";
 import { Button } from "@f0rbit/ui";
 import { RefreshCw, Trash2 } from "lucide-solid";
-import { Show, createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { getClient } from "@/utils/client";
+import { format } from "@/utils/formatters";
+import type { Connection } from "@/utils/types";
 import PlatformIcon from "./PlatformIcon";
 
 type Props = {
@@ -22,7 +23,7 @@ export default function ConnectionCard(props: Props) {
 		setDeleting(true);
 		setError(null);
 
-		const result = await connections.delete(props.connection.account_id);
+		const result = await getClient().media.connections.delete(props.connection.account_id);
 
 		if (result.ok === false) {
 			setError(result.error.message);
@@ -37,7 +38,7 @@ export default function ConnectionCard(props: Props) {
 		setRefreshing(true);
 		setError(null);
 
-		const result = await connections.refresh(props.connection.account_id);
+		const result = await getClient().media.connections.refresh(props.connection.account_id);
 
 		if (result.ok === false) {
 			setError(result.error.message);

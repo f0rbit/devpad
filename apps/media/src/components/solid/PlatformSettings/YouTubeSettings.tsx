@@ -1,6 +1,6 @@
 import { Checkbox } from "@f0rbit/ui";
-import { connections } from "@/utils/api";
-import { Show, createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { getClient } from "@/utils/client";
 
 type Props = {
 	accountId: string;
@@ -16,7 +16,7 @@ export default function YouTubeSettings(props: Props) {
 
 	const updateSetting = async (key: string, value: boolean) => {
 		setUpdating(true);
-		await connections.updateSettings(props.accountId, {
+		await getClient().media.connections.settings.update(props.accountId, {
 			...props.settings,
 			[key]: value,
 		});

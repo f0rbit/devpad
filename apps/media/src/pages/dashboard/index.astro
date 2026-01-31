@@ -1,7 +1,8 @@
 ---
 import Dashboard from "../../components/solid/Dashboard/Dashboard";
 import AppLayout from "../../layouts/AppLayout.astro";
-import { type ProfileTimelineResponse, api } from "../../utils/api";
+import { type ProfileTimelineResponse } from "../../utils/types";
+import { ssr } from "../../utils/ssr";
 
 const profileSlug = Astro.url.searchParams.get("profile");
 
@@ -10,7 +11,7 @@ let initialTimeline: ProfileTimelineResponse | null = null;
 if (profileSlug) {
 	try {
 		const runtime = Astro.locals.runtime;
-		const result = await api.ssr<ProfileTimelineResponse>(`/api/v1/profiles/${profileSlug}/timeline`, Astro.request, {}, runtime);
+		const result = await ssr<ProfileTimelineResponse>(`/api/v1/profiles/${profileSlug}/timeline`, Astro.request, {}, runtime);
 
 		if (result.ok) {
 			initialTimeline = result.value;

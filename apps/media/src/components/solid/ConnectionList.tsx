@@ -1,7 +1,8 @@
-import { type ConnectionWithSettings, type ProfileSummary, connections, initMockAuth } from "@/utils/api";
 import { Empty } from "@f0rbit/ui";
-import { For, Show, createResource, createSignal } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
+import { getClient } from "@/utils/client";
+import type { ConnectionWithSettings, ProfileSummary } from "@/utils/types";
 import PlatformCard from "./PlatformCard";
 import type { Platform } from "./PlatformSetupForm";
 import { ResourceState } from "./ResourceState";
@@ -62,10 +63,9 @@ export default function ConnectionList(props: ConnectionListProps) {
 		async id => {
 			if (isServer) return [];
 			setHasFetched(true);
-			initMockAuth();
-			const result = await connections.listWithSettings(id);
+			const result = await getClient().media.connections.list(id, { include_settings: true });
 			if (!result.ok) throw new Error(result.error.message);
-			return result.value.accounts;
+			return result.value as ConnectionWithSettings[];
 		},
 		{
 			initialValue: props.initialConnections ?? [],

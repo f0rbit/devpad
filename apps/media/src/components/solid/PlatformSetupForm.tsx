@@ -1,7 +1,7 @@
-import { connections } from "@/utils/api";
-import { format } from "@/utils/formatters";
 import { FormField, Input } from "@f0rbit/ui";
-import { Show, createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
+import { getClient } from "@/utils/client";
+import { format } from "@/utils/formatters";
 
 export type Platform = "github" | "bluesky" | "youtube" | "devpad" | "reddit" | "twitter";
 
@@ -58,7 +58,7 @@ export default function PlatformSetupForm(props: Props) {
 		setSubmitting(true);
 		setError(null);
 
-		const result = await connections.create({
+		const result = await getClient().media.connections.create({
 			platform: props.platform,
 			access_token: token(),
 			platform_username: username() || undefined,

@@ -1,8 +1,8 @@
-import { api, apiUrls, initMockAuth } from "@/utils/api";
 import { Badge, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Empty, FormField, Input } from "@f0rbit/ui";
 import { Check, Copy, Eye, Pencil, Plus, Trash2 } from "lucide-solid";
-import { For, Show, createResource, createSignal } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
+import { apiUrls, getClient } from "@/utils/client";
 import { ErrorDisplay, Loading } from "./ResourceState";
 
 type ProfileFilter = {
@@ -24,40 +24,31 @@ type Profile = {
 	filters?: ProfileFilter[];
 };
 
-type ProfilesResponse = {
-	profiles: Profile[];
-};
-
-type CreateProfileResponse = {
-	profile: Profile;
-};
-
 const fetchProfiles = async (): Promise<Profile[]> => {
 	if (isServer) return [];
-	initMockAuth();
-	const result = await api.get<ProfilesResponse>("/profiles");
+	const result = await getClient().media.profiles.list();
 	if (!result.ok) {
 		console.error("[ProfileList] Failed to fetch profiles:", result.error);
 		throw new Error(result.error.message);
 	}
-	return result.value.profiles;
+	return result.value as Profile[];
 };
 
 const createProfile = async (data: { slug: string; name: string; description?: string }): Promise<Profile> => {
-	const result = await api.post<CreateProfileResponse>("/profiles", data);
+	const result = await getClient().media.profiles.create(data);
 	if (!result.ok) throw new Error(result.error.message);
-	return result.value.profile;
+	return result.value as Profile;
 };
 
 const deleteProfile = async (id: string): Promise<void> => {
-	const result = await api.delete<{ deleted: boolean }>(`/profiles/${id}`);
+	const result = await getClient().media.profiles.delete(id);
 	if (!result.ok) throw new Error(result.error.message);
 };
 
 const updateProfile = async (id: string, data: { slug?: string; name?: string; description?: string | null }): Promise<Profile> => {
-	const result = await api.patch<{ profile: Profile }>(`/profiles/${id}`, data);
+	const result = await getClient().media.profiles.update(id, data);
 	if (!result.ok) throw new Error(result.error.message);
-	return result.value.profile;
+	return result.value as Profile;
 };
 
 export type ProfileSummary = Profile;

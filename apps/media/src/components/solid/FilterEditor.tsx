@@ -1,7 +1,7 @@
-import { apiUrls } from "@/utils/api";
 import { Button, Empty, FormField, Input, Modal, ModalBody, ModalHeader, ModalTitle, Select } from "@f0rbit/ui";
 import { X } from "lucide-solid";
-import { For, Show, createMemo, createResource, createSignal } from "solid-js";
+import { createMemo, createResource, createSignal, For, Show } from "solid-js";
+import { getClient } from "@/utils/client";
 import PlatformIcon from "./PlatformIcon";
 import { ErrorDisplay, Loading } from "./ResourceState";
 
@@ -12,10 +12,6 @@ type Filter = {
 	filter_type: "include" | "exclude";
 	filter_key: string;
 	filter_value: string;
-};
-
-type FiltersResponse = {
-	filters: Filter[];
 };
 
 type Account = {
@@ -45,12 +41,9 @@ const FILTER_KEY_LABELS: Record<string, string> = {
 };
 
 const fetchFilters = async (profileId: string): Promise<Filter[]> => {
-	const res = await fetch(apiUrls.profiles(`/${profileId}/filters`), {
-		credentials: "include",
-	});
-	if (!res.ok) throw new Error("Failed to fetch filters");
-	const data: FiltersResponse = await res.json();
-	return data.filters;
+	const result = await getClient().media.profiles.filters.list(profileId);
+	if (!result.ok) throw new Error(result.error.message);
+	return result.value as Filter[];
 };
 
 const getPlatformForAccount = (accounts: Account[], accountId: string): string | undefined => accounts.find(a => a.id === accountId)?.platform;
@@ -101,48 +94,29 @@ export default function FilterEditor(props: FilterEditorProps) {
 		setAdding(true);
 		setError(null);
 
-		try {
-			const res = await fetch(apiUrls.profiles(`/${props.profileId}/filters`), {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					account_id: accountId(),
-					filter_type: filterType(),
-					filter_key: filterKey(),
-					filter_value: filterValue().trim(),
-				}),
-				credentials: "include",
-			});
+		const result = await getClient().media.profiles.filters.add(props.profileId, {
+			account_id: accountId(),
+			filter_type: filterType(),
+			filter_key: filterKey(),
+			filter_value: filterValue().trim(),
+		});
 
-			if (!res.ok) {
-				const data = (await res.json()) as { error?: string; message?: string };
-				throw new Error(data.error ?? data.message ?? "Failed to add filter");
-			}
-
+		if (result.ok) {
 			setFilterValue("");
 			refetch();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to add filter");
-		} finally {
-			setAdding(false);
+		} else {
+			setError(result.error.message);
 		}
+
+		setAdding(false);
 	};
 
 	const removeFilter = async (filterId: string) => {
-		try {
-			const res = await fetch(apiUrls.profiles(`/${props.profileId}/filters/${filterId}`), {
-				method: "DELETE",
-				credentials: "include",
-			});
-
-			if (!res.ok) {
-				const data = (await res.json()) as { error?: string; message?: string };
-				throw new Error(data.error ?? data.message ?? "Failed to remove filter");
-			}
-
+		const result = await getClient().media.profiles.filters.remove(props.profileId, filterId);
+		if (result.ok) {
 			refetch();
-		} catch (err) {
-			setError(err instanceof Error ? err.message : "Failed to remove filter");
+		} else {
+			setError(result.error.message);
 		}
 	};
 
