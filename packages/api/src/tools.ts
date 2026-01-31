@@ -423,6 +423,268 @@ export const tools: Record<string, ToolDefinition> = {
 			return result.value;
 		},
 	},
+
+	devpad_blog_posts_list: {
+		name: "devpad_blog_posts_list",
+		description: "List blog posts with optional filters",
+		inputSchema: z.object({
+			category: z.string().optional().describe("Filter by category"),
+			tag: z.string().optional().describe("Filter by tag"),
+			project: z.string().optional().describe("Filter by project ID"),
+			status: z.enum(["draft", "published"]).optional().describe("Filter by status"),
+			archived: z.boolean().optional().describe("Filter by archived state"),
+			limit: z.number().optional().describe("Max posts to return"),
+			offset: z.number().optional().describe("Offset for pagination"),
+			sort: z.string().optional().describe("Sort order"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.blog.posts.list(input);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_posts_get: {
+		name: "devpad_blog_posts_get",
+		description: "Get a blog post by slug",
+		inputSchema: z.object({
+			slug: z.string().describe("Post slug"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.blog.posts.getBySlug(input.slug);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_posts_create: {
+		name: "devpad_blog_posts_create",
+		description: "Create a new blog post",
+		inputSchema: z.object({
+			title: z.string().describe("Post title"),
+			content: z.string().describe("Post content"),
+			format: z.enum(["markdown", "html"]).describe("Content format"),
+			slug: z.string().optional().describe("Custom slug"),
+			category: z.string().optional().describe("Category name"),
+			tags: z.array(z.string()).optional().describe("Tag names"),
+			description: z.string().optional().describe("Post description"),
+			publish_at: z.string().optional().describe("Scheduled publish date (ISO string)"),
+			project_ids: z.array(z.string()).optional().describe("Associated project IDs"),
+			archived: z.boolean().optional().describe("Whether post is archived"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.blog.posts.create(input);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_posts_update: {
+		name: "devpad_blog_posts_update",
+		description: "Update a blog post by UUID",
+		inputSchema: z.object({
+			uuid: z.string().describe("Post UUID"),
+			title: z.string().optional().describe("Post title"),
+			content: z.string().optional().describe("Post content"),
+			format: z.enum(["markdown", "html"]).optional().describe("Content format"),
+			slug: z.string().optional().describe("Custom slug"),
+			category: z.string().optional().describe("Category name"),
+			tags: z.array(z.string()).optional().describe("Tag names"),
+			description: z.string().optional().describe("Post description"),
+			publish_at: z.string().optional().describe("Scheduled publish date (ISO string)"),
+			project_ids: z.array(z.string()).optional().describe("Associated project IDs"),
+			archived: z.boolean().optional().describe("Whether post is archived"),
+		}),
+		execute: async (client, input) => {
+			const { uuid, ...data } = input;
+			const result = await client.blog.posts.update(uuid, data);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_posts_delete: {
+		name: "devpad_blog_posts_delete",
+		description: "Delete a blog post by UUID",
+		inputSchema: z.object({
+			uuid: z.string().describe("Post UUID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.blog.posts.delete(input.uuid);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_tags_list: {
+		name: "devpad_blog_tags_list",
+		description: "List all blog tags with post counts",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.blog.tags.list();
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_categories_tree: {
+		name: "devpad_blog_categories_tree",
+		description: "Get the blog category tree",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.blog.categories.tree();
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_categories_create: {
+		name: "devpad_blog_categories_create",
+		description: "Create a blog category",
+		inputSchema: z.object({
+			name: z.string().describe("Category name"),
+			parent: z.string().optional().describe("Parent category name"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.blog.categories.create(input);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_tokens_list: {
+		name: "devpad_blog_tokens_list",
+		description: "List blog access tokens",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.blog.tokens.list();
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_blog_tokens_create: {
+		name: "devpad_blog_tokens_create",
+		description: "Create a blog access token",
+		inputSchema: z.object({
+			name: z.string().describe("Token name"),
+			note: z.string().optional().describe("Optional note"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.blog.tokens.create(input);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_profiles_list: {
+		name: "devpad_media_profiles_list",
+		description: "List media profiles",
+		inputSchema: z.object({}),
+		execute: async client => {
+			const result = await client.media.profiles.list();
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_profiles_create: {
+		name: "devpad_media_profiles_create",
+		description: "Create a media profile",
+		inputSchema: z.object({
+			name: z.string().describe("Profile name"),
+			slug: z.string().describe("Profile slug"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.media.profiles.create(input);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_profiles_get: {
+		name: "devpad_media_profiles_get",
+		description: "Get a media profile by ID",
+		inputSchema: z.object({
+			id: z.string().describe("Profile ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.media.profiles.get(input.id);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_profiles_update: {
+		name: "devpad_media_profiles_update",
+		description: "Update a media profile by ID",
+		inputSchema: z.object({
+			id: z.string().describe("Profile ID"),
+			name: z.string().optional().describe("Profile name"),
+			slug: z.string().optional().describe("Profile slug"),
+		}),
+		execute: async (client, input) => {
+			const { id, ...data } = input;
+			const result = await client.media.profiles.update(id, data);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_profiles_delete: {
+		name: "devpad_media_profiles_delete",
+		description: "Delete a media profile by ID",
+		inputSchema: z.object({
+			id: z.string().describe("Profile ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.media.profiles.delete(input.id);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_connections_list: {
+		name: "devpad_media_connections_list",
+		description: "List connections for a media profile",
+		inputSchema: z.object({
+			profile_id: z.string().describe("Profile ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.media.connections.list(input.profile_id);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_connections_refresh: {
+		name: "devpad_media_connections_refresh",
+		description: "Refresh a media connection",
+		inputSchema: z.object({
+			account_id: z.string().describe("Account/connection ID"),
+		}),
+		execute: async (client, input) => {
+			const result = await client.media.connections.refresh(input.account_id);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
+
+	devpad_media_timeline_get: {
+		name: "devpad_media_timeline_get",
+		description: "Get media timeline for a user",
+		inputSchema: z.object({
+			user_id: z.string().describe("User ID"),
+			from: z.string().optional().describe("Start date (ISO string)"),
+			to: z.string().optional().describe("End date (ISO string)"),
+		}),
+		execute: async (client, input) => {
+			const { user_id, ...params } = input;
+			const result = await client.media.timeline.get(user_id, params);
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
+		},
+	},
 };
 
 // Helper to convert Zod schema to JSON Schema for MCP
