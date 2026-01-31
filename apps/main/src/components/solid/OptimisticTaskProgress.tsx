@@ -35,8 +35,8 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 				progress: updatedTask.progress,
 				owner_id: updatedTask.owner_id,
 			});
-			if (!result.task) throw new Error(result.error?.message ?? "Failed to update task");
-			return result.task;
+			if (!result.ok) throw new Error(result.error?.message ?? "Failed to update task");
+			return result.value.task;
 		},
 		showSuccessToast: false, // No toast for quick actions
 		showErrorToast: true,

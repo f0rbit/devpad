@@ -12,18 +12,21 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 const api_client = getServerApiClient(Astro.locals);
 
 // Get the project to verify access and pre-select it
-const { project, error: project_error } = await api_client.projects.getByName(project_id);
-if (project_error) return rethrow(project_error);
+const project_result = await api_client.projects.getByName(project_id);
+if (!project_result.ok) return rethrow(project_result.error);
+const project = project_result.value;
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
 
 // Create project map with just this project for the TaskEditor
-const { project_map, error: map_error } = await api_client.projects.map();
-if (map_error) return rethrow(map_error);
+const map_result = await api_client.projects.map();
+if (!map_result.ok) return rethrow(map_result.error);
+const project_map = map_result.value;
 
 // Get user tags for the task editor
-const { tags: user_tags, error: tags_error } = await api_client.tags.list();
-if (tags_error) return rethrow(tags_error);
+const tags_result = await api_client.tags.list();
+if (!tags_result.ok) return rethrow(tags_result.error);
+const user_tags = tags_result.value;
 ---
 
 <PageLayout title={`New Task - ${project_id}`}>

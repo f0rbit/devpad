@@ -12,8 +12,9 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 // Get server API client and fetch project by name (project_id is the human-readable name)
 const api_client = getServerApiClient(Astro.locals);
-const { project, error } = await api_client.projects.getByName(project_id);
-if (error) return rethrow(error);
+const result = await api_client.projects.getByName(project_id);
+if (!result.ok) return rethrow(result.error);
+const project = result.value;
 if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 ---
 

@@ -11,19 +11,23 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const api_client = getServerApiClient(Astro.locals);
 
-const { task, error: task_error } = await api_client.tasks.find(todo_id);
-if (task_error) return rethrow(task_error);
+const task_result = await api_client.tasks.find(todo_id);
+if (!task_result.ok) return rethrow(task_result.error);
+const task = task_result.value;
 if (!task || !task.task) return new Response(null, { status: 404, statusText: "Task not found" });
 if (task.task.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const { project_map, error: project_error } = await api_client.projects.map();
-if (project_error) return rethrow(project_error);
+const project_map_result = await api_client.projects.map();
+if (!project_map_result.ok) return rethrow(project_map_result.error);
+const project_map = project_map_result.value;
 
-const { tags: user_tags, error: tags_error } = await api_client.tags.list();
-if (tags_error) return rethrow(tags_error);
+const tags_result = await api_client.tags.list();
+if (!tags_result.ok) return rethrow(tags_result.error);
+const user_tags = tags_result.value;
 
-const { history: task_history, error: history_error } = await api_client.tasks.history.get(todo_id);
-if (history_error) return rethrow(history_error);
+const history_result = await api_client.tasks.history.get(todo_id);
+if (!history_result.ok) return rethrow(history_result.error);
+const task_history = history_result.value;
 
 const { tags } = task;
 

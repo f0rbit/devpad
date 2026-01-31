@@ -3,9 +3,9 @@
  * Tests the new scan.initiate(), scan.updates(), and scan.update() methods
  */
 
-import { describe, test, expect } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { describe, expect, test } from "bun:test";
 import { expectValidProject } from "../shared/assertions";
+import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
 
@@ -40,28 +40,29 @@ describe("Scanning API Client Integration", () => {
 		expectValidProject(project);
 
 		// 2. Test getting updates for project with no scans yet
-		const { updates, error } = await testInstance.client.projects.scan.updates(project.id);
+		const updatesResult = await testInstance.client.projects.scan.updates(project.id);
 
-		if (error) {
-			console.log("Updates error (might be expected):", error);
+		if (!updatesResult.ok) {
+			console.log("Updates error (might be expected):", updatesResult.error);
 			// This might fail if the route isn't fully set up, which is acceptable
-			expect(error).toBeDefined();
+			expect(updatesResult.error).toBeDefined();
 		} else {
 			// If successful, should return an array (likely empty)
-			expect(Array.isArray(updates)).toBe(true);
-			console.log(`Found ${updates.length} pending updates for new project`);
+			expect(Array.isArray(updatesResult.value)).toBe(true);
+			console.log(`Found ${updatesResult.value.length} pending updates for new project`);
 		}
 	});
 
 	test("should handle scan.updates() with invalid project ID", async () => {
 		// Test error handling for non-existent project
-		const { updates, error } = await testInstance.client.projects.scan.updates("non-existent-project-id");
+		const updatesResult = await testInstance.client.projects.scan.updates("non-existent-project-id");
 
 		// Should return an error for invalid project ID
-		expect(error).toBeDefined();
-		expect(updates).toBeNull();
+		expect(updatesResult.ok).toBe(false);
 
-		console.log("Expected error for invalid project ID:", error?.message);
+		if (!updatesResult.ok) {
+			console.log("Expected error for invalid project ID:", updatesResult.error.message);
+		}
 	});
 
 	test("should handle scan.update() method structure", async () => {
@@ -84,12 +85,12 @@ describe("Scanning API Client Integration", () => {
 			approved: false,
 		};
 
-		const { error } = await testInstance.client.projects.scan.update(project.id, mockUpdateData);
+		const updateResult = await testInstance.client.projects.scan.update(project.id, mockUpdateData);
 
 		// Expected to fail since there's no actual update with ID 1, but we're testing the API structure
-		if (error) {
-			console.log("Expected error for mock update data:", error.message);
-			expect(error).toBeDefined();
+		if (!updateResult.ok) {
+			console.log("Expected error for mock update data:", updateResult.error.message);
+			expect(updateResult.error).toBeDefined();
 		}
 	});
 
@@ -227,25 +228,19 @@ describe("Scanning API Client Integration", () => {
 		expectValidProject(project);
 
 		// 2. Test that scan.updates() follows Result pattern
-		const updatesResult = await testInstance.client.projects.scan.updates(project.id);
+		const scanUpdatesResult = await testInstance.client.projects.scan.updates(project.id);
 
-		// Should follow Result<T, E> pattern - either have data or error, not both
-		const hasUpdates = updatesResult.updates !== null && updatesResult.updates !== undefined;
-		const hasError = updatesResult.error !== null && updatesResult.error !== undefined;
-
-		expect(hasUpdates || hasError).toBe(true); // Should have one or the other
-		expect(hasUpdates && hasError).toBe(false); // Should not have both
-
-		if (hasUpdates) {
-			expect(Array.isArray(updatesResult.updates)).toBe(true);
+		// Should follow Result<T, E> pattern - either ok with value or not ok with error
+		if (scanUpdatesResult.ok) {
+			expect(Array.isArray(scanUpdatesResult.value)).toBe(true);
 			console.log("✅ Updates result follows expected format");
 		} else {
-			expect(typeof updatesResult.error?.message).toBe("string");
+			expect(typeof scanUpdatesResult.error.message).toBe("string");
 			console.log("✅ Error result follows expected format");
 		}
 
 		// 3. Test that scan.update() follows Result pattern
-		const updateResult = await testInstance.client.projects.scan.update(project.id, {
+		const scanUpdateResult = await testInstance.client.projects.scan.update(project.id, {
 			update_id: 999, // Non-existent ID
 			actions: {},
 			titles: {},
@@ -253,8 +248,10 @@ describe("Scanning API Client Integration", () => {
 		});
 
 		// Should return error for non-existent update
-		expect(updateResult.error).toBeDefined();
-		expect(typeof updateResult.error?.message).toBe("string");
+		expect(scanUpdateResult.ok).toBe(false);
+		if (!scanUpdateResult.ok) {
+			expect(typeof scanUpdateResult.error.message).toBe("string");
+		}
 		console.log("✅ Update method error handling follows expected format");
 	});
 });

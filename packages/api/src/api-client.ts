@@ -1,6 +1,6 @@
 import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema";
 import { ApiClient as HttpClient } from "./request";
-import { type Result, wrap } from "./result";
+import { type ApiResult, wrap } from "./result";
 
 /**
  * Authentication mode for the API client
@@ -9,7 +9,7 @@ export type AuthMode = "session" | "key";
 
 /**
  * API client with Result-wrapped operations for clean error handling
- * All methods return Result<T, name> types with context-aware property names
+ * All methods return ApiResult<T> types using @f0rbit/corpus Result
  */
 export class ApiClient {
 	private readonly clients;
@@ -50,13 +50,13 @@ export class ApiClient {
 	 */
 	public readonly auth = {
 		keys: {
-			list: (): Promise<Result<ApiKey[], "keys">> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys"), "keys"),
+			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (name?: string): Promise<Result<{ message: string; key: string }, "key">> => wrap(() => this.clients.auth.post<{ message: string; key: string }>("/keys", { body: name ? { name } : {} }), "key"),
+			create: (name?: string): Promise<ApiResult<{ message: string; key: string }>> => wrap(() => this.clients.auth.post<{ message: string; key: string }>("/keys", { body: name ? { name } : {} })),
 
-			revoke: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`), "result"),
+			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
 
-			remove: (key_id: string): Promise<Result<{ message: string; success: boolean }, "result">> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`), "result"),
+			remove: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
 		},
 	};
 
@@ -67,48 +67,48 @@ export class ApiClient {
 		/**
 		 * List projects with optional filtering
 		 */
-		list: (filters?: { private?: boolean }): Promise<Result<Project[], "projects">> => wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects"), "projects"),
+		list: (filters?: { private?: boolean }): Promise<ApiResult<Project[]>> => wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects")),
 
 		/**
 		 * Get project map
 		 */
-		map: async (filters?: { private?: boolean }): Promise<Result<Record<string, Project>, "project_map">> =>
+		map: async (filters?: { private?: boolean }): Promise<ApiResult<Record<string, Project>>> =>
 			wrap(async () => {
-				const { projects, error } = await this.projects.list(filters);
-				if (error) throw new Error(error.message);
-				return projects!.reduce(
+				const result = await this.projects.list(filters);
+				if (!result.ok) throw new Error(result.error.message);
+				return result.value.reduce(
 					(acc, project) => {
 						acc[project.id] = project;
 						return acc;
 					},
 					{} as Record<string, Project>
 				);
-			}, "project_map"),
+			}),
 
 		/**
 		 * Get project by ID
 		 */
-		find: (id: string): Promise<Result<Project | null, "project">> => wrap(() => this.clients.projects.get<any>("/projects", { query: { id } }), "project"),
+		find: (id: string): Promise<ApiResult<Project | null>> => wrap(() => this.clients.projects.get<any>("/projects", { query: { id } })),
 
 		/**
 		 * Get project by name
 		 */
-		getByName: (name: string): Promise<Result<Project, "project">> => wrap(() => this.clients.projects.get<Project>("/projects", { query: { name } }), "project"),
+		getByName: (name: string): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.get<Project>("/projects", { query: { name } })),
 
 		/**
 		 * Get project by ID (throws if not found)
 		 */
-		getById: (id: string): Promise<Result<Project, "project">> => wrap(() => this.clients.projects.get<Project>("/projects", { query: { id } }), "project"),
+		getById: (id: string): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.get<Project>("/projects", { query: { id } })),
 
 		/**
 		 * Create a new project
 		 */
-		create: (data: Omit<UpsertProject, "id">): Promise<Result<Project, "project">> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data }), "project"),
+		create: (data: Omit<UpsertProject, "id">): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data })),
 
 		/**
 		 * Update an existing project
 		 */
-		update: async (idOrData: string | UpsertProject, changes?: Partial<Omit<UpsertProject, "id" | "project_id">>): Promise<Result<Project, "project">> =>
+		update: async (idOrData: string | UpsertProject, changes?: Partial<Omit<UpsertProject, "id" | "project_id">>): Promise<ApiResult<Project>> =>
 			wrap(async () => {
 				// Handle backward compatibility: update(data)
 				if (typeof idOrData === "object" && idOrData.id) {
@@ -122,9 +122,11 @@ export class ApiClient {
 				}
 
 				// Fetch the existing project to get current values
-				const { project, error } = await this.projects.find(id);
-				if (error) throw new Error(error.message);
-				if (!project) throw new Error(`Project with id ${id} not found`);
+				const result = await this.projects.find(id);
+				if (!result.ok) throw new Error(result.error.message);
+				if (!result.value) throw new Error(`Project with id ${id} not found`);
+
+				const project = result.value;
 
 				// Merge changes with existing project data
 				const updateData: UpsertProject = {
@@ -147,7 +149,7 @@ export class ApiClient {
 				};
 
 				return this.clients.projects.patch<Project>("/projects", { body: updateData });
-			}, "project"),
+			}),
 
 		/**
 		 * Project configuration operations
@@ -156,12 +158,12 @@ export class ApiClient {
 			/**
 			 * Get project configuration
 			 */
-			load: (project_id: string): Promise<Result<GetConfigResult, "config">> => wrap(() => this.clients.projects.get<GetConfigResult>("/projects/config", { query: { project_id } }), "config"),
+			load: (project_id: string): Promise<ApiResult<GetConfigResult>> => wrap(() => this.clients.projects.get<GetConfigResult>("/projects/config", { query: { project_id } })),
 
 			/**
 			 * Save project configuration
 			 */
-			save: (request: SaveConfigRequest): Promise<Result<void, "result">> => wrap(() => this.clients.projects.patch<void>("/projects/save_config", { body: request }), "result"),
+			save: (request: SaveConfigRequest): Promise<ApiResult<void>> => wrap(() => this.clients.projects.patch<void>("/projects/save_config", { body: request })),
 		},
 
 		/**
@@ -188,33 +190,33 @@ export class ApiClient {
 			/**
 			 * Get pending scan updates for a project
 			 */
-			updates: (project_id: string): Promise<Result<any[], "updates">> => wrap(() => this.clients.projects.get<{ updates: any[] }>("/projects/updates", { query: { project_id } }).then(response => response.updates), "updates"),
+			updates: (project_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.projects.get<{ updates: any[] }>("/projects/updates", { query: { project_id } }).then(response => response.updates)),
 
 			/**
 			 * Process scan results
 			 */
-			update: (project_id: string, data: any): Promise<Result<void, "result">> => wrap(() => this.clients.projects.post<void>("/projects/scan_status", { query: { project_id }, body: data }), "result"),
+			update: (project_id: string, data: any): Promise<ApiResult<void>> => wrap(() => this.clients.projects.post<void>("/projects/scan_status", { query: { project_id }, body: data })),
 		},
 
 		/**
 		 * Get project history
 		 */
-		history: (project_id: string): Promise<Result<any[], "history">> => wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`), "history"),
+		history: (project_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`)),
 
 		/**
 		 * Legacy methods (keeping for compatibility)
 		 */
-		upsert: (data: UpsertProject): Promise<Result<Project, "project">> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data }), "project"),
+		upsert: (data: UpsertProject): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data })),
 
 		/**
 		 * Fetch project specification from GitHub
 		 */
-		specification: (project_id: string): Promise<Result<string, "specification">> => wrap(() => this.clients.projects.get<string>("/projects/fetch_spec", { query: { project_id } }), "specification"),
+		specification: (project_id: string): Promise<ApiResult<string>> => wrap(() => this.clients.projects.get<string>("/projects/fetch_spec", { query: { project_id } })),
 
 		/**
 		 * Delete project (soft delete)
 		 */
-		deleteProject: (project: Project): Promise<Result<void, "result">> => wrap(() => this.clients.projects.patch<void>("/projects", { body: { ...project, deleted: true } }), "result"),
+		deleteProject: (project: Project): Promise<ApiResult<void>> => wrap(() => this.clients.projects.patch<void>("/projects", { body: { ...project, deleted: true } })),
 	};
 
 	/**
@@ -224,40 +226,42 @@ export class ApiClient {
 		/**
 		 * List milestones for authenticated user
 		 */
-		list: (): Promise<Result<Milestone[], "milestones">> => wrap(() => this.clients.milestones.get<any[]>("/milestones"), "milestones"),
+		list: (): Promise<ApiResult<Milestone[]>> => wrap(() => this.clients.milestones.get<any[]>("/milestones")),
 
 		/**
 		 * Get milestones by project ID
 		 */
-		getByProject: (project_id: string): Promise<Result<Milestone[], "milestones">> => wrap(() => this.clients.milestones.get<any[]>(`/projects/${project_id}/milestones`), "milestones"),
+		getByProject: (project_id: string): Promise<ApiResult<Milestone[]>> => wrap(() => this.clients.milestones.get<any[]>(`/projects/${project_id}/milestones`)),
 
 		/**
 		 * Get milestone by ID
 		 */
-		find: (id: string): Promise<Result<Milestone | null, "milestone">> =>
+		find: (id: string): Promise<ApiResult<Milestone | null>> =>
 			wrap(async () => {
 				try {
 					return await this.clients.milestones.get<any>(`/milestones/${id}`);
 				} catch (error) {
 					return null;
 				}
-			}, "milestone"),
+			}),
 
 		/**
 		 * Create new milestone
 		 */
-		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string }): Promise<Result<Milestone, "milestone">> =>
-			wrap(() => this.clients.milestones.post<any>("/milestones", { body: data }), "milestone"),
+		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string }): Promise<ApiResult<Milestone>> =>
+			wrap(() => this.clients.milestones.post<any>("/milestones", { body: data })),
 
 		/**
 		 * Update milestone
 		 */
-		update: async (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }): Promise<Result<Milestone, "milestone">> =>
+		update: async (id: string, data: { name?: string; description?: string; target_time?: string; target_version?: string }): Promise<ApiResult<Milestone>> =>
 			wrap(async () => {
 				// Fetch the existing milestone to get required fields
-				const { milestone, error } = await this.milestones.find(id);
-				if (error) throw new Error(error.message);
-				if (!milestone) throw new Error(`Milestone with id ${id} not found`);
+				const result = await this.milestones.find(id);
+				if (!result.ok) throw new Error(result.error.message);
+				if (!result.value) throw new Error(`Milestone with id ${id} not found`);
+
+				const milestone = result.value;
 
 				// Merge changes with existing milestone data
 				const updateData = {
@@ -270,17 +274,17 @@ export class ApiClient {
 				};
 
 				return this.clients.milestones.patch<any>(`/milestones/${id}`, { body: updateData });
-			}, "milestone"),
+			}),
 
 		/**
 		 * Delete milestone (soft delete)
 		 */
-		delete: (id: string): Promise<Result<{ success: boolean; message: string }, "result">> => wrap(() => this.clients.milestones.delete<{ success: boolean; message: string }>(`/milestones/${id}`), "result"),
+		delete: (id: string): Promise<ApiResult<{ success: boolean; message: string }>> => wrap(() => this.clients.milestones.delete<{ success: boolean; message: string }>(`/milestones/${id}`)),
 
 		/**
 		 * Get goals for a milestone
 		 */
-		goals: (id: string): Promise<Result<Goal[], "goals">> => wrap(() => this.clients.milestones.get<any[]>(`/milestones/${id}/goals`), "goals"),
+		goals: (id: string): Promise<ApiResult<Goal[]>> => wrap(() => this.clients.milestones.get<any[]>(`/milestones/${id}/goals`)),
 	};
 
 	/**
@@ -290,27 +294,29 @@ export class ApiClient {
 		/**
 		 * List goals for authenticated user
 		 */
-		list: (): Promise<Result<Goal[], "goals">> => wrap(() => this.clients.goals.get<any[]>("/goals"), "goals"),
+		list: (): Promise<ApiResult<Goal[]>> => wrap(() => this.clients.goals.get<any[]>("/goals")),
 
 		/**
 		 * Get goal by ID
 		 */
-		find: (id: string): Promise<Result<Goal | null, "goal">> => wrap(() => this.clients.goals.get<any>(`/goals/${id}`), "goal"),
+		find: (id: string): Promise<ApiResult<Goal | null>> => wrap(() => this.clients.goals.get<any>(`/goals/${id}`)),
 
 		/**
 		 * Create new goal
 		 */
-		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string }): Promise<Result<Goal, "goal">> => wrap(() => this.clients.goals.post<any>("/goals", { body: data }), "goal"),
+		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string }): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<any>("/goals", { body: data })),
 
 		/**
 		 * Update goal
 		 */
-		update: async (id: string, data: { name?: string; description?: string; target_time?: string }): Promise<Result<Goal, "goal">> =>
+		update: async (id: string, data: { name?: string; description?: string; target_time?: string }): Promise<ApiResult<Goal>> =>
 			wrap(async () => {
 				// Fetch the existing goal to get required fields
-				const { goal, error } = await this.goals.find(id);
-				if (error) throw new Error(error.message);
-				if (!goal) throw new Error(`Goal with id ${id} not found`);
+				const result = await this.goals.find(id);
+				if (!result.ok) throw new Error(result.error.message);
+				if (!result.value) throw new Error(`Goal with id ${id} not found`);
+
+				const goal = result.value;
 
 				// Merge changes with existing goal data
 				const updateData = {
@@ -322,12 +328,12 @@ export class ApiClient {
 				};
 
 				return this.clients.goals.patch<any>(`/goals/${id}`, { body: updateData });
-			}, "goal"),
+			}),
 
 		/**
 		 * Delete goal (soft delete)
 		 */
-		delete: (id: string): Promise<Result<{ success: boolean; message: string }, "result">> => wrap(() => this.clients.goals.delete<{ success: boolean; message: string }>(`/goals/${id}`), "result"),
+		delete: (id: string): Promise<ApiResult<{ success: boolean; message: string }>> => wrap(() => this.clients.goals.delete<{ success: boolean; message: string }>(`/goals/${id}`)),
 	};
 
 	/**
@@ -337,38 +343,40 @@ export class ApiClient {
 		/**
 		 * List tasks with optional filtering
 		 */
-		list: (filters?: { project_id?: string; tag_id?: string }): Promise<Result<TaskWithDetails[], "tasks">> =>
+		list: (filters?: { project_id?: string; tag_id?: string }): Promise<ApiResult<TaskWithDetails[]>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (filters?.project_id) query.project = filters.project_id;
 				if (filters?.tag_id) query.tag = filters.tag_id;
 				return this.clients.tasks.get<TaskWithDetails[]>("/tasks", Object.keys(query).length > 0 ? { query } : {});
-			}, "tasks"),
+			}),
 
 		/**
 		 * Get task by ID
 		 */
-		find: (id: string): Promise<Result<TaskWithDetails | null, "task">> => wrap(() => this.clients.tasks.get<any>("/tasks", { query: { id } }), "task"),
+		find: (id: string): Promise<ApiResult<TaskWithDetails | null>> => wrap(() => this.clients.tasks.get<any>("/tasks", { query: { id } })),
 
 		/**
 		 * Get tasks by project ID
 		 */
-		getByProject: (project_id: string): Promise<Result<TaskWithDetails[], "tasks">> => wrap(() => this.clients.tasks.get<TaskWithDetails[]>(`/tasks`, { query: { project: project_id } }), "tasks"),
+		getByProject: (project_id: string): Promise<ApiResult<TaskWithDetails[]>> => wrap(() => this.clients.tasks.get<TaskWithDetails[]>(`/tasks`, { query: { project: project_id } })),
 
 		/**
 		 * Create a new task
 		 */
-		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data }), "task"),
+		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data })),
 
 		/**
 		 * Update an existing task
 		 */
-		update: async (id: string, changes: Partial<Omit<UpsertTodo, "id">> & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> =>
+		update: async (id: string, changes: Partial<Omit<UpsertTodo, "id">> & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> =>
 			wrap(async () => {
 				// Fetch existing task to merge changes
-				const { task, error } = await this.tasks.find(id);
-				if (error) throw new Error(error.message);
-				if (!task) throw new Error(`Task with id ${id} not found`);
+				const result = await this.tasks.find(id);
+				if (!result.ok) throw new Error(result.error.message);
+				if (!result.value) throw new Error(`Task with id ${id} not found`);
+
+				const task = result.value;
 
 				const updateData = {
 					id,
@@ -386,22 +394,22 @@ export class ApiClient {
 				};
 
 				return this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: updateData });
-			}, "task"),
+			}),
 
 		/**
 		 * Upsert task (create or update)
 		 */
-		upsert: (data: UpsertTodo & { tags?: UpsertTag[] }): Promise<Result<TaskWithDetails, "task">> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data }), "task"),
+		upsert: (data: UpsertTodo & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data })),
 
 		/**
 		 * Save tags for tasks
 		 */
-		saveTags: (data: any): Promise<Result<void, "result">> => wrap(() => this.clients.tasks.post<void>("/tasks/save_tags", { body: data }), "result"),
+		saveTags: (data: any): Promise<ApiResult<void>> => wrap(() => this.clients.tasks.post<void>("/tasks/save_tags", { body: data })),
 
 		/**
 		 * Delete task (soft delete)
 		 */
-		deleteTask: (task: TaskWithDetails): Promise<Result<void, "result">> => wrap(() => this.clients.tasks.patch<void>("/tasks", { body: { ...task.task, deleted: true } }), "result"),
+		deleteTask: (task: TaskWithDetails): Promise<ApiResult<void>> => wrap(() => this.clients.tasks.patch<void>("/tasks", { body: { ...task.task, deleted: true } })),
 
 		/**
 		 * Task history operations
@@ -410,7 +418,7 @@ export class ApiClient {
 			/**
 			 * Get task history by task ID
 			 */
-			get: (task_id: string): Promise<Result<HistoryAction[], "history">> => wrap(() => this.clients.tasks.get<HistoryAction[]>(`/tasks/history/${task_id}`), "history"),
+			get: (task_id: string): Promise<ApiResult<HistoryAction[]>> => wrap(() => this.clients.tasks.get<HistoryAction[]>(`/tasks/history/${task_id}`)),
 		},
 	};
 
@@ -421,7 +429,7 @@ export class ApiClient {
 		/**
 		 * List tags for authenticated user
 		 */
-		list: (): Promise<Result<TagWithTypedColor[], "tags">> => wrap(() => this.clients.tags.get<TagWithTypedColor[]>("/tags"), "tags"),
+		list: (): Promise<ApiResult<TagWithTypedColor[]>> => wrap(() => this.clients.tags.get<TagWithTypedColor[]>("/tags")),
 	};
 
 	/**
@@ -431,12 +439,12 @@ export class ApiClient {
 		/**
 		 * List repositories for authenticated user
 		 */
-		repos: (): Promise<Result<any[], "repos">> => wrap(() => this.clients.github.get<any[]>("/repos"), "repos"),
+		repos: (): Promise<ApiResult<any[]>> => wrap(() => this.clients.github.get<any[]>("/repos")),
 
 		/**
 		 * List branches for a GitHub repository
 		 */
-		branches: (owner: string, repo: string): Promise<Result<any[], "branches">> => wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`), "branches"),
+		branches: (owner: string, repo: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`)),
 	};
 
 	/**
@@ -446,12 +454,12 @@ export class ApiClient {
 		/**
 		 * Get user activity history
 		 */
-		history: (): Promise<Result<any[], "history">> => wrap(() => this.clients.auth.get<any[]>("/user/history"), "history"),
+		history: (): Promise<ApiResult<any[]>> => wrap(() => this.clients.auth.get<any[]>("/user/history")),
 
 		/**
 		 * Update user preferences
 		 */
-		preferences: (data: { id: string; task_view: string }): Promise<Result<any, "result">> => wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data }), "result"),
+		preferences: (data: { id: string; task_view: string }): Promise<ApiResult<any>> => wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data })),
 	};
 
 	/**

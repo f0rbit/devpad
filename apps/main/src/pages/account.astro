@@ -1,5 +1,5 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 
@@ -11,11 +11,13 @@ if (!user) {
 
 const api_client = getServerApiClient(Astro.locals);
 
-const { keys, error: keys_error } = await api_client.auth.keys.list();
-if (keys_error) return rethrow(keys_error);
+const keys_result = await api_client.auth.keys.list();
+if (!keys_result.ok) return rethrow(keys_result.error);
+const keys = keys_result.value;
 
-const { history: user_history, error: history_error } = await api_client.user.history();
-if (history_error) return rethrow(history_error);
+const history_result = await api_client.user.history();
+if (!history_result.ok) return rethrow(history_result.error);
+const user_history = history_result.value;
 ---
 
 <PageLayout title="Account - devpad">

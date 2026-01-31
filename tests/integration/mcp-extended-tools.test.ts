@@ -78,8 +78,8 @@ describe("MCP Extended Tools Integration", () => {
 			expect(delete_result?.result?.content?.[0]?.text).toContain("success");
 
 			// Verify deletion via API
-			const { project } = await api_client.projects.find(created_project.id);
-			expect(project?.deleted).toBe(true);
+			const findResult = await api_client.projects.find(created_project.id);
+			expect(findResult.ok ? findResult.value?.deleted : undefined).toBe(true);
 		});
 
 		test("should get project history via MCP", async () => {

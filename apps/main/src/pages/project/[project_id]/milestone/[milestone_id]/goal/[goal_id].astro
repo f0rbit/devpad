@@ -15,17 +15,20 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-const { project, error: projectError } = await apiClient.projects.getByName(project_id);
-if (projectError) return rethrow(projectError);
+const project_result = await apiClient.projects.getByName(project_id);
+if (!project_result.ok) return rethrow(project_result.error);
+const project = project_result.value;
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 
-const { milestone, error: milestoneError } = await apiClient.milestones.find(milestone_id);
-if (milestoneError) return rethrow(milestoneError);
+const milestone_result = await apiClient.milestones.find(milestone_id);
+if (!milestone_result.ok) return rethrow(milestone_result.error);
+const milestone = milestone_result.value;
 if (!milestone) return new Response(null, { status: 404, statusText: "Milestone not found" });
 
-const { goal, error: goalError } = await apiClient.goals.find(goal_id);
-if (goalError) return rethrow(goalError);
+const goal_result = await apiClient.goals.find(goal_id);
+if (!goal_result.ok) return rethrow(goal_result.error);
+const goal = goal_result.value;
 if (!goal) return new Response(null, { status: 404, statusText: "Goal not found" });
 
 if (goal.milestone_id !== milestone.id) {
@@ -35,11 +38,13 @@ if (goal.milestone_id !== milestone.id) {
 const project_map: Record<string, typeof project> = {};
 project_map[project.id] = project;
 
-const { tasks: allTasks, error: tasksError } = await apiClient.tasks.list();
-if (tasksError) return rethrow(tasksError);
+const tasks_result = await apiClient.tasks.list();
+if (!tasks_result.ok) return rethrow(tasks_result.error);
+const allTasks = tasks_result.value;
 
-const { tags, error: tagsError } = await apiClient.tags.list();
-if (tagsError) return rethrow(tagsError);
+const tags_result = await apiClient.tags.list();
+if (!tags_result.ok) return rethrow(tags_result.error);
+const tags = tags_result.value;
 
 const tasks = allTasks?.filter(task => task.task.goal_id === goal_id) || [];
 

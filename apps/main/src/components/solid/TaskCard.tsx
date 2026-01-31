@@ -6,13 +6,13 @@ import Circle from "lucide-solid/icons/circle";
 import CircleCheck from "lucide-solid/icons/circle-check";
 import CircleDot from "lucide-solid/icons/circle-dot";
 import Link from "lucide-solid/icons/link";
-import Target from "lucide-solid/icons/target";
 import Square from "lucide-solid/icons/square";
 import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
-import { For, createSignal, onMount } from "solid-js";
-import { getApiClient } from "@/utils/api-client";
+import Target from "lucide-solid/icons/target";
+import { createSignal, For, onMount } from "solid-js";
 import { TagBadge } from "@/components/solid/TagEditor";
+import { getApiClient } from "@/utils/api-client";
 import { advanceTaskProgress, formatDueDate, getPriorityClass, getProgressIconType, isPastDue, isProgressClickable } from "@/utils/task-status";
 
 interface Props {
@@ -31,9 +31,9 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	onMount(async () => {
 		try {
 			const apiClient = getApiClient();
-			const { goal, error } = await apiClient.goals.find(goal_id);
-			if (!error && goal) {
-				setGoalName(goal.name);
+			const result = await apiClient.goals.find(goal_id);
+			if (result.ok && result.value) {
+				setGoalName(result.value.name);
 			}
 		} catch (error) {
 			console.error("Failed to fetch goal:", error);

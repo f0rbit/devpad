@@ -13,28 +13,27 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const api_client = getServerApiClient(Astro.locals);
 
-// Beautiful clean error handling with Result types!
-const { project, error } = await api_client.projects.getByName(project_id);
-if (error) return new Response(null, { status: 500, statusText: error.message });
+const project_result = await api_client.projects.getByName(project_id);
+if (!project_result.ok) return new Response(null, { status: 500, statusText: project_result.error.message });
+const project = project_result.value;
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 
-// Check ownership
 if (project.owner_id !== user.id) {
 	return new Response(null, { status: 403, statusText: "Access denied" });
 }
 
-const { milestones, error: milestones_error } = await api_client.milestones.getByProject(project.id);
-if (milestones_error) {
-	console.error("Failed to fetch milestones:", milestones_error.message);
+const milestones_result = await api_client.milestones.getByProject(project.id);
+if (!milestones_result.ok) {
+	console.error("Failed to fetch milestones:", milestones_result.error.message);
 }
+const milestones = milestones_result.ok ? milestones_result.value : [];
 
-// Fetch goals for each milestone
 const goals_map: Record<string, Goal[]> = {};
-for (const milestone of milestones || []) {
-	const { goals, error: goals_error } = await api_client.milestones.goals(milestone.id);
-	goals_map[milestone.id] = goals || [];
-	if (goals_error) {
-		console.error(`Failed to fetch goals for milestone ${milestone.id}:`, goals_error.message);
+for (const milestone of milestones) {
+	const goals_result = await api_client.milestones.goals(milestone.id);
+	goals_map[milestone.id] = goals_result.ok ? goals_result.value : [];
+	if (!goals_result.ok) {
+		console.error(`Failed to fetch goals for milestone ${milestone.id}:`, goals_result.error.message);
 	}
 }
 ---

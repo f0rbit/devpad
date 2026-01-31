@@ -1,17 +1,11 @@
-import { describe, expect, test, beforeEach } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { Goal, Milestone, Project, TaskWithDetails, UpsertTodo } from "@devpad/schema";
 import { expectMatchesPartial } from "../shared/assertions";
+import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
-import type { Milestone, Goal, Project, TaskWithDetails, UpsertTodo } from "@devpad/schema";
 
-/**
- * Integration tests for linking tasks to goals
- * This tests the future functionality where tasks can be assigned to specific goals
- * Note: Temporarily simplified due to server-side authentication issues with goals/milestones API
- */
 class TaskGoalLinkingIntegrationTest extends BaseIntegrationTest {
-	// Simplified helper for task creation - using only basic API client functionality
 	async createSimpleTask(project_id: string, task_data?: Partial<UpsertTodo>): Promise<TaskWithDetails> {
 		const default_task_data: UpsertTodo = {
 			title: `Test Task ${Date.now()}`,
@@ -23,12 +17,12 @@ class TaskGoalLinkingIntegrationTest extends BaseIntegrationTest {
 			...task_data,
 		};
 
-		const { task, error } = await this.client.tasks.create(default_task_data);
-		if (error) {
-			throw new Error(`Failed to create task: ${error.message}`);
+		const result = await this.client.tasks.create(default_task_data);
+		if (!result.ok) {
+			throw new Error(`Failed to create task: ${result.error.message}`);
 		}
-		this.registerTask(task!);
-		return task!;
+		this.registerTask(result.value);
+		return result.value;
 	}
 }
 
@@ -89,14 +83,14 @@ describe("Task-Goal Linking Integration Tests", () => {
 				priority: "LOW",
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
-			if (error) {
-				throw new Error(`Failed to create task: ${error.message}`);
+			const createResult = await test_instance.client.tasks.create(task_data);
+			if (!createResult.ok) {
+				throw new Error(`Failed to create task: ${createResult.error.message}`);
 			}
-			test_instance.registerTask(task!);
+			test_instance.registerTask(createResult.value);
 
-			expect(task!.task.goal_id).toBeNull();
-			expect(task!.task.project_id).toBe(test_project.id);
+			expect(createResult.value.task.goal_id).toBeNull();
+			expect(createResult.value.task.project_id).toBe(test_project.id);
 		});
 	});
 
@@ -109,23 +103,23 @@ describe("Task-Goal Linking Integration Tests", () => {
 				owner_id: TEST_USER_ID,
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
-			if (error) {
-				throw new Error(`Failed to create task: ${error.message}`);
+			const createResult = await test_instance.client.tasks.create(task_data);
+			if (!createResult.ok) {
+				throw new Error(`Failed to create task: ${createResult.error.message}`);
 			}
-			test_instance.registerTask(task!);
-			expect(task!.task.goal_id).toBeNull();
+			test_instance.registerTask(createResult.value);
+			expect(createResult.value.task.goal_id).toBeNull();
 
 			// Update task properties (goal linking temporarily disabled due to server issues)
-			const { task: updated_task, error: update_error } = await test_instance.client.tasks.update(task!.task.id, {
+			const updateResult = await test_instance.client.tasks.update(createResult.value.task.id, {
 				title: "Updated task title",
 			});
-			if (update_error) {
+			if (!updateResult.ok) {
 				// Skip this test due to server-side update issues
 				console.log("⚠️ Skipping task update test due to server-side 500 errors");
 				return;
 			}
-			expect(updated_task!.task.title).toBe("Updated task title");
+			expect(updateResult.value.task.title).toBe("Updated task title");
 		});
 	});
 
@@ -138,10 +132,9 @@ describe("Task-Goal Linking Integration Tests", () => {
 				owner_id: TEST_USER_ID,
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
+			const createResult = await test_instance.client.tasks.create(task_data);
 			// Should have error for invalid goal_id
-			expect(error).toBeDefined();
-			expect(task).toBeNull();
+			expect(createResult.ok).toBe(false);
 		});
 
 		test("should reject task with goal from different project", async () => {
@@ -156,10 +149,9 @@ describe("Task-Goal Linking Integration Tests", () => {
 				owner_id: TEST_USER_ID,
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
+			const createResult = await test_instance.client.tasks.create(task_data);
 			// Should have error for cross-project validation
-			expect(error).toBeDefined();
-			expect(task).toBeNull();
+			expect(createResult.ok).toBe(false);
 		});
 	});
 

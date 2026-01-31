@@ -46,18 +46,18 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 
 		setLoading(true);
 		const api_client = getApiClient();
-		const { milestones, error } = await api_client.milestones.getByProject(project_id);
-		if (error) {
-			console.error("Failed to load milestones and goals:", error);
+		const result = await api_client.milestones.getByProject(project_id);
+		if (!result.ok) {
+			console.error("Failed to load milestones and goals:", result.error);
 			setMilestones([]);
 			setLoading(false);
 			return;
 		}
 		const with_goals = await Promise.all(
-			milestones.map(async m => {
-				const { goals, error } = await api_client.milestones.goals(m.id);
-				if (error) return { ...m, goals: [] };
-				return { ...m, goals };
+			result.value.map(async m => {
+				const result = await api_client.milestones.goals(m.id);
+				if (!result.ok) return { ...m, goals: [] };
+				return { ...m, goals: result.value };
 			})
 		);
 		setLoading(false);

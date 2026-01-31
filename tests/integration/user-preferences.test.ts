@@ -134,22 +134,22 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Preferences API Client Methods", () => {
 		test("should use API client for preferences update", async () => {
 			try {
-				const { result, error } = await testInstance.client.user.preferences({
+				const prefResult = await testInstance.client.user.preferences({
 					id: "test-user-12345",
 					task_view: "grid",
 				});
 
 				// If endpoint is not implemented, expect an error
-				if (error && (error.message.includes("404") || error.message.includes("not found"))) {
+				if (!prefResult.ok && (prefResult.error.message.includes("404") || prefResult.error.message.includes("not found"))) {
 					console.warn("User preferences API client method not implemented");
 					return;
 				}
 
 				// If implemented, should succeed
-				if (error) {
-					console.warn("User preferences API client failed:", error.message);
+				if (!prefResult.ok) {
+					console.warn("User preferences API client failed:", prefResult.error.message);
 				} else {
-					expect(result).toBeDefined();
+					expect(prefResult.value).toBeDefined();
 				}
 			} catch (error) {
 				console.warn("User preferences API client method not available:", error);
@@ -160,19 +160,19 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Activity History", () => {
 		test("should get user activity history", async () => {
 			try {
-				const { history, error } = await testInstance.client.user.history();
+				const historyResult = await testInstance.client.user.history();
 
 				// If endpoint is not implemented, expect an error
-				if (error && (error.message.includes("404") || error.message.includes("not found"))) {
+				if (!historyResult.ok && (historyResult.error.message.includes("404") || historyResult.error.message.includes("not found"))) {
 					console.warn("User activity history endpoint not implemented");
 					return;
 				}
 
 				// If implemented, should return an array
-				if (error) {
-					console.warn("User activity history failed:", error.message);
+				if (!historyResult.ok) {
+					console.warn("User activity history failed:", historyResult.error.message);
 				} else {
-					expect(Array.isArray(history)).toBe(true);
+					expect(Array.isArray(historyResult.value)).toBe(true);
 				}
 			} catch (error) {
 				console.warn("User activity history not available:", error);

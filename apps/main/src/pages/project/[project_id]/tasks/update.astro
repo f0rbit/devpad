@@ -12,13 +12,15 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-const { project, error: projectError } = await apiClient.projects.getByName(project_id);
-if (projectError) return rethrow(projectError);
+const project_result = await apiClient.projects.getByName(project_id);
+if (!project_result.ok) return rethrow(project_result.error);
+const project = project_result.value;
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 
-const { tasks: project_tasks, error: tasksError } = await apiClient.tasks.getByProject(project.id);
-if (tasksError) return rethrow(tasksError);
+const tasks_result = await apiClient.tasks.getByProject(project.id);
+if (!tasks_result.ok) return rethrow(tasks_result.error);
+const project_tasks = tasks_result.value;
 
 // Build a map of task.codebases_tasks.id -> task
 const codebase_task_map = project_tasks.reduce(
@@ -31,10 +33,11 @@ const codebase_task_map = project_tasks.reduce(
 );
 
 // Get pending scan updates for this project
-const { updates: pending_updates, error: updatesError } = await apiClient.projects.scan.updates(project.id);
-if (updatesError) {
-	console.error("Error fetching updates:", updatesError);
+const updates_result = await apiClient.projects.scan.updates(project.id);
+if (!updates_result.ok) {
+	console.error("Error fetching updates:", updates_result.error);
 }
+const pending_updates = updates_result.ok ? updates_result.value : null;
 
 // Get the most recent pending update
 const update = pending_updates && pending_updates.length > 0 ? pending_updates[0] : null;

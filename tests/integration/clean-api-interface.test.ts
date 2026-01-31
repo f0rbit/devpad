@@ -26,25 +26,25 @@ describe("Clean API Interface", () => {
 
 		test("should support clean list filtering", async () => {
 			// Test the improved list interface
-			const { projects: all_projects, error: all_error } = await test_instance.client.projects.list();
-			if (all_error) throw new Error(`Failed to list all projects: ${all_error.message}`);
+			const allResult = await test_instance.client.projects.list();
+			if (!allResult.ok) throw new Error(`Failed to list all projects: ${allResult.error.message}`);
 
-			const { projects: private_projects, error: private_error } = await test_instance.client.projects.list({ private: true });
-			if (private_error) throw new Error(`Failed to list private projects: ${private_error.message}`);
+			const privateResult = await test_instance.client.projects.list({ private: true });
+			if (!privateResult.ok) throw new Error(`Failed to list private projects: ${privateResult.error.message}`);
 
-			const { projects: public_projects, error: public_error } = await test_instance.client.projects.list({ private: false });
-			if (public_error) throw new Error(`Failed to list public projects: ${public_error.message}`);
+			const publicResult = await test_instance.client.projects.list({ private: false });
+			if (!publicResult.ok) throw new Error(`Failed to list public projects: ${publicResult.error.message}`);
 
-			expect(Array.isArray(all_projects)).toBe(true);
-			expect(Array.isArray(private_projects)).toBe(true);
-			expect(Array.isArray(public_projects)).toBe(true);
+			expect(Array.isArray(allResult.value)).toBe(true);
+			expect(Array.isArray(privateResult.value)).toBe(true);
+			expect(Array.isArray(publicResult.value)).toBe(true);
 		});
 
 		test("should use find() method that returns null for missing projects", async () => {
 			// Test the clean find interface
-			const { project: non_existent_project, error } = await test_instance.client.projects.find("non-existent-id");
+			const findResult = await test_instance.client.projects.find("non-existent-id");
 			// Should return null for missing project without error
-			expect(non_existent_project).toBeNull();
+			expect(findResult.ok ? findResult.value : null).toBeNull();
 		});
 
 		test("should support basic project operations", async () => {
@@ -58,12 +58,12 @@ describe("Clean API Interface", () => {
 			expectValidProject(project);
 
 			// Test update operation (this is the main way to change project state)
-			const { project: updated_project, error: update_error } = await test_instance.client.projects.update(project.id, {
+			const updateResult = await test_instance.client.projects.update(project.id, {
 				visibility: "PUBLIC",
 			});
-			if (update_error) throw new Error(`Failed to update project: ${update_error.message}`);
-			expectValidProject(updated_project!);
-			expect(updated_project!.visibility).toBe("PUBLIC");
+			if (!updateResult.ok) throw new Error(`Failed to update project: ${updateResult.error.message}`);
+			expectValidProject(updateResult.value);
+			expect(updateResult.value.visibility).toBe("PUBLIC");
 		});
 	});
 
@@ -85,9 +85,9 @@ describe("Clean API Interface", () => {
 	describe("Tasks", () => {
 		test("should support clean find() method", async () => {
 			// Test the clean find interface
-			const { task: non_existent_task, error } = await test_instance.client.tasks.find("non-existent-id");
+			const findResult = await test_instance.client.tasks.find("non-existent-id");
 			// Should return null for missing task without error
-			expect(non_existent_task).toBeNull();
+			expect(findResult.ok ? findResult.value : null).toBeNull();
 		});
 
 		test("should support basic task operations", async () => {
@@ -104,18 +104,18 @@ describe("Clean API Interface", () => {
 			expect(task.task.progress).toBe("UNSTARTED");
 
 			// Test update operation
-			const { task: updated_task, error: update_error } = await test_instance.client.tasks.update(task.task.id, {
+			const updateResult = await test_instance.client.tasks.update(task.task.id, {
 				progress: "IN_PROGRESS",
 			});
-			if (update_error) throw new Error(`Failed to update task: ${update_error.message}`);
-			expect(updated_task!.task.progress).toBe("IN_PROGRESS");
+			if (!updateResult.ok) throw new Error(`Failed to update task: ${updateResult.error.message}`);
+			expect(updateResult.value.task.progress).toBe("IN_PROGRESS");
 		});
 
 		test("should support task list filtering", async () => {
 			// Test list interface
-			const { tasks, error } = await test_instance.client.tasks.list();
-			if (error) throw new Error(`Failed to list tasks: ${error.message}`);
-			expect(Array.isArray(tasks)).toBe(true);
+			const listResult = await test_instance.client.tasks.list();
+			if (!listResult.ok) throw new Error(`Failed to list tasks: ${listResult.error.message}`);
+			expect(Array.isArray(listResult.value)).toBe(true);
 		});
 	});
 });

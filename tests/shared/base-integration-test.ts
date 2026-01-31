@@ -1,6 +1,6 @@
 import { afterAll, beforeAll } from "bun:test";
 import type ApiClient from "@devpad/api";
-import type { Project, TaskWithDetails, Tag } from "@devpad/schema";
+import type { Project, Tag, TaskWithDetails } from "@devpad/schema";
 import { getSharedApiClient } from "../integration/setup";
 import { CleanupManager } from "./cleanup-manager";
 import { log } from "./test-utils";
@@ -73,26 +73,26 @@ export abstract class BaseIntegrationTest {
 	 * Create a project and automatically register it for cleanup
 	 */
 	public async createAndRegisterProject(project_data: any): Promise<Project> {
-		const { project, error } = await this.client.projects.create(project_data);
-		if (error) {
-			throw new Error(`Failed to create project: ${error.message}`);
+		const result = await this.client.projects.create(project_data);
+		if (!result.ok) {
+			throw new Error(`Failed to create project: ${result.error.message}`);
 		}
-		this.registerProject(project!);
-		log(`📋 Created and registered project: ${project!.name} (${project!.id})`);
-		return project!;
+		this.registerProject(result.value);
+		log(`📋 Created and registered project: ${result.value.name} (${result.value.id})`);
+		return result.value;
 	}
 
 	/**
 	 * Create a task and automatically register it for cleanup
 	 */
 	public async createAndRegisterTask(task_data: any): Promise<TaskWithDetails> {
-		const { task, error } = await this.client.tasks.create(task_data);
-		if (error) {
-			throw new Error(`Failed to create task: ${error.message}`);
+		const result = await this.client.tasks.create(task_data);
+		if (!result.ok) {
+			throw new Error(`Failed to create task: ${result.error.message}`);
 		}
-		this.registerTask(task!);
-		log(`✅ Created and registered task: ${task!.task.title} (${task!.task.id})`);
-		return task!;
+		this.registerTask(result.value);
+		log(`✅ Created and registered task: ${result.value.task.title} (${result.value.task.id})`);
+		return result.value;
 	}
 
 	/**
@@ -100,9 +100,9 @@ export abstract class BaseIntegrationTest {
 	 */
 	protected async manualCleanupProject(project: Project): Promise<void> {
 		try {
-			const { error } = await this.client.projects.deleteProject(project);
-			if (error) {
-				throw new Error(`Failed to delete project: ${error.message}`);
+			const result = await this.client.projects.deleteProject(project);
+			if (!result.ok) {
+				throw new Error(`Failed to delete project: ${result.error.message}`);
 			}
 			log(`🗑️ Manually cleaned up project: ${project.name} (${project.id})`);
 		} catch (error) {
@@ -115,9 +115,9 @@ export abstract class BaseIntegrationTest {
 	 */
 	protected async manualCleanupTask(task: TaskWithDetails): Promise<void> {
 		try {
-			const { error } = await this.client.tasks.deleteTask(task);
-			if (error) {
-				throw new Error(`Failed to delete task: ${error.message}`);
+			const result = await this.client.tasks.deleteTask(task);
+			if (!result.ok) {
+				throw new Error(`Failed to delete task: ${result.error.message}`);
 			}
 			log(`🗑️ Manually cleaned up task: ${task.task.title} (${task.task.id})`);
 		} catch (error) {

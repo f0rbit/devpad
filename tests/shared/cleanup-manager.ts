@@ -1,5 +1,5 @@
 import type ApiClient from "@devpad/api";
-import type { Project, TaskWithDetails, Tag } from "@devpad/schema";
+import type { Project, Tag, TaskWithDetails } from "@devpad/schema";
 import { log } from "./test-utils";
 
 type CleanupFunction = () => Promise<void>;
@@ -32,9 +32,9 @@ export class CleanupManager {
 	registerProject(project: Project): void {
 		this.registerCleanup("projects", async () => {
 			try {
-				const { error } = await this.client.projects.update(project.id, { deleted: true });
-				if (error) {
-					log(`⚠️ Failed to cleanup project ${project.id}: ${error.message}`);
+				const result = await this.client.projects.update(project.id, { deleted: true });
+				if (!result.ok) {
+					log(`⚠️ Failed to cleanup project ${project.id}: ${result.error.message}`);
 				} else {
 					log(`✅ Cleaned up project: ${project.name} (${project.id})`);
 				}
@@ -50,9 +50,9 @@ export class CleanupManager {
 	registerTask(task: TaskWithDetails): void {
 		this.registerCleanup("tasks", async () => {
 			try {
-				const { error } = await this.client.tasks.deleteTask(task);
-				if (error) {
-					log(`⚠️ Failed to cleanup task ${task.task.id}: ${error.message}`);
+				const result = await this.client.tasks.deleteTask(task);
+				if (!result.ok) {
+					log(`⚠️ Failed to cleanup task ${task.task.id}: ${result.error.message}`);
 				} else {
 					log(`✅ Cleaned up task: ${task.task.title} (${task.task.id})`);
 				}

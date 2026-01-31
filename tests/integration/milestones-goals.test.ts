@@ -200,13 +200,13 @@ describe("Milestones & Goals Integration Tests", () => {
 				target_version: "v2.0.0",
 			};
 
-			const { milestone: updatedMilestone, error } = await testInstance.client.milestones.update(createdMilestone.id, updateData);
-			if (error) {
-				throw new Error(`Failed to update milestone: ${error.message}`);
+			const updateResult = await testInstance.client.milestones.update(createdMilestone.id, updateData);
+			if (!updateResult.ok) {
+				throw new Error(`Failed to update milestone: ${updateResult.error.message}`);
 			}
 
-			expectMatchesPartial(updatedMilestone!, updateData);
-			expect(updatedMilestone!.id).toBe(createdMilestone.id);
+			expectMatchesPartial(updateResult.value, updateData);
+			expect(updateResult.value.id).toBe(createdMilestone.id);
 		});
 
 		test("should delete a milestone", async () => {
@@ -321,30 +321,30 @@ describe("Milestones & Goals Integration Tests", () => {
 				target_time: "2024-08-31",
 			};
 
-			const { goal: updatedGoal, error } = await testInstance.client.goals.update(createdGoal.id, updateData);
-			if (error) {
-				throw new Error(`Failed to update goal: ${error.message}`);
+			const updateResult = await testInstance.client.goals.update(createdGoal.id, updateData);
+			if (!updateResult.ok) {
+				throw new Error(`Failed to update goal: ${updateResult.error.message}`);
 			}
 
-			expectMatchesPartial(updatedGoal!, updateData);
-			expect(updatedGoal!.id).toBe(createdGoal.id);
-			expect(updatedGoal.milestone_id).toBe(testMilestone.id);
+			expectMatchesPartial(updateResult.value, updateData);
+			expect(updateResult.value.id).toBe(createdGoal.id);
+			expect(updateResult.value.milestone_id).toBe(testMilestone.id);
 		});
 
 		test("should delete a goal", async () => {
 			const createdGoal = await testInstance.createTestGoal(testMilestone.id);
 
-			const { result, error } = await testInstance.client.goals.delete(createdGoal.id);
-			if (error) {
-				throw new Error(`Failed to delete goal: ${error.message}`);
+			const deleteResult = await testInstance.client.goals.delete(createdGoal.id);
+			if (!deleteResult.ok) {
+				throw new Error(`Failed to delete goal: ${deleteResult.error.message}`);
 			}
 
-			expect(result!.success).toBe(true);
+			expect(deleteResult.value.success).toBe(true);
 
 			// Verify goal is deleted by trying to fetch it
-			const { goal: fetchedGoal, error: fetchError } = await testInstance.client.goals.find(createdGoal.id);
+			const fetchResult = await testInstance.client.goals.find(createdGoal.id);
 			// Should return null for deleted goal
-			expect(fetchedGoal).toBeNull();
+			expect(fetchResult.ok ? fetchResult.value : null).toBeNull();
 		});
 
 		test("should get goals for a specific milestone", async () => {
@@ -479,10 +479,10 @@ describe("Milestones & Goals Integration Tests", () => {
 			await testInstance.deleteTestMilestone(milestone.id);
 
 			// Verify the goal is also deleted/inaccessible
-			const { goal: deletedGoal, error } = await testInstance.client.goals.find(goal.id);
+			const findResult = await testInstance.client.goals.find(goal.id);
 
-			expect(deletedGoal).toBeNull();
-			expect(error).not.toBeNull();
+			expect(findResult.ok ? findResult.value : null).toBeNull();
+			expect(findResult.ok).toBe(false);
 		});
 	});
 
@@ -507,14 +507,14 @@ describe("Milestones & Goals Integration Tests", () => {
 				goal_id: testGoal.id,
 			};
 
-			const { task, error } = await testInstance.client.tasks.create(taskData);
+			const createResult = await testInstance.client.tasks.create(taskData);
 
-			expect(error).toBeNull();
-			expect(task).not.toBeNull();
-			expect(task?.task.goal_id).toBe(testGoal.id);
-			expect(task?.task.project_id).toBe(testProject.id);
-
-			// Task will be cleaned up automatically
+			expect(createResult.ok).toBe(true);
+			if (createResult.ok) {
+				expect(createResult.value).not.toBeNull();
+				expect(createResult.value.task.goal_id).toBe(testGoal.id);
+				expect(createResult.value.task.project_id).toBe(testProject.id);
+			}
 		});
 
 		test("should modify task goal relationship", async () => {
@@ -525,29 +525,32 @@ describe("Milestones & Goals Integration Tests", () => {
 				project_id: testProject.id,
 			};
 
-			const { task: createdTask, error: createError } = await testInstance.client.tasks.create(taskData);
+			const createResult = await testInstance.client.tasks.create(taskData);
 
-			expect(createError).toBeNull();
-			expect(createdTask).not.toBeNull();
-			expect(createdTask?.task.goal_id).toBeNull();
+			expect(createResult.ok).toBe(true);
+			if (createResult.ok) {
+				expect(createResult.value.task.goal_id).toBeNull();
 
-			// Update task to add goal
-			const { task: updatedTask, error: updateError } = await testInstance.client.tasks.update(createdTask!.task.id, {
-				goal_id: testGoal.id,
-			});
+				// Update task to add goal
+				const updateResult = await testInstance.client.tasks.update(createResult.value.task.id, {
+					goal_id: testGoal.id,
+				});
 
-			expect(updateError).toBeNull();
-			expect(updatedTask?.task.goal_id).toBe(testGoal.id);
+				expect(updateResult.ok).toBe(true);
+				if (updateResult.ok) {
+					expect(updateResult.value.task.goal_id).toBe(testGoal.id);
 
-			// Update task to remove goal
-			const { task: finalTask, error: finalError } = await testInstance.client.tasks.update(updatedTask!.task.id, {
-				goal_id: null,
-			});
+					// Update task to remove goal
+					const finalResult = await testInstance.client.tasks.update(updateResult.value.task.id, {
+						goal_id: null,
+					});
 
-			expect(finalError).toBeNull();
-			expect(finalTask?.task.goal_id).toBeNull();
-
-			// Task will be cleaned up automatically
+					expect(finalResult.ok).toBe(true);
+					if (finalResult.ok) {
+						expect(finalResult.value.task.goal_id).toBeNull();
+					}
+				}
+			}
 		});
 
 		test("should filter tasks by goal", async () => {
@@ -586,28 +589,31 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			// Verify task creation was successful
 			for (const result of taskResults) {
-				expect(result.error).toBeNull();
-				expect(result.task).not.toBeNull();
+				expect(result.ok).toBe(true);
+				if (result.ok) {
+					expect(result.value).not.toBeNull();
+				}
 			}
-			// Tasks will be cleaned up automatically by test teardown
 
 			// Get all project tasks
-			const { tasks: allTasks, error: tasksError } = await testInstance.client.tasks.list({ project_id: testProject.id });
+			const listResult = await testInstance.client.tasks.list({ project_id: testProject.id });
 
-			expect(tasksError).toBeNull();
-			expect(allTasks).not.toBeNull();
+			expect(listResult.ok).toBe(true);
+			if (listResult.ok) {
+				expect(listResult.value).not.toBeNull();
 
-			// Filter by testGoal (should have 2 tasks)
-			const goal1Tasks = allTasks.filter((task: any) => task.task.goal_id === testGoal.id);
-			expect(goal1Tasks.length).toBe(2);
+				// Filter by testGoal (should have 2 tasks)
+				const goal1Tasks = listResult.value.filter((task: any) => task.task.goal_id === testGoal.id);
+				expect(goal1Tasks.length).toBe(2);
 
-			// Filter by goal2 (should have 1 task)
-			const goal2Tasks = allTasks.filter((task: any) => task.task.goal_id === goal2.id);
-			expect(goal2Tasks.length).toBe(1);
+				// Filter by goal2 (should have 1 task)
+				const goal2Tasks = listResult.value.filter((task: any) => task.task.goal_id === goal2.id);
+				expect(goal2Tasks.length).toBe(1);
 
-			// Filter by no goal (should have 1 task)
-			const noGoalTasks = allTasks.filter((task: any) => task.task.goal_id === null);
-			expect(noGoalTasks.length).toBe(1);
+				// Filter by no goal (should have 1 task)
+				const noGoalTasks = listResult.value.filter((task: any) => task.task.goal_id === null);
+				expect(noGoalTasks.length).toBe(1);
+			}
 		});
 	});
 });

@@ -6,13 +6,13 @@ import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
 import { createSignal, For } from "solid-js";
 import { createStore } from "solid-js/store";
+import { GoalSelector } from "@/components/solid/GoalSelector";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
-import { GoalSelector } from "@/components/solid/GoalSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
 import { getApiClient } from "@/utils/api-client";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
-import { PROGRESS_OPTIONS, PRIORITY_OPTIONS, VISIBILITY_OPTIONS, type Progress, type Priority, type Visibility } from "@/utils/task-status";
+import { PRIORITY_OPTIONS, PROGRESS_OPTIONS, type Priority, type Progress, VISIBILITY_OPTIONS, type Visibility } from "@/utils/task-status";
 
 interface Props {
 	task: TaskWithDetails | null;
@@ -65,7 +65,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 
 			setRequestState("success");
 			if (task?.task?.id == null) {
-				const new_id = result.task?.task?.id;
+				const new_id = result.ok ? result.value?.task?.id : undefined;
 				// redirect to new task page
 				if (new_id) {
 					window.location.href = `/todo/${new_id}`;

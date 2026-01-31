@@ -18,18 +18,18 @@ if (user) {
 		const api_client = getServerApiClient(Astro.locals);
 
 		// Get projects list and convert to map format
-		const { project_map: fetched_project_map, error: project_error } = await api_client.projects.map();
-		if (project_error) return rethrow(project_error);
+		const project_map_result = await api_client.projects.map();
+		if (!project_map_result.ok) return rethrow(project_map_result.error);
 
-		const { tasks: fetched_tasks, error: tasks_error } = await api_client.tasks.list();
-		if (tasks_error) return rethrow(tasks_error);
+		const tasks_result = await api_client.tasks.list();
+		if (!tasks_result.ok) return rethrow(tasks_result.error);
 
-		const { tags: fetched_tags, error: tags_error } = await api_client.tags.list();
-		if (tags_error) return rethrow(tags_error);
+		const tags_result = await api_client.tags.list();
+		if (!tags_result.ok) return rethrow(tags_result.error);
 
-		project_map = fetched_project_map;
-		tasks = fetched_tasks;
-		tags = fetched_tags;
+		project_map = project_map_result.value;
+		tasks = tasks_result.value;
+		tags = tags_result.value;
 	} catch (error) {
 		// the error here is that the user is not logged in/authenticated.
 		// which we can safely ignore since this is optional.

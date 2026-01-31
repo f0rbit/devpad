@@ -46,22 +46,22 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 
 			let result;
 			if (mode === "create") {
-				const { goal: createdGoal, error } = await apiClient.goals.create({
+				const createResult = await apiClient.goals.create({
 					milestone_id: state.milestone_id,
 					name: state.name.trim(),
 					description: state.description.trim() || undefined,
 					target_time: state.target_time || undefined,
 				});
-				if (error) throw new Error(error.message);
-				result = createdGoal;
+				if (!createResult.ok) throw new Error(createResult.error.message);
+				result = createResult.value;
 			} else {
-				const { goal: updatedGoal, error } = await apiClient.goals.update(goal!.id, {
+				const updateResult = await apiClient.goals.update(goal!.id, {
 					name: state.name.trim(),
 					description: state.description.trim() || undefined,
 					target_time: state.target_time || undefined,
 				});
-				if (error) throw new Error(error.message);
-				result = updatedGoal;
+				if (!updateResult.ok) throw new Error(updateResult.error.message);
+				result = updateResult.value;
 			}
 
 			setRequestState("success");

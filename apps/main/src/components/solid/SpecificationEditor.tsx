@@ -32,9 +32,9 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 		setFetching("loading");
 		try {
 			const apiClient = getApiClient();
-			const { specification, error } = await apiClient.projects.specification(project_id);
-			if (error) throw new Error(error.message);
-			setMarkdown(specification ?? "");
+			const result = await apiClient.projects.specification(project_id);
+			if (!result.ok) throw new Error(result.error.message);
+			setMarkdown(result.value ?? "");
 			setFetching("success");
 			setTimeout(() => {
 				setFetching("idle");

@@ -1,6 +1,6 @@
+import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo } from "@devpad/schema";
 import { z } from "zod";
-import { ApiClient } from "./api-client";
-import { upsert_project, upsert_todo, upsert_milestone, upsert_goal, save_config_request, save_tags_request } from "@devpad/schema";
+import type { ApiClient } from "./api-client";
 
 // Filter schemas that aren't in @devpad/schema yet
 export const project_filters = z.object({
@@ -59,8 +59,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: project_filters,
 		execute: async (client, input) => {
 			const result = await client.projects.list(input);
-			if (result.error) throw new Error(result.error.message);
-			return result.projects;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -70,8 +70,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: project_by_id_or_name,
 		execute: async (client, input) => {
 			const result = input.id ? await client.projects.getById(input.id) : await client.projects.getByName(input.name!);
-			if (result.error) throw new Error(result.error.message);
-			return result.project;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -81,8 +81,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: upsert_project,
 		execute: async (client, input) => {
 			const result = await client.projects.upsert(input);
-			if (result.error) throw new Error(result.error.message);
-			return result.project;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -92,7 +92,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: save_config_request,
 		execute: async (client, input) => {
 			const result = await client.projects.config.save(input);
-			if (result.error) throw new Error(result.error.message);
+			if (!result.ok) throw new Error(result.error.message);
 			return { success: true };
 		},
 	},
@@ -104,8 +104,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: task_filters,
 		execute: async (client, input) => {
 			const result = await client.tasks.list(input);
-			if (result.error) throw new Error(result.error.message);
-			return result.tasks;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -115,8 +115,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: task_by_id,
 		execute: async (client, input) => {
 			const result = await client.tasks.find(input.id);
-			if (result.error) throw new Error(result.error.message);
-			return result.task;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -126,8 +126,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: upsert_todo,
 		execute: async (client, input) => {
 			const result = await client.tasks.upsert(input);
-			if (result.error) throw new Error(result.error.message);
-			return result.task;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -137,7 +137,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: save_tags_request,
 		execute: async (client, input) => {
 			const result = await client.tasks.saveTags(input);
-			if (result.error) throw new Error(result.error.message);
+			if (!result.ok) throw new Error(result.error.message);
 			return { success: true };
 		},
 	},
@@ -149,8 +149,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: milestone_filters,
 		execute: async (client, input) => {
 			const result = input.project_id ? await client.milestones.getByProject(input.project_id) : await client.milestones.list();
-			if (result.error) throw new Error(result.error.message);
-			return result.milestones;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -160,8 +160,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: milestone_by_id,
 		execute: async (client, input) => {
 			const result = await client.milestones.find(input.id);
-			if (result.error) throw new Error(result.error.message);
-			return result.milestone;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -184,8 +184,8 @@ export const tools: Record<string, ToolDefinition> = {
 						target_time: input.target_time,
 						target_version: input.target_version,
 					});
-			if (result.error) throw new Error(result.error.message);
-			return result.milestone;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -196,8 +196,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({}),
 		execute: async client => {
 			const result = await client.goals.list();
-			if (result.error) throw new Error(result.error.message);
-			return result.goals;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -207,8 +207,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: goal_by_id,
 		execute: async (client, input) => {
 			const result = await client.goals.find(input.id);
-			if (result.error) throw new Error(result.error.message);
-			return result.goal;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -229,8 +229,8 @@ export const tools: Record<string, ToolDefinition> = {
 						description: input.description,
 						target_time: input.target_time,
 					});
-			if (result.error) throw new Error(result.error.message);
-			return result.goal;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -241,8 +241,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({}),
 		execute: async client => {
 			const result = await client.tags.list();
-			if (result.error) throw new Error(result.error.message);
-			return result.tags;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -253,8 +253,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({}),
 		execute: async client => {
 			const result = await client.github.repos();
-			if (result.error) throw new Error(result.error.message);
-			return result.repos;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -264,8 +264,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: github_branches,
 		execute: async (client, input) => {
 			const result = await client.github.branches(input.owner, input.repo);
-			if (result.error) throw new Error(result.error.message);
-			return result.branches;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -277,13 +277,12 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("Project ID"),
 		}),
 		execute: async (client, input) => {
-			// First get the project to have all required fields
 			const getResult = await client.projects.find(input.id);
-			if (getResult.error) throw new Error(getResult.error.message);
-			if (!getResult.project) throw new Error(`Project ${input.id} not found`);
+			if (!getResult.ok) throw new Error(getResult.error.message);
+			if (!getResult.value) throw new Error(`Project ${input.id} not found`);
 
-			const result = await client.projects.deleteProject(getResult.project);
-			if (result.error) throw new Error(result.error.message);
+			const result = await client.projects.deleteProject(getResult.value);
+			if (!result.ok) throw new Error(result.error.message);
 			return { success: true };
 		},
 	},
@@ -296,8 +295,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.projects.history(input.project_id);
-			if (result.error) throw new Error(result.error.message);
-			return result.history;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -309,8 +308,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.projects.specification(input.project_id);
-			if (result.error) throw new Error(result.error.message);
-			return result.specification;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -322,8 +321,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.projects.config.load(input.project_id);
-			if (result.error) throw new Error(result.error.message);
-			return result.config;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -336,8 +335,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.milestones.delete(input.id);
-			if (result.error) throw new Error(result.error.message);
-			return result.result;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -349,8 +348,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.milestones.goals(input.id);
-			if (result.error) throw new Error(result.error.message);
-			return result.goals;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -363,8 +362,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.goals.delete(input.id);
-			if (result.error) throw new Error(result.error.message);
-			return result.result;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -376,13 +375,12 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("Task ID"),
 		}),
 		execute: async (client, input) => {
-			// First get the task to have all required fields
 			const getResult = await client.tasks.find(input.id);
-			if (getResult.error) throw new Error(getResult.error.message);
-			if (!getResult.task) throw new Error(`Task ${input.id} not found`);
+			if (!getResult.ok) throw new Error(getResult.error.message);
+			if (!getResult.value) throw new Error(`Task ${input.id} not found`);
 
-			const result = await client.tasks.deleteTask(getResult.task);
-			if (result.error) throw new Error(result.error.message);
+			const result = await client.tasks.deleteTask(getResult.value);
+			if (!result.ok) throw new Error(result.error.message);
 			return { success: true };
 		},
 	},
@@ -395,8 +393,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.tasks.history.get(input.task_id);
-			if (result.error) throw new Error(result.error.message);
-			return result.history;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -407,8 +405,8 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({}),
 		execute: async client => {
 			const result = await client.user.history();
-			if (result.error) throw new Error(result.error.message);
-			return result.history;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 
@@ -421,8 +419,8 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const result = await client.user.preferences(input);
-			if (result.error) throw new Error(result.error.message);
-			return result.result;
+			if (!result.ok) throw new Error(result.error.message);
+			return result.value;
 		},
 	},
 };

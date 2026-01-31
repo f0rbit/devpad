@@ -1,4 +1,4 @@
-import ApiClient, { type Result } from "@devpad/api";
+import ApiClient, { type ApiResultError } from "@devpad/api";
 import { log } from "@devpad/core/logger";
 
 // Global API client instance
@@ -224,6 +224,6 @@ export function getServerApiClient(locals: any): ApiClient {
 	});
 }
 
-export function rethrow<T>(error: Result<T, string>["error"]) {
+export function rethrow(error: ApiResultError) {
 	return new Response(error?.code, { status: error?.status_code, statusText: error?.code });
 }

@@ -23,8 +23,9 @@ const sub_pages = [
 
 const apiClient = getServerApiClient(Astro.locals);
 
-const { project, error } = await apiClient.projects.getByName(project_id);
-if (error || !project) return new Response(null, { status: 404, statusText: "Project not found" });
+const result = await apiClient.projects.getByName(project_id);
+if (!result.ok || !result.value) return new Response(null, { status: 404, statusText: "Project not found" });
+const project = result.value;
 
 if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 ---

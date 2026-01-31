@@ -12,8 +12,9 @@ if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" }
 
 const apiClient = getServerApiClient(Astro.locals);
 
-const { project, error: projectError } = await apiClient.projects.getByName(project_id);
-if (projectError) return rethrow(projectError);
+const project_result = await apiClient.projects.getByName(project_id);
+if (!project_result.ok) return rethrow(project_result.error);
+const project = project_result.value;
 if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
 ---
@@ -84,7 +85,7 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 
 		try {
 			const apiClient = getApiClient();
-			const { milestone: _milestone, error } = await apiClient.milestones.create({
+			const result = await apiClient.milestones.create({
 				name,
 				description,
 				target_version,
@@ -92,9 +93,9 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 				project_id: projectId,
 			});
 
-			if (error) {
-				console.error("Failed to create milestone:", error);
-				errorEl.innerText = error.message || "Failed to create milestone";
+			if (!result.ok) {
+				console.error("Failed to create milestone:", result.error);
+				errorEl.innerText = result.error.message || "Failed to create milestone";
 				return;
 			}
 

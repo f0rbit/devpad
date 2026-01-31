@@ -10,11 +10,11 @@ export type {
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema";
+export type { AuthMode } from "./api-client";
 export { getUserFriendlyErrorMessage, parseZodErrors } from "./error-handlers";
 export type { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
 export type { RequestHistoryEntry, RequestOptions } from "./request";
-export type { AuthMode } from "./api-client";
-export { wrap, type Result, type Success, type Failure } from "./result";
-export { tools, getTool, toolNames, type ToolDefinition } from "./tools";
+export { type ApiResult, type ApiResultError, err, ok, type Result, wrap } from "./result";
+export { getTool, type ToolDefinition, toolNames, tools } from "./tools";
 export { ApiClient };
 export default ApiClient;
