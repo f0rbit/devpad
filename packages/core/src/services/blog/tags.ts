@@ -1,7 +1,6 @@
 import { type DrizzleDB, err, ok, type PostRow, type Result, try_catch_async } from "@devpad/schema/blog";
 import { blog_posts as posts, blog_tags as tags } from "@devpad/schema/database/blog";
 import { and, eq, sql } from "drizzle-orm";
-import { errors } from "../errors";
 
 type TagServiceError = { kind: "not_found"; resource: string } | { kind: "db_error"; message: string };
 
@@ -14,9 +13,15 @@ type Deps = {
 	db: DrizzleDB;
 };
 
-const toDbError = (e: unknown): TagServiceError => errors.db(e);
+const toDbError = (e: unknown): TagServiceError => ({
+	kind: "db_error",
+	message: e instanceof Error ? e.message : String(e),
+});
 
-const notFound = (resource: string): TagServiceError => errors.missing(resource);
+const notFound = (resource: string): TagServiceError => ({
+	kind: "not_found",
+	resource,
+});
 
 export const createTagService = ({ db }: Deps) => {
 	const findPost = async (userId: string, uuid: string): Promise<Result<PostRow, TagServiceError>> => {

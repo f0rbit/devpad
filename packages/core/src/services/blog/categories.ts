@@ -1,7 +1,7 @@
 import { type Category, type CategoryCreate, type DrizzleDB, err, ok, type Result, try_catch_async } from "@devpad/schema/blog";
 import { blog_categories as categories, blog_posts as posts } from "@devpad/schema/database/blog";
 import { and, eq } from "drizzle-orm";
-import { errors, rows } from "../errors";
+import { rows } from "../errors";
 
 type CategoryServiceError =
 	| { kind: "not_found"; resource: string }
@@ -25,9 +25,15 @@ type Deps = {
 	db: DrizzleDB;
 };
 
-const toDbError = (e: unknown): CategoryServiceError => errors.db(e);
+const toDbError = (e: unknown): CategoryServiceError => ({
+	kind: "db_error",
+	message: e instanceof Error ? e.message : String(e),
+});
 
-const notFound = (resource: string): CategoryServiceError => errors.missing(resource);
+const notFound = (resource: string): CategoryServiceError => ({
+	kind: "not_found",
+	resource,
+});
 
 const conflict = (message: string): CategoryServiceError => ({
 	kind: "conflict",

@@ -19,7 +19,7 @@ import {
 } from "@devpad/schema/blog";
 import { blog_categories as categories, blog_post_projects as postProjects, blog_posts as posts, blog_tags as tags } from "@devpad/schema/database/blog";
 import { and, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
-import { errors, rows } from "../errors";
+import { rows } from "../errors";
 import { corpus as postsCorpus } from "./corpus";
 
 type PostServiceError = { kind: "not_found"; resource: string } | { kind: "slug_conflict"; slug: string } | { kind: "corpus_error"; inner: PostCorpusError } | { kind: "db_error"; message: string };
@@ -34,9 +34,15 @@ const toCorpusError = (e: PostCorpusError): PostServiceError => ({
 	inner: e,
 });
 
-const toDbError = (e: unknown): PostServiceError => errors.db(e);
+const toDbError = (e: unknown): PostServiceError => ({
+	kind: "db_error",
+	message: e instanceof Error ? e.message : String(e),
+});
 
-const notFound = (resource: string): PostServiceError => errors.missing(resource);
+const notFound = (resource: string): PostServiceError => ({
+	kind: "not_found",
+	resource,
+});
 
 const slugConflict = (slug: string): PostServiceError => ({
 	kind: "slug_conflict",

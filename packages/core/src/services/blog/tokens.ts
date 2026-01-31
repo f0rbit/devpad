@@ -2,7 +2,7 @@ import { type AccessKeyCreate, type AccessKeyUpdate, type DrizzleDB, ok, type Re
 import { api_keys } from "@devpad/schema/database/schema";
 import { and, eq } from "drizzle-orm";
 import { hashing } from "../../utils/crypto";
-import { errors, rows } from "../errors";
+import { rows } from "../errors";
 
 type TokenServiceError = { kind: "not_found"; resource: string } | { kind: "db_error"; message: string };
 
@@ -32,9 +32,15 @@ type Deps = {
 	db: DrizzleDB;
 };
 
-const toDbError = (e: unknown): TokenServiceError => errors.db(e);
+const toDbError = (e: unknown): TokenServiceError => ({
+	kind: "db_error",
+	message: e instanceof Error ? e.message : String(e),
+});
 
-const notFound = (resource: string): TokenServiceError => errors.missing(resource);
+const notFound = (resource: string): TokenServiceError => ({
+	kind: "not_found",
+	resource,
+});
 
 const firstRow = <T>(r: T[], resource: string): Result<T, TokenServiceError> => rows.firstOr(r, () => notFound(resource));
 
