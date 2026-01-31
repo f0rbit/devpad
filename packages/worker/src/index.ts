@@ -1,6 +1,4 @@
-import { categoriesRouter, postsRouter, tagsRouter, tokensRouter } from "@devpad/blog-server";
-import { createContextFromBindings, createProviderFactory, handleCron } from "@devpad/media-server";
-import { connectionRoutes, credentialRoutes, authRoutes as mediaAuthRoutes, profileRoutes, timelineRoutes } from "@devpad/media-server/routes";
+import { createContextFromBindings, createProviderFactory, handleCron } from "@devpad/core/services/media";
 import type { Bindings } from "@devpad/schema/bindings";
 import type { UnifiedDatabase } from "@devpad/schema/database/d1";
 import { Hono } from "hono";
@@ -11,7 +9,10 @@ import { unifiedContextMiddleware } from "./middleware/context.js";
 import { dbMiddleware } from "./middleware/db.js";
 import { requestContextMiddleware } from "./middleware/request-context.js";
 import authRoutes from "./routes/auth.js";
+import blogRoutes from "./routes/v1/blog/index.js";
 import v1Routes from "./routes/v1/index.js";
+import { authRoutes as mediaAuthRoutes } from "./routes/v1/media/auth.js";
+import mediaRoutes from "./routes/v1/media/index.js";
 
 export type ApiOptions = {
 	db?: UnifiedDatabase;
@@ -74,19 +75,8 @@ export const createApi = (options?: ApiOptions) => {
 	app.route("/api/auth/platforms", mediaAuthRoutes);
 
 	app.route("/api/v1", v1Routes);
-
-	const blogRouter = new Hono<AppContext>();
-	blogRouter.route("/posts", postsRouter);
-	blogRouter.route("/tags", tagsRouter);
-	blogRouter.route("/categories", categoriesRouter);
-	blogRouter.route("/tokens", tokensRouter);
-
-	app.route("/api/v1/blog", blogRouter);
-
-	app.route("/api/v1/timeline", timelineRoutes);
-	app.route("/api/v1/connections", connectionRoutes);
-	app.route("/api/v1/credentials", credentialRoutes);
-	app.route("/api/v1/profiles", profileRoutes);
+	app.route("/api/v1/blog", blogRoutes);
+	app.route("/api/v1", mediaRoutes);
 
 	return app;
 };

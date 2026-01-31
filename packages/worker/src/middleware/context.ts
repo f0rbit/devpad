@@ -1,5 +1,5 @@
-import { createContextFromDeps } from "@devpad/blog-server/context";
-import { createContextFromBindings, createProviderFactory } from "@devpad/media-server";
+import { createContextFromDeps } from "@devpad/core/services/blog";
+import { createContextFromBindings, createProviderFactory } from "@devpad/core/services/media";
 import { createMiddleware } from "hono/factory";
 import type { AppContext } from "../bindings.js";
 
