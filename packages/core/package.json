@@ -13,7 +13,8 @@
 		"./logger": "./src/utils/client-logger.ts",
 		"./utils/context": "./src/utils/context-parser.ts",
 		"./utils/crypto": "./src/utils/crypto.ts",
-		"./utils/logger": "./src/utils/logger.ts"
+		"./utils/logger": "./src/utils/logger.ts",
+		"./services/blog": "./src/services/blog/index.ts"
 	},
 	"scripts": {
 		"test": "bun test"
@@ -21,6 +22,7 @@
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
 		"@paralleldrive/cuid2": "^2.2.2",
+		"@f0rbit/corpus": "^0.3.4",
 		"drizzle-orm": "^0.44.7",
 		"zod": "^3.22.4",
 		"@octokit/auth-oauth-app": "^9.0.1",
