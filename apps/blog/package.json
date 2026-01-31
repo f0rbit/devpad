@@ -9,7 +9,6 @@
 	"dependencies": {
 		"@astrojs/cloudflare": "^12.0.1",
 		"@astrojs/solid-js": "^5.0.0",
-		"@devpad/blog-server": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@f0rbit/ui": "0.1.9",
 		"astro": "^5.1.1",
