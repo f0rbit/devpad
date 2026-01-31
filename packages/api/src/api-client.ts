@@ -29,21 +29,26 @@ export class ApiClient {
 		api_key: string;
 		auth_mode?: AuthMode;
 		max_history_size?: number;
+		credentials?: "include" | "omit" | "same-origin";
 	}) {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
 		this._api_key = options.api_key;
 		this._auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
 
-		// Create category-specific HTTP clients
 		const clientOptions = {
 			base_url,
 			api_key: options.api_key,
 			max_history_size: options.max_history_size,
+			auth_mode: this._auth_mode,
+			credentials: options.credentials,
 		};
+
+		const auth_base_url = base_url.replace(/\/v1\/?$/, "");
 
 		this.clients = {
 			auth: new HttpClient({ ...clientOptions, category: "auth" }),
+			auth_root: new HttpClient({ ...clientOptions, base_url: auth_base_url, category: "auth" }),
 			projects: new HttpClient({ ...clientOptions, category: "projects" }),
 			tasks: new HttpClient({ ...clientOptions, category: "tasks" }),
 			milestones: new HttpClient({ ...clientOptions, category: "milestones" }),
@@ -59,6 +64,8 @@ export class ApiClient {
 	 * Auth namespace with Result-wrapped operations
 	 */
 	public readonly auth = {
+		session: (): Promise<ApiResult<{ authenticated: boolean; user: any; session: any }>> => wrap(() => this.clients.auth_root.get<{ authenticated: boolean; user: any; session: any }>("/auth/session")),
+
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
@@ -551,7 +558,12 @@ export class ApiClient {
 		},
 
 		connections: {
-			list: (profile_id: string): Promise<ApiResult<Account[]>> => wrap(() => this.clients.media.get<Account[]>("/connections", { query: { profile_id } })),
+			list: (profile_id: string, options?: { include_settings?: boolean }): Promise<ApiResult<Account[]>> =>
+				wrap(() => {
+					const query: Record<string, string> = { profile_id };
+					if (options?.include_settings) query.include_settings = "true";
+					return this.clients.media.get<Account[]>("/connections", { query });
+				}),
 
 			create: (data: { profile_id: string; platform: string; access_token: string; refresh_token?: string; platform_user_id?: string; platform_username?: string; token_expires_at?: string }): Promise<ApiResult<Account>> =>
 				wrap(() => this.clients.media.post<Account>("/connections", { body: data })),

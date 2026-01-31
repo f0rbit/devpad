@@ -76,9 +76,9 @@ describe("Clean API Interface", () => {
 			expect(typeof test_instance.client.auth.keys.remove).toBe("function");
 		});
 
-		test("should not expose removed session method", async () => {
-			// auth.session() was removed during API consolidation - sessions handled by worker middleware
-			expect(test_instance.client.auth.session).toBeUndefined();
+		test("should expose session method for cookie-based auth", async () => {
+			// auth.session() re-added for session-based authentication support
+			expect(typeof test_instance.client.auth.session).toBe("function");
 		});
 	});
 
