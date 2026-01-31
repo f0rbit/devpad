@@ -12,7 +12,8 @@
 		"./auth": "./src/auth/index.ts",
 		"./logger": "./src/utils/client-logger.ts",
 		"./utils/context": "./src/utils/context-parser.ts",
-		"./utils/crypto": "./src/utils/crypto.ts"
+		"./utils/crypto": "./src/utils/crypto.ts",
+		"./utils/logger": "./src/utils/logger.ts"
 	},
 	"scripts": {
 		"test": "bun test"
