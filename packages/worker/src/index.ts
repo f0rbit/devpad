@@ -1,5 +1,5 @@
 import { categoriesRouter, postsRouter, tagsRouter, tokensRouter } from "@devpad/blog-server";
-import { createContextFromBindings, createProviderFactory, handleCron, requestContextMiddleware } from "@devpad/media-server";
+import { createContextFromBindings, createProviderFactory, handleCron } from "@devpad/media-server";
 import { connectionRoutes, credentialRoutes, authRoutes as mediaAuthRoutes, profileRoutes, timelineRoutes } from "@devpad/media-server/routes";
 import type { Bindings } from "@devpad/schema/bindings";
 import type { UnifiedDatabase } from "@devpad/schema/database/d1";
@@ -9,6 +9,7 @@ import type { AppContext } from "./bindings.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { unifiedContextMiddleware } from "./middleware/context.js";
 import { dbMiddleware } from "./middleware/db.js";
+import { requestContextMiddleware } from "./middleware/request-context.js";
 import authRoutes from "./routes/auth.js";
 import v1Routes from "./routes/v1.js";
 
