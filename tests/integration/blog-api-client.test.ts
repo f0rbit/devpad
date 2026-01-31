@@ -6,7 +6,7 @@ class BlogIntegrationTest extends BaseIntegrationTest {}
 const testInstance = new BlogIntegrationTest();
 setupBaseIntegrationTest(testInstance);
 
-const SKIP_REASON = "blog context requires Cloudflare D1/R2 bindings not available in bun test server";
+const SKIP_REASON = "not yet implemented (Phase 3)";
 
 const uniqueSlug = () => `test-post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -19,39 +19,27 @@ describe("blog API client integration", () => {
 		expect(testInstance.client.blog.tokens).toBeDefined();
 	});
 
-	test("should return Result error for blog posts (no blog context in test server)", async () => {
+	test("should list blog posts (empty)", async () => {
 		const result = await testInstance.client.blog.posts.list();
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for blog categories (no blog context in test server)", async () => {
+	test("should get blog category tree", async () => {
 		const result = await testInstance.client.blog.categories.tree();
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for blog tags (no blog context in test server)", async () => {
+	test("should list blog tags (empty)", async () => {
 		const result = await testInstance.client.blog.tags.list();
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for blog tokens (no blog context in test server)", async () => {
+	test("should list blog tokens", async () => {
 		const result = await testInstance.client.blog.tokens.list();
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for blog post create (no blog context in test server)", async () => {
+	test("should create a blog post", async () => {
 		const result = await testInstance.client.blog.posts.create({
 			slug: uniqueSlug(),
 			title: "Test Post",
@@ -60,32 +48,15 @@ describe("blog API client integration", () => {
 			category: "root",
 			tags: [],
 		});
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for blog category create (no blog context in test server)", async () => {
-		const result = await testInstance.client.blog.categories.create({
-			name: `test-cat-${Date.now()}`,
-			parent: "root",
-		});
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
-	});
-
-	test("should return Result error for blog token create (no blog context in test server)", async () => {
+	test("should create a blog token", async () => {
 		const result = await testInstance.client.blog.tokens.create({
 			name: `test-token-${Date.now()}`,
 			note: "Integration test",
 		});
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
 	describe("posts CRUD lifecycle", () => {

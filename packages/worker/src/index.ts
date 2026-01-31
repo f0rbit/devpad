@@ -1,3 +1,5 @@
+import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
+import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { createContextFromBindings, createProviderFactory, handleCron } from "@devpad/core/services/media";
 import type { Bindings } from "@devpad/schema/bindings";
 import type { UnifiedDatabase } from "@devpad/schema/database/d1";
@@ -17,6 +19,8 @@ import mediaRoutes from "./routes/v1/media/index.js";
 export type ApiOptions = {
 	db?: UnifiedDatabase;
 	contexts?: boolean;
+	blogContext?: BlogAppContext;
+	mediaContext?: MediaAppContext;
 };
 
 type AstroHandler = {
@@ -65,7 +69,15 @@ export const createApi = (options?: ApiOptions) => {
 		app.use("*", dbMiddleware);
 	}
 	app.use("*", authMiddleware);
-	if (options?.contexts !== false) {
+	if (options?.blogContext && options?.mediaContext) {
+		const blog_ctx = options.blogContext;
+		const media_ctx = options.mediaContext;
+		app.use("*", async (c, next) => {
+			c.set("blogContext", blog_ctx);
+			c.set("mediaContext", media_ctx);
+			await next();
+		});
+	} else if (options?.contexts !== false) {
 		app.use("*", unifiedContextMiddleware);
 	}
 

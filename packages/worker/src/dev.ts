@@ -1,6 +1,11 @@
 import { Database } from "bun:sqlite";
+import { createContext as createBlogContext } from "@devpad/core/services/blog";
+import { createMediaContext, defaultProviderFactory } from "@devpad/core/services/media";
 import type { Bindings } from "@devpad/schema/bindings";
+import { create_memory_backend } from "@devpad/schema/blog";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
+import * as mediaSchema from "@devpad/schema/database/media";
+import { drizzle } from "drizzle-orm/bun-sqlite";
 import { createApi } from "./index.js";
 
 export type BunServerOptions = {
@@ -57,7 +62,22 @@ export function createBunApp(options: BunServerOptions) {
 	const sqlite = new Database(options.database_file);
 	const db = createBunDatabase(sqlite);
 	const fake_bindings = createFakeBindings();
-	const app = createApi({ db, contexts: false });
+
+	const blog_context = createBlogContext({
+		db: drizzle(sqlite) as any,
+		backend: create_memory_backend(),
+		jwt_secret: fake_bindings.JWT_SECRET,
+		environment: fake_bindings.ENVIRONMENT,
+	});
+
+	const media_context = createMediaContext({
+		db: drizzle(sqlite, { schema: mediaSchema }) as any,
+		backend: create_memory_backend(),
+		providerFactory: defaultProviderFactory,
+		encryptionKey: fake_bindings.ENCRYPTION_KEY,
+	});
+
+	const app = createApi({ db, contexts: false, blogContext: blog_context, mediaContext: media_context });
 
 	const fetch = (request: Request) => app.fetch(request, fake_bindings, fake_execution_context as any);
 

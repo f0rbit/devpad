@@ -7,7 +7,7 @@ class MediaIntegrationTest extends BaseIntegrationTest {}
 const testInstance = new MediaIntegrationTest();
 setupBaseIntegrationTest(testInstance);
 
-const SKIP_REASON = "media context requires Cloudflare D1/R2 bindings not available in bun test server";
+const SKIP_REASON = "not yet implemented (Phase 3)";
 
 const uniqueSlug = () => `test-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -19,31 +19,23 @@ describe("media API client integration", () => {
 		expect(testInstance.client.media.timeline).toBeDefined();
 	});
 
-	test("should return Result error for media profiles list (no media context in test server)", async () => {
+	test("should list media profiles (empty)", async () => {
 		const result = await testInstance.client.media.profiles.list();
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for media profile create (no media context in test server)", async () => {
+	test("should create a media profile", async () => {
 		const result = await testInstance.client.media.profiles.create({
 			slug: uniqueSlug(),
 			name: "Test Media Profile",
 		});
-		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
+		expect(result.ok).toBe(true);
 	});
 
-	test("should return Result error for media timeline (no media context in test server)", async () => {
+	test("should get media timeline (returns error with empty data)", async () => {
 		const result = await testInstance.client.media.timeline.get(TEST_USER_ID);
+		// Timeline service errors when no accounts exist -- expected for empty test DB
 		expect(result.ok).toBe(false);
-		if (!result.ok) {
-			expect(result.error).toBeDefined();
-		}
 	});
 
 	describe("profiles CRUD lifecycle", () => {
