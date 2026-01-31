@@ -14,7 +14,16 @@
 		"./utils/context": "./src/utils/context-parser.ts",
 		"./utils/crypto": "./src/utils/crypto.ts",
 		"./utils/logger": "./src/utils/logger.ts",
-		"./services/blog": "./src/services/blog/index.ts"
+		"./services/blog": "./src/services/blog/index.ts",
+		"./services/media": "./src/services/media/index.ts",
+		"./services/media/platforms": "./src/services/media/platforms/index.ts",
+		"./services/media/platforms/github": "./src/services/media/platforms/github.ts",
+		"./services/media/platforms/reddit-memory": "./src/services/media/platforms/reddit-memory.ts",
+		"./services/media/platforms/twitter-memory": "./src/services/media/platforms/twitter-memory.ts",
+		"./services/media/timeline": "./src/services/media/timeline/index.ts",
+		"./services/media/cron": "./src/services/media/cron/index.ts",
+		"./services/media/storage": "./src/services/media/storage.ts",
+		"./services/media/sync": "./src/services/media/sync.ts"
 	},
 	"scripts": {
 		"test": "bun test"
