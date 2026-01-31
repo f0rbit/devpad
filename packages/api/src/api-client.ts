@@ -1,6 +1,14 @@
 import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema";
+import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate, PostListParams, PostsResponse, PostUpdate, VersionInfo } from "@devpad/schema/blog";
+import type { Account, AddFilterInput, CreateProfileInput, PlatformSettings, Profile, ProfileFilter, Timeline, UpdateProfileInput } from "@devpad/schema/media";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
+
+type TagWithCount = { tag: string; count: number };
+type SanitizedToken = { id: string; name: string | null; note: string | null; enabled: boolean; created_at: string };
+type CreatedToken = SanitizedToken & { token: string };
+type AccessKeyCreate = { name: string; note?: string };
+type AccessKeyUpdate = { name?: string; note?: string; enabled?: boolean };
 
 /**
  * Authentication mode for the API client
@@ -42,6 +50,8 @@ export class ApiClient {
 			goals: new HttpClient({ ...clientOptions, category: "goals" }),
 			github: new HttpClient({ ...clientOptions, category: "github" }),
 			tags: new HttpClient({ ...clientOptions, category: "tags" }),
+			blog: new HttpClient({ ...clientOptions, category: "blog" }),
+			media: new HttpClient({ ...clientOptions, category: "media" }),
 		} as const;
 	}
 
@@ -445,6 +455,147 @@ export class ApiClient {
 		 * List branches for a GitHub repository
 		 */
 		branches: (owner: string, repo: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`)),
+	};
+
+	public readonly blog = {
+		posts: {
+			list: (params?: Partial<PostListParams>): Promise<ApiResult<PostsResponse>> =>
+				wrap(() => {
+					const query: Record<string, string> = {};
+					if (params?.category) query.category = params.category;
+					if (params?.tag) query.tag = params.tag;
+					if (params?.project) query.project = params.project;
+					if (params?.status) query.status = params.status;
+					if (params?.archived !== undefined) query.archived = String(params.archived);
+					if (params?.limit) query.limit = String(params.limit);
+					if (params?.offset !== undefined) query.offset = String(params.offset);
+					if (params?.sort) query.sort = params.sort;
+					return this.clients.blog.get<PostsResponse>("/blog/posts", Object.keys(query).length ? { query } : {});
+				}),
+
+			getBySlug: (slug: string): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.get<Post>(`/blog/posts/${slug}`)),
+
+			create: (data: PostCreate): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.post<Post>("/blog/posts", { body: data })),
+
+			update: (uuid: string, data: PostUpdate): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.put<Post>(`/blog/posts/${uuid}`, { body: data })),
+
+			delete: (uuid: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.blog.delete<{ success: boolean }>(`/blog/posts/${uuid}`)),
+
+			versions: (uuid: string): Promise<ApiResult<{ versions: VersionInfo[] }>> => wrap(() => this.clients.blog.get<{ versions: VersionInfo[] }>(`/blog/posts/${uuid}/versions`)),
+
+			version: (uuid: string, hash: string): Promise<ApiResult<PostContent>> => wrap(() => this.clients.blog.get<PostContent>(`/blog/posts/${uuid}/version/${hash}`)),
+
+			restore: (uuid: string, hash: string): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.post<Post>(`/blog/posts/${uuid}/restore/${hash}`)),
+		},
+
+		tags: {
+			list: (): Promise<ApiResult<{ tags: TagWithCount[] }>> => wrap(() => this.clients.blog.get<{ tags: TagWithCount[] }>("/blog/tags")),
+
+			getForPost: (uuid: string): Promise<ApiResult<{ tags: string[] }>> => wrap(() => this.clients.blog.get<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`)),
+
+			setForPost: (uuid: string, tags: string[]): Promise<ApiResult<{ tags: string[] }>> => wrap(() => this.clients.blog.put<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
+
+			addToPost: (uuid: string, tags: string[]): Promise<ApiResult<{ tags: string[] }>> => wrap(() => this.clients.blog.post<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
+
+			removeFromPost: (uuid: string, tag: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete<void>(`/blog/tags/posts/${uuid}/tags/${tag}`)),
+		},
+
+		categories: {
+			tree: (): Promise<ApiResult<{ categories: Category[] }>> => wrap(() => this.clients.blog.get<{ categories: Category[] }>("/blog/categories")),
+
+			create: (data: CategoryCreate): Promise<ApiResult<Category>> => wrap(() => this.clients.blog.post<Category>("/blog/categories", { body: data })),
+
+			update: (name: string, data: { name: string }): Promise<ApiResult<Category>> => wrap(() => this.clients.blog.put<Category>(`/blog/categories/${name}`, { body: data })),
+
+			delete: (name: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete<void>(`/blog/categories/${name}`)),
+		},
+
+		tokens: {
+			list: (): Promise<ApiResult<{ tokens: SanitizedToken[] }>> => wrap(() => this.clients.blog.get<{ tokens: SanitizedToken[] }>("/blog/tokens")),
+
+			create: (data: AccessKeyCreate): Promise<ApiResult<CreatedToken>> => wrap(() => this.clients.blog.post<CreatedToken>("/blog/tokens", { body: data })),
+
+			update: (id: string, data: AccessKeyUpdate): Promise<ApiResult<AccessKey>> => wrap(() => this.clients.blog.put<AccessKey>(`/blog/tokens/${id}`, { body: data })),
+
+			delete: (id: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete<void>(`/blog/tokens/${id}`)),
+		},
+	};
+
+	public readonly media = {
+		profiles: {
+			list: (): Promise<ApiResult<Profile[]>> => wrap(() => this.clients.media.get<Profile[]>("/profiles")),
+
+			create: (data: CreateProfileInput): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.post<Profile>("/profiles", { body: data })),
+
+			get: (id: string): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.get<Profile>(`/profiles/${id}`)),
+
+			update: (id: string, data: UpdateProfileInput): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.patch<Profile>(`/profiles/${id}`, { body: data })),
+
+			delete: (id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/profiles/${id}`)),
+
+			filters: {
+				list: (profile_id: string): Promise<ApiResult<ProfileFilter[]>> => wrap(() => this.clients.media.get<ProfileFilter[]>(`/profiles/${profile_id}/filters`)),
+
+				add: (profile_id: string, data: AddFilterInput): Promise<ApiResult<ProfileFilter>> => wrap(() => this.clients.media.post<ProfileFilter>(`/profiles/${profile_id}/filters`, { body: data })),
+
+				remove: (profile_id: string, filter_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.media.delete<void>(`/profiles/${profile_id}/filters/${filter_id}`)),
+			},
+
+			timeline: (slug: string, params?: { limit?: number; before?: string }): Promise<ApiResult<Timeline>> =>
+				wrap(() => {
+					const query: Record<string, string> = {};
+					if (params?.limit) query.limit = String(params.limit);
+					if (params?.before) query.before = params.before;
+					return this.clients.media.get<Timeline>(`/profiles/${slug}/timeline`, Object.keys(query).length ? { query } : {});
+				}),
+		},
+
+		connections: {
+			list: (profile_id: string): Promise<ApiResult<Account[]>> => wrap(() => this.clients.media.get<Account[]>("/connections", { query: { profile_id } })),
+
+			create: (data: { profile_id: string; platform: string; access_token: string; refresh_token?: string; platform_user_id?: string; platform_username?: string; token_expires_at?: string }): Promise<ApiResult<Account>> =>
+				wrap(() => this.clients.media.post<Account>("/connections", { body: data })),
+
+			delete: (account_id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/connections/${account_id}`)),
+
+			refresh: (account_id: string): Promise<ApiResult<any>> => wrap(() => this.clients.media.post<any>(`/connections/${account_id}/refresh`)),
+
+			refreshAll: (): Promise<ApiResult<any>> => wrap(() => this.clients.media.post<any>("/connections/refresh-all")),
+
+			updateStatus: (account_id: string, is_active: boolean): Promise<ApiResult<Account>> => wrap(() => this.clients.media.patch<Account>(`/connections/${account_id}`, { body: { is_active } })),
+
+			settings: {
+				get: (account_id: string): Promise<ApiResult<PlatformSettings>> => wrap(() => this.clients.media.get<PlatformSettings>(`/connections/${account_id}/settings`)),
+
+				update: (account_id: string, settings: Record<string, unknown>): Promise<ApiResult<any>> => wrap(() => this.clients.media.put<any>(`/connections/${account_id}/settings`, { body: { settings } })),
+			},
+
+			repos: (account_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.media.get<any[]>(`/connections/${account_id}/repos`)),
+
+			subreddits: (account_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.media.get<any[]>(`/connections/${account_id}/subreddits`)),
+		},
+
+		credentials: {
+			check: (platform: string, profile_id: string): Promise<ApiResult<{ exists: boolean; isVerified: boolean; clientId: string | null }>> =>
+				wrap(() => this.clients.media.get<{ exists: boolean; isVerified: boolean; clientId: string | null }>(`/credentials/${platform}`, { query: { profile_id } })),
+
+			save: (platform: string, data: { profile_id: string; client_id: string; client_secret: string; redirect_uri?: string; reddit_username?: string }): Promise<ApiResult<{ success: boolean; id: string }>> =>
+				wrap(() => this.clients.media.post<{ success: boolean; id: string }>(`/credentials/${platform}`, { body: data })),
+
+			delete: (platform: string, profile_id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/credentials/${platform}`, { query: { profile_id } })),
+		},
+
+		timeline: {
+			get: (user_id: string, params?: { from?: string; to?: string }): Promise<ApiResult<Timeline>> =>
+				wrap(() => {
+					const query: Record<string, string> = {};
+					if (params?.from) query.from = params.from;
+					if (params?.to) query.to = params.to;
+					return this.clients.media.get<Timeline>(`/timeline/${user_id}`, Object.keys(query).length ? { query } : {});
+				}),
+
+			getRaw: (user_id: string, platform: string, account_id: string): Promise<ApiResult<any>> => wrap(() => this.clients.media.get<any>(`/timeline/${user_id}/raw/${platform}`, { query: { account_id } })),
+		},
 	};
 
 	/**

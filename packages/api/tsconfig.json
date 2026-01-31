@@ -28,7 +28,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
-			"@devpad/schema/*": ["../schema/src/*"]
+			"@devpad/schema": ["../schema/dist/index.d.ts"],
+			"@devpad/schema/*": ["../schema/dist/*"]
 		}
 	},
 	"include": ["src/**/*"],
