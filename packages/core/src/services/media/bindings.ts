@@ -2,9 +2,10 @@
 
 import type { Bindings } from "@devpad/schema/bindings";
 import * as schema from "@devpad/schema/database/media";
+import type { Backend } from "@f0rbit/corpus/cloudflare";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { drizzle } from "drizzle-orm/d1";
-import type { AppContext } from "./context";
+import type { AppContext, DrizzleDB, OAuthEnvCredentials } from "./context";
 import type { ProviderFactory } from "./platforms/types";
 
 export type { Bindings } from "@devpad/schema/bindings";
@@ -24,17 +25,34 @@ const toCorpusBackend = (env: Bindings): CorpusBackend => ({
 	r2: env.MEDIA_CORPUS_BUCKET as unknown as CorpusBackend["r2"],
 });
 
-export const createContextFromBindings = (env: Bindings, providerFactory: ProviderFactory): AppContext => ({
-	db: drizzle(env.DB, { schema }),
-	backend: create_cloudflare_backend(toCorpusBackend(env)),
-	providerFactory,
-	encryptionKey: env.ENCRYPTION_KEY,
-	env: {
-		REDDIT_CLIENT_ID: env.REDDIT_CLIENT_ID,
-		REDDIT_CLIENT_SECRET: env.REDDIT_CLIENT_SECRET,
-		TWITTER_CLIENT_ID: env.TWITTER_CLIENT_ID,
-		TWITTER_CLIENT_SECRET: env.TWITTER_CLIENT_SECRET,
-		GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
-		GITHUB_CLIENT_SECRET: env.GITHUB_CLIENT_SECRET,
-	},
+export type CreateContextDeps = {
+	db: DrizzleDB;
+	backend: Backend;
+	providerFactory: ProviderFactory;
+	encryptionKey: string;
+	env?: OAuthEnvCredentials;
+};
+
+export const createContext = (deps: CreateContextDeps): AppContext => ({
+	db: deps.db,
+	backend: deps.backend,
+	providerFactory: deps.providerFactory,
+	encryptionKey: deps.encryptionKey,
+	env: deps.env,
 });
+
+export const createContextFromBindings = (env: Bindings, providerFactory: ProviderFactory): AppContext =>
+	createContext({
+		db: drizzle(env.DB, { schema }),
+		backend: create_cloudflare_backend(toCorpusBackend(env)),
+		providerFactory,
+		encryptionKey: env.ENCRYPTION_KEY,
+		env: {
+			REDDIT_CLIENT_ID: env.REDDIT_CLIENT_ID,
+			REDDIT_CLIENT_SECRET: env.REDDIT_CLIENT_SECRET,
+			TWITTER_CLIENT_ID: env.TWITTER_CLIENT_ID,
+			TWITTER_CLIENT_SECRET: env.TWITTER_CLIENT_SECRET,
+			GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
+			GITHUB_CLIENT_SECRET: env.GITHUB_CLIENT_SECRET,
+		},
+	});

@@ -62,7 +62,8 @@
 	"scripts": {
 		"build": "tsc && cp -r src/database/drizzle dist/database/",
 		"dev": "tsc --watch",
-		"clean": "rm -rf dist"
+		"clean": "rm -rf dist",
+		"generate": "bunx drizzle-kit generate"
 	},
 	"dependencies": {
 		"@f0rbit/corpus": "^0.3.4",
@@ -73,6 +74,7 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241205.0",
 		"@types/node": "^20.11.24",
+		"drizzle-kit": "^0.31.0",
 		"typescript": "^5.3.3"
 	}
 }

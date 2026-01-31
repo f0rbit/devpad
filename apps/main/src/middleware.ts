@@ -106,7 +106,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	if (isTestEnv && hasTestHeader) {
 		log.middleware("🧪 TEST MODE: Injecting mock user");
 		// Import test user constants dynamically to avoid bundling in production
-		// @ts-expect-error
+		// @ts-expect-error - test-user.ts is outside rootDir, expected in test mode only
 		const { TEST_USER, TEST_SESSION, TEST_JWT_TOKEN } = await import("../../../tests/shared/test-user");
 
 		context.locals.user = TEST_USER as unknown as NonNullable<AuthUser>;
