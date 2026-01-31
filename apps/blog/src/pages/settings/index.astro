@@ -1,7 +1,7 @@
 ---
 import SettingsPage from "@/components/settings/settings-page";
 import AppLayout from "@/layouts/app-layout.astro";
-import { api } from "@/lib/api";
+import { ssr } from "@/lib/ssr";
 import type { AccessKey, User } from "@devpad/schema/blog";
 
 type Token = Pick<AccessKey, "id" | "name" | "note" | "enabled" | "created_at">;
@@ -9,23 +9,18 @@ type Token = Pick<AccessKey, "id" | "name" | "note" | "enabled" | "created_at">;
 let user: User | null = null;
 let tokens: Token[] = [];
 
-try {
-	const runtime = Astro.locals.runtime;
-	const [userRes, tokensRes] = await Promise.all([api.ssr("/api/auth/session", Astro.request, {}, runtime), api.ssr("/api/v1/blog/tokens", Astro.request, {}, runtime)]);
+const runtime = Astro.locals.runtime;
+const [userResult, tokensResult] = await Promise.all([
+	ssr<{ authenticated: boolean; user: User }>("/api/auth/session", Astro.request, {}, runtime),
+	ssr<{ tokens?: Token[] }>("/api/v1/blog/tokens", Astro.request, {}, runtime),
+]);
 
-	if (userRes.ok) {
-		const data = await userRes.json();
-		if (data.authenticated) {
-			user = data.user;
-		}
-	}
+if (userResult.ok && userResult.value.authenticated) {
+	user = userResult.value.user;
+}
 
-	if (tokensRes.ok) {
-		const data = await tokensRes.json();
-		tokens = data.tokens ?? [];
-	}
-} catch (e) {
-	// Settings fetch failed silently
+if (tokensResult.ok) {
+	tokens = tokensResult.value.tokens ?? [];
 }
 ---
 

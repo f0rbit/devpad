@@ -1,7 +1,7 @@
 import { Button, ChipInput } from "@f0rbit/ui";
 import type { Component } from "solid-js";
 import { createSignal, For, onMount, Show } from "solid-js";
-import { api } from "../../lib/api";
+import { getClient, unwrap } from "../../lib/client";
 import { date } from "../../lib/date-utils";
 import { form } from "../../lib/form-utils";
 import PostPreview from "./post-preview";
@@ -112,12 +112,9 @@ const PostEditor: Component<PostEditorProps> = props => {
 		// Fetch categories if not provided
 		if (props.categories && props.categories.length > 0) return;
 		try {
-			const response = await api.fetch("/api/v1/blog/categories");
-			if (response.ok) {
-				const data = (await response.json()) as { categories?: CategoryNode[] };
-				const flatCategories = flattenCategoryTree(data.categories ?? []);
-				setCategories(flatCategories);
-			}
+			const data = unwrap(await getClient().blog.categories.tree());
+			const flatCategories = flattenCategoryTree((data.categories ?? []) as CategoryNode[]);
+			setCategories(flatCategories);
 		} catch (e) {
 			console.error("[PostEditor] Failed to fetch categories:", e);
 		}
@@ -141,10 +138,8 @@ const PostEditor: Component<PostEditorProps> = props => {
 	};
 
 	const saveNewPost = async (data: PostFormData) => {
-		const response = await api.fetch("/api/v1/blog/posts", {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
+		const post = unwrap(
+			await getClient().blog.posts.create({
 				slug: data.slug,
 				title: data.title,
 				content: data.content,
@@ -153,16 +148,10 @@ const PostEditor: Component<PostEditorProps> = props => {
 				category: data.category,
 				tags: data.tags,
 				project_ids: data.project_ids,
-				publish_at: data.publish_at?.toISOString() ?? null,
-			}),
-		});
+				publish_at: data.publish_at ?? undefined,
+			})
+		);
 
-		if (!response.ok) {
-			const error = (await response.json().catch(() => ({ message: "Unknown error" }))) as { message?: string };
-			throw new Error(error.message ?? "Failed to create post");
-		}
-
-		const post = (await response.json()) as { slug: string };
 		window.location.href = `/posts/${post.slug}`;
 	};
 

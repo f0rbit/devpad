@@ -1,6 +1,6 @@
 import { Button, MultiSelect, type MultiSelectOption } from "@f0rbit/ui";
 import { createResource, createSignal } from "solid-js";
-import { api } from "@/lib/api";
+import { getClient, unwrap } from "@/lib/client";
 
 type Project = {
 	id: string;
@@ -18,10 +18,9 @@ type ProjectSelectorProps = {
 
 const fetchProjects = async (): Promise<Project[]> => {
 	if (typeof window === "undefined") return [];
-	const response = await api.fetch("/api/v1/projects");
-	if (!response.ok) return [];
-	const data: { projects?: Project[] } = await response.json();
-	return data.projects ?? [];
+	const result = await getClient().projects.list();
+	if (!result.ok) return [];
+	return result.value as Project[];
 };
 
 const ProjectSelector = (props: ProjectSelectorProps) => {
@@ -51,9 +50,7 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		try {
-			await api.fetch("/api/v1/projects", {
-				method: "GET",
-			});
+			await getClient().projects.list();
 			setFetchTrigger(n => n + 1);
 		} finally {
 			setRefreshing(false);

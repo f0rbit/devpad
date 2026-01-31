@@ -1,7 +1,7 @@
 ---
 import { Button } from "@f0rbit/ui";
 import AppLayout from "@/layouts/app-layout.astro";
-import { api } from "@/lib/api";
+import { ssr } from "@/lib/ssr";
 import { date } from "@/lib/date-utils";
 
 const { uuid } = Astro.params;
@@ -29,35 +29,29 @@ let error: string | null = null;
 
 const runtime = Astro.locals.runtime;
 
-try {
-	const versionsRes = await api.ssr(`/api/v1/blog/posts/${uuid}/versions`, Astro.request, {}, runtime);
+const versionsResult = await ssr<{ versions?: VersionInfo[] }>(`/api/v1/blog/posts/${uuid}/versions`, Astro.request, {}, runtime);
 
-	if (versionsRes.ok) {
-		const data = await versionsRes.json();
-		versions = (data.versions ?? []).map((v: VersionInfo) => ({
-			...v,
-			hash: normalizeHash(v.hash),
-			parent: v.parent ? normalizeHash(v.parent) : null,
-		}));
-	} else {
-		error = "Post not found";
-	}
+if (versionsResult.ok) {
+	versions = (versionsResult.value.versions ?? []).map((v: VersionInfo) => ({
+		...v,
+		hash: normalizeHash(v.hash),
+		parent: v.parent ? normalizeHash(v.parent) : null,
+	}));
+} else {
+	error = "Post not found";
+}
 
-	if (versions.length > 0) {
-		const postsRes = await api.ssr("/api/v1/blog/posts?limit=100", Astro.request, {}, runtime);
-		if (postsRes.ok) {
-			const postsData = await postsRes.json();
-			const post = postsData.posts?.find((p: { uuid: string }) => p.uuid === uuid);
-			if (post) {
-				postInfo = {
-					slug: post.slug,
-					corpus_version: normalizeHash(post.corpus_version),
-				};
-			}
+if (versions.length > 0) {
+	const postsResult = await ssr<{ posts?: { uuid: string; slug: string; corpus_version: string }[] }>("/api/v1/blog/posts?limit=100", Astro.request, {}, runtime);
+	if (postsResult.ok) {
+		const post = postsResult.value.posts?.find((p) => p.uuid === uuid);
+		if (post) {
+			postInfo = {
+				slug: post.slug,
+				corpus_version: normalizeHash(post.corpus_version),
+			};
 		}
 	}
-} catch (e) {
-	error = "Failed to load version history";
 }
 
 const currentHash = postInfo?.corpus_version ?? (versions.length > 0 ? versions[0].hash : null);
@@ -139,7 +133,7 @@ const backUrl = postInfo ? `/posts/${postInfo.slug}` : "/posts";
 	</section>
 </AppLayout>
 
-<script is:inline define:vars={{ API_URL: api.blog("") }}>
+<script is:inline define:vars={{ API_URL: "/api/v1/blog" }}>
 	function formatBytes(bytes) {
 		if (bytes === 0) return "0 B";
 		const k = 1024;

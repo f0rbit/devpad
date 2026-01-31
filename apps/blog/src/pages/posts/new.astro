@@ -1,7 +1,7 @@
 ---
 import PostEditor from "@/components/post/post-editor";
 import AppLayout from "@/layouts/app-layout.astro";
-import { api } from "@/lib/api";
+import { ssr } from "@/lib/ssr";
 
 interface CategoryNode {
 	name: string;
@@ -26,21 +26,18 @@ const flattenTree = (nodes: CategoryNode[]): Category[] => nodes.flatMap(n => [{
 let categories: Category[] = [];
 let projects: Project[] = [];
 
-try {
-	const runtime = Astro.locals.runtime;
-	const [catRes, projRes] = await Promise.all([api.ssr("/api/v1/blog/categories", Astro.request, {}, runtime), api.ssr("/api/v1/projects", Astro.request, {}, runtime)]);
+const runtime = Astro.locals.runtime;
+const [catResult, projResult] = await Promise.all([
+	ssr<{ categories?: CategoryNode[] }>("/api/v1/blog/categories", Astro.request, {}, runtime),
+	ssr<{ projects?: Project[] }>("/api/v1/projects", Astro.request, {}, runtime),
+]);
 
-	if (catRes.ok) {
-		const data = (await catRes.json()) as { categories?: CategoryNode[] };
-		categories = flattenTree(data.categories ?? []);
-	}
+if (catResult.ok) {
+	categories = flattenTree(catResult.value.categories ?? []);
+}
 
-	if (projRes.ok) {
-		const data = (await projRes.json()) as { projects?: Project[] };
-		projects = data.projects ?? [];
-	}
-} catch (e) {
-	// Fetch failed silently
+if (projResult.ok) {
+	projects = projResult.value.projects ?? [];
 }
 ---
 

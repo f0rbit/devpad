@@ -2,7 +2,7 @@
 import { Button } from "@f0rbit/ui";
 import PostEditor from "@/components/post/post-editor";
 import AppLayout from "@/layouts/app-layout.astro";
-import { api } from "@/lib/api";
+import { ssr } from "@/lib/ssr";
 
 const { slug } = Astro.params;
 
@@ -44,30 +44,24 @@ let error: string | null = null;
 
 const runtime = Astro.locals.runtime;
 
-try {
-	const [postRes, catRes, projRes] = await Promise.all([
-		api.ssr(`/api/v1/blog/posts/${slug}`, Astro.request, {}, runtime),
-		api.ssr("/api/v1/blog/categories", Astro.request, {}, runtime),
-		api.ssr("/api/v1/projects", Astro.request, {}, runtime),
-	]);
+const [postResult, catResult, projResult] = await Promise.all([
+	ssr<Post>(`/api/v1/blog/posts/${slug}`, Astro.request, {}, runtime),
+	ssr<{ categories?: CategoryNode[] }>("/api/v1/blog/categories", Astro.request, {}, runtime),
+	ssr<{ projects?: Project[] }>("/api/v1/projects", Astro.request, {}, runtime),
+]);
 
-	if (postRes.ok) {
-		post = await postRes.json();
-	} else {
-		error = "Post not found";
-	}
+if (postResult.ok) {
+	post = postResult.value;
+} else {
+	error = "Post not found";
+}
 
-	if (catRes.ok) {
-		const catData = (await catRes.json()) as { categories?: CategoryNode[] };
-		categories = flattenTree(catData.categories ?? []);
-	}
+if (catResult.ok) {
+	categories = flattenTree(catResult.value.categories ?? []);
+}
 
-	if (projRes.ok) {
-		const projData = (await projRes.json()) as { projects?: Project[] };
-		projects = projData.projects ?? [];
-	}
-} catch (e) {
-	error = "Failed to load post";
+if (projResult.ok) {
+	projects = projResult.value.projects ?? [];
 }
 ---
 
@@ -106,7 +100,7 @@ try {
 	}
 </style>
 
-<script is:inline define:vars={{ API_BASE: api.blog("") }}>
+<script is:inline define:vars={{ API_BASE: "/api/v1/blog" }}>
 	// Define postEditorReady BEFORE DOMContentLoaded to avoid race condition
 	// PostEditor will call this when it's ready
 	var postEditorState = {

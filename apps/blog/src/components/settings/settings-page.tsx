@@ -1,7 +1,7 @@
 import type { AccessKey, User as SchemaUser } from "@devpad/schema/blog";
 import { Button } from "@f0rbit/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
-import { api } from "@/lib/api";
+import { getClient, unwrap } from "@/lib/client";
 import { date } from "../../lib/date-utils";
 import DevpadConnection from "./devpad-connection";
 import TokenForm from "./token-form";
@@ -50,8 +50,8 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 
 	const fetchTokens = async () => {
 		try {
-			const data = await api.json<{ tokens?: Token[] }>("/api/v1/blog/tokens");
-			setTokens(data.tokens ?? []);
+			const data = unwrap(await getClient().blog.tokens.list());
+			setTokens((data.tokens ?? []) as Token[]);
 		} catch {
 			setTokensError("Failed to fetch tokens");
 		} finally {
@@ -68,7 +68,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 	const handleToggle = async (id: number, enabled: boolean) => {
 		setTokensError(null);
 		try {
-			await api.put(`/api/v1/blog/tokens/${id}`, { enabled });
+			unwrap(await getClient().blog.tokens.update(String(id), { enabled }));
 			refetchTokens();
 		} catch {
 			setTokensError("Failed to update token");
@@ -78,7 +78,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 	const handleDelete = async (id: number) => {
 		setTokensError(null);
 		try {
-			await api.delete(`/api/v1/blog/tokens/${id}`);
+			unwrap(await getClient().blog.tokens.delete(String(id)));
 			refetchTokens();
 		} catch {
 			setTokensError("Failed to delete token");
@@ -86,9 +86,9 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 	};
 
 	const handleCreate = async (data: { name: string; note?: string }): Promise<{ key: string }> => {
-		const result = await api.post<{ key: string }>("/api/v1/blog/tokens", data);
+		const result = unwrap(await getClient().blog.tokens.create(data));
 		refetchTokens();
-		return result;
+		return { key: result.token };
 	};
 
 	const handleIntegrationClick = (integration: IntegrationDisplay) => {

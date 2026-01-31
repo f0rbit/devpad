@@ -1,6 +1,6 @@
 ---
 import AuthStatus from "../components/layout/auth-status";
-import { api } from "../lib/api";
+import { ssr } from "../lib/ssr";
 import BaseLayout from "./base-layout.astro";
 
 interface Props {
@@ -24,16 +24,11 @@ const isActive = (href: string) => {
 let authUser = null;
 let authAuthenticated = false;
 
-try {
-	const runtime = Astro.locals.runtime;
-	const authRes = await api.ssr("/api/auth/session", Astro.request, {}, runtime);
-	if (authRes.ok) {
-		const data = await authRes.json();
-		authAuthenticated = data.authenticated;
-		authUser = data.user;
-	}
-} catch (e) {
-	// Auth fetch failed silently
+const runtime = Astro.locals.runtime;
+const authResult = await ssr<{ authenticated: boolean; user: any }>("/api/auth/session", Astro.request, {}, runtime);
+if (authResult.ok) {
+	authAuthenticated = authResult.value.authenticated;
+	authUser = authResult.value.user;
 }
 ---
 
