@@ -11,7 +11,7 @@ import { unifiedContextMiddleware } from "./middleware/context.js";
 import { dbMiddleware } from "./middleware/db.js";
 import { requestContextMiddleware } from "./middleware/request-context.js";
 import authRoutes from "./routes/auth.js";
-import v1Routes from "./routes/v1.js";
+import v1Routes from "./routes/v1/index.js";
 
 export type ApiOptions = {
 	db?: UnifiedDatabase;
