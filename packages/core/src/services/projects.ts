@@ -172,28 +172,19 @@ export async function upsertProject(db: Database, data: UpsertProject, owner_id:
 
 	const exists = !!previous;
 
-	const upsert = {
-		...data,
-		id: data.id === "" || data.id == null ? undefined : data.id,
-		updated_at: new Date().toISOString(),
-		owner_id: final_owner_id,
-	};
-
-	const clean_upsert = Object.fromEntries(Object.entries(upsert).filter(([_, value]) => value !== null)) as typeof upsert;
+	const { id: raw_id, ...fields } = data;
+	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id: final_owner_id };
 
 	let result: Project | null = null;
-	if (exists && clean_upsert.id) {
-		const update_result = await db
-			.update(project)
-			.set(clean_upsert as any)
-			.where(eq(project.id, clean_upsert.id))
-			.returning();
+	if (exists && id) {
+		const update_result = await db.update(project).set(upsert).where(eq(project.id, id)).returning();
 		result = update_result[0] || null;
 	} else {
 		const insert_result = await db
 			.insert(project)
-			.values(clean_upsert as any)
-			.onConflictDoUpdate({ target: [project.id], set: clean_upsert as any })
+			.values(upsert)
+			.onConflictDoUpdate({ target: [project.id], set: upsert })
 			.returning();
 		result = insert_result[0] || null;
 	}

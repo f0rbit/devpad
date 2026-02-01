@@ -176,26 +176,19 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const exists = !!previous;
 	const project_id = data.project_id ?? previous?.project_id ?? null;
 
-	const upsert = {
-		...data,
-		updated_at: new Date().toISOString(),
-		owner_id,
-	};
-	if (upsert.id === "" || upsert.id == null) delete upsert.id;
+	const { id: raw_id, ...fields } = data;
+	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id };
 
 	let result: Task["task"] | null = null;
-	if (exists && upsert.id) {
-		const update_result = await db
-			.update(task)
-			.set(upsert as any)
-			.where(eq(task.id, upsert.id))
-			.returning();
+	if (exists && id) {
+		const update_result = await db.update(task).set(upsert).where(eq(task.id, id)).returning();
 		result = update_result[0] || null;
 	} else {
 		const insert_result = await db
 			.insert(task)
-			.values(upsert as any)
-			.onConflictDoUpdate({ target: [task.id], set: upsert as any })
+			.values(upsert)
+			.onConflictDoUpdate({ target: [task.id], set: upsert })
 			.returning();
 		result = insert_result[0] || null;
 	}

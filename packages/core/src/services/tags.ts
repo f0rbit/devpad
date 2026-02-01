@@ -37,16 +37,14 @@ export async function getTaskTags(db: Database, task_id: string): Promise<Result
 }
 
 export async function upsertTag(db: Database, data: UpsertTag): Promise<Result<string, ServiceError>> {
-	const upsert = {
-		...data,
-		updated_at: new Date().toISOString(),
-	};
-	if (upsert.id === "" || upsert.id == null) delete upsert.id;
+	const { id: raw_id, ...fields } = data;
+	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString() };
 
 	const result = await db
 		.insert(tag)
-		.values(upsert as any)
-		.onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: upsert as any })
+		.values(upsert)
+		.onConflictDoUpdate({ target: [tag.owner_id, tag.title], set: upsert })
 		.returning();
 
 	if (!result[0]?.id) return err({ kind: "db_error", message: "Tag upsert returned no result" });

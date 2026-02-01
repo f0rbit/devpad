@@ -54,25 +54,19 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 	}
 
 	const exists = !!previous;
-	const upsert = {
-		...data,
-		updated_at: new Date().toISOString(),
-	};
-	if (upsert.id === "" || upsert.id == null) delete upsert.id;
+	const { id: raw_id, ...fields } = data;
+	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString() };
 
 	let result: Milestone | null = null;
-	if (exists && upsert.id) {
-		const update_result = await db
-			.update(milestone)
-			.set(upsert as any)
-			.where(eq(milestone.id, upsert.id))
-			.returning();
+	if (exists && id) {
+		const update_result = await db.update(milestone).set(upsert).where(eq(milestone.id, id)).returning();
 		result = update_result[0] || null;
 	} else {
 		const insert_result = await db
 			.insert(milestone)
-			.values(upsert as any)
-			.onConflictDoUpdate({ target: [milestone.id], set: upsert as any })
+			.values(upsert)
+			.onConflictDoUpdate({ target: [milestone.id], set: upsert })
 			.returning();
 		result = insert_result[0] || null;
 	}

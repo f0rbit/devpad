@@ -6,11 +6,8 @@ import { eq } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 
 export async function updateUserPreferences(db: Database, user_id: string, updates: UpdateUser): Promise<Result<User, ServiceError>> {
-	const result = await db
-		.update(user)
-		.set(updates as any)
-		.where(eq(user.id, user_id))
-		.returning();
+	const { id: _, ...fields } = updates;
+	const result = await db.update(user).set(fields).where(eq(user.id, user_id)).returning();
 
 	if (!result[0]) return err({ kind: "not_found", resource: "user", id: user_id });
 	return ok(result[0]);
