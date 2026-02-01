@@ -22,7 +22,6 @@ import mediaRoutes from "./routes/v1/media/index.js";
 
 export type ApiOptions = {
 	db?: UnifiedDatabase;
-	contexts?: boolean;
 	blogContext?: BlogAppContext;
 	mediaContext?: MediaAppContext;
 	config?: AppConfig;
@@ -96,7 +95,7 @@ export const createApi = (options?: ApiOptions) => {
 			c.set("mediaContext", media_ctx);
 			await next();
 		});
-	} else if (options?.contexts !== false) {
+	} else {
 		app.use("*", unifiedContextMiddleware);
 	}
 

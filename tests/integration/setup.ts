@@ -4,15 +4,16 @@
  */
 
 import { afterAll, beforeAll } from "bun:test";
+import fs from "node:fs";
 import path from "node:path";
 import ApiClient from "@devpad/api";
-import { cleanupTestDatabase, createTestUser, DEBUG_LOGGING, log, setupTestDatabase, TEST_USER_ID, waitForServer } from "../shared/test-utils";
+import { cleanupTestDatabase, createTestUser, DEBUG_LOGGING, log, TEST_USER_ID, waitForServer } from "../shared/test-utils";
 
 export const TEST_BASE_URL = "http://localhost:3001/api/v1";
 export { TEST_USER_ID, DEBUG_LOGGING };
 
 // Global shared server state
-let honoServer: any = null;
+let honoServer: ReturnType<typeof Bun.serve> | null = null;
 let testApiKey: string | null = null;
 let testClient: ApiClient | null = null;
 let setupPromise: Promise<void> | null = null;
@@ -33,13 +34,16 @@ async function performSetup(): Promise<void> {
 	process.env.DATABASE_URL = `sqlite://${dbPath}`;
 	process.env.DATABASE_FILE = dbPath;
 
-	// Setup test database
-	await setupTestDatabase(dbPath);
-	log("✅ Test database setup complete");
+	const dbDir = path.dirname(dbPath);
+	if (!fs.existsSync(dbDir)) {
+		fs.mkdirSync(dbDir, { recursive: true });
+	}
+	if (fs.existsSync(dbPath)) {
+		fs.unlinkSync(dbPath);
+	}
 
-	// Start Hono server
 	await startHonoServer();
-	log("✅ Hono server started and ready");
+	log("Hono server started and ready");
 
 	// Create test user and API key
 	testApiKey = await createTestUser(dbPath);

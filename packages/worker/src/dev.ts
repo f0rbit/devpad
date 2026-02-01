@@ -71,7 +71,6 @@ export function createBunApp(options: BunServerOptions) {
 
 	const app = createApi({
 		db,
-		contexts: false,
 		blogContext: blog_context,
 		mediaContext: media_context,
 		config,
