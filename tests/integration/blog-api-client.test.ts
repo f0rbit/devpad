@@ -1,44 +1,41 @@
 import { describe, expect, test } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { setupIntegration } from "../shared/base-integration-test";
 
-class BlogIntegrationTest extends BaseIntegrationTest {}
-
-const testInstance = new BlogIntegrationTest();
-setupBaseIntegrationTest(testInstance);
+const t = setupIntegration();
 
 const uniqueSlug = () => `test-post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("blog API client integration", () => {
 	test("should verify blog client namespace exists", () => {
-		expect(testInstance.client.blog).toBeDefined();
-		expect(testInstance.client.blog.posts).toBeDefined();
-		expect(testInstance.client.blog.tags).toBeDefined();
-		expect(testInstance.client.blog.categories).toBeDefined();
-		expect(testInstance.client.blog.tokens).toBeDefined();
+		expect(t.client.blog).toBeDefined();
+		expect(t.client.blog.posts).toBeDefined();
+		expect(t.client.blog.tags).toBeDefined();
+		expect(t.client.blog.categories).toBeDefined();
+		expect(t.client.blog.tokens).toBeDefined();
 	});
 
 	test("should list blog posts (empty)", async () => {
-		const result = await testInstance.client.blog.posts.list();
+		const result = await t.client.blog.posts.list();
 		expect(result.ok).toBe(true);
 	});
 
 	test("should get blog category tree", async () => {
-		const result = await testInstance.client.blog.categories.tree();
+		const result = await t.client.blog.categories.tree();
 		expect(result.ok).toBe(true);
 	});
 
 	test("should list blog tags (empty)", async () => {
-		const result = await testInstance.client.blog.tags.list();
+		const result = await t.client.blog.tags.list();
 		expect(result.ok).toBe(true);
 	});
 
 	test("should list blog tokens", async () => {
-		const result = await testInstance.client.blog.tokens.list();
+		const result = await t.client.blog.tokens.list();
 		expect(result.ok).toBe(true);
 	});
 
 	test("should create a blog post", async () => {
-		const result = await testInstance.client.blog.posts.create({
+		const result = await t.client.blog.posts.create({
 			slug: uniqueSlug(),
 			title: "Test Post",
 			content: "# Hello",
@@ -50,7 +47,7 @@ describe("blog API client integration", () => {
 	});
 
 	test("should create a blog token", async () => {
-		const result = await testInstance.client.blog.tokens.create({
+		const result = await t.client.blog.tokens.create({
 			name: `test-token-${Date.now()}`,
 			note: "Integration test",
 		});
@@ -62,7 +59,7 @@ describe("blog API client integration", () => {
 		const slug = uniqueSlug();
 
 		test("should create a post", async () => {
-			const result = await testInstance.client.blog.posts.create({
+			const result = await t.client.blog.posts.create({
 				slug,
 				title: "CRUD Test Post",
 				content: "# CRUD Test\nThis is a test post for CRUD operations.",
@@ -79,7 +76,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should get post by slug", async () => {
-			const result = await testInstance.client.blog.posts.getBySlug(slug);
+			const result = await t.client.blog.posts.getBySlug(slug);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.uuid).toBe(post_uuid);
@@ -89,7 +86,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should list posts", async () => {
-			const result = await testInstance.client.blog.posts.list();
+			const result = await t.client.blog.posts.list();
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.posts.length).toBeGreaterThanOrEqual(1);
@@ -99,7 +96,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should list posts with filters", async () => {
-			const result = await testInstance.client.blog.posts.list({ limit: 1, offset: 0 });
+			const result = await t.client.blog.posts.list({ limit: 1, offset: 0 });
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.posts.length).toBeLessThanOrEqual(1);
@@ -107,7 +104,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should update a post", async () => {
-			const result = await testInstance.client.blog.posts.update(post_uuid, {
+			const result = await t.client.blog.posts.update(post_uuid, {
 				title: "Updated CRUD Test Post",
 			});
 			expect(result.ok).toBe(true);
@@ -118,7 +115,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should delete a post", async () => {
-			const result = await testInstance.client.blog.posts.delete(post_uuid);
+			const result = await t.client.blog.posts.delete(post_uuid);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.success).toBe(true);
@@ -126,14 +123,14 @@ describe("blog API client integration", () => {
 		});
 
 		test("should return error for deleted post slug", async () => {
-			const result = await testInstance.client.blog.posts.getBySlug(slug);
+			const result = await t.client.blog.posts.getBySlug(slug);
 			expect(result.ok).toBe(false);
 		});
 	});
 
 	describe("categories", () => {
 		test("should get category tree", async () => {
-			const result = await testInstance.client.blog.categories.tree();
+			const result = await t.client.blog.categories.tree();
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.categories).toBeDefined();
@@ -142,7 +139,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should create a category", async () => {
-			const result = await testInstance.client.blog.categories.create({ name: "test-cat" });
+			const result = await t.client.blog.categories.create({ name: "test-cat" });
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.name).toBe("test-cat");
@@ -150,7 +147,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should update a category", async () => {
-			const result = await testInstance.client.blog.categories.update("test-cat", { name: "renamed-cat" });
+			const result = await t.client.blog.categories.update("test-cat", { name: "renamed-cat" });
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.name).toBe("renamed-cat");
@@ -158,7 +155,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should delete a category", async () => {
-			const result = await testInstance.client.blog.categories.delete("renamed-cat");
+			const result = await t.client.blog.categories.delete("renamed-cat");
 			expect(result.ok).toBe(true);
 		});
 	});
@@ -168,7 +165,7 @@ describe("blog API client integration", () => {
 		const tag_slug = uniqueSlug();
 
 		test("should create a post for tag operations", async () => {
-			const result = await testInstance.client.blog.posts.create({
+			const result = await t.client.blog.posts.create({
 				slug: tag_slug,
 				title: "Tag Test Post",
 				content: "# Tags\nPost for testing tag operations.",
@@ -183,7 +180,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should add tags to a post", async () => {
-			const result = await testInstance.client.blog.tags.addToPost(tag_post_uuid, ["tag1", "tag2"]);
+			const result = await t.client.blog.tags.addToPost(tag_post_uuid, ["tag1", "tag2"]);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.tags).toContain("tag1");
@@ -192,7 +189,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should get tags for a post", async () => {
-			const result = await testInstance.client.blog.tags.getForPost(tag_post_uuid);
+			const result = await t.client.blog.tags.getForPost(tag_post_uuid);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.tags).toContain("tag1");
@@ -201,7 +198,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should set tags for a post (replace all)", async () => {
-			const result = await testInstance.client.blog.tags.setForPost(tag_post_uuid, ["tag3"]);
+			const result = await t.client.blog.tags.setForPost(tag_post_uuid, ["tag3"]);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.tags).toContain("tag3");
@@ -211,12 +208,12 @@ describe("blog API client integration", () => {
 		});
 
 		test("should remove a tag from a post", async () => {
-			const result = await testInstance.client.blog.tags.removeFromPost(tag_post_uuid, "tag3");
+			const result = await t.client.blog.tags.removeFromPost(tag_post_uuid, "tag3");
 			expect(result.ok).toBe(true);
 		});
 
 		test("should list tags", async () => {
-			const result = await testInstance.client.blog.tags.list();
+			const result = await t.client.blog.tags.list();
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.tags).toBeDefined();
@@ -225,7 +222,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("cleanup: delete tag test post", async () => {
-			const result = await testInstance.client.blog.posts.delete(tag_post_uuid);
+			const result = await t.client.blog.posts.delete(tag_post_uuid);
 			expect(result.ok).toBe(true);
 		});
 	});
@@ -234,7 +231,7 @@ describe("blog API client integration", () => {
 		let created_token_id = "";
 
 		test("should list tokens", async () => {
-			const result = await testInstance.client.blog.tokens.list();
+			const result = await t.client.blog.tokens.list();
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.tokens).toBeDefined();
@@ -243,7 +240,7 @@ describe("blog API client integration", () => {
 		});
 
 		test("should create a token", async () => {
-			const result = await testInstance.client.blog.tokens.create({
+			const result = await t.client.blog.tokens.create({
 				name: `test-token-crud-${Date.now()}`,
 				note: "Integration test token",
 			});
@@ -257,7 +254,7 @@ describe("blog API client integration", () => {
 
 		test("cleanup: delete created token", async () => {
 			if (!created_token_id) return;
-			const result = await testInstance.client.blog.tokens.delete(created_token_id);
+			const result = await t.client.blog.tokens.delete(created_token_id);
 			expect(result.ok).toBe(true);
 		});
 	});

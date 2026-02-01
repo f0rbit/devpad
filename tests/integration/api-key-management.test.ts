@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { setupIntegration } from "../shared/base-integration-test";
 
-class ApiKeyManagementTest extends BaseIntegrationTest {}
-
-// Setup test instance
-const testInstance = new ApiKeyManagementTest();
-setupBaseIntegrationTest(testInstance);
+const t = setupIntegration();
 
 describe("API Key Management Integration", () => {
 	describe("API Key Creation", () => {
@@ -14,7 +10,7 @@ describe("API Key Management Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "POST",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
@@ -46,10 +42,10 @@ describe("API Key Management Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "POST",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
-					body: JSON.stringify({}), // No name provided
+					body: JSON.stringify({}),
 				});
 
 				if (response.status === 404 || response.status === 501) {
@@ -61,7 +57,6 @@ describe("API Key Management Integration", () => {
 					const result = (await response.json()) as any;
 					expect(result).toBeDefined();
 					expect(result.key).toBeDefined();
-					// Should have a default or generated name
 				}
 			} catch (error) {
 				console.warn("API key creation endpoint not available:", error);
@@ -75,7 +70,7 @@ describe("API Key Management Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "GET",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 				});
@@ -101,11 +96,10 @@ describe("API Key Management Integration", () => {
 	describe("API Key Deletion", () => {
 		test("should delete API key by ID", async () => {
 			try {
-				// First try to create a key to delete
 				const createResponse = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "POST",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
@@ -122,11 +116,10 @@ describe("API Key Management Integration", () => {
 					const createdKey = (await createResponse.json()) as any;
 					const keyId = createdKey.id;
 
-					// Now try to delete it
 					const deleteResponse = await fetch(`http://localhost:3001/api/v1/keys/${keyId}`, {
 						method: "DELETE",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 					});
@@ -148,13 +141,12 @@ describe("API Key Management Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/keys/non-existent-key", {
 					method: "DELETE",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 				});
 
 				if (response.status === 404) {
-					// This is expected for non-existent keys
 					expect(response.status).toBe(404);
 				} else if (response.status === 501) {
 					console.warn("API key management endpoints not implemented");
@@ -168,18 +160,13 @@ describe("API Key Management Integration", () => {
 	describe("API Key Validation", () => {
 		test("should reject API key creation with invalid data", async () => {
 			try {
-				const invalidPayloads = [
-					{ name: "" }, // Empty name
-					{ name: "x".repeat(200) }, // Too long name
-					{ name: null }, // Null name
-					{ invalidField: "test" }, // Invalid field
-				];
+				const invalidPayloads = [{ name: "" }, { name: "x".repeat(200) }, { name: null }, { invalidField: "test" }];
 
 				for (const payload of invalidPayloads) {
 					const response = await fetch("http://localhost:3001/api/v1/keys", {
 						method: "POST",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify(payload),
@@ -190,7 +177,6 @@ describe("API Key Management Integration", () => {
 						break;
 					}
 
-					// Should either succeed (if validation is lenient) or fail with 400
 					expect([200, 201, 400]).toContain(response.status);
 				}
 			} catch (error) {
@@ -202,7 +188,6 @@ describe("API Key Management Integration", () => {
 	describe("API Key Security", () => {
 		test("should require authentication for key operations", async () => {
 			try {
-				// Test without authentication
 				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "GET",
 					headers: {
@@ -210,7 +195,6 @@ describe("API Key Management Integration", () => {
 					},
 				});
 
-				// Should require authentication
 				expect([401, 403, 404]).toContain(response.status);
 			} catch (error) {
 				console.warn("API key security test not available:", error);
@@ -222,7 +206,7 @@ describe("API Key Management Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/keys", {
 					method: "GET",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 				});
@@ -237,11 +221,9 @@ describe("API Key Management Integration", () => {
 					const keys = result.keys || result;
 
 					if (Array.isArray(keys) && keys.length > 0) {
-						// API keys in list should be masked or not include the full key
 						for (const key of keys) {
 							if (key.key) {
-								// Should be masked like "ak_xxx...xxx" or not include full key
-								expect(key.key).not.toContain(testInstance.client.getApiKey());
+								expect(key.key).not.toContain(t.client.getApiKey());
 							}
 						}
 					}
@@ -255,12 +237,11 @@ describe("API Key Management Integration", () => {
 	describe("API Key Usage Scenarios", () => {
 		test("should handle concurrent key operations", async () => {
 			try {
-				// Test creating multiple keys concurrently
 				const createPromises = Array.from({ length: 3 }, (_, i) =>
 					fetch("http://localhost:3001/api/v1/keys", {
 						method: "POST",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
@@ -271,13 +252,11 @@ describe("API Key Management Integration", () => {
 
 				const responses = await Promise.all(createPromises);
 
-				// Check if endpoint exists
 				if (responses[0].status === 404 || responses[0].status === 501) {
 					console.warn("API key management endpoints not implemented");
 					return;
 				}
 
-				// All should either succeed or fail gracefully
 				for (const response of responses) {
 					expect([200, 201, 400, 429, 500]).toContain(response.status);
 				}
@@ -290,12 +269,11 @@ describe("API Key Management Integration", () => {
 	describe("API Key Rate Limiting", () => {
 		test("should handle rapid key creation requests", async () => {
 			try {
-				// Test rapid key creation (potential rate limiting scenario)
 				const rapidRequests = Array.from({ length: 10 }, (_, i) =>
 					fetch("http://localhost:3001/api/v1/keys", {
 						method: "POST",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
@@ -306,20 +284,17 @@ describe("API Key Management Integration", () => {
 
 				const responses = await Promise.all(rapidRequests);
 
-				// Check if endpoint exists
 				if (responses[0].status === 404 || responses[0].status === 501) {
 					console.warn("API key management endpoints not implemented");
 					return;
 				}
 
-				// Should handle gracefully - either succeed or rate limit
 				const statusCodes = responses.map(r => r.status);
 				const hasRateLimit = statusCodes.some(status => status === 429);
 				const hasSuccess = statusCodes.some(status => [200, 201].includes(status));
 				const hasValidResponses = statusCodes.every(status => [200, 201, 400, 429, 500].includes(status));
 
 				expect(hasValidResponses).toBe(true);
-				// Either all succeed or some are rate limited
 				expect(hasSuccess || hasRateLimit).toBe(true);
 			} catch (error) {
 				console.warn("API key rate limiting test not available:", error);

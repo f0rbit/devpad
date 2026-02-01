@@ -78,26 +78,6 @@ export async function getSharedApiClient(): Promise<ApiClient> {
 }
 
 /**
- * Legacy function for backward compatibility - now uses lazy initialization
- */
-export async function setupIntegrationTests(): Promise<ApiClient> {
-	return await getSharedApiClient();
-}
-
-/**
- * No-op teardown since server cleanup is handled globally
- */
-export async function teardownIntegrationTests(): Promise<void> {
-	// No-op - global teardown handles server cleanup
-	return;
-}
-
-/**
- * Legacy export for compatibility
- */
-export { getSharedApiClient as testClient };
-
-/**
  * Perform cleanup of server and database
  */
 export async function performCleanup(): Promise<void> {

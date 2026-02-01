@@ -1,29 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { setupIntegration } from "../shared/base-integration-test";
 import { TEST_USER_ID } from "./setup";
 
-class MediaIntegrationTest extends BaseIntegrationTest {}
-
-const testInstance = new MediaIntegrationTest();
-setupBaseIntegrationTest(testInstance);
+const t = setupIntegration();
 
 const uniqueSlug = () => `test-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("media API client integration", () => {
 	test("should verify media client namespace exists", () => {
-		expect(testInstance.client.media).toBeDefined();
-		expect(testInstance.client.media.profiles).toBeDefined();
-		expect(testInstance.client.media.connections).toBeDefined();
-		expect(testInstance.client.media.timeline).toBeDefined();
+		expect(t.client.media).toBeDefined();
+		expect(t.client.media.profiles).toBeDefined();
+		expect(t.client.media.connections).toBeDefined();
+		expect(t.client.media.timeline).toBeDefined();
 	});
 
 	test("should list media profiles (empty)", async () => {
-		const result = await testInstance.client.media.profiles.list();
+		const result = await t.client.media.profiles.list();
 		expect(result.ok).toBe(true);
 	});
 
 	test("should create a media profile", async () => {
-		const result = await testInstance.client.media.profiles.create({
+		const result = await t.client.media.profiles.create({
 			slug: uniqueSlug(),
 			name: "Test Media Profile",
 		});
@@ -31,8 +28,7 @@ describe("media API client integration", () => {
 	});
 
 	test("should get media timeline (returns error with empty data)", async () => {
-		const result = await testInstance.client.media.timeline.get(TEST_USER_ID);
-		// Timeline service errors when no accounts exist -- expected for empty test DB
+		const result = await t.client.media.timeline.get(TEST_USER_ID);
 		expect(result.ok).toBe(false);
 	});
 
@@ -41,7 +37,7 @@ describe("media API client integration", () => {
 		const slug = uniqueSlug();
 
 		test("should create a profile", async () => {
-			const result = await testInstance.client.media.profiles.create({
+			const result = await t.client.media.profiles.create({
 				slug,
 				name: "CRUD Test Profile",
 				description: "Profile for CRUD lifecycle test",
@@ -49,7 +45,6 @@ describe("media API client integration", () => {
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 
-			// Response is { profile: {...} } from the service layer
 			const value = result.value as any;
 			const profile_data = value.profile ?? value;
 			created_id = profile_data.id;
@@ -61,7 +56,7 @@ describe("media API client integration", () => {
 
 		test("should get profile by id", async () => {
 			expect(created_id).not.toBe("");
-			const result = await testInstance.client.media.profiles.get(created_id);
+			const result = await t.client.media.profiles.get(created_id);
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 
@@ -71,11 +66,10 @@ describe("media API client integration", () => {
 		});
 
 		test("should list profiles", async () => {
-			const result = await testInstance.client.media.profiles.list();
+			const result = await t.client.media.profiles.list();
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 
-			// Response is { profiles: [...] } from the service layer
 			const value = result.value as any;
 			const profiles_list = Array.isArray(value) ? value : value.profiles;
 			expect(Array.isArray(profiles_list)).toBe(true);
@@ -86,7 +80,7 @@ describe("media API client integration", () => {
 
 		test("should update a profile", async () => {
 			expect(created_id).not.toBe("");
-			const result = await testInstance.client.media.profiles.update(created_id, {
+			const result = await t.client.media.profiles.update(created_id, {
 				name: "Updated CRUD Profile",
 				description: "Updated description",
 			});
@@ -100,16 +94,14 @@ describe("media API client integration", () => {
 
 		test("should delete a profile", async () => {
 			expect(created_id).not.toBe("");
-			const result = await testInstance.client.media.profiles.delete(created_id);
+			const result = await t.client.media.profiles.delete(created_id);
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 
 			const value = result.value as any;
-			// Response is { deleted: true, id: "..." }
 			expect(value.deleted ?? value.success).toBe(true);
 
-			// Verify it's gone
-			const get_result = await testInstance.client.media.profiles.get(created_id);
+			const get_result = await t.client.media.profiles.get(created_id);
 			expect(get_result.ok).toBe(false);
 		});
 	});
@@ -119,7 +111,7 @@ describe("media API client integration", () => {
 		let filter_id = "";
 
 		test("should create a profile for filter tests", async () => {
-			const result = await testInstance.client.media.profiles.create({
+			const result = await t.client.media.profiles.create({
 				slug: uniqueSlug(),
 				name: "Filter Test Profile",
 			});
@@ -133,7 +125,7 @@ describe("media API client integration", () => {
 
 		test("should list filters (initially empty)", async () => {
 			expect(profile_id).not.toBe("");
-			const result = await testInstance.client.media.profiles.filters.list(profile_id);
+			const result = await t.client.media.profiles.filters.list(profile_id);
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 
@@ -144,23 +136,18 @@ describe("media API client integration", () => {
 
 		test("should add a filter", async () => {
 			expect(profile_id).not.toBe("");
-			// Filter add requires a real account_id that exists and is owned by the user.
-			// Without a real account, this will fail with not_found/forbidden.
-			const result = await testInstance.client.media.profiles.filters.add(profile_id, {
+			const result = await t.client.media.profiles.filters.add(profile_id, {
 				account_id: "fake-account-for-filter-test",
 				filter_type: "exclude",
 				filter_key: "keyword",
 				filter_value: "spam",
 			});
 
-			// Expected to fail because fake-account-for-filter-test doesn't exist in DB
-			// The server validates account ownership
 			if (result.ok) {
 				const value = result.value as any;
 				filter_id = value.id;
 				expect(filter_id).toBeDefined();
 			} else {
-				// Accept not_found or forbidden as valid responses for missing account
 				expect(result.ok).toBe(false);
 			}
 		});
@@ -168,16 +155,15 @@ describe("media API client integration", () => {
 		test("should remove a filter", async () => {
 			expect(profile_id).not.toBe("");
 			if (!filter_id) {
-				// Filter was not created (expected - no real account), skip gracefully
 				return;
 			}
-			const result = await testInstance.client.media.profiles.filters.remove(profile_id, filter_id);
+			const result = await t.client.media.profiles.filters.remove(profile_id, filter_id);
 			expect(result.ok).toBe(true);
 		});
 
 		test("cleanup: delete filter test profile", async () => {
 			if (profile_id) {
-				const result = await testInstance.client.media.profiles.delete(profile_id);
+				const result = await t.client.media.profiles.delete(profile_id);
 				expect(result.ok).toBe(true);
 			}
 		});
@@ -185,7 +171,7 @@ describe("media API client integration", () => {
 
 	describe("connections", () => {
 		test("should list connections without crashing", async () => {
-			const profile_result = await testInstance.client.media.profiles.create({
+			const profile_result = await t.client.media.profiles.create({
 				slug: uniqueSlug(),
 				name: "Connections Test Profile",
 			});
@@ -195,8 +181,7 @@ describe("media API client integration", () => {
 			const value = profile_result.value as any;
 			const profile_id = (value.profile ?? value).id;
 
-			const result = await testInstance.client.media.connections.list(profile_id);
-			// Should succeed with empty array (no OAuth connections in test)
+			const result = await t.client.media.connections.list(profile_id);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				const conn_value = result.value as any;
@@ -204,15 +189,13 @@ describe("media API client integration", () => {
 				expect(Array.isArray(connections_list)).toBe(true);
 			}
 
-			// Cleanup
-			await testInstance.client.media.profiles.delete(profile_id);
+			await t.client.media.profiles.delete(profile_id);
 		});
 	});
 
 	describe("timeline", () => {
 		test("should get timeline without crashing", async () => {
-			const result = await testInstance.client.media.timeline.get(TEST_USER_ID);
-			// Timeline may error due to no accounts -- either outcome is acceptable
+			const result = await t.client.media.timeline.get(TEST_USER_ID);
 			expect(typeof result.ok).toBe("boolean");
 		});
 	});

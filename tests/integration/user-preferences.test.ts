@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { setupIntegration } from "../shared/base-integration-test";
 
-class UserPreferencesTest extends BaseIntegrationTest {}
-
-// Setup test instance
-const testInstance = new UserPreferencesTest();
-setupBaseIntegrationTest(testInstance);
+const t = setupIntegration();
 
 describe("User Preferences & Profile Integration", () => {
 	describe("User Profile Information", () => {
@@ -14,7 +10,7 @@ describe("User Preferences & Profile Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/user", {
 					method: "GET",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 				});
@@ -28,7 +24,6 @@ describe("User Preferences & Profile Integration", () => {
 					const user = (await response.json()) as any;
 					expect(user).toBeDefined();
 					expect(user.id).toBeDefined();
-					// Should have basic user fields
 					expect(typeof user.id).toBe("string");
 				} else {
 					console.warn("User profile fetch failed, status:", response.status);
@@ -45,11 +40,11 @@ describe("User Preferences & Profile Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
-						id: "test-user-12345", // Use the test user ID
+						id: "test-user-12345",
 						task_view: "grid",
 					}),
 				});
@@ -75,7 +70,7 @@ describe("User Preferences & Profile Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
@@ -108,7 +103,7 @@ describe("User Preferences & Profile Integration", () => {
 					const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 						method: "PATCH",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
@@ -122,7 +117,6 @@ describe("User Preferences & Profile Integration", () => {
 						break;
 					}
 
-					// Should either reject (400) or succeed (if validation is lenient)
 					expect([200, 201, 400]).toContain(response.status);
 				}
 			} catch (error) {
@@ -134,18 +128,16 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Preferences API Client Methods", () => {
 		test("should use API client for preferences update", async () => {
 			try {
-				const prefResult = await testInstance.client.user.preferences({
+				const prefResult = await t.client.user.preferences({
 					id: "test-user-12345",
 					task_view: "grid",
 				});
 
-				// If endpoint is not implemented, expect an error
 				if (!prefResult.ok && (prefResult.error.message.includes("404") || prefResult.error.message.includes("not found"))) {
 					console.warn("User preferences API client method not implemented");
 					return;
 				}
 
-				// If implemented, should succeed
 				if (!prefResult.ok) {
 					console.warn("User preferences API client failed:", prefResult.error.message);
 				} else {
@@ -160,15 +152,13 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Activity History", () => {
 		test("should get user activity history", async () => {
 			try {
-				const historyResult = await testInstance.client.user.history();
+				const historyResult = await t.client.user.history();
 
-				// If endpoint is not implemented, expect an error
 				if (!historyResult.ok && (historyResult.error.message.includes("404") || historyResult.error.message.includes("not found"))) {
 					console.warn("User activity history endpoint not implemented");
 					return;
 				}
 
-				// If implemented, should return an array
 				if (!historyResult.ok) {
 					console.warn("User activity history failed:", historyResult.error.message);
 				} else {
@@ -184,7 +174,7 @@ describe("User Preferences & Profile Integration", () => {
 				const response = await fetch("http://localhost:3001/api/v1/user/history", {
 					method: "GET",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 				});
@@ -209,7 +199,6 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Preferences Validation", () => {
 		test("should require authentication for preferences operations", async () => {
 			try {
-				// Test without authentication
 				const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
@@ -221,7 +210,6 @@ describe("User Preferences & Profile Integration", () => {
 					}),
 				});
 
-				// Should require authentication
 				expect([401, 403, 404]).toContain(response.status);
 			} catch (error) {
 				console.warn("User preferences authentication test not available:", error);
@@ -236,7 +224,7 @@ describe("User Preferences & Profile Integration", () => {
 					const response = await fetch("http://localhost:3001/api/v1/user/preferences", {
 						method: "PATCH",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
@@ -250,7 +238,6 @@ describe("User Preferences & Profile Integration", () => {
 						break;
 					}
 
-					// Should either reject invalid IDs or handle gracefully
 					expect([200, 201, 400, 403]).toContain(response.status);
 				}
 			} catch (error) {
@@ -262,11 +249,10 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Profile Edge Cases", () => {
 		test("should handle missing user profile gracefully", async () => {
 			try {
-				// Test with potentially invalid/expired token (still authenticated but maybe edge case)
 				const response = await fetch("http://localhost:3001/api/v1/user", {
 					method: "GET",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 				});
@@ -276,7 +262,6 @@ describe("User Preferences & Profile Integration", () => {
 					return;
 				}
 
-				// Should either return user data or appropriate error
 				expect([200, 401, 403, 404, 500]).toContain(response.status);
 			} catch (error) {
 				console.warn("User profile edge case test not available:", error);
@@ -285,12 +270,11 @@ describe("User Preferences & Profile Integration", () => {
 
 		test("should handle concurrent preference updates", async () => {
 			try {
-				// Test concurrent preference updates
 				const updatePromises = Array.from({ length: 5 }, (_, i) =>
 					fetch("http://localhost:3001/api/v1/user/preferences", {
 						method: "PATCH",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
@@ -302,13 +286,11 @@ describe("User Preferences & Profile Integration", () => {
 
 				const responses = await Promise.all(updatePromises);
 
-				// Check if endpoint exists
 				if (responses[0].status === 404 || responses[0].status === 501) {
 					console.warn("User preferences endpoints not implemented");
 					return;
 				}
 
-				// All should handle gracefully
 				for (const response of responses) {
 					expect([200, 201, 400, 409, 500]).toContain(response.status);
 				}
@@ -321,11 +303,10 @@ describe("User Preferences & Profile Integration", () => {
 	describe("User Data Consistency", () => {
 		test("should maintain preference consistency across requests", async () => {
 			try {
-				// Set a preference
 				const setResponse = await fetch("http://localhost:3001/api/v1/user/preferences", {
 					method: "PATCH",
 					headers: {
-						Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+						Authorization: `Bearer ${t.client.getApiKey()}`,
 						"Content-Type": "application/json",
 					},
 					body: JSON.stringify({
@@ -340,11 +321,10 @@ describe("User Preferences & Profile Integration", () => {
 				}
 
 				if (setResponse.ok) {
-					// Get user profile to check if preference was saved
 					const profileResponse = await fetch("http://localhost:3001/api/v1/user", {
 						method: "GET",
 						headers: {
-							Authorization: `Bearer ${testInstance.client.getApiKey()}`,
+							Authorization: `Bearer ${t.client.getApiKey()}`,
 							"Content-Type": "application/json",
 						},
 					});
