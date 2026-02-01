@@ -1,12 +1,13 @@
 import type { Milestone, UpsertMilestone } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { goal, milestone, project } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { doesUserOwnProject } from "./projects.js";
 
-export async function getUserMilestones(db: any, user_id: string): Promise<Result<Milestone[], ServiceError>> {
+export async function getUserMilestones(db: Database, user_id: string): Promise<Result<Milestone[], ServiceError>> {
 	const result = await db
 		.select({ milestone })
 		.from(milestone)
@@ -17,7 +18,7 @@ export async function getUserMilestones(db: any, user_id: string): Promise<Resul
 	return ok(result.map((r: any) => r.milestone));
 }
 
-export async function getProjectMilestones(db: any, project_id: string): Promise<Result<Milestone[], ServiceError>> {
+export async function getProjectMilestones(db: Database, project_id: string): Promise<Result<Milestone[], ServiceError>> {
 	const result = await db
 		.select()
 		.from(milestone)
@@ -32,7 +33,7 @@ export async function getProjectMilestones(db: any, project_id: string): Promise
 	return ok(sorted);
 }
 
-export async function getMilestone(db: any, milestone_id: string): Promise<Result<Milestone | null, ServiceError>> {
+export async function getMilestone(db: Database, milestone_id: string): Promise<Result<Milestone | null, ServiceError>> {
 	const result = await db.select().from(milestone).where(eq(milestone.id, milestone_id));
 
 	const record = result[0];
@@ -40,7 +41,7 @@ export async function getMilestone(db: any, milestone_id: string): Promise<Resul
 	return ok(record);
 }
 
-export async function upsertMilestone(db: any, data: UpsertMilestone, owner_id: string): Promise<Result<Milestone, ServiceError>> {
+export async function upsertMilestone(db: Database, data: UpsertMilestone, owner_id: string): Promise<Result<Milestone, ServiceError>> {
 	const previous_result = data.id ? await getMilestone(db, data.id) : null;
 	const previous = previous_result?.ok ? previous_result.value : null;
 
@@ -80,7 +81,7 @@ export async function upsertMilestone(db: any, data: UpsertMilestone, owner_id: 
 	return ok(result);
 }
 
-export async function deleteMilestone(db: any, milestone_id: string, owner_id: string): Promise<Result<void, ServiceError>> {
+export async function deleteMilestone(db: Database, milestone_id: string, owner_id: string): Promise<Result<void, ServiceError>> {
 	const milestone_result = await getMilestone(db, milestone_id);
 	if (!milestone_result.ok) return milestone_result;
 	if (!milestone_result.value) return err({ kind: "not_found", resource: "milestone", id: milestone_id });
@@ -96,7 +97,7 @@ export async function deleteMilestone(db: any, milestone_id: string, owner_id: s
 	return ok(undefined);
 }
 
-export async function completeMilestone(db: any, milestone_id: string, owner_id: string, target_version?: string): Promise<Result<Milestone, ServiceError>> {
+export async function completeMilestone(db: Database, milestone_id: string, owner_id: string, target_version?: string): Promise<Result<Milestone, ServiceError>> {
 	const data: Partial<UpsertMilestone> = {
 		id: milestone_id,
 		finished_at: new Date().toISOString(),
@@ -109,6 +110,6 @@ export async function completeMilestone(db: any, milestone_id: string, owner_id:
 	return upsertMilestone(db, data as UpsertMilestone, owner_id);
 }
 
-export async function addMilestoneAction(_db: any, _data: { owner_id: string; milestone_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+export async function addMilestoneAction(_db: Database, _data: { owner_id: string; milestone_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
 	return ok(true);
 }

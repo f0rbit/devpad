@@ -1,13 +1,14 @@
 import type { Goal, UpsertGoal } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { goal, milestone, project } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { getMilestone } from "./milestones.js";
 import { doesUserOwnProject } from "./projects.js";
 
-export async function getUserGoals(db: any, user_id: string): Promise<Result<Goal[], ServiceError>> {
+export async function getUserGoals(db: Database, user_id: string): Promise<Result<Goal[], ServiceError>> {
 	const result = await db
 		.select({ goal })
 		.from(goal)
@@ -19,7 +20,7 @@ export async function getUserGoals(db: any, user_id: string): Promise<Result<Goa
 	return ok(result.map((r: any) => r.goal));
 }
 
-export async function getMilestoneGoals(db: any, milestone_id: string): Promise<Result<Goal[], ServiceError>> {
+export async function getMilestoneGoals(db: Database, milestone_id: string): Promise<Result<Goal[], ServiceError>> {
 	const result = await db
 		.select()
 		.from(goal)
@@ -29,7 +30,7 @@ export async function getMilestoneGoals(db: any, milestone_id: string): Promise<
 	return ok(result);
 }
 
-export async function getGoal(db: any, goal_id: string): Promise<Result<Goal | null, ServiceError>> {
+export async function getGoal(db: Database, goal_id: string): Promise<Result<Goal | null, ServiceError>> {
 	const result = await db.select().from(goal).where(eq(goal.id, goal_id));
 
 	const record = result[0];
@@ -37,7 +38,7 @@ export async function getGoal(db: any, goal_id: string): Promise<Result<Goal | n
 	return ok(record);
 }
 
-export async function upsertGoal(db: any, data: UpsertGoal, owner_id: string): Promise<Result<Goal, ServiceError>> {
+export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: string): Promise<Result<Goal, ServiceError>> {
 	const previous_result = data.id ? await getGoal(db, data.id) : null;
 	const previous = previous_result?.ok ? previous_result.value : null;
 
@@ -81,7 +82,7 @@ export async function upsertGoal(db: any, data: UpsertGoal, owner_id: string): P
 	return ok(result);
 }
 
-export async function deleteGoal(db: any, goal_id: string, owner_id: string): Promise<Result<void, ServiceError>> {
+export async function deleteGoal(db: Database, goal_id: string, owner_id: string): Promise<Result<void, ServiceError>> {
 	const goal_result = await getGoal(db, goal_id);
 	if (!goal_result.ok) return goal_result;
 	if (!goal_result.value) return err({ kind: "not_found", resource: "goal", id: goal_id });
@@ -99,7 +100,7 @@ export async function deleteGoal(db: any, goal_id: string, owner_id: string): Pr
 	return ok(undefined);
 }
 
-export async function completeGoal(db: any, goal_id: string, owner_id: string): Promise<Result<Goal, ServiceError>> {
+export async function completeGoal(db: Database, goal_id: string, owner_id: string): Promise<Result<Goal, ServiceError>> {
 	const data: Partial<UpsertGoal> = {
 		id: goal_id,
 		finished_at: new Date().toISOString(),
@@ -108,6 +109,6 @@ export async function completeGoal(db: any, goal_id: string, owner_id: string): 
 	return upsertGoal(db, data as UpsertGoal, owner_id);
 }
 
-export async function addGoalAction(_db: any, _data: { owner_id: string; goal_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+export async function addGoalAction(_db: Database, _data: { owner_id: string; goal_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
 	return ok(true);
 }

@@ -1,13 +1,14 @@
 import type { HistoryAction } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { action, todo_updates } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { getProjectById, getUserProjectMap } from "./projects.js";
 import { getTask } from "./tasks.js";
 
-export async function getActions(db: any, user_id: string, action_filter: ActionType[] | null): Promise<Result<any[], ServiceError>> {
+export async function getActions(db: Database, user_id: string, action_filter: ActionType[] | null): Promise<Result<any[], ServiceError>> {
 	const filter = action_filter && action_filter.length > 0 ? action_filter : null;
 
 	const data = filter
@@ -33,7 +34,7 @@ export async function getActions(db: any, user_id: string, action_filter: Action
 	return ok(data);
 }
 
-export async function getProjectScanHistory(db: any, project_id: string): Promise<Result<any[], ServiceError>> {
+export async function getProjectScanHistory(db: Database, project_id: string): Promise<Result<any[], ServiceError>> {
 	const result = await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_id)).orderBy(desc(todo_updates.created_at));
 	return ok(result);
 }
@@ -42,7 +43,7 @@ function sortByDate(a: HistoryAction, b: HistoryAction) {
 	return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 }
 
-export async function getProjectHistory(db: any, project_id: string): Promise<Result<HistoryAction[], ServiceError>> {
+export async function getProjectHistory(db: Database, project_id: string): Promise<Result<HistoryAction[], ServiceError>> {
 	const project_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
 
 	const project_result = await getProjectById(db, project_id);
@@ -72,7 +73,7 @@ export async function getProjectHistory(db: any, project_id: string): Promise<Re
 	return ok(filtered.concat(mapped_scan).sort(sortByDate));
 }
 
-export async function getTaskHistory(db: any, task_id: string): Promise<Result<HistoryAction[], ServiceError>> {
+export async function getTaskHistory(db: Database, task_id: string): Promise<Result<HistoryAction[], ServiceError>> {
 	const task_filter: ActionType[] = ["CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
 
 	const task_result = await getTask(db, task_id);
@@ -92,7 +93,7 @@ export async function getTaskHistory(db: any, task_id: string): Promise<Result<H
 	return ok(filtered.sort(sortByDate));
 }
 
-export async function getUserHistory(db: any, user_id: string): Promise<Result<HistoryAction[], ServiceError>> {
+export async function getUserHistory(db: Database, user_id: string): Promise<Result<HistoryAction[], ServiceError>> {
 	const project_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT"];
 
 	const actions_result = await getActions(db, user_id, project_filter);

@@ -1,6 +1,7 @@
 import type { TaskWithDetails, UpdateData, UpsertTag, UpsertTodo } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { action, codebase_tasks, task, task_tag } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
@@ -9,7 +10,7 @@ import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
 
-async function fetchTasksWithDetails(db: any, where_conditions: any[]): Promise<Result<Task[], ServiceError>> {
+async function fetchTasksWithDetails(db: Database, where_conditions: any[]): Promise<Result<Task[], ServiceError>> {
 	const fetched_tasks = await db
 		.select()
 		.from(task)
@@ -41,15 +42,15 @@ async function fetchTasksWithDetails(db: any, where_conditions: any[]): Promise<
 	return ok(tasks);
 }
 
-export async function getUserTasks(db: any, user_id: string): Promise<Result<Task[], ServiceError>> {
+export async function getUserTasks(db: Database, user_id: string): Promise<Result<Task[], ServiceError>> {
 	return fetchTasksWithDetails(db, [eq(task.owner_id, user_id)]);
 }
 
-export async function getProjectTasks(db: any, project_id: string): Promise<Result<Task[], ServiceError>> {
+export async function getProjectTasks(db: Database, project_id: string): Promise<Result<Task[], ServiceError>> {
 	return fetchTasksWithDetails(db, [eq(task.project_id, project_id)]);
 }
 
-export async function getTasksByTag(db: any, tag_id: string): Promise<Result<Task[], ServiceError>> {
+export async function getTasksByTag(db: Database, tag_id: string): Promise<Result<Task[], ServiceError>> {
 	const task_tag_relations = await db.select({ task_id: task_tag.task_id }).from(task_tag).where(eq(task_tag.tag_id, tag_id));
 	const task_ids = task_tag_relations.map((rel: any) => rel.task_id as string);
 
@@ -57,14 +58,14 @@ export async function getTasksByTag(db: any, tag_id: string): Promise<Result<Tas
 	return fetchTasksWithDetails(db, [inArray(task.id, task_ids)]);
 }
 
-export async function getTask(db: any, task_id: string): Promise<Result<Task | null, ServiceError>> {
+export async function getTask(db: Database, task_id: string): Promise<Result<Task | null, ServiceError>> {
 	const tasks_result = await fetchTasksWithDetails(db, [eq(task.id, task_id)]);
 	if (!tasks_result.ok) return tasks_result;
 	return ok(tasks_result.value[0] || null);
 }
 
 export async function addTaskAction(
-	db: any,
+	db: Database,
 	{ owner_id, task_id, type, description, project_id }: { owner_id: string; task_id: string; type: ActionType; description: string; project_id: string | null }
 ): Promise<Result<boolean, ServiceError>> {
 	if (project_id) {
@@ -92,7 +93,7 @@ export async function addTaskAction(
 	return ok(true);
 }
 
-export async function getUpsertedTaskMap(db: any, codebase_items: UpdateData[]): Promise<Result<Map<string, string>, ServiceError>> {
+export async function getUpsertedTaskMap(db: Database, codebase_items: UpdateData[]): Promise<Result<Map<string, string>, ServiceError>> {
 	const result = new Map<string, string>();
 	if (codebase_items.length === 0) return ok(result);
 
@@ -115,7 +116,7 @@ export async function getUpsertedTaskMap(db: any, codebase_items: UpdateData[]):
 	return ok(result);
 }
 
-async function upsertTaskTags(db: any, task_id: string, tags: string[]): Promise<void> {
+async function upsertTaskTags(db: Database, task_id: string, tags: string[]): Promise<void> {
 	const current_result = await getTaskTags(db, task_id);
 	const current = current_result.ok ? current_result.value.map(c => c.id) : [];
 
@@ -134,7 +135,7 @@ async function upsertTaskTags(db: any, task_id: string, tags: string[]): Promise
 	await db.update(task_tag).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(eq(task_tag.task_id, task_id));
 }
 
-export async function upsertTask(db: any, data: UpsertTodo, tags: UpsertTag[], owner_id: string): Promise<Result<Task | null, ServiceError>> {
+export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag[], owner_id: string): Promise<Result<Task | null, ServiceError>> {
 	const previous_result = data.id ? await getTask(db, data.id) : null;
 	const previous = previous_result?.ok ? (previous_result.value?.task ?? null) : null;
 

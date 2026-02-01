@@ -1,5 +1,6 @@
 import type { TodoUpdate, TrackerResult, UpsertTodo } from "@devpad/schema";
 import { action, codebase_tasks, project, task, todo_updates, tracker_result } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
 import { parseContextToArray } from "../utils/context-parser.js";
@@ -7,7 +8,7 @@ import type { ServiceError } from "./errors.js";
 import { getProjectConfig } from "./projects.js";
 import { type DiffResult, generateDiff, type ParsedTask, scanGitHubRepo } from "./scanner/index.js";
 
-export async function* initiateScan(db: any, project_id: string, user_id: string, access_token: string): AsyncGenerator<string> {
+export async function* initiateScan(db: Database, project_id: string, user_id: string, access_token: string): AsyncGenerator<string> {
 	yield "starting\n";
 
 	const project_query = await db
@@ -133,7 +134,7 @@ function createCodebaseTaskValues(update_item: any, new_id: number): any {
 	};
 }
 
-async function upsertCodebaseTask(db: any, update_item: any, new_id: number): Promise<void> {
+async function upsertCodebaseTask(db: Database, update_item: any, new_id: number): Promise<void> {
 	const values = createCodebaseTaskValues(update_item, new_id);
 	await db
 		.insert(codebase_tasks)
@@ -141,7 +142,7 @@ async function upsertCodebaseTask(db: any, update_item: any, new_id: number): Pr
 		.onConflictDoUpdate({ target: [codebase_tasks.id], set: values });
 }
 
-async function handleCreateAction(db: any, update_item: any, titles: Record<string, string>, user_id: string, project_id: string, new_id: number): Promise<void> {
+async function handleCreateAction(db: Database, update_item: any, titles: Record<string, string>, user_id: string, project_id: string, new_id: number): Promise<void> {
 	const title = titles[update_item.id] || update_item.data?.new?.text || "Untitled Task";
 	const new_text = update_item.data?.new?.text || "";
 
@@ -162,7 +163,7 @@ async function handleCreateAction(db: any, update_item: any, titles: Record<stri
 	await db.update(task).set({ codebase_task_id: update_item.id }).where(eq(task.id, task_result.value.task.id));
 }
 
-async function processScanItem(db: any, update_item: any, actions_map: Record<string, string[]>, titles: Record<string, string>, user_id: string, project_id: string, new_id: number): Promise<void> {
+async function processScanItem(db: Database, update_item: any, actions_map: Record<string, string[]>, titles: Record<string, string>, user_id: string, project_id: string, new_id: number): Promise<void> {
 	let item_action: string | null = null;
 	for (const [a, item_ids] of Object.entries(actions_map)) {
 		if (item_ids.includes(update_item.id)) {
@@ -227,7 +228,7 @@ async function processScanItem(db: any, update_item: any, actions_map: Record<st
 }
 
 export async function processScanResults(
-	db: any,
+	db: Database,
 	project_id: string,
 	user_id: string,
 	update_id: number,
@@ -273,7 +274,7 @@ export async function processScanResults(
 	return ok({ success: true });
 }
 
-export async function getPendingUpdates(db: any, project_id: string, user_id: string): Promise<Result<TodoUpdate[], ServiceError>> {
+export async function getPendingUpdates(db: Database, project_id: string, user_id: string): Promise<Result<TodoUpdate[], ServiceError>> {
 	const project_query = await db
 		.select()
 		.from(project)
@@ -292,7 +293,7 @@ export async function getPendingUpdates(db: any, project_id: string, user_id: st
 	return ok(result);
 }
 
-export async function getScanHistory(db: any, project_id: string, user_id: string): Promise<Result<TrackerResult[], ServiceError>> {
+export async function getScanHistory(db: Database, project_id: string, user_id: string): Promise<Result<TrackerResult[], ServiceError>> {
 	const project_query = await db
 		.select()
 		.from(project)

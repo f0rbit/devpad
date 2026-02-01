@@ -1,4 +1,5 @@
 import { commit_detail } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
@@ -37,7 +38,7 @@ export async function getRepoMetadata(owner: string, repo: string, access_token:
 	return ok(response.data);
 }
 
-export async function getBranches(db: any, owner: string, repo: string, access_token: string): Promise<Result<GitHubBranch[], ServiceError>> {
+export async function getBranches(db: Database, owner: string, repo: string, access_token: string): Promise<Result<GitHubBranch[], ServiceError>> {
 	const octokit = createOctokit(access_token);
 
 	const branches_response = await octokit.rest.repos.listBranches({
@@ -80,7 +81,7 @@ export async function getBranches(db: any, owner: string, repo: string, access_t
 	return ok(enriched_branches);
 }
 
-async function getCommitDetails(db: any, owner: string, repo: string, commit_shas: Set<string>, access_token: string) {
+async function getCommitDetails(db: Database, owner: string, repo: string, commit_shas: Set<string>, access_token: string) {
 	const shas = Array.from(commit_shas);
 	const existing = await db.select().from(commit_detail).where(inArray(commit_detail.sha, shas));
 

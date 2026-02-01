@@ -1,11 +1,12 @@
 import type { Project, ProjectConfig, TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { action, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, not, sql } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 
-export async function getUserProjects(db: any, user_id: string): Promise<Result<Project[], ServiceError>> {
+export async function getUserProjects(db: Database, user_id: string): Promise<Result<Project[], ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
@@ -13,7 +14,7 @@ export async function getUserProjects(db: any, user_id: string): Promise<Result<
 	return ok(result);
 }
 
-export async function getProject(db: any, user_id: string, project_id: string): Promise<Result<Project, ServiceError>> {
+export async function getProject(db: Database, user_id: string, project_id: string): Promise<Result<Project, ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
@@ -23,7 +24,7 @@ export async function getProject(db: any, user_id: string, project_id: string): 
 	return ok(result[0]);
 }
 
-export async function getProjectById(db: any, project_id: string): Promise<Result<Project, ServiceError>> {
+export async function getProjectById(db: Database, project_id: string): Promise<Result<Project, ServiceError>> {
 	if (!project_id) return err({ kind: "validation", errors: { project_id: ["No project ID provided"] } });
 
 	const result = await db.select().from(project).where(eq(project.id, project_id));
@@ -31,7 +32,7 @@ export async function getProjectById(db: any, project_id: string): Promise<Resul
 	return ok(result[0]);
 }
 
-export async function getUserProjectMap(db: any, user_id: string): Promise<Result<Record<string, Project>, ServiceError>> {
+export async function getUserProjectMap(db: Database, user_id: string): Promise<Result<Record<string, Project>, ServiceError>> {
 	const projects_result = await getUserProjects(db, user_id);
 	if (!projects_result.ok) return projects_result;
 
@@ -39,7 +40,7 @@ export async function getUserProjectMap(db: any, user_id: string): Promise<Resul
 	return ok(project_map);
 }
 
-export async function doesUserOwnProject(db: any, user_id: string, project_id: string): Promise<Result<boolean, ServiceError>> {
+export async function doesUserOwnProject(db: Database, user_id: string, project_id: string): Promise<Result<boolean, ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
@@ -48,7 +49,7 @@ export async function doesUserOwnProject(db: any, user_id: string, project_id: s
 	return ok(result.length > 0);
 }
 
-export async function addProjectAction(db: any, { owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+export async function addProjectAction(db: Database, { owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
 	const owns_result = await doesUserOwnProject(db, owner_id, project_id);
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return ok(false);
@@ -62,7 +63,7 @@ export async function addProjectAction(db: any, { owner_id, project_id, type, de
 	return ok(true);
 }
 
-export async function getRecentUpdate(db: any, project_data: Project): Promise<Result<(TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null }) | null, ServiceError>> {
+export async function getRecentUpdate(db: Database, project_data: Project): Promise<Result<(TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null }) | null, ServiceError>> {
 	const { owner_id: user_id, id } = project_data;
 	if (!user_id || !id) return ok(null);
 
@@ -91,7 +92,7 @@ export async function getRecentUpdate(db: any, project_data: Project): Promise<R
 	return ok(update);
 }
 
-export async function getProjectConfig(db: any, project_id: string): Promise<Result<{ id: string; config: ProjectConfig; scan_branch: string | null }, ServiceError>> {
+export async function getProjectConfig(db: Database, project_id: string): Promise<Result<{ id: string; config: ProjectConfig; scan_branch: string | null }, ServiceError>> {
 	const project_result = await getProjectById(db, project_id);
 	if (!project_result.ok) return project_result;
 
@@ -129,7 +130,7 @@ export type GitHubClient = {
 	getSpecification?: (owner: string, repo: string, access_token: string) => Promise<string>;
 };
 
-export async function upsertProject(db: any, data: UpsertProject, owner_id: string, access_token?: string, github_client?: GitHubClient): Promise<Result<Project, ServiceError>> {
+export async function upsertProject(db: Database, data: UpsertProject, owner_id: string, access_token?: string, github_client?: GitHubClient): Promise<Result<Project, ServiceError>> {
 	if (access_token && github_client) {
 		const prev_result = data.id ? await getProjectById(db, data.id) : null;
 		const previous = prev_result?.ok ? prev_result.value : null;
