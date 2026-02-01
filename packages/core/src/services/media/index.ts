@@ -5,7 +5,7 @@ export { type Bindings, type CreateContextDeps, createContext as createMediaCont
 export { type DeleteConnectionError, type DeleteConnectionResult, deleteConnection } from "./connection-delete";
 export type { AppContext } from "./context";
 export { type CronResult, handleCron, type ProviderFactory as CronProviderFactory } from "./cron";
-export { createDb, type Database } from "./db";
+export type { Database } from "./db";
 export { mergeByKey } from "./merge";
 export { createProviderFactory, defaultProviderFactory } from "./platforms";
 export type { ProviderFactory } from "./platforms/types";

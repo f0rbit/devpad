@@ -1,8 +1,4 @@
-import * as schema from "@devpad/schema/database/media";
-import { drizzle } from "drizzle-orm/d1";
+import type * as schema from "@devpad/schema/database/media";
+import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 
-export function createDb(d1: D1Database) {
-	return drizzle(d1, { schema });
-}
-
-export type Database = ReturnType<typeof createDb>;
+export type Database = BaseSQLiteDatabase<"async", unknown, typeof schema>;
