@@ -11,9 +11,11 @@
 	"scripts": {
 		"build": "bun run --filter=@devpad/* build",
 		"build:api": "cd packages/schema && bun run build && cd ../api && bun run build",
-		"dev": "PUBLIC_API_SERVER_URL=localhost:3000/api/v1 bun run --filter=@devpad/app dev",
+		"dev": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/app dev",
 		"dev:server": "DATABASE_FILE=../../database/local.db bun run --filter=@devpad/worker dev",
-		"dev:all": "DATABASE_FILE=database/local.db concurrently \"bun run dev\" \"bun run dev:server\"",
+		"dev:blog": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/blog-app dev",
+		"dev:media": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/media-app dev",
+		"dev:all": "DATABASE_FILE=database/local.db concurrently \"bun run dev\" \"bun run dev:server\" \"bun run dev:blog\" \"bun run dev:media\"",
 		"test": "bun run --filter=@devpad/* test",
 		"test:unit": "bun test unit",
 		"test:integration": "bun test integration/ --max-concurrency 1",

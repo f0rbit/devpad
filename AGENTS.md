@@ -2,12 +2,15 @@
 
 THIS PROJECT IS CALLED "devpad" NOT "DevPad". PLEASE UTILISE CORRECT CAPITLISATION: "devpad"
 
-NEVER EVER MAKE ANY COMMITS OR EVERY DO A GIT PUSH/PULL OR MERGE/REBASE!!!!
+NEVER EVER DO A GIT PUSH/PULL OR MERGE/REBASE!!!!
 
 Please don't be super agreeable with whatever I say - if you think there's an issue with my suggestions, push back & suggest better alternatives. I may be wrong upon occasion challenge me. But then once we've come to a decision - let's disagree & commit and move forward.
 
 ## Build & Test Commands
 - Dev server: `bun dev` (root) or `cd apps/main && bun dev`
+- Dev blog: `bun dev:blog` (port 3002)
+- Dev media: `bun dev:media` (port 3003)
+- Dev all services: `bun dev:all` (runs main app, worker API, blog, and media concurrently)
 - Build all: `bun build` (builds all packages)
 - Formatting guidelines are defined in `biome.json` - DO NOT RUN `bun lint:fix` - this will break astro imports
 - Type check: `cd apps/main && bun check`
@@ -16,6 +19,14 @@ Please don't be super agreeable with whatever I say - if you think there's an is
 - Single test: `bun test path/to/test.test.ts`
 - Coverage: `make coverage` then `make coverage-stats`
 - Database migrate: `cd apps/main && bun migrate`
+
+### Dev Server Ports
+| Service | Port | Script |
+|---------|------|--------|
+| Main app | 3000 | `bun dev` |
+| Worker API | 3001 | `bun dev:server` |
+| Blog app | 3002 | `bun dev:blog` |
+| Media app | 3003 | `bun dev:media` |
 
 ## Code Style & Architecture
 - Naming: snake_case (variables), camelCase (functions), PascalCase (classes/types)

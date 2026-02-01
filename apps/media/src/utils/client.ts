@@ -1,7 +1,7 @@
 import { ApiClient } from "@devpad/api";
 import { isDevMode, MOCK_API_KEY } from "./mock-auth";
 
-const API_HOST = import.meta.env.PUBLIC_API_URL || (import.meta.env.DEV ? "http://localhost:8787" : "");
+const API_HOST = import.meta.env.PUBLIC_API_URL || "";
 
 function createClient(api_key?: string): ApiClient {
 	const key = api_key ?? (isDevMode() ? MOCK_API_KEY : "");

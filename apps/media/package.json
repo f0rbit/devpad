@@ -3,7 +3,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"dev": "astro dev --port 4321",
+		"dev": "bunx --bun astro dev",
 		"build": "astro build",
 		"check": "astro check",
 		"preview": "astro preview"

@@ -2,7 +2,7 @@
 	"name": "@devpad/blog-app",
 	"type": "module",
 	"scripts": {
-		"dev": "astro dev",
+		"dev": "bunx --bun astro dev",
 		"build": "astro build",
 		"preview": "astro preview"
 	},

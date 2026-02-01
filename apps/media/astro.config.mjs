@@ -4,6 +4,7 @@ import solidJs from "@astrojs/solid-js";
 import { defineConfig } from "astro/config";
 
 export default defineConfig({
+	server: { port: 3003 },
 	integrations: [solidJs()],
 	adapter: cloudflare({
 		mode: "advanced",
@@ -14,6 +15,12 @@ export default defineConfig({
 	}),
 	output: "server",
 	vite: {
+		server: {
+			proxy: {
+				"/api": "http://localhost:3001",
+				"/health": "http://localhost:3001",
+			},
+		},
 		resolve: {
 			alias: {
 				"@": resolve("./src"),

@@ -21,6 +21,18 @@ export default defineConfig({
 		driver: "fs",
 	},
 	vite: {
+		server: {
+			proxy: {
+				"/api": {
+					target: "http://localhost:3001",
+					changeOrigin: true,
+				},
+				"/health": {
+					target: "http://localhost:3001",
+					changeOrigin: true,
+				},
+			},
+		},
 		build: {
 			watch: false,
 			chunkSizeWarningLimit: 3000,

@@ -66,3 +66,4 @@ test-results/
 
 # Platform-specific binaries (built in Docker/CI)
 todo-tracker
+.plans/
