@@ -1,11 +1,11 @@
 import { Database } from "bun:sqlite";
 import { createContext as createBlogContext } from "@devpad/core/services/blog";
 import { createMediaContext, defaultProviderFactory } from "@devpad/core/services/media";
-import type { Bindings } from "@devpad/schema/bindings";
 import { create_memory_backend } from "@devpad/schema/blog";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import * as mediaSchema from "@devpad/schema/database/media";
 import { drizzle } from "drizzle-orm/bun-sqlite";
+import type { AppConfig, OAuthSecrets } from "./bindings.js";
 import { createApi } from "./index.js";
 
 export type BunServerOptions = {
@@ -15,27 +15,6 @@ export type BunServerOptions = {
 };
 
 const DEFAULT_MIGRATION_PATHS = ["./packages/schema/src/database/drizzle", "./packages/schema/dist/database/drizzle", "../schema/src/database/drizzle", "../schema/dist/database/drizzle"];
-
-const fake_execution_context = {
-	waitUntil: () => {},
-	passThroughOnException: () => {},
-};
-
-function createFakeBindings(): Bindings {
-	return {
-		ENVIRONMENT: process.env.ENVIRONMENT ?? "development",
-		API_URL: process.env.API_URL ?? "http://localhost:3001",
-		FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:4321",
-		GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID ?? "",
-		GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET ?? "",
-		JWT_SECRET: process.env.JWT_SECRET ?? "dev-jwt-secret",
-		ENCRYPTION_KEY: process.env.ENCRYPTION_KEY ?? "dev-encryption-key",
-		REDDIT_CLIENT_ID: process.env.REDDIT_CLIENT_ID ?? "",
-		REDDIT_CLIENT_SECRET: process.env.REDDIT_CLIENT_SECRET ?? "",
-		TWITTER_CLIENT_ID: process.env.TWITTER_CLIENT_ID ?? "",
-		TWITTER_CLIENT_SECRET: process.env.TWITTER_CLIENT_SECRET ?? "",
-	};
-}
 
 export function migrateBunDb(options: { database_file: string; migration_paths?: string[] }): void {
 	const sqlite = new Database(options.database_file);
@@ -58,25 +37,48 @@ export function migrateBunDb(options: { database_file: string; migration_paths?:
 export function createBunApp(options: BunServerOptions) {
 	const sqlite = new Database(options.database_file);
 	const db = createBunDatabase(sqlite);
-	const fake_bindings = createFakeBindings();
+
+	const config: AppConfig = {
+		environment: process.env.ENVIRONMENT ?? "development",
+		api_url: process.env.API_URL ?? "http://localhost:3001",
+		frontend_url: process.env.FRONTEND_URL ?? "http://localhost:4321",
+		jwt_secret: process.env.JWT_SECRET ?? "dev-jwt-secret",
+		encryption_key: process.env.ENCRYPTION_KEY ?? "dev-encryption-key",
+	};
+
+	const oauth_secrets: OAuthSecrets = {
+		github_client_id: process.env.GITHUB_CLIENT_ID ?? "",
+		github_client_secret: process.env.GITHUB_CLIENT_SECRET ?? "",
+		reddit_client_id: process.env.REDDIT_CLIENT_ID ?? "",
+		reddit_client_secret: process.env.REDDIT_CLIENT_SECRET ?? "",
+		twitter_client_id: process.env.TWITTER_CLIENT_ID ?? "",
+		twitter_client_secret: process.env.TWITTER_CLIENT_SECRET ?? "",
+	};
 
 	const blog_context = createBlogContext({
 		db: drizzle(sqlite) as any,
 		backend: create_memory_backend(),
-		jwt_secret: fake_bindings.JWT_SECRET,
-		environment: fake_bindings.ENVIRONMENT,
+		jwt_secret: config.jwt_secret,
+		environment: config.environment,
 	});
 
 	const media_context = createMediaContext({
 		db: drizzle(sqlite, { schema: mediaSchema }) as any,
 		backend: create_memory_backend(),
 		providerFactory: defaultProviderFactory,
-		encryptionKey: fake_bindings.ENCRYPTION_KEY,
+		encryptionKey: config.encryption_key,
 	});
 
-	const app = createApi({ db, contexts: false, blogContext: blog_context, mediaContext: media_context });
+	const app = createApi({
+		db,
+		contexts: false,
+		blogContext: blog_context,
+		mediaContext: media_context,
+		config,
+		oauth_secrets,
+	});
 
-	const fetch = (request: Request) => app.fetch(request, fake_bindings, fake_execution_context as any);
+	const fetch = (request: Request) => app.fetch(request);
 
 	return { app, fetch, db };
 }

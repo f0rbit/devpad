@@ -3,18 +3,7 @@ import { Hono } from "hono";
 import type { AppContext } from "../bindings.js";
 import { requireAuth } from "../middleware/auth.js";
 
-const MOCK_ENV = {
-	DB: {} as any,
-	BLOG_CORPUS_BUCKET: {} as any,
-	MEDIA_CORPUS_BUCKET: {} as any,
-	ENVIRONMENT: "test",
-	API_URL: "http://localhost:8787",
-	FRONTEND_URL: "http://localhost:3000",
-	GITHUB_CLIENT_ID: "test-client-id",
-	GITHUB_CLIENT_SECRET: "test-client-secret",
-	JWT_SECRET: "test-jwt-secret",
-	ENCRYPTION_KEY: "test-encryption-key",
-};
+const MOCK_ENV = {};
 
 const createTestApp = () => {
 	const app = new Hono<AppContext>();
