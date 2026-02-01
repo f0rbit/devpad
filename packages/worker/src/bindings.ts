@@ -6,12 +6,31 @@ import type { UnifiedDatabase } from "@devpad/schema/database/d1";
 
 export type { AuthUser };
 
+export type AppConfig = {
+	environment: string;
+	api_url: string;
+	frontend_url: string;
+	jwt_secret: string;
+	encryption_key: string;
+};
+
+export type OAuthSecrets = {
+	github_client_id: string;
+	github_client_secret: string;
+	reddit_client_id: string;
+	reddit_client_secret: string;
+	twitter_client_id: string;
+	twitter_client_secret: string;
+};
+
 export type AppVariables = {
 	db: UnifiedDatabase;
 	user: AuthUser;
 	session: SessionData | null;
 	blogContext: BlogAppContext;
 	mediaContext: MediaAppContext;
+	config: AppConfig;
+	oauth_secrets: OAuthSecrets;
 };
 
 export type AppContext = {

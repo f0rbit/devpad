@@ -8,8 +8,9 @@ import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import type { AppContext } from "./bindings.js";
+import type { AppConfig, AppContext, OAuthSecrets } from "./bindings.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { configMiddleware } from "./middleware/config.js";
 import { unifiedContextMiddleware } from "./middleware/context.js";
 import { dbMiddleware } from "./middleware/db.js";
 import { requestContextMiddleware } from "./middleware/request-context.js";
@@ -24,6 +25,8 @@ export type ApiOptions = {
 	contexts?: boolean;
 	blogContext?: BlogAppContext;
 	mediaContext?: MediaAppContext;
+	config?: AppConfig;
+	oauth_secrets?: OAuthSecrets;
 };
 
 type AstroHandler = {
@@ -71,6 +74,19 @@ export const createApi = (options?: ApiOptions) => {
 	} else {
 		app.use("*", dbMiddleware);
 	}
+
+	if (options?.config && options?.oauth_secrets) {
+		const injected_config = options.config;
+		const injected_secrets = options.oauth_secrets;
+		app.use("*", async (c, next) => {
+			c.set("config", injected_config);
+			c.set("oauth_secrets", injected_secrets);
+			await next();
+		});
+	} else {
+		app.use("*", configMiddleware);
+	}
+
 	app.use("*", authMiddleware);
 	if (options?.blogContext && options?.mediaContext) {
 		const blog_ctx = options.blogContext;

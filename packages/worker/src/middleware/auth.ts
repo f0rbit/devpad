@@ -11,7 +11,7 @@ const setNullAuth = (c: any) => {
 
 export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	const db = c.get("db");
-	const env = c.env;
+	const config = c.get("config");
 
 	const auth_header = c.req.header("Authorization");
 	if (auth_header?.startsWith("Bearer ")) {
@@ -19,7 +19,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 
 		if (token.startsWith("jwt:")) {
 			const jwt_token = token.slice(4);
-			const jwt_result = await jwt.verifyJWT(env.JWT_SECRET, jwt_token);
+			const jwt_result = await jwt.verifyJWT(config.jwt_secret, jwt_token);
 			if (jwt_result.ok) {
 				const session_result = await validateSession(db, jwt_result.value.session_id);
 				if (session_result.ok) {
@@ -62,12 +62,12 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 			c.set("session", session_data);
 
 			if (session_data.fresh) {
-				c.header("Set-Cookie", createSessionCookie(session_data.id, cookieConfig(env)));
+				c.header("Set-Cookie", createSessionCookie(session_data.id, cookieConfig(config.environment)));
 			}
 			return next();
 		}
 
-		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(env)));
+		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 
 	setNullAuth(c);

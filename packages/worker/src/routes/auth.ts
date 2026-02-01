@@ -26,14 +26,15 @@ const isAllowedRedirectUrl = (url: string): boolean => {
 const app = new Hono<AppContext>();
 
 app.get("/login", async c => {
-	const env = c.env;
+	const config = c.get("config");
+	const oauth_secrets = c.get("oauth_secrets");
 	const return_to = c.req.query("return_to");
 	const mode = c.req.query("mode") as "jwt" | "session" | undefined;
 
 	const oauth_env = {
-		GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
-		GITHUB_CLIENT_SECRET: env.GITHUB_CLIENT_SECRET,
-		JWT_SECRET: env.JWT_SECRET,
+		GITHUB_CLIENT_ID: oauth_secrets.github_client_id,
+		GITHUB_CLIENT_SECRET: oauth_secrets.github_client_secret,
+		JWT_SECRET: config.jwt_secret,
 	};
 
 	const result = oauth.createGitHubAuthUrl(oauth_env, {
@@ -47,7 +48,7 @@ app.get("/login", async c => {
 
 	setCookie(c, "github_oauth_state", state, {
 		path: "/",
-		secure: env.ENVIRONMENT === "production",
+		secure: config.environment === "production",
 		httpOnly: true,
 		maxAge: 60 * 10,
 		sameSite: "Lax",
@@ -57,7 +58,8 @@ app.get("/login", async c => {
 });
 
 app.get("/callback/github", async c => {
-	const env = c.env;
+	const config = c.get("config");
+	const oauth_secrets = c.get("oauth_secrets");
 	const db = c.get("db");
 	const code = c.req.query("code");
 	const state = c.req.query("state");
@@ -68,9 +70,9 @@ app.get("/callback/github", async c => {
 	}
 
 	const oauth_env = {
-		GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
-		GITHUB_CLIENT_SECRET: env.GITHUB_CLIENT_SECRET,
-		JWT_SECRET: env.JWT_SECRET,
+		GITHUB_CLIENT_ID: oauth_secrets.github_client_id,
+		GITHUB_CLIENT_SECRET: oauth_secrets.github_client_secret,
+		JWT_SECRET: config.jwt_secret,
 	};
 
 	const callback_result = await oauth.handleGitHubCallback(db, oauth_env, code, state, stored_state);
@@ -78,15 +80,15 @@ app.get("/callback/github", async c => {
 
 	const { user: oauth_user, accessToken, sessionId } = callback_result.value;
 
-	const jwt_result = await jwt.generateJWT(env.JWT_SECRET, {
+	const jwt_result = await jwt.generateJWT(config.jwt_secret, {
 		user_id: oauth_user.id,
 		session_id: sessionId,
 	});
 
 	const token = jwt_result.ok ? jwt_result.value : null;
 
-	const config = cookieConfig(env);
-	c.header("Set-Cookie", createSessionCookie(sessionId, config));
+	const cookie_config = cookieConfig(config.environment);
+	c.header("Set-Cookie", createSessionCookie(sessionId, cookie_config));
 
 	setCookie(c, "github_oauth_state", "", {
 		path: "/",
@@ -101,7 +103,7 @@ app.get("/callback/github", async c => {
 		}
 	}
 
-	const frontend_url = env.FRONTEND_URL || "http://localhost:3000";
+	const frontend_url = config.frontend_url || "http://localhost:3000";
 
 	if (token) {
 		return c.redirect(`${frontend_url}/auth/callback?token=${token}`);
@@ -112,15 +114,15 @@ app.get("/callback/github", async c => {
 
 app.get("/logout", async c => {
 	const db = c.get("db");
-	const env = c.env;
+	const config = c.get("config");
 	const session = c.get("session");
 
 	if (session) {
 		await invalidateSession(db, session.id);
-		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(env)));
+		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 
-	const frontend_url = env.FRONTEND_URL || "http://localhost:3000";
+	const frontend_url = config.frontend_url || "http://localhost:3000";
 	return c.redirect(`${frontend_url}/auth/logout`);
 });
 

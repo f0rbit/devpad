@@ -5,7 +5,7 @@ import { accounts, apiKeys, type BadRequestError, errors, type ParseError, type 
 import { err, type FetchError, ok, pipe, type Result, to_nullable, try_catch, try_catch_async } from "@f0rbit/corpus";
 import { and, eq, or } from "drizzle-orm";
 import type { Context } from "hono";
-import type { AppContext } from "../../../bindings.js";
+import type { AppContext, OAuthSecrets } from "../../../bindings.js";
 import { getContext } from "./auth-context.js";
 
 type HonoContext = Context<AppContext>;
@@ -98,7 +98,7 @@ export type OAuthUser = {
 
 export type OAuthError = { kind: "token_exchange_failed"; message: string } | { kind: "user_fetch_failed"; message: string } | { kind: "encryption_failed"; message: string } | { kind: "db_error"; message: string };
 
-export type OAuthSecrets = { clientId: string | undefined; clientSecret: string | undefined };
+export type PlatformSecrets = { clientId: string | undefined; clientSecret: string | undefined };
 
 export type OAuthCallbackConfig<TState extends Record<string, unknown> = Record<string, never>> = {
 	platform: Platform;
@@ -107,13 +107,13 @@ export type OAuthCallbackConfig<TState extends Record<string, unknown> = Record<
 	tokenHeaders?: Record<string, string>;
 	tokenBody: (code: string, redirectUri: string, state: OAuthState<TState>, secrets: { clientId: string; clientSecret: string }) => URLSearchParams;
 	fetchUser: (accessToken: string) => Promise<OAuthUser>;
-	getSecrets: (env: HonoContext["env"]) => OAuthSecrets;
+	getSecrets: (secrets: OAuthSecrets) => PlatformSecrets;
 	stateKeys?: (keyof TState)[];
-	resolveSecrets?: (ctx: MediaAppContext, state: OAuthState<TState>, envSecrets: OAuthSecrets) => Promise<OAuthSecrets>;
+	resolveSecrets?: (ctx: MediaAppContext, state: OAuthState<TState>, envSecrets: PlatformSecrets) => Promise<PlatformSecrets>;
 	onSuccess?: (ctx: MediaAppContext, state: OAuthState<TState>) => Promise<void>;
 };
 
-export const getFrontendUrl = (c: HonoContext): string => c.env.FRONTEND_URL || "http://localhost:4321";
+export const getFrontendUrl = (c: HonoContext): string => c.get("config").frontend_url || "http://localhost:4321";
 
 export const validateOAuthQueryKey = async (c: HonoContext, ctx: MediaAppContext, platform: string): Promise<Result<string, Response>> => {
 	const apiKey = c.req.query("key");
@@ -240,10 +240,10 @@ export const validateOAuthRequest = async <TState extends Record<string, unknown
 	const stateResult = decodeOAuthState<TState>(c, c.req.query("state"), config.platform, config.stateKeys);
 	if (!stateResult.ok) return err(stateResult.error);
 
-	const envSecrets = config.getSecrets(c.env);
+	const envSecrets = config.getSecrets(c.get("oauth_secrets"));
 	const { clientId, clientSecret } = config.resolveSecrets ? await config.resolveSecrets(ctx, stateResult.value, envSecrets) : envSecrets;
 
-	const redirectUri = `${c.env.API_URL || "http://localhost:8787"}/api/auth/platforms/${config.platform}/callback`;
+	const redirectUri = `${c.get("config").api_url || "http://localhost:8787"}/api/auth/platforms/${config.platform}/callback`;
 
 	if (!clientId || !clientSecret) {
 		return err(redirectWithError(c, config.platform, "not_configured"));

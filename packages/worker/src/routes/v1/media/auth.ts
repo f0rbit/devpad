@@ -3,11 +3,11 @@ import { credential, token } from "@devpad/core/services/media";
 import { Hono } from "hono";
 import type { AppContext } from "../../../bindings.js";
 import { getContext } from "./auth-context.js";
-import { type OAuthCallbackConfig, type OAuthSecrets, type OAuthState, oauth } from "./oauth-helpers.js";
+import { type OAuthCallbackConfig, type OAuthState, oauth, type PlatformSecrets } from "./oauth-helpers.js";
 
 type RedditOAuthState = { byo?: boolean };
 
-const resolveRedditSecrets = async (ctx: MediaAppContext, state: OAuthState<RedditOAuthState>, envSecrets: OAuthSecrets): Promise<OAuthSecrets> => {
+const resolveRedditSecrets = async (ctx: MediaAppContext, state: OAuthState<RedditOAuthState>, envSecrets: PlatformSecrets): Promise<PlatformSecrets> => {
 	if (!state.byo) return envSecrets;
 	const byoCredentials = await credential.get(ctx, state.profile_id, "reddit");
 	if (!byoCredentials) return { clientId: undefined, clientSecret: undefined };
@@ -42,7 +42,7 @@ const redditOAuthConfig: OAuthCallbackConfig<RedditOAuthState> = {
 		const data = (await response.json()) as { id: string; name: string };
 		return { id: data.id, username: data.name };
 	},
-	getSecrets: env => ({ clientId: env.REDDIT_CLIENT_ID, clientSecret: env.REDDIT_CLIENT_SECRET }),
+	getSecrets: secrets => ({ clientId: secrets.reddit_client_id, clientSecret: secrets.reddit_client_secret }),
 	resolveSecrets: resolveRedditSecrets,
 	onSuccess: onRedditSuccess,
 };
@@ -66,7 +66,7 @@ const twitterOAuthConfig: OAuthCallbackConfig<{ code_verifier: string }> = {
 		const data = (await response.json()) as { data: { id: string; username: string } };
 		return { id: data.data.id, username: data.data.username };
 	},
-	getSecrets: env => ({ clientId: env.TWITTER_CLIENT_ID, clientSecret: env.TWITTER_CLIENT_SECRET }),
+	getSecrets: secrets => ({ clientId: secrets.twitter_client_id, clientSecret: secrets.twitter_client_secret }),
 	stateKeys: ["code_verifier"],
 };
 
@@ -94,7 +94,7 @@ const githubOAuthConfig: OAuthCallbackConfig = {
 		const data = (await response.json()) as { id: number; login: string };
 		return { id: String(data.id), username: data.login };
 	},
-	getSecrets: env => ({ clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET }),
+	getSecrets: secrets => ({ clientId: secrets.github_client_id, clientSecret: secrets.github_client_secret }),
 };
 
 const base64UrlEncode = (buffer: Uint8Array): string => {
@@ -127,13 +127,13 @@ authRoutes.get("/reddit", async c => {
 	const { user_id, profile_id } = validation.value;
 
 	const byoCredentials = await credential.get(ctx, profile_id, "reddit");
-	const clientId = byoCredentials?.clientId ?? c.env.REDDIT_CLIENT_ID;
+	const clientId = byoCredentials?.clientId ?? c.get("oauth_secrets").reddit_client_id;
 
 	if (!clientId) {
 		return c.redirect(`${oauth.url(c)}/connections?error=reddit_no_credentials`);
 	}
 
-	const redirectUri = `${c.env.API_URL || "http://localhost:8787"}/api/auth/platforms/reddit/callback`;
+	const redirectUri = `${c.get("config").api_url || "http://localhost:8787"}/api/auth/platforms/reddit/callback`;
 	const state = oauth.encode(user_id, profile_id, { byo: !!byoCredentials });
 
 	const authUrl = new URL("https://www.reddit.com/api/v1/authorize");
@@ -156,12 +156,12 @@ authRoutes.get("/twitter", async c => {
 	if (!validation.ok) return validation.error;
 	const { user_id, profile_id } = validation.value;
 
-	const clientId = c.env.TWITTER_CLIENT_ID;
+	const clientId = c.get("oauth_secrets").twitter_client_id;
 	if (!clientId) {
 		return c.json({ error: "Twitter OAuth not configured" }, 500);
 	}
 
-	const redirectUri = `${c.env.API_URL || "http://localhost:8787"}/api/auth/platforms/twitter/callback`;
+	const redirectUri = `${c.get("config").api_url || "http://localhost:8787"}/api/auth/platforms/twitter/callback`;
 
 	const codeVerifier = generateCodeVerifier();
 	const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -188,12 +188,12 @@ authRoutes.get("/github", async c => {
 	if (!validation.ok) return validation.error;
 	const { user_id, profile_id } = validation.value;
 
-	const clientId = c.env.GITHUB_CLIENT_ID;
+	const clientId = c.get("oauth_secrets").github_client_id;
 	if (!clientId) {
 		return c.json({ error: "GitHub OAuth not configured" }, 500);
 	}
 
-	const redirectUri = `${c.env.API_URL || "http://localhost:8787"}/api/auth/platforms/github/callback`;
+	const redirectUri = `${c.get("config").api_url || "http://localhost:8787"}/api/auth/platforms/github/callback`;
 	const state = oauth.encode(user_id, profile_id);
 
 	const authUrl = new URL("https://github.com/login/oauth/authorize");

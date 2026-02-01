@@ -1,5 +1,5 @@
-export const cookieConfig = (env: { ENVIRONMENT: string }) => {
-	const is_production = env.ENVIRONMENT === "production";
+export const cookieConfig = (environment: string) => {
+	const is_production = environment === "production";
 	return {
 		secure: is_production,
 		domain: is_production ? ".devpad.tools" : undefined,
