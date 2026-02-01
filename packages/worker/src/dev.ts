@@ -23,9 +23,6 @@ const fake_execution_context = {
 
 function createFakeBindings(): Bindings {
 	return {
-		DB: {} as any,
-		BLOG_CORPUS_BUCKET: {} as any,
-		MEDIA_CORPUS_BUCKET: {} as any,
 		ENVIRONMENT: process.env.ENVIRONMENT ?? "development",
 		API_URL: process.env.API_URL ?? "http://localhost:3001",
 		FRONTEND_URL: process.env.FRONTEND_URL ?? "http://localhost:4321",

@@ -2,9 +2,6 @@ import { describe, expect, it } from "bun:test";
 import { createUnifiedWorker } from "../index.js";
 
 const MOCK_ENV = {
-	DB: {} as any,
-	BLOG_CORPUS_BUCKET: {} as any,
-	MEDIA_CORPUS_BUCKET: {} as any,
 	ENVIRONMENT: "test",
 	API_URL: "http://localhost:8787",
 	FRONTEND_URL: "http://localhost:3000",

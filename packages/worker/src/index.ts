@@ -127,6 +127,9 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 		},
 
 		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {
+			if (!env.DB || !env.MEDIA_CORPUS_BUCKET) {
+				return;
+			}
 			const unified_db = createD1Database(env.DB);
 			const media_db = drizzle(env.DB, { schema: mediaSchema });
 			const media_backend = create_cloudflare_backend({ d1: env.DB, r2: env.MEDIA_CORPUS_BUCKET });

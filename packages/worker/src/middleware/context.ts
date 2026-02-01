@@ -11,6 +11,10 @@ import type { AppContext } from "../bindings.js";
 export const unifiedContextMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	const env = c.env;
 
+	if (!env.DB || !env.BLOG_CORPUS_BUCKET || !env.MEDIA_CORPUS_BUCKET) {
+		return next();
+	}
+
 	// Blog: D1→Drizzle + R2→Backend at the worker boundary
 	const blog_db = drizzle(env.DB);
 	const blog_backend = create_cloudflare_backend({ d1: env.DB, r2: env.BLOG_CORPUS_BUCKET });
