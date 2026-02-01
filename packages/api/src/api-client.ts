@@ -421,7 +421,7 @@ export class ApiClient {
 		/**
 		 * Save tags for tasks
 		 */
-		saveTags: (data: any): Promise<ApiResult<void>> => wrap(() => this.clients.tasks.post<void>("/tasks/save_tags", { body: data })),
+		saveTags: (data: any): Promise<ApiResult<void>> => wrap(() => this.clients.tasks.patch<void>("/tasks/save_tags", { body: data })),
 
 		/**
 		 * Delete task (soft delete)

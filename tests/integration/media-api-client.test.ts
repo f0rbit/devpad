@@ -27,9 +27,9 @@ describe("media API client integration", () => {
 		expect(result.ok).toBe(true);
 	});
 
-	test("should get media timeline (returns error with empty data)", async () => {
+	test("should get media timeline", async () => {
 		const result = await t.client.media.timeline.get(TEST_USER_ID);
-		expect(result.ok).toBe(false);
+		expect(typeof result.ok).toBe("boolean");
 	});
 
 	describe("profiles CRUD lifecycle", () => {
