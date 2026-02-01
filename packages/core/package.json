@@ -30,13 +30,15 @@
 	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
-		"@paralleldrive/cuid2": "^2.2.2",
 		"@f0rbit/corpus": "^0.3.4",
-		"drizzle-orm": "^0.44.7",
-		"zod": "^3.22.4",
 		"@octokit/auth-oauth-app": "^9.0.1",
 		"@octokit/rest": "^22.0.0",
-		"@octokit/types": "^14.1.0"
+		"@octokit/types": "^14.1.0",
+		"@paralleldrive/cuid2": "^2.2.2",
+		"@xdevplatform/xdk": "^0.4.0",
+		"drizzle-orm": "^0.44.7",
+		"octokit": "^5.0.5",
+		"zod": "^3.22.4"
 	},
 	"devDependencies": {
 		"@octokit/fixtures": "^23.1.1",
