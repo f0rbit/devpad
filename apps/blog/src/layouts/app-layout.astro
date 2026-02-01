@@ -1,6 +1,5 @@
 ---
 import AuthStatus from "../components/layout/auth-status";
-import { ssr } from "../lib/ssr";
 import BaseLayout from "./base-layout.astro";
 
 interface Props {
@@ -21,15 +20,7 @@ const isActive = (href: string) => {
 	return currentPath.startsWith(href);
 };
 
-let authUser = null;
-let authAuthenticated = false;
-
-const runtime = Astro.locals.runtime;
-const authResult = await ssr<{ authenticated: boolean; user: any }>("/api/auth/session", Astro.request, {}, runtime);
-if (authResult.ok) {
-	authAuthenticated = authResult.value.authenticated;
-	authUser = authResult.value.user;
-}
+const authUser = Astro.locals.user;
 ---
 
 <BaseLayout title={title}>
@@ -44,7 +35,7 @@ if (authResult.ok) {
 					</a>
 				))}
 			</nav>
-			<AuthStatus client:load initialUser={authUser} initialAuthenticated={authAuthenticated} />
+			<AuthStatus client:load initialUser={authUser} />
 		</header>
 
 		<main>

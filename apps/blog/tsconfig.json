@@ -10,10 +10,10 @@
 		"strict": true,
 		"skipLibCheck": true,
 		"baseUrl": ".",
-		"types": ["@cloudflare/workers-types"],
 		"paths": {
 			"@/*": ["src/*"],
-			"@devpad/schema/blog": ["../../packages/schema/src/blog/index.ts"]
+			"@devpad/schema/blog": ["../../packages/schema/src/blog/index.ts"],
+			"@devpad/schema/bindings": ["../../packages/schema/src/bindings.ts"]
 		}
 	},
 	"include": ["src/**/*", "astro.config.mjs"],

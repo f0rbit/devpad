@@ -1,7 +1,7 @@
 ---
 import CategoriesPage from "@/components/category/categories-page";
 import AppLayout from "@/layouts/app-layout.astro";
-import { ssr } from "@/lib/ssr";
+import { getServerApiClient } from "@/lib/api-client";
 
 interface CategoryNode {
 	name: string;
@@ -20,8 +20,8 @@ const flattenTree = (nodes: CategoryNode[], id = 1): Category[] => nodes.flatMap
 let categories: Category[] = [];
 let error: string | null = null;
 
-const runtime = Astro.locals.runtime;
-const catResult = await ssr<{ categories?: CategoryNode[] }>("/api/v1/blog/categories", Astro.request, {}, runtime);
+const client = getServerApiClient(Astro.locals);
+const catResult = await client.blog.categories.tree();
 
 if (catResult.ok) {
 	categories = flattenTree(catResult.value.categories ?? []);

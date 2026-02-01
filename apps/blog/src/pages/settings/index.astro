@@ -1,23 +1,15 @@
 ---
 import SettingsPage from "@/components/settings/settings-page";
 import AppLayout from "@/layouts/app-layout.astro";
-import { ssr } from "@/lib/ssr";
-import type { AccessKey, User } from "@devpad/schema/blog";
+import { getServerApiClient } from "@/lib/api-client";
 
-type Token = Pick<AccessKey, "id" | "name" | "note" | "enabled" | "created_at">;
+type Token = { id: string; name: string | null; note: string | null; enabled: boolean; created_at: string };
 
-let user: User | null = null;
+const user = Astro.locals.user;
 let tokens: Token[] = [];
 
-const runtime = Astro.locals.runtime;
-const [userResult, tokensResult] = await Promise.all([
-	ssr<{ authenticated: boolean; user: User }>("/api/auth/session", Astro.request, {}, runtime),
-	ssr<{ tokens?: Token[] }>("/api/v1/blog/tokens", Astro.request, {}, runtime),
-]);
-
-if (userResult.ok && userResult.value.authenticated) {
-	user = userResult.value.user;
-}
+const client = getServerApiClient(Astro.locals);
+const tokensResult = await client.blog.tokens.list();
 
 if (tokensResult.ok) {
 	tokens = tokensResult.value.tokens ?? [];

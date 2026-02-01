@@ -2,7 +2,7 @@
 import { Button } from "@f0rbit/ui";
 import PostEditor from "@/components/post/post-editor";
 import AppLayout from "@/layouts/app-layout.astro";
-import { ssr } from "@/lib/ssr";
+import { getServerApiClient } from "@/lib/api-client";
 
 const { slug } = Astro.params;
 
@@ -42,16 +42,16 @@ let categories: Category[] = [];
 let projects: Project[] = [];
 let error: string | null = null;
 
-const runtime = Astro.locals.runtime;
+const client = getServerApiClient(Astro.locals);
 
 const [postResult, catResult, projResult] = await Promise.all([
-	ssr<Post>(`/api/v1/blog/posts/${slug}`, Astro.request, {}, runtime),
-	ssr<{ categories?: CategoryNode[] }>("/api/v1/blog/categories", Astro.request, {}, runtime),
-	ssr<{ projects?: Project[] }>("/api/v1/projects", Astro.request, {}, runtime),
+	client.blog.posts.getBySlug(slug!),
+	client.blog.categories.tree(),
+	client.projects.list(),
 ]);
 
 if (postResult.ok) {
-	post = postResult.value;
+	post = postResult.value as unknown as Post;
 } else {
 	error = "Post not found";
 }
@@ -61,7 +61,7 @@ if (catResult.ok) {
 }
 
 if (projResult.ok) {
-	projects = projResult.value.projects ?? [];
+	projects = projResult.value;
 }
 ---
 

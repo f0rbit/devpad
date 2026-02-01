@@ -1,7 +1,7 @@
 ---
 import PostEditor from "@/components/post/post-editor";
 import AppLayout from "@/layouts/app-layout.astro";
-import { ssr } from "@/lib/ssr";
+import { getServerApiClient } from "@/lib/api-client";
 
 interface CategoryNode {
 	name: string;
@@ -26,10 +26,10 @@ const flattenTree = (nodes: CategoryNode[]): Category[] => nodes.flatMap(n => [{
 let categories: Category[] = [];
 let projects: Project[] = [];
 
-const runtime = Astro.locals.runtime;
+const client = getServerApiClient(Astro.locals);
 const [catResult, projResult] = await Promise.all([
-	ssr<{ categories?: CategoryNode[] }>("/api/v1/blog/categories", Astro.request, {}, runtime),
-	ssr<{ projects?: Project[] }>("/api/v1/projects", Astro.request, {}, runtime),
+	client.blog.categories.tree(),
+	client.projects.list(),
 ]);
 
 if (catResult.ok) {
@@ -37,7 +37,7 @@ if (catResult.ok) {
 }
 
 if (projResult.ok) {
-	projects = projResult.value.projects ?? [];
+	projects = projResult.value;
 }
 ---
 

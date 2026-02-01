@@ -2,7 +2,6 @@
 import { Button } from "@f0rbit/ui";
 import HowItWorks from "@/components/landing/HowItWorks";
 import BaseLayout from "@/layouts/base-layout.astro";
-import { ssr } from "@/lib/ssr";
 import ArrowRight from "lucide-astro/ArrowRight";
 import CalendarCheck from "lucide-astro/CalendarCheck";
 import FileText from "lucide-astro/FileText";
@@ -13,12 +12,7 @@ import RefreshCw from "lucide-astro/RefreshCw";
 import Sparkles from "lucide-astro/Sparkles";
 import Tag from "lucide-astro/Tag";
 
-const runtime = Astro.locals.runtime;
-const authResult = await ssr<{ authenticated?: boolean }>("/api/auth/session", Astro.request, {}, runtime);
-let isAuthenticated = false;
-if (authResult.ok) {
-	isAuthenticated = authResult.value.authenticated === true;
-}
+const isAuthenticated = !!Astro.locals.user;
 ---
 
 <BaseLayout title="Blog - devpad">

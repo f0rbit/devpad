@@ -1,7 +1,7 @@
 ---
 import { Button } from "@f0rbit/ui";
 import AppLayout from "@/layouts/app-layout.astro";
-import { ssr } from "@/lib/ssr";
+import { getServerApiClient } from "@/lib/api-client";
 import { date } from "@/lib/date-utils";
 
 const { uuid } = Astro.params;
@@ -27,9 +27,9 @@ let postInfo: PostInfo | null = null;
 let versions: VersionInfo[] = [];
 let error: string | null = null;
 
-const runtime = Astro.locals.runtime;
+const client = getServerApiClient(Astro.locals);
 
-const versionsResult = await ssr<{ versions?: VersionInfo[] }>(`/api/v1/blog/posts/${uuid}/versions`, Astro.request, {}, runtime);
+const versionsResult = await client.blog.posts.versions(uuid!);
 
 if (versionsResult.ok) {
 	versions = (versionsResult.value.versions ?? []).map((v: VersionInfo) => ({
@@ -42,13 +42,13 @@ if (versionsResult.ok) {
 }
 
 if (versions.length > 0) {
-	const postsResult = await ssr<{ posts?: { uuid: string; slug: string; corpus_version: string }[] }>("/api/v1/blog/posts?limit=100", Astro.request, {}, runtime);
+	const postsResult = await client.blog.posts.list({ limit: 100 });
 	if (postsResult.ok) {
-		const post = postsResult.value.posts?.find((p) => p.uuid === uuid);
+		const post = postsResult.value.posts?.find((p: any) => p.uuid === uuid);
 		if (post) {
 			postInfo = {
 				slug: post.slug,
-				corpus_version: normalizeHash(post.corpus_version),
+				corpus_version: normalizeHash((post as any).corpus_version),
 			};
 		}
 	}
