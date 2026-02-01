@@ -1,5 +1,5 @@
 export { type CategoryNode, type CategoryService, type CategoryUpdate, category, createCategoryService } from "./categories";
-export { type AppContext, createContext, createContextFromDeps } from "./context";
+export { type AppContext, createContext } from "./context";
 export { corpus } from "./corpus";
 export { createPostService, type PostService } from "./posts";
 export { createTagService, type TagService, type TagWithCount } from "./tags";

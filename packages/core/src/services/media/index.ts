@@ -1,7 +1,7 @@
 // Media services barrel export
 
 export { type AccountOwnership, type OwnershipError, type ProfileOwnership, requireAccountOwnership, requireProfileOwnership } from "./auth-ownership";
-export { type Bindings, type CreateContextDeps, createContext as createMediaContext, createContextFromBindings } from "./bindings";
+export { type CreateContextDeps, createContext as createMediaContext } from "./bindings";
 export { type DeleteConnectionError, type DeleteConnectionResult, deleteConnection } from "./connection-delete";
 export type { AppContext } from "./context";
 export { type CronResult, handleCron, type ProviderFactory as CronProviderFactory } from "./cron";

@@ -1,8 +1,11 @@
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
-import { createContextFromBindings, createProviderFactory, handleCron } from "@devpad/core/services/media";
+import { createMediaContext, createProviderFactory, handleCron } from "@devpad/core/services/media";
 import type { Bindings } from "@devpad/schema/bindings";
-import type { UnifiedDatabase } from "@devpad/schema/database/d1";
+import { createD1Database, type UnifiedDatabase } from "@devpad/schema/database/d1";
+import * as mediaSchema from "@devpad/schema/database/media";
+import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
+import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppContext } from "./bindings.js";
@@ -124,7 +127,23 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 		},
 
 		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {
-			const app_ctx = createContextFromBindings(env, createProviderFactory(env.DB));
+			const unified_db = createD1Database(env.DB);
+			const media_db = drizzle(env.DB, { schema: mediaSchema });
+			const media_backend = create_cloudflare_backend({ d1: env.DB, r2: env.MEDIA_CORPUS_BUCKET });
+			const app_ctx = createMediaContext({
+				db: media_db as any,
+				backend: media_backend,
+				providerFactory: createProviderFactory(unified_db),
+				encryptionKey: env.ENCRYPTION_KEY,
+				env: {
+					REDDIT_CLIENT_ID: env.REDDIT_CLIENT_ID,
+					REDDIT_CLIENT_SECRET: env.REDDIT_CLIENT_SECRET,
+					TWITTER_CLIENT_ID: env.TWITTER_CLIENT_ID,
+					TWITTER_CLIENT_SECRET: env.TWITTER_CLIENT_SECRET,
+					GITHUB_CLIENT_ID: env.GITHUB_CLIENT_ID,
+					GITHUB_CLIENT_SECRET: env.GITHUB_CLIENT_SECRET,
+				},
+			});
 			ctx.waitUntil(handleCron(app_ctx));
 		},
 	};

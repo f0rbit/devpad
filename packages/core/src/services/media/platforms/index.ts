@@ -11,6 +11,7 @@ export * from "./twitter-memory";
 export * from "./types";
 export { normalizeYouTube, YouTubeMemoryProvider, YouTubeProvider, type YouTubeProviderConfig } from "./youtube";
 
+import type { UnifiedDatabase } from "@devpad/schema/database/d1";
 import { errors } from "@devpad/schema/media";
 import type { Result } from "@f0rbit/corpus";
 import { BlueskyProvider } from "./bluesky";
@@ -18,9 +19,9 @@ import { DevpadProvider } from "./devpad";
 import type { Provider, ProviderError, ProviderFactory } from "./types";
 import { YouTubeProvider } from "./youtube";
 
-export const createProviderFactory = (d1: D1Database): ProviderFactory => ({
+export const createProviderFactory = (db: UnifiedDatabase): ProviderFactory => ({
 	async create(platform, platformUserId, token) {
-		const provider = providerForPlatform(platform, platformUserId, d1);
+		const provider = providerForPlatform(platform, platformUserId, db);
 		if (!provider) return errors.badRequest(`Unknown platform: ${platform}`);
 		return provider.fetch(token) as Promise<Result<Record<string, unknown>, ProviderError>>;
 	},
@@ -34,15 +35,15 @@ export const defaultProviderFactory: ProviderFactory = {
 	},
 };
 
-const providerForPlatform = (platform: string, platformUserId: string | null, d1?: D1Database): Provider<unknown> | null => {
+const providerForPlatform = (platform: string, platformUserId: string | null, db?: UnifiedDatabase): Provider<unknown> | null => {
 	switch (platform) {
 		case "bluesky":
 			return new BlueskyProvider({ actor: platformUserId ?? "" });
 		case "youtube":
 			return new YouTubeProvider({ playlist_id: platformUserId ?? "" });
 		case "devpad":
-			if (!d1 || !platformUserId) return null;
-			return new DevpadProvider(d1, platformUserId);
+			if (!db || !platformUserId) return null;
+			return new DevpadProvider(db, platformUserId);
 		default:
 			return null;
 	}
