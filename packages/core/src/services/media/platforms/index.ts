@@ -11,7 +11,7 @@ export * from "./twitter-memory";
 export * from "./types";
 export { normalizeYouTube, YouTubeMemoryProvider, YouTubeProvider, type YouTubeProviderConfig } from "./youtube";
 
-import type { UnifiedDatabase } from "@devpad/schema/database/d1";
+import type { Database } from "@devpad/schema/database/types";
 import { errors } from "@devpad/schema/media";
 import type { Result } from "@f0rbit/corpus";
 import { BlueskyProvider } from "./bluesky";
@@ -19,7 +19,7 @@ import { DevpadProvider } from "./devpad";
 import type { Provider, ProviderError, ProviderFactory } from "./types";
 import { YouTubeProvider } from "./youtube";
 
-export const createProviderFactory = (db: UnifiedDatabase): ProviderFactory => ({
+export const createProviderFactory = (db: Database): ProviderFactory => ({
 	async create(platform, platformUserId, token) {
 		const provider = providerForPlatform(platform, platformUserId, db);
 		if (!provider) return errors.badRequest(`Unknown platform: ${platform}`);
@@ -35,7 +35,7 @@ export const defaultProviderFactory: ProviderFactory = {
 	},
 };
 
-const providerForPlatform = (platform: string, platformUserId: string | null, db?: UnifiedDatabase): Provider<unknown> | null => {
+const providerForPlatform = (platform: string, platformUserId: string | null, db?: Database): Provider<unknown> | null => {
 	switch (platform) {
 		case "bluesky":
 			return new BlueskyProvider({ actor: platformUserId ?? "" });

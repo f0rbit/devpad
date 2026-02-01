@@ -1,5 +1,5 @@
 import { tasks } from "@devpad/core/services";
-import type { UnifiedDatabase } from "@devpad/schema/database/d1";
+import type { Database } from "@devpad/schema/database/types";
 import type { DevpadRaw, DevpadTask, TaskPayload, TimelineItem } from "@devpad/schema/media";
 import { err, ok } from "@f0rbit/corpus";
 import { BaseMemoryProvider } from "./memory-base";
@@ -42,10 +42,9 @@ const mapTaskToDevpadTask = (t: any): DevpadTask => ({
 
 export class DevpadProvider implements Provider<DevpadRaw> {
 	readonly platform = "devpad";
-	private db: UnifiedDatabase;
-	private user_id: string;
+	private db: Database;
 
-	constructor(db: UnifiedDatabase, user_id: string) {
+	constructor(db: Database, user_id: string) {
 		this.db = db;
 		this.user_id = user_id;
 	}

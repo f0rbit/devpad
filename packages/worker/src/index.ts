@@ -2,10 +2,9 @@ import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { createMediaContext, createProviderFactory, handleCron } from "@devpad/core/services/media";
 import type { Bindings } from "@devpad/schema/bindings";
-import { createD1Database, type UnifiedDatabase } from "@devpad/schema/database/d1";
-import * as mediaSchema from "@devpad/schema/database/media";
+import { createD1Database } from "@devpad/schema/database/d1";
+import type { Database } from "@devpad/schema/database/types";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
-import { drizzle } from "drizzle-orm/d1";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppConfig, AppContext, OAuthSecrets } from "./bindings.js";
@@ -21,7 +20,7 @@ import { authRoutes as mediaAuthRoutes } from "./routes/v1/media/auth.js";
 import mediaRoutes from "./routes/v1/media/index.js";
 
 export type ApiOptions = {
-	db?: UnifiedDatabase;
+	db?: Database;
 	blogContext?: BlogAppContext;
 	mediaContext?: MediaAppContext;
 	config?: AppConfig;
@@ -145,13 +144,12 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			if (!env.DB || !env.MEDIA_CORPUS_BUCKET) {
 				return;
 			}
-			const unified_db = createD1Database(env.DB);
-			const media_db = drizzle(env.DB, { schema: mediaSchema });
+			const db = createD1Database(env.DB);
 			const media_backend = create_cloudflare_backend({ d1: env.DB, r2: env.MEDIA_CORPUS_BUCKET });
 			const app_ctx = createMediaContext({
-				db: media_db as any,
+				db,
 				backend: media_backend,
-				providerFactory: createProviderFactory(unified_db),
+				providerFactory: createProviderFactory(db),
 				encryptionKey: env.ENCRYPTION_KEY,
 				env: {
 					REDDIT_CLIENT_ID: env.REDDIT_CLIENT_ID,

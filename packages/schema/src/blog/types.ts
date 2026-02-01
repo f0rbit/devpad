@@ -1,11 +1,7 @@
 /// <reference types="@cloudflare/workers-types" />
 import type { Corpus, Store } from "@f0rbit/corpus";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
 import { z } from "zod";
 import type { PostContent } from "./corpus.js";
-
-// biome-ignore lint/suspicious/noExplicitAny: Drizzle uses 'any' for flexible query/result types
-export type DrizzleDB = BaseSQLiteDatabase<"async", any, Record<string, never>>;
 
 export {
 	at,
@@ -26,6 +22,7 @@ export {
 	try_catch_async,
 	unwrap_or,
 } from "@f0rbit/corpus";
+export type { Database as DrizzleDB } from "../database/types.js";
 export { type PostContent, PostContentSchema } from "./corpus.js";
 
 export const PostRowSchema = z.object({

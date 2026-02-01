@@ -34,6 +34,10 @@
 			"types": "./dist/database/media.d.ts",
 			"import": "./dist/database/media.js"
 		},
+		"./database/types": {
+			"types": "./dist/database/types.d.ts",
+			"import": "./dist/database/types.js"
+		},
 		"./blog": {
 			"types": "./dist/blog/index.d.ts",
 			"import": "./dist/blog/index.js"
