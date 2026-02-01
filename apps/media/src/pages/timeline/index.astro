@@ -1,20 +1,19 @@
 ---
 import TimelineList from "../../components/solid/TimelineList";
 import AppLayout from "../../layouts/AppLayout.astro";
-import { type ProfileTimelineResponse, type TimelineGroup } from "../../utils/types";
-import { ssr } from "../../utils/ssr";
+import { type TimelineGroup } from "../../utils/types";
+import { getServerApiClient } from "../../utils/api-client";
 
 const profileSlug = Astro.url.searchParams.get("profile");
 
 let initialGroups: TimelineGroup[] = [];
 
-if (profileSlug) {
+if (profileSlug && Astro.locals.user) {
 	try {
-		const runtime = Astro.locals.runtime;
-		const result = await ssr<ProfileTimelineResponse>(`/api/v1/profiles/${profileSlug}/timeline`, Astro.request, {}, runtime);
-
+		const client = getServerApiClient(Astro.locals);
+		const result = await client.media.profiles.timeline(profileSlug);
 		if (result.ok) {
-			initialGroups = result.value.data.groups;
+			initialGroups = result.value.data.groups as TimelineGroup[];
 		}
 	} catch {
 		// SSR fetch failed, component will fetch client-side

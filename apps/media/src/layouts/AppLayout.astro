@@ -1,7 +1,7 @@
 ---
 import "../utils/error-logger";
 import ProfileSelector from "../components/solid/ProfileSelector.tsx";
-import { getSSRAuth } from "../utils/ssr-auth";
+import { getServerApiClient } from "../utils/api-client";
 import Layout from "./Layout.astro";
 
 interface Props {
@@ -29,20 +29,18 @@ const buildUrl = (path: string) => {
 	return `${path}?profile=${encodeURIComponent(profileSlug)}`;
 };
 
-// Fetch auth status and profiles using direct database access
-let isAuthenticated = false;
+const isAuthenticated = !!Astro.locals.user;
 let initialProfiles: { id: string; slug: string; name: string; description: string | null; created_at: string }[] = [];
 
-// @ts-expect-error - Astro.locals.runtime is provided by Cloudflare adapter
-const runtime = Astro.locals.runtime;
-
-if (runtime?.env?.DB) {
+if (isAuthenticated) {
 	try {
-		const authResult = await getSSRAuth(Astro.request, runtime);
-		isAuthenticated = authResult.authenticated;
-		initialProfiles = authResult.profiles;
+		const client = getServerApiClient(Astro.locals);
+		const profilesResult = await client.media.profiles.list();
+		if (profilesResult.ok) {
+			initialProfiles = profilesResult.value;
+		}
 	} catch {
-		// Auth failed, will show login button
+		// failed to fetch profiles
 	}
 }
 ---
