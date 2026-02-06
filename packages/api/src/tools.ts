@@ -2,6 +2,11 @@ import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, 
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
 
+function unwrap<T>(result: { ok: boolean; value?: T; error?: { message: string } }): T {
+	if (!result.ok) throw new Error(result.error?.message ?? "Unknown error");
+	return result.value as T;
+}
+
 // Filter schemas that aren't in @devpad/schema yet
 export const project_filters = z.object({
 	private: z.boolean().optional().describe("Include private projects (default: true)"),
@@ -57,33 +62,21 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_projects_list",
 		description: "List all projects (or only public ones)",
 		inputSchema: project_filters,
-		execute: async (client, input) => {
-			const result = await client.projects.list(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.projects.list(input)),
 	},
 
 	devpad_projects_get: {
 		name: "devpad_projects_get",
 		description: "Get project by ID or name",
 		inputSchema: project_by_id_or_name,
-		execute: async (client, input) => {
-			const result = input.id ? await client.projects.getById(input.id) : await client.projects.getByName(input.name!);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(input.id ? await client.projects.getById(input.id) : await client.projects.getByName(input.name!)),
 	},
 
 	devpad_projects_upsert: {
 		name: "devpad_projects_upsert",
 		description: "Create or update a project (set deleted=true to delete)",
 		inputSchema: upsert_project,
-		execute: async (client, input) => {
-			const result = await client.projects.upsert(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.projects.upsert(input)),
 	},
 
 	devpad_projects_config_save: {
@@ -91,8 +84,7 @@ export const tools: Record<string, ToolDefinition> = {
 		description: "Save project configuration",
 		inputSchema: save_config_request,
 		execute: async (client, input) => {
-			const result = await client.projects.config.save(input);
-			if (!result.ok) throw new Error(result.error.message);
+			unwrap(await client.projects.config.save(input));
 			return { success: true };
 		},
 	},
@@ -102,33 +94,21 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_tasks_list",
 		description: "List tasks, optionally filtered by project or tag",
 		inputSchema: task_filters,
-		execute: async (client, input) => {
-			const result = await client.tasks.list(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.tasks.list(input)),
 	},
 
 	devpad_tasks_get: {
 		name: "devpad_tasks_get",
 		description: "Get task by ID",
 		inputSchema: task_by_id,
-		execute: async (client, input) => {
-			const result = await client.tasks.find(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.tasks.find(input.id)),
 	},
 
 	devpad_tasks_upsert: {
 		name: "devpad_tasks_upsert",
 		description: "Create or update a task (set deleted=true to delete)",
 		inputSchema: upsert_todo,
-		execute: async (client, input) => {
-			const result = await client.tasks.upsert(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.tasks.upsert(input)),
 	},
 
 	devpad_tasks_save_tags: {
@@ -136,8 +116,7 @@ export const tools: Record<string, ToolDefinition> = {
 		description: "Save tags for tasks",
 		inputSchema: save_tags_request,
 		execute: async (client, input) => {
-			const result = await client.tasks.saveTags(input);
-			if (!result.ok) throw new Error(result.error.message);
+			unwrap(await client.tasks.saveTags(input));
 			return { success: true };
 		},
 	},
@@ -147,46 +126,37 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_milestones_list",
 		description: "List milestones for authenticated user or by project",
 		inputSchema: milestone_filters,
-		execute: async (client, input) => {
-			const result = input.project_id ? await client.milestones.getByProject(input.project_id) : await client.milestones.list();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(input.project_id ? await client.milestones.getByProject(input.project_id) : await client.milestones.list()),
 	},
 
 	devpad_milestones_get: {
 		name: "devpad_milestones_get",
 		description: "Get milestone by ID",
 		inputSchema: milestone_by_id,
-		execute: async (client, input) => {
-			const result = await client.milestones.find(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.milestones.find(input.id)),
 	},
 
 	devpad_milestones_upsert: {
 		name: "devpad_milestones_upsert",
 		description: "Create or update a milestone",
 		inputSchema: upsert_milestone,
-		execute: async (client, input) => {
-			const result = input.id
-				? await client.milestones.update(input.id, {
-						name: input.name,
-						description: input.description,
-						target_time: input.target_time,
-						target_version: input.target_version,
-					})
-				: await client.milestones.create({
-						project_id: input.project_id,
-						name: input.name,
-						description: input.description,
-						target_time: input.target_time,
-						target_version: input.target_version,
-					});
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) =>
+			unwrap(
+				input.id
+					? await client.milestones.update(input.id, {
+							name: input.name,
+							description: input.description,
+							target_time: input.target_time,
+							target_version: input.target_version,
+						})
+					: await client.milestones.create({
+							project_id: input.project_id,
+							name: input.name,
+							description: input.description,
+							target_time: input.target_time,
+							target_version: input.target_version,
+						})
+			),
 	},
 
 	// Goals
@@ -194,44 +164,35 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_goals_list",
 		description: "List goals for authenticated user",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.goals.list();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.goals.list()),
 	},
 
 	devpad_goals_get: {
 		name: "devpad_goals_get",
 		description: "Get goal by ID",
 		inputSchema: goal_by_id,
-		execute: async (client, input) => {
-			const result = await client.goals.find(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.goals.find(input.id)),
 	},
 
 	devpad_goals_upsert: {
 		name: "devpad_goals_upsert",
 		description: "Create or update a goal",
 		inputSchema: upsert_goal,
-		execute: async (client, input) => {
-			const result = input.id
-				? await client.goals.update(input.id, {
-						name: input.name,
-						description: input.description,
-						target_time: input.target_time,
-					})
-				: await client.goals.create({
-						milestone_id: input.milestone_id,
-						name: input.name,
-						description: input.description,
-						target_time: input.target_time,
-					});
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) =>
+			unwrap(
+				input.id
+					? await client.goals.update(input.id, {
+							name: input.name,
+							description: input.description,
+							target_time: input.target_time,
+						})
+					: await client.goals.create({
+							milestone_id: input.milestone_id,
+							name: input.name,
+							description: input.description,
+							target_time: input.target_time,
+						})
+			),
 	},
 
 	// Tags
@@ -239,11 +200,7 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_tags_list",
 		description: "List tags for authenticated user",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.tags.list();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.tags.list()),
 	},
 
 	// GitHub integration
@@ -251,22 +208,14 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_github_repos",
 		description: "List GitHub repositories for authenticated user",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.github.repos();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.github.repos()),
 	},
 
 	devpad_github_branches: {
 		name: "devpad_github_branches",
 		description: "List branches for a GitHub repository",
 		inputSchema: github_branches,
-		execute: async (client, input) => {
-			const result = await client.github.branches(input.owner, input.repo);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.github.branches(input.owner, input.repo)),
 	},
 
 	// Additional project operations
@@ -277,12 +226,9 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("Project ID"),
 		}),
 		execute: async (client, input) => {
-			const getResult = await client.projects.find(input.id);
-			if (!getResult.ok) throw new Error(getResult.error.message);
-			if (!getResult.value) throw new Error(`Project ${input.id} not found`);
-
-			const result = await client.projects.deleteProject(getResult.value);
-			if (!result.ok) throw new Error(result.error.message);
+			const project = unwrap(await client.projects.find(input.id));
+			if (!project) throw new Error(`Project ${input.id} not found`);
+			unwrap(await client.projects.deleteProject(project));
 			return { success: true };
 		},
 	},
@@ -293,11 +239,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.projects.history(input.project_id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.projects.history(input.project_id)),
 	},
 
 	devpad_projects_specification: {
@@ -306,11 +248,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.projects.specification(input.project_id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.projects.specification(input.project_id)),
 	},
 
 	devpad_projects_config_load: {
@@ -319,11 +257,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.projects.config.load(input.project_id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.projects.config.load(input.project_id)),
 	},
 
 	// Additional milestone operations
@@ -333,11 +267,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			id: z.string().describe("Milestone ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.milestones.delete(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.milestones.delete(input.id)),
 	},
 
 	devpad_milestones_goals: {
@@ -346,11 +276,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			id: z.string().describe("Milestone ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.milestones.goals(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.milestones.goals(input.id)),
 	},
 
 	// Additional goal operations
@@ -360,11 +286,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			id: z.string().describe("Goal ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.goals.delete(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.goals.delete(input.id)),
 	},
 
 	// Additional task operations
@@ -375,12 +297,9 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("Task ID"),
 		}),
 		execute: async (client, input) => {
-			const getResult = await client.tasks.find(input.id);
-			if (!getResult.ok) throw new Error(getResult.error.message);
-			if (!getResult.value) throw new Error(`Task ${input.id} not found`);
-
-			const result = await client.tasks.deleteTask(getResult.value);
-			if (!result.ok) throw new Error(result.error.message);
+			const task = unwrap(await client.tasks.find(input.id));
+			if (!task) throw new Error(`Task ${input.id} not found`);
+			unwrap(await client.tasks.deleteTask(task));
 			return { success: true };
 		},
 	},
@@ -391,11 +310,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			task_id: z.string().describe("Task ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.tasks.history.get(input.task_id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.tasks.history.get(input.task_id)),
 	},
 
 	// User operations
@@ -403,11 +318,7 @@ export const tools: Record<string, ToolDefinition> = {
 		name: "devpad_user_history",
 		description: "Get user activity history",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.user.history();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.user.history()),
 	},
 
 	devpad_user_preferences: {
@@ -417,11 +328,7 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("User ID"),
 			task_view: z.enum(["list", "grid"]).describe("Task view preference"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.user.preferences(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.user.preferences(input)),
 	},
 
 	devpad_blog_posts_list: {
@@ -437,11 +344,7 @@ export const tools: Record<string, ToolDefinition> = {
 			offset: z.number().optional().describe("Offset for pagination"),
 			sort: z.string().optional().describe("Sort order"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.blog.posts.list(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.blog.posts.list(input)),
 	},
 
 	devpad_blog_posts_get: {
@@ -450,11 +353,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			slug: z.string().describe("Post slug"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.blog.posts.getBySlug(input.slug);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.blog.posts.getBySlug(input.slug)),
 	},
 
 	devpad_blog_posts_create: {
@@ -472,11 +371,7 @@ export const tools: Record<string, ToolDefinition> = {
 			project_ids: z.array(z.string()).optional().describe("Associated project IDs"),
 			archived: z.boolean().optional().describe("Whether post is archived"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.blog.posts.create(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.blog.posts.create(input)),
 	},
 
 	devpad_blog_posts_update: {
@@ -497,9 +392,7 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const { uuid, ...data } = input;
-			const result = await client.blog.posts.update(uuid, data);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
+			return unwrap(await client.blog.posts.update(uuid, data));
 		},
 	},
 
@@ -509,33 +402,21 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			uuid: z.string().describe("Post UUID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.blog.posts.delete(input.uuid);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.blog.posts.delete(input.uuid)),
 	},
 
 	devpad_blog_tags_list: {
 		name: "devpad_blog_tags_list",
 		description: "List all blog tags with post counts",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.blog.tags.list();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.blog.tags.list()),
 	},
 
 	devpad_blog_categories_tree: {
 		name: "devpad_blog_categories_tree",
 		description: "Get the blog category tree",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.blog.categories.tree();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.blog.categories.tree()),
 	},
 
 	devpad_blog_categories_create: {
@@ -545,22 +426,14 @@ export const tools: Record<string, ToolDefinition> = {
 			name: z.string().describe("Category name"),
 			parent: z.string().optional().describe("Parent category name"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.blog.categories.create(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.blog.categories.create(input)),
 	},
 
 	devpad_blog_tokens_list: {
 		name: "devpad_blog_tokens_list",
 		description: "List blog access tokens",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.blog.tokens.list();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.blog.tokens.list()),
 	},
 
 	devpad_blog_tokens_create: {
@@ -570,22 +443,14 @@ export const tools: Record<string, ToolDefinition> = {
 			name: z.string().describe("Token name"),
 			note: z.string().optional().describe("Optional note"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.blog.tokens.create(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.blog.tokens.create(input)),
 	},
 
 	devpad_media_profiles_list: {
 		name: "devpad_media_profiles_list",
 		description: "List media profiles",
 		inputSchema: z.object({}),
-		execute: async client => {
-			const result = await client.media.profiles.list();
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async client => unwrap(await client.media.profiles.list()),
 	},
 
 	devpad_media_profiles_create: {
@@ -595,11 +460,7 @@ export const tools: Record<string, ToolDefinition> = {
 			name: z.string().describe("Profile name"),
 			slug: z.string().describe("Profile slug"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.media.profiles.create(input);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.media.profiles.create(input)),
 	},
 
 	devpad_media_profiles_get: {
@@ -608,11 +469,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			id: z.string().describe("Profile ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.media.profiles.get(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.media.profiles.get(input.id)),
 	},
 
 	devpad_media_profiles_update: {
@@ -625,9 +482,7 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const { id, ...data } = input;
-			const result = await client.media.profiles.update(id, data);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
+			return unwrap(await client.media.profiles.update(id, data));
 		},
 	},
 
@@ -637,11 +492,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			id: z.string().describe("Profile ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.media.profiles.delete(input.id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.media.profiles.delete(input.id)),
 	},
 
 	devpad_media_connections_list: {
@@ -650,11 +501,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			profile_id: z.string().describe("Profile ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.media.connections.list(input.profile_id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.media.connections.list(input.profile_id)),
 	},
 
 	devpad_media_connections_refresh: {
@@ -663,11 +510,7 @@ export const tools: Record<string, ToolDefinition> = {
 		inputSchema: z.object({
 			account_id: z.string().describe("Account/connection ID"),
 		}),
-		execute: async (client, input) => {
-			const result = await client.media.connections.refresh(input.account_id);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
-		},
+		execute: async (client, input) => unwrap(await client.media.connections.refresh(input.account_id)),
 	},
 
 	devpad_media_timeline_get: {
@@ -680,9 +523,7 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => {
 			const { user_id, ...params } = input;
-			const result = await client.media.timeline.get(user_id, params);
-			if (!result.ok) throw new Error(result.error.message);
-			return result.value;
+			return unwrap(await client.media.timeline.get(user_id, params));
 		},
 	},
 };
