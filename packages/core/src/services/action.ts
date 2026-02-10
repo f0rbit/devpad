@@ -1,4 +1,4 @@
-import type { HistoryAction } from "@devpad/schema";
+import type { Action, HistoryAction } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { action, todo_updates } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -8,10 +8,22 @@ import type { ServiceError } from "./errors.js";
 import { getProjectById, getUserProjectMap } from "./projects.js";
 import { getTask } from "./tasks.js";
 
-export async function getActions(db: Database, user_id: string, action_filter: ActionType[] | null): Promise<Result<any[], ServiceError>> {
+type ActionData = {
+	task_id?: string;
+	project_id?: string;
+	title?: string;
+	href?: string;
+	name?: string;
+	message?: string;
+	status?: string;
+};
+
+type ActionWithData = Omit<Action, "data"> & { data: ActionData };
+
+export async function getActions(db: Database, user_id: string, action_filter: ActionType[] | null): Promise<Result<ActionWithData[], ServiceError>> {
 	const filter = action_filter && action_filter.length > 0 ? action_filter : null;
 
-	const data = filter
+	const raw_data = filter
 		? await db
 				.select()
 				.from(action)
@@ -22,14 +34,15 @@ export async function getActions(db: Database, user_id: string, action_filter: A
 	if (!project_map_result.ok) return project_map_result;
 	const project_map = project_map_result.value;
 
-	for (const a of data) {
-		const action_data = a.data as any;
-		const p = project_map[action_data.project_id];
+	const data: ActionWithData[] = raw_data.map(a => {
+		const action_data = (a.data ?? {}) as ActionData;
+		const p = action_data.project_id ? project_map[action_data.project_id] : undefined;
 		if (p) {
 			action_data.href = p.project_id;
 			action_data.name = p.name;
 		}
-	}
+		return { ...a, data: action_data };
+	});
 
 	return ok(data);
 }
@@ -53,10 +66,7 @@ export async function getProjectHistory(db: Database, project_id: string): Promi
 	const actions_result = await getActions(db, user_id, project_filter);
 	if (!actions_result.ok) return actions_result;
 
-	const filtered: HistoryAction[] = actions_result.value.filter((a: any) => {
-		const data = a.data as any;
-		return data.project_id === project_id;
-	});
+	const filtered: HistoryAction[] = actions_result.value.filter(a => a.data.project_id === project_id);
 
 	const scan_result = await getProjectScanHistory(db, project_id);
 	if (!scan_result.ok) return scan_result;
@@ -85,10 +95,7 @@ export async function getTaskHistory(db: Database, task_id: string): Promise<Res
 	const actions_result = await getActions(db, user_id, task_filter);
 	if (!actions_result.ok) return actions_result;
 
-	const filtered: HistoryAction[] = actions_result.value.filter((a: any) => {
-		const data = a.data as any;
-		return data.task_id === task_id;
-	});
+	const filtered: HistoryAction[] = actions_result.value.filter(a => a.data.task_id === task_id);
 
 	return ok(filtered.sort(sortByDate));
 }

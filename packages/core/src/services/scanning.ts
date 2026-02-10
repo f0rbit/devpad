@@ -31,8 +31,9 @@ export async function* initiateScan(db: Database, project_id: string, user_id: s
 	yield "loading config\n";
 	const config_result = await getProjectConfig(db, project_id);
 	if (!config_result.ok) {
-		const config_err = config_result.error as ServiceError;
-		yield `error: ${config_err.kind === "not_found" ? "project not found" : ((config_err as any).message ?? config_err.kind)}\n`;
+		const config_err = config_result.error;
+		const error_msg = config_err.kind === "not_found" ? "project not found" : (config_err.message ?? config_err.kind);
+		yield `error: ${error_msg}\n`;
 		return;
 	}
 

@@ -87,7 +87,7 @@ export const handleResult = <T>(c: Context, result: Result<T, ServiceError>, suc
 		const { status, body } = mapErrorToResponse(result.error);
 		return c.json(body, status);
 	}
-	return c.json(result.value as any, successStatus);
+	return c.json(result.value as object, successStatus);
 };
 
 export const handleResultWith = <T, R>(c: Context, result: Result<T, ServiceError>, mapper: (value: T) => R, successStatus: ContentfulStatusCode = 200): Response => {
@@ -95,7 +95,7 @@ export const handleResultWith = <T, R>(c: Context, result: Result<T, ServiceErro
 		const { status, body } = mapErrorToResponse(result.error);
 		return c.json(body, status);
 	}
-	return c.json(mapper(result.value) as any, successStatus);
+	return c.json(mapper(result.value) as object, successStatus);
 };
 
 export const handleResultNoContent = <T>(c: Context, result: Result<T, ServiceError>): Response => {

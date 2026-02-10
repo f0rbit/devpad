@@ -3,25 +3,25 @@ import type { ActionType } from "@devpad/schema/database";
 import { action, codebase_tasks, task, task_tag } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { doesUserOwnProject } from "./projects.js";
 import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
 
-async function fetchTasksWithDetails(db: Database, where_conditions: any[]): Promise<Result<Task[], ServiceError>> {
+async function fetchTasksWithDetails(db: Database, where_conditions: (SQL | undefined)[]): Promise<Result<Task[], ServiceError>> {
 	const fetched_tasks = await db
 		.select()
 		.from(task)
 		.leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id))
 		.where(and(...where_conditions));
 
-	const tasks: Task[] = fetched_tasks.map((t: any) => {
-		const new_task: Task = t as any;
-		new_task.tags = [];
-		return new_task;
-	});
+	const tasks: Task[] = fetched_tasks.map(t => ({
+		task: t.task,
+		codebase_tasks: t.codebase_tasks,
+		tags: [],
+	}));
 
 	const task_ids = tasks.map(t => t.task.id);
 	if (task_ids.length > 0) {
