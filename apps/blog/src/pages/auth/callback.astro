@@ -6,7 +6,7 @@ const token = Astro.url.searchParams.get("token");
 
 if (token) {
 	// Set httpOnly cookie on the frontend domain for SSR requests
-	Astro.cookies.set("devpad_jwt", token, {
+	Astro.cookies.set("jwt-token", token, {
 		httpOnly: true,
 		secure: true,
 		sameSite: "lax",
@@ -24,9 +24,9 @@ if (token) {
   <script define:vars={{ token }}>
     // Also store in localStorage for client-side requests
     if (token) {
-      localStorage.setItem('devpad_jwt', token);
+      localStorage.setItem('jwt-token', token);
       window.location.href = '/posts';
-    } else if (localStorage.getItem('devpad_jwt')) {
+    } else if (localStorage.getItem('jwt-token')) {
       window.location.href = '/posts';
     } else {
       window.location.href = '/auth/login';

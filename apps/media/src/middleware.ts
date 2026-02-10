@@ -13,7 +13,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	context.locals.session = null;
 	context.locals.jwtToken = null;
 
-	const storedJWT = context.cookies.get("devpad_jwt")?.value;
+	const storedJWT = context.cookies.get("jwt-token")?.value;
 
 	if (!storedJWT) return next();
 

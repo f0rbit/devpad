@@ -7,7 +7,7 @@ function getCookie(name: string): string | undefined {
 }
 
 function createClient(): ApiClient {
-	const jwt = getCookie("devpad_jwt") ?? "";
+	const jwt = getCookie("jwt-token") ?? "";
 	return new ApiClient({
 		base_url: "/api/v1",
 		api_key: jwt,
