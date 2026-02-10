@@ -31,10 +31,6 @@ type AstroHandler = {
 	fetch: (request: Request, env: any, ctx: ExecutionContext) => Promise<Response>;
 };
 
-type ApiHandler = {
-	fetch: (request: Request) => Promise<Response>;
-};
-
 type UnifiedHandlers = {
 	devpad: AstroHandler;
 	blog: AstroHandler;
@@ -127,17 +123,15 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 				return api.fetch(request, env, ctx);
 			}
 
-			const apiHandler: ApiHandler = { fetch: (req: Request) => api.fetch(req, env, ctx) };
-
 			if (hostname.includes("blog.devpad.tools")) {
-				return handlers.blog.fetch(request, { ...env, API_HANDLER: apiHandler }, ctx);
+				return handlers.blog.fetch(request, env, ctx);
 			}
 
 			if (hostname.includes("media.devpad.tools")) {
-				return handlers.media.fetch(request, { ...env, API_HANDLER: apiHandler }, ctx);
+				return handlers.media.fetch(request, env, ctx);
 			}
 
-			return handlers.devpad.fetch(request, { ...env, API_HANDLER: apiHandler }, ctx);
+			return handlers.devpad.fetch(request, env, ctx);
 		},
 
 		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {
@@ -165,4 +159,4 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 	};
 }
 
-export type { AstroHandler, ApiHandler, UnifiedHandlers };
+export type { AstroHandler, UnifiedHandlers };
