@@ -1,5 +1,6 @@
 import type { ApiKey, User } from "@devpad/schema";
 import { api_keys, user } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 
@@ -16,7 +17,7 @@ const hashKey = async (raw_key: string): Promise<string> => {
 		.join("");
 };
 
-export async function getAPIKeys(db: any, user_id: string, scope?: ApiKeyScope): Promise<Result<ApiKey[], KeyError>> {
+export async function getAPIKeys(db: Database, user_id: string, scope?: ApiKeyScope): Promise<Result<ApiKey[], KeyError>> {
 	const conditions = [eq(api_keys.user_id, user_id), eq(api_keys.deleted, false)];
 	if (scope) conditions.push(eq(api_keys.scope, scope));
 
@@ -31,7 +32,7 @@ export async function getAPIKeys(db: any, user_id: string, scope?: ApiKeyScope):
 	return ok(rows as ApiKey[]);
 }
 
-export async function getUserByAPIKey(db: any, raw_key: string): Promise<Result<string, KeyError>> {
+export async function getUserByAPIKey(db: Database, raw_key: string): Promise<Result<string, KeyError>> {
 	const key_hash = await hashKey(raw_key);
 
 	const rows = await db
@@ -48,7 +49,7 @@ export async function getUserByAPIKey(db: any, raw_key: string): Promise<Result<
 	return ok(rows[0].user_id!);
 }
 
-export async function getUserByApiKey(db: any, raw_key: string): Promise<Result<User, KeyError>> {
+export async function getUserByApiKey(db: Database, raw_key: string): Promise<Result<User, KeyError>> {
 	const key_result = await getUserByAPIKey(db, raw_key);
 	if (!key_result.ok) return key_result;
 
@@ -67,7 +68,7 @@ export async function getUserByApiKey(db: any, raw_key: string): Promise<Result<
 
 export type CreatedApiKey = { key: ApiKey; raw_key: string };
 
-export async function createApiKey(db: any, user_id: string, scope: ApiKeyScope = "devpad", name?: string): Promise<Result<CreatedApiKey, KeyError>> {
+export async function createApiKey(db: Database, user_id: string, scope: ApiKeyScope = "devpad", name?: string): Promise<Result<CreatedApiKey, KeyError>> {
 	const raw_key = `devpad_${crypto.randomUUID()}`;
 	const key_hash = await hashKey(raw_key);
 
@@ -89,7 +90,7 @@ export async function createApiKey(db: any, user_id: string, scope: ApiKeyScope 
 	return ok({ key: rows[0] as ApiKey, raw_key });
 }
 
-export async function deleteApiKey(db: any, key_id: string): Promise<Result<void, KeyError>> {
+export async function deleteApiKey(db: Database, key_id: string): Promise<Result<void, KeyError>> {
 	const rows = await db
 		.update(api_keys)
 		.set({ deleted: true })

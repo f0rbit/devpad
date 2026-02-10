@@ -1,4 +1,5 @@
 import { user } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { createSession } from "./session.js";
@@ -71,7 +72,7 @@ export function createGitHubAuthUrl(env: OAuthEnv, params?: OAuthParams): Result
 	return ok({ url, state: encoded_state });
 }
 
-export async function handleGitHubCallback(db: any, env: OAuthEnv, code: string, state: string, stored_state: string): Promise<Result<OAuthCallbackResult, OAuthError>> {
+export async function handleGitHubCallback(db: Database, env: OAuthEnv, code: string, state: string, stored_state: string): Promise<Result<OAuthCallbackResult, OAuthError>> {
 	if (state !== stored_state) return err({ kind: "invalid_state" });
 
 	const token_response = await fetch("https://github.com/login/oauth/access_token", {
@@ -175,7 +176,7 @@ async function fetchGitHubEmail(access_token: string): Promise<Result<string | n
 	return ok(primary?.email ?? null);
 }
 
-async function createOrUpdateUser(db: any, github_user: GitHubUser): Promise<Result<OAuthCallbackResult["user"], OAuthError>> {
+async function createOrUpdateUser(db: Database, github_user: GitHubUser): Promise<Result<OAuthCallbackResult["user"], OAuthError>> {
 	const existing = await db
 		.select()
 		.from(user)

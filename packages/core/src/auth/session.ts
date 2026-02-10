@@ -1,4 +1,5 @@
 import { session, user } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 
@@ -31,7 +32,7 @@ export function generateSessionId(): string {
 	return crypto.randomUUID();
 }
 
-export async function createSession(db: any, user_id: string, access_token: string): Promise<Result<SessionData, AuthError>> {
+export async function createSession(db: Database, user_id: string, access_token: string): Promise<Result<SessionData, AuthError>> {
 	const session_id = generateSessionId();
 	const expires_at = Math.floor((Date.now() + SESSION_DURATION_MS) / 1000);
 
@@ -57,7 +58,7 @@ export async function createSession(db: any, user_id: string, access_token: stri
 	});
 }
 
-export async function validateSession(db: any, session_id: string): Promise<Result<SessionValidationResult, AuthError>> {
+export async function validateSession(db: Database, session_id: string): Promise<Result<SessionValidationResult, AuthError>> {
 	const rows = await db
 		.select({
 			session_id: session.id,
@@ -131,7 +132,7 @@ export async function validateSession(db: any, session_id: string): Promise<Resu
 	});
 }
 
-export async function invalidateSession(db: any, session_id: string): Promise<Result<void, AuthError>> {
+export async function invalidateSession(db: Database, session_id: string): Promise<Result<void, AuthError>> {
 	const result = await db
 		.delete(session)
 		.where(eq(session.id, session_id))
