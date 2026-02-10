@@ -143,7 +143,7 @@ devpad/
 - Server lifecycle managed by `tests/integration/setup.ts` -- lazy init, shared across all test files
 - `CleanupManager` handles test resource cleanup (projects, tasks, tags) in dependency order
 - Dev server (`packages/worker/src/dev.ts`) constructs `AppConfig`/`OAuthSecrets` from `process.env`, injects via `createApi()` -- no fake `Bindings` object needed
-- 250 tests: 62 unit + 188 integration
+- 300 tests: 62 unit + 238 integration
 
 ## Error Handling Patterns
 - Core devpad services use `Result<T, ServiceError>` from `@f0rbit/corpus` with `ok()` and `err()`
