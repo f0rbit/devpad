@@ -1,6 +1,6 @@
 {
 	"name": "@devpad/worker",
-	"version": "1.0.0",
+	"version": "2.0.0",
 	"description": "Unified Cloudflare Worker for devpad, dev-blog, and media-timeline",
 	"type": "module",
 	"main": "src/index.ts",
