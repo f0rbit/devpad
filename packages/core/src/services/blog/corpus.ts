@@ -50,7 +50,6 @@ const versions = async (corpus: PostsCorpus, path: string): Promise<Result<Versi
 			});
 		}
 	} catch (e) {
-		console.error("[corpus] list query failed:", (e as any)?.cause?.message ?? (e as any)?.message);
 		const underlying = (e as any)?.cause;
 		const message = underlying?.message ?? (e as Error)?.message ?? "Storage error";
 		return err({ kind: "io_error", message });
@@ -70,7 +69,6 @@ const remove = async (corpus: PostsCorpus, path: string): Promise<Result<void, P
 			if (!result.ok) return err(mapCorpusError(result.error));
 		}
 	} catch (e) {
-		console.error("[corpus] list query failed:", (e as any)?.cause?.message ?? (e as any)?.message);
 		const underlying = (e as any)?.cause;
 		const message = underlying?.message ?? (e as Error)?.message ?? "Storage error";
 		return err({ kind: "io_error", message });

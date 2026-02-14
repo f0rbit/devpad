@@ -70,7 +70,7 @@
 		"generate": "bunx drizzle-kit generate"
 	},
 	"dependencies": {
-		"@f0rbit/corpus": "^0.3.4",
+		"@f0rbit/corpus": "^0.3.5",
 		"drizzle-orm": "^0.44.7",
 		"drizzle-zod": "^0.7.0",
 		"zod": "^3.22.4"
