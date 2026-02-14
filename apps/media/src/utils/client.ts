@@ -1,6 +1,6 @@
 import { ApiClient } from "@devpad/api";
 
-const API_HOST = import.meta.env.PUBLIC_API_URL || "";
+const API_HOST = import.meta.env.PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
 function createClient(): ApiClient {
 	return new ApiClient({

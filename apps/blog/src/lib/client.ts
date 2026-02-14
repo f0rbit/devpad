@@ -2,7 +2,7 @@ import { ApiClient, type ApiResult } from "@devpad/api";
 
 function createClient(): ApiClient {
 	return new ApiClient({
-		base_url: "/api/v1",
+		base_url: `${window.location.origin}/api/v1`,
 		auth_mode: "cookie",
 		credentials: "include",
 	});
