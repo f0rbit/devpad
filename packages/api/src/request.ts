@@ -26,11 +26,16 @@ export class ApiClient {
 	private request_history: BufferedQueue<RequestHistoryEntry>;
 	private category: string = "api";
 
+	private credentials?: "include" | "omit" | "same-origin";
+	private auth_mode: "session" | "key";
+
 	constructor(options: {
 		base_url: string;
 		api_key: string;
 		max_history_size?: number;
 		category?: string;
+		credentials?: "include" | "omit" | "same-origin";
+		auth_mode?: "session" | "key";
 	}) {
 		if (!options.api_key) {
 			throw new Error("API key is required");
@@ -43,6 +48,8 @@ export class ApiClient {
 		this.base_url = options.base_url;
 		this.api_key = options.api_key;
 		this.category = options.category || "api";
+		this.credentials = options.credentials;
+		this.auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
 		this.request_history = new ArrayBufferedQueue<RequestHistoryEntry>(options.max_history_size ?? 5);
 	}
 
@@ -75,9 +82,11 @@ export class ApiClient {
 			query,
 		});
 
+		const auth_value = this.auth_mode === "session" ? `Bearer jwt:${this.api_key.replace(/^jwt:/, "")}` : `Bearer ${this.api_key}`;
+
 		const request_headers: Record<string, string> = {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${this.api_key}`,
+			Authorization: auth_value,
 			"X-Request-ID": requestId,
 			...headers,
 		};
@@ -99,6 +108,10 @@ export class ApiClient {
 
 			if (body) {
 				fetchOptions.body = JSON.stringify(body);
+			}
+
+			if (this.credentials) {
+				fetchOptions.credentials = this.credentials;
 			}
 
 			const response = await fetch(url, fetchOptions);
@@ -215,16 +228,13 @@ export class ApiClient {
 	}
 
 	public headers(): Record<string, string> {
-		const isJWT = this.api_key.startsWith("jwt:");
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 		};
 
-		if (isJWT) {
-			// JWT token in Authorization header
-			headers.Authorization = `Bearer ${this.api_key.replace("jwt:", "")}`;
+		if (this.auth_mode === "session") {
+			headers.Authorization = `Bearer jwt:${this.api_key.replace(/^jwt:/, "")}`;
 		} else {
-			// API key in X-API-KEY header
 			headers["X-API-KEY"] = this.api_key;
 		}
 

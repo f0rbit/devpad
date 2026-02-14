@@ -1,13 +1,13 @@
-import { describe, expect, it, beforeEach } from "bun:test";
-import { ApiClient } from "../../../src/api-client";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { Milestone, UpsertMilestone } from "@devpad/schema";
+import { ApiClient } from "../../../src/api-client";
 
 describe("Milestones API Client Unit Tests", () => {
 	let client: ApiClient;
 
 	beforeEach(() => {
 		client = new ApiClient({
-			base_url: "http://test.localhost/api/v0",
+			base_url: "http://test.localhost/api/v1",
 			api_key: "test-api-key",
 		});
 	});

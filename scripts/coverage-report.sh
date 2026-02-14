@@ -53,7 +53,7 @@ calculate_package_coverage() {
 echo "Package Coverage:"
 calculate_package_coverage "packages/api/src" "api"
 calculate_package_coverage "packages/core/src" "core" 
-calculate_package_coverage "packages/server/src" "server"
+calculate_package_coverage "packages/worker/src" "worker"
 
 echo ""
 
@@ -101,4 +101,4 @@ else
 fi
 
 echo ""
-echo "Coverage focused on: packages/api/src, packages/core/src, packages/server/src"
+echo "Coverage focused on: packages/api/src, packages/core/src, packages/worker/src"

@@ -48,6 +48,11 @@ database/*.db
 
 dist
 
+# Build artifacts in src/ (tsc sometimes emits here)
+packages/schema/src/**/*.js
+packages/schema/src/**/*.d.ts
+packages/schema/src/**/*.d.ts.map
+
 # Astro
 .astro/
 
@@ -59,5 +64,6 @@ coverage/
 playwright-report/
 test-results/
 
-# Platform-specific binaries (built in Docker/CI)
+# Platform-specific binaries (built in CI)
 todo-tracker
+.plans/

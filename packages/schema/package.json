@@ -14,9 +14,41 @@
 			"types": "./dist/database/index.d.ts",
 			"import": "./dist/database/index.js"
 		},
-		"./database/server": {
-			"types": "./dist/database/server.d.ts",
-			"import": "./dist/database/server.js"
+		"./database/d1": {
+			"types": "./dist/database/d1.d.ts",
+			"import": "./dist/database/d1.js"
+		},
+		"./database/bun": {
+			"types": "./dist/database/bun.d.ts",
+			"import": "./dist/database/bun.js"
+		},
+		"./database/schema": {
+			"types": "./dist/database/schema.d.ts",
+			"import": "./dist/database/schema.js"
+		},
+		"./database/blog": {
+			"types": "./dist/database/blog.d.ts",
+			"import": "./dist/database/blog.js"
+		},
+		"./database/media": {
+			"types": "./dist/database/media.d.ts",
+			"import": "./dist/database/media.js"
+		},
+		"./database/types": {
+			"types": "./dist/database/types.d.ts",
+			"import": "./dist/database/types.js"
+		},
+		"./blog": {
+			"types": "./dist/blog/index.d.ts",
+			"import": "./dist/blog/index.js"
+		},
+		"./media": {
+			"types": "./dist/media/index.d.ts",
+			"import": "./dist/media/index.js"
+		},
+		"./bindings": {
+			"types": "./dist/bindings.d.ts",
+			"import": "./dist/bindings.js"
 		},
 		"./validation": {
 			"types": "./dist/validation/index.d.ts",
@@ -25,19 +57,28 @@
 		"./types": {
 			"types": "./dist/types/index.d.ts",
 			"import": "./dist/types/index.js"
+		},
+		"./errors": {
+			"types": "./dist/errors.d.ts",
+			"import": "./dist/errors.js"
 		}
 	},
 	"scripts": {
 		"build": "tsc && cp -r src/database/drizzle dist/database/",
 		"dev": "tsc --watch",
-		"clean": "rm -rf dist"
+		"clean": "rm -rf dist",
+		"generate": "bunx drizzle-kit generate"
 	},
 	"dependencies": {
-		"drizzle-orm": "^0.30.6",
+		"@f0rbit/corpus": "^0.3.4",
+		"drizzle-orm": "^0.44.7",
+		"drizzle-zod": "^0.7.0",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20241205.0",
 		"@types/node": "^20.11.24",
+		"drizzle-kit": "^0.31.0",
 		"typescript": "^5.3.3"
 	}
 }

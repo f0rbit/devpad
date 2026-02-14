@@ -1,12 +1,12 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { z } from "zod";
-import type { action, api_key, codebase_tasks, goal, ignore_path, milestone, project, session, tag, tag_config, task, task_tag, todo_updates, tracker_result, user } from "./database/schema.js";
+import type { ActionType, action, api_keys, codebase_tasks, goal, ignore_path, milestone, project, session, tag, tag_config, task, task_tag, todo_updates, tracker_result, user } from "./database/schema.js";
 import type { config_schema, project_config, save_config_request, save_tags_request, update_action, update_user, upsert_goal, upsert_milestone, upsert_project, upsert_tag, upsert_todo } from "./validation.js";
 
 // Database table select types (inferred from Drizzle schema)
 export type User = InferSelectModel<typeof user>;
 export type Session = InferSelectModel<typeof session>;
-export type ApiKey = InferSelectModel<typeof api_key>;
+export type ApiKey = InferSelectModel<typeof api_keys>;
 export type Project = InferSelectModel<typeof project>;
 export type Task = InferSelectModel<typeof task>;
 export type Tag = InferSelectModel<typeof tag>;
@@ -23,7 +23,7 @@ export type IgnorePath = InferSelectModel<typeof ignore_path>;
 // Database table insert types (inferred from Drizzle schema)
 export type InsertUser = InferInsertModel<typeof user>;
 export type InsertSession = InferInsertModel<typeof session>;
-export type InsertApiKey = InferInsertModel<typeof api_key>;
+export type InsertApiKey = InferInsertModel<typeof api_keys>;
 export type InsertProject = InferInsertModel<typeof project>;
 export type InsertTask = InferInsertModel<typeof task>;
 export type InsertTag = InferInsertModel<typeof tag>;
@@ -136,7 +136,7 @@ export interface ScanUpdate {
 
 // History action type
 export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & {
-	type: string | "SCAN"; // TODO: Import ActionType from database schema
+	type: ActionType | "SCAN";
 };
 
 // API response types

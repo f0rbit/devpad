@@ -1,0 +1,395 @@
+---
+import { Button } from "@f0rbit/ui";
+import AppLayout from "@/layouts/app-layout.astro";
+import { getServerApiClient } from "@/lib/api-client";
+import { date } from "@/lib/date-utils";
+
+const { uuid } = Astro.params;
+
+type VersionInfo = {
+	hash: string;
+	parent: string | null;
+	created_at: string;
+	size?: number;
+};
+
+type PostInfo = {
+	slug: string;
+	corpus_version: string;
+};
+
+const normalizeHash = (hash: string): string => {
+	const match = hash.match(/^([a-f0-9]{64})/);
+	return match ? match[1] : hash;
+};
+
+let postInfo: PostInfo | null = null;
+let versions: VersionInfo[] = [];
+let error: string | null = null;
+
+const client = getServerApiClient(Astro.locals);
+
+const versionsResult = await client.blog.posts.versions(uuid!);
+
+if (versionsResult.ok) {
+	versions = (versionsResult.value.versions ?? []).map((v: VersionInfo) => ({
+		...v,
+		hash: normalizeHash(v.hash),
+		parent: v.parent ? normalizeHash(v.parent) : null,
+	}));
+} else {
+	error = "Post not found";
+}
+
+if (versions.length > 0) {
+	const postsResult = await client.blog.posts.list({ limit: 100 });
+	if (postsResult.ok) {
+		const post = postsResult.value.posts?.find((p: any) => p.uuid === uuid);
+		if (post) {
+			postInfo = {
+				slug: post.slug,
+				corpus_version: normalizeHash((post as any).corpus_version),
+			};
+		}
+	}
+}
+
+const currentHash = postInfo?.corpus_version ?? (versions.length > 0 ? versions[0].hash : null);
+const backUrl = postInfo ? `/posts/${postInfo.slug}` : "/posts";
+---
+
+<AppLayout title="Version History">
+	<section class="stack">
+		<header>
+			<h1 class="page-title row">
+				<a href={backUrl} title="Back to post" class="back-arrow">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+				</a>
+				Version History
+			</h1>
+		</header>
+
+		{error ? (
+			<div class="form-error">{error}</div>
+		) : versions.length > 0 ? (
+			<div class="versions-layout" data-uuid={uuid} data-current-hash={currentHash} data-post-slug={postInfo?.slug ?? ""}>
+				<aside class="versions-sidebar">
+					<h6 class="sidebar-title">Versions</h6>
+					<ul class="version-list">
+						{versions.map((version, index) => {
+							const isCurrent = version.hash === currentHash;
+							const versionNumber = versions.length - index;
+							return (
+								<li>
+									<button
+										type="button"
+										class:list={["version-item", { "version-item--selected": index === 0 }]}
+										data-hash={version.hash}
+										data-is-current={isCurrent}
+									>
+										<span class:list={["version-dot", { "version-dot--current": isCurrent }]}>
+											{isCurrent ? "●" : "○"}
+										</span>
+										<span class="version-info">
+											<span class="version-number">v{versionNumber}{isCurrent ? " (current)" : ""}</span>
+											<span class="version-time text-muted text-xs">{date.relative(version.created_at)}</span>
+										</span>
+									</button>
+								</li>
+							);
+						})}
+					</ul>
+				</aside>
+				<main class="preview-pane">
+					<div class="preview-header">
+						<h6 class="preview-title">Preview</h6>
+						<div class="preview-meta text-xs text-muted">
+							<span id="preview-size"></span>
+							<span id="preview-hash"></span>
+						</div>
+					</div>
+					<div class="preview-content">
+						<div id="preview-loading" class="preview-loading">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide spinner"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+							Loading...
+						</div>
+						<pre id="preview-text" class="preview-text"></pre>
+					</div>
+					<div class="preview-actions">
+						<Button type="button" id="restore-btn" variant="primary" disabled>
+							Restore this version
+						</Button>
+					</div>
+				</main>
+			</div>
+		) : (
+			<div class="empty-state">
+				<p class="text-muted">No version history available for this post.</p>
+				<a href={backUrl} style="text-decoration: none;">
+					<Button variant="secondary">Back</Button>
+				</a>
+			</div>
+		)}
+	</section>
+</AppLayout>
+
+<script is:inline define:vars={{ API_URL: "/api/v1/blog" }}>
+	function formatBytes(bytes) {
+		if (bytes === 0) return "0 B";
+		const k = 1024;
+		const sizes = ["B", "KB", "MB"];
+		const i = Math.floor(Math.log(bytes) / Math.log(k));
+		return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+	}
+
+	function truncateHash(hash) {
+		return hash.slice(0, 8) + "..." + hash.slice(-4);
+	}
+
+	const container = document.querySelector(".versions-layout");
+	if (container) {
+		const uuid = container.dataset.uuid;
+		const currentHash = container.dataset.currentHash;
+		const postSlug = container.dataset.postSlug;
+
+		const versionItems = document.querySelectorAll(".version-item");
+		const previewText = document.getElementById("preview-text");
+		const previewLoading = document.getElementById("preview-loading");
+		const previewSize = document.getElementById("preview-size");
+		const previewHash = document.getElementById("preview-hash");
+		const restoreBtn = document.getElementById("restore-btn");
+
+		let selectedHash = null;
+		let selectedIsCurrent = false;
+
+		const loadVersion = async (hash) => {
+			previewLoading.style.display = "flex";
+			previewText.textContent = "";
+			previewSize.textContent = "";
+			previewHash.textContent = "";
+
+			try {
+				const res = await fetch(`${API_URL}/posts/${uuid}/version/${hash}`);
+				if (!res.ok) throw new Error("Failed to load version");
+
+				const data = await res.json();
+				const content = `# ${data.title}\n\n${data.description ? data.description + "\n\n" : ""}${data.content}`;
+				
+				previewText.textContent = content;
+				previewSize.textContent = formatBytes(new Blob([content]).size);
+				previewHash.textContent = truncateHash(hash);
+			} catch (e) {
+				previewText.textContent = "Failed to load version content";
+			} finally {
+				previewLoading.style.display = "none";
+			}
+		};
+
+		const selectVersion = (hash, isCurrent) => {
+			selectedHash = hash;
+			selectedIsCurrent = isCurrent === "true" || isCurrent === true;
+
+			versionItems.forEach((item) => {
+				item.classList.toggle("version-item--selected", item.dataset.hash === hash);
+			});
+
+			restoreBtn.disabled = selectedIsCurrent;
+			restoreBtn.textContent = selectedIsCurrent ? "Current version" : "Restore this version";
+
+			loadVersion(hash);
+		};
+
+		versionItems.forEach((item) => {
+			item.addEventListener("click", () => {
+				selectVersion(item.dataset.hash, item.dataset.isCurrent);
+			});
+		});
+
+		restoreBtn.addEventListener("click", async () => {
+			if (!selectedHash || selectedIsCurrent) return;
+
+			restoreBtn.disabled = true;
+			restoreBtn.textContent = "Restoring...";
+
+			try {
+				const res = await fetch(`${API_URL}/posts/${uuid}/restore/${selectedHash}`, {
+					method: "POST",
+				});
+
+				if (!res.ok) throw new Error("Failed to restore version");
+
+				window.location.href = `/posts/${postSlug}`;
+			} catch (e) {
+				alert("Failed to restore version");
+				restoreBtn.disabled = false;
+				restoreBtn.textContent = "Restore this version";
+			}
+		});
+
+		// Load first version on page load
+		const firstItem = versionItems[0];
+		if (firstItem) {
+			selectVersion(firstItem.dataset.hash, firstItem.dataset.isCurrent);
+		}
+	}
+</script>
+
+<style>
+	.back-arrow {
+		display: flex;
+		align-items: center;
+		color: var(--text-muted);
+	}
+	.back-arrow:hover {
+		color: var(--text-link);
+	}
+
+	.versions-layout {
+		display: grid;
+		grid-template-columns: 240px 1fr;
+		gap: 24px;
+		min-height: 400px;
+	}
+
+	@media (max-width: 768px) {
+		.versions-layout {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	.versions-sidebar {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.sidebar-title {
+		margin: 0;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--input-border);
+	}
+
+	.version-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+	}
+
+	.version-item {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		padding: 10px 12px;
+		border: 1px solid var(--input-border);
+		border-radius: 4px;
+		background: none;
+		cursor: pointer;
+		width: 100%;
+		text-align: left;
+		transition: border-color 0.15s, background 0.15s;
+		color: var(--text-secondary);
+	}
+
+	.version-item:hover {
+		border-color: var(--text-muted);
+		background: var(--input-background);
+	}
+
+	.version-item--selected {
+		border-color: var(--text-link);
+		background: var(--input-background);
+	}
+
+	.version-dot {
+		font-size: 0.875rem;
+		color: var(--text-muted);
+		width: 16px;
+		text-align: center;
+	}
+
+	.version-dot--current {
+		color: var(--text-link);
+	}
+
+	.version-info {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.version-number {
+		font-size: 0.875rem;
+		color: var(--text-primary);
+	}
+
+	.version-time {
+		font-size: 0.75rem;
+	}
+
+	.preview-pane {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+		border: 1px solid var(--input-border);
+		border-radius: 4px;
+		padding: 16px;
+	}
+
+	.preview-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding-bottom: 8px;
+		border-bottom: 1px solid var(--input-border);
+	}
+
+	.preview-title {
+		margin: 0;
+	}
+
+	.preview-meta {
+		display: flex;
+		gap: 12px;
+	}
+
+	.preview-content {
+		flex: 1;
+		min-height: 300px;
+		position: relative;
+	}
+
+	.preview-loading {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		color: var(--text-muted);
+	}
+
+	.preview-text {
+		margin: 0;
+		padding: 12px;
+		background: var(--input-background);
+		border-radius: 4px;
+		font-family: monospace;
+		font-size: 0.8125rem;
+		line-height: 1.6;
+		white-space: pre-wrap;
+		word-wrap: break-word;
+		overflow-y: auto;
+		max-height: 400px;
+		color: var(--text-secondary);
+	}
+
+	.preview-actions {
+		display: flex;
+		justify-content: flex-end;
+		padding-top: 12px;
+		border-top: 1px solid var(--input-border);
+	}
+</style>

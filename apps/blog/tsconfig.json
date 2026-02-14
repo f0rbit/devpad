@@ -1,0 +1,21 @@
+{
+	"extends": "astro/tsconfigs/strict",
+	"compilerOptions": {
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["src/*"],
+			"@devpad/schema/blog": ["../../packages/schema/src/blog/index.ts"],
+			"@devpad/schema/bindings": ["../../packages/schema/src/bindings.ts"]
+		}
+	},
+	"include": ["src/**/*", "astro.config.mjs"],
+	"exclude": ["node_modules", "dist"]
+}

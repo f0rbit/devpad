@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type ApiClient from "@devpad/api";
 import { CleanupManager } from "../shared/cleanup-manager";
 import { MCPTestClient } from "../shared/mcp-test-client";
@@ -258,9 +258,10 @@ describe("MCP Server Integration", () => {
 		const mcpProject = JSON.parse(mcpResponse.result.content[0].text);
 
 		// Get same project via API client by ID
-		const { project: apiProject } = await apiClient.projects.getById(createdProject.id);
+		const apiResult = await apiClient.projects.getById(createdProject.id);
 
 		// Verify they match
+		const apiProject = apiResult.ok ? apiResult.value : null;
 		expect(mcpProject.id).toBe(apiProject?.id);
 		expect(mcpProject.name).toBe(apiProject?.name);
 		expect(mcpProject.description).toBe(apiProject?.description);

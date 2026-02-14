@@ -1,8 +1,6 @@
 {
-  "version": "5",
+  "version": "6",
   "dialect": "sqlite",
-  "id": "ad71248e-6de3-47e7-8f65-55cdd3ed386b",
-  "prevId": "61ff403a-f4fb-4dd8-9e4a-0d3f721a2492",
   "tables": {
     "action": {
       "name": "action",
@@ -72,19 +70,20 @@
         "action_owner_id_user_id_fk": {
           "name": "action_owner_id_user_id_fk",
           "tableFrom": "action",
-          "tableTo": "user",
           "columnsFrom": [
             "owner_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "api_key": {
       "name": "api_key",
@@ -140,19 +139,20 @@
         "api_key_owner_id_user_id_fk": {
           "name": "api_key_owner_id_user_id_fk",
           "tableFrom": "api_key",
-          "tableTo": "user",
           "columnsFrom": [
             "owner_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "checklist": {
       "name": "checklist",
@@ -208,19 +208,20 @@
         "checklist_task_id_task_id_fk": {
           "name": "checklist_task_id_task_id_fk",
           "tableFrom": "checklist",
-          "tableTo": "task",
           "columnsFrom": [
             "task_id"
           ],
+          "tableTo": "task",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "checklist_item": {
       "name": "checklist_item",
@@ -291,19 +292,20 @@
         "checklist_item_checklist_id_checklist_id_fk": {
           "name": "checklist_item_checklist_id_checklist_id_fk",
           "tableFrom": "checklist_item",
-          "tableTo": "checklist",
           "columnsFrom": [
             "checklist_id"
           ],
+          "tableTo": "checklist",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "codebase_tasks": {
       "name": "codebase_tasks",
@@ -415,19 +417,20 @@
         "codebase_tasks_recent_scan_id_tracker_result_id_fk": {
           "name": "codebase_tasks_recent_scan_id_tracker_result_id_fk",
           "tableFrom": "codebase_tasks",
-          "tableTo": "tracker_result",
           "columnsFrom": [
             "recent_scan_id"
           ],
+          "tableTo": "tracker_result",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "commit_detail": {
       "name": "commit_detail",
@@ -492,7 +495,8 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "goal": {
       "name": "goal",
@@ -569,19 +573,20 @@
         "goal_milestone_id_milestone_id_fk": {
           "name": "goal_milestone_id_milestone_id_fk",
           "tableFrom": "goal",
-          "tableTo": "milestone",
           "columnsFrom": [
             "milestone_id"
           ],
+          "tableTo": "milestone",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "ignore_path": {
       "name": "ignore_path",
@@ -629,19 +634,20 @@
         "ignore_path_project_id_project_id_fk": {
           "name": "ignore_path_project_id_project_id_fk",
           "tableFrom": "ignore_path",
-          "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "milestone": {
       "name": "milestone",
@@ -732,19 +738,20 @@
         "milestone_project_id_project_id_fk": {
           "name": "milestone_project_id_project_id_fk",
           "tableFrom": "milestone",
-          "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "project": {
       "name": "project",
@@ -886,19 +893,20 @@
         "project_owner_id_user_id_fk": {
           "name": "project_owner_id_user_id_fk",
           "tableFrom": "project",
-          "tableTo": "user",
           "columnsFrom": [
             "owner_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "session": {
       "name": "session",
@@ -937,19 +945,20 @@
         "session_user_id_user_id_fk": {
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
-          "tableTo": "user",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "tag": {
       "name": "tag",
@@ -1029,19 +1038,20 @@
         "tag_owner_id_user_id_fk": {
           "name": "tag_owner_id_user_id_fk",
           "tableFrom": "tag",
-          "tableTo": "user",
           "columnsFrom": [
             "owner_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "tag_config": {
       "name": "tag_config",
@@ -1096,32 +1106,33 @@
         "tag_config_project_id_project_id_fk": {
           "name": "tag_config_project_id_project_id_fk",
           "tableFrom": "tag_config",
-          "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "tag_config_tag_id_tag_id_fk": {
           "name": "tag_config_tag_id_tag_id_fk",
           "tableFrom": "tag_config",
-          "tableTo": "tag",
           "columnsFrom": [
             "tag_id"
           ],
+          "tableTo": "tag",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "task": {
       "name": "task",
@@ -1250,58 +1261,59 @@
         "task_owner_id_user_id_fk": {
           "name": "task_owner_id_user_id_fk",
           "tableFrom": "task",
-          "tableTo": "user",
           "columnsFrom": [
             "owner_id"
           ],
+          "tableTo": "user",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "task_goal_id_goal_id_fk": {
           "name": "task_goal_id_goal_id_fk",
           "tableFrom": "task",
-          "tableTo": "goal",
           "columnsFrom": [
             "goal_id"
           ],
+          "tableTo": "goal",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "task_project_id_project_id_fk": {
           "name": "task_project_id_project_id_fk",
           "tableFrom": "task",
-          "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "task_codebase_task_id_codebase_tasks_id_fk": {
           "name": "task_codebase_task_id_codebase_tasks_id_fk",
           "tableFrom": "task",
-          "tableTo": "codebase_tasks",
           "columnsFrom": [
             "codebase_task_id"
           ],
+          "tableTo": "codebase_tasks",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "task_tag": {
       "name": "task_tag",
@@ -1342,28 +1354,28 @@
         "task_tag_task_id_task_id_fk": {
           "name": "task_tag_task_id_task_id_fk",
           "tableFrom": "task_tag",
-          "tableTo": "task",
           "columnsFrom": [
             "task_id"
           ],
+          "tableTo": "task",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "task_tag_tag_id_tag_id_fk": {
           "name": "task_tag_tag_id_tag_id_fk",
           "tableFrom": "task_tag",
-          "tableTo": "tag",
           "columnsFrom": [
             "tag_id"
           ],
+          "tableTo": "tag",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -1375,7 +1387,8 @@
           "name": "task_tag_task_id_tag_id_pk"
         }
       },
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "todo_updates": {
       "name": "todo_updates",
@@ -1465,45 +1478,46 @@
         "todo_updates_project_id_project_id_fk": {
           "name": "todo_updates_project_id_project_id_fk",
           "tableFrom": "todo_updates",
-          "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "todo_updates_old_id_tracker_result_id_fk": {
           "name": "todo_updates_old_id_tracker_result_id_fk",
           "tableFrom": "todo_updates",
-          "tableTo": "tracker_result",
           "columnsFrom": [
             "old_id"
           ],
+          "tableTo": "tracker_result",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "todo_updates_new_id_tracker_result_id_fk": {
           "name": "todo_updates_new_id_tracker_result_id_fk",
           "tableFrom": "todo_updates",
-          "tableTo": "tracker_result",
           "columnsFrom": [
             "new_id"
           ],
+          "tableTo": "tracker_result",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "tracker_result": {
       "name": "tracker_result",
@@ -1551,19 +1565,20 @@
         "tracker_result_project_id_project_id_fk": {
           "name": "tracker_result_project_id_project_id_fk",
           "tableFrom": "tracker_result",
-          "tableTo": "project",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "project",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "user": {
       "name": "user",
@@ -1630,13 +1645,16 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     }
   },
   "enums": {},
   "_meta": {
-    "schemas": {},
     "tables": {},
     "columns": {}
-  }
+  },
+  "id": "ad71248e-6de3-47e7-8f65-55cdd3ed386b",
+  "prevId": "61ff403a-f4fb-4dd8-9e4a-0d3f721a2492",
+  "views": {}
 }

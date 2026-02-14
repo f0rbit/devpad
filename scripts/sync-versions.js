@@ -24,7 +24,7 @@ const rootDir = path.resolve(__dirname, "..");
 const PUBLISHABLE_PACKAGES = ["api", "cli", "mcp"];
 
 // All packages (for dependency updates)
-const ALL_PACKAGES = ["api", "cli", "mcp", "schema", "core", "app", "server"];
+const ALL_PACKAGES = ["api", "cli", "mcp", "schema", "core", "worker"];
 
 /**
  * Read current version from .github/VERSION
@@ -139,7 +139,7 @@ async function getChangedPackages(lastTag) {
 
 		for (const file of changed) {
 			// Check if file is in a package directory
-			const match = file.match(/^packages\/([^\/]+)\//);
+			const match = file.match(/^packages\/([^/]+)\//);
 			if (match && PUBLISHABLE_PACKAGES.includes(match[1])) {
 				changedPackages.add(match[1]);
 			}

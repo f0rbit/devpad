@@ -31,26 +31,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
         
-      - name: Build packages in order
+      - name: Build packages
         run: |
-          # Build packages in dependency order
-          cd packages/schema && bun run build
-          cd ../core && bun run build
-          cd ../api && bun run build
-          cd ../app && bun run build
-          cd ../cli && bun run build
-          cd ../server && bun run build
-          cd ../mcp && bun run build
-        
-      - name: Setup test environment
-        run: |
-          # Build todo-tracker binary for Linux
-          git clone https://github.com/f0rbit/todo-tracker.git /tmp/todo-tracker
-          cd /tmp/todo-tracker
-          go build -o todo-tracker
-          mv todo-tracker $GITHUB_WORKSPACE/todo-tracker
-          chmod +x $GITHUB_WORKSPACE/todo-tracker
-        
+          cd packages/schema && bun run build && cd ../..
+          cd packages/api && bun run build && cd ../..
+          cd packages/cli && bun run build && cd ../..
+          cd packages/mcp && bun run build && cd ../..
+
       - name: Run unit tests
         run: bun run test:unit
         env:
@@ -75,7 +62,7 @@ jobs:
         
       - name: Type check
         run: |
-          cd packages/app
+          cd apps/main
           bun run check
         continue-on-error: true
         

@@ -1,136 +1,118 @@
-import { describe, expect, test, beforeEach } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
-import { expectValidArray, expectMatchesPartial } from "../shared/assertions";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { Goal, Milestone, Project, UpsertGoal, UpsertMilestone } from "@devpad/schema";
+import { expectMatchesPartial, expectValidArray } from "../shared/assertions";
+import { setupIntegration } from "../shared/base-integration-test";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
-import type { Milestone, Goal, UpsertMilestone, UpsertGoal, Project } from "@devpad/schema";
 
-// Helper function for API error assertions
 const expectValidApiError = (response: Response, expectedCodes: number[] = [400, 401, 404, 500]) => {
 	expect(expectedCodes).toContain(response.status);
 	expect(response.ok).toBe(false);
 };
 
-class MilestonesGoalsIntegrationTest extends BaseIntegrationTest {
-	// Helper methods for milestone/goal operations
-	async createTestMilestone(projectId: string, milestoneData?: Partial<UpsertMilestone>): Promise<Milestone> {
-		const defaultData: UpsertMilestone = {
-			project_id: projectId,
-			name: `Test Milestone ${Date.now()}`,
-			description: "Test milestone description",
-			target_version: "v1.0.0",
-			target_time: "2024-12-31",
-			...milestoneData,
-		};
+const t = setupIntegration();
 
-		const response = await fetch("http://localhost:3001/api/v0/milestones", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${this.client["_api_key"]}`,
-			},
-			body: JSON.stringify(defaultData),
-		});
+async function createTestMilestone(projectId: string, milestoneData?: Partial<UpsertMilestone>): Promise<Milestone> {
+	const defaultData: UpsertMilestone = {
+		project_id: projectId,
+		name: `Test Milestone ${Date.now()}`,
+		description: "Test milestone description",
+		target_version: "v1.0.0",
+		target_time: "2024-12-31",
+		...milestoneData,
+	};
 
-		if (!response.ok) {
-			throw new Error(`Failed to create milestone: ${response.status}`);
-		}
+	const response = await fetch("http://localhost:3001/api/v1/milestones", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${t.client["_api_key"]}`,
+		},
+		body: JSON.stringify(defaultData),
+	});
 
-		const milestone = await response.json();
-		// Register milestone for cleanup via the CleanupManager
-		this.cleanup.registerCleanup("milestones", async () => {
-			try {
-				const deleteResponse = await fetch(`http://localhost:3001/api/v0/milestones/${milestone.id}`, {
-					method: "DELETE",
-					headers: { Authorization: `Bearer ${this.client["_api_key"]}` },
-				});
-				if (deleteResponse.ok) {
-					console.log(`✅ Cleaned up milestone: ${milestone.name} (${milestone.id})`);
-				}
-			} catch (error) {
-				console.log(`⚠️ Failed to cleanup milestone ${milestone.id}:`, error);
+	if (!response.ok) {
+		throw new Error(`Failed to create milestone: ${response.status}`);
+	}
+
+	const milestone = await response.json();
+	t.cleanup.registerCleanup("milestones", async () => {
+		try {
+			const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${t.client["_api_key"]}` },
+			});
+			if (deleteResponse.ok) {
+				console.log(`Cleaned up milestone: ${milestone.name} (${milestone.id})`);
 			}
-		});
-		return milestone;
-	}
-
-	async createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal>): Promise<Goal> {
-		const defaultData: UpsertGoal = {
-			milestone_id: milestoneId,
-			name: `Test Goal ${Date.now()}`,
-			description: "Test goal description",
-			target_time: "2024-06-30",
-			...goalData,
-		};
-
-		const response = await fetch("http://localhost:3001/api/v0/goals", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-				Authorization: `Bearer ${this.client["_api_key"]}`,
-			},
-			body: JSON.stringify(defaultData),
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to create goal: ${response.status}`);
+		} catch (error) {
+			console.log(`Failed to cleanup milestone ${milestone.id}:`, error);
 		}
-
-		const goal = await response.json();
-		// Register goal for cleanup
-		this.cleanup.registerCleanup("goals", async () => {
-			try {
-				const deleteResponse = await fetch(`http://localhost:3001/api/v0/goals/${goal.id}`, {
-					method: "DELETE",
-					headers: { Authorization: `Bearer ${this.client["_api_key"]}` },
-				});
-				if (deleteResponse.ok) {
-					console.log(`✅ Cleaned up goal: ${goal.name} (${goal.id})`);
-				}
-			} catch (error) {
-				console.log(`⚠️ Failed to cleanup goal ${goal.id}:`, error);
-			}
-		});
-		return goal;
-	}
-
-	async deleteTestMilestone(milestoneId: string): Promise<void> {
-		const response = await fetch(`http://localhost:3001/api/v0/milestones/${milestoneId}`, {
-			method: "DELETE",
-			headers: {
-				Authorization: `Bearer ${this.client["_api_key"]}`,
-			},
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to delete milestone: ${response.status}`);
-		}
-	}
-
-	async deleteTestGoal(goalId: string): Promise<void> {
-		const response = await fetch(`http://localhost:3001/api/v0/goals/${goalId}`, {
-			method: "DELETE",
-			headers: {
-				Authorization: `Bearer ${this.client["_api_key"]}`,
-			},
-		});
-
-		if (!response.ok) {
-			throw new Error(`Failed to delete goal: ${response.status}`);
-		}
-	}
+	});
+	return milestone;
 }
 
-// Setup test instance
-const testInstance = new MilestonesGoalsIntegrationTest();
-setupBaseIntegrationTest(testInstance);
+async function createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal>): Promise<Goal> {
+	const defaultData: UpsertGoal = {
+		milestone_id: milestoneId,
+		name: `Test Goal ${Date.now()}`,
+		description: "Test goal description",
+		target_time: "2024-06-30",
+		...goalData,
+	};
+
+	const response = await fetch("http://localhost:3001/api/v1/goals", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Authorization: `Bearer ${t.client["_api_key"]}`,
+		},
+		body: JSON.stringify(defaultData),
+	});
+
+	if (!response.ok) {
+		throw new Error(`Failed to create goal: ${response.status}`);
+	}
+
+	const goal = await response.json();
+	t.cleanup.registerCleanup("goals", async () => {
+		try {
+			const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${goal.id}`, {
+				method: "DELETE",
+				headers: { Authorization: `Bearer ${t.client["_api_key"]}` },
+			});
+			if (deleteResponse.ok) {
+				console.log(`Cleaned up goal: ${goal.name} (${goal.id})`);
+			}
+		} catch (error) {
+			console.log(`Failed to cleanup goal ${goal.id}:`, error);
+		}
+	});
+	return goal;
+}
+
+async function deleteTestMilestone(milestoneId: string): Promise<void> {
+	const response = await fetch(`http://localhost:3001/api/v1/milestones/${milestoneId}`, {
+		method: "DELETE",
+		headers: {
+			Authorization: `Bearer ${t.client["_api_key"]}`,
+		},
+	});
+
+	if (!response.ok) {
+		throw new Error(`Failed to delete milestone: ${response.status}`);
+	}
+}
 
 describe("Milestones & Goals Integration Tests", () => {
 	let testProject: Project;
 
 	beforeEach(async () => {
 		const projectData = TestDataFactory.createRealisticProject();
-		testProject = await testInstance.createAndRegisterProject(projectData);
+		const result = await t.client.projects.create(projectData);
+		if (!result.ok) throw new Error(`Failed to create project: ${result.error.message}`);
+		t.cleanup.registerProject(result.value);
+		testProject = result.value;
 	});
 	describe("milestone CRUD operations", () => {
 		test("should create a new milestone", async () => {
@@ -142,7 +124,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				target_time: "2024-12-31",
 			};
 
-			const milestone = await testInstance.createTestMilestone(testProject.id, milestoneData);
+			const milestone = await createTestMilestone(testProject.id, milestoneData);
 
 			expect(milestone).toBeDefined();
 			expect(milestone.id).toMatch(/^milestone_/);
@@ -158,13 +140,12 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should list milestones for authenticated user", async () => {
-			// Create a couple of milestones
-			await testInstance.createTestMilestone(testProject.id, { name: "Milestone 1" });
-			await testInstance.createTestMilestone(testProject.id, { name: "Milestone 2" });
+			await createTestMilestone(testProject.id, { name: "Milestone 1" });
+			await createTestMilestone(testProject.id, { name: "Milestone 2" });
 
-			const response = await fetch("http://localhost:3001/api/v0/milestones", {
+			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -178,11 +159,11 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should get milestone by ID", async () => {
-			const createdMilestone = await testInstance.createTestMilestone(testProject.id);
+			const createdMilestone = await createTestMilestone(testProject.id);
 
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${createdMilestone.id}`, {
+			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -193,31 +174,30 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should update an existing milestone", async () => {
-			const createdMilestone = await testInstance.createTestMilestone(testProject.id);
+			const createdMilestone = await createTestMilestone(testProject.id);
 			const updateData = {
 				name: "Updated Milestone Name",
 				description: "Updated description",
 				target_version: "v2.0.0",
 			};
 
-			const { milestone: updatedMilestone, error } = await testInstance.client.milestones.update(createdMilestone.id, updateData);
-			if (error) {
-				throw new Error(`Failed to update milestone: ${error.message}`);
+			const updateResult = await t.client.milestones.update(createdMilestone.id, updateData);
+			if (!updateResult.ok) {
+				throw new Error(`Failed to update milestone: ${updateResult.error.message}`);
 			}
 
-			expectMatchesPartial(updatedMilestone!, updateData);
-			expect(updatedMilestone!.id).toBe(createdMilestone.id);
+			expectMatchesPartial(updateResult.value, updateData);
+			expect(updateResult.value.id).toBe(createdMilestone.id);
 		});
 
 		test("should delete a milestone", async () => {
-			const createdMilestone = await testInstance.createTestMilestone(testProject.id);
+			const createdMilestone = await createTestMilestone(testProject.id);
 
-			await testInstance.deleteTestMilestone(createdMilestone.id);
+			await deleteTestMilestone(createdMilestone.id);
 
-			// Verify milestone is deleted by trying to fetch it
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${createdMilestone.id}`, {
+			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -225,13 +205,12 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should get milestones for a specific project", async () => {
-			// Create milestones for our test project
-			const milestone1 = await testInstance.createTestMilestone(testProject.id, { name: "Project Milestone 1" });
-			const milestone2 = await testInstance.createTestMilestone(testProject.id, { name: "Project Milestone 2" });
+			const milestone1 = await createTestMilestone(testProject.id, { name: "Project Milestone 1" });
+			const milestone2 = await createTestMilestone(testProject.id, { name: "Project Milestone 2" });
 
-			const response = await fetch(`http://localhost:3001/api/v0/projects/${testProject.id}/milestones`, {
+			const response = await fetch(`http://localhost:3001/api/v1/projects/${testProject.id}/milestones`, {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -250,7 +229,7 @@ describe("Milestones & Goals Integration Tests", () => {
 		let testMilestone: Milestone;
 
 		beforeEach(async () => {
-			testMilestone = await testInstance.createTestMilestone(testProject.id);
+			testMilestone = await createTestMilestone(testProject.id);
 		});
 
 		test("should create a new goal", async () => {
@@ -261,7 +240,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				target_time: "2024-06-30",
 			};
 
-			const goal = await testInstance.createTestGoal(testMilestone.id, goalData);
+			const goal = await createTestGoal(testMilestone.id, goalData);
 
 			expect(goal).toBeDefined();
 			expect(goal.id).toMatch(/^goal_/);
@@ -277,13 +256,12 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should list goals for authenticated user", async () => {
-			// Create a couple of goals
-			await testInstance.createTestGoal(testMilestone.id, { name: "Goal 1" });
-			await testInstance.createTestGoal(testMilestone.id, { name: "Goal 2" });
+			await createTestGoal(testMilestone.id, { name: "Goal 1" });
+			await createTestGoal(testMilestone.id, { name: "Goal 2" });
 
-			const response = await fetch("http://localhost:3001/api/v0/goals", {
+			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -298,11 +276,11 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should get goal by ID", async () => {
-			const createdGoal = await testInstance.createTestGoal(testMilestone.id);
+			const createdGoal = await createTestGoal(testMilestone.id);
 
-			const response = await fetch(`http://localhost:3001/api/v0/goals/${createdGoal.id}`, {
+			const response = await fetch(`http://localhost:3001/api/v1/goals/${createdGoal.id}`, {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -314,47 +292,44 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should update an existing goal", async () => {
-			const createdGoal = await testInstance.createTestGoal(testMilestone.id);
+			const createdGoal = await createTestGoal(testMilestone.id);
 			const updateData = {
 				name: "Updated Goal Name",
 				description: "Updated goal description",
 				target_time: "2024-08-31",
 			};
 
-			const { goal: updatedGoal, error } = await testInstance.client.goals.update(createdGoal.id, updateData);
-			if (error) {
-				throw new Error(`Failed to update goal: ${error.message}`);
+			const updateResult = await t.client.goals.update(createdGoal.id, updateData);
+			if (!updateResult.ok) {
+				throw new Error(`Failed to update goal: ${updateResult.error.message}`);
 			}
 
-			expectMatchesPartial(updatedGoal!, updateData);
-			expect(updatedGoal!.id).toBe(createdGoal.id);
-			expect(updatedGoal.milestone_id).toBe(testMilestone.id);
+			expectMatchesPartial(updateResult.value, updateData);
+			expect(updateResult.value.id).toBe(createdGoal.id);
+			expect(updateResult.value.milestone_id).toBe(testMilestone.id);
 		});
 
 		test("should delete a goal", async () => {
-			const createdGoal = await testInstance.createTestGoal(testMilestone.id);
+			const createdGoal = await createTestGoal(testMilestone.id);
 
-			const { result, error } = await testInstance.client.goals.delete(createdGoal.id);
-			if (error) {
-				throw new Error(`Failed to delete goal: ${error.message}`);
+			const deleteResult = await t.client.goals.delete(createdGoal.id);
+			if (!deleteResult.ok) {
+				throw new Error(`Failed to delete goal: ${deleteResult.error.message}`);
 			}
 
-			expect(result!.success).toBe(true);
+			expect(deleteResult.value.success).toBe(true);
 
-			// Verify goal is deleted by trying to fetch it
-			const { goal: fetchedGoal, error: fetchError } = await testInstance.client.goals.find(createdGoal.id);
-			// Should return null for deleted goal
-			expect(fetchedGoal).toBeNull();
+			const fetchResult = await t.client.goals.find(createdGoal.id);
+			expect(fetchResult.ok ? fetchResult.value : null).toBeNull();
 		});
 
 		test("should get goals for a specific milestone", async () => {
-			// Create goals for our test milestone
-			const goal1 = await testInstance.createTestGoal(testMilestone.id, { name: "Milestone Goal 1" });
-			const goal2 = await testInstance.createTestGoal(testMilestone.id, { name: "Milestone Goal 2" });
+			const goal1 = await createTestGoal(testMilestone.id, { name: "Milestone Goal 1" });
+			const goal2 = await createTestGoal(testMilestone.id, { name: "Milestone Goal 2" });
 
-			const response = await fetch(`http://localhost:3001/api/v0/milestones/${testMilestone.id}/goals`, {
+			const response = await fetch(`http://localhost:3001/api/v1/milestones/${testMilestone.id}/goals`, {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -376,11 +351,11 @@ describe("Milestones & Goals Integration Tests", () => {
 				name: "Test Milestone",
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/milestones", {
+			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -394,11 +369,11 @@ describe("Milestones & Goals Integration Tests", () => {
 				name: "Test Goal",
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/goals", {
+			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -409,14 +384,13 @@ describe("Milestones & Goals Integration Tests", () => {
 		test("should reject milestone with missing required fields", async () => {
 			const invalidData = {
 				project_id: testProject.id,
-				// Missing required 'name' field
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/milestones", {
+			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -425,17 +399,16 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should reject goal with missing required fields", async () => {
-			const testMilestone = await testInstance.createTestMilestone(testProject.id);
+			const testMilestone = await createTestMilestone(testProject.id);
 			const invalidData = {
 				milestone_id: testMilestone.id,
-				// Missing required 'name' field
 			};
 
-			const response = await fetch("http://localhost:3001/api/v0/goals", {
+			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -446,23 +419,20 @@ describe("Milestones & Goals Integration Tests", () => {
 
 	describe("hierarchy relationships", () => {
 		test("should maintain project -> milestone -> goal hierarchy", async () => {
-			// Create the full hierarchy
-			const milestone = await testInstance.createTestMilestone(testProject.id, {
+			const milestone = await createTestMilestone(testProject.id, {
 				name: "Hierarchy Test Milestone",
 			});
 
-			const goal = await testInstance.createTestGoal(milestone.id, {
+			const goal = await createTestGoal(milestone.id, {
 				name: "Hierarchy Test Goal",
 			});
 
-			// Verify relationships
-			expect(milestone.project_id).toBe(testProject.id); // Milestone belongs to project
-			expect(goal.milestone_id).toBe(milestone.id); // Goal belongs to milestone
+			expect(milestone.project_id).toBe(testProject.id);
+			expect(goal.milestone_id).toBe(milestone.id);
 
-			// Verify we can traverse the hierarchy
-			const milestoneGoalsResponse = await fetch(`http://localhost:3001/api/v0/milestones/${milestone.id}/goals`, {
+			const milestoneGoalsResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}/goals`, {
 				headers: {
-					Authorization: `Bearer ${testInstance.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["_api_key"]}`,
 				},
 			});
 
@@ -472,17 +442,15 @@ describe("Milestones & Goals Integration Tests", () => {
 		});
 
 		test("should delete goals when milestone is deleted", async () => {
-			const milestone = await testInstance.createTestMilestone(testProject.id);
-			const goal = await testInstance.createTestGoal(milestone.id);
+			const milestone = await createTestMilestone(testProject.id);
+			const goal = await createTestGoal(milestone.id);
 
-			// Delete the milestone
-			await testInstance.deleteTestMilestone(milestone.id);
+			await deleteTestMilestone(milestone.id);
 
-			// Verify the goal is also deleted/inaccessible
-			const { goal: deletedGoal, error } = await testInstance.client.goals.find(goal.id);
+			const findResult = await t.client.goals.find(goal.id);
 
-			expect(deletedGoal).toBeNull();
-			expect(error).not.toBeNull();
+			expect(findResult.ok ? findResult.value : null).toBeNull();
+			expect(findResult.ok).toBe(false);
 		});
 	});
 
@@ -491,8 +459,8 @@ describe("Milestones & Goals Integration Tests", () => {
 		let testGoal: Goal;
 
 		beforeEach(async () => {
-			testMilestone = await testInstance.createTestMilestone(testProject.id);
-			testGoal = await testInstance.createTestGoal(testMilestone.id);
+			testMilestone = await createTestMilestone(testProject.id);
+			testGoal = await createTestGoal(testMilestone.id);
 		});
 
 		test("should create task with goal relationship", async () => {
@@ -507,53 +475,52 @@ describe("Milestones & Goals Integration Tests", () => {
 				goal_id: testGoal.id,
 			};
 
-			const { task, error } = await testInstance.client.tasks.create(taskData);
+			const createResult = await t.client.tasks.create(taskData);
 
-			expect(error).toBeNull();
-			expect(task).not.toBeNull();
-			expect(task?.task.goal_id).toBe(testGoal.id);
-			expect(task?.task.project_id).toBe(testProject.id);
-
-			// Task will be cleaned up automatically
+			expect(createResult.ok).toBe(true);
+			if (createResult.ok) {
+				expect(createResult.value).not.toBeNull();
+				expect(createResult.value.task.goal_id).toBe(testGoal.id);
+				expect(createResult.value.task.project_id).toBe(testProject.id);
+			}
 		});
 
 		test("should modify task goal relationship", async () => {
-			// Create task without goal
 			const taskData = {
 				title: `Test Task ${Date.now()}`,
 				owner_id: TEST_USER_ID,
 				project_id: testProject.id,
 			};
 
-			const { task: createdTask, error: createError } = await testInstance.client.tasks.create(taskData);
+			const createResult = await t.client.tasks.create(taskData);
 
-			expect(createError).toBeNull();
-			expect(createdTask).not.toBeNull();
-			expect(createdTask?.task.goal_id).toBeNull();
+			expect(createResult.ok).toBe(true);
+			if (createResult.ok) {
+				expect(createResult.value.task.goal_id).toBeNull();
 
-			// Update task to add goal
-			const { task: updatedTask, error: updateError } = await testInstance.client.tasks.update(createdTask!.task.id, {
-				goal_id: testGoal.id,
-			});
+				const updateResult = await t.client.tasks.update(createResult.value.task.id, {
+					goal_id: testGoal.id,
+				});
 
-			expect(updateError).toBeNull();
-			expect(updatedTask?.task.goal_id).toBe(testGoal.id);
+				expect(updateResult.ok).toBe(true);
+				if (updateResult.ok) {
+					expect(updateResult.value.task.goal_id).toBe(testGoal.id);
 
-			// Update task to remove goal
-			const { task: finalTask, error: finalError } = await testInstance.client.tasks.update(updatedTask!.task.id, {
-				goal_id: null,
-			});
+					const finalResult = await t.client.tasks.update(updateResult.value.task.id, {
+						goal_id: null,
+					});
 
-			expect(finalError).toBeNull();
-			expect(finalTask?.task.goal_id).toBeNull();
-
-			// Task will be cleaned up automatically
+					expect(finalResult.ok).toBe(true);
+					if (finalResult.ok) {
+						expect(finalResult.value.task.goal_id).toBeNull();
+					}
+				}
+			}
 		});
 
 		test("should filter tasks by goal", async () => {
-			const goal2 = await testInstance.createTestGoal(testMilestone.id);
+			const goal2 = await createTestGoal(testMilestone.id);
 
-			// Create tasks with different goals
 			const task1Data = {
 				title: "Task 1",
 				owner_id: TEST_USER_ID,
@@ -581,33 +548,30 @@ describe("Milestones & Goals Integration Tests", () => {
 				project_id: testProject.id,
 			};
 
-			// Create all tasks
-			const taskResults = await Promise.all([testInstance.client.tasks.create(task1Data), testInstance.client.tasks.create(task2Data), testInstance.client.tasks.create(task3Data), testInstance.client.tasks.create(task4Data)]);
+			const taskResults = await Promise.all([t.client.tasks.create(task1Data), t.client.tasks.create(task2Data), t.client.tasks.create(task3Data), t.client.tasks.create(task4Data)]);
 
-			// Verify task creation was successful
 			for (const result of taskResults) {
-				expect(result.error).toBeNull();
-				expect(result.task).not.toBeNull();
+				expect(result.ok).toBe(true);
+				if (result.ok) {
+					expect(result.value).not.toBeNull();
+				}
 			}
-			// Tasks will be cleaned up automatically by test teardown
 
-			// Get all project tasks
-			const { tasks: allTasks, error: tasksError } = await testInstance.client.tasks.list({ project_id: testProject.id });
+			const listResult = await t.client.tasks.list({ project_id: testProject.id });
 
-			expect(tasksError).toBeNull();
-			expect(allTasks).not.toBeNull();
+			expect(listResult.ok).toBe(true);
+			if (listResult.ok) {
+				expect(listResult.value).not.toBeNull();
 
-			// Filter by testGoal (should have 2 tasks)
-			const goal1Tasks = allTasks.filter((task: any) => task.task.goal_id === testGoal.id);
-			expect(goal1Tasks.length).toBe(2);
+				const goal1Tasks = listResult.value.filter((task: any) => task.task.goal_id === testGoal.id);
+				expect(goal1Tasks.length).toBe(2);
 
-			// Filter by goal2 (should have 1 task)
-			const goal2Tasks = allTasks.filter((task: any) => task.task.goal_id === goal2.id);
-			expect(goal2Tasks.length).toBe(1);
+				const goal2Tasks = listResult.value.filter((task: any) => task.task.goal_id === goal2.id);
+				expect(goal2Tasks.length).toBe(1);
 
-			// Filter by no goal (should have 1 task)
-			const noGoalTasks = allTasks.filter((task: any) => task.task.goal_id === null);
-			expect(noGoalTasks.length).toBe(1);
+				const noGoalTasks = listResult.value.filter((task: any) => task.task.goal_id === null);
+				expect(noGoalTasks.length).toBe(1);
+			}
 		});
 	});
 });

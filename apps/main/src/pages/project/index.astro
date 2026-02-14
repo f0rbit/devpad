@@ -1,0 +1,156 @@
+---
+import ExternalLink from "lucide-solid/icons/external-link";
+import GithubLogin from "@/components/solid/GithubLogin";
+import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { Project } from "@devpad/schema";
+
+let user = Astro.locals.user;
+
+let projects: Project[] = [];
+
+if (user) {
+	try {
+		const api_client = getServerApiClient(Astro.locals);
+		const result = await api_client.projects.list();
+		if (!result.ok) return rethrow(result.error);
+		projects = result.value;
+	} catch (error) {
+		// the error here is that the user is not logged in/authenticated.
+		// which we can safely ignore since this is optional.
+		user = null;
+	}
+}
+
+//
+const keywords = [
+	// One-word keywords
+	"projects",
+	"management",
+	"github",
+	"tasks",
+	"milestones",
+
+	// Two-word keywords
+	"project management",
+	"github integration",
+	"task tracking",
+	"code scanning",
+	"project updates",
+	"project visibility",
+	"task automation",
+	"project milestones",
+	"project goals",
+	"development progress",
+	"project links",
+
+	// Three-word keywords
+	"github project management",
+	"codebase task tracking",
+	"project milestone tracking",
+	"project visibility tools",
+	"development project management",
+];
+---
+
+<PageLayout
+  title="Projects - devpad"
+  description="Manage your development projects effortlessly with devpad. Track progress, link GitHub repositories, scan codebases for tasks, and centralize project visibility, milestones, and updates—all in one place."
+  keywords={keywords}
+  canonical="https://devpad.tools/project"
+>
+  {
+    user && (
+      <main>
+        <section>
+          <div class="flex-row" style="justify-content: space-between; margin-bottom: 1rem;">
+            <h3>projects</h3>
+            <a href="/project/create">+ add</a>
+          </div>
+          <ProjectCardGrid projects={projects} client:load />
+        </section>
+      </main>
+    )
+}
+{!user && (
+  <main
+    class="landing-page"
+    style="display: grid; gap: 100px; justify-items: center"
+  >
+    <br />
+    <section id="organize-projects">
+      <h2 style="text-align: center; font-size: 2rem; margin-bottom: 50px;">
+        organize side projects
+      </h2>
+      <div class="mobile-grid">
+        <div
+          style="display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center;"
+        >
+          <p>
+            keep all your development projects in one place with automatic
+            updates from your github repositories. track progress, manage
+            visibility, and set milestones for your tasks.
+          </p>
+          <GithubLogin size={30} client:load />
+        </div>
+        <img src="/project-creator.png" alt="project management dashboard" />
+      </div>
+    </section>
+
+    <section id="api" style="display: flex; flex-direction: column; gap: 25px;">
+      <h2 style="text-align: center;">api access</h2>
+      <div class="mobile-grid">
+        <p>
+          access your project data through our comprehensive api. perfect for
+          integrating with your portfolio or other development tools. query
+          projects, tasks, and milestones programmatically. you can filter
+          results based on project visibility, status, or specific time ranges.
+          the api provides a restful interface with json endpoints for easy
+          integration.
+          <a style="margin-top: 10px;" class="flex-row" href="/docs">
+            <span>api docs</span>
+            <ExternalLink />
+          </a>
+        </p>
+        <img src="/project-api.png" alt="project api settings" />
+      </div>
+    </section>
+
+    <section
+      id="scanning"
+      style="display: flex; flex-direction: column; gap: 25px;"
+    >
+      <h2 style="text-align: center;">automatic scanning</h2>
+      <div class="mobile-grid">
+        <img src="/scan-update.png" alt="code scanning process" />
+        <p>
+          automatically scan your codebase for todo comments and convert them
+          into trackable tasks. review and update tasks with just enough
+          verification to keep your workflow smooth. scanning updates tasks with
+          the latest code changes and allows you to filter tasks by project or
+          priority. this creates a seamless connection between your codebase and
+          project management workflow.
+        </p>
+      </div>
+    </section>
+
+    <!-- TODO: add testimonials section
+    <section id="testimonials" style="display: grid; gap: 20px;">
+      <h2 style="text-align: center; font-size: 1.5rem;">what developers say</h2>
+    </section> 
+-->
+
+    <section id="cta">
+      <div
+        style="display: flex; flex-direction: column; justify-content: center; gap: 25px; align-items: center;"
+      >
+        <h2 style="text-align: center">let's get started</h2>
+        <GithubLogin size={30} client:load />
+      </div>
+    </section>
+    <br />
+    <br />
+</main>
+)}
+</PageLayout>

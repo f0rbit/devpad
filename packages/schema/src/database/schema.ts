@@ -54,9 +54,21 @@ export const session = sqliteTable("session", {
 	access_token: text("access_token"),
 });
 
-export const api_key = sqliteTable("api_key", {
-	...owned_entity("api_key"),
-	hash: text("hash").notNull(),
+export const api_keys = sqliteTable("api_keys", {
+	...id("apikey"),
+	user_id: text("user_id")
+		.notNull()
+		.references(() => user.id),
+	key_hash: text("key_hash").notNull().unique(),
+	name: text("name"),
+	note: text("note"),
+	scope: text("scope", { enum: ["devpad", "blog", "media", "all"] })
+		.notNull()
+		.default("all"),
+	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+	last_used_at: text("last_used_at"),
+	...timestamps(),
+	deleted: integer("deleted", { mode: "boolean" }).notNull().default(false),
 });
 
 export const project = sqliteTable("project", {
@@ -287,7 +299,7 @@ export const ignore_path = sqliteTable("ignore_path", {
 
 export const user_relations = relations(user, ({ many }) => ({
 	sessions: many(session),
-	api_keys: many(api_key),
+	api_keys: many(api_keys),
 	actions: many(action),
 	tasks: many(task),
 	tags: many(tag),
@@ -297,8 +309,8 @@ export const session_relations = relations(session, ({ one }) => ({
 	user: one(user, { fields: [session.userId], references: [user.id] }),
 }));
 
-export const api_key_relations = relations(api_key, ({ one }) => ({
-	owner: one(user, { fields: [api_key.owner_id], references: [user.id] }),
+export const api_keys_relations = relations(api_keys, ({ one }) => ({
+	owner: one(user, { fields: [api_keys.user_id], references: [user.id] }),
 }));
 
 export const project_relations = relations(project, ({ one, many }) => ({

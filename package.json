@@ -5,15 +5,17 @@
 	"private": true,
 	"type": "module",
 	"workspaces": [
-		"packages/*"
+		"packages/*",
+		"apps/*"
 	],
 	"scripts": {
 		"build": "bun run --filter=@devpad/* build",
 		"build:api": "cd packages/schema && bun run build && cd ../api && bun run build",
-		"build:docker": "docker build -t devpad-app -f deployment/Dockerfile .",
-		"dev": "PUBLIC_API_SERVER_URL=localhost:3000/api/v0 bun run --filter=@devpad/app dev",
-		"dev:server": "DATABASE_FILE=../../database/local.db bun run --filter=@devpad/server dev",
-		"dev:all": "DATABASE_FILE=database/local.db concurrently \"bun run dev\" \"bun run dev:server\"",
+		"dev": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/app dev",
+		"dev:server": "DATABASE_FILE=../../database/local.db bun run --filter=@devpad/worker dev",
+		"dev:blog": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/blog-app dev",
+		"dev:media": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/media-app dev",
+		"dev:all": "DATABASE_FILE=database/local.db concurrently \"bun run dev\" \"bun run dev:server\" \"bun run dev:blog\" \"bun run dev:media\"",
 		"test": "bun run --filter=@devpad/* test",
 		"test:unit": "bun test unit",
 		"test:integration": "bun test integration/ --max-concurrency 1",
@@ -22,15 +24,6 @@
 		"e2e:ui": "playwright test --ui",
 		"e2e:local": "TEST_ENV=local playwright test",
 		"e2e:local:ui": "TEST_ENV=local playwright test --ui",
-		"e2e:docker": "TEST_ENV=docker playwright test",
-		"e2e:staging": "TEST_ENV=staging playwright test --config=playwright.staging.config.ts",
-		"e2e:production": "TEST_ENV=production playwright test --config=playwright.staging.config.ts",
-		"docker:build": "docker-compose -f deployment/docker-compose.local.yml build",
-		"docker:up": "docker-compose -f deployment/docker-compose.local.yml up -d",
-		"docker:down": "docker-compose -f deployment/docker-compose.local.yml down",
-		"docker:logs": "docker-compose -f deployment/docker-compose.local.yml logs -f",
-		"docker:test": "bun run docker:up && sleep 10 && bun run e2e:docker; bun run docker:down",
-		"docker:run": "docker run -p 8080:8080 -v ./database/preview.db:/sqlite.db devpad-app",
 		"coverage": "./scripts/test-coverage.sh",
 		"coverage:report": "./scripts/coverage-report.sh",
 		"coverage:view": "genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html",
@@ -40,9 +33,13 @@
 		"format:check": "biome format .",
 		"lint": "biome check .",
 		"lint:fix": "biome check . --write",
-		"deploy:production": "bun deployment/production.ts",
-		"deploy:serverless": "bun deployment/serverless.ts",
-		"deploy:migrate": "bun deployment/migrate.ts"
+		"build:worker": "bun scripts/build-unified.ts"
+	},
+	"overrides": {
+		"drizzle-orm": "^0.44.7"
+	},
+	"resolutions": {
+		"drizzle-orm": "^0.44.7"
 	},
 	"packageManager": "bun@1.0.0",
 	"devDependencies": {

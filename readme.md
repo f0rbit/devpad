@@ -17,30 +17,19 @@ devpad is a suite of tools designed for development & project management. The ma
 
 ## Installation
 
-### Deployment (via Docker)
-1. Download the repo
-2. Setup environment variables [.env.example](/app/.env.example)
-3. Setup DB `touch database/sqlite.db`
-3. Run `make build` or `docker build -t devpad-app -f deployment/Dockerfile .`
-4. Run `make run` or `docker run -p 8080:8080 -v ./database/sqlite.db:/sqlite.db devpad-app`
-
-The docker file will run an [index.ts](/deployment/index.ts) script that does a `drizzle migrate` and exposes the `astro build` result via an `express server`.
-
 ### Development
 1. Download repo
-2. Install dependencies. `bun install`
-3. Setup `.env` file [.env.example](/packages/app/.env.example)
-4. Build the todo-tracker binary: `./scripts/build-todo-tracker.sh` (required for scanning tests)
-5. Run dev server with `bun dev`
+2. Install dependencies: `bun install`
+3. Setup `.env` file [.env.example](/apps/main/.env.example)
+4. Run dev server: `bun dev`
+
+### Deployment
+Deployed as a Cloudflare Worker via `wrangler`. Build with `bun run build:worker`.
 
 ### Testing
-Integration tests are available for the projects and tasks APIs, with automated test database setup. Run tests with `make integration` from the root directory.
+Integration tests are available for the projects and tasks APIs, with automated test database setup. Run tests with `bun run test:integration` from the root directory.
 
-Unit tests are available for individual components. Run with `make unit` from the root directory.
-
-### Scripts
-- `scripts/debug-migrations.ts` - Run database migrations
-- `scripts/create-test-user.ts` - Create a test user and API key for development
+Unit tests are available for individual components. Run with `bun run test:unit` from the root directory.
 
 ## API
 

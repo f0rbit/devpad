@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import fixtures from "@octokit/fixtures";
-import { getBranches, getRepo, getRepos, getSpecification } from "../github.js";
+import { getBranches, getRepoMetadata, getRepos, getSpecification } from "../github.js";
 
 describe("GitHub Service with Octokit Fixtures", () => {
 	it("should demonstrate fixture data available", () => {
@@ -28,7 +28,7 @@ describe("GitHub Service with Octokit Fixtures", () => {
 
 		// Verify our GitHub service functions exist and are testable
 		expect(typeof getBranches).toBe("function");
-		expect(typeof getRepo).toBe("function");
+		expect(typeof getRepoMetadata).toBe("function");
 		expect(typeof getSpecification).toBe("function");
 		expect(typeof getRepos).toBe("function");
 

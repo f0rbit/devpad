@@ -1,0 +1,25 @@
+{
+	"name": "@devpad/blog-app",
+	"type": "module",
+	"scripts": {
+		"dev": "bunx --bun astro dev",
+		"build": "astro build",
+		"preview": "astro preview"
+	},
+	"dependencies": {
+		"@astrojs/cloudflare": "^12.0.1",
+		"@astrojs/solid-js": "^5.0.0",
+		"@devpad/api": "workspace:*",
+		"@devpad/schema": "workspace:*",
+		"@f0rbit/ui": "0.1.9",
+		"astro": "^5.1.1",
+		"lucide-astro": "^0.556.0",
+		"rehype-highlight": "^7.0.2",
+		"rehype-stringify": "^10.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"remark-rehype": "^11.1.2",
+		"solid-js": "^1.9.3",
+		"unified": "^11.0.5"
+	}
+}

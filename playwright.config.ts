@@ -2,9 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 /**
  * E2E test configuration for multiple environments:
- * - local: Run against local dev server (bun start in packages/server)
- * - docker: Run against Docker Compose setup (used in CI for PRs)
- * - staging: Run against staging deployment (after deploy to main)
+ * - local: Run against local dev server (packages/worker)
+ * - staging: Run against staging deployment (Cloudflare Workers)
  *
  * Set TEST_ENV environment variable to switch between environments
  */
@@ -16,17 +15,13 @@ const environments = {
 	local: {
 		baseURL: "http://localhost:3001",
 		webServer: {
-			command: "cd packages/server && DATABASE_FILE=../../database/test.db bun start",
+			command: "cd packages/worker && DATABASE_FILE=../../database/test.db bun run dev",
 			url: "http://localhost:3001",
 			reuseExistingServer: !process.env.CI,
 			timeout: 60 * 1000,
 			stdout: "pipe" as const,
 			stderr: "pipe" as const,
 		},
-	},
-	docker: {
-		baseURL: "http://0.0.0.0:3000",
-		webServer: undefined, // Docker Compose should be running externally
 	},
 	staging: {
 		baseURL: process.env.STAGING_URL || "https://staging.devpad.tools",
@@ -37,7 +32,7 @@ const environments = {
 const config = environments[TEST_ENV as keyof typeof environments];
 
 if (!config) {
-	throw new Error(`Invalid TEST_ENV: ${TEST_ENV}. Must be one of: local, docker, staging`);
+	throw new Error(`Invalid TEST_ENV: ${TEST_ENV}. Must be one of: local, staging`);
 }
 
 export default defineConfig({

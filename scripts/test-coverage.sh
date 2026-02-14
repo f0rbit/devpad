@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Test coverage focused on packages/api, packages/core, packages/server
+# Test coverage focused on packages/api, packages/core, packages/worker
 
 set -e
 
-echo "Running test coverage for packages/api, packages/core, packages/server..."
+echo "Running test coverage for packages/api, packages/core, packages/worker..."
 
 # Clean coverage directory
 rm -rf coverage
@@ -13,7 +13,6 @@ mkdir -p coverage
 # Build dependencies
 echo "Building dependencies..."
 cd packages/schema && bun run build > /dev/null 2>&1
-cd ../core && bun run build > /dev/null 2>&1
 cd ../..
 
 # Run integration tests with coverage, including specific source paths
@@ -23,7 +22,7 @@ bun test integration/ --coverage \
     --coverage-dir=coverage \
     --coverage-include='packages/api/src/**/*.ts' \
     --coverage-include='packages/core/src/**/*.ts' \
-    --coverage-include='packages/server/src/**/*.ts' \
+    --coverage-include='packages/worker/src/**/*.ts' \
     --coverage-exclude='**/__tests__/**' \
     --coverage-exclude='**/tests/**' \
     --coverage-exclude='tests/**'
@@ -80,4 +79,4 @@ else
 fi
 
 echo "Coverage complete. LCOV report: coverage/lcov.info"
-echo "Coverage focused on: packages/api/src, packages/core/src, packages/server/src"
+echo "Coverage focused on: packages/api/src, packages/core/src, packages/worker/src"

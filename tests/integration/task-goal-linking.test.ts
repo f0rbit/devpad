@@ -1,47 +1,40 @@
-import { describe, expect, test, beforeEach } from "bun:test";
-import { BaseIntegrationTest, setupBaseIntegrationTest } from "../shared/base-integration-test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { Project, TaskWithDetails, UpsertTodo } from "@devpad/schema";
 import { expectMatchesPartial } from "../shared/assertions";
+import { setupIntegration } from "../shared/base-integration-test";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
-import type { Milestone, Goal, Project, TaskWithDetails, UpsertTodo } from "@devpad/schema";
 
-/**
- * Integration tests for linking tasks to goals
- * This tests the future functionality where tasks can be assigned to specific goals
- * Note: Temporarily simplified due to server-side authentication issues with goals/milestones API
- */
-class TaskGoalLinkingIntegrationTest extends BaseIntegrationTest {
-	// Simplified helper for task creation - using only basic API client functionality
-	async createSimpleTask(project_id: string, task_data?: Partial<UpsertTodo>): Promise<TaskWithDetails> {
-		const default_task_data: UpsertTodo = {
-			title: `Test Task ${Date.now()}`,
-			description: "Test task for goal linking",
-			project_id,
-			owner_id: TEST_USER_ID,
-			progress: "UNSTARTED",
-			priority: "MEDIUM",
-			...task_data,
-		};
+const t = setupIntegration();
 
-		const { task, error } = await this.client.tasks.create(default_task_data);
-		if (error) {
-			throw new Error(`Failed to create task: ${error.message}`);
-		}
-		this.registerTask(task!);
-		return task!;
+async function createSimpleTask(project_id: string, task_data?: Partial<UpsertTodo>): Promise<TaskWithDetails> {
+	const default_task_data: UpsertTodo = {
+		title: `Test Task ${Date.now()}`,
+		description: "Test task for goal linking",
+		project_id,
+		owner_id: TEST_USER_ID,
+		progress: "UNSTARTED",
+		priority: "MEDIUM",
+		...task_data,
+	};
+
+	const result = await t.client.tasks.create(default_task_data);
+	if (!result.ok) {
+		throw new Error(`Failed to create task: ${result.error.message}`);
 	}
+	t.cleanup.registerTask(result.value);
+	return result.value;
 }
-
-// Setup test instance
-const test_instance = new TaskGoalLinkingIntegrationTest();
-setupBaseIntegrationTest(test_instance);
 
 describe("Task-Goal Linking Integration Tests", () => {
 	let test_project: Project;
 
 	beforeEach(async () => {
 		const project_data = TestDataFactory.createRealisticProject();
-		test_project = await test_instance.createAndRegisterProject(project_data);
+		const result = await t.client.projects.create(project_data);
+		if (!result.ok) throw new Error(`Failed to create project: ${result.error.message}`);
+		t.cleanup.registerProject(result.value);
+		test_project = result.value;
 	});
 	describe("task creation with goal assignment", () => {
 		test("should create a basic task (goal linking temporarily disabled)", async () => {
@@ -51,7 +44,7 @@ describe("Task-Goal Linking Integration Tests", () => {
 				priority: "HIGH",
 			};
 
-			const task = await test_instance.createSimpleTask(test_project.id, task_data);
+			const task = await createSimpleTask(test_project.id, task_data);
 
 			expect(task).toBeDefined();
 			expect(task.task.id).toMatch(/^task_/);
@@ -64,12 +57,12 @@ describe("Task-Goal Linking Integration Tests", () => {
 		});
 
 		test("should create multiple tasks for the same project", async () => {
-			const task1 = await test_instance.createSimpleTask(test_project.id, {
+			const task1 = await createSimpleTask(test_project.id, {
 				title: "Task 1 for project",
 				description: "First task",
 			});
 
-			const task2 = await test_instance.createSimpleTask(test_project.id, {
+			const task2 = await createSimpleTask(test_project.id, {
 				title: "Task 2 for project",
 				description: "Second task",
 			});
@@ -89,43 +82,40 @@ describe("Task-Goal Linking Integration Tests", () => {
 				priority: "LOW",
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
-			if (error) {
-				throw new Error(`Failed to create task: ${error.message}`);
+			const createResult = await t.client.tasks.create(task_data);
+			if (!createResult.ok) {
+				throw new Error(`Failed to create task: ${createResult.error.message}`);
 			}
-			test_instance.registerTask(task!);
+			t.cleanup.registerTask(createResult.value);
 
-			expect(task!.task.goal_id).toBeNull();
-			expect(task!.task.project_id).toBe(test_project.id);
+			expect(createResult.value.task.goal_id).toBeNull();
+			expect(createResult.value.task.project_id).toBe(test_project.id);
 		});
 	});
 
 	describe("task updates with goal assignment", () => {
 		test("should update task properties", async () => {
-			// Create task without goal
 			const task_data: UpsertTodo = {
 				title: "Unlinked task",
 				project_id: test_project.id,
 				owner_id: TEST_USER_ID,
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
-			if (error) {
-				throw new Error(`Failed to create task: ${error.message}`);
+			const createResult = await t.client.tasks.create(task_data);
+			if (!createResult.ok) {
+				throw new Error(`Failed to create task: ${createResult.error.message}`);
 			}
-			test_instance.registerTask(task!);
-			expect(task!.task.goal_id).toBeNull();
+			t.cleanup.registerTask(createResult.value);
+			expect(createResult.value.task.goal_id).toBeNull();
 
-			// Update task properties (goal linking temporarily disabled due to server issues)
-			const { task: updated_task, error: update_error } = await test_instance.client.tasks.update(task!.task.id, {
+			const updateResult = await t.client.tasks.update(createResult.value.task.id, {
 				title: "Updated task title",
 			});
-			if (update_error) {
-				// Skip this test due to server-side update issues
-				console.log("⚠️ Skipping task update test due to server-side 500 errors");
+			if (!updateResult.ok) {
+				console.log("Skipping task update test due to server-side 500 errors");
 				return;
 			}
-			expect(updated_task!.task.title).toBe("Updated task title");
+			expect(updateResult.value.task.title).toBe("Updated task title");
 		});
 	});
 
@@ -138,43 +128,37 @@ describe("Task-Goal Linking Integration Tests", () => {
 				owner_id: TEST_USER_ID,
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
-			// Should have error for invalid goal_id
-			expect(error).toBeDefined();
-			expect(task).toBeNull();
+			const createResult = await t.client.tasks.create(task_data);
+			expect(createResult.ok).toBe(false);
 		});
 
 		test("should reject task with goal from different project", async () => {
-			// Create another project
-			const other_project = await test_instance.createAndRegisterProject(TestDataFactory.createRealisticProject());
+			const other_result = await t.client.projects.create(TestDataFactory.createRealisticProject());
+			if (!other_result.ok) throw new Error(`Failed to create project: ${other_result.error.message}`);
+			t.cleanup.registerProject(other_result.value);
 
-			// Try to create task with cross-project goal (using fake goal ID)
 			const task_data: UpsertTodo = {
 				title: "Cross-project task",
 				project_id: test_project.id,
-				goal_id: "fake_goal_from_other_project", // Goal from different project
+				goal_id: "fake_goal_from_other_project",
 				owner_id: TEST_USER_ID,
 			};
 
-			const { task, error } = await test_instance.client.tasks.create(task_data);
-			// Should have error for cross-project validation
-			expect(error).toBeDefined();
-			expect(task).toBeNull();
+			const createResult = await t.client.tasks.create(task_data);
+			expect(createResult.ok).toBe(false);
 		});
 	});
 
-	// Note: Temporarily commented out complex tests that depend on goals/milestones API
-	// TODO: Re-enable once server-side authentication issues are resolved
 	/*
 	describe("goal progress calculation", () => {
 		test("should calculate goal progress based on linked tasks", async () => {
-			console.log("⚠️ Goal progress tests temporarily disabled due to server-side authentication issues");
+			console.log("Goal progress tests temporarily disabled due to server-side authentication issues");
 		});
 	});
 
 	describe("hierarchy navigation", () => {
 		test("should traverse full hierarchy: project -> milestone -> goal -> tasks", async () => {
-			console.log("⚠️ Hierarchy navigation tests temporarily disabled due to server-side authentication issues");
+			console.log("Hierarchy navigation tests temporarily disabled due to server-side authentication issues");
 		});
 	});
 	*/

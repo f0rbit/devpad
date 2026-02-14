@@ -1,0 +1,93 @@
+---
+import ConnectionList from "../../components/solid/ConnectionList";
+import ProfileList from "../../components/solid/ProfileList";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { type ConnectionWithSettings, type ProfileSummary } from "../../utils/types";
+import { getServerApiClient } from "../../utils/api-client";
+
+const profileSlug = Astro.url.searchParams.get("profile");
+
+let initialProfiles: ProfileSummary[] = [];
+let initialConnections: ConnectionWithSettings[] = [];
+
+if (Astro.locals.user) {
+	try {
+		const client = getServerApiClient(Astro.locals);
+		const profilesResult = await client.media.profiles.list();
+
+		if (profilesResult.ok) {
+			initialProfiles = profilesResult.value as ProfileSummary[];
+
+			if (profileSlug) {
+				const currentProfile = initialProfiles.find(p => p.slug === profileSlug);
+				if (currentProfile) {
+					const connectionsResult = await client.media.connections.list(currentProfile.id, { include_settings: true });
+					if (connectionsResult.ok) {
+						initialConnections = connectionsResult.value as ConnectionWithSettings[];
+					}
+				}
+			}
+		}
+	} catch {
+		// SSR fetch failed, components will fetch client-side
+	}
+}
+---
+
+<AppLayout 
+  title="Connections | Media Timeline"
+  description="Connect and manage your GitHub, Twitter, Reddit, Bluesky, and YouTube accounts."
+  noindex={true}
+>
+  <section>
+    <h1 class="page-title">Connections</h1>
+    <p class="description">Manage your connected platforms and profiles.</p>
+  </section>
+  
+  <section class="connections-section">
+    <h2 class="section-title">Profiles</h2>
+    <p class="section-description">Create profiles to share different views of your activity via API.</p>
+    <div class="content-skeleton">
+      <ProfileList 
+        client:load
+        initialProfiles={initialProfiles}
+      />
+    </div>
+  </section>
+  
+  <section class="connections-section">
+    <h2 class="section-title">Connected Platforms</h2>
+    <p class="section-description">Connect your accounts to aggregate activity.</p>
+    <div class="content-skeleton">
+      <ConnectionList 
+        client:load
+        profileSlug={profileSlug}
+        initialProfiles={initialProfiles}
+        initialConnections={initialConnections}
+      />
+    </div>
+  </section>
+</AppLayout>
+
+<style>
+  .connections-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .section-title {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .section-description {
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+  }
+  
+  /* Prevent layout shift while client components load */
+  .content-skeleton {
+    min-height: 100px;
+  }
+</style>

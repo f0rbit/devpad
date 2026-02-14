@@ -1,0 +1,82 @@
+---
+import { Button } from "@f0rbit/ui";
+import AppLayout from "@/layouts/app-layout.astro";
+import { getServerApiClient } from "@/lib/api-client";
+import { date } from "@/lib/date-utils";
+import type { Post } from "@devpad/schema/blog";
+
+let posts: Post[] = [];
+let projectMap: Record<string, string> = {};
+let error: string | null = null;
+
+const client = getServerApiClient(Astro.locals);
+const [postsResult, projectsResult] = await Promise.all([
+	client.blog.posts.list({ limit: 100 }),
+	client.projects.list(),
+]);
+
+if (postsResult.ok) {
+	posts = postsResult.value.posts ?? [];
+} else {
+	error = "Failed to load posts";
+}
+
+if (projectsResult.ok) {
+	projectMap = Object.fromEntries(projectsResult.value.map(p => [p.id, p.name]));
+}
+
+const projectName = (id: string): string => projectMap[id] ?? id;
+---
+
+<AppLayout title="Posts">
+  <section class="stack">
+    <header>
+      <h1 class="page-title">Posts</h1>
+      <a href="/posts/new" style="text-decoration: none;">
+        <Button variant="primary">New Post</Button>
+      </a>
+    </header>
+
+    <div id="posts-container">
+      {error ? (
+        <div class="form-error">{error}</div>
+      ) : posts.length === 0 ? (
+        <div class="empty-state">
+          <p>No posts yet.</p>
+          <a href="/posts/new" style="text-decoration: none;">
+            <Button variant="primary">Create your first post</Button>
+          </a>
+        </div>
+      ) : (
+        <div class="posts-grid">
+          {posts.map((post) => {
+            const date = post.publish_at ?? post.updated_at;
+            const dateStr = date instanceof Date ? date.toISOString() : String(date);
+            return (
+              <div class="post-card">
+                <a href={`/posts/${post.slug}`} class="post-card__link">
+                  <span class="post-card__title">{post.title}</span>
+                  {post.description && <p class="post-card__description">{post.description}</p>}
+                </a>
+                {post.project_ids.length > 0 && (
+                  <div class="post-card__projects">
+                    {post.project_ids.map(id => (
+                      <span class="post-card__project">{projectName(id)}</span>
+                    ))}
+                  </div>
+                )}
+                <div class="post-card__footer">
+                  <span class="post-card__meta">
+                    <span class="post-card__category">{post.category}</span>
+                    <span class="post-card__date">{date.relative(dateStr)}</span>
+                  </span>
+                  <a href={`/posts/${post.uuid}/versions`} class="post-card__history">History</a>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  </section>
+</AppLayout>

@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
+		"@f0rbit/corpus": "^0.3.4",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {

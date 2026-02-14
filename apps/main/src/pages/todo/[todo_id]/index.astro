@@ -1,0 +1,43 @@
+---
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+import PageLayout from "@/layouts/PageLayout.astro";
+import TaskEditor from "@/components/solid/TaskEditor";
+
+const { todo_id } = Astro.params;
+if (!todo_id) return new Response(null, { status: 404, statusText: "Task not found" });
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const api_client = getServerApiClient(Astro.locals);
+
+const task_result = await api_client.tasks.find(todo_id);
+if (!task_result.ok) return rethrow(task_result.error);
+const task = task_result.value;
+if (!task || !task.task) return new Response(null, { status: 404, statusText: "Task not found" });
+if (task.task.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const project_map_result = await api_client.projects.map();
+if (!project_map_result.ok) return rethrow(project_map_result.error);
+const project_map = project_map_result.value;
+
+const tags_result = await api_client.tags.list();
+if (!tags_result.ok) return rethrow(tags_result.error);
+const user_tags = tags_result.value;
+
+const history_result = await api_client.tasks.history.get(todo_id);
+if (!history_result.ok) return rethrow(history_result.error);
+const task_history = history_result.value;
+
+const { tags } = task;
+
+// tags contains the TagLink, we construct a map of tag_id to Tag & pass to TagPicker
+const tag_map = new Map(user_tags.map(t => [t.id, t]));
+const current_tags = tags.map(tag_id => tag_map.get(tag_id)!) ?? [];
+---
+
+<PageLayout title={`${task.task?.title ?? "New Task"} - devpad`}>
+	<main>
+		<TaskEditor task={task} user_tags={user_tags} current_tags={current_tags.filter(Boolean)} history={task_history} user_id={user.id} project_map={project_map} client:load />
+	</main>
+</PageLayout>

@@ -1,0 +1,44 @@
+---
+import CategoriesPage from "@/components/category/categories-page";
+import AppLayout from "@/layouts/app-layout.astro";
+import { getServerApiClient } from "@/lib/api-client";
+
+interface CategoryNode {
+	name: string;
+	parent: string | null;
+	children?: CategoryNode[];
+}
+
+interface Category {
+	id: number;
+	name: string;
+	parent: string | null;
+}
+
+const flattenTree = (nodes: CategoryNode[], id = 1): Category[] => nodes.flatMap((n, i) => [{ id: id + i, name: n.name, parent: n.parent }, ...flattenTree(n.children ?? [], id + i + 100)]);
+
+let categories: Category[] = [];
+let error: string | null = null;
+
+const client = getServerApiClient(Astro.locals);
+const catResult = await client.blog.categories.tree();
+
+if (catResult.ok) {
+	categories = flattenTree(catResult.value.categories ?? []);
+} else {
+	error = "Failed to load categories";
+}
+---
+
+<AppLayout title="Categories">
+	<section class="stack">
+		<header>
+			<h1 class="page-title">Categories</h1>
+		</header>
+		{error ? (
+			<div class="form-error">{error}</div>
+		) : (
+			<CategoriesPage client:load initialCategories={categories} />
+		)}
+	</section>
+</AppLayout>

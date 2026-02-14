@@ -5,7 +5,7 @@ echo "Testing devpad CLI..."
 
 # Set up test environment
 export DEVPAD_API_KEY="test-key"
-export DEVPAD_BASE_URL="http://localhost:3000/api/v0"
+export DEVPAD_BASE_URL="http://localhost:3000/api/v1"
 
 # Test help command
 echo "1. Testing help command..."

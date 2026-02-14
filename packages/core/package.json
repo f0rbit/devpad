@@ -1,57 +1,44 @@
 {
 	"name": "@devpad/core",
 	"version": "1.0.0",
+	"private": true,
 	"description": "Core business logic and services for Devpad",
 	"type": "module",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
 	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
-		},
-		"./services": {
-			"types": "./dist/services/index.d.ts",
-			"import": "./dist/services/index.js"
-		},
-		"./auth": {
-			"types": "./dist/auth/index.d.ts",
-			"import": "./dist/auth/index.js"
-		},
-		"./data": {
-			"types": "./dist/data/index.d.ts",
-			"import": "./dist/data/index.js"
-		},
-		"./logger": {
-			"types": "./dist/utils/client-logger.d.ts",
-			"import": "./dist/utils/client-logger.js"
-		},
-		"./utils/context": {
-			"types": "./dist/utils/context-parser.d.ts",
-			"import": "./dist/utils/context-parser.js"
-		}
+		".": "./src/index.ts",
+		"./services": "./src/services/index.ts",
+		"./auth": "./src/auth/index.ts",
+		"./logger": "./src/utils/client-logger.ts",
+		"./utils/context": "./src/utils/context-parser.ts",
+		"./utils/crypto": "./src/utils/crypto.ts",
+		"./utils/logger": "./src/utils/logger.ts",
+		"./services/blog": "./src/services/blog/index.ts",
+		"./services/media": "./src/services/media/index.ts",
+		"./services/media/platforms": "./src/services/media/platforms/index.ts",
+		"./services/media/platforms/github": "./src/services/media/platforms/github.ts",
+		"./services/media/platforms/reddit-memory": "./src/services/media/platforms/reddit-memory.ts",
+		"./services/media/platforms/twitter-memory": "./src/services/media/platforms/twitter-memory.ts",
+		"./services/media/timeline": "./src/services/media/timeline/index.ts",
+		"./services/media/cron": "./src/services/media/cron/index.ts",
+		"./services/media/storage": "./src/services/media/storage.ts",
+		"./services/media/sync": "./src/services/media/sync.ts"
 	},
-	"files": [
-		"dist"
-	],
 	"scripts": {
-		"build": "tsc",
-		"build:watch": "tsc --watch",
-		"test": "bun test",
-		"clean": "rm -rf dist",
-		"dev": "tsc --watch"
+		"test": "bun test"
 	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
-		"@paralleldrive/cuid2": "^2.2.2",
-		"arctic": "^1.5.0",
-		"drizzle-orm": "^0.30.6",
-		"lucia": "^3.1.1",
-		"oslo": "^1.2.0",
-		"zod": "^3.22.4",
+		"@f0rbit/corpus": "^0.3.4",
 		"@octokit/auth-oauth-app": "^9.0.1",
 		"@octokit/rest": "^22.0.0",
-		"@octokit/types": "^14.1.0"
+		"@octokit/types": "^14.1.0",
+		"@paralleldrive/cuid2": "^2.2.2",
+		"@xdevplatform/xdk": "^0.4.0",
+		"drizzle-orm": "^0.44.7",
+		"octokit": "^5.0.5",
+		"zod": "^3.22.4"
 	},
 	"devDependencies": {
 		"@octokit/fixtures": "^23.1.1",

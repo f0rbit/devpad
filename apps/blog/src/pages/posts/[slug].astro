@@ -1,0 +1,193 @@
+---
+import { Button } from "@f0rbit/ui";
+import PostEditor from "@/components/post/post-editor";
+import AppLayout from "@/layouts/app-layout.astro";
+import { getServerApiClient } from "@/lib/api-client";
+
+const { slug } = Astro.params;
+
+type Category = {
+	name: string;
+	parent: string | null;
+};
+
+type CategoryNode = Category & { children?: CategoryNode[] };
+
+type Post = {
+	id: number;
+	uuid: string;
+	slug: string;
+	title: string;
+	content: string;
+	description?: string;
+	format: "md" | "adoc";
+	category: string;
+	tags: string[];
+	project_ids: string[];
+	publish_at: string | null;
+	updated_at: string;
+};
+
+type Project = {
+	id: string;
+	name: string;
+	project_id: string;
+	description: string | null;
+};
+
+const flattenTree = (nodes: CategoryNode[]): Category[] => nodes.flatMap(n => [{ name: n.name, parent: n.parent }, ...flattenTree(n.children ?? [])]);
+
+let post: Post | null = null;
+let categories: Category[] = [];
+let projects: Project[] = [];
+let error: string | null = null;
+
+const client = getServerApiClient(Astro.locals);
+
+const [postResult, catResult, projResult] = await Promise.all([
+	client.blog.posts.getBySlug(slug!),
+	client.blog.categories.tree(),
+	client.projects.list(),
+]);
+
+if (postResult.ok) {
+	post = postResult.value as unknown as Post;
+} else {
+	error = "Post not found";
+}
+
+if (catResult.ok) {
+	categories = flattenTree(catResult.value.categories ?? []);
+}
+
+if (projResult.ok) {
+	projects = projResult.value;
+}
+---
+
+<AppLayout title="Edit Post">
+	<section class="stack">
+		<header>
+			<h1 class="page-title row">
+				<a href="/posts" title="Back to posts" class="back-arrow">
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+				</a>
+				Edit Post
+			</h1>
+			{post && <Button type="button" id="save-btn" variant="primary" disabled>Update</Button>}
+		</header>
+
+		{error ? (
+			<div class="form-error">{error}</div>
+		) : post ? (
+			<div id="editor-container" data-uuid={post.uuid}>
+				<PostEditor client:load post={post} categories={categories} projects={projects} onFormReady={() => {}} />
+			</div>
+		) : (
+			<div class="form-error">Post not found</div>
+		)}
+	</section>
+</AppLayout>
+
+<style>
+	.back-arrow {
+		display: flex;
+		align-items: center;
+		color: var(--text-muted);
+	}
+	.back-arrow:hover {
+		color: var(--text-link);
+	}
+</style>
+
+<script is:inline define:vars={{ API_BASE: "/api/v1/blog" }}>
+	// Define postEditorReady BEFORE DOMContentLoaded to avoid race condition
+	// PostEditor will call this when it's ready
+	var postEditorState = {
+		getFormData: null,
+		saveBtn: null,
+		uuid: null
+	};
+
+	window.postEditorReady = function(getFormData) {
+		postEditorState.getFormData = getFormData;
+		// If DOM is already ready, enable button immediately
+		if (postEditorState.saveBtn) {
+			postEditorState.saveBtn.disabled = false;
+		}
+	};
+
+	var handleSave = function(uuid, data) {
+		return fetch(API_BASE + "/posts/" + uuid, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				slug: data.slug,
+				title: data.title,
+				content: data.content,
+				description: data.description,
+				format: data.format,
+				category: data.category,
+				tags: data.tags,
+				project_ids: data.project_ids,
+				publish_at: data.publish_at ? data.publish_at.toISOString() : null,
+			}),
+		}).then(function(response) {
+			if (!response.ok) {
+				return response.json().catch(function() { return { message: "Unknown error" }; }).then(function(error) {
+					throw new Error(error.message || "Failed to update post");
+				});
+			}
+			return response.json();
+		}).then(function(post) {
+			if (post.slug !== data.slug) {
+				window.location.href = "/posts/" + post.slug;
+			}
+		});
+	};
+
+	document.addEventListener("DOMContentLoaded", function() {
+		var saveBtn = document.getElementById("save-btn");
+		var container = document.getElementById("editor-container");
+		if (!saveBtn || !container) return;
+
+		var uuid = container.dataset.uuid;
+		if (!uuid) return;
+
+		postEditorState.saveBtn = saveBtn;
+		postEditorState.uuid = uuid;
+
+		// If PostEditor already called postEditorReady, enable button now
+		if (postEditorState.getFormData) {
+			saveBtn.disabled = false;
+		}
+
+		saveBtn.addEventListener("click", function() {
+			if (!postEditorState.getFormData) return;
+
+			var data = postEditorState.getFormData();
+			if (!data.title.trim()) {
+				alert("Title is required");
+				return;
+			}
+			if (!data.slug.trim()) {
+				alert("Slug is required");
+				return;
+			}
+
+			saveBtn.disabled = true;
+			saveBtn.textContent = "Saving...";
+
+			handleSave(uuid, data)
+				.then(function() {
+					saveBtn.textContent = "Update";
+					saveBtn.disabled = false;
+				})
+				.catch(function(e) {
+					alert(e.message || "Failed to save");
+					saveBtn.textContent = "Update";
+					saveBtn.disabled = false;
+				});
+		});
+	});
+</script>

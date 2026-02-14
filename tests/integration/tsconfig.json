@@ -15,13 +15,13 @@
 		"allowImportingTsExtensions": true,
 		"baseUrl": "../../",
 		"paths": {
-			"@/*": ["packages/app/src/*"],
+			"@/*": ["apps/main/src/*"],
 			"@devpad/api": ["packages/api/src"],
 			"@devpad/schema": ["packages/schema/src"],
 			"@devpad/schema/*": ["packages/schema/src/*"]
 		},
 		"types": ["bun-types"]
 	},
-	"include": ["**/*.ts", "**/*.tsx", "../../packages/schema/src/**/*", "../../packages/api/src/**/*", "../../packages/app/src/**/*"],
+	"include": ["**/*.ts", "**/*.tsx", "../../packages/schema/src/**/*", "../../packages/api/src/**/*", "../../apps/main/src/**/*"],
 	"exclude": ["node_modules"]
 }

@@ -5,15 +5,11 @@ End-to-end tests for devpad using Playwright.
 ## Quick Start
 
 ```bash
-# Check your environment is set up
-./scripts/e2e-check.sh
-
 # Install Playwright browsers (first time only)
 bunx playwright install chromium
 
 # Run tests in different environments
 bun run e2e:local      # Test against local server
-bun run e2e:docker     # Test in Docker environment  
 bun run e2e:staging    # Test against staging environment
 ```
 
@@ -21,20 +17,13 @@ bun run e2e:staging    # Test against staging environment
 
 ### 1. Local Development (`TEST_ENV=local`)
 - **URL**: http://localhost:3001
-- **Setup**: Automatically starts server via `bun start` in packages/server
+- **Setup**: Automatically starts server via `bun run dev` in packages/worker
 - **Database**: Uses test database at `database/test.db`
 - **Use Case**: Quick testing during development
 
-### 2. Docker Environment (`TEST_ENV=docker`)
-- **URL**: http://localhost:3000
-- **Setup**: Uses `docker-compose.local.yml`
-- **Database**: SQLite in Docker container
-- **Use Case**: Testing production-like environment locally
-
-### 3. Staging Environment (`TEST_ENV=staging`)
+### 2. Staging Environment (`TEST_ENV=staging`)
 - **URL**: https://staging.devpad.tools
-- **Setup**: Tests against deployed staging server
-- **Database**: Production staging database
+- **Setup**: Tests against deployed Cloudflare Workers staging
 - **Use Case**: Pre-production validation
 
 ## Running Tests
@@ -57,34 +46,6 @@ TEST_ENV=local bunx playwright test --headed
 # Generate test report
 bunx playwright show-report .playwright/playwright-report
 ```
-
-### Using the Helper Script
-
-```bash
-# Run tests with helper script
-./scripts/e2e-test.sh local          # Local tests
-./scripts/e2e-test.sh docker         # Docker tests (builds and tears down)
-./scripts/e2e-test.sh staging        # Staging tests
-
-# Pass additional playwright options
-./scripts/e2e-test.sh local --ui     # Open UI mode
-./scripts/e2e-test.sh local --headed # Show browser
-```
-
-## CI/CD Integration
-
-### Pull Requests (docker-test.yml)
-- Runs automatically on all PRs to main branch
-- Builds Docker image and runs container
-- Executes E2E tests against Docker environment
-- Uploads test artifacts on failure
-
-### Staging Deployment (deploy-staging.yml)
-- Triggered on push to main branch
-- Deploys to staging environment
-- Runs E2E tests against staging after deployment
-- Automatic rollback if tests fail
-- Preserves previous working version for quick recovery
 
 ## Writing New Tests
 

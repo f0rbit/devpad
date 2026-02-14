@@ -1,0 +1,26 @@
+---
+import SettingsPage from "@/components/settings/settings-page";
+import AppLayout from "@/layouts/app-layout.astro";
+import { getServerApiClient } from "@/lib/api-client";
+
+type Token = { id: string; name: string | null; note: string | null; enabled: boolean; created_at: string };
+
+const user = Astro.locals.user;
+let tokens: Token[] = [];
+
+const client = getServerApiClient(Astro.locals);
+const tokensResult = await client.blog.tokens.list();
+
+if (tokensResult.ok) {
+	tokens = tokensResult.value.tokens ?? [];
+}
+---
+
+<AppLayout title="Settings">
+	<section class="stack">
+		<header>
+			<h1 class="page-title">Settings</h1>
+		</header>
+		<SettingsPage client:load initialUser={user} initialTokens={tokens} />
+	</section>
+</AppLayout>

@@ -1,0 +1,49 @@
+---
+import AuthStatus from "../components/layout/auth-status";
+import BaseLayout from "./base-layout.astro";
+
+interface Props {
+	title?: string;
+}
+
+const { title = "Blog" } = Astro.props;
+const currentPath = Astro.url.pathname;
+
+const navLinks = [
+	{ href: "/posts", label: "posts" },
+	{ href: "/categories", label: "categories" },
+	{ href: "/settings", label: "settings" },
+];
+
+const isActive = (href: string) => {
+	if (href === "/") return currentPath === "/";
+	return currentPath.startsWith(href);
+};
+
+const authUser = Astro.locals.user;
+---
+
+<BaseLayout title={title}>
+	<div id="container" class="stack">
+		<header>
+			<nav>
+				<a href="/" class:list={{ active: isActive("/") }}>blog</a>
+				<span class="text-muted">|</span>
+				{navLinks.map((link) => (
+					<a href={link.href} class:list={{ active: isActive(link.href) }}>
+						{link.label}
+					</a>
+				))}
+			</nav>
+			<AuthStatus client:load initialUser={authUser} />
+		</header>
+
+		<main>
+			<slot />
+		</main>
+	</div>
+
+	<footer>
+		<span class="text-sm text-muted">blog.devpad.tools</span>
+	</footer>
+</BaseLayout>

@@ -1,84 +1,106 @@
 import type { ApiKey, User } from "@devpad/schema";
-import { api_key, db, user } from "@devpad/schema/database/server";
-import { createId } from "@paralleldrive/cuid2";
-import type { APIContext } from "astro";
-import { eq } from "drizzle-orm";
+import { api_keys, user } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
+import { err, ok, type Result } from "@f0rbit/corpus";
+import { and, eq } from "drizzle-orm";
 
-export async function getAPIKeys(user_id: string) {
-	return await db.select().from(api_key).where(eq(api_key.owner_id, user_id));
+export type KeyError = { kind: "not_found"; resource?: string } | { kind: "conflict"; resource?: string; message?: string } | { kind: "db_error"; message?: string };
+
+type ApiKeyScope = "devpad" | "blog" | "media" | "all";
+
+const hashKey = async (raw_key: string): Promise<string> => {
+	const encoder = new TextEncoder();
+	const data = encoder.encode(raw_key);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map(b => b.toString(16).padStart(2, "0"))
+		.join("");
+};
+
+export async function getAPIKeys(db: Database, user_id: string, scope?: ApiKeyScope): Promise<Result<ApiKey[], KeyError>> {
+	const conditions = [eq(api_keys.user_id, user_id), eq(api_keys.deleted, false)];
+	if (scope) conditions.push(eq(api_keys.scope, scope));
+
+	const rows = await db
+		.select()
+		.from(api_keys)
+		.where(and(...conditions))
+		.catch((e: Error) => e);
+
+	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
+
+	return ok(rows as ApiKey[]);
 }
 
-export async function getUserByAPIKey(key: string): Promise<{ user_id: string; error: null } | { user_id: null; error: string }> {
-	const user = await db.select().from(api_key).where(eq(api_key.hash, key));
-	if (!user || user.length === 0) {
-		return { user_id: null, error: "Invalid API key" };
-	}
-	if (user.length > 1) {
-		return { user_id: null, error: "Multiple users with same API key" };
-	}
-	return { user_id: user[0].owner_id!, error: null };
+export async function getUserByAPIKey(db: Database, raw_key: string): Promise<Result<string, KeyError>> {
+	const key_hash = await hashKey(raw_key);
+
+	const rows = await db
+		.select()
+		.from(api_keys)
+		.where(and(eq(api_keys.key_hash, key_hash), eq(api_keys.enabled, true), eq(api_keys.deleted, false)))
+		.catch((e: Error) => e);
+
+	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
+
+	if (!rows || rows.length === 0) return err({ kind: "not_found" });
+	if (rows.length > 1) return err({ kind: "conflict", resource: "api_key", message: "Multiple matching keys found" });
+
+	return ok(rows[0].user_id!);
 }
 
-export async function getAuthedUser(request: APIContext): Promise<{ user_id: string; error: null } | { user_id: null; error: string }> {
-	// take the auth key from the headers
-	// will be Authorization: Bearer <auth_key>
-	const auth_key = request.request.headers.get("Authorization")?.split(" ")?.[1];
-	if (!auth_key) {
-		return { user_id: null, error: "No auth key provided" };
-	}
+export async function getUserByApiKey(db: Database, raw_key: string): Promise<Result<User, KeyError>> {
+	const key_result = await getUserByAPIKey(db, raw_key);
+	if (!key_result.ok) return key_result;
 
-	// check if the auth key is valid
-	const found = await getUserByAPIKey(auth_key);
-	return found;
+	const users = await db
+		.select()
+		.from(user)
+		.where(eq(user.id, key_result.value))
+		.catch((e: Error) => e);
+
+	if (users instanceof Error) return err({ kind: "db_error", message: users.message });
+
+	if (!users || users.length === 0) return err({ kind: "not_found", resource: "user" });
+
+	return ok(users[0] as User);
 }
 
-// Alias for interface compatibility
-export async function getUserByApiKey(apiKey: string): Promise<{ user: User | null; error: string | null }> {
-	try {
-		const result = await getUserByAPIKey(apiKey);
-		if (result.error) {
-			return { user: null, error: result.error };
-		}
+export type CreatedApiKey = { key: ApiKey; raw_key: string };
 
-		// Get full user details
-		const users = await db.select().from(user).where(eq(user.id, result.user_id!));
-		if (users.length === 0) {
-			return { user: null, error: "User not found" };
-		}
+export async function createApiKey(db: Database, user_id: string, scope: ApiKeyScope = "devpad", name?: string): Promise<Result<CreatedApiKey, KeyError>> {
+	const raw_key = `devpad_${crypto.randomUUID()}`;
+	const key_hash = await hashKey(raw_key);
 
-		return { user: users[0] as User, error: null };
-	} catch (error) {
-		return { user: null, error: `Failed to get user: ${error}` };
-	}
+	const rows = await db
+		.insert(api_keys)
+		.values({
+			user_id,
+			key_hash,
+			name: name ?? null,
+			scope,
+		})
+		.returning()
+		.catch((e: Error) => e);
+
+	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
+
+	if (!rows || rows.length === 0) return err({ kind: "db_error", message: "Insert returned no rows" });
+
+	return ok({ key: rows[0] as ApiKey, raw_key });
 }
 
-export async function createApiKey(userId: string, name: string): Promise<{ key: ApiKey; error: string | null }> {
-	try {
-		const keyHash = createId(); // This would normally be properly hashed
+export async function deleteApiKey(db: Database, key_id: string): Promise<Result<void, KeyError>> {
+	const rows = await db
+		.update(api_keys)
+		.set({ deleted: true })
+		.where(eq(api_keys.id, key_id))
+		.returning()
+		.catch((e: Error) => e);
 
-		const result = await db
-			.insert(api_key)
-			.values({
-				owner_id: userId,
-				hash: keyHash,
-			})
-			.returning();
+	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
-		if (result.length === 0) {
-			return { key: {} as ApiKey, error: "Failed to create API key" };
-		}
+	if (!rows || rows.length === 0) return err({ kind: "not_found" });
 
-		return { key: result[0] as ApiKey, error: null };
-	} catch (error) {
-		return { key: {} as ApiKey, error: `Failed to create API key: ${error}` };
-	}
-}
-
-export async function deleteApiKey(keyId: string): Promise<{ success: boolean; error: string | null }> {
-	try {
-		const result = await db.delete(api_key).where(eq(api_key.id, keyId)).returning();
-		return { success: result.length > 0, error: null };
-	} catch (error) {
-		return { success: false, error: `Failed to delete API key: ${error}` };
-	}
+	return ok(undefined);
 }

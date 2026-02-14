@@ -29,7 +29,7 @@ test.describe("Page Rendering", () => {
 
 		// Check that it's not an error page
 		const bodyText = await page.textContent("body");
-		expect(bodyText).toContain("This endpoint fetches the data associated with each project")
+		expect(bodyText).toContain("This endpoint fetches the data associated with each project");
 	});
 
 	test("should render project landing page at /project", async ({ page }) => {

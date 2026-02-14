@@ -1,0 +1,29 @@
+---
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+
+const { project_id } = Astro.params;
+
+if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+// Get server API client and fetch project by name (project_id is the human-readable name)
+const api_client = getServerApiClient(Astro.locals);
+const result = await api_client.projects.getByName(project_id);
+if (!result.ok) return rethrow(result.error);
+const project = result.value;
+if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
+---
+
+<PageLayout title={`${project_id} - devpad`}>
+	<ProjectLayout project_id={project_id}>
+		<p>{project!.description}</p>
+		{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
+		<p>
+			<span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></span>
+		</p>
+	</ProjectLayout>
+</PageLayout>

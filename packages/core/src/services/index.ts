@@ -1,13 +1,10 @@
-// Export all core services
-
-export * from "./action.js";
-export * from "./github.js";
-export * from "./milestones.js";
-export * from "./goals.js";
-export * from "./projects.js";
-export * from "./scanning.js";
-// Export specific functions for testing
-export { scanLocalRepo } from "./scanning.js";
-export * from "./tags.js";
-export * from "./tasks.js";
-export * from "./users.js";
+export * as action from "./action.js";
+export type { ServiceError } from "./errors.js";
+export * as github from "./github.js";
+export * as goals from "./goals.js";
+export * as milestones from "./milestones.js";
+export * as projects from "./projects.js";
+export * as scanning from "./scanning.js";
+export * as tags from "./tags.js";
+export * as tasks from "./tasks.js";
+export * as users from "./users.js";

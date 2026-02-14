@@ -1,8 +1,16 @@
-import { db, user } from "@devpad/schema/database/server";
-import { generateState } from "arctic";
+import { user } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
+import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
-import { github } from "../services/github.js";
-import { lucia } from "./lucia.js";
+import { createSession } from "./session.js";
+
+export type OAuthError = { kind: "invalid_state" } | { kind: "github_error"; message: string } | { kind: "db_error"; message: string };
+
+export type OAuthEnv = {
+	GITHUB_CLIENT_ID: string;
+	GITHUB_CLIENT_SECRET: string;
+	JWT_SECRET: string;
+};
 
 export interface GitHubUser {
 	id: number;
@@ -42,173 +50,172 @@ export interface OAuthCallbackResult {
 	sessionId: string;
 }
 
-/**
- * Create GitHub OAuth authorization URL with state
- */
-export async function createGitHubAuthUrl(params?: OAuthParams): Promise<OAuthState> {
-	const csrfState = generateState();
+export function createGitHubAuthUrl(env: OAuthEnv, params?: OAuthParams): Result<OAuthState, OAuthError> {
+	const csrf_state = crypto.randomUUID();
 
-	const stateData: DecodedOAuthState = {
-		csrf: csrfState,
+	const state_data: DecodedOAuthState = {
+		csrf: csrf_state,
 		return_to: params?.return_to,
 		mode: params?.mode,
 	};
-	const encodedState = Buffer.from(JSON.stringify(stateData)).toString("base64url");
 
-	const url = await github.createAuthorizationURL(encodedState, {
-		scopes: ["user:email", "repo"],
+	const encoded_state = btoa(JSON.stringify(state_data)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+
+	const url_params = new URLSearchParams({
+		client_id: env.GITHUB_CLIENT_ID,
+		scope: "user:email repo",
+		state: encoded_state,
 	});
 
-	return {
-		url: url.toString(),
-		state: encodedState,
-	};
+	const url = `https://github.com/login/oauth/authorize?${url_params.toString()}`;
+
+	return ok({ url, state: encoded_state });
 }
 
-/**
- * Decode OAuth state from base64url encoded JSON
- * Falls back to treating the state as a plain CSRF token for backwards compatibility
- */
-export function decodeOAuthState(encodedState: string): DecodedOAuthState {
-	try {
-		const decoded = Buffer.from(encodedState, "base64url").toString("utf-8");
-		return JSON.parse(decoded);
-	} catch {
-		return { csrf: encodedState };
-	}
-}
+export async function handleGitHubCallback(db: Database, env: OAuthEnv, code: string, state: string, stored_state: string): Promise<Result<OAuthCallbackResult, OAuthError>> {
+	if (state !== stored_state) return err({ kind: "invalid_state" });
 
-/**
- * Handle GitHub OAuth callback - exchange code for tokens and create user session
- */
-export async function handleGitHubCallback(code: string, state: string, storedState: string): Promise<OAuthCallbackResult> {
-	// Validate state to prevent CSRF attacks
-	if (state !== storedState) {
-		throw new Error("Invalid OAuth state parameter");
-	}
+	const token_response = await fetch("https://github.com/login/oauth/access_token", {
+		method: "POST",
+		headers: {
+			"Content-Type": "application/json",
+			Accept: "application/json",
+		},
+		body: JSON.stringify({
+			client_id: env.GITHUB_CLIENT_ID,
+			client_secret: env.GITHUB_CLIENT_SECRET,
+			code,
+		}),
+	}).catch((e: Error) => e);
 
-	try {
-		// Exchange authorization code for access token
-		const tokens = await github.validateAuthorizationCode(code);
-		const accessToken = tokens.accessToken;
+	if (token_response instanceof Error) return err({ kind: "github_error", message: token_response.message });
 
-		// Fetch user profile from GitHub
-		const githubUser = await fetchGitHubUser(accessToken);
+	if (!token_response.ok) return err({ kind: "github_error", message: `Token exchange failed: ${token_response.status}` });
 
-		// Create or retrieve user from database
-		const dbUser = await createOrUpdateUser(githubUser);
+	const token_data = (await token_response.json()) as { access_token?: string; error?: string };
 
-		// Create Lucia session with access token
-		const session = await lucia.createSession(dbUser.id, {
-			access_token: accessToken,
-		});
+	if (token_data.error || !token_data.access_token) return err({ kind: "github_error", message: token_data.error ?? "No access token" });
 
-		return {
-			user: dbUser,
-			accessToken,
-			sessionId: session.id,
-		};
-	} catch (error) {
-		console.error("OAuth callback error:", error);
-		throw new Error("Failed to process GitHub OAuth callback");
-	}
-}
+	const access_token = token_data.access_token;
 
-/**
- * Create user session with access token
- */
-export async function createUserSession(userId: string, accessToken: string) {
-	return await lucia.createSession(userId, {
-		access_token: accessToken,
+	const github_user_result = await fetchGitHubUser(access_token);
+	if (!github_user_result.ok) return github_user_result;
+
+	const github_user = github_user_result.value;
+	const db_user_result = await createOrUpdateUser(db, github_user);
+	if (!db_user_result.ok) return db_user_result;
+
+	const db_user = db_user_result.value;
+	const session_result = await createSession(db, db_user.id, access_token);
+	if (!session_result.ok) return err({ kind: "db_error", message: `Session creation failed: ${session_result.error.kind}` });
+
+	return ok({
+		user: db_user,
+		accessToken: access_token,
+		sessionId: session_result.value.id,
 	});
 }
 
-/**
- * Invalidate user session
- */
-export async function invalidateUserSession(sessionId: string): Promise<void> {
-	await lucia.invalidateSession(sessionId);
+export function decodeOAuthState(encoded_state: string): Result<DecodedOAuthState, OAuthError> {
+	const decoded = (() => {
+		try {
+			const padded = encoded_state.replace(/-/g, "+").replace(/_/g, "/");
+			const pad_length = (4 - (padded.length % 4)) % 4;
+			return JSON.parse(atob(padded + "=".repeat(pad_length)));
+		} catch {
+			return null;
+		}
+	})();
+
+	if (!decoded) return err({ kind: "invalid_state" });
+
+	return ok(decoded as DecodedOAuthState);
 }
 
-/**
- * Fetch user profile from GitHub API
- */
-async function fetchGitHubUser(accessToken: string): Promise<GitHubUser> {
+async function fetchGitHubUser(access_token: string): Promise<Result<GitHubUser, OAuthError>> {
 	const response = await fetch("https://api.github.com/user", {
 		headers: {
-			Authorization: `Bearer ${accessToken}`,
+			Authorization: `Bearer ${access_token}`,
 			"User-Agent": "devpad-app",
 		},
+	}).catch((e: Error) => e);
+
+	if (response instanceof Error) return err({ kind: "github_error", message: response.message });
+
+	if (!response.ok) return err({ kind: "github_error", message: `GitHub API: ${response.status} ${response.statusText}` });
+
+	const user_data = (await response.json()) as any;
+
+	if (!user_data.email) {
+		const email_result = await fetchGitHubEmail(access_token);
+		if (email_result.ok) user_data.email = email_result.value;
+	}
+
+	return ok({
+		id: user_data.id,
+		login: user_data.login,
+		name: user_data.name,
+		email: user_data.email,
+		avatar_url: user_data.avatar_url,
 	});
-
-	if (!response.ok) {
-		throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);
-	}
-
-	const userData = (await response.json()) as any;
-
-	// If primary email is private, fetch public email
-	if (!userData.email) {
-		try {
-			const emailResponse = await fetch("https://api.github.com/user/emails", {
-				headers: {
-					Authorization: `Bearer ${accessToken}`,
-					"User-Agent": "devpad-app",
-				},
-			});
-
-			if (emailResponse.ok) {
-				const emails = (await emailResponse.json()) as any[];
-				const primaryEmail = emails.find((email: any) => email.primary);
-				userData.email = primaryEmail?.email || null;
-			}
-		} catch (emailError) {
-			console.warn("Failed to fetch user emails:", emailError);
-		}
-	}
-
-	return {
-		id: userData.id,
-		login: userData.login,
-		name: userData.name,
-		email: userData.email,
-		avatar_url: userData.avatar_url,
-	};
 }
 
-/**
- * Create or update user in database
- */
-async function createOrUpdateUser(githubUser: GitHubUser) {
-	// Check if user already exists
-	const existingUser = await db.select().from(user).where(eq(user.github_id, githubUser.id)).limit(1);
+async function fetchGitHubEmail(access_token: string): Promise<Result<string | null, OAuthError>> {
+	const response = await fetch("https://api.github.com/user/emails", {
+		headers: {
+			Authorization: `Bearer ${access_token}`,
+			"User-Agent": "devpad-app",
+		},
+	}).catch((e: Error) => e);
 
-	if (existingUser.length > 0) {
-		// Update existing user
-		const updatedUser = await db
+	if (response instanceof Error) return ok(null);
+	if (!response.ok) return ok(null);
+
+	const emails = (await response.json()) as Array<{ email: string; primary: boolean }>;
+	const primary = emails.find(e => e.primary);
+	return ok(primary?.email ?? null);
+}
+
+async function createOrUpdateUser(db: Database, github_user: GitHubUser): Promise<Result<OAuthCallbackResult["user"], OAuthError>> {
+	const existing = await db
+		.select()
+		.from(user)
+		.where(eq(user.github_id, github_user.id))
+		.limit(1)
+		.catch((e: Error) => e);
+
+	if (existing instanceof Error) return err({ kind: "db_error", message: existing.message });
+
+	if (existing.length > 0) {
+		const updated = await db
 			.update(user)
 			.set({
-				name: githubUser.name || githubUser.login,
-				email: githubUser.email,
-				image_url: githubUser.avatar_url,
+				name: github_user.name || github_user.login,
+				email: github_user.email,
+				image_url: github_user.avatar_url,
 			})
-			.where(eq(user.github_id, githubUser.id))
-			.returning();
+			.where(eq(user.github_id, github_user.id))
+			.returning()
+			.catch((e: Error) => e);
 
-		return updatedUser[0];
+		if (updated instanceof Error) return err({ kind: "db_error", message: updated.message });
+
+		return ok(updated[0]);
 	}
 
-	// Create new user
-	const newUser = await db
+	const created = await db
 		.insert(user)
 		.values({
-			github_id: githubUser.id,
-			name: githubUser.name || githubUser.login,
-			email: githubUser.email,
-			image_url: githubUser.avatar_url,
+			github_id: github_user.id,
+			name: github_user.name || github_user.login,
+			email: github_user.email,
+			image_url: github_user.avatar_url,
 			task_view: "list",
 		})
-		.returning();
+		.returning()
+		.catch((e: Error) => e);
 
-	return newUser[0];
+	if (created instanceof Error) return err({ kind: "db_error", message: created.message });
+
+	return ok(created[0]);
 }

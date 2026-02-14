@@ -1,15 +1,15 @@
 #!/usr/bin/env bun
 
-import { Command } from "commander";
 import { ApiClient, getTool } from "@devpad/api";
 import chalk from "chalk";
-import ora from "ora";
+import { Command } from "commander";
 import { Table } from "console-table-printer";
+import ora from "ora";
 
 // Helper to get API client
 function getApiClient(): ApiClient {
 	const apiKey = process.env.DEVPAD_API_KEY || Bun.env.DEVPAD_API_KEY;
-	const baseUrl = process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v0";
+	const baseUrl = process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v1";
 
 	if (!apiKey) {
 		console.error(chalk.red("Error: DEVPAD_API_KEY environment variable is required"));

@@ -1,0 +1,47 @@
+---
+import TimelineList from "../../components/solid/TimelineList";
+import AppLayout from "../../layouts/AppLayout.astro";
+import { type TimelineGroup } from "../../utils/types";
+import { getServerApiClient } from "../../utils/api-client";
+
+const profileSlug = Astro.url.searchParams.get("profile");
+
+let initialGroups: TimelineGroup[] = [];
+
+if (profileSlug && Astro.locals.user) {
+	try {
+		const client = getServerApiClient(Astro.locals);
+		const result = await client.media.profiles.timeline(profileSlug);
+		if (result.ok) {
+			initialGroups = result.value.data.groups as TimelineGroup[];
+		}
+	} catch {
+		// SSR fetch failed, component will fetch client-side
+	}
+}
+---
+
+<AppLayout 
+  title="Timeline | Media Timeline"
+  description="Your aggregated activity feed from GitHub, Reddit, Twitter, and more."
+  noindex={true}
+>
+  <section>
+    <h1 class="page-title">Timeline</h1>
+    <p class="description">Your aggregated activity across all connected platforms.</p>
+  </section>
+  <div class="timeline-skeleton">
+    <TimelineList 
+      client:load
+      profileSlug={profileSlug}
+      initialGroups={initialGroups}
+    />
+  </div>
+</AppLayout>
+
+<style>
+  /* Prevent layout shift while client component loads */
+  .timeline-skeleton {
+    min-height: 200px;
+  }
+</style>

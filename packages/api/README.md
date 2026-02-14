@@ -19,7 +19,7 @@ import DevpadApiClient from '@devpad/api';
 
 const client = new DevpadApiClient({
   api_key: 'your-api-key-here',
-  base_url: 'https://devpad.tools/api/v0' // optional, defaults to localhost:4321
+  base_url: 'https://devpad.tools/api/v1' // optional, defaults to localhost:4321
 });
 
 // Create a project
@@ -49,7 +49,7 @@ Main client class that provides access to all API endpoints.
 ```typescript
 const client = new DevpadApiClient({
   api_key: string;          // Required: Your Devpad API key
-  base_url?: string;        // Optional: API base URL (defaults to localhost:4321/api/v0)
+  base_url?: string;        // Optional: API base URL (defaults to localhost:4321/api/v1)
 });
 ```
 
