@@ -105,23 +105,32 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 
 	if (isTestEnv && hasTestHeader) {
 		log.middleware("🧪 TEST MODE: Injecting mock user");
-		// Import test user constants dynamically to avoid bundling in production
-		// @ts-expect-error - test-user.ts is outside rootDir, expected in test mode only
-		const { TEST_USER, TEST_SESSION, TEST_JWT_TOKEN } = await import("../../../tests/shared/test-user");
 
-		context.locals.user = TEST_USER as unknown as NonNullable<AuthUser>;
-		context.locals.session = TEST_SESSION as App.Locals["session"];
-		context.locals.jwtToken = TEST_JWT_TOKEN;
+		const test_user = {
+			id: "test-user-e2e",
+			github_id: null,
+			name: "Test User",
+			task_view: "list" as const,
+		};
+		const test_session = {
+			id: "test-session",
+			userId: "test-user-e2e",
+			fresh: false,
+			expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+		};
+		const test_jwt_token = "test-jwt-token";
 
-		// Set cookie for client-side API access
-		context.cookies.set("jwt-token", TEST_JWT_TOKEN, {
+		context.locals.user = test_user as unknown as NonNullable<AuthUser>;
+		context.locals.session = test_session as App.Locals["session"];
+		context.locals.jwtToken = test_jwt_token;
+
+		context.cookies.set("jwt-token", test_jwt_token, {
 			path: "/",
 			sameSite: "lax",
 			maxAge: 86400,
-			httpOnly: false, // Allow client-side access
+			httpOnly: false,
 		});
 
-		// Skip rest of auth flow for test user
 		return next();
 	}
 

@@ -16,7 +16,7 @@
 	},
 	"scripts": {
 		"dev": "bun --watch src/local.ts",
-		"build": "wrangler deploy --dry-run --outdir=dist",
+		"build": "tsc --noEmit",
 		"clean": "rm -rf dist",
 		"test": "bun test"
 	},
