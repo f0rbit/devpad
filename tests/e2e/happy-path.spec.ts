@@ -1,15 +1,11 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("Happy Path Workflow", () => {
 	test("complete workflow: create project, tasks, milestone, goals, and assignments", async ({ page, context }) => {
 		// Add X-Test-User header only to same-origin requests using context route
 		// This avoids issues with page.route intercepting navigations
-		const baseUrl = process.env.TEST_ENV === "docker" ? "http://0.0.0.0:3000" : "http://localhost:4321";
 		await context.route(
-			url => {
-				const urlStr = url.toString();
-				return urlStr.startsWith(baseUrl) || urlStr.startsWith("http://localhost") || urlStr.startsWith("http://0.0.0.0");
-			},
+			() => true,
 			async route => {
 				await route.continue({
 					headers: {

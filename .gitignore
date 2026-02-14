@@ -64,6 +64,6 @@ coverage/
 playwright-report/
 test-results/
 
-# Platform-specific binaries (built in Docker/CI)
+# Platform-specific binaries (built in CI)
 todo-tracker
 .plans/

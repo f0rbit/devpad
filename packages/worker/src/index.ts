@@ -48,8 +48,10 @@ export const createApi = (options?: ApiOptions) => {
 		"/api/*",
 		cors({
 			origin: origin => {
-				const allowed = ["http://localhost:4321", "http://localhost:3000", "https://media.devpad.tools", "https://devpad.tools", "https://blog.devpad.tools"];
-				if (!origin || allowed.includes(origin)) return origin;
+				if (!origin) return origin;
+				const allowed = ["http://localhost:4321", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"];
+				if (allowed.includes(origin)) return origin;
+				if (origin.endsWith(".devpad.tools") || origin === "https://devpad.tools") return origin;
 				if (origin.endsWith(".workers.dev") || origin.endsWith(".pages.dev")) return origin;
 				return null;
 			},
@@ -123,11 +125,11 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 				return api.fetch(request, env, ctx);
 			}
 
-			if (hostname.includes("blog.devpad.tools")) {
+			if (hostname.startsWith("blog.")) {
 				return handlers.blog.fetch(request, env, ctx);
 			}
 
-			if (hostname.includes("media.devpad.tools")) {
+			if (hostname.startsWith("media.")) {
 				return handlers.media.fetch(request, env, ctx);
 			}
 

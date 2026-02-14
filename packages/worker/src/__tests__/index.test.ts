@@ -77,4 +77,20 @@ describe("routing", () => {
 		const body = (await response.json()) as any;
 		expect(body.message).toContain("Phase 2");
 	});
+
+	it("routes blog.staging subdomain to blog handler", async () => {
+		const req = new Request("http://blog.staging.devpad.tools/", { headers: { host: "blog.staging.devpad.tools" } });
+		const response = await worker.fetch(req, MOCK_ENV as never, {} as never);
+		expect(response.status).toBe(501);
+		const body = (await response.json()) as any;
+		expect(body.message).toContain("blog");
+	});
+
+	it("routes media.staging subdomain to media handler", async () => {
+		const req = new Request("http://media.staging.devpad.tools/", { headers: { host: "media.staging.devpad.tools" } });
+		const response = await worker.fetch(req, MOCK_ENV as never, {} as never);
+		expect(response.status).toBe(501);
+		const body = (await response.json()) as any;
+		expect(body.message).toContain("media");
+	});
 });
