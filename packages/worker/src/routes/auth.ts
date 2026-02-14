@@ -76,8 +76,10 @@ app.get("/callback/github", async c => {
 	if (!callback_result.ok) return c.json({ error: "OAuth callback failed", detail: callback_result.error }, 500);
 
 	const { sessionId } = callback_result.value;
+	console.log(`[auth/callback] session created: ${sessionId.substring(0, 8)}...`);
 
 	const cookie_config = cookieConfig(config.environment);
+	console.log(`[auth/callback] cookie config: ${JSON.stringify(cookie_config)}`);
 	c.header("Set-Cookie", createSessionCookie(sessionId, cookie_config));
 
 	setCookie(c, "github_oauth_state", "", {
@@ -91,13 +93,17 @@ app.get("/callback/github", async c => {
 
 	if (config.environment === "development") {
 		const redirect_url = return_to || frontend_url;
+		console.log(`[auth/callback] redirecting to: ${redirect_url}/project?auth_session=${sessionId}`);
 		return c.redirect(`${redirect_url}/project?auth_session=${sessionId}`);
 	}
 
-	if (return_to && isAllowedRedirectUrl(return_to)) {
-		return c.redirect(return_to);
+	const return_url = return_to ? new URL(return_to) : null;
+	if (return_url && isAllowedRedirectUrl(return_to!) && return_url.pathname !== "/") {
+		console.log(`[auth/callback] redirecting to: ${return_to}`);
+		return c.redirect(return_to!);
 	}
 
+	console.log(`[auth/callback] redirecting to: ${frontend_url}/project`);
 	return c.redirect(`${frontend_url}/project`);
 });
 

@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { $ } from "bun";
 
@@ -85,6 +85,16 @@ async function build() {
 		const astro_dir = join(app_dists[name], "_astro");
 		if (existsSync(astro_dir)) {
 			cpSync(astro_dir, join(DIST_DIR, "_astro"), { recursive: true });
+		}
+	}
+
+	const skip_entries = new Set(["_worker.js", "_routes.json", "_astro"]);
+	console.log("Copying static assets...");
+	for (const name of APP_NAMES) {
+		const entries = readdirSync(app_dists[name], { withFileTypes: true });
+		for (const entry of entries) {
+			if (skip_entries.has(entry.name)) continue;
+			cpSync(join(app_dists[name], entry.name), join(DIST_DIR, entry.name), { recursive: true });
 		}
 	}
 

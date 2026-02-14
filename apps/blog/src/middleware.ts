@@ -1,12 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import type { MiddlewareHandler } from "astro";
 
-if (!process.env.PUBLIC_API_SERVER_URL) {
-	throw new Error("PUBLIC_API_SERVER_URL environment variable is not set");
-}
-
-const API_SERVER_URL = process.env.PUBLIC_API_SERVER_URL;
-const API_SERVER_BASE = API_SERVER_URL.replace("/api/v1", "");
+const API_SERVER_BASE = process.env.PUBLIC_API_SERVER_URL?.replace("/api/v1", "") ?? "";
 
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
 	context.locals.user = null;
@@ -40,6 +35,8 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	}
 
 	const session_cookie = context.cookies.get("auth_session")?.value;
+	if (!API_SERVER_BASE || !session_cookie) return next();
+
 	if (session_cookie) {
 		try {
 			const response = await fetch(`${API_SERVER_BASE}/api/auth/session`, {

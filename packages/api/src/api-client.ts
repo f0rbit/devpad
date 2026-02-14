@@ -30,6 +30,8 @@ export class ApiClient {
 		auth_mode?: AuthMode;
 		max_history_size?: number;
 		credentials?: "include" | "omit" | "same-origin";
+		default_headers?: Record<string, string>;
+		custom_fetch?: typeof fetch;
 	}) {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
@@ -42,6 +44,8 @@ export class ApiClient {
 			max_history_size: options.max_history_size,
 			auth_mode: this._auth_mode,
 			credentials: options.credentials,
+			default_headers: options.default_headers,
+			custom_fetch: options.custom_fetch,
 		};
 
 		const auth_base_url = base_url.replace(/\/v1\/?$/, "");

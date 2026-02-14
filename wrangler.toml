@@ -14,6 +14,12 @@ directory = "dist"
 [triggers]
 crons = ["*/5 * * * *"]
 
+[observability]
+enabled = true
+
+[observability.logs]
+invocation_logs = true
+
 [vars]
 ENVIRONMENT = "production"
 API_URL = "https://devpad.tools"
@@ -59,6 +65,12 @@ bucket_name = "devpad-corpus-staging"
 [[env.preview.r2_buckets]]
 binding = "MEDIA_CORPUS_BUCKET"
 bucket_name = "devpad-corpus-staging"
+
+[env.preview.observability]
+enabled = true
+
+[env.preview.observability.logs]
+invocation_logs = true
 
 # Secrets for preview (set via `wrangler secret put <NAME> --env preview`):
 # GITHUB_CLIENT_ID

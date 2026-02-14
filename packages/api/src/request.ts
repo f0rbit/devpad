@@ -25,6 +25,8 @@ export class ApiClient {
 	private api_key: string;
 	private request_history: BufferedQueue<RequestHistoryEntry>;
 	private category: string = "api";
+	private default_headers: Record<string, string>;
+	private custom_fetch?: typeof fetch;
 
 	private credentials?: "include" | "omit" | "same-origin";
 	private auth_mode: "session" | "key" | "cookie";
@@ -36,6 +38,8 @@ export class ApiClient {
 		category?: string;
 		credentials?: "include" | "omit" | "same-origin";
 		auth_mode?: "session" | "key" | "cookie";
+		default_headers?: Record<string, string>;
+		custom_fetch?: typeof fetch;
 	}) {
 		this.auth_mode = options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : "key");
 
@@ -48,6 +52,8 @@ export class ApiClient {
 		this.api_key = options.api_key ?? "";
 		this.category = options.category || "api";
 		this.credentials = options.credentials;
+		this.default_headers = options.default_headers ?? {};
+		this.custom_fetch = options.custom_fetch;
 		this.request_history = new ArrayBufferedQueue<RequestHistoryEntry>(options.max_history_size ?? 5);
 	}
 
@@ -83,6 +89,7 @@ export class ApiClient {
 		const request_headers: Record<string, string> = {
 			"Content-Type": "application/json",
 			"X-Request-ID": requestId,
+			...this.default_headers,
 			...headers,
 		};
 
@@ -117,7 +124,8 @@ export class ApiClient {
 				fetchOptions.credentials = "include";
 			}
 
-			const response = await fetch(url, fetchOptions);
+			const fetcher = this.custom_fetch ?? fetch;
+			const response = await fetcher(url, fetchOptions);
 			const duration = Date.now() - startTime;
 
 			// Update history entry with response info
