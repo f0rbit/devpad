@@ -9,7 +9,6 @@ export type OAuthError = { kind: "invalid_state" } | { kind: "github_error"; mes
 export type OAuthEnv = {
 	GITHUB_CLIENT_ID: string;
 	GITHUB_CLIENT_SECRET: string;
-	JWT_SECRET: string;
 };
 
 export interface GitHubUser {
@@ -27,13 +26,11 @@ export interface OAuthState {
 
 export interface OAuthParams {
 	return_to?: string;
-	mode?: "jwt" | "session";
 }
 
 export interface DecodedOAuthState {
 	csrf: string;
 	return_to?: string;
-	mode?: "jwt" | "session";
 }
 
 export interface OAuthCallbackResult {
@@ -56,7 +53,6 @@ export function createGitHubAuthUrl(env: OAuthEnv, params?: OAuthParams): Result
 	const state_data: DecodedOAuthState = {
 		csrf: csrf_state,
 		return_to: params?.return_to,
-		mode: params?.mode,
 	};
 
 	const encoded_state = btoa(JSON.stringify(state_data)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");

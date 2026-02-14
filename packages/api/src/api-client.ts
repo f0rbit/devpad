@@ -13,7 +13,7 @@ type AccessKeyUpdate = { name?: string; note?: string; enabled?: boolean };
 /**
  * Authentication mode for the API client
  */
-export type AuthMode = "session" | "key";
+export type AuthMode = "session" | "key" | "cookie";
 
 /**
  * API client with Result-wrapped operations for clean error handling
@@ -26,15 +26,15 @@ export class ApiClient {
 
 	constructor(options: {
 		base_url?: string;
-		api_key: string;
+		api_key?: string;
 		auth_mode?: AuthMode;
 		max_history_size?: number;
 		credentials?: "include" | "omit" | "same-origin";
 	}) {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
-		this._api_key = options.api_key;
-		this._auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
+		this._api_key = options.api_key ?? "";
+		this._auth_mode = options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : options.api_key ? "key" : "cookie");
 
 		const clientOptions = {
 			base_url,

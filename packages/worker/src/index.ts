@@ -1,3 +1,4 @@
+import { createSessionCookie, getSessionCookieName, validateSession } from "@devpad/core/auth";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { createMediaContext, createProviderFactory, handleCron } from "@devpad/core/services/media";
@@ -18,6 +19,7 @@ import blogRoutes from "./routes/v1/blog/index.js";
 import v1Routes from "./routes/v1/index.js";
 import { authRoutes as mediaAuthRoutes } from "./routes/v1/media/auth.js";
 import mediaRoutes from "./routes/v1/media/index.js";
+import { cookieConfig } from "./utils/cookies.js";
 
 export type ApiOptions = {
 	db?: Database;
@@ -113,6 +115,41 @@ const hostnameFor = (request: Request) => {
 	return host.toLowerCase();
 };
 
+function parseCookie(request: Request, name: string): string | undefined {
+	const header = request.headers.get("cookie");
+	if (!header) return undefined;
+	const match = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+	return match?.[1];
+}
+
+async function resolveAuth(request: Request, env: Bindings): Promise<{ request: Request; session_cookie?: string }> {
+	if (!env.DB) return { request };
+
+	const session_id = parseCookie(request, getSessionCookieName());
+	if (!session_id) return { request };
+
+	const db = createD1Database(env.DB);
+	const result = await validateSession(db, session_id);
+	if (!result.ok) return { request };
+
+	const headers = new Headers(request.headers);
+	headers.set(
+		"X-Auth-User",
+		JSON.stringify({
+			id: result.value.user.id,
+			github_id: result.value.user.github_id,
+			name: result.value.user.name,
+			task_view: result.value.user.task_view,
+		})
+	);
+	headers.set("X-Auth-Session-Id", result.value.session.id);
+
+	const authed = new Request(request, { headers });
+	const session_cookie = result.value.session.fresh ? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT ?? "production")) : undefined;
+
+	return { request: authed, session_cookie };
+}
+
 export function createUnifiedWorker(handlers: UnifiedHandlers) {
 	const api = createApi();
 
@@ -125,15 +162,19 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 				return api.fetch(request, env, ctx);
 			}
 
-			if (hostname.startsWith("blog.")) {
-				return handlers.blog.fetch(request, env, ctx);
+			const auth = await resolveAuth(request, env);
+
+			const handler = hostname.startsWith("blog.") ? handlers.blog : hostname.startsWith("media.") ? handlers.media : handlers.devpad;
+
+			const response = await handler.fetch(auth.request, env, ctx);
+
+			if (auth.session_cookie) {
+				const refreshed = new Response(response.body, response);
+				refreshed.headers.append("Set-Cookie", auth.session_cookie);
+				return refreshed;
 			}
 
-			if (hostname.startsWith("media.")) {
-				return handlers.media.fetch(request, env, ctx);
-			}
-
-			return handlers.devpad.fetch(request, env, ctx);
+			return response;
 		},
 
 		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {

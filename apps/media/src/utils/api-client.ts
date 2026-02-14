@@ -5,7 +5,7 @@ export function getServerApiClient(locals: App.Locals): ApiClient {
 
 	return new ApiClient({
 		base_url: process.env.PUBLIC_API_SERVER_URL,
-		api_key: `jwt:${locals.jwtToken}`,
-		auth_mode: "session",
+		auth_mode: "cookie",
+		credentials: "include",
 	});
 }

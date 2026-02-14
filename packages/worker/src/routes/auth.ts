@@ -1,18 +1,11 @@
-import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, invalidateSession, jwt, oauth, validateSession } from "@devpad/core/auth";
+import { createBlankSessionCookie, createSessionCookie, invalidateSession, oauth } from "@devpad/core/auth";
 import { users } from "@devpad/core/services";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppContext } from "../bindings.js";
 import { cookieConfig } from "../utils/cookies.js";
 
-const ALLOWED_REDIRECT_PATTERNS = [
-	/^https:\/\/[a-z0-9.-]+\.pages\.dev$/,
-	/^https:\/\/[a-z0-9.-]+\.workers\.dev$/,
-	/^https:\/\/blog\.devpad\.tools$/,
-	/^https:\/\/devpad\.tools$/,
-	/^https:\/\/staging\.devpad\.tools$/,
-	/^http:\/\/localhost:\d+$/,
-];
+const ALLOWED_REDIRECT_PATTERNS = [/^https:\/\/[a-z0-9.-]+\.pages\.dev$/, /^https:\/\/[a-z0-9.-]+\.workers\.dev$/, /^https:\/\/([a-z0-9-]+\.)?devpad\.tools$/, /^http:\/\/localhost:\d+$/];
 
 const isAllowedRedirectUrl = (url: string): boolean => {
 	try {
@@ -28,18 +21,23 @@ const app = new Hono<AppContext>();
 app.get("/login", async c => {
 	const config = c.get("config");
 	const oauth_secrets = c.get("oauth_secrets");
-	const return_to = c.req.query("return_to");
-	const mode = c.req.query("mode") as "jwt" | "session" | undefined;
+	let return_to = c.req.query("return_to");
+
+	if (!return_to) {
+		const referer = c.req.header("Referer");
+		if (referer) {
+			const referer_url = new URL(referer);
+			return_to = referer_url.origin;
+		}
+	}
 
 	const oauth_env = {
 		GITHUB_CLIENT_ID: oauth_secrets.github_client_id,
 		GITHUB_CLIENT_SECRET: oauth_secrets.github_client_secret,
-		JWT_SECRET: config.jwt_secret,
 	};
 
 	const result = oauth.createGitHubAuthUrl(oauth_env, {
 		return_to: return_to && isAllowedRedirectUrl(return_to) ? return_to : undefined,
-		mode,
 	});
 
 	if (!result.ok) return c.json({ error: "Failed to initiate GitHub OAuth" }, 500);
@@ -72,20 +70,12 @@ app.get("/callback/github", async c => {
 	const oauth_env = {
 		GITHUB_CLIENT_ID: oauth_secrets.github_client_id,
 		GITHUB_CLIENT_SECRET: oauth_secrets.github_client_secret,
-		JWT_SECRET: config.jwt_secret,
 	};
 
 	const callback_result = await oauth.handleGitHubCallback(db, oauth_env, code, state, stored_state);
 	if (!callback_result.ok) return c.json({ error: "OAuth callback failed", detail: callback_result.error }, 500);
 
-	const { user: oauth_user, accessToken, sessionId } = callback_result.value;
-
-	const jwt_result = await jwt.generateJWT(config.jwt_secret, {
-		user_id: oauth_user.id,
-		session_id: sessionId,
-	});
-
-	const token = jwt_result.ok ? jwt_result.value : null;
+	const { sessionId } = callback_result.value;
 
 	const cookie_config = cookieConfig(config.environment);
 	c.header("Set-Cookie", createSessionCookie(sessionId, cookie_config));
@@ -96,17 +86,16 @@ app.get("/callback/github", async c => {
 	});
 
 	const decoded_state = oauth.decodeOAuthState(state);
-
-	if (decoded_state.ok && decoded_state.value.mode === "jwt" && decoded_state.value.return_to && token) {
-		if (isAllowedRedirectUrl(decoded_state.value.return_to)) {
-			return c.redirect(`${decoded_state.value.return_to}?token=${token}`);
-		}
-	}
-
+	const return_to = decoded_state.ok ? decoded_state.value.return_to : undefined;
 	const frontend_url = config.frontend_url || "http://localhost:3000";
 
-	if (token) {
-		return c.redirect(`${frontend_url}/auth/callback?token=${token}`);
+	if (config.environment === "development") {
+		const redirect_url = return_to || frontend_url;
+		return c.redirect(`${redirect_url}/project?auth_session=${sessionId}`);
+	}
+
+	if (return_to && isAllowedRedirectUrl(return_to)) {
+		return c.redirect(return_to);
 	}
 
 	return c.redirect(`${frontend_url}/project`);
@@ -122,8 +111,16 @@ app.get("/logout", async c => {
 		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 
+	const referer = c.req.header("Referer");
+	if (referer) {
+		const referer_origin = new URL(referer).origin;
+		if (isAllowedRedirectUrl(referer_origin)) {
+			return c.redirect(referer_origin);
+		}
+	}
+
 	const frontend_url = config.frontend_url || "http://localhost:3000";
-	return c.redirect(`${frontend_url}/auth/logout`);
+	return c.redirect(frontend_url);
 });
 
 app.get("/session", async c => {
@@ -156,62 +153,6 @@ app.get("/session", async c => {
 					task_view: user.task_view,
 				},
 		session: { id: session.id },
-	});
-});
-
-app.get("/verify", async c => {
-	const db = c.get("db");
-	const user = c.get("user");
-	const session = c.get("session");
-
-	if (user && !session) {
-		const full_user_result = await users.getUserById(db, user.id);
-		const full_user = full_user_result.ok ? full_user_result.value : null;
-
-		return c.json({
-			authenticated: true,
-			user: full_user
-				? {
-						id: full_user.id,
-						name: full_user.name,
-						email: full_user.email,
-						github_id: full_user.github_id,
-						image_url: full_user.image_url,
-						task_view: full_user.task_view,
-					}
-				: {
-						id: user.id,
-						name: user.name,
-						github_id: user.github_id,
-						task_view: user.task_view,
-					},
-		});
-	}
-
-	if (!user || !session) {
-		return c.json({ authenticated: false, user: null }, 200);
-	}
-
-	const full_user_result = await users.getUserById(db, user.id);
-	const full_user = full_user_result.ok ? full_user_result.value : null;
-
-	return c.json({
-		authenticated: true,
-		user: full_user
-			? {
-					id: full_user.id,
-					name: full_user.name,
-					email: full_user.email,
-					github_id: full_user.github_id,
-					image_url: full_user.image_url,
-					task_view: full_user.task_view,
-				}
-			: {
-					id: user.id,
-					name: user.name,
-					github_id: user.github_id,
-					task_view: user.task_view,
-				},
 	});
 });
 

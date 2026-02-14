@@ -1,4 +1,4 @@
-import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, jwt, keys, validateSession } from "@devpad/core/auth";
+import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, keys, validateSession } from "@devpad/core/auth";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppContext } from "../bindings.js";
@@ -16,24 +16,6 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	const auth_header = c.req.header("Authorization");
 	if (auth_header?.startsWith("Bearer ")) {
 		const token = auth_header.slice(7);
-
-		if (token.startsWith("jwt:")) {
-			const jwt_token = token.slice(4);
-			const jwt_result = await jwt.verifyJWT(config.jwt_secret, jwt_token);
-			if (jwt_result.ok) {
-				const session_result = await validateSession(db, jwt_result.value.session_id);
-				if (session_result.ok) {
-					c.set("user", {
-						id: session_result.value.user.id,
-						github_id: session_result.value.user.github_id!,
-						name: session_result.value.user.name!,
-						task_view: session_result.value.user.task_view,
-					});
-					c.set("session", session_result.value.session);
-					return next();
-				}
-			}
-		}
 
 		const key_result = await keys.getUserByApiKey(db, token);
 		if (key_result.ok) {

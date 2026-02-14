@@ -1,18 +1,10 @@
 import { ApiClient, type ApiResult } from "@devpad/api";
 
-function getCookie(name: string): string | undefined {
-	if (typeof document === "undefined") return undefined;
-	const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
-	return match?.[1];
-}
-
 function createClient(): ApiClient {
-	const jwt = getCookie("jwt-token") ?? "";
 	return new ApiClient({
 		base_url: "/api/v1",
-		api_key: jwt,
-		auth_mode: "session",
-		credentials: "same-origin",
+		auth_mode: "cookie",
+		credentials: "include",
 	});
 }
 

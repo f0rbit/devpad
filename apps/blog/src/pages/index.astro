@@ -25,7 +25,7 @@ const isAuthenticated = !!Astro.locals.user;
           <Button variant="primary">dashboard <ArrowRight size={16} /></Button>
         </a>
       ) : (
-        <a href="/auth/login" style="text-decoration: none;">
+        <a href="/api/auth/login" style="text-decoration: none;">
           <Button variant="primary"><Github size={16} />login</Button>
         </a>
       )}
@@ -46,7 +46,7 @@ const isAuthenticated = !!Astro.locals.user;
             <Button variant="primary" size="lg">open dashboard</Button>
           </a>
         ) : (
-          <a href="/auth/login" style="text-decoration: none;">
+          <a href="/api/auth/login" style="text-decoration: none;">
             <Button variant="primary" size="lg">get started</Button>
           </a>
         )}
@@ -171,7 +171,7 @@ const isAuthenticated = !!Astro.locals.user;
       ) : (
         <>
           <h2>ready to start writing?</h2>
-          <a href="/auth/login" style="text-decoration: none;">
+          <a href="/api/auth/login" style="text-decoration: none;">
             <Button variant="primary" size="lg"><Github size={18} />login</Button>
           </a>
         </>

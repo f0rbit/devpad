@@ -1,4 +1,4 @@
-import { Show, createSignal } from "solid-js";
+import { createSignal, Show } from "solid-js";
 
 type User = {
 	id: number;
@@ -18,7 +18,7 @@ const AuthStatus = (props: Props) => {
 			<Show
 				when={user()}
 				fallback={
-					<a href="/auth/login" class="auth-btn login-btn">
+					<a href="/api/auth/login" class="auth-btn login-btn">
 						Login
 					</a>
 				}
@@ -26,7 +26,7 @@ const AuthStatus = (props: Props) => {
 				{u => (
 					<>
 						<span class="user-name">{u().username}</span>
-						<a href="/auth/logout" class="auth-btn logout-btn">
+						<a href="/api/auth/logout" class="auth-btn logout-btn">
 							Logout
 						</a>
 					</>

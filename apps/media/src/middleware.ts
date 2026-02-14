@@ -11,30 +11,54 @@ const API_SERVER_BASE = API_SERVER_URL.replace("/api/v1", "");
 export const onRequest: MiddlewareHandler = defineMiddleware(async (context, next) => {
 	context.locals.user = null;
 	context.locals.session = null;
-	context.locals.jwtToken = null;
 
-	const storedJWT = context.cookies.get("jwt-token")?.value;
-
-	if (!storedJWT) return next();
-
-	try {
-		const response = await fetch(`${API_SERVER_BASE}/api/auth/verify`, {
-			headers: {
-				Authorization: `Bearer jwt:${storedJWT}`,
-				"Content-Type": "application/json",
-			},
-		});
-
-		if (response.ok) {
-			const data = (await response.json()) as { authenticated: boolean; user: any };
-			if (data.authenticated && data.user) {
-				context.locals.user = data.user;
-				context.locals.session = { id: "verified" };
-				context.locals.jwtToken = storedJWT;
-			}
+	const auth_user_header = context.request.headers.get("X-Auth-User");
+	if (auth_user_header) {
+		try {
+			context.locals.user = JSON.parse(auth_user_header);
+			context.locals.session = { id: context.request.headers.get("X-Auth-Session-Id") ?? "injected" };
+		} catch {
+			// invalid header
 		}
-	} catch {
-		// auth verification failed, continue without auth
+		return next();
+	}
+
+	const session_param = context.url.searchParams.get("auth_session");
+	if (session_param) {
+		context.cookies.set("auth_session", session_param, {
+			path: "/",
+			sameSite: "lax",
+			maxAge: 60 * 60 * 24 * 30,
+			httpOnly: false,
+		});
+		const clean_url = new URL(context.url);
+		clean_url.searchParams.delete("auth_session");
+		return new Response(null, {
+			status: 302,
+			headers: { Location: clean_url.pathname + clean_url.search || "/" },
+		});
+	}
+
+	const session_cookie = context.cookies.get("auth_session")?.value;
+	if (session_cookie) {
+		try {
+			const response = await fetch(`${API_SERVER_BASE}/api/auth/session`, {
+				headers: {
+					Cookie: `auth_session=${session_cookie}`,
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (response.ok) {
+				const data = (await response.json()) as { authenticated: boolean; user: any };
+				if (data.authenticated && data.user) {
+					context.locals.user = data.user;
+					context.locals.session = { id: "verified" };
+				}
+			}
+		} catch {
+			// dev server unreachable
+		}
 	}
 
 	return next();
