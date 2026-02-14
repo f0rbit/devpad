@@ -31,7 +31,7 @@ on:
         default: false
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   BUN_VERSION: 'latest'
 
 jobs:
@@ -264,6 +264,9 @@ jobs:
   publish-api:
     name: Publish @devpad/api
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     needs: [detect-changes, prepare-packages]
     if: contains(needs.detect-changes.outputs.changed_packages, 'api')
     
@@ -299,8 +302,6 @@ jobs:
         run: |
           cd packages/api
           npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           
       - name: Dry run
         if: github.event.inputs.dry_run == 'true'
@@ -311,6 +312,9 @@ jobs:
   publish-cli:
     name: Publish @devpad/cli
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     needs: [detect-changes, prepare-packages, publish-api]
     if: contains(needs.detect-changes.outputs.changed_packages, 'cli')
     
@@ -347,8 +351,6 @@ jobs:
         run: |
           cd packages/cli
           npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           
       - name: Dry run
         if: github.event.inputs.dry_run == 'true'
@@ -359,6 +361,9 @@ jobs:
   publish-mcp:
     name: Publish @devpad/mcp
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     needs: [detect-changes, prepare-packages, publish-api]
     if: contains(needs.detect-changes.outputs.changed_packages, 'mcp')
     
@@ -395,8 +400,6 @@ jobs:
         run: |
           cd packages/mcp
           npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           
       - name: Dry run
         if: github.event.inputs.dry_run == 'true'
