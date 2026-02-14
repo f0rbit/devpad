@@ -74,3 +74,4 @@ jobs:
         run: bun run build
         env:
           NODE_ENV: production
+          PUBLIC_API_SERVER_URL: https://devpad.tools/api/v1

@@ -70,6 +70,10 @@ async function build() {
 	}
 	mkdirSync(DIST_DIR, { recursive: true });
 
+	console.log("Building dependency packages...");
+	await $`bun run --filter '@devpad/schema' build`;
+	await $`bun run --filter '@devpad/api' build`;
+
 	console.log("Building all Astro apps in parallel...");
 	await Promise.all(APP_NAMES.map(name => $`bun run --filter '${APPS[name].filter}' build`));
 
