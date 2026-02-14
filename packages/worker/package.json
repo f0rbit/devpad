@@ -16,7 +16,7 @@
 	},
 	"scripts": {
 		"dev": "bun --watch src/local.ts",
-		"build": "tsc --noEmit",
+		"build": "echo 'worker is bundled via scripts/build-unified.ts'",
 		"clean": "rm -rf dist",
 		"test": "bun test"
 	},
