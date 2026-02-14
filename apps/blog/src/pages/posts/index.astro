@@ -50,8 +50,8 @@ const projectName = (id: string): string => projectMap[id] ?? id;
       ) : (
         <div class="posts-grid">
           {posts.map((post) => {
-            const date = post.publish_at ?? post.updated_at;
-            const dateStr = date instanceof Date ? date.toISOString() : String(date);
+            const post_date = post.publish_at ?? post.updated_at;
+            const dateStr = post_date instanceof Date ? post_date.toISOString() : String(post_date);
             return (
               <div class="post-card">
                 <a href={`/posts/${post.slug}`} class="post-card__link">

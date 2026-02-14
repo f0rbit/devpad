@@ -34,7 +34,10 @@ export const mapCorpusError = (e: LibCorpusError): PostCorpusError => {
 		return { kind: "invalid_content", message: e.cause?.message ?? "Decode error" };
 	}
 	if (e.kind === "storage_error") {
-		return { kind: "io_error", message: e.cause?.message ?? "Storage error" };
+		const drizzle_err = e.cause;
+		const underlying = (drizzle_err as any)?.cause;
+		const message = underlying?.message ?? drizzle_err?.message ?? "Storage error";
+		return { kind: "io_error", message };
 	}
 	return { kind: "io_error", message: "Unknown corpus error" };
 };
