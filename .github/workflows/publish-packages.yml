@@ -1,6 +1,13 @@
 name: Publish Packages
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/api/**'
+      - 'packages/cli/**'
+      - 'packages/mcp/**'
+      - 'packages/schema/**'
   release:
     types: [published]
   workflow_dispatch:
@@ -13,7 +20,7 @@ on:
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
 
 env:
   NODE_VERSION: '24'
@@ -23,6 +30,56 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout versions branch
+        uses: actions/checkout@v4
+        with:
+          ref: versions
+          path: versions-branch
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Calculate version
+        id: version
+        run: |
+          cd versions-branch
+          
+          MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
+          RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
+          PATCH=$(cat VERSION_PR 2>/dev/null || echo "0")
+          
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            # Release: use tag version, reset patch
+            TAG="${{ github.event.release.tag_name }}"
+            VERSION="${TAG#v}"
+            
+            # Parse and save components
+            IFS='.' read -r NEW_MAJOR NEW_RELEASE NEW_PATCH <<< "$VERSION"
+            echo "$NEW_MAJOR" > VERSION_MAJOR
+            echo "$NEW_RELEASE" > VERSION_RELEASE
+            echo "${NEW_PATCH:-0}" > VERSION_PR
+            
+            echo "📦 Release version: ${VERSION}"
+          else
+            # Push to main: increment patch
+            PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${RELEASE}.${PATCH}"
+            
+            echo "$PATCH" > VERSION_PR
+            
+            echo "📦 Patch version: ${VERSION}"
+          fi
+          
+          echo "$VERSION" > VERSION
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          
+          # Commit version update
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR
+          git diff --staged --quiet || git commit -m "chore: bump version to ${VERSION}"
+          git push origin versions || true
+          
+          cd ..
 
       - uses: actions/setup-node@v4
         with:
@@ -36,20 +93,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-
-      - name: Get version from release tag
-        id: version
-        run: |
-          if [[ "${{ github.event_name }}" == "release" ]]; then
-            # Extract version from tag (e.g., v1.7.3 -> 1.7.3)
-            VERSION="${{ github.event.release.tag_name }}"
-            VERSION="${VERSION#v}"
-          else
-            # For manual dispatch, read from package.json
-            VERSION=$(node -p "require('./packages/api/package.json').version")
-          fi
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "📦 Publishing version: ${VERSION}"
 
       - name: Sync versions across packages
         run: |
@@ -66,13 +109,12 @@ jobs:
 
       - name: Prepare packages for publishing
         run: |
-          # Replace workspace:* with actual versions
           VERSION="${{ steps.version.outputs.version }}"
           for package in api cli mcp; do
             echo "Preparing @devpad/$package..."
             node -e "
               const fs = require('fs');
-              const pkg = JSON.parse(fs.readFileSync('packages/$package/package.json', 'utf8'));
+              const pkg = JSON.parse(fs.readFileSync('packages/${package}/package.json', 'utf8'));
               for (const depType of ['dependencies', 'devDependencies', 'peerDependencies']) {
                 if (pkg[depType]) {
                   for (const dep in pkg[depType]) {
@@ -84,39 +126,48 @@ jobs:
                   }
                 }
               }
-              fs.writeFileSync('packages/$package/package.json', JSON.stringify(pkg, null, 2));
+              fs.writeFileSync('packages/${package}/package.json', JSON.stringify(pkg, null, 2));
             "
           done
 
       - name: Publish @devpad/api
-        if: github.event.inputs.dry_run != 'true'
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/api
         run: npm publish --access public
 
       - name: Publish @devpad/cli
-        if: github.event.inputs.dry_run != 'true'
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/cli
         run: npm publish --access public
 
       - name: Publish @devpad/mcp
-        if: github.event.inputs.dry_run != 'true'
+        if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/mcp
         run: npm publish --access public
 
       - name: Dry run - show what would be published
-        if: github.event.inputs.dry_run == 'true'
+        if: ${{ github.event.inputs.dry_run == 'true' }}
         run: |
           echo "DRY RUN - Would publish:"
           for package in api cli mcp; do
             echo "  @devpad/$package@${{ steps.version.outputs.version }}"
-            cd packages/$package && npm publish --dry-run --access public 2>&1 | head -20 && cd ../..
           done
+
+      - name: Create git tag
+        if: ${{ github.event_name == 'push' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${VERSION}" -m "Release v${VERSION}" || true
+          git push origin "v${VERSION}" || true
 
       - name: Summary
         run: |
           echo "## 📦 Published Packages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Version: ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ @devpad/api" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ @devpad/cli" >> $GITHUB_STEP_SUMMARY
