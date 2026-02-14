@@ -27,7 +27,7 @@ Notes:
   - Login to production first to get your new user ID
   - The --new-user-id flag remaps all owner_id/author_id values in both databases
   - Blog posts will get new UUIDs generated during migration
-  - api_key and access_keys tables are skipped (will regenerate)
+  - access_keys tables are skipped (will regenerate)
 `;
 
 type Config = {
@@ -251,6 +251,66 @@ async function migrateTable(db: Database, table: string, columns: string[], env:
 	return stats;
 }
 
+async function migrateApiKeys(db: Database, env: string, dry_run: boolean, user_mapping: UserIdMapping): Promise<MigrationStats> {
+	console.log(`\nMigrating api_key -> api_keys`);
+	const stats: MigrationStats = { table: "api_keys", total: 0, success: 0, failed: 0 };
+
+	type OldApiKey = {
+		id: string;
+		owner_id: string;
+		hash: string;
+	};
+
+	const rows = db.query("SELECT * FROM api_key").all() as OldApiKey[];
+	stats.total = rows.length;
+
+	if (rows.length === 0) {
+		console.log("  No API keys to migrate");
+		return stats;
+	}
+
+	console.log(`  Found ${rows.length} API keys`);
+
+	const now = new Date().toISOString();
+
+	for (const row of rows) {
+		// Transform old id format (api_key{uuid}) to new format (apikey_{uuid})
+		// Old: api_key2d6f534b-dccc-4b26-b1ee-bed76e122929
+		// New: apikey_2d6f534b-dccc-4b26-b1ee-bed76e122929
+		const old_uuid = row.id.replace("api_key", "");
+		const new_id = `apikey_${old_uuid}`;
+
+		// Map owner_id to new user_id
+		const new_user_id = user_mapping.devpad_users.get(row.owner_id) ?? row.owner_id;
+
+		const new_row = {
+			id: new_id,
+			user_id: new_user_id,
+			key_hash: row.hash,
+			name: "Migrated Key",
+			note: "Migrated from VPS",
+			scope: "all",
+			enabled: 1,
+			last_used_at: null,
+			created_at: now,
+			updated_at: now,
+			deleted: 0,
+		};
+
+		const sql = buildInsert("api_keys", ["id", "user_id", "key_hash", "name", "note", "scope", "enabled", "last_used_at", "created_at", "updated_at", "deleted"], new_row);
+
+		const ok = await executeD1(sql, env, dry_run);
+		if (ok) {
+			stats.success++;
+		} else {
+			stats.failed++;
+		}
+	}
+
+	console.log(`  Migrated: ${stats.success}/${stats.total}${stats.failed > 0 ? ` (${stats.failed} failed)` : ""}`);
+	return stats;
+}
+
 async function migrateDevpadDb(db_path: string, env: string, dry_run: boolean, user_mapping: UserIdMapping): Promise<MigrationStats[]> {
 	console.log("\n========================================");
 	console.log("Migrating devpad database");
@@ -381,11 +441,20 @@ async function migrateDevpadDb(db_path: string, env: string, dry_run: boolean, u
 	];
 
 	// Tables to SKIP:
-	// - api_key: Old schema has (id, owner_id, hash), new has different structure. Users will create new keys.
 	// - session: Will regenerate on login
 
-	console.log("\n  Skipping: api_key (different schema, will regenerate)");
 	console.log("  Skipping: session (will regenerate on login)");
+
+	// Migrate api_key -> api_keys
+	try {
+		const api_keys_result = await migrateApiKeys(db, env, dry_run, user_mapping);
+		stats.push(api_keys_result);
+	} catch (e) {
+		const error = e as Error;
+		if (!error.message.includes("no such table")) {
+			console.error(`Error migrating api_key: ${error.message}`);
+		}
+	}
 
 	for (const table of tables) {
 		try {
