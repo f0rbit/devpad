@@ -8,14 +8,12 @@
 		"devpad-mcp": "dist/index.js"
 	},
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --target node",
+		"build": "bun build src/index.ts --outdir dist --target node --packages=bundle",
 		"dev": "bun run src/index.ts",
 		"clean": "rm -rf dist",
 		"prepublishOnly": "bun run build"
 	},
 	"dependencies": {
-		"@devpad/api": "workspace:*",
-		"@devpad/schema": "workspace:*",
 		"@modelcontextprotocol/sdk": "^1.17.5",
 		"zod": "^3.22.4",
 		"zod-to-json-schema": "^3.24.6"
