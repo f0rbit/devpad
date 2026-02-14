@@ -25,31 +25,35 @@ export class ApiClient {
 	private api_key: string;
 	private request_history: BufferedQueue<RequestHistoryEntry>;
 	private category: string = "api";
+	private default_headers: Record<string, string>;
+	private custom_fetch?: typeof fetch;
 
 	private credentials?: "include" | "omit" | "same-origin";
-	private auth_mode: "session" | "key";
+	private auth_mode: "session" | "key" | "cookie";
 
 	constructor(options: {
 		base_url: string;
-		api_key: string;
+		api_key?: string;
 		max_history_size?: number;
 		category?: string;
 		credentials?: "include" | "omit" | "same-origin";
-		auth_mode?: "session" | "key";
+		auth_mode?: "session" | "key" | "cookie";
+		default_headers?: Record<string, string>;
+		custom_fetch?: typeof fetch;
 	}) {
-		if (!options.api_key) {
-			throw new Error("API key is required");
-		}
+		this.auth_mode = options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : "key");
 
-		if (options.api_key.length < 10) {
-			throw new Error("API key is too short");
+		if (this.auth_mode !== "cookie") {
+			if (!options.api_key) throw new Error("API key is required");
+			if (options.api_key.length < 10) throw new Error("API key is too short");
 		}
 
 		this.base_url = options.base_url;
-		this.api_key = options.api_key;
+		this.api_key = options.api_key ?? "";
 		this.category = options.category || "api";
 		this.credentials = options.credentials;
-		this.auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
+		this.default_headers = options.default_headers ?? {};
+		this.custom_fetch = options.custom_fetch;
 		this.request_history = new ArrayBufferedQueue<RequestHistoryEntry>(options.max_history_size ?? 5);
 	}
 
@@ -82,14 +86,18 @@ export class ApiClient {
 			query,
 		});
 
-		const auth_value = this.auth_mode === "session" ? `Bearer jwt:${this.api_key.replace(/^jwt:/, "")}` : `Bearer ${this.api_key}`;
-
 		const request_headers: Record<string, string> = {
 			"Content-Type": "application/json",
-			Authorization: auth_value,
 			"X-Request-ID": requestId,
+			...this.default_headers,
 			...headers,
 		};
+
+		if (this.auth_mode === "session") {
+			request_headers.Authorization = `Bearer jwt:${this.api_key.replace(/^jwt:/, "")}`;
+		} else if (this.auth_mode === "key") {
+			request_headers.Authorization = `Bearer ${this.api_key}`;
+		}
 
 		// Initialize history entry
 		const historyEntry: RequestHistoryEntry = {
@@ -112,9 +120,12 @@ export class ApiClient {
 
 			if (this.credentials) {
 				fetchOptions.credentials = this.credentials;
+			} else if (this.auth_mode === "cookie") {
+				fetchOptions.credentials = "include";
 			}
 
-			const response = await fetch(url, fetchOptions);
+			const fetcher = this.custom_fetch ?? fetch;
+			const response = await fetcher(url, fetchOptions);
 			const duration = Date.now() - startTime;
 
 			// Update history entry with response info
@@ -234,7 +245,7 @@ export class ApiClient {
 
 		if (this.auth_mode === "session") {
 			headers.Authorization = `Bearer jwt:${this.api_key.replace(/^jwt:/, "")}`;
-		} else {
+		} else if (this.auth_mode === "key") {
 			headers["X-API-KEY"] = this.api_key;
 		}
 

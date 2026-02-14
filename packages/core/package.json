@@ -30,7 +30,7 @@
 	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
-		"@f0rbit/corpus": "^0.3.4",
+		"@f0rbit/corpus": "^0.3.5",
 		"@octokit/auth-oauth-app": "^9.0.1",
 		"@octokit/rest": "^22.0.0",
 		"@octokit/types": "^14.1.0",

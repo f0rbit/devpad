@@ -13,7 +13,7 @@ type AccessKeyUpdate = { name?: string; note?: string; enabled?: boolean };
 /**
  * Authentication mode for the API client
  */
-export type AuthMode = "session" | "key";
+export type AuthMode = "session" | "key" | "cookie";
 
 /**
  * API client with Result-wrapped operations for clean error handling
@@ -26,15 +26,17 @@ export class ApiClient {
 
 	constructor(options: {
 		base_url?: string;
-		api_key: string;
+		api_key?: string;
 		auth_mode?: AuthMode;
 		max_history_size?: number;
 		credentials?: "include" | "omit" | "same-origin";
+		default_headers?: Record<string, string>;
+		custom_fetch?: typeof fetch;
 	}) {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
-		this._api_key = options.api_key;
-		this._auth_mode = options.auth_mode || (options.api_key.startsWith("jwt:") ? "session" : "key");
+		this._api_key = options.api_key ?? "";
+		this._auth_mode = options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : options.api_key ? "key" : "cookie");
 
 		const clientOptions = {
 			base_url,
@@ -42,6 +44,8 @@ export class ApiClient {
 			max_history_size: options.max_history_size,
 			auth_mode: this._auth_mode,
 			credentials: options.credentials,
+			default_headers: options.default_headers,
+			custom_fetch: options.custom_fetch,
 		};
 
 		const auth_base_url = base_url.replace(/\/v1\/?$/, "");
@@ -530,7 +534,11 @@ export class ApiClient {
 
 	public readonly media = {
 		profiles: {
-			list: (): Promise<ApiResult<Profile[]>> => wrap(() => this.clients.media.get<Profile[]>("/profiles")),
+			list: (): Promise<ApiResult<Profile[]>> =>
+				wrap(async () => {
+					const res = await this.clients.media.get<{ profiles: Profile[] }>("/profiles");
+					return res.profiles;
+				}),
 
 			create: (data: CreateProfileInput): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.post<Profile>("/profiles", { body: data })),
 
@@ -541,7 +549,11 @@ export class ApiClient {
 			delete: (id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/profiles/${id}`)),
 
 			filters: {
-				list: (profile_id: string): Promise<ApiResult<ProfileFilter[]>> => wrap(() => this.clients.media.get<ProfileFilter[]>(`/profiles/${profile_id}/filters`)),
+				list: (profile_id: string): Promise<ApiResult<ProfileFilter[]>> =>
+					wrap(async () => {
+						const res = await this.clients.media.get<{ filters: ProfileFilter[] }>(`/profiles/${profile_id}/filters`);
+						return res.filters;
+					}),
 
 				add: (profile_id: string, data: AddFilterInput): Promise<ApiResult<ProfileFilter>> => wrap(() => this.clients.media.post<ProfileFilter>(`/profiles/${profile_id}/filters`, { body: data })),
 
@@ -559,10 +571,11 @@ export class ApiClient {
 
 		connections: {
 			list: (profile_id: string, options?: { include_settings?: boolean }): Promise<ApiResult<Account[]>> =>
-				wrap(() => {
+				wrap(async () => {
 					const query: Record<string, string> = { profile_id };
 					if (options?.include_settings) query.include_settings = "true";
-					return this.clients.media.get<Account[]>("/connections", { query });
+					const res = await this.clients.media.get<{ accounts: Account[] }>("/connections", { query });
+					return res.accounts;
 				}),
 
 			create: (data: { profile_id: string; platform: string; access_token: string; refresh_token?: string; platform_user_id?: string; platform_username?: string; token_expires_at?: string }): Promise<ApiResult<Account>> =>
@@ -582,9 +595,17 @@ export class ApiClient {
 				update: (account_id: string, settings: Record<string, unknown>): Promise<ApiResult<any>> => wrap(() => this.clients.media.put<any>(`/connections/${account_id}/settings`, { body: { settings } })),
 			},
 
-			repos: (account_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.media.get<any[]>(`/connections/${account_id}/repos`)),
+			repos: (account_id: string): Promise<ApiResult<any[]>> =>
+				wrap(async () => {
+					const res = await this.clients.media.get<{ repos: any[] }>(`/connections/${account_id}/repos`);
+					return res.repos;
+				}),
 
-			subreddits: (account_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.media.get<any[]>(`/connections/${account_id}/subreddits`)),
+			subreddits: (account_id: string): Promise<ApiResult<any[]>> =>
+				wrap(async () => {
+					const res = await this.clients.media.get<{ subreddits: any[]; username: string }>(`/connections/${account_id}/subreddits`);
+					return res.subreddits;
+				}),
 		},
 
 		credentials: {

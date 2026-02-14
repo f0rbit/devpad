@@ -1,3 +1,4 @@
+import { createSessionCookie, getSessionCookieName, validateSession } from "@devpad/core/auth";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { createMediaContext, createProviderFactory, handleCron } from "@devpad/core/services/media";
@@ -18,6 +19,7 @@ import blogRoutes from "./routes/v1/blog/index.js";
 import v1Routes from "./routes/v1/index.js";
 import { authRoutes as mediaAuthRoutes } from "./routes/v1/media/auth.js";
 import mediaRoutes from "./routes/v1/media/index.js";
+import { cookieConfig } from "./utils/cookies.js";
 
 export type ApiOptions = {
 	db?: Database;
@@ -113,6 +115,48 @@ const hostnameFor = (request: Request) => {
 	return host.toLowerCase();
 };
 
+function parseCookie(request: Request, name: string): string | undefined {
+	const header = request.headers.get("cookie");
+	if (!header) return undefined;
+	const match = header.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+	return match?.[1];
+}
+
+async function resolveAuth(request: Request, env: Bindings): Promise<{ request: Request; session_cookie?: string }> {
+	console.log(`[resolveAuth] starting, has DB: ${!!env.DB}`);
+	if (!env.DB) return { request };
+
+	const session_id = parseCookie(request, getSessionCookieName());
+	console.log(`[resolveAuth] session_id from cookie: ${session_id ? session_id.substring(0, 8) + "..." : "none"}`);
+	if (!session_id) return { request };
+
+	const db = createD1Database(env.DB);
+	const result = await validateSession(db, session_id);
+	console.log(`[resolveAuth] validation result ok: ${result.ok}`);
+	if (!result.ok) {
+		console.log(`[resolveAuth] validation error: ${JSON.stringify(result.error)}`);
+		return { request };
+	}
+
+	const headers = new Headers(request.headers);
+	headers.set(
+		"X-Auth-User",
+		JSON.stringify({
+			id: result.value.user.id,
+			github_id: result.value.user.github_id,
+			name: result.value.user.name,
+			task_view: result.value.user.task_view,
+		})
+	);
+	headers.set("X-Auth-Session-Id", result.value.session.id);
+
+	const authed = new Request(request, { headers });
+	const session_cookie = result.value.session.fresh ? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT ?? "production")) : undefined;
+
+	console.log(`[resolveAuth] injecting X-Auth-User for user: ${result.value.user.id}`);
+	return { request: authed, session_cookie };
+}
+
 export function createUnifiedWorker(handlers: UnifiedHandlers) {
 	const api = createApi();
 
@@ -120,20 +164,28 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 		async fetch(request: Request, env: Bindings, ctx: ExecutionContext): Promise<Response> {
 			const hostname = hostnameFor(request);
 			const path = new URL(request.url).pathname;
+			console.log(`[worker] ${request.method} ${hostname}${path}`);
+
+			const enriched_env = { ...env, __api: api };
 
 			if (isApiRequest(path)) {
-				return api.fetch(request, env, ctx);
+				return api.fetch(request, enriched_env, ctx);
 			}
 
-			if (hostname.startsWith("blog.")) {
-				return handlers.blog.fetch(request, env, ctx);
+			const auth = await resolveAuth(request, env);
+			console.log(`[worker] auth resolved, has X-Auth-User: ${auth.request.headers.has("X-Auth-User")}`);
+
+			const handler = hostname.startsWith("blog.") ? handlers.blog : hostname.startsWith("media.") ? handlers.media : handlers.devpad;
+
+			const response = await handler.fetch(auth.request, enriched_env, ctx);
+
+			if (auth.session_cookie) {
+				const refreshed = new Response(response.body, response);
+				refreshed.headers.append("Set-Cookie", auth.session_cookie);
+				return refreshed;
 			}
 
-			if (hostname.startsWith("media.")) {
-				return handlers.media.fetch(request, env, ctx);
-			}
-
-			return handlers.devpad.fetch(request, env, ctx);
+			return response;
 		},
 
 		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {

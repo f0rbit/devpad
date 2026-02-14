@@ -1,8 +1,8 @@
 export const cookieConfig = (environment: string) => {
-	const is_production = environment === "production";
+	const is_deployed = environment !== "development";
 	return {
-		secure: is_production,
-		domain: is_production ? ".devpad.tools" : undefined,
+		secure: is_deployed,
+		domain: is_deployed ? ".devpad.tools" : undefined,
 		same_site: "lax" as const,
 	};
 };

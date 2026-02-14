@@ -40,13 +40,19 @@ const versions = async (corpus: PostsCorpus, path: string): Promise<Result<Versi
 
 	const versionList: VersionInfo[] = [];
 
-	for await (const meta of store.list()) {
-		const firstParent = meta.parents[0];
-		versionList.push({
-			hash: meta.version,
-			parent: firstParent?.version ?? null,
-			created_at: meta.created_at,
-		});
+	try {
+		for await (const meta of store.list()) {
+			const firstParent = meta.parents[0];
+			versionList.push({
+				hash: meta.version,
+				parent: firstParent?.version ?? null,
+				created_at: meta.created_at,
+			});
+		}
+	} catch (e) {
+		const underlying = (e as any)?.cause;
+		const message = underlying?.message ?? (e as Error)?.message ?? "Storage error";
+		return err({ kind: "io_error", message });
 	}
 
 	versionList.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
@@ -57,9 +63,15 @@ const versions = async (corpus: PostsCorpus, path: string): Promise<Result<Versi
 const remove = async (corpus: PostsCorpus, path: string): Promise<Result<void, PostCorpusError>> => {
 	const store = createDynamicStore(corpus, path);
 
-	for await (const meta of store.list()) {
-		const result = await store.delete(meta.version);
-		if (!result.ok) return err(mapCorpusError(result.error));
+	try {
+		for await (const meta of store.list()) {
+			const result = await store.delete(meta.version);
+			if (!result.ok) return err(mapCorpusError(result.error));
+		}
+	} catch (e) {
+		const underlying = (e as any)?.cause;
+		const message = underlying?.message ?? (e as Error)?.message ?? "Storage error";
+		return err({ kind: "io_error", message });
 	}
 
 	return ok(undefined);
