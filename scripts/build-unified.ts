@@ -8,7 +8,7 @@ const DIST_DIR = join(ROOT_DIR, "dist");
 const APPS = {
 	devpad: { dir: join(ROOT_DIR, "apps/main"), filter: "@devpad/app" },
 	blog: { dir: join(ROOT_DIR, "apps/blog"), filter: "@devpad/blog-app" },
-	media: { dir: join(ROOT_DIR, "apps/media"), filter: "@media-timeline/website" },
+	media: { dir: join(ROOT_DIR, "apps/media"), filter: "@devpad/media-app" },
 } as const;
 
 type AppName = keyof typeof APPS;
