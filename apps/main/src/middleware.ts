@@ -162,7 +162,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 		const response = new Response(null, {
 			status: 302,
 			headers: {
-				Location: context.url.pathname,
+				Location: context.url.pathname === "/auth/callback" ? "/project" : context.url.pathname,
 				"Set-Cookie": `jwt-token=${jwtToken}; Path=/; SameSite=Lax${secure}; Max-Age=86400`,
 			},
 		});

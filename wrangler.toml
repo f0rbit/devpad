@@ -23,6 +23,7 @@ FRONTEND_URL = "https://devpad.tools"
 binding = "DB"
 database_name = "devpad-unified-db"
 database_id = "43bc9f1b-70a9-4844-b3c6-9c95e14bacbf"
+migrations_dir = "packages/schema/src/database/drizzle"
 
 [[r2_buckets]]
 binding = "BLOG_CORPUS_BUCKET"
@@ -49,6 +50,7 @@ FRONTEND_URL = "https://staging.devpad.tools"
 binding = "DB"
 database_name = "devpad-unified-db-preview"
 database_id = "e162775e-2c68-40ac-8ef4-446fd30ba24c"
+migrations_dir = "packages/schema/src/database/drizzle"
 
 [[env.preview.r2_buckets]]
 binding = "BLOG_CORPUS_BUCKET"

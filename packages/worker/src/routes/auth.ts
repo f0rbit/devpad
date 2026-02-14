@@ -48,7 +48,7 @@ app.get("/login", async c => {
 
 	setCookie(c, "github_oauth_state", state, {
 		path: "/",
-		secure: config.environment === "production",
+		secure: config.environment !== "development",
 		httpOnly: true,
 		maxAge: 60 * 10,
 		sameSite: "Lax",
@@ -76,7 +76,7 @@ app.get("/callback/github", async c => {
 	};
 
 	const callback_result = await oauth.handleGitHubCallback(db, oauth_env, code, state, stored_state);
-	if (!callback_result.ok) return c.json({ error: "OAuth callback failed" }, 500);
+	if (!callback_result.ok) return c.json({ error: "OAuth callback failed", detail: callback_result.error }, 500);
 
 	const { user: oauth_user, accessToken, sessionId } = callback_result.value;
 

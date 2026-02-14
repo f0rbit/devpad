@@ -49,7 +49,8 @@ describe("health endpoint", () => {
 		const response = await worker.fetch(request("/health"), MOCK_ENV as never, {} as never);
 		const body = await response.json();
 		expect(response.status).toBe(200);
-		expect(body).toEqual({ status: "ok" });
+		expect(body).toEqual(expect.objectContaining({ status: "ok" }));
+		expect(typeof (body as any).timestamp).toBe("string");
 	});
 });
 
