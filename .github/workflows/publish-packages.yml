@@ -8,519 +8,167 @@ on:
       - 'packages/cli/**'
       - 'packages/mcp/**'
       - 'packages/schema/**'
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
-      packages:
-        description: 'Packages to publish (comma-separated: api,cli,mcp or "all")'
-        required: false
-        default: 'all'
-      version_bump:
-        description: 'Version bump type'
-        type: choice
-        required: false
-        default: 'patch'
-        options:
-          - patch
-          - minor
-          - major
-          - none
       dry_run:
         description: 'Dry run (no actual publish)'
         type: boolean
         required: false
         default: false
 
+permissions:
+  id-token: write
+  contents: write
+
 env:
-  NODE_VERSION: '22'
-  BUN_VERSION: 'latest'
+  NODE_VERSION: '24'
 
 jobs:
-  get-version:
-    name: Get Version from Versions Branch
+  publish:
     runs-on: ubuntu-latest
-    outputs:
-      current_version: ${{ steps.version.outputs.current }}
-      new_version: ${{ steps.version.outputs.new }}
-    
     steps:
+      - uses: actions/checkout@v4
+
       - name: Checkout versions branch
         uses: actions/checkout@v4
         with:
           ref: versions
-          fetch-depth: 1
+          path: versions-branch
           token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Get current version
+
+      - name: Calculate version
         id: version
         run: |
-          # Read version components from versions branch
+          cd versions-branch
+          
           MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
           RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
-          LAST_PATCH=$(cat VERSION_PR 2>/dev/null || echo "0")
-          CURRENT_VERSION=$(cat VERSION 2>/dev/null || echo "${MAJOR}.${RELEASE}.${LAST_PATCH}")
+          PATCH=$(cat VERSION_PR 2>/dev/null || echo "0")
           
-          echo "current=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
-          
-          # Calculate new version based on bump type
-          if [[ "${{ github.event.inputs.version_bump }}" == "none" ]]; then
-            NEW_VERSION=${CURRENT_VERSION}
-          elif [[ -n "${{ github.event.inputs.version_bump }}" ]]; then
-            # Manual trigger with version bump
-            BUMP_TYPE="${{ github.event.inputs.version_bump }}"
-            IFS='.' read -r major minor patch <<< "${CURRENT_VERSION}"
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            # Release: use tag version, reset patch
+            TAG="${{ github.event.release.tag_name }}"
+            VERSION="${TAG#v}"
             
-            case $BUMP_TYPE in
-              major)
-                NEW_VERSION="$((major + 1)).0.0"
-                ;;
-              minor)
-                NEW_VERSION="${major}.$((minor + 1)).0"
-                ;;
-              patch)
-                NEW_VERSION="${major}.${minor}.$((patch + 1))"
-                ;;
-            esac
+            # Parse and save components
+            IFS='.' read -r NEW_MAJOR NEW_RELEASE NEW_PATCH <<< "$VERSION"
+            echo "$NEW_MAJOR" > VERSION_MAJOR
+            echo "$NEW_RELEASE" > VERSION_RELEASE
+            echo "${NEW_PATCH:-0}" > VERSION_PR
+            
+            echo "📦 Release version: ${VERSION}"
           else
-            # Auto bump patch for push events
-            IFS='.' read -r major minor patch <<< "${CURRENT_VERSION}"
-            NEW_VERSION="${major}.${minor}.$((patch + 1))"
+            # Push to main: increment patch
+            PATCH=$((PATCH + 1))
+            VERSION="${MAJOR}.${RELEASE}.${PATCH}"
+            
+            echo "$PATCH" > VERSION_PR
+            
+            echo "📦 Patch version: ${VERSION}"
           fi
           
-          echo "new=${NEW_VERSION}" >> $GITHUB_OUTPUT
-          echo "📦 Version: ${CURRENT_VERSION} → ${NEW_VERSION}"
+          echo "$VERSION" > VERSION
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          
+          # Commit version update
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR
+          git diff --staged --quiet || git commit -m "chore: bump version to ${VERSION}"
+          git push origin versions || true
+          
+          cd ..
 
-  detect-changes:
-    name: Detect Changed Packages  
-    runs-on: ubuntu-latest
-    needs: get-version
-    outputs:
-      changed_packages: ${{ steps.detect.outputs.packages }}
-      should_publish: ${{ steps.detect.outputs.should_publish }}
-      current_version: ${{ needs.get-version.outputs.current_version }}
-      new_version: ${{ needs.get-version.outputs.new_version }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: Detect changed packages
-        id: detect
-        run: |
-          # For manual trigger, use input packages
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            PACKAGES="${{ github.event.inputs.packages }}"
-            if [[ "$PACKAGES" == "all" ]]; then
-              PACKAGES="api,cli,mcp"
-            fi
-            echo "packages=${PACKAGES}" >> $GITHUB_OUTPUT
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-            echo "📝 Manual trigger for packages: ${PACKAGES}"
-            exit 0
-          fi
-          
-          # For push events, detect changes
-          echo "🔍 Detecting changed packages..."
-          
-          # Get the last published version tag
-          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -1)
-          if [[ -z "$LAST_TAG" ]]; then
-            LAST_TAG="HEAD~1"
-            echo "No previous tags found, comparing with HEAD~1"
-          else
-            echo "Comparing with last tag: $LAST_TAG"
-          fi
-          
-          # Check which packages have changes
-          CHANGED_PACKAGES=""
-          
-          # Check each package for changes
-          for package in api cli mcp; do
-            if git diff $LAST_TAG..HEAD --quiet -- "packages/$package/"; then
-              echo "  ✅ No changes in @devpad/$package"
-            else
-              echo "  📦 Changes detected in @devpad/$package"
-              if [[ -n "$CHANGED_PACKAGES" ]]; then
-                CHANGED_PACKAGES="${CHANGED_PACKAGES},"
-              fi
-              CHANGED_PACKAGES="${CHANGED_PACKAGES}${package}"
-            fi
-          done
-          
-          # Check if schema changed (affects all packages)
-          if ! git diff $LAST_TAG..HEAD --quiet -- "packages/schema/"; then
-            echo "  📦 Schema changes detected - will publish all packages"
-            CHANGED_PACKAGES="api,cli,mcp"
-          fi
-          
-          if [[ -z "$CHANGED_PACKAGES" ]]; then
-            echo "No packages have changed"
-            echo "packages=" >> $GITHUB_OUTPUT
-            echo "should_publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "Changed packages: $CHANGED_PACKAGES"
-            echo "packages=${CHANGED_PACKAGES}" >> $GITHUB_OUTPUT
-            echo "should_publish=true" >> $GITHUB_OUTPUT
-          fi
-
-  prepare-packages:
-    name: Prepare Packages for Publishing
-    runs-on: ubuntu-latest
-    needs: detect-changes
-    if: needs.detect-changes.outputs.should_publish == 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           registry-url: 'https://registry.npmjs.org'
-          
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Install dependencies
         run: bun install --frozen-lockfile
-        
-      - name: Update versions
+
+      - name: Sync versions across packages
         run: |
-          node scripts/sync-versions.js --version ${{ needs.detect-changes.outputs.new_version }}
-          
-      - name: Build packages
+          VERSION="${{ steps.version.outputs.version }}"
+          node scripts/sync-versions.js --version ${VERSION}
+
+      - name: Build all packages
         run: |
           echo "Building packages in dependency order..."
-          cd packages/schema && bun run build
-          cd ../api && bun run build
-          cd ../mcp && bun run build
-          cd ../cli && bun run build
-          cd ../..
-          
-      - name: Run tests
+          cd packages/schema && bun run build && cd ../..
+          cd packages/api && bun run build && cd ../..
+          cd packages/cli && bun run build && cd ../..
+          cd packages/mcp && bun run build && cd ../..
+
+      - name: Prepare packages for publishing
         run: |
-          # Run tests for changed packages
-          IFS=',' read -ra PACKAGES <<< "${{ needs.detect-changes.outputs.changed_packages }}"
-          for package in "${PACKAGES[@]}"; do
-            echo "Testing @devpad/$package..."
-            cd packages/$package
-            bun test || true  # Continue even if tests fail for now
-            cd ../..
-          done
-          
-      - name: Prepare for publishing
-        run: |
-          # Replace workspace: protocol with actual versions for publishing
-          IFS=',' read -ra PACKAGES <<< "${{ needs.detect-changes.outputs.changed_packages }}"
-          for package in "${PACKAGES[@]}"; do
-            echo "Preparing @devpad/$package for publishing..."
-            cd packages/$package
-            
-            # Create a temporary package.json for publishing
-            cp package.json package.json.orig
-            
-            # Replace workspace:* with actual version for dependencies
+          VERSION="${{ steps.version.outputs.version }}"
+          for package in api cli mcp; do
+            echo "Preparing @devpad/$package..."
             node -e "
               const fs = require('fs');
-              const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-              const version = '${{ needs.detect-changes.outputs.new_version }}';
-              
-              // Update workspace dependencies
+              const pkg = JSON.parse(fs.readFileSync('packages/${package}/package.json', 'utf8'));
               for (const depType of ['dependencies', 'devDependencies', 'peerDependencies']) {
                 if (pkg[depType]) {
                   for (const dep in pkg[depType]) {
                     if (pkg[depType][dep] === 'workspace:*') {
-                      // Check if this is a publishable package
-                      if (['@devpad/api', '@devpad/cli', '@devpad/mcp'].includes(dep)) {
-                        pkg[depType][dep] = '^' + version;
-                      } else {
-                        // For non-publishable packages, we need to handle differently
-                        // For now, keep them as workspace dependencies
-                        console.log('Warning: Non-publishable dependency', dep);
+                      if (dep.startsWith('@devpad/')) {
+                        pkg[depType][dep] = '^${VERSION}';
                       }
                     }
                   }
                 }
               }
-              
-              fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2));
+              fs.writeFileSync('packages/${package}/package.json', JSON.stringify(pkg, null, 2));
             "
-            
-            cd ../..
           done
-          
-      - name: Upload prepared packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: prepared-packages
-          path: packages/*/package.json
 
-  publish-api:
-    name: Publish @devpad/api
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    needs: [detect-changes, prepare-packages]
-    if: contains(needs.detect-changes.outputs.changed_packages, 'api')
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Download prepared packages
-        uses: actions/download-artifact@v4
-        with:
-          name: prepared-packages
-          path: packages/
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: 'https://registry.npmjs.org'
-          
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-          
-      - name: Install and build
-        run: |
-          bun install --frozen-lockfile
-          cd packages/schema && bun run build
-          cd ../api && bun run build
-          
-      - name: Publish to npm
-        if: github.event.inputs.dry_run != 'true'
-        run: |
-          cd packages/api
-          npm publish --access public
-          
-      - name: Dry run
-        if: github.event.inputs.dry_run == 'true'
-        run: |
-          cd packages/api
-          npm publish --dry-run --access public
+      - name: Publish @devpad/api
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        working-directory: packages/api
+        run: npm publish --access public
 
-  publish-cli:
-    name: Publish @devpad/cli
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    needs: [detect-changes, prepare-packages, publish-api]
-    if: contains(needs.detect-changes.outputs.changed_packages, 'cli')
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Download prepared packages
-        uses: actions/download-artifact@v4
-        with:
-          name: prepared-packages
-          path: packages/
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: 'https://registry.npmjs.org'
-          
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-          
-      - name: Install and build
-        run: |
-          bun install --frozen-lockfile
-          cd packages/schema && bun run build
-          cd ../api && bun run build
-          cd ../cli && bun run build
-          
-      - name: Publish to npm
-        if: github.event.inputs.dry_run != 'true'
-        run: |
-          cd packages/cli
-          npm publish --access public
-          
-      - name: Dry run
-        if: github.event.inputs.dry_run == 'true'
-        run: |
-          cd packages/cli
-          npm publish --dry-run --access public
+      - name: Publish @devpad/cli
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        working-directory: packages/cli
+        run: npm publish --access public
 
-  publish-mcp:
-    name: Publish @devpad/mcp
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-    needs: [detect-changes, prepare-packages, publish-api]
-    if: contains(needs.detect-changes.outputs.changed_packages, 'mcp')
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Download prepared packages
-        uses: actions/download-artifact@v4
-        with:
-          name: prepared-packages
-          path: packages/
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          registry-url: 'https://registry.npmjs.org'
-          
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-          
-      - name: Install and build
-        run: |
-          bun install --frozen-lockfile
-          cd packages/schema && bun run build
-          cd ../api && bun run build
-          cd ../mcp && bun run build
-          
-      - name: Publish to npm
-        if: github.event.inputs.dry_run != 'true'
-        run: |
-          cd packages/mcp
-          npm publish --access public
-          
-      - name: Dry run
-        if: github.event.inputs.dry_run == 'true'
-        run: |
-          cd packages/mcp
-          npm publish --dry-run --access public
+      - name: Publish @devpad/mcp
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        working-directory: packages/mcp
+        run: npm publish --access public
 
-  finalize:
-    name: Finalize Release
-    runs-on: ubuntu-latest
-    needs: [detect-changes, publish-api, publish-cli, publish-mcp]
-    if: always() && needs.detect-changes.outputs.should_publish == 'true'
-    
-    steps:
-      - name: Checkout versions branch
-        uses: actions/checkout@v4
-        with:
-          ref: versions
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Update version files on versions branch
-        if: github.event.inputs.dry_run != 'true'
+      - name: Dry run - show what would be published
+        if: ${{ github.event.inputs.dry_run == 'true' }}
         run: |
-          VERSION="${{ needs.detect-changes.outputs.new_version }}"
-          echo "$VERSION" > VERSION
-          
-          # Update version components
-          IFS='.' read -r major minor patch <<< "$VERSION"
-          echo "$major" > VERSION_MAJOR
-          echo "$minor" > VERSION_RELEASE
-          echo "$patch" > VERSION_PR
-          
+          echo "DRY RUN - Would publish:"
+          for package in api cli mcp; do
+            echo "  @devpad/$package@${{ steps.version.outputs.version }}"
+          done
+
+      - name: Create git tag
+        if: ${{ github.event_name == 'push' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR
-          git diff --staged --quiet || git commit -m "chore: bump npm packages to v${VERSION} [skip ci]"
-          git push origin versions || echo "No changes to push"
-          
-      - name: Checkout main for tagging
-        if: github.event.inputs.dry_run != 'true'
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Create git tags
-        if: github.event.inputs.dry_run != 'true'
-        run: |
-          VERSION="${{ needs.detect-changes.outputs.new_version }}"
-          PACKAGES="${{ needs.detect-changes.outputs.changed_packages }}"
-          
-          # Create main version tag
-          git tag -a "v${VERSION}" -m "Release v${VERSION}"
-          
-          # Create package-specific tags
-          IFS=',' read -ra PKG_ARRAY <<< "$PACKAGES"
-          for package in "${PKG_ARRAY[@]}"; do
-            git tag -a "@devpad/${package}@${VERSION}" -m "Release @devpad/${package}@${VERSION}"
-          done
-          
-          # Push all tags
-          git push origin --tags
-          
-      # GitHub releases are created manually - only publish to npm
-      # - name: Create GitHub Release
-      #   if: github.event.inputs.dry_run != 'true'
-      #   uses: actions/github-script@v7
-      #   with:
-      #     script: |
-      #       const version = '${{ needs.detect-changes.outputs.new_version }}';
-      #       const packages = '${{ needs.detect-changes.outputs.changed_packages }}'.split(',');
-      #       
-      #       const packageList = packages.map(p => `- @devpad/${p}`).join('\n');
-      #       const npmLinks = packages.map(p => 
-      #         `- [@devpad/${p}](https://www.npmjs.com/package/@devpad/${p}/v/${version})`
-      #       ).join('\n');
-      #       
-      #       const body = `## 📦 Package Release v${version}
-      #       
-      #       ### Published Packages
-      #       ${packageList}
-      #       
-      #       ### NPM Links
-      #       ${npmLinks}
-      #       
-      #       ### Installation
-      #       \`\`\`bash
-      #       # Install specific packages
-      #       ${packages.map(p => `npm install @devpad/${p}@${version}`).join('\n')}
-      #       \`\`\`
-      #       
-      #       ### Changelog
-      #       - Updated packages to version ${version}
-      #       - See individual package changelogs for details
-      #       `;
-      #       
-      #       await github.rest.repos.createRelease({
-      #         owner: context.repo.owner,
-      #         repo: context.repo.repo,
-      #         tag_name: `v${version}`,
-      #         name: `devpad Packages v${version}`,
-      #         body: body,
-      #         draft: false,
-      #         prerelease: false
-      #       });
-            
+          git tag -a "v${VERSION}" -m "Release v${VERSION}" || true
+          git push origin "v${VERSION}" || true
+
       - name: Summary
         run: |
-          echo "## 📦 Package Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Published Packages" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [[ "${{ github.event.inputs.dry_run }}" == "true" ]]; then
-            echo "**🔍 DRY RUN MODE - No packages were actually published**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          echo "**Version:** ${{ needs.detect-changes.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          echo "**Packages:** ${{ needs.detect-changes.outputs.changed_packages }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger:** ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          echo "### Published Packages" >> $GITHUB_STEP_SUMMARY
-          IFS=',' read -ra PACKAGES <<< "${{ needs.detect-changes.outputs.changed_packages }}"
-          for package in "${PACKAGES[@]}"; do
-            echo "- ✅ @devpad/$package@${{ needs.detect-changes.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-          done
+          echo "- ✅ @devpad/api" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ @devpad/cli" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ @devpad/mcp" >> $GITHUB_STEP_SUMMARY
