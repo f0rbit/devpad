@@ -2,17 +2,15 @@
 import DevpadLogo from "@/components/solid/DevpadLogo";
 import GithubLogin from "@/components/solid/GithubLogin";
 import Layout from "@/layouts/Layout.astro";
-import ExternalLink from "lucide-solid/icons/external-link";
+import { Badge, Button, Stat, Stepper, Step } from "@f0rbit/ui";
 
 const keywords = [
-	// One-word keywords
 	"devpad",
 	"tasks",
 	"projects",
 	"management",
 	"developers",
 
-	// Two-word keywords
 	"project management",
 	"task tracking",
 	"code scanning",
@@ -30,7 +28,6 @@ const keywords = [
 	"task editor",
 	"project goals",
 
-	// Three-word keywords
 	"developer project management",
 	"github task tracking",
 	"todo comment scanning",
@@ -46,111 +43,235 @@ const keywords = [
 	canonical="https://devpad.tools"
 >
 	<body>
-		<main class="landing-page" style="display: grid; gap: 100px; width: 80vw; max-width: 1000px; justify-items: center; justify-content: center;">
-			<div></div>
-			<br />
-			<section id="hero" style="width: 100%">
-				<h1 class="flex-row" style="gap: 20px; justify-content: center;">
-					<DevpadLogo size={48} client:load />
-					<span style="font-size: 3rem;">devpad</span>
-				</h1>
-				<div style="height: 75px"></div>
-				<div class="mobile-grid">
-					<div style="width: 100%; display: flex; flex-direction: column; gap: 20px; justify-content: center; align-items: center;">
-						<p style="font-size: 1.5rem; text-align: center">
-							scan & track <code>@todo</code> comments
-						</p>
-						<p style="margin-top: -19px; font-size: 1.1rem; color: var(--text-tertiary)">& way more</p>
-						<div style="font-size: 1.2rem">
-							<GithubLogin size={30} client:load />
-						</div>
-					</div>
-					<img src="/hero-scan.png" alt="Scan codebase into tasks" />
-				</div>
-			</section>
-			<br />
-			<section id="projects" style="display: flex; flex-direction: column; gap: 25px;">
-				<h2 style="text-align: center">project management</h2>
-				<div class="mobile-grid">
-					<p>
-						devpad offers a dead simple yet powerful way to manage your ever-increasing list of projects. with options for visibility, development progress, and the abiltiy to
-						specify separate github & deployment links for each project, all of your projects can be managed in a single place. when linking to a github repo, devpad offers the
-						ability to scan the codebase for tasks, automatically updating, creating or deleting tasks for you.
-						<a style="margin-top: 10px;" class="flex-row" href="/project">
-							<span>projects</span>
-							<ExternalLink />
-						</a>
-					</p>
-					<img src="/project-creator.png" alt="project creator dialog" />
-					<img src="/project-api.png" alt="devpad projects api" />
-					<p>
-						when all your projects have been setup, you can make use of devpad's built-in api to query your projects, perfect for integrating with your portfolio website, or other
-						projects. with this api, you can build your own extensions, keeping this application as the only place to manage your projects.
-						<a style="margin-top: 10px;" class="flex-row" href="/docs">
-							<span>api docs</span>
-							<ExternalLink />
-						</a>
-					</p>
-				</div>
-			</section>
-			<section id="tasks" style="display: flex; flex-direction: column; gap: 25px;">
-				<h2 style="text-align: center">task management</h2>
-				<div class="mobile-grid">
-					<p>
-						keeping track of everything you need to do for a project is a pain. devpad offers a simple way to add new tasks, attach them to a project, and add a summary,
-						description, give due dates and assign priorities. when integrated with the project manager, you can update these tasks automatically directly from the comments in your
-						codebase, with just enough user verification to make sure everything is how you want it.
-						<a style="margin-top: 10px;" class="flex-row" href="/todo">
-							<span>tasks</span>
-							<ExternalLink />
-						</a>
-					</p>
-					<img src="/task-view.png" alt="Task grid view" />
-					<img src="/scan-update.png" alt="Update dialog for task scanning" />
-					<p>
-						the task editor allows you to assign tags to each tasks, allowing for powerful searching & filtering. similar to the project manager, all of this data is available via
-						the built-in api, allowing you to hook into your task list from anywhere. the possibilties are endless.
-					</p>
-				</div>
-			</section>
-			<!-- TODO: add testimonials 
+		<nav class="landing-nav row row-between">
+			<a href="/" class="row" style="gap: var(--space-sm); text-decoration: none; color: inherit;">
+				<DevpadLogo size={24} client:load />
+				<span class="font-medium">devpad</span>
+			</a>
+			<GithubLogin client:load />
+		</nav>
 
-        id="testimonials"
-        style="display: flex; flex-direction: column; gap: 25px;"
-      >
-        <h2 style="text-align: center">testimonials</h2>
-        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-          
-        </div>
-      </section>
-      <br /> -->
-			<section id="how-it-works" style="display: flex; flex-direction: column; gap: 25px;">
-				<h2 style="text-align: center">how it works</h2>
-				<div class="triple-grid">
-					<div>
-						<img src="/import-project.png" alt="Import project from github" />
-						<p>1. import project</p>
+		<section class="landing-hero">
+			<div class="dot-grid"></div>
+			<div class="cluster" style="justify-content: center;">
+				<Badge client:load>TypeScript</Badge>
+				<Badge client:load>Open Source</Badge>
+				<Badge client:load>Self-hosted</Badge>
+			</div>
+			<h1 style="font-size: 2.5rem; font-weight: 600; margin: 0;">devpad</h1>
+			<p class="text-lg text-muted hero-description">
+				development lifecycle tools. track projects, scan codebases, publish blogs, aggregate media.
+			</p>
+			<div class="row">
+				<a href="/project" style="text-decoration: none;">
+					<Button client:load variant="primary">get started</Button>
+				</a>
+				<a href="/docs" style="text-decoration: none;">
+					<Button client:load variant="secondary">view docs</Button>
+				</a>
+			</div>
+			<div class="hero-stats">
+				<Stat client:load value="5" label="Apps" />
+				<Stat client:load value="300+" label="Tests" />
+				<Stat client:load value="Zero" label="Exceptions" />
+			</div>
+		</section>
+
+		<section class="landing-section">
+			<h2 class="text-xl font-bold" style="margin-bottom: var(--space-lg);">features</h2>
+			<div class="grid grid-2">
+				<div class="card card-flat">
+					<div class="card-header">
+						<span class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M2 10h20"/></svg>
+						</span>
+						<h3 class="card-title">Project Management</h3>
 					</div>
-					<div>
-						<img src="/check-for-updates.png" alt="Scan repo for updates" />
-						<p>2. check for updates</p>
-					</div>
-					<div>
-						<img src="/scan-updates.png" alt="Accept updates from scan" />
-						<p>3. accept updates</p>
-					</div>
+					<p class="card-description">organize side projects with GitHub integration, versioning, milestones, and goal tracking.</p>
 				</div>
-			</section>
-			<br />
-			<section id="end" style="display: flex; flex-direction: column; gap: 25px; align-items: center;">
-				<h2 style="text-align: center">let's get started</h2>
-				<GithubLogin size={30} client:load />
-			</section>
-			<br />
-			<br />
-		</main>
-		<footer>
-			<p>© 2025 devpad</p>
+				<div class="card card-flat">
+					<div class="card-header">
+						<span class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+						</span>
+						<h3 class="card-title">Task Scanning</h3>
+					</div>
+					<p class="card-description">scan your codebase for @todo comments. automatic detection, smart tagging, and priority assignment.</p>
+				</div>
+				<div class="card card-flat">
+					<div class="card-header">
+						<span class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+						</span>
+						<h3 class="card-title">Blog Platform</h3>
+					</div>
+					<p class="card-description">write and publish with markdown. categories, tags, project linking, and a full API.</p>
+				</div>
+				<div class="card card-flat">
+					<div class="card-header">
+						<span class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+						</span>
+						<h3 class="card-title">Media Timeline</h3>
+					</div>
+					<p class="card-description">aggregate activity from GitHub, Reddit, Twitter and more into a unified timeline.</p>
+				</div>
+			</div>
+		</section>
+
+		<section class="landing-section">
+			<h2 class="text-xl font-bold" style="margin-bottom: var(--space-lg);">how it works</h2>
+			<Stepper client:load orientation="vertical">
+				<Step client:load title="connect" description="link your GitHub account to import repositories" status="completed" />
+				<Step client:load title="scan" description="devpad scans your codebase for TODO comments and extracts tasks" status="completed" />
+				<Step client:load title="track" description="manage tasks, set milestones, and track progress across projects" status="completed" />
+			</Stepper>
+		</section>
+
+		<section class="landing-section">
+			<h2 class="text-xl font-bold" style="margin-bottom: var(--space-lg);">explore</h2>
+			<div class="grid grid-2">
+				<a href="/project" class="explore-link">
+					<div class="card card-interactive">
+						<div class="card-header">
+							<h3 class="card-title">projects</h3>
+						</div>
+						<p class="card-description">manage your project portfolio</p>
+					</div>
+				</a>
+				<a href="/todo" class="explore-link">
+					<div class="card card-interactive">
+						<div class="card-header">
+							<h3 class="card-title">tasks</h3>
+						</div>
+						<p class="card-description">track and organize your work</p>
+					</div>
+				</a>
+				<a href="https://blog.devpad.tools" class="explore-link">
+					<div class="card card-interactive">
+						<div class="card-header">
+							<h3 class="card-title">blog</h3>
+						</div>
+						<p class="card-description">write and publish articles</p>
+					</div>
+				</a>
+				<a href="https://media.devpad.tools" class="explore-link">
+					<div class="card card-interactive">
+						<div class="card-header">
+							<h3 class="card-title">media</h3>
+						</div>
+						<p class="card-description">your digital footprint</p>
+					</div>
+				</a>
+			</div>
+		</section>
+
+		<section class="landing-section stack" style="text-align: center; align-items: center;">
+			<h2 class="text-xl font-bold">ready to get started?</h2>
+			<p class="text-muted">sign in with GitHub to begin.</p>
+			<GithubLogin client:load />
+		</section>
+
+		<footer class="landing-footer text-sm text-faint">
+			devpad.tools &middot; &copy; 2026
 		</footer>
 	</body>
 </Layout>
+
+<style>
+	.landing-nav {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: var(--space-md) var(--space-md);
+		width: 100%;
+		box-sizing: border-box;
+	}
+
+	.landing-hero {
+		position: relative;
+		text-align: center;
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 8rem var(--space-lg);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-md);
+	}
+
+	.dot-grid {
+		position: absolute;
+		inset: 0;
+		overflow: hidden;
+		pointer-events: none;
+		mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black 20%, transparent 70%);
+		-webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black 20%, transparent 70%);
+	}
+
+	.dot-grid::before {
+		content: "";
+		position: absolute;
+		inset: -50%;
+		width: 200%;
+		height: 200%;
+		background-image: radial-gradient(circle at center, var(--border) 1.5px, transparent 1.5px);
+		background-size: 32px 32px;
+		opacity: 0.5;
+		animation: dot-wave 25s linear infinite;
+	}
+
+	@keyframes dot-wave {
+		0% { transform: translate(0, 0); }
+		100% { transform: translate(32px, 32px); }
+	}
+
+	.landing-section {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: var(--space-xl) var(--space-md);
+		width: 100%;
+		box-sizing: border-box;
+		border-top: 1px solid var(--border);
+	}
+
+	.hero-stats {
+		display: flex;
+		gap: var(--space-xl);
+		justify-content: center;
+		padding-top: var(--space-lg);
+		border-top: 1px solid var(--border);
+		width: 100%;
+	}
+
+	.hero-description {
+		max-width: 500px;
+		margin: 0;
+	}
+
+	.explore-link {
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.landing-footer {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: var(--space-xl) var(--space-md);
+		text-align: center;
+	}
+
+	@media (max-width: 768px) {
+		.landing-hero {
+			padding: 4rem var(--space-md);
+		}
+		.hero-stats {
+			gap: var(--space-lg);
+		}
+	}
+
+	@media (max-width: 480px) {
+		.landing-hero {
+			padding: 3rem var(--space-sm);
+		}
+	}
+</style>
