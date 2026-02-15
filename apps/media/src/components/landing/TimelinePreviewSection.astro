@@ -2,36 +2,36 @@
 import TimelinePreview from "./TimelinePreview";
 ---
 
-<section id="preview" class="timeline-preview-section">
-	<h2>See it in action</h2>
-	<p class="description">A unified view of your commits, posts, and thoughts.</p>
+<section id="preview" class="landing-section">
+	<h2 class="section-title">See it in action</h2>
+	<p class="text-muted" style="text-align: center; margin: 0;">A unified view of your commits, posts, and thoughts.</p>
 	<div class="timeline-demo-container">
 		<TimelinePreview client:load />
 	</div>
 </section>
 
 <style>
-	.timeline-preview-section {
+	.landing-section {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: calc(var(--space-xl) * 1.5) var(--space-md);
+		width: 100%;
+		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-		margin-top: 5rem;
+		gap: var(--space-lg);
 	}
 
-	.timeline-preview-section h2 {
+	.section-title {
 		text-align: center;
-	}
-
-	.timeline-preview-section .description {
-		text-align: center;
+		margin: 0;
 	}
 
 	.timeline-demo-container {
-		border: 1px solid var(--input-border);
+		border: 1px solid var(--border);
 		border-radius: 4px;
 		padding-left: 10px;
 		padding-top: 4px;
 		padding-bottom: 4px;
-		margin-top: 8px;
 	}
 </style>

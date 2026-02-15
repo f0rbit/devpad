@@ -1,22 +1,29 @@
 ---
-
+import { Button } from "@f0rbit/ui";
 ---
 
-<section class="cta-section">
-	<h2>Ready to see your story?</h2>
-	<p class="description">Updated Live. Free API. Endless possibilities.</p>
-	<a href="/connections" class="btn" style="margin-top: 8px;">Get Started</a>
+<section class="landing-section" style="align-items: center; text-align: center;">
+	<h2 class="section-title">Ready to see your story?</h2>
+	<p class="text-muted">Updated Live. Free API. Endless possibilities.</p>
+	<a href="/connections" style="text-decoration: none;">
+		<Button client:load variant="primary">Get Started</Button>
+	</a>
 </section>
 
 <style>
-	.cta-section {
+	.landing-section {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: calc(var(--space-xl) * 2) var(--space-md);
+		width: 100%;
+		box-sizing: border-box;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		gap: var(--space-lg);
+	}
+
+	.section-title {
 		text-align: center;
-		gap: 8px;
-		padding-top: 32px;
-		margin-top: 4rem;
-		margin-bottom: 5rem;
+		margin: 0;
 	}
 </style>
