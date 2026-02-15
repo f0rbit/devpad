@@ -177,7 +177,13 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 
 			const handler = hostname.startsWith("blog.") ? handlers.blog : hostname.startsWith("media.") ? handlers.media : handlers.devpad;
 
-			const response = await handler.fetch(auth.request, enriched_env, ctx);
+			let response: Response;
+			try {
+				response = await handler.fetch(auth.request, enriched_env, ctx);
+			} catch (err) {
+				console.error(`[worker] Astro handler threw for ${hostname}${path}:`, err);
+				response = new Response("Not Found", { status: 404 });
+			}
 
 			if (auth.session_cookie) {
 				const refreshed = new Response(response.body, response);
