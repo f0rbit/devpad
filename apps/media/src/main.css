@@ -60,21 +60,25 @@
 
 .unified-header__apps {
 	display: flex;
-	gap: 12px;
+	gap: 5px;
 	align-items: center;
+	margin-left: auto;
+	margin-right: 16px;
 }
 
 .unified-header__app {
 	color: var(--accent);
 	text-decoration: none;
-	font-size: 0.875rem;
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1;
 	transition: filter 0.15s;
 }
 
 .unified-header__app.active {
 	color: var(--fg);
 	text-decoration: underline;
-	text-underline-offset: 4px;
+	text-underline-offset: 2px;
 }
 
 .unified-header__app:hover {
