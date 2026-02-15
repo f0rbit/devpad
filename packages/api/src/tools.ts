@@ -331,6 +331,16 @@ export const tools: Record<string, ToolDefinition> = {
 		execute: async (client, input) => unwrap(await client.user.preferences(input)),
 	},
 
+	devpad_activity_ai: {
+		name: "devpad_activity_ai",
+		description: "Get AI activity feed - shows recent actions made via API/MCP grouped into sessions by time window",
+		inputSchema: z.object({
+			limit: z.number().optional().describe("Max sessions to return (default 20)"),
+			since: z.string().optional().describe("Only show activity after this ISO date"),
+		}),
+		execute: async (client, input) => unwrap(await client.activity.ai(input)),
+	},
+
 	devpad_blog_posts_list: {
 		name: "devpad_blog_posts_list",
 		description: "List blog posts with optional filters",

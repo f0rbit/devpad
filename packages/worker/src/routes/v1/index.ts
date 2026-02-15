@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { AppContext } from "../../bindings.js";
+import activity from "./activity.js";
 import goals from "./goals.js";
 import keys from "./keys.js";
 import milestones from "./milestones.js";
@@ -20,6 +21,7 @@ app.route("/goals", goals);
 app.route("/keys", keys);
 app.route("/user", user);
 app.route("/tags", tags);
+app.route("/activity", activity);
 
 app.route("/projects", scanning);
 

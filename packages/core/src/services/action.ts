@@ -3,7 +3,7 @@ import type { ActionType } from "@devpad/schema/database";
 import { action, todo_updates } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { getProjectById, getUserProjectMap } from "./projects.js";
 import { getTask } from "./tasks.js";
@@ -107,4 +107,101 @@ export async function getUserHistory(db: Database, user_id: string): Promise<Res
 	if (!actions_result.ok) return actions_result;
 
 	return ok((actions_result.value as HistoryAction[]).sort(sortByDate));
+}
+
+export type AISession = {
+	started_at: string;
+	ended_at: string;
+	action_count: number;
+	actions: ActionWithData[];
+	entities_touched: string[];
+	summary: string;
+};
+
+export async function getAIActivity(db: Database, user_id: string, options?: { limit?: number; since?: string }): Promise<Result<AISession[], ServiceError>> {
+	const conditions = [eq(action.owner_id, user_id), eq(action.channel, "api")];
+	if (options?.since) {
+		conditions.push(gt(action.created_at, options.since));
+	}
+
+	const raw_data = await db
+		.select()
+		.from(action)
+		.where(and(...conditions))
+		.orderBy(desc(action.created_at));
+
+	const project_map_result = await getUserProjectMap(db, user_id);
+	if (!project_map_result.ok) return project_map_result;
+	const project_map = project_map_result.value;
+
+	const actions: ActionWithData[] = raw_data.map(a => {
+		const action_data = (a.data ?? {}) as ActionData;
+		const p = action_data.project_id ? project_map[action_data.project_id] : undefined;
+		if (p) {
+			action_data.href = p.project_id;
+			action_data.name = p.name;
+		}
+		return { ...a, data: action_data };
+	});
+
+	const SESSION_GAP_MS = 10 * 60 * 1000;
+	const sessions: AISession[] = [];
+	let current_session: ActionWithData[] = [];
+
+	for (const a of actions) {
+		if (current_session.length === 0) {
+			current_session.push(a);
+			continue;
+		}
+
+		const prev_time = new Date(current_session[current_session.length - 1].created_at).getTime();
+		const curr_time = new Date(a.created_at).getTime();
+
+		if (Math.abs(prev_time - curr_time) <= SESSION_GAP_MS) {
+			current_session.push(a);
+		} else {
+			sessions.push(buildSession(current_session));
+			current_session = [a];
+		}
+	}
+
+	if (current_session.length > 0) {
+		sessions.push(buildSession(current_session));
+	}
+
+	const limit = options?.limit ?? 20;
+	return ok(sessions.slice(0, limit));
+}
+
+function buildSession(actions: ActionWithData[]): AISession {
+	const sorted = [...actions].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+	const started_at = sorted[0].created_at;
+	const ended_at = sorted[sorted.length - 1].created_at;
+
+	const entity_ids = new Set<string>();
+	const type_counts: Record<string, number> = {};
+
+	for (const a of actions) {
+		const data = a.data;
+		if (data.task_id) entity_ids.add(data.task_id);
+		if (data.project_id) entity_ids.add(data.project_id);
+
+		const base_type = a.type.replace(/^(CREATE|UPDATE|DELETE)_/, "").toLowerCase();
+		const verb = a.type.startsWith("CREATE") ? "Created" : a.type.startsWith("UPDATE") ? "Updated" : "Deleted";
+		const key = `${verb} ${base_type}`;
+		type_counts[key] = (type_counts[key] ?? 0) + 1;
+	}
+
+	const summary = Object.entries(type_counts)
+		.map(([key, count]) => `${key}${count > 1 ? "s" : ""}: ${count}`)
+		.join(", ");
+
+	return {
+		started_at,
+		ended_at,
+		action_count: actions.length,
+		actions: sorted,
+		entities_touched: Array.from(entity_ids),
+		summary,
+	};
 }
