@@ -50,6 +50,7 @@ type PostEditorProps = {
 	post?: Post;
 	categories: Category[];
 	projects?: Project[];
+	initialProjectIds?: string[];
 	onSave?: (data: PostFormData) => Promise<void>;
 	onFormReady?: (getFormData: () => PostFormData) => void;
 };
@@ -78,7 +79,7 @@ const PostEditor: Component<PostEditorProps> = props => {
 	const [format, setFormat] = createSignal<"md" | "adoc">(props.post?.format ?? "md");
 	const [category, setCategory] = createSignal(props.post?.category ?? "root");
 	const [tags, setTags] = createSignal<string[]>(props.post?.tags ?? []);
-	const [projectIds, setProjectIds] = createSignal<string[]>(props.post?.project_ids ?? []);
+	const [projectIds, setProjectIds] = createSignal<string[]>(props.post?.project_ids ?? props.initialProjectIds ?? []);
 	const [publishAt, setPublishAt] = createSignal<Date | null>(props.post?.publish_at ? new Date(props.post.publish_at) : null);
 	const [categories, setCategories] = createSignal<Category[]>(props.categories ?? []);
 

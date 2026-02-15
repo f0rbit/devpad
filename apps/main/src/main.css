@@ -969,3 +969,48 @@ details[open] .down-arrow {
 .tag-grid .tag-badge {
 	width: 100%;
 }
+
+.project-blog__header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 16px;
+}
+
+.project-blog__list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.project-blog__card {
+	display: block;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	text-decoration: none;
+	color: var(--fg);
+	transition: border-color 0.15s;
+}
+
+.project-blog__card:hover {
+	border-color: var(--accent);
+}
+
+.project-blog__card-title {
+	font-weight: 500;
+	margin-bottom: 4px;
+}
+
+.project-blog__card-desc {
+	font-size: 0.875rem;
+	color: var(--fg-muted);
+	margin-bottom: 8px;
+}
+
+.project-blog__card-meta {
+	display: flex;
+	gap: 12px;
+	font-size: 0.75rem;
+	color: var(--fg-subtle);
+}
