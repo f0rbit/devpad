@@ -588,6 +588,13 @@ footer {
 	padding: 0.125rem 0.5rem;
 	border-radius: 999px;
 	text-transform: lowercase;
+	text-decoration: none;
+	transition: background 0.15s ease;
+}
+
+.post-card__project:hover {
+	background: var(--border);
+	color: var(--fg);
 }
 
 /* ==========================================================================
@@ -1142,6 +1149,35 @@ footer {
 		gap: 4px;
 		font-size: 0.7rem;
 	}
+}
+
+/* ==========================================================================
+   POST PROJECT LINKS
+   ========================================================================== */
+
+.post-project-links {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	margin-bottom: 12px;
+}
+
+.post-project-pill {
+	display: inline-block;
+	padding: 2px 8px;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	font-size: 0.75rem;
+	color: var(--fg-muted);
+	text-decoration: none;
+	transition:
+		border-color 0.15s,
+		color 0.15s;
+}
+
+.post-project-pill:hover {
+	border-color: var(--accent);
+	color: var(--accent);
 }
 
 /* ==========================================================================

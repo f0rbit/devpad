@@ -63,6 +63,9 @@ if (catResult.ok) {
 if (projResult.ok) {
 	projects = projResult.value;
 }
+
+const projectMap: Record<string, string> = Object.fromEntries(projects.map(p => [p.id, p.name]));
+const projectName = (id: string): string => projectMap[id] ?? id;
 ---
 
 <AppLayout title="Edit Post">
@@ -76,6 +79,16 @@ if (projResult.ok) {
 			</h1>
 			{post && <Button type="button" id="save-btn" variant="primary" disabled>Update</Button>}
 		</header>
+
+		{post && post.project_ids && post.project_ids.length > 0 && (
+			<div class="post-project-links">
+				{post.project_ids.map(id => (
+					<a href={`https://devpad.tools/project/${projectName(id)}`} class="post-project-pill" target="_blank" rel="noopener noreferrer">
+						{projectName(id)}
+					</a>
+				))}
+			</div>
+		)}
 
 		{error ? (
 			<div class="form-error">{error}</div>
