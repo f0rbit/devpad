@@ -2,7 +2,6 @@
 import Layout from "./Layout.astro";
 import DevpadLogo from "@/components/solid/DevpadLogo";
 import GithubLogin from "@/components/solid/GithubLogin";
-import ArrowLeft from "lucide-solid/icons/arrow-left";
 
 interface Props {
 	title: string;
@@ -11,63 +10,38 @@ interface Props {
 	canonical?: string;
 }
 const user = Astro.locals.user;
+const pathname = Astro.url.pathname;
 
 const { title, description, keywords, canonical } = Astro.props;
-
-const logout_pages = [
-	{ name: "home", href: "/" },
-	{ name: "docs", href: "/docs" },
-	{ name: "projects", href: "/project" },
-	{ name: "tasks", href: "/todo" },
-];
-
-const login_pages = [
-	{ name: "home", href: "/" },
-	{ name: "docs", href: "/docs" },
-	{ name: "projects", href: "/project" },
-	{ name: "tasks", href: "/todo" },
-	{ name: "account", href: "/account" },
-];
-
-const pages = user ? login_pages : logout_pages;
-
-// get the active page (excluding home)
-const search_pages = pages.filter(p => p.href !== "/");
-const active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "home";
-
-const history = Astro.locals.history ?? [];
-const last_page = history.at(-2) ?? null;
 ---
 
 <Layout title={title} description={description} keywords={keywords} canonical={canonical}>
 	<body>
 		<div id="container">
-			<header style="position: relative">
-				<a href="/" class={active == "home" ? "active" : ""}>
-					<h5 class="flex-row">
-						<DevpadLogo size={18} />
-						<span>devpad</span>
-					</h5>
-				</a>
-				{
-					last_page && (
-						<a href={`${last_page}?back=true`} class="last-page" title="Go Back">
-							<ArrowLeft />
+			<header class="unified-header">
+				<div class="unified-header__row1">
+					<div class="unified-header__left">
+						<a href="/" class="unified-header__logo">
+							<DevpadLogo size={18} />
+							<span>devpad</span>
 						</a>
-					)
-				}
-				<nav>
-					{
-						search_pages.map((p) => (
-							<a href={p.href} class={active == p.name ? "active" : ""}>
-								{p.name}
-							</a>
-						))
-					}
-					{!user && <GithubLogin client:load />}
-				</nav>
+					</div>
+					<nav class="unified-header__apps">
+						<a href="/project" class:list={["unified-header__app", { active: pathname.startsWith("/project") }]}>projects</a>
+						<a href="/todo" class:list={["unified-header__app", { active: pathname.startsWith("/todo") }]}>tasks</a>
+						<a href="https://blog.devpad.tools" class="unified-header__app">blog</a>
+						<a href="https://media.devpad.tools" class="unified-header__app">media</a>
+						<a href="/docs" class:list={["unified-header__app", { active: pathname.startsWith("/docs") }]}>docs</a>
+					</nav>
+					<div class="unified-header__auth">
+						{user ? (
+							<a href="/account" class:list={[{ active: pathname.startsWith("/account") }]}>account</a>
+						) : (
+							<GithubLogin client:load />
+						)}
+					</div>
+				</div>
 			</header>
-			<br />
 			<slot />
 		</div>
 		<br />

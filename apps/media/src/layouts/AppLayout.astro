@@ -13,15 +13,7 @@ interface Props {
 
 const { title = "Media Timeline", description, ogImage, noindex } = Astro.props;
 
-const pages = [
-	{ name: "dashboard", href: "/dashboard" },
-	{ name: "timeline", href: "/timeline" },
-	{ name: "connections", href: "/connections" },
-];
-
-const currentPath = Astro.url.pathname;
-const active = pages.find(p => currentPath.startsWith(p.href))?.name ?? "";
-
+const pathname = Astro.url.pathname;
 const profileSlug = Astro.url.searchParams.get("profile");
 
 const buildUrl = (path: string) => {
@@ -29,7 +21,8 @@ const buildUrl = (path: string) => {
 	return `${path}?profile=${encodeURIComponent(profileSlug)}`;
 };
 
-const isAuthenticated = !!Astro.locals.user;
+const user = Astro.locals.user;
+const isAuthenticated = !!user;
 let initialProfiles: { id: string; slug: string; name: string; description: string | null; created_at: string }[] = [];
 
 if (isAuthenticated) {
@@ -40,7 +33,6 @@ if (isAuthenticated) {
 			initialProfiles = profilesResult.value;
 		}
 	} catch {
-		// failed to fetch profiles
 	}
 }
 ---
@@ -48,11 +40,43 @@ if (isAuthenticated) {
 <Layout title={title} description={description} ogImage={ogImage} noindex={noindex}>
   <body>
     <div id="container">
-      <header>
-        <div class="header-left">
-          <a href={buildUrl("/dashboard")}><h5>media timeline</h5></a>
-          <div class="profile-selector-wrapper">
-            <ProfileSelector 
+      <header class="unified-header">
+        <div class="unified-header__row1">
+          <div class="unified-header__left">
+            <a href="https://devpad.tools" class="unified-header__logo">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"></path>
+                <path d="M2 6h4"></path>
+                <path d="M2 10h4"></path>
+                <path d="M2 14h4"></path>
+                <path d="M2 18h4"></path>
+                <path d="M21.378 5.626a1 1 0 1 0-3.004-3.004l-5.01 5.012a2 2 0 0 0-.506.854l-.837 2.87a.5.5 0 0 0 .62.62l2.87-.837a2 2 0 0 0 .854-.506z"></path>
+              </svg>
+              <span>devpad</span>
+            </a>
+          </div>
+          <nav class="unified-header__apps">
+            <a href="https://devpad.tools/project" class="unified-header__app">projects</a>
+            <a href="https://devpad.tools/todo" class="unified-header__app">tasks</a>
+            <a href="https://blog.devpad.tools" class="unified-header__app">blog</a>
+            <a href="/dashboard" class="unified-header__app active">media</a>
+          </nav>
+          <div class="unified-header__auth">
+            {user ? (
+              <span class="user-name">{user.name || user.email || "User"}</span>
+            ) : (
+              <a href="/api/auth/login">login</a>
+            )}
+          </div>
+        </div>
+        <div class="unified-header__row2">
+          <nav class="unified-header__subnav">
+            <a href={buildUrl("/dashboard")} class:list={[{ active: pathname.startsWith("/dashboard") }]}>dashboard</a>
+            <a href={buildUrl("/timeline")} class:list={[{ active: pathname.startsWith("/timeline") }]}>timeline</a>
+            <a href={buildUrl("/connections")} class:list={[{ active: pathname.startsWith("/connections") }]}>connections</a>
+          </nav>
+          <div class="unified-header__controls">
+            <ProfileSelector
               client:load
               currentSlug={profileSlug}
               initialProfiles={initialProfiles}
@@ -60,13 +84,6 @@ if (isAuthenticated) {
             />
           </div>
         </div>
-        <nav>
-          {pages.map(p => (
-            <a href={buildUrl(p.href)} class={active === p.name ? "active" : ""}>
-              {p.name}
-            </a>
-          ))}
-        </nav>
       </header>
       <main class="flex-col">
         <slot />
@@ -77,23 +94,3 @@ if (isAuthenticated) {
     </footer>
   </body>
 </Layout>
-
-<style>
-  main {
-    margin-top: 24px;
-  }
-  
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  
-  /* Reserve space for profile selector to prevent layout shift */
-  .profile-selector-wrapper {
-    min-width: 100px;
-    min-height: 32px;
-    display: flex;
-    align-items: center;
-  }
-</style>
