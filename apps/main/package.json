@@ -18,6 +18,7 @@
 		"@astrojs/sitemap": "^3.2.1",
 		"@astrojs/solid-js": "5.0.4",
 		"@devpad/api": "workspace:*",
+		"@f0rbit/ui": "^0.1.9",
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@types/bun": "^1.0.12",
