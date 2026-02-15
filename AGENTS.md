@@ -179,6 +179,32 @@ These type errors exist and should be ignored:
 - `packages/worker/src/index.ts` fetch type signature
 - `packages/schema/src/validation.ts` regex pattern
 
+## AI Provenance & Protection System
+
+### Entity Provenance
+- `provenance()` schema helper adds `created_by` and `modified_by` columns (enum: "user" | "api", default "user") plus `protected` boolean (default false)
+- `provenance()` → `entity()` → `owned_entity()` — adding columns to `provenance()` cascades to ALL entity tables
+- Auth middleware sets `auth_channel` ("user" for session cookies, "api" for Bearer tokens) in Hono context
+- All 4 upsert services (tasks, projects, milestones, goals) accept `auth_channel` and write it to `created_by`/`modified_by`
+- Action table has a `channel` column recording which auth path created the action
+
+### Protected Entity Policy
+- Entities edited by a user (`auth_channel == "user"`) are auto-protected (`protected = true`)
+- API-channel writes to a protected entity are rejected with 409 Conflict unless `force: true` is passed
+- `force: true` clears the protection flag — the entity becomes unprotected again
+- `ProtectedError` type and `isProtectedError()` guard in `packages/schema/src/errors.ts`
+- `force` is a validation-only field — must be destructured out before DB write: `const { id, force: _force, ...fields } = data;`
+
+### AI Activity Feed
+- `GET /activity/ai` returns sessions of API-channel actions grouped by 10-minute time gaps
+- `getAIActivity()` in `packages/core/src/services/action.ts`
+- `activity.ai()` on the API client, `devpad_activity_ai` MCP tool
+
+### Milestone/Goal Ownership
+- Milestone and goal tables use `entity()` not `owned_entity()` — no `owner_id` column
+- Ownership is checked via the parent project
+- Provenance columns (`created_by`, `modified_by`, `protected`) still apply via `provenance()` in `entity()`
+
 # Debugging
 When running integration tests, logs will get piped to `packages/worker/server.log`, only read the logs if you're looking for errors.
 

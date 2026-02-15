@@ -60,7 +60,6 @@ html select {
 	justify-content: space-between;
 	align-items: center;
 	padding-bottom: 8px;
-	border-bottom: 1px solid var(--border);
 }
 
 .unified-header__left {
@@ -80,21 +79,25 @@ html select {
 
 .unified-header__apps {
 	display: flex;
-	gap: 12px;
+	gap: 5px;
 	align-items: center;
+	margin-left: auto;
+	margin-right: 16px;
 }
 
 .unified-header__app {
 	color: var(--accent);
 	text-decoration: none;
-	font-size: 0.875rem;
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1;
 	transition: filter 0.15s;
 }
 
 .unified-header__app.active {
 	color: var(--fg);
 	text-decoration: underline;
-	text-underline-offset: 4px;
+	text-underline-offset: 2px;
 }
 
 .unified-header__app:hover {
@@ -118,6 +121,7 @@ body {
 	background: var(--bg);
 	color: var(--fg-muted);
 	margin: unset;
+	-webkit-font-smoothing: auto;
 }
 
 body {
@@ -889,13 +893,12 @@ details[open] .down-arrow {
 .github-login {
 	display: flex;
 	align-items: center;
-	gap: 5px;
-	padding: 2px 7px;
+	gap: 4px;
+	padding: 1px 5px;
 	border: 1px solid var(--border);
-	border-radius: 5px;
-	min-width: 77px;
-	justify-content: space-between;
+	border-radius: 4px;
 	cursor: pointer;
+	font-size: 0.85rem;
 }
 
 .landing-page img {
