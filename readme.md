@@ -1,35 +1,90 @@
 # devpad
+
 devpad is a suite of tools designed for development & project management. The main focus of this application is tracking and managing `@todo` and `// TODO:` comments within codebases. With a minimalist user interface, every element should have a clear purpose.
 
-## Main Features
-- Project Management
-    - Export to an API for external data fetching
-    - Manage descriptions & specifications
-    - Project versioning and automatic updates based on reaching goals
-    - Tech stack information, project status
-    - Update / revision history
-    - Assign goals & milestones for todo tasks
-- Task Tracker
-    - Searches codebase for todo items
-    - Presents management options for each
-    - Allows for additional tasks
-    - API for exporting to external data sources
+## Quick Start
 
-## Installation
+### Get an API Key
 
-### Development
-1. Download repo
+1. Sign up at [devpad.tools](https://devpad.tools)
+2. Go to [devpad.tools/account](https://devpad.tools/account)
+3. Generate an API key
+
+### CLI
+
+Install and use the devpad CLI for command-line access to your projects and tasks:
+
+```bash
+bun install -g @devpad/cli
+
+export DEVPAD_API_KEY="your-api-key"
+
+devpad projects list
+devpad tasks list
+devpad tasks create --title "My task" --project <project-id>
+```
+
+See [packages/cli/README.md](packages/cli/README.md) for full documentation.
+
+### MCP Server (AI Integration)
+
+Connect devpad to AI assistants like Claude using the MCP server:
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "devpad": {
+      "command": "bunx",
+      "args": ["@devpad/mcp"],
+      "env": {
+        "DEVPAD_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+**opencode** (`~/.config/opencode/opencode.json`):
+```json
+{
+  "mcp": {
+    "devpad": {
+      "type": "local",
+      "command": ["bunx", "@devpad/mcp"],
+      "environment": {
+        "DEVPAD_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
+
+See [packages/mcp/README.md](packages/mcp/README.md) for full documentation.
+
+## Features
+
+- **Project Management**: Track projects with descriptions, specifications, versioning, and status
+- **Task Tracker**: Scan codebases for TODO comments, manage tasks with priorities and tags
+- **Milestones & Goals**: Organize work into milestones with measurable goals
+- **GitHub Integration**: Link projects to repositories, track branches and commits
+- **CLI Tool**: Full command-line interface for all operations
+- **MCP Server**: AI assistant integration via Model Context Protocol
+
+## Development
+
+### Setup
+1. Clone the repo
 2. Install dependencies: `bun install`
-3. Setup `.env` file [.env.example](/apps/main/.env.example)
+3. Setup `.env` file: [.env.example](/apps/main/.env.example)
 4. Run dev server: `bun dev`
 
 ### Deployment
 Deployed as a Cloudflare Worker via `wrangler`. Build with `bun run build:worker`.
 
 ### Testing
-Integration tests are available for the projects and tasks APIs, with automated test database setup. Run tests with `bun run test:integration` from the root directory.
-
-Unit tests are available for individual components. Run with `bun run test:unit` from the root directory.
+- Integration tests: `make integration`
+- Unit tests: `make unit`
 
 ## API
 

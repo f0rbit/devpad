@@ -30,6 +30,7 @@ export class ApiClient {
 
 	private credentials?: "include" | "omit" | "same-origin";
 	private auth_mode: "session" | "key" | "cookie";
+	private debug: boolean;
 
 	constructor(options: {
 		base_url: string;
@@ -40,6 +41,7 @@ export class ApiClient {
 		auth_mode?: "session" | "key" | "cookie";
 		default_headers?: Record<string, string>;
 		custom_fetch?: typeof fetch;
+		debug?: boolean;
 	}) {
 		this.auth_mode = options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : "key");
 
@@ -55,6 +57,7 @@ export class ApiClient {
 		this.default_headers = options.default_headers ?? {};
 		this.custom_fetch = options.custom_fetch;
 		this.request_history = new ArrayBufferedQueue<RequestHistoryEntry>(options.max_history_size ?? 5);
+		this.debug = options.debug ?? false;
 	}
 
 	private buildUrl(path: string, query?: Record<string, string>): string {
@@ -80,11 +83,9 @@ export class ApiClient {
 		const startTime = Date.now();
 		const timestamp = new Date().toISOString();
 
-		// Log request start
-		console.log(`[DEBUG][${this.category}] ${method} ${path} [${requestId}]`, {
-			body,
-			query,
-		});
+		if (this.debug) {
+			console.log(`[DEBUG][${this.category}] ${method} ${path} [${requestId}]`, { body, query });
+		}
 
 		const request_headers: Record<string, string> = {
 			"Content-Type": "application/json",
@@ -133,12 +134,14 @@ export class ApiClient {
 			historyEntry.duration = duration;
 
 			if (!response.ok) {
-				console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
-					status: response.status,
-					duration: `${duration}ms`,
-					body,
-					query,
-				});
+				if (this.debug) {
+					console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
+						status: response.status,
+						duration: `${duration}ms`,
+						body,
+						query,
+					});
+				}
 
 				try {
 					// Use centralized error handling
@@ -173,23 +176,26 @@ export class ApiClient {
 				}
 			}
 
-			// Log success
-			console.log(`[INFO][${this.category}] ${method} ${path} [${requestId}] completed`, {
-				status: response.status,
-				duration: `${duration}ms`,
-			});
+			if (this.debug) {
+				console.log(`[INFO][${this.category}] ${method} ${path} [${requestId}] completed`, {
+					status: response.status,
+					duration: `${duration}ms`,
+				});
+			}
 
 			return result;
 		} catch (error) {
 			const duration = Date.now() - startTime;
 
-			console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
-				url,
-				duration: `${duration}ms`,
-				error: error instanceof Error ? error.message : String(error),
-				body,
-				query,
-			});
+			if (this.debug) {
+				console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
+					url,
+					duration: `${duration}ms`,
+					error: error instanceof Error ? error.message : String(error),
+					body,
+					query,
+				});
+			}
 
 			// If this is already an API error, just re-throw it (already added to history above)
 			if (error instanceof ApiError || error instanceof AuthenticationError) {

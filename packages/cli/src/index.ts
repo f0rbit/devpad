@@ -6,6 +6,17 @@ import { Command } from "commander";
 import { Table } from "console-table-printer";
 import ora from "ora";
 
+const isTTY = process.stdout.isTTY;
+
+function createSpinner(text: string) {
+	if (isTTY) {
+		return ora(text);
+	}
+	const noop = () => noopSpinner;
+	const noopSpinner = { start: noop, succeed: noop, fail: noop, stop: noop };
+	return noopSpinner;
+}
+
 // Helper to get API client
 function getApiClient(): ApiClient {
 	const apiKey = process.env.DEVPAD_API_KEY || Bun.env.DEVPAD_API_KEY;
@@ -30,10 +41,13 @@ function handleError(error: any) {
 	process.exit(1);
 }
 
-// Helper to format output
-function formatOutput(data: any, format: string = "json") {
+async function formatOutput(data: any, format: string = "json") {
 	if (format === "json") {
-		console.log(JSON.stringify(data, null, 2));
+		const output = JSON.stringify(data, null, 2) + "\n";
+		const flushed = process.stdout.write(output);
+		if (!flushed) {
+			await new Promise<void>(resolve => process.stdout.once("drain", resolve));
+		}
 	} else if (format === "table" && Array.isArray(data)) {
 		const table = new Table();
 		data.forEach(item => table.addRow(item));
@@ -56,7 +70,7 @@ projects
 	.option("--private", "Include private projects", true)
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching projects...").start();
+		const spinner = createSpinner("Fetching projects...").start();
 		try {
 			const tool = getTool("devpad_projects_list");
 			if (!tool) throw new Error("Tool not found");
@@ -64,7 +78,7 @@ projects
 			const client = getApiClient();
 			const result = await tool.execute(client, { private: options.private });
 			spinner.succeed("Projects fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch projects");
 			handleError(error);
@@ -76,7 +90,7 @@ projects
 	.description("Get a project by ID or name")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async (idOrName, options) => {
-		const spinner = ora("Fetching project...").start();
+		const spinner = createSpinner("Fetching project...").start();
 		try {
 			const tool = getTool("devpad_projects_get");
 			if (!tool) throw new Error("Tool not found");
@@ -86,7 +100,7 @@ projects
 			const input = idOrName.includes("-") ? { id: idOrName } : { name: idOrName };
 			const result = await tool.execute(client, input);
 			spinner.succeed("Project fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch project");
 			handleError(error);
@@ -100,7 +114,7 @@ projects
 	.option("-d, --description <description>", "Project description")
 	.option("--private", "Make project private", false)
 	.action(async options => {
-		const spinner = ora("Creating project...").start();
+		const spinner = createSpinner("Creating project...").start();
 		try {
 			const tool = getTool("devpad_projects_upsert");
 			if (!tool) throw new Error("Tool not found");
@@ -129,7 +143,7 @@ projects
 			return;
 		}
 
-		const spinner = ora("Deleting project...").start();
+		const spinner = createSpinner("Deleting project...").start();
 		try {
 			const tool = getTool("devpad_projects_delete");
 			if (!tool) throw new Error("Tool not found");
@@ -148,7 +162,7 @@ projects
 	.description("Get project history")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async (id, options) => {
-		const spinner = ora("Fetching project history...").start();
+		const spinner = createSpinner("Fetching project history...").start();
 		try {
 			const tool = getTool("devpad_projects_history");
 			if (!tool) throw new Error("Tool not found");
@@ -156,7 +170,7 @@ projects
 			const client = getApiClient();
 			const result = await tool.execute(client, { project_id: id });
 			spinner.succeed("Project history fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch project history");
 			handleError(error);
@@ -173,7 +187,7 @@ tasks
 	.option("-t, --tag <id>", "Filter by tag ID")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching tasks...").start();
+		const spinner = createSpinner("Fetching tasks...").start();
 		try {
 			const tool = getTool("devpad_tasks_list");
 			if (!tool) throw new Error("Tool not found");
@@ -184,7 +198,7 @@ tasks
 				tag_id: options.tag,
 			});
 			spinner.succeed("Tasks fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch tasks");
 			handleError(error);
@@ -196,7 +210,7 @@ tasks
 	.description("Get a task by ID")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async (id, options) => {
-		const spinner = ora("Fetching task...").start();
+		const spinner = createSpinner("Fetching task...").start();
 		try {
 			const tool = getTool("devpad_tasks_get");
 			if (!tool) throw new Error("Tool not found");
@@ -204,7 +218,7 @@ tasks
 			const client = getApiClient();
 			const result = await tool.execute(client, { id });
 			spinner.succeed("Task fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch task");
 			handleError(error);
@@ -220,7 +234,7 @@ tasks
 	.option("--priority <priority>", "Task priority (low|medium|high)", "medium")
 	.option("--status <status>", "Task status (todo|in_progress|done)", "todo")
 	.action(async options => {
-		const spinner = ora("Creating task...").start();
+		const spinner = createSpinner("Creating task...").start();
 		try {
 			const tool = getTool("devpad_tasks_upsert");
 			if (!tool) throw new Error("Tool not found");
@@ -245,7 +259,7 @@ tasks
 	.command("done <id>")
 	.description("Mark a task as done")
 	.action(async id => {
-		const spinner = ora("Marking task as done...").start();
+		const spinner = createSpinner("Marking task as done...").start();
 		try {
 			const tool = getTool("devpad_tasks_upsert");
 			if (!tool) throw new Error("Tool not found");
@@ -266,7 +280,7 @@ tasks
 	.command("todo <id>")
 	.description("Mark a task as todo")
 	.action(async id => {
-		const spinner = ora("Marking task as todo...").start();
+		const spinner = createSpinner("Marking task as todo...").start();
 		try {
 			const tool = getTool("devpad_tasks_upsert");
 			if (!tool) throw new Error("Tool not found");
@@ -293,7 +307,7 @@ tasks
 			return;
 		}
 
-		const spinner = ora("Deleting task...").start();
+		const spinner = createSpinner("Deleting task...").start();
 		try {
 			const tool = getTool("devpad_tasks_delete");
 			if (!tool) throw new Error("Tool not found");
@@ -312,7 +326,7 @@ tasks
 	.description("Get task history")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async (id, options) => {
-		const spinner = ora("Fetching task history...").start();
+		const spinner = createSpinner("Fetching task history...").start();
 		try {
 			const tool = getTool("devpad_tasks_history");
 			if (!tool) throw new Error("Tool not found");
@@ -320,7 +334,7 @@ tasks
 			const client = getApiClient();
 			const result = await tool.execute(client, { task_id: id });
 			spinner.succeed("Task history fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch task history");
 			handleError(error);
@@ -336,7 +350,7 @@ milestones
 	.option("-p, --project <id>", "Filter by project ID")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching milestones...").start();
+		const spinner = createSpinner("Fetching milestones...").start();
 		try {
 			const tool = getTool("devpad_milestones_list");
 			if (!tool) throw new Error("Tool not found");
@@ -346,7 +360,7 @@ milestones
 				project_id: options.project,
 			});
 			spinner.succeed("Milestones fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch milestones");
 			handleError(error);
@@ -362,7 +376,7 @@ milestones
 	.option("--target-time <time>", "Target completion time")
 	.option("--target-version <version>", "Target version")
 	.action(async options => {
-		const spinner = ora("Creating milestone...").start();
+		const spinner = createSpinner("Creating milestone...").start();
 		try {
 			const tool = getTool("devpad_milestones_upsert");
 			if (!tool) throw new Error("Tool not found");
@@ -391,7 +405,7 @@ goals
 	.description("List goals")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching goals...").start();
+		const spinner = createSpinner("Fetching goals...").start();
 		try {
 			const tool = getTool("devpad_goals_list");
 			if (!tool) throw new Error("Tool not found");
@@ -399,7 +413,7 @@ goals
 			const client = getApiClient();
 			const result = await tool.execute(client, {});
 			spinner.succeed("Goals fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch goals");
 			handleError(error);
@@ -414,7 +428,7 @@ goals
 	.option("-d, --description <description>", "Goal description")
 	.option("--target-time <time>", "Target completion time")
 	.action(async options => {
-		const spinner = ora("Creating goal...").start();
+		const spinner = createSpinner("Creating goal...").start();
 		try {
 			const tool = getTool("devpad_goals_upsert");
 			if (!tool) throw new Error("Tool not found");
@@ -441,7 +455,7 @@ tags.command("list")
 	.description("List tags")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching tags...").start();
+		const spinner = createSpinner("Fetching tags...").start();
 		try {
 			const tool = getTool("devpad_tags_list");
 			if (!tool) throw new Error("Tool not found");
@@ -449,7 +463,7 @@ tags.command("list")
 			const client = getApiClient();
 			const result = await tool.execute(client, {});
 			spinner.succeed("Tags fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch tags");
 			handleError(error);
@@ -464,7 +478,7 @@ github
 	.description("List GitHub repositories")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching GitHub repositories...").start();
+		const spinner = createSpinner("Fetching GitHub repositories...").start();
 		try {
 			const tool = getTool("devpad_github_repos");
 			if (!tool) throw new Error("Tool not found");
@@ -472,7 +486,7 @@ github
 			const client = getApiClient();
 			const result = await tool.execute(client, {});
 			spinner.succeed("Repositories fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch repositories");
 			handleError(error);
@@ -484,7 +498,7 @@ github
 	.description("List branches for a GitHub repository")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async (owner, repo, options) => {
-		const spinner = ora("Fetching branches...").start();
+		const spinner = createSpinner("Fetching branches...").start();
 		try {
 			const tool = getTool("devpad_github_branches");
 			if (!tool) throw new Error("Tool not found");
@@ -492,7 +506,7 @@ github
 			const client = getApiClient();
 			const result = await tool.execute(client, { owner, repo });
 			spinner.succeed("Branches fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch branches");
 			handleError(error);
@@ -506,7 +520,7 @@ user.command("history")
 	.description("Get user activity history")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
 	.action(async options => {
-		const spinner = ora("Fetching user history...").start();
+		const spinner = createSpinner("Fetching user history...").start();
 		try {
 			const tool = getTool("devpad_user_history");
 			if (!tool) throw new Error("Tool not found");
@@ -514,7 +528,7 @@ user.command("history")
 			const client = getApiClient();
 			const result = await tool.execute(client, {});
 			spinner.succeed("User history fetched");
-			formatOutput(result, options.format);
+			await formatOutput(result, options.format);
 		} catch (error) {
 			spinner.fail("Failed to fetch user history");
 			handleError(error);
@@ -526,7 +540,7 @@ user.command("preferences")
 	.requiredOption("-u, --user-id <id>", "User ID")
 	.requiredOption("-v, --view <view>", "Task view preference (list|grid)")
 	.action(async options => {
-		const spinner = ora("Updating preferences...").start();
+		const spinner = createSpinner("Updating preferences...").start();
 		try {
 			const tool = getTool("devpad_user_preferences");
 			if (!tool) throw new Error("Tool not found");
@@ -543,5 +557,4 @@ user.command("preferences")
 		}
 	});
 
-// Parse and execute
-program.parse(process.argv);
+await program.parseAsync(process.argv);
