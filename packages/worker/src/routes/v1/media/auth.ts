@@ -70,17 +70,16 @@ const twitterOAuthConfig: OAuthCallbackConfig<{ code_verifier: string }> = {
 	stateKeys: ["code_verifier"],
 };
 
-const githubOAuthConfig: OAuthCallbackConfig = {
+export const githubOAuthConfig: OAuthCallbackConfig = {
 	platform: "github",
 	tokenUrl: "https://github.com/login/oauth/access_token",
 	tokenAuthHeader: () => "",
 	tokenHeaders: { Accept: "application/json" },
-	tokenBody: (code, redirectUri, _state, secrets) =>
+	tokenBody: (code, _redirectUri, _state, secrets) =>
 		new URLSearchParams({
 			client_id: secrets.clientId,
 			client_secret: secrets.clientSecret,
 			code,
-			redirect_uri: redirectUri,
 		}),
 	fetchUser: async (accessToken): Promise<{ id: string; username: string }> => {
 		const response = await fetch("https://api.github.com/user", {
@@ -193,18 +192,14 @@ authRoutes.get("/github", async c => {
 		return c.json({ error: "GitHub OAuth not configured" }, 500);
 	}
 
-	const redirectUri = `${c.get("config").api_url || "http://localhost:8787"}/api/auth/platforms/github/callback`;
 	const state = oauth.encode(user_id, profile_id);
 
 	const authUrl = new URL("https://github.com/login/oauth/authorize");
 	authUrl.searchParams.set("client_id", clientId);
-	authUrl.searchParams.set("redirect_uri", redirectUri);
 	authUrl.searchParams.set("scope", "read:user repo");
 	authUrl.searchParams.set("state", state);
 
 	return c.redirect(authUrl.toString());
 });
-
-authRoutes.get("/github/callback", oauth.callback(githubOAuthConfig));
 
 export { token };

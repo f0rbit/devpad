@@ -4,6 +4,8 @@ import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppContext } from "../bindings.js";
 import { cookieConfig } from "../utils/cookies.js";
+import { githubOAuthConfig } from "./v1/media/auth.js";
+import { oauth as mediaOAuth } from "./v1/media/oauth-helpers.js";
 
 const ALLOWED_REDIRECT_PATTERNS = [/^https:\/\/[a-z0-9.-]+\.pages\.dev$/, /^https:\/\/[a-z0-9.-]+\.workers\.dev$/, /^https:\/\/([a-z0-9-]+\.)?devpad\.tools$/, /^http:\/\/localhost:\d+$/];
 
@@ -56,14 +58,31 @@ app.get("/login", async c => {
 });
 
 app.get("/callback/github", async c => {
+	const code = c.req.query("code");
+	const state = c.req.query("state");
+
+	if (!code || !state) {
+		return c.json({ error: "Invalid OAuth parameters" }, 400);
+	}
+
+	let decoded: Record<string, unknown>;
+	try {
+		decoded = JSON.parse(atob(state.replace(/-/g, "+").replace(/_/g, "/")));
+	} catch {
+		return c.json({ error: "Invalid OAuth state" }, 400);
+	}
+
+	if (decoded.profile_id) {
+		const handler = mediaOAuth.callback(githubOAuthConfig);
+		return handler(c);
+	}
+
 	const config = c.get("config");
 	const oauth_secrets = c.get("oauth_secrets");
 	const db = c.get("db");
-	const code = c.req.query("code");
-	const state = c.req.query("state");
 	const stored_state = getCookie(c, "github_oauth_state");
 
-	if (!code || !state || !stored_state || state !== stored_state) {
+	if (!stored_state || state !== stored_state) {
 		return c.json({ error: "Invalid OAuth parameters" }, 400);
 	}
 

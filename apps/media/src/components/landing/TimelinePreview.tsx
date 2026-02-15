@@ -117,7 +117,7 @@ function RedditPostRow(props: { item: MockTimelineItem }) {
 function TweetRow(props: { item: MockTimelineItem }) {
 	return (
 		<div class="timeline-row">
-			<div class="timeline-icon" style={{ color: "var(--text-primary)" }}>
+			<div class="timeline-icon" style={{ color: "var(--fg)" }}>
 				<PlatformIcon platform="twitter" size={16} />
 			</div>
 			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
