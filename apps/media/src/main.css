@@ -478,42 +478,6 @@ form section label {
 }
 
 /* ==========================================================================
-   BUTTONS
-   ========================================================================== */
-
-.btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 6px;
-	padding: 8px 16px;
-	font-size: 0.875rem;
-	font-weight: 500;
-	border-radius: 6px;
-	border: 1px solid var(--border);
-	background: var(--bg-alt);
-	color: var(--fg);
-	cursor: pointer;
-	transition:
-		background 0.15s,
-		border-color 0.15s;
-}
-
-.btn:hover {
-	background: var(--border);
-	filter: none;
-}
-
-.btn-secondary {
-	background: transparent;
-	color: var(--fg-muted);
-}
-
-.btn-secondary:hover {
-	background: var(--bg-alt);
-}
-
-/* ==========================================================================
    CARDS & CONTAINERS
    ========================================================================== */
 

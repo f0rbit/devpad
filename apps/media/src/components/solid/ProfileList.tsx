@@ -216,7 +216,7 @@ function ProfileCard(props: ProfileCardProps) {
 			</Show>
 
 			<CardFooter class="flex-row items-center" style={{ gap: "8px" }}>
-				<code class="text-xs mono truncate" style={{ flex: "1", padding: "4px 8px", background: "var(--input-background)", "border-radius": "4px", border: "1px solid var(--input-border)" }}>
+				<code class="text-xs mono truncate" style={{ flex: "1", padding: "4px 8px", background: "var(--bg-alt)", "border-radius": "4px", border: "1px solid var(--border)" }}>
 					{endpoint}
 				</code>
 				<Button icon variant="ghost" label={props.copied ? "Copied!" : "Copy endpoint"} onClick={props.onCopy}>
