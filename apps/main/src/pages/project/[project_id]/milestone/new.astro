@@ -21,36 +21,34 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 
 <PageLayout title={`New Milestone - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
-		<h5>create milestone</h5>
-		<section id="milestone-form" data-project-id={project.id}>
-			<div class="flex-row">
-				<label for="name">name</label>
-				<input id="name" type="text" placeholder="Milestone name" required />
+		<h4 class="font-medium" style="margin: 0;">New milestone</h4>
+		<section class="stack" id="milestone-form" data-project-id={project.id}>
+			<div class="form-field">
+				<label class="form-field-label" for="name">Name <span class="form-field-required">*</span></label>
+				<input id="name" class="input" type="text" placeholder="Milestone name" required />
 			</div>
 
-			<div class="flex-row">
-				<label for="description">description</label>
-				<textarea id="description" placeholder="Optional description" rows={3}></textarea>
+			<div class="form-field">
+				<label class="form-field-label" for="description">Description</label>
+				<textarea id="description" class="textarea" placeholder="Optional description" rows={3}></textarea>
 			</div>
 
-			<div class="flex-row">
-				<label for="target-version">target version</label>
-				<input id="target-version" type="text" placeholder="e.g., v1.0.0" />
+			<div class="form-field">
+				<label class="form-field-label" for="target-version">Target version</label>
+				<input id="target-version" class="input" type="text" placeholder="e.g., v1.0.0" />
 			</div>
 
-			<div class="flex-row">
-				<label for="target-time">target date</label>
-				<input id="target-time" type="date" />
+			<div class="form-field">
+				<label class="form-field-label" for="target-time">Target date</label>
+				<input id="target-time" class="input" type="date" />
 			</div>
 
-			<div class="flex-row">
-				<a role="button" id="submit-milestone">Create Milestone</a>
-				<a role="button" id="cancel-milestone">Cancel</a>
+			<div class="row" style="gap: 0.5rem;">
+				<button type="button" id="submit-milestone" class="btn">Create Milestone</button>
+				<button type="button" id="cancel-milestone" class="btn btn-secondary">Cancel</button>
 			</div>
 
-			<div>
-				<p id="error" style="color: red;"></p>
-			</div>
+			<p id="error" class="form-field-error" style="display: none;"></p>
 		</section>
 	</ProjectLayout>
 </PageLayout>
@@ -60,6 +58,7 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 
 	async function createMilestone() {
 		const errorEl = document.getElementById("error") as HTMLParagraphElement;
+		errorEl.style.display = "none";
 		errorEl.innerText = "";
 
 		const getValue = (id: string) => {
@@ -74,12 +73,14 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 		
 		if (!name) {
 			errorEl.innerText = "Milestone name is required";
+			errorEl.style.display = "block";
 			return;
 		}
 
 		const projectId = document.getElementById("milestone-form")?.dataset.projectId;
 		if (!projectId) {
 			errorEl.innerText = "Project ID not found";
+			errorEl.style.display = "block";
 			return;
 		}
 
@@ -96,15 +97,16 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 			if (!result.ok) {
 				console.error("Failed to create milestone:", result.error);
 				errorEl.innerText = result.error.message || "Failed to create milestone";
+				errorEl.style.display = "block";
 				return;
 			}
 
-			// Navigate back to goals page
 			const projectSlug = window.location.pathname.split('/')[2];
 			window.location.href = `/project/${projectSlug}/goals`;
 		} catch (error) {
 			console.error("Failed to create milestone:", error);
 			errorEl.innerText = "Failed to create milestone";
+			errorEl.style.display = "block";
 		}
 	}
 

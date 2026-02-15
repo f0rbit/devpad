@@ -26,37 +26,37 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 <PageLayout title={`Edit Milestone - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
-		<h5>edit milestone</h5>
-		<section id="milestone-form" data-project-id={project.id} data-milestone-id={milestone.id}>
-			<div class="flex-row">
-				<label for="name">name</label>
-				<input id="name" type="text" value={milestone.name} placeholder="Milestone name" required />
+		<h4 class="font-medium" style="margin: 0;">Edit milestone</h4>
+		<section class="stack" id="milestone-form" data-project-id={project.id} data-milestone-id={milestone.id}>
+			<div class="form-field">
+				<label class="form-field-label" for="name">Name <span class="form-field-required">*</span></label>
+				<input id="name" class="input" type="text" value={milestone.name} placeholder="Milestone name" required />
 			</div>
 
-			<div class="flex-row">
-				<label for="description">description</label>
-				<textarea id="description" placeholder="Optional description" rows={3}>{milestone.description || ""}</textarea>
+			<div class="form-field">
+				<label class="form-field-label" for="description">Description</label>
+				<textarea id="description" class="textarea" placeholder="Optional description" rows={3}>{milestone.description || ""}</textarea>
 			</div>
 
-			<div class="flex-row">
-				<label for="target-version">target version</label>
-				<input id="target-version" type="text" value={milestone.target_version || ""} placeholder="e.g., v1.0.0" />
+			<div class="form-field">
+				<label class="form-field-label" for="target-version">Target version</label>
+				<input id="target-version" class="input" type="text" value={milestone.target_version || ""} placeholder="e.g., v1.0.0" />
 			</div>
 
-			<div class="flex-row">
-				<label for="target-time">target date</label>
-				<input id="target-time" type="date" value={milestone.target_time ? milestone.target_time.split('T')[0] : ""} />
+			<div class="form-field">
+				<label class="form-field-label" for="target-time">Target date</label>
+				<input id="target-time" class="input" type="date" value={milestone.target_time ? milestone.target_time.split('T')[0] : ""} />
 			</div>
 
-			<div class="flex-row">
-				<a role="button" id="submit-milestone">Update Milestone</a>
-				<a role="button" id="cancel-milestone">Cancel</a>
-				<a role="button" id="delete-milestone" style="color: red;">Delete</a>
+			<div class="row-between">
+				<div class="row" style="gap: 0.5rem;">
+					<button type="button" id="submit-milestone" class="btn">Update Milestone</button>
+					<button type="button" id="cancel-milestone" class="btn btn-secondary">Cancel</button>
+				</div>
+				<button type="button" id="delete-milestone" class="btn btn-danger">Delete</button>
 			</div>
 
-			<div>
-				<p id="error" style="color: red;"></p>
-			</div>
+			<p id="error" class="form-field-error" style="display: none;"></p>
 		</section>
 	</ProjectLayout>
 </PageLayout>
@@ -66,6 +66,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 
 	async function updateMilestone() {
 		const errorEl = document.getElementById("error") as HTMLParagraphElement;
+		errorEl.style.display = "none";
 		errorEl.innerText = "";
 
 		const getValue = (id: string) => {
@@ -79,12 +80,14 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 		
 		if (!name) {
 			errorEl.innerText = "Milestone name is required";
+			errorEl.style.display = "block";
 			return;
 		}
 
 		const milestoneId = document.getElementById("milestone-form")?.dataset.milestoneId;
 		if (!milestoneId) {
 			errorEl.innerText = "Milestone ID not found";
+			errorEl.style.display = "block";
 			return;
 		}
 
@@ -97,12 +100,12 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 			target_time: target_time ?? undefined,
 		});
 
-			// Navigate back to goals page
 			const projectSlug = window.location.pathname.split('/')[2];
 			window.location.href = `/project/${projectSlug}/goals`;
 		} catch (error) {
 			console.error("Failed to update milestone:", error);
 			errorEl.innerText = "Failed to update milestone";
+			errorEl.style.display = "block";
 		}
 	}
 
@@ -112,11 +115,13 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 		}
 
 		const errorEl = document.getElementById("error") as HTMLParagraphElement;
+		errorEl.style.display = "none";
 		errorEl.innerText = "";
 
 		const milestoneId = document.getElementById("milestone-form")?.dataset.milestoneId;
 		if (!milestoneId) {
 			errorEl.innerText = "Milestone ID not found";
+			errorEl.style.display = "block";
 			return;
 		}
 
@@ -124,12 +129,12 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 			const apiClient = getApiClient();
 			await apiClient.milestones.delete(milestoneId);
 
-			// Navigate back to goals page
 			const projectSlug = window.location.pathname.split('/')[2];
 			window.location.href = `/project/${projectSlug}/goals`;
 		} catch (error) {
 			console.error("Failed to delete milestone:", error);
 			errorEl.innerText = "Failed to delete milestone";
+			errorEl.style.display = "block";
 		}
 	}
 

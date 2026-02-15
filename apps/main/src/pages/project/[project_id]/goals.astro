@@ -40,7 +40,6 @@ for (const milestone of milestones) {
 
 <PageLayout title={`Milestones & Goals - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
-		<h5>project goals</h5>
 		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones ?? undefined} initialGoalsMap={goals_map} client:load />
 	</ProjectLayout>
 </PageLayout>
