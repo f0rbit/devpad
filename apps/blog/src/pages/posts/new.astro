@@ -26,6 +26,9 @@ const flattenTree = (nodes: CategoryNode[]): Category[] => nodes.flatMap(n => [{
 let categories: Category[] = [];
 let projects: Project[] = [];
 
+const projectParam = Astro.url.searchParams.get("project");
+const initialProjectIds = projectParam ? [projectParam] : undefined;
+
 const client = getServerApiClient(Astro.locals);
 const [catResult, projResult] = await Promise.all([
 	client.blog.categories.tree(),
@@ -53,7 +56,7 @@ if (projResult.ok) {
 		</header>
 
 		<div id="editor-container">
-			<PostEditor client:load categories={categories} projects={projects} />
+			<PostEditor client:load categories={categories} projects={projects} initialProjectIds={initialProjectIds} />
 		</div>
 	</section>
 </AppLayout>

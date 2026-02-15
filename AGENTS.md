@@ -151,6 +151,28 @@ devpad/
 - Upsert operations use destructuring to exclude `id` field -- never use `delete` on the upsert object (destroys type safety)
 - API client (`packages/api`) wraps all operations in `Result<T, ApiResultError>`
 
+## Cross-App Navigation
+- All 3 apps use a unified header design (`.unified-header` CSS class in each app's layout)
+- Header row 1: devpad logo + cross-app links (Projects, Tasks, Blog, Media) + auth controls
+- Header row 2 (blog/media only): app-specific sub-nav (posts/categories/settings, dashboard/timeline/connections)
+- Cross-app URLs are hardcoded production URLs (`https://devpad.tools`, `https://blog.devpad.tools`, `https://media.devpad.tools`)
+- Within an app, use relative paths for navigation
+- Each app determines its own "active" state and renders its own auth component
+- Header markup lives in each app's layout file (`PageLayout.astro`, `app-layout.astro`, `AppLayout.astro`)
+
+## Blog-Project Integration
+- Blog posts link to projects via `blog_post_projects` junction table
+- Main app's `/project/[project_id]/blog` page fetches posts via `client.blog.posts.list({ project: id })`
+- Blog editor accepts `?project=<uuid>` URL param to pre-select a project on new posts (`initialProjectIds` prop on PostEditor)
+- Blog post list shows project badges as clickable links back to `https://devpad.tools/project/{name}`
+- Blog post editor page shows linked projects as clickable pills
+
+## CSS Token Architecture
+- `@f0rbit/ui` is the source of truth for design tokens (all 3 apps import `@f0rbit/ui/styles`)
+- App-specific tokens that DON'T come from `@f0rbit/ui`: `--text-link`, `--hover-filter`, `--input-placeholder`, `--input-focus`, `--item-red`, `--item-green`, `--item-red-border`, `--item-green-border`
+- When writing new CSS, use `@f0rbit/ui` token names (`--fg`, `--bg`, `--accent`, `--border`, `--bg-alt`, `--fg-muted`, `--fg-subtle`, `--fg-faint`, etc.)
+- NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they no longer exist in CSS files (some inline styles still reference them via `:root` aliases)
+
 ## Known Pre-existing LSP Errors
 These type errors exist and should be ignored:
 - `CategoryServiceError`/`PostServiceError` type mismatches in blog routes

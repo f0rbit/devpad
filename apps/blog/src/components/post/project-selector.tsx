@@ -1,5 +1,5 @@
 import { Button, MultiSelect, type MultiSelectOption } from "@f0rbit/ui";
-import { createResource, createSignal } from "solid-js";
+import { createResource, createSignal, For, Show } from "solid-js";
 import { getClient, unwrap } from "@/lib/client";
 
 type Project = {
@@ -47,6 +47,12 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 			description: p.description ?? undefined,
 		}));
 
+	const selectedProjects = () => {
+		const all = projects() ?? [];
+		const ids = new Set(props.selectedIds);
+		return all.filter(p => ids.has(p.id));
+	};
+
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		try {
@@ -58,11 +64,24 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 	};
 
 	return (
-		<div class="row">
-			<MultiSelect options={options()} value={props.selectedIds} onChange={props.onChange} placeholder="No projects linked" addLabel="Add Project" doneLabel="Done" emptyMessage="No more projects to add" />
-			<Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing()} label="Refresh projects from DevPad">
-				{refreshing() ? "..." : "↻"}
-			</Button>
+		<div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
+			<div class="row">
+				<MultiSelect options={options()} value={props.selectedIds} onChange={props.onChange} placeholder="No projects linked" addLabel="Add Project" doneLabel="Done" emptyMessage="No more projects to add" />
+				<Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing()} label="Refresh projects from DevPad">
+					{refreshing() ? "..." : "↻"}
+				</Button>
+			</div>
+			<Show when={selectedProjects().length > 0}>
+				<div style={{ display: "flex", "flex-wrap": "wrap", gap: "6px", "padding-left": "2px" }}>
+					<For each={selectedProjects()}>
+						{p => (
+							<a href={`https://devpad.tools/project/${p.name}`} target="_blank" rel="noopener noreferrer" style={{ "font-size": "0.75rem", color: "var(--fg-faint)", "text-decoration": "none" }}>
+								{p.name} ↗
+							</a>
+						)}
+					</For>
+				</div>
+			</Show>
 		</div>
 	);
 };

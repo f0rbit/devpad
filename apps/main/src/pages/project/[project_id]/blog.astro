@@ -1,0 +1,52 @@
+---
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getServerApiClient, rethrow } from "@/utils/api-client";
+
+const { project_id } = Astro.params;
+if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+
+const user = Astro.locals.user;
+if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+
+const api_client = getServerApiClient(Astro.locals);
+
+const project_result = await api_client.projects.getByName(project_id);
+if (!project_result.ok) return rethrow(project_result.error);
+const project = project_result.value;
+if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
+if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
+
+const posts_result = await api_client.blog.posts.list({ project: project.id, limit: 50 });
+const posts = posts_result.ok ? posts_result.value.posts : [];
+---
+
+<PageLayout title={`Blog - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<div class="project-blog">
+			<div class="project-blog__header">
+				<h4>Blog Posts</h4>
+				<a href={`https://blog.devpad.tools/posts/new?project=${project.id}`} class="text-link">
+					+ write a post
+				</a>
+			</div>
+
+			{posts.length === 0 ? (
+				<p class="description">No blog posts linked to this project yet.</p>
+			) : (
+				<div class="project-blog__list">
+					{posts.map(post => (
+						<a href={`https://blog.devpad.tools/posts/${post.slug}`} class="project-blog__card">
+							<div class="project-blog__card-title">{post.title}</div>
+							{post.description && <div class="project-blog__card-desc">{post.description}</div>}
+							<div class="project-blog__card-meta">
+								{post.category && <span>{post.category}</span>}
+								<span>{new Date(post.created_at).toLocaleDateString()}</span>
+							</div>
+						</a>
+					))}
+				</div>
+			)}
+		</div>
+	</ProjectLayout>
+</PageLayout>

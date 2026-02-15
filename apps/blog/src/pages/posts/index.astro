@@ -61,7 +61,7 @@ const projectName = (id: string): string => projectMap[id] ?? id;
                 {post.project_ids.length > 0 && (
                   <div class="post-card__projects">
                     {post.project_ids.map(id => (
-                      <span class="post-card__project">{projectName(id)}</span>
+                      <a href={`https://devpad.tools/project/${projectName(id)}`} class="post-card__project">{projectName(id)}</a>
                     ))}
                   </div>
                 )}
