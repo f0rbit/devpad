@@ -13,6 +13,7 @@ export type ParseError = BaseError & { kind: "parse_error" };
 export type EncryptionError = BaseError & { kind: "encryption_error"; operation: "encrypt" | "decrypt" };
 export type DatabaseError = BaseError & { kind: "db_error" };
 export type ConflictError = BaseError & { kind: "conflict"; resource?: string };
+export type ProtectedError = BaseError & { kind: "protected"; entity_id?: string; modified_by?: string; modified_at?: string };
 export type BadRequestError = BaseError & { kind: "bad_request"; details?: unknown };
 export type UnauthorizedError = BaseError & { kind: "unauthorized" };
 export type ScanError = BaseError & { kind: "scan_error" };
@@ -31,6 +32,7 @@ export type ServiceError =
 	| EncryptionError
 	| DatabaseError
 	| ConflictError
+	| ProtectedError
 	| BadRequestError
 	| UnauthorizedError
 	| ScanError
@@ -75,6 +77,7 @@ export const isParseError = (e: unknown): e is ParseError => hasKind(e, "parse_e
 export const isEncryptionError = (e: unknown): e is EncryptionError => hasKind(e, "encryption_error");
 export const isDatabaseError = (e: unknown): e is DatabaseError => hasKind(e, "db_error");
 export const isConflictError = (e: unknown): e is ConflictError => hasKind(e, "conflict");
+export const isProtectedError = (e: unknown): e is ProtectedError => hasKind(e, "protected");
 export const isBadRequestError = (e: unknown): e is BadRequestError => hasKind(e, "bad_request");
 export const isUnauthorizedError = (e: unknown): e is UnauthorizedError => hasKind(e, "unauthorized");
 export const isScanError = (e: unknown): e is ScanError => hasKind(e, "scan_error");
@@ -92,6 +95,7 @@ export const isServiceError = (e: unknown): e is ServiceError =>
 	isEncryptionError(e) ||
 	isDatabaseError(e) ||
 	isConflictError(e) ||
+	isProtectedError(e) ||
 	isBadRequestError(e) ||
 	isUnauthorizedError(e) ||
 	isScanError(e) ||
@@ -110,6 +114,8 @@ export const parseError = (message?: string, ctx?: Record<string, unknown>): Res
 export const encryptionError = (operation: "encrypt" | "decrypt", message?: string, ctx?: Record<string, unknown>): Result<never, EncryptionError> => logAndReturn({ kind: "encryption_error", operation, ...(message && { message }) }, ctx);
 export const dbError = (message?: string, ctx?: Record<string, unknown>): Result<never, DatabaseError> => logAndReturn({ kind: "db_error", ...(message && { message }) }, ctx);
 export const conflict = (resource?: string, message?: string, ctx?: Record<string, unknown>): Result<never, ConflictError> => logAndReturn({ kind: "conflict", ...(resource && { resource }), ...(message && { message }) }, ctx);
+export const protectedEntity = (entity_id?: string, message?: string, modified_by?: string, modified_at?: string, ctx?: Record<string, unknown>): Result<never, ProtectedError> =>
+	logAndReturn({ kind: "protected", ...(entity_id && { entity_id }), ...(message && { message }), ...(modified_by && { modified_by }), ...(modified_at && { modified_at }) }, ctx);
 export const badRequest = (message?: string, details?: unknown, ctx?: Record<string, unknown>): Result<never, BadRequestError> =>
 	logAndReturn({ kind: "bad_request", ...(message && { message }), ...(details !== undefined && { details }) }, ctx);
 export const unauthorized = (message?: string, ctx?: Record<string, unknown>): Result<never, UnauthorizedError> => logAndReturn({ kind: "unauthorized", ...(message && { message }) }, ctx);
@@ -129,6 +135,7 @@ export const errors = {
 	encryptionError,
 	dbError,
 	conflict,
+	protectedEntity,
 	badRequest,
 	unauthorized,
 	scanError,
@@ -146,6 +153,7 @@ export const errors = {
 		encryptionError: isEncryptionError,
 		dbError: isDatabaseError,
 		conflict: isConflictError,
+		protectedEntity: isProtectedError,
 		badRequest: isBadRequestError,
 		unauthorized: isUnauthorizedError,
 		scanError: isScanError,

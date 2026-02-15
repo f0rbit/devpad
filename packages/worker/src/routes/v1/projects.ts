@@ -78,9 +78,11 @@ app.patch("/", requireAuth, zValidator("json", upsert_project), async c => {
 			: undefined,
 	};
 
-	const result = await projects.upsertProject(db, data, auth_user.id, access_token ?? undefined, github_client);
+	const auth_channel = c.get("auth_channel");
+	const result = await projects.upsertProject(db, data, auth_user.id, access_token ?? undefined, github_client, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
 		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
 		return c.json({ error: result.error.kind }, 500);
 	}

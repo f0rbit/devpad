@@ -41,7 +41,7 @@ export async function getMilestone(db: Database, milestone_id: string): Promise<
 	return ok(record);
 }
 
-export async function upsertMilestone(db: Database, data: UpsertMilestone, owner_id: string): Promise<Result<Milestone, ServiceError>> {
+export async function upsertMilestone(db: Database, data: UpsertMilestone, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Milestone, ServiceError>> {
 	const previous_result = data.id ? await getMilestone(db, data.id) : null;
 	const previous = previous_result?.ok ? previous_result.value : null;
 
@@ -53,10 +53,16 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 		return err({ kind: "bad_request", message: "Cannot modify deleted milestone" });
 	}
 
+	if (auth_channel === "api" && previous?.protected && !data.force) {
+		return err({ kind: "protected", entity_id: previous.id, message: `Milestone ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+	}
+
 	const exists = !!previous;
-	const { id: raw_id, ...fields } = data;
+	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
-	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString() };
+	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
+	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), ...provenance };
 
 	let result: Milestone | null = null;
 	if (exists && id) {
@@ -91,7 +97,7 @@ export async function deleteMilestone(db: Database, milestone_id: string, owner_
 	return ok(undefined);
 }
 
-export async function completeMilestone(db: Database, milestone_id: string, owner_id: string, target_version?: string): Promise<Result<Milestone, ServiceError>> {
+export async function completeMilestone(db: Database, milestone_id: string, owner_id: string, target_version?: string, auth_channel: "user" | "api" = "user"): Promise<Result<Milestone, ServiceError>> {
 	const data: Partial<UpsertMilestone> = {
 		id: milestone_id,
 		finished_at: new Date().toISOString(),
@@ -101,9 +107,9 @@ export async function completeMilestone(db: Database, milestone_id: string, owne
 		data.target_version = target_version;
 	}
 
-	return upsertMilestone(db, data as UpsertMilestone, owner_id);
+	return upsertMilestone(db, data as UpsertMilestone, owner_id, auth_channel);
 }
 
-export async function addMilestoneAction(_db: Database, _data: { owner_id: string; milestone_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+export async function addMilestoneAction(_db: Database, _data: { owner_id: string; milestone_id: string; type: ActionType; description: string; channel?: "user" | "api" }): Promise<Result<boolean, ServiceError>> {
 	return ok(true);
 }

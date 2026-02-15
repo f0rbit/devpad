@@ -7,6 +7,7 @@ import { cookieConfig } from "../utils/cookies.js";
 const setNullAuth = (c: any) => {
 	c.set("user", null);
 	c.set("session", null);
+	c.set("auth_channel", "user");
 };
 
 export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
@@ -26,6 +27,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 				task_view: key_result.value.task_view as "list" | "grid",
 			});
 			c.set("session", null);
+			c.set("auth_channel", "api");
 			return next();
 		}
 	}
@@ -42,6 +44,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 				task_view: session_user.task_view,
 			});
 			c.set("session", session_data);
+			c.set("auth_channel", "user");
 
 			if (session_data.fresh) {
 				c.header("Set-Cookie", createSessionCookie(session_data.id, cookieConfig(config.environment)));

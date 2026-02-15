@@ -36,9 +36,11 @@ app.post("/", requireAuth, zValidator("json", upsert_goal), async c => {
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
 
-	const result = await goals.upsertGoal(db, data, auth_user.id);
+	const auth_channel = c.get("auth_channel");
+	const result = await goals.upsertGoal(db, data, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
@@ -54,9 +56,11 @@ app.patch("/:id", requireAuth, zValidator("json", upsert_goal), async c => {
 	if (!goal_id) return c.json({ error: "Missing goal ID" }, 400);
 
 	const update_data = { ...data, id: goal_id };
-	const result = await goals.upsertGoal(db, update_data, auth_user.id);
+	const auth_channel = c.get("auth_channel");
+	const result = await goals.upsertGoal(db, update_data, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}

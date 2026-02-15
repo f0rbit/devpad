@@ -96,64 +96,197 @@ const keywords = [
 				<br />
 			</main>
 		) : (
-			<main class="landing-page" style="display: grid; gap: 100px; justify-items: center">
-				<br />
-				<section id="keep-track">
-					<h2 style="text-align: center; font-size: 2rem; margin-bottom: 50px;">keep track.</h2>
-					<div class="mobile-grid">
-						<div style="display: flex; flex-direction: column; gap: 20px; align-items: center; justify-content: center;">
-							<p>
-								manage your tasks with precision. track progress, set priorities, and organize your workflow in one intuitive interface. devpad helps you stay on top of your to-do
-								list with automatic scanning and smart task management features.
-							</p>
-							<GithubLogin size={30} client:load />
+			<main>
+				<section class="landing-hero">
+					<div class="dot-grid"></div>
+					<h1 style="font-size: 2.5rem; font-weight: 600; margin: 0;">keep track.</h1>
+					<p class="text-lg text-muted hero-description">
+						scan your codebase for @todo comments and turn them into real, trackable tasks. automatic detection, smart tagging, priority assignment, and diff-based updates.
+					</p>
+					<GithubLogin client:load />
+				</section>
+
+				<section class="landing-section">
+					<h2 class="section-title text-xl font-bold">features</h2>
+					<div class="grid grid-2">
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+								<span class="card-icon">
+									<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+								</span>
+								<h3 class="card-title">Codebase Scanning</h3>
+							</div>
+							<p class="card-description">connect a GitHub repository and devpad scans for TODO, FIXME, and @todo comments. when code around a comment changes, you see the diff.</p>
 						</div>
-						<img src="/task-view.png" alt="Task management interface" />
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+								<span class="card-icon">
+									<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><path d="M7 7h.01"/></svg>
+								</span>
+								<h3 class="card-title">Smart Tagging</h3>
+							</div>
+							<p class="card-description">organize tasks with custom color-coded tags. filter by tag, project, or priority to find exactly what you need across all your work.</p>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+								<span class="card-icon">
+									<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+								</span>
+								<h3 class="card-title">Goals & Milestones</h3>
+							</div>
+							<p class="card-description">attach tasks to goals within project milestones. track completion rates and see how individual tasks contribute to larger releases.</p>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+								<span class="card-icon">
+									<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9H3m9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18c-1.66 0-3-4.03-3-9s1.34-9 3-9m-9 9a9 9 0 0 1 9-9"/></svg>
+								</span>
+								<h3 class="card-title">API Access</h3>
+							</div>
+							<p class="card-description">every task is accessible via the REST API. build custom views, integrate with other tools, or use the MCP server to manage tasks through AI assistants.</p>
+						</div>
 					</div>
 				</section>
 
-				<section id="scanning" style="display: flex; flex-direction: column; gap: 25px;">
-					<h2 style="text-align: center; font-size: 1.5rem;">automatic scanning</h2>
-					<div class="mobile-grid">
-						<img src="/scan-update.png" alt="Code scanning process" />
-						<p>
-							automatically scan your codebase for todo comments and convert them into trackable tasks. review and update tasks with just enough verification to keep your workflow
-							smooth. scanning updates tasks with the latest code changes and allows you to filter tasks by project or priority.
-						</p>
+				<section class="landing-section">
+					<h2 class="section-title text-xl font-bold">your tasks at a glance</h2>
+					<div class="card card-flat" style="padding: var(--space-lg);">
+						<div class="stack" style="gap: var(--space-sm);">
+							<div class="flex-col" style="gap: 3px;">
+								<div>
+									<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+									<span class="task-title">implement token refresh with retry logic</span>
+								</div>
+								<p class="task-summary">auth module needs graceful retry on token expiry</p>
+								<div class="flex-col" style="font-size: small; gap: 6px;">
+									<span class="flex-row priority-high">
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+										<span>tomorrow</span>
+									</span>
+								</div>
+							</div>
+							<div class="flex-col" style="gap: 3px;">
+								<div>
+									<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span>
+									<span class="task-title">add dark mode toggle to settings</span>
+								</div>
+								<p class="task-summary">settings page needs a theme switcher component</p>
+								<div class="flex-col" style="font-size: small; gap: 6px;">
+									<span class="flex-row priority-medium">
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+										<span>next week</span>
+									</span>
+								</div>
+							</div>
+							<div class="flex-col" style="gap: 3px;">
+								<div>
+									<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+									<span class="task-title">write API documentation for v2</span>
+								</div>
+								<p class="task-summary">document all public endpoints with examples</p>
+								<div class="flex-col" style="font-size: small; gap: 6px;">
+									<span class="flex-row priority-none">
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+										<span>no due date</span>
+									</span>
+								</div>
+							</div>
+							<div class="flex-col" style="gap: 3px;">
+								<div>
+									<span class="progress-icon"><div class="priority-low"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg></div></span>
+									<span class="task-title" style="text-decoration: line-through; color: var(--fg-faint);">fix login redirect on oauth callback</span>
+								</div>
+								<p class="task-summary">oauth callback was redirecting to wrong page</p>
+								<div class="flex-col" style="font-size: small; gap: 6px;">
+									<span class="flex-row priority-high">
+										<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+										<span>yesterday</span>
+									</span>
+								</div>
+							</div>
+						</div>
 					</div>
 				</section>
 
-				<section id="tagging" style="display: flex; flex-direction: column; gap: 25px;">
-					<h2 style="text-align: center; font-size: 1.5rem;">tagging</h2>
-					<div class="mobile-grid">
-						<p>
-							organize your tasks with custom tags. create categories, filter tasks, and prioritize your work with a flexible tagging system. tags help you quickly find and manage
-							related tasks across multiple projects.
-						</p>
-						<img src="/tag-editor.png" alt="Task tagging interface" />
-					</div>
+				<section class="landing-section stack" style="text-align: center; align-items: center;">
+					<h2 class="text-xl font-bold">ready to get organized?</h2>
+					<p class="text-muted">sign in with GitHub to start tracking.</p>
+					<GithubLogin client:load />
 				</section>
-
-				<section id="projects" style="display: flex; flex-direction: column; gap: 25px;">
-					<h2 style="text-align: center; font-size: 1.5rem;">projects</h2>
-					<div class="mobile-grid">
-						<img src="/project-api.png" alt="Project integration" />
-						<p>
-							link your tasks to specific projects and track progress in one place. devpad integrates seamlessly with your project management workflow, allowing you to set
-							milestones, track updates, and maintain clear project visibility.
-						</p>
-					</div>
-				</section>
-
-				<section id="cta">
-					<div style="display: flex; flex-direction: column; justify-content: center; gap: 25px; align-items: center;">
-						<h2 style="text-align: center;">let's get started</h2>
-						<GithubLogin size={30} client:load />
-					</div>
-				</section>
-				<br />
-				<br />
 			</main>
 		)
 	}
 </PageLayout>
+
+<style>
+	.landing-hero {
+		position: relative;
+		text-align: center;
+		max-width: 800px;
+		margin: 0 auto;
+		padding: 8rem var(--space-lg);
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-md);
+	}
+
+	.dot-grid {
+		position: absolute;
+		inset: 0;
+		overflow: hidden;
+		pointer-events: none;
+		mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black 20%, transparent 70%);
+		-webkit-mask-image: radial-gradient(ellipse 70% 50% at 50% 50%, black 20%, transparent 70%);
+	}
+
+	.dot-grid::before {
+		content: "";
+		position: absolute;
+		inset: -50%;
+		width: 200%;
+		height: 200%;
+		background-image: radial-gradient(circle at center, var(--border) 1.5px, transparent 1.5px);
+		background-size: 32px 32px;
+		opacity: 0.5;
+		animation: dot-wave 25s linear infinite;
+	}
+
+	@keyframes dot-wave {
+		0% { transform: translate(0, 0); }
+		100% { transform: translate(32px, 32px); }
+	}
+
+	.hero-description {
+		max-width: 500px;
+		margin: 0;
+	}
+
+	.landing-section {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: calc(var(--space-xl) * 1.5) var(--space-md);
+		width: 100%;
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-lg);
+	}
+
+	.section-title {
+		text-align: center;
+		margin-bottom: 0;
+	}
+
+	@media (max-width: 768px) {
+		.landing-hero {
+			padding: 4rem var(--space-md);
+		}
+	}
+
+	@media (max-width: 480px) {
+		.landing-hero {
+			padding: 3rem var(--space-sm);
+		}
+	}
+</style>

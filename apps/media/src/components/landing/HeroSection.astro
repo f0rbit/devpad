@@ -1,4 +1,5 @@
 ---
+import { Button } from "@f0rbit/ui";
 import PlatformOrbit from "./PlatformOrbit";
 ---
 
@@ -8,12 +9,16 @@ import PlatformOrbit from "./PlatformOrbit";
 	</div>
 	<div class="hero-content">
 		<h1>Your digital footprint, one timeline.</h1>
-		<p class="description">
+		<p class="text-muted description">
 			Aggregate activity from GitHub, Reddit, Twitter, and more into a single, beautiful timeline.
 		</p>
 		<div class="hero-cta">
-			<a href="/connections" class="btn">Get Started</a>
-			<a href="#preview" class="btn btn-secondary">View Demo</a>
+			<a href="/connections" style="text-decoration: none;">
+				<Button client:load variant="primary">Get Started</Button>
+			</a>
+			<a href="#preview" style="text-decoration: none;">
+				<Button client:load variant="secondary">View Demo</Button>
+			</a>
 		</div>
 	</div>
 </section>
@@ -25,7 +30,7 @@ import PlatformOrbit from "./PlatformOrbit";
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		padding: 8rem 0;
+		padding: 10rem 0;
 		text-align: center;
 		min-height: 400px;
 	}
@@ -42,7 +47,7 @@ import PlatformOrbit from "./PlatformOrbit";
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 16px;
+		gap: var(--space-md);
 		max-width: 500px;
 	}
 
@@ -51,17 +56,22 @@ import PlatformOrbit from "./PlatformOrbit";
 		font-weight: 700;
 		letter-spacing: -0.02em;
 		line-height: 1.1;
+		margin: 0;
+	}
+
+	.description {
+		margin: 0;
 	}
 
 	.hero-cta {
 		display: flex;
-		gap: 12px;
-		margin-top: 8px;
+		gap: var(--space-sm);
+		margin-top: var(--space-xs);
 	}
 
 	@media (max-width: 768px) {
 		.hero-section {
-			padding: 4rem 0;
+			padding: 5rem 0;
 		}
 
 		h1 {
@@ -90,17 +100,17 @@ import PlatformOrbit from "./PlatformOrbit";
 		align-items: center;
 		justify-content: center;
 		padding: 12px;
-		border: 1px solid var(--input-border);
+		border: 1px solid var(--border);
 		border-radius: 8px;
-		color: var(--platform-color, var(--text-secondary));
-		background: var(--bg-primary);
+		color: var(--platform-color, var(--fg-muted));
+		background: var(--bg);
 		transition: border-color 0.15s;
 		animation: float 4s ease-in-out infinite;
 		pointer-events: auto;
 	}
 
 	.orbit-icon:hover {
-		border-color: var(--text-tertiary);
+		border-color: var(--fg-subtle);
 	}
 
 	@keyframes float {
@@ -108,7 +118,6 @@ import PlatformOrbit from "./PlatformOrbit";
 		50% { transform: translateY(-8px); }
 	}
 
-	/* Position icons around the hero */
 	.orbit-icon:nth-child(1) { left: 15%; top: 20%; animation-delay: 0s; }
 	.orbit-icon:nth-child(2) { right: 15%; top: 25%; animation-delay: 0.5s; }
 	.orbit-icon:nth-child(3) { left: 18%; bottom: 25%; animation-delay: 1s; }

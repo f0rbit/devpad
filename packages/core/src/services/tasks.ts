@@ -66,7 +66,7 @@ export async function getTask(db: Database, task_id: string): Promise<Result<Tas
 
 export async function addTaskAction(
 	db: Database,
-	{ owner_id, task_id, type, description, project_id }: { owner_id: string; task_id: string; type: ActionType; description: string; project_id: string | null }
+	{ owner_id, task_id, type, description, project_id, channel = "user" }: { owner_id: string; task_id: string; type: ActionType; description: string; project_id: string | null; channel?: "user" | "api" }
 ): Promise<Result<boolean, ServiceError>> {
 	if (project_id) {
 		const owns_result = await doesUserOwnProject(db, owner_id, project_id);
@@ -89,6 +89,7 @@ export async function addTaskAction(
 		type,
 		description,
 		data: JSON.stringify(data),
+		channel,
 	});
 	return ok(true);
 }
@@ -135,7 +136,7 @@ async function upsertTaskTags(db: Database, task_id: string, tags: string[]): Pr
 	await db.update(task_tag).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(eq(task_tag.task_id, task_id));
 }
 
-export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag[], owner_id: string): Promise<Result<Task | null, ServiceError>> {
+export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag[], owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Task | null, ServiceError>> {
 	const previous_result = data.id ? await getTask(db, data.id) : null;
 	const previous = previous_result?.ok ? (previous_result.value?.task ?? null) : null;
 
@@ -145,6 +146,10 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 
 	if (previous && previous.owner_id !== owner_id) {
 		return err({ kind: "forbidden", reason: "User does not own this task" });
+	}
+
+	if (auth_channel === "api" && previous?.protected && !data.force) {
+		return err({ kind: "protected", entity_id: previous.id, message: `Task ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
 	}
 
 	if (data.goal_id) {
@@ -176,9 +181,11 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const exists = !!previous;
 	const project_id = data.project_id ?? previous?.project_id ?? null;
 
-	const { id: raw_id, ...fields } = data;
+	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
-	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id };
+	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
+	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id, ...provenance };
 
 	let result: Task["task"] | null = null;
 	if (exists && id) {
@@ -201,7 +208,7 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const action_type: ActionType = !exists ? "CREATE_TASK" : "UPDATE_TASK";
 	const action_desc = !exists ? "Created task" : fresh_complete ? "Completed task" : "Updated task";
 
-	await addTaskAction(db, { owner_id, task_id: new_todo.id, type: action_type, description: action_desc, project_id });
+	await addTaskAction(db, { owner_id, task_id: new_todo.id, type: action_type, description: action_desc, project_id, channel: auth_channel });
 
 	if (tag_ids.length > 0) {
 		await upsertTaskTags(db, new_todo.id, tag_ids);
