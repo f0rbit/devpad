@@ -2,7 +2,7 @@
 import DevpadLogo from "@/components/solid/DevpadLogo";
 import GithubLogin from "@/components/solid/GithubLogin";
 import Layout from "@/layouts/Layout.astro";
-import { Badge, Button, Stat, Stepper, Step } from "@f0rbit/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, Status, Tab, TabList, TabPanel, Tabs } from "@f0rbit/ui";
 
 const keywords = [
 	"devpad",
@@ -56,11 +56,11 @@ const keywords = [
 			<div class="cluster" style="justify-content: center;">
 				<Badge client:load>TypeScript</Badge>
 				<Badge client:load>Open Source</Badge>
-				<Badge client:load>Self-hosted</Badge>
+				<Badge client:load>MIT License</Badge>
 			</div>
 			<h1 style="font-size: 2.5rem; font-weight: 600; margin: 0;">devpad</h1>
 			<p class="text-lg text-muted hero-description">
-				development lifecycle tools. track projects, scan codebases, publish blogs, aggregate media.
+				a suite of tools for the development lifecycle. manage projects, scan codebases for tasks, publish technical writing, and track your digital footprint.
 			</p>
 			<div class="row">
 				<a href="/project" style="text-decoration: none;">
@@ -70,66 +70,323 @@ const keywords = [
 					<Button client:load variant="secondary">view docs</Button>
 				</a>
 			</div>
-			<div class="hero-stats">
-				<Stat client:load value="5" label="Apps" />
-				<Stat client:load value="300+" label="Tests" />
-				<Stat client:load value="Zero" label="Exceptions" />
-			</div>
 		</section>
 
 		<section class="landing-section">
-			<h2 class="text-xl font-bold" style="margin-bottom: var(--space-lg);">features</h2>
+			<h2 class="section-title text-xl font-bold">features</h2>
 			<div class="grid grid-2">
 				<div class="card card-flat">
-					<div class="card-header">
+					<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
 						<span class="card-icon">
 							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path d="M2 10h20"/></svg>
 						</span>
 						<h3 class="card-title">Project Management</h3>
 					</div>
-					<p class="card-description">organize side projects with GitHub integration, versioning, milestones, and goal tracking.</p>
+					<p class="card-description">organize your projects with GitHub integration, milestone tracking, and automatic versioning. link repositories, set goals, and track progress from a single dashboard.</p>
 				</div>
 				<div class="card card-flat">
-					<div class="card-header">
+					<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
 						<span class="card-icon">
 							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
 						</span>
 						<h3 class="card-title">Task Scanning</h3>
 					</div>
-					<p class="card-description">scan your codebase for @todo comments. automatic detection, smart tagging, and priority assignment.</p>
+					<p class="card-description">scan your codebase for @todo comments and extract them as trackable tasks. automatic detection with smart tagging, priority assignment, and diff-based updates.</p>
 				</div>
 				<div class="card card-flat">
-					<div class="card-header">
+					<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
 						<span class="card-icon">
 							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
 						</span>
 						<h3 class="card-title">Blog Platform</h3>
 					</div>
-					<p class="card-description">write and publish with markdown. categories, tags, project linking, and a full API.</p>
+					<p class="card-description">write and publish with a full markdown editor. organize with categories and tags, link posts to projects, and access everything through a REST API.</p>
 				</div>
 				<div class="card card-flat">
-					<div class="card-header">
+					<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
 						<span class="card-icon">
 							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
 						</span>
 						<h3 class="card-title">Media Timeline</h3>
 					</div>
-					<p class="card-description">aggregate activity from GitHub, Reddit, Twitter and more into a unified timeline.</p>
+					<p class="card-description">aggregate your activity from GitHub, Reddit, Bluesky and more into one timeline. see your digital footprint across platforms in a single view.</p>
 				</div>
 			</div>
 		</section>
 
 		<section class="landing-section">
-			<h2 class="text-xl font-bold" style="margin-bottom: var(--space-lg);">how it works</h2>
-			<Stepper client:load orientation="vertical">
-				<Step client:load title="connect" description="link your GitHub account to import repositories" status="completed" />
-				<Step client:load title="scan" description="devpad scans your codebase for TODO comments and extracts tasks" status="completed" />
-				<Step client:load title="track" description="manage tasks, set milestones, and track progress across projects" status="completed" />
-			</Stepper>
+			<h2 class="section-title text-xl font-bold">your TODOs become real tasks</h2>
+			<div class="pipeline">
+				<div class="card card-flat pipeline-code">
+					<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-sm);">
+						<span class="text-sm text-faint font-mono">src/auth/session.ts</span>
+					</div>
+					<pre class="font-mono text-sm" style="margin: 0; line-height: 1.6; color: var(--fg-subtle);"><span style="color: var(--fg-faint);">1</span>  export async function refresh(
+<span style="color: var(--fg-faint);">2</span>    session: Session
+<span style="color: var(--fg-faint);">3</span>  ) &#123;
+<span style="color: var(--fg-faint);">4</span>    const token = session.token;
+<span style="color: var(--fg-faint);">5</span>
+<span class="todo-highlight"><span style="color: var(--fg-faint);">6</span>    // @todo implement token refresh</span>
+<span class="todo-highlight"><span style="color: var(--fg-faint);">7</span>    // with retry logic</span>
+<span style="color: var(--fg-faint);">8</span>
+<span style="color: var(--fg-faint);">9</span>    return &#123; expired: true &#125;;
+<span style="color: var(--fg-faint);">10</span> &#125;</pre>
+				</div>
+				<div class="pipeline-arrow">
+					<svg width="40" height="24" viewBox="0 0 40 24" fill="none" stroke="var(--fg-faint)" stroke-width="1.5">
+						<path d="M0 12h32M28 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/>
+					</svg>
+				</div>
+				<div class="card card-flat pipeline-task">
+					<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
+						<span class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+						</span>
+						<h3 class="card-title">implement token refresh with retry logic</h3>
+					</div>
+					<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-sm);">
+						<Badge client:load variant="info">auth</Badge>
+						<Badge client:load variant="warning">HIGH</Badge>
+					</div>
+					<p class="card-description">src/auth/session.ts · line 6</p>
+					<div class="row" style="gap: var(--space-xs); margin-top: var(--space-sm);">
+						<Status client:load state="pending" label="unstarted" />
+					</div>
+				</div>
+			</div>
+			<div class="pipeline-steps">
+				<div class="pipeline-step">
+					<div class="pipeline-step-num">1</div>
+					<div class="pipeline-step-title text-sm font-medium">comment written</div>
+					<div class="pipeline-step-desc text-xs text-faint">you write a @todo in any source file</div>
+				</div>
+				<div class="pipeline-step-divider"></div>
+				<div class="pipeline-step">
+					<div class="pipeline-step-num">2</div>
+					<div class="pipeline-step-title text-sm font-medium">scan detects it</div>
+					<div class="pipeline-step-desc text-xs text-faint">devpad scans your repo on each push</div>
+				</div>
+				<div class="pipeline-step-divider"></div>
+				<div class="pipeline-step">
+					<div class="pipeline-step-num">3</div>
+					<div class="pipeline-step-title text-sm font-medium">task tracked</div>
+					<div class="pipeline-step-desc text-xs text-faint">appears on your dashboard with file + line ref</div>
+				</div>
+			</div>
 		</section>
 
 		<section class="landing-section">
-			<h2 class="text-xl font-bold" style="margin-bottom: var(--space-lg);">explore</h2>
+			<h2 class="section-title text-xl font-bold">everything connects</h2>
+			<Tabs client:load defaultValue="projects">
+				<TabList>
+					<Tab value="projects">projects</Tab>
+					<Tab value="tasks">tasks</Tab>
+					<Tab value="blog">blog</Tab>
+					<Tab value="api">api</Tab>
+					<Tab value="media">media</Tab>
+				</TabList>
+				<TabPanel value="projects">
+					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">track every project with status, version, and linked resources.</p>
+					<div class="grid grid-3">
+						<Card client:load>
+							<CardHeader><CardTitle>game-engine</CardTitle></CardHeader>
+							<CardContent>
+								<div class="row" style="gap: var(--space-xs);">
+									<Status state="active" label="LIVE" />
+									<Badge variant="default">v2.1.0</Badge>
+								</div>
+							</CardContent>
+						</Card>
+						<Card client:load>
+							<CardHeader><CardTitle>dotfiles</CardTitle></CardHeader>
+							<CardContent>
+								<div class="row" style="gap: var(--space-xs);">
+									<Status state="active" label="LIVE" />
+									<Badge variant="default">v1.0.0</Badge>
+								</div>
+							</CardContent>
+						</Card>
+						<Card client:load>
+							<CardHeader><CardTitle>blog-theme</CardTitle></CardHeader>
+							<CardContent>
+								<div class="row" style="gap: var(--space-xs);">
+									<Status state="pending" label="DEV" />
+									<Badge variant="default">v0.3.2</Badge>
+								</div>
+							</CardContent>
+						</Card>
+					</div>
+				</TabPanel>
+				<TabPanel value="tasks">
+					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">scan your codebase or create tasks manually. filter by project, tag, or priority.</p>
+					<div class="stack" style="gap: var(--space-sm);">
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Checkbox client:load checked={true} />
+								<span class="text-sm" style="flex: 1;">add rate limiting to API endpoints</span>
+								<Badge client:load variant="error">HIGH</Badge>
+								<Badge client:load variant="info">backend</Badge>
+							</div>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Checkbox client:load checked={false} />
+								<span class="text-sm" style="flex: 1;">refactor auth middleware</span>
+								<Badge client:load variant="warning">MEDIUM</Badge>
+								<Badge client:load variant="info">auth</Badge>
+							</div>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Checkbox client:load checked={false} />
+								<span class="text-sm" style="flex: 1;">update README with API examples</span>
+								<Badge client:load variant="default">LOW</Badge>
+								<Badge client:load variant="info">docs</Badge>
+							</div>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Checkbox client:load checked={true} />
+								<span class="text-sm" style="flex: 1;">fix timezone handling in scheduler</span>
+								<Badge client:load variant="error">HIGH</Badge>
+								<Badge client:load variant="info">core</Badge>
+							</div>
+						</div>
+					</div>
+				</TabPanel>
+				<TabPanel value="blog">
+					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">write posts linked to projects. markdown editor with live preview.</p>
+					<div class="grid grid-2">
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-xs);">
+								<Badge client:load variant="accent">devlog</Badge>
+								<span class="text-xs text-faint">2026-02-10</span>
+							</div>
+							<h4 class="card-title">Building a Code Scanner in TypeScript</h4>
+							<p class="card-description">how devpad parses your codebase to extract TODO comments and convert them into trackable tasks.</p>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-xs);">
+								<Badge client:load variant="accent">tutorial</Badge>
+								<span class="text-xs text-faint">2026-01-28</span>
+							</div>
+							<h4 class="card-title">API-First Project Management</h4>
+							<p class="card-description">why every feature in devpad is an API call and how to build your own integrations.</p>
+						</div>
+					</div>
+				</TabPanel>
+				<TabPanel value="api">
+					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">every feature is an API call. build your own dashboard, CLI, or bot.</p>
+					<div class="card card-flat" style="background: var(--bg-alt);">
+						<pre class="font-mono text-sm" style="margin: 0; overflow-x: auto; color: var(--fg-subtle);"><span style="color: var(--fg-faint);">$</span> curl -s https://api.devpad.tools/v1/tasks \
+    -H "Authorization: Bearer dp_sk_..." | jq '.[:2]'
+
+[
+  &#123;
+    "title": "implement token refresh",
+    "priority": "HIGH",
+    "progress": "UNSTARTED",
+    "project": "game-engine"
+  &#125;,
+  &#123;
+    "title": "add rate limiting",
+    "priority": "MEDIUM",
+    "progress": "IN_PROGRESS",
+    "project": "game-engine"
+  &#125;
+]</pre>
+					</div>
+				</TabPanel>
+				<TabPanel value="media">
+					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">GitHub, Reddit, Bluesky, YouTube — one feed.</p>
+					<div class="stack" style="gap: var(--space-sm);">
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Badge client:load variant="default">GitHub</Badge>
+								<span class="text-sm" style="flex: 1;">pushed 3 commits to game-engine</span>
+								<span class="text-xs text-faint">2h ago</span>
+							</div>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Badge client:load variant="info">Bluesky</Badge>
+								<span class="text-sm" style="flex: 1;">posted about the new scanner feature</span>
+								<span class="text-xs text-faint">5h ago</span>
+							</div>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Badge client:load variant="error">Reddit</Badge>
+								<span class="text-sm" style="flex: 1;">commented on r/typescript thread</span>
+								<span class="text-xs text-faint">1d ago</span>
+							</div>
+						</div>
+						<div class="card card-flat">
+							<div class="row" style="gap: var(--space-sm);">
+								<Badge client:load variant="warning">YouTube</Badge>
+								<span class="text-sm" style="flex: 1;">liked "Advanced TypeScript Patterns"</span>
+								<span class="text-xs text-faint">2d ago</span>
+							</div>
+						</div>
+					</div>
+				</TabPanel>
+			</Tabs>
+		</section>
+
+		<section class="landing-section">
+			<h2 class="section-title text-xl font-bold">API-first means you own the integration</h2>
+			<p class="text-muted" style="text-align: center; margin-bottom: var(--space-lg);">every button in devpad is an API call. use it your way.</p>
+			<div class="arch-diagram">
+				<div class="arch-row">
+					<div class="card card-flat arch-card">
+						<h4 class="card-title text-sm">MCP Server</h4>
+						<p class="card-description text-xs">Claude, Cursor, opencode</p>
+					</div>
+					<div class="card card-flat arch-card">
+						<h4 class="card-title text-sm">CLI</h4>
+						<p class="card-description text-xs font-mono">$ devpad tasks list</p>
+					</div>
+				</div>
+				<div class="arch-center">
+					<div class="arch-lines"></div>
+					<div class="card arch-card-center">
+						<Badge client:load variant="accent">devpad API</Badge>
+					</div>
+				</div>
+				<div class="arch-row">
+					<div class="card card-flat arch-card">
+						<h4 class="card-title text-sm">REST API</h4>
+						<p class="card-description text-xs">bearer token auth</p>
+					</div>
+					<div class="card card-flat arch-card">
+						<h4 class="card-title text-sm">GitHub</h4>
+						<p class="card-description text-xs">repo sync & scanning</p>
+					</div>
+					<div class="card card-flat arch-card">
+						<h4 class="card-title text-sm">Blog API</h4>
+						<p class="card-description text-xs">posts, categories, tags</p>
+					</div>
+					<div class="card card-flat arch-card">
+						<h4 class="card-title text-sm">Media</h4>
+						<p class="card-description text-xs">timeline & connections</p>
+					</div>
+				</div>
+			</div>
+			<div class="card card-flat" style="margin-top: var(--space-lg);">
+				<pre class="font-mono text-sm" style="margin: 0; overflow-x: auto; color: var(--fg-subtle);">$ curl -s https://api.devpad.tools/v1/projects \
+    -H "Authorization: Bearer dp_sk_..." | jq '.[0]'
+
+&#123;
+  "name": "game-engine",
+  "status": "LIVE",
+  "current_version": "2.1.0",
+  "repo_url": "https://github.com/f0rbit/engine"
+&#125;</pre>
+			</div>
+		</section>
+
+		<section class="landing-section">
+			<h2 class="section-title text-xl font-bold">explore</h2>
 			<div class="grid grid-2">
 				<a href="/project" class="explore-link">
 					<div class="card card-interactive">
@@ -231,16 +488,11 @@ const keywords = [
 		padding: var(--space-xl) var(--space-md);
 		width: 100%;
 		box-sizing: border-box;
-		border-top: 1px solid var(--border);
 	}
 
-	.hero-stats {
-		display: flex;
-		gap: var(--space-xl);
-		justify-content: center;
-		padding-top: var(--space-lg);
-		border-top: 1px solid var(--border);
-		width: 100%;
+	.section-title {
+		text-align: center;
+		margin-bottom: var(--space-lg);
 	}
 
 	.hero-description {
@@ -264,8 +516,133 @@ const keywords = [
 		.landing-hero {
 			padding: 4rem var(--space-md);
 		}
-		.hero-stats {
-			gap: var(--space-lg);
+	}
+
+	.pipeline {
+		display: flex;
+		align-items: center;
+		gap: var(--space-md);
+		margin-bottom: var(--space-lg);
+	}
+
+	.pipeline-code, .pipeline-task {
+		flex: 1;
+	}
+
+	.pipeline-arrow {
+		flex-shrink: 0;
+		display: flex;
+		align-items: center;
+	}
+
+	.todo-highlight {
+		background: color-mix(in srgb, var(--accent) 15%, transparent);
+		display: block;
+		margin: 0 calc(-1 * var(--space-md));
+		padding: 0 var(--space-md);
+		border-left: 2px solid var(--accent);
+	}
+
+	.pipeline-steps {
+		display: flex;
+		align-items: flex-start;
+		justify-content: center;
+		gap: var(--space-md);
+	}
+
+	.pipeline-step {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		gap: var(--space-xs);
+		flex: 1;
+		max-width: 200px;
+	}
+
+	.pipeline-step-num {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: var(--bg-alt);
+		border: 1px solid var(--border);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: var(--text-xs);
+		font-weight: 600;
+		color: var(--fg-muted);
+	}
+
+	.pipeline-step-divider {
+		flex-shrink: 0;
+		width: 40px;
+		height: 1px;
+		background: var(--border);
+		margin-top: 14px;
+	}
+
+	.arch-diagram {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: var(--space-md);
+	}
+
+	.arch-row {
+		display: flex;
+		gap: var(--space-md);
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+
+	.arch-card {
+		min-width: 140px;
+		text-align: center;
+	}
+
+	.arch-center {
+		position: relative;
+		display: flex;
+		justify-content: center;
+		padding: var(--space-md) 0;
+	}
+
+	.arch-card-center {
+		padding: var(--space-md) var(--space-xl);
+		text-align: center;
+		z-index: 1;
+	}
+
+	.arch-lines {
+		position: absolute;
+		inset: 0;
+		display: flex;
+		justify-content: center;
+	}
+
+	.arch-lines::before {
+		content: "";
+		width: 1px;
+		height: 100%;
+		background: var(--border);
+	}
+
+	@media (max-width: 768px) {
+		.pipeline {
+			flex-direction: column;
+		}
+		.pipeline-arrow {
+			transform: rotate(90deg);
+		}
+		.pipeline-steps {
+			flex-direction: column;
+			align-items: center;
+		}
+		.pipeline-step-divider {
+			width: 1px;
+			height: 20px;
+			margin-top: 0;
 		}
 	}
 
