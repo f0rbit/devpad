@@ -2,7 +2,7 @@
 import DevpadLogo from "@/components/solid/DevpadLogo";
 import GithubLogin from "@/components/solid/GithubLogin";
 import Layout from "@/layouts/Layout.astro";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Checkbox, Status, Tab, TabList, TabPanel, Tabs } from "@f0rbit/ui";
+import { Badge, Button, Tab, TabList, TabPanel, Tabs } from "@f0rbit/ui";
 
 const keywords = [
 	"devpad",
@@ -54,9 +54,9 @@ const keywords = [
 		<section class="landing-hero">
 			<div class="dot-grid"></div>
 			<div class="cluster" style="justify-content: center;">
-				<Badge client:load>TypeScript</Badge>
-				<Badge client:load>Open Source</Badge>
-				<Badge client:load>MIT License</Badge>
+				<Badge client:load variant="default">TypeScript</Badge>
+				<Badge client:load variant="default">Open Source</Badge>
+				<Badge client:load variant="default">MIT License</Badge>
 			</div>
 			<h1 style="font-size: 2.5rem; font-weight: 600; margin: 0;">devpad</h1>
 			<p class="text-lg text-muted hero-description">
@@ -138,19 +138,22 @@ const keywords = [
 					</svg>
 				</div>
 				<div class="card card-flat pipeline-task">
-					<div class="row" style="gap: var(--space-sm); margin-bottom: var(--space-sm);">
-						<span class="card-icon">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-						</span>
-						<h3 class="card-title">implement token refresh with retry logic</h3>
-					</div>
-					<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-sm);">
-						<Badge client:load variant="info">auth</Badge>
-						<Badge client:load variant="warning">HIGH</Badge>
-					</div>
-					<p class="card-description">src/auth/session.ts · line 6</p>
-					<div class="row" style="gap: var(--space-xs); margin-top: var(--space-sm);">
-						<Status client:load state="pending" label="unstarted" />
+					<div class="flex-col" style="gap: 3px;">
+						<div>
+							<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+							<span class="task-title">implement token refresh with retry logic</span>
+						</div>
+						<p class="task-summary">src/auth/session.ts &middot; line 6</p>
+						<div class="flex-col" style="font-size: small; gap: 6px;">
+							<span class="flex-row">
+								<span class="tag-dot" style="background: var(--text-link);"></span>
+								<span style="color: var(--fg-muted);">auth</span>
+							</span>
+							<span class="flex-row priority-high">
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+								<span>unstarted</span>
+							</span>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -188,68 +191,94 @@ const keywords = [
 				<TabPanel value="projects">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">track every project with status, version, and linked resources.</p>
 					<div class="grid grid-3">
-						<Card client:load>
-							<CardHeader><CardTitle>game-engine</CardTitle></CardHeader>
-							<CardContent>
-								<div class="row" style="gap: var(--space-xs);">
-									<Status state="active" label="LIVE" />
-									<Badge variant="default">v2.1.0</Badge>
-								</div>
-							</CardContent>
-						</Card>
-						<Card client:load>
-							<CardHeader><CardTitle>dotfiles</CardTitle></CardHeader>
-							<CardContent>
-								<div class="row" style="gap: var(--space-xs);">
-									<Status state="active" label="LIVE" />
-									<Badge variant="default">v1.0.0</Badge>
-								</div>
-							</CardContent>
-						</Card>
-						<Card client:load>
-							<CardHeader><CardTitle>blog-theme</CardTitle></CardHeader>
-							<CardContent>
-								<div class="row" style="gap: var(--space-xs);">
-									<Status state="pending" label="DEV" />
-									<Badge variant="default">v0.3.2</Badge>
-								</div>
-							</CardContent>
-						</Card>
+						<div class="card flex-col" style="gap: 3px;">
+							<div><span class="task-title">game-engine</span></div>
+							<p class="task-summary">a 2D game engine built with WebGL and TypeScript</p>
+							<div style="height: 100%;"></div>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row">
+									<span style="color: var(--fg-faint);">2 days ago</span>
+									<span style="color: color-mix(in srgb, var(--fg-muted) 70%, green); font-weight: 500; margin-left: auto;">Live</span>
+								</span>
+							</div>
+						</div>
+						<div class="card flex-col" style="gap: 3px;">
+							<div><span class="task-title">blog-theme</span></div>
+							<p class="task-summary">a minimal theme for the devpad blog platform</p>
+							<div style="height: 100%;"></div>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row">
+									<span style="color: var(--fg-faint);">5 days ago</span>
+									<span style="color: var(--text-link); font-weight: 500; margin-left: auto;">Development</span>
+								</span>
+							</div>
+						</div>
+						<div class="card flex-col" style="gap: 3px;">
+							<div><span class="task-title">cli-tool</span></div>
+							<p class="task-summary">command-line interface for managing devpad resources</p>
+							<div style="height: 100%;"></div>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row">
+									<span style="color: var(--fg-faint);">2 weeks ago</span>
+									<span style="color: var(--fg-muted); font-weight: 500; margin-left: auto;">Paused</span>
+								</span>
+							</div>
+						</div>
 					</div>
 				</TabPanel>
 				<TabPanel value="tasks">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">scan your codebase or create tasks manually. filter by project, tag, or priority.</p>
 					<div class="stack" style="gap: var(--space-sm);">
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Checkbox client:load checked={true} />
-								<span class="text-sm" style="flex: 1;">add rate limiting to API endpoints</span>
-								<Badge client:load variant="error">HIGH</Badge>
-								<Badge client:load variant="info">backend</Badge>
+						<div class="flex-col" style="gap: 3px;">
+							<div>
+								<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+								<span class="task-title">implement token refresh with retry logic</span>
+							</div>
+							<p class="task-summary">auth module needs graceful retry on token expiry</p>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row priority-high">
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+									<span>tomorrow</span>
+								</span>
 							</div>
 						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Checkbox client:load checked={false} />
-								<span class="text-sm" style="flex: 1;">refactor auth middleware</span>
-								<Badge client:load variant="warning">MEDIUM</Badge>
-								<Badge client:load variant="info">auth</Badge>
+						<div class="flex-col" style="gap: 3px;">
+							<div>
+								<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span>
+								<span class="task-title">add dark mode toggle</span>
+							</div>
+							<p class="task-summary">settings page needs a theme switcher component</p>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row priority-medium">
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+									<span>next week</span>
+								</span>
 							</div>
 						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Checkbox client:load checked={false} />
-								<span class="text-sm" style="flex: 1;">update README with API examples</span>
-								<Badge client:load variant="default">LOW</Badge>
-								<Badge client:load variant="info">docs</Badge>
+						<div class="flex-col" style="gap: 3px;">
+							<div>
+								<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+								<span class="task-title">write API documentation</span>
+							</div>
+							<p class="task-summary">document all public endpoints with examples</p>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row priority-none">
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+									<span>no due date</span>
+								</span>
 							</div>
 						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Checkbox client:load checked={true} />
-								<span class="text-sm" style="flex: 1;">fix timezone handling in scheduler</span>
-								<Badge client:load variant="error">HIGH</Badge>
-								<Badge client:load variant="info">core</Badge>
+						<div class="flex-col" style="gap: 3px;">
+							<div>
+								<span class="progress-icon"><div class="priority-low"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg></div></span>
+								<span class="task-title" style="text-decoration: line-through; color: var(--fg-faint);">fix login redirect bug</span>
+							</div>
+							<p class="task-summary">oauth callback was redirecting to wrong page</p>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row priority-high">
+									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+									<span>yesterday</span>
+								</span>
 							</div>
 						</div>
 					</div>
@@ -257,21 +286,27 @@ const keywords = [
 				<TabPanel value="blog">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">write posts linked to projects. markdown editor with live preview.</p>
 					<div class="grid grid-2">
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-xs);">
-								<Badge client:load variant="accent">devlog</Badge>
-								<span class="text-xs text-faint">2026-02-10</span>
+						<div class="card flex-col" style="gap: 3px;">
+							<div><span class="task-title">building a game engine from scratch</span></div>
+							<p class="task-summary">a deep dive into WebGL rendering pipelines and entity component systems</p>
+							<div style="height: 100%;"></div>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row">
+									<span style="color: var(--fg-faint);">jan 15, 2026</span>
+									<span style="color: var(--fg-faint); margin-left: auto;">development</span>
+								</span>
 							</div>
-							<h4 class="card-title">Building a Code Scanner in TypeScript</h4>
-							<p class="card-description">how devpad parses your codebase to extract TODO comments and convert them into trackable tasks.</p>
 						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-xs); margin-bottom: var(--space-xs);">
-								<Badge client:load variant="accent">tutorial</Badge>
-								<span class="text-xs text-faint">2026-01-28</span>
+						<div class="card flex-col" style="gap: 3px;">
+							<div><span class="task-title">API-first project management</span></div>
+							<p class="task-summary">why every feature in devpad is an API call and how to build your own integrations</p>
+							<div style="height: 100%;"></div>
+							<div class="flex-col" style="font-size: small; gap: 6px;">
+								<span class="flex-row">
+									<span style="color: var(--fg-faint);">jan 28, 2026</span>
+									<span style="color: var(--fg-faint); margin-left: auto;">tutorial</span>
+								</span>
 							</div>
-							<h4 class="card-title">API-First Project Management</h4>
-							<p class="card-description">why every feature in devpad is an API call and how to build your own integrations.</p>
 						</div>
 					</div>
 				</TabPanel>
@@ -299,34 +334,27 @@ const keywords = [
 				</TabPanel>
 				<TabPanel value="media">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">GitHub, Reddit, Bluesky, YouTube — one feed.</p>
-					<div class="stack" style="gap: var(--space-sm);">
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Badge client:load variant="default">GitHub</Badge>
-								<span class="text-sm" style="flex: 1;">pushed 3 commits to game-engine</span>
-								<span class="text-xs text-faint">2h ago</span>
+					<div class="stack" style="gap: 0;">
+						<div class="flex-col" style="gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
+							<div class="flex-row" style="gap: var(--space-xs);">
+								<span class="text-xs text-faint">github</span>
+								<span class="text-xs text-faint" style="margin-left: auto;">2 hours ago</span>
 							</div>
+							<span class="task-title text-sm">pushed 3 commits to f0rbit/engine</span>
 						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Badge client:load variant="info">Bluesky</Badge>
-								<span class="text-sm" style="flex: 1;">posted about the new scanner feature</span>
-								<span class="text-xs text-faint">5h ago</span>
+						<div class="flex-col" style="gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
+							<div class="flex-row" style="gap: var(--space-xs);">
+								<span class="text-xs text-faint">reddit</span>
+								<span class="text-xs text-faint" style="margin-left: auto;">yesterday</span>
 							</div>
+							<span class="task-title text-sm">posted in r/typescript about code scanning patterns</span>
 						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Badge client:load variant="error">Reddit</Badge>
-								<span class="text-sm" style="flex: 1;">commented on r/typescript thread</span>
-								<span class="text-xs text-faint">1d ago</span>
+						<div class="flex-col" style="gap: var(--space-xs); padding: var(--space-sm) 0;">
+							<div class="flex-row" style="gap: var(--space-xs);">
+								<span class="text-xs text-faint">bluesky</span>
+								<span class="text-xs text-faint" style="margin-left: auto;">3 days ago</span>
 							</div>
-						</div>
-						<div class="card card-flat">
-							<div class="row" style="gap: var(--space-sm);">
-								<Badge client:load variant="warning">YouTube</Badge>
-								<span class="text-sm" style="flex: 1;">liked "Advanced TypeScript Patterns"</span>
-								<span class="text-xs text-faint">2d ago</span>
-							</div>
+							<span class="task-title text-sm">shared a thread about building developer tools</span>
 						</div>
 					</div>
 				</TabPanel>
@@ -485,14 +513,17 @@ const keywords = [
 	.landing-section {
 		max-width: 1000px;
 		margin: 0 auto;
-		padding: var(--space-xl) var(--space-md);
+		padding: calc(var(--space-xl) * 1.5) var(--space-md);
 		width: 100%;
 		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-lg);
 	}
 
 	.section-title {
 		text-align: center;
-		margin-bottom: var(--space-lg);
+		margin-bottom: 0;
 	}
 
 	.hero-description {
@@ -512,6 +543,13 @@ const keywords = [
 		text-align: center;
 	}
 
+	.tag-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
 	@media (max-width: 768px) {
 		.landing-hero {
 			padding: 4rem var(--space-md);
@@ -521,8 +559,7 @@ const keywords = [
 	.pipeline {
 		display: flex;
 		align-items: center;
-		gap: var(--space-md);
-		margin-bottom: var(--space-lg);
+		gap: var(--space-lg);
 	}
 
 	.pipeline-code, .pipeline-task {
