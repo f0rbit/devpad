@@ -148,6 +148,10 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 		return err({ kind: "forbidden", reason: "User does not own this task" });
 	}
 
+	if (auth_channel === "api" && previous?.protected && !data.force) {
+		return err({ kind: "protected", entity_id: previous.id, message: `Task ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+	}
+
 	if (data.goal_id) {
 		const { getGoal } = await import("./goals.js");
 		const goal_result = await getGoal(db, data.goal_id);
@@ -177,9 +181,10 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const exists = !!previous;
 	const project_id = data.project_id ?? previous?.project_id ?? null;
 
-	const { id: raw_id, ...fields } = data;
+	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
-	const provenance = exists ? { modified_by: auth_channel } : { created_by: auth_channel, modified_by: auth_channel };
+	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
+	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
 	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id, ...provenance };
 
 	let result: Task["task"] | null = null;

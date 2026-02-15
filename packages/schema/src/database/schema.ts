@@ -16,6 +16,7 @@ export const provenance = () => ({
 	modified_by: text("modified_by", { enum: ["user", "api"] })
 		.notNull()
 		.default("user"),
+	protected: int("protected", { mode: "boolean" }).notNull().default(false),
 });
 
 export const owner_id = () => ({

@@ -16,6 +16,7 @@ export const upsert_project = z.object({
 	link_text: z.string().nullable(),
 	visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]).optional(),
 	current_version: z.string().nullable(),
+	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });
 
 export const upsert_todo = z.object({
@@ -31,6 +32,7 @@ export const upsert_todo = z.object({
 	owner_id: z.string(),
 	project_id: z.string().optional().nullable(),
 	goal_id: z.string().optional().nullable(),
+	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });
 
 export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
@@ -102,6 +104,7 @@ export const upsert_milestone = z.object({
 	target_version: z.string().nullable().optional(),
 	finished_at: z.string().nullable().optional(),
 	after_id: z.string().nullable().optional(),
+	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });
 
 export const upsert_goal = z.object({
@@ -111,4 +114,5 @@ export const upsert_goal = z.object({
 	description: z.string().nullable().optional(),
 	target_time: z.string().nullable().optional(),
 	finished_at: z.string().nullable().optional(),
+	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });

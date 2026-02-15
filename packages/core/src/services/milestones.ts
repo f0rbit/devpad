@@ -53,10 +53,15 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 		return err({ kind: "bad_request", message: "Cannot modify deleted milestone" });
 	}
 
+	if (auth_channel === "api" && previous?.protected && !data.force) {
+		return err({ kind: "protected", entity_id: previous.id, message: `Milestone ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+	}
+
 	const exists = !!previous;
-	const { id: raw_id, ...fields } = data;
+	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
-	const provenance = exists ? { modified_by: auth_channel } : { created_by: auth_channel, modified_by: auth_channel };
+	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
+	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
 	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), ...provenance };
 
 	let result: Milestone | null = null;

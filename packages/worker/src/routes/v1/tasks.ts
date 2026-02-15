@@ -77,6 +77,7 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async c => {
 	const result = await tasks.upsertTask(db, data, tag_list, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
+		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
 		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
 		return c.json({ error: result.error.kind }, 500);
 	}
