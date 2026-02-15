@@ -9,6 +9,15 @@ export const deleted = () => ({
 	deleted: int("deleted", { mode: "boolean" }).notNull().default(false),
 });
 
+export const provenance = () => ({
+	created_by: text("created_by", { enum: ["user", "api"] })
+		.notNull()
+		.default("user"),
+	modified_by: text("modified_by", { enum: ["user", "api"] })
+		.notNull()
+		.default("user"),
+});
+
 export const owner_id = () => ({
 	owner_id: text("owner_id")
 		.notNull()
@@ -25,6 +34,7 @@ export const entity = (prefix: string) => ({
 	...id(prefix),
 	...timestamps(),
 	...deleted(),
+	...provenance(),
 });
 
 export const owned_entity = (prefix: string) => ({
@@ -120,6 +130,9 @@ export const action = sqliteTable("action", {
 	type: text("type", { enum: ACTIONS }).notNull(),
 	description: text("description").notNull(),
 	data: text("data", { mode: "json" }),
+	channel: text("channel", { enum: ["user", "api"] })
+		.notNull()
+		.default("user"),
 });
 
 export const tracker_result = sqliteTable("tracker_result", {

@@ -38,7 +38,7 @@ export async function getGoal(db: Database, goal_id: string): Promise<Result<Goa
 	return ok(record);
 }
 
-export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: string): Promise<Result<Goal, ServiceError>> {
+export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Goal, ServiceError>> {
 	const previous_result = data.id ? await getGoal(db, data.id) : null;
 	const previous = previous_result?.ok ? previous_result.value : null;
 
@@ -57,7 +57,8 @@ export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: strin
 	const exists = !!previous;
 	const { id: raw_id, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
-	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString() };
+	const provenance = exists ? { modified_by: auth_channel } : { created_by: auth_channel, modified_by: auth_channel };
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), ...provenance };
 
 	let result: Goal | null = null;
 	if (exists && id) {
@@ -94,15 +95,15 @@ export async function deleteGoal(db: Database, goal_id: string, owner_id: string
 	return ok(undefined);
 }
 
-export async function completeGoal(db: Database, goal_id: string, owner_id: string): Promise<Result<Goal, ServiceError>> {
+export async function completeGoal(db: Database, goal_id: string, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Goal, ServiceError>> {
 	const data: Partial<UpsertGoal> = {
 		id: goal_id,
 		finished_at: new Date().toISOString(),
 	};
 
-	return upsertGoal(db, data as UpsertGoal, owner_id);
+	return upsertGoal(db, data as UpsertGoal, owner_id, auth_channel);
 }
 
-export async function addGoalAction(_db: Database, _data: { owner_id: string; goal_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+export async function addGoalAction(_db: Database, _data: { owner_id: string; goal_id: string; type: ActionType; description: string; channel?: "user" | "api" }): Promise<Result<boolean, ServiceError>> {
 	return ok(true);
 }

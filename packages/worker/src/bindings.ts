@@ -23,10 +23,13 @@ export type OAuthSecrets = {
 	twitter_client_secret: string;
 };
 
+export type AuthChannel = "user" | "api";
+
 export type AppVariables = {
 	db: Database;
 	user: AuthUser;
 	session: SessionData | null;
+	auth_channel: AuthChannel;
 	blogContext: BlogAppContext;
 	mediaContext: MediaAppContext;
 	config: AppConfig;

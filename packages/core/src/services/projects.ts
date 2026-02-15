@@ -49,7 +49,10 @@ export async function doesUserOwnProject(db: Database, user_id: string, project_
 	return ok(result.length > 0);
 }
 
-export async function addProjectAction(db: Database, { owner_id, project_id, type, description }: { owner_id: string; project_id: string; type: ActionType; description: string }): Promise<Result<boolean, ServiceError>> {
+export async function addProjectAction(
+	db: Database,
+	{ owner_id, project_id, type, description, channel = "user" }: { owner_id: string; project_id: string; type: ActionType; description: string; channel?: "user" | "api" }
+): Promise<Result<boolean, ServiceError>> {
 	const owns_result = await doesUserOwnProject(db, owner_id, project_id);
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return ok(false);
@@ -59,6 +62,7 @@ export async function addProjectAction(db: Database, { owner_id, project_id, typ
 		type,
 		description,
 		data: JSON.stringify({ project_id }),
+		channel,
 	});
 	return ok(true);
 }
@@ -130,7 +134,7 @@ export type GitHubClient = {
 	getSpecification?: (owner: string, repo: string, access_token: string) => Promise<string>;
 };
 
-export async function upsertProject(db: Database, data: UpsertProject, owner_id: string, access_token?: string, github_client?: GitHubClient): Promise<Result<Project, ServiceError>> {
+export async function upsertProject(db: Database, data: UpsertProject, owner_id: string, access_token?: string, github_client?: GitHubClient, auth_channel: "user" | "api" = "user"): Promise<Result<Project, ServiceError>> {
 	if (access_token && github_client) {
 		const prev_result = data.id ? await getProjectById(db, data.id) : null;
 		const previous = prev_result?.ok ? prev_result.value : null;
@@ -174,7 +178,8 @@ export async function upsertProject(db: Database, data: UpsertProject, owner_id:
 
 	const { id: raw_id, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
-	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id: final_owner_id };
+	const provenance_fields = exists ? { modified_by: auth_channel } : { created_by: auth_channel, modified_by: auth_channel };
+	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id: final_owner_id, ...provenance_fields };
 
 	let result: Project | null = null;
 	if (exists && id) {
@@ -200,6 +205,7 @@ export async function upsertProject(db: Database, data: UpsertProject, owner_id:
 		project_id: new_project.id,
 		type: action_type,
 		description: action_desc,
+		channel: auth_channel,
 	});
 
 	return ok(new_project);

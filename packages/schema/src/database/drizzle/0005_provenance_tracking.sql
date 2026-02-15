@@ -1,0 +1,19 @@
+ALTER TABLE `action` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `action` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `action` ADD `channel` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `checklist` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `checklist` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `checklist_item` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `checklist_item` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `codebase_tasks` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `codebase_tasks` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `goal` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `goal` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `milestone` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `milestone` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `project` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `project` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `tag` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `tag` ADD `modified_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `task` ADD `created_by` text DEFAULT 'user' NOT NULL;--> statement-breakpoint
+ALTER TABLE `task` ADD `modified_by` text DEFAULT 'user' NOT NULL;
