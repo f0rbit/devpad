@@ -118,7 +118,7 @@ const isOverdue = goal.target_time && new Date(goal.target_time) < new Date() &&
 				<div class="empty">
 					<h3 class="empty-title">No tasks yet</h3>
 					<p class="empty-description">Create a task and assign it to this goal.</p>
-					<a href="/todo/new" class="btn">Create task</a>
+					<a href={`/project/${project_id}/tasks/create?goal_id=${goal_id}`} class="btn">Create task</a>
 				</div>
 			)}
 		</div>
