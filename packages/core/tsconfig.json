@@ -12,6 +12,8 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"allowSyntheticDefaultImports": true,
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
 		"lib": ["ES2022"]
 	},
 	"include": ["src/**/*"],
