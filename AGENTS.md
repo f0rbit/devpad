@@ -71,6 +71,10 @@ devpad/
 │   ├── cli/                                   # CLI tool for devpad
 │   ├── mcp/                                   # MCP server for AI tool integration
 │   ├── core/src/
+│   │   ├── ui/                                # Shared frontend (SolidJS components, CSS, middleware)
+│   │   │   ├── index.ts                       # Barrel: DevpadHeader, DevpadFooter, DevpadLogo, DevpadAuth
+│   │   │   ├── styles/globals.css             # Shared CSS (@imports @f0rbit/ui/styles)
+│   │   │   └── middleware.ts                  # resolveAuth() shared auth middleware
 │   │   ├── services/
 │   │   │   ├── projects.ts                    # Project management logic
 │   │   │   ├── tasks.ts                       # Task operations
@@ -152,13 +156,12 @@ devpad/
 - API client (`packages/api`) wraps all operations in `Result<T, ApiResultError>`
 
 ## Cross-App Navigation
-- All 3 apps use a unified header design (`.unified-header` CSS class in each app's layout)
-- Header row 1: devpad logo + cross-app links (Projects, Tasks, Blog, Media) + auth controls
-- Header row 2 (blog/media only): app-specific sub-nav (posts/categories/settings, dashboard/timeline/connections)
-- Cross-app URLs are hardcoded production URLs (`https://devpad.tools`, `https://blog.devpad.tools`, `https://media.devpad.tools`)
-- Within an app, use relative paths for navigation
-- Each app determines its own "active" state and renders its own auth component
-- Header markup lives in each app's layout file (`PageLayout.astro`, `app-layout.astro`, `AppLayout.astro`)
+- All 3 apps use shared `DevpadHeader` from `@devpad/core/ui` for row 1 (logo, nav, auth)
+- Row 2 subnav (blog/media only) stays in each app's `.astro` layout (needs Astro's `class:list` directive)
+- `DevpadHeader` generates URLs using domain grouping: main = projects/tasks/docs, blog = blog, media = media
+- If a nav link's domain matches `currentApp`'s domain → relative URL, else → absolute cross-app URL
+- `DevpadAuth` uses GitHub-branded login button when logged out; `variant="main"` shows "account" link, `variant="sub"` shows username
+- Main's `GithubLogin.tsx` and `DevpadLogo.tsx` are thin re-export wrappers for backward compat (used by landing page, project/todo index)
 
 ## Blog-Project Integration
 - Blog posts link to projects via `blog_post_projects` junction table
@@ -168,7 +171,8 @@ devpad/
 - Blog post editor page shows linked projects as clickable pills
 
 ## CSS Token Architecture
-- `@f0rbit/ui` is the source of truth for design tokens (all 3 apps import `@f0rbit/ui/styles`)
+- `@f0rbit/ui` is the source of truth for design tokens (all 3 apps import `@devpad/core/ui/styles` which `@import`s `@f0rbit/ui/styles`)
+- Apps no longer import `@f0rbit/ui/styles` directly -- it's included via `globals.css` in `@devpad/core/ui/styles`
 - App-specific tokens that DON'T come from `@f0rbit/ui`: `--text-link`, `--hover-filter`, `--input-placeholder`, `--input-focus`, `--item-red`, `--item-green`, `--item-red-border`, `--item-green-border`
 - When writing new CSS, use `@f0rbit/ui` token names (`--fg`, `--bg`, `--accent`, `--border`, `--bg-alt`, `--fg-muted`, `--fg-subtle`, `--fg-faint`, etc.)
 - NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they no longer exist in CSS files (some inline styles still reference them via `:root` aliases)
