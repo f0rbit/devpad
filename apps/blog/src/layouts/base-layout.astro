@@ -1,5 +1,5 @@
 ---
-import "@f0rbit/ui/styles";
+import "@devpad/core/ui/styles";
 
 interface Props {
 	title: string;
@@ -17,7 +17,7 @@ const { title, description = "Blog development platform" } = Astro.props;
     <meta name="description" content={description} />
     <meta name="generator" content={Astro.generator} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title} | DevPad Blog</title>
+    <title>{title} | devpad blog</title>
   </head>
   <body>
     <slot />

@@ -1,6 +1,7 @@
 ---
 import "../utils/error-logger";
-import "@f0rbit/ui/styles";
+import "@devpad/core/ui/styles";
+import "@/main.css";
 
 interface Props {
 	title: string;
@@ -55,6 +56,3 @@ const canonicalUrl = canonical ?? Astro.url.href;
   <slot />
 </html>
 
-<style is:global>
-  @import "../main.css";
-</style>
