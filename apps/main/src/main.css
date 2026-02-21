@@ -1,13 +1,3 @@
-:root {
-	--bg-primary: var(--bg);
-	--text-primary: var(--fg);
-	--text-secondary: var(--fg-muted);
-	--text-tertiary: var(--fg-subtle);
-	--text-muted: var(--fg-faint);
-	--input-background: var(--bg-alt);
-	--input-border: var(--border);
-}
-
 body {
 	-webkit-font-smoothing: auto;
 }

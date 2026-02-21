@@ -26,6 +26,8 @@
 		"./services/media/sync": "./src/services/media/sync.ts",
 		"./ui": "./src/ui/index.ts",
 		"./ui/styles": "./src/ui/styles/globals.css",
+		"./ui/api-client": "./src/ui/api-client.ts",
+		"./ui/client": "./src/ui/client.ts",
 		"./ui/middleware": "./src/ui/middleware.ts"
 	},
 	"scripts": {

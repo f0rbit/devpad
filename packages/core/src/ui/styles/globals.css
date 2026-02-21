@@ -15,6 +15,13 @@
 	--item-red-border: color-mix(in srgb, var(--item-red) 90%, var(--fg) 10%);
 	--item-green-border: color-mix(in srgb, var(--item-green) 90%, var(--fg) 10%);
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
+	--bg-primary: var(--bg);
+	--text-primary: var(--fg);
+	--text-secondary: var(--fg-muted);
+	--text-tertiary: var(--fg-subtle);
+	--text-muted: var(--fg-faint);
+	--input-background: var(--bg-alt);
+	--input-border: var(--border);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -403,6 +410,10 @@ footer {
 	flex-direction: row;
 	gap: 4px;
 	align-items: center;
+}
+
+.flex-1 {
+	flex: 1;
 }
 
 .icons {
