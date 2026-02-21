@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { HistoryAction, Project, TagWithTypedColor, TaskWithDetails, UpsertTag } from "@devpad/schema";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -10,7 +11,6 @@ import { GoalSelector } from "@/components/solid/GoalSelector";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
-import { getApiClient } from "@/utils/api-client";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { PRIORITY_OPTIONS, PROGRESS_OPTIONS, type Priority, type Progress, VISIBILITY_OPTIONS, type Visibility } from "@/utils/task-status";
 
@@ -47,7 +47,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		setRequestState("loading");
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.upsert({
 				id: task?.task?.id ?? null,
 				title: state.title,

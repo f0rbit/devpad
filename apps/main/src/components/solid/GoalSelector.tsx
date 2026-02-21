@@ -1,9 +1,8 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Goal, Milestone } from "@devpad/schema";
-
 import Edit from "lucide-solid/icons/edit";
 import X from "lucide-solid/icons/x";
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { getApiClient } from "@/utils/api-client";
 import { GoalQuickForm } from "./GoalQuickForm";
 
 interface Props {
@@ -45,7 +44,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 		if (!project_id) return;
 
 		setLoading(true);
-		const api_client = getApiClient();
+		const api_client = getBrowserClient();
 		const result = await api_client.milestones.getByProject(project_id);
 		if (!result.ok) {
 			console.error("Failed to load milestones and goals:", result.error);

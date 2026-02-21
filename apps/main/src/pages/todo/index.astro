@@ -5,7 +5,8 @@ import Tag from "lucide-solid/icons/tag";
 import GithubLogin from "@/components/solid/GithubLogin";
 import { TaskSorter } from "@/components/solid/TaskSorter";
 import PageLayout from "@/layouts/PageLayout.astro";
-import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import { rethrow } from "@/utils/api-client";
 
 let user = Astro.locals.user;
 

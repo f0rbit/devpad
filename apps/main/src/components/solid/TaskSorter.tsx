@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Project, TaskWithDetails as TaskType, TaskView, UpsertTag, TagWithTypedColor as UserTag } from "@devpad/schema";
 import FolderSearch from "lucide-solid/icons/folder-search";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
@@ -8,7 +9,6 @@ import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagSelect } from "@/components/solid/TagPicker";
-import { getApiClient } from "@/utils/api-client";
 import { TaskCard } from "./TaskCard";
 
 const options = ["upcoming", "recent", "priority", "progress"] as const;
@@ -130,7 +130,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 		setView(view);
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			await apiClient.user.preferences({
 				id: user_id,
 				task_view: view,

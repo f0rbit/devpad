@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { ConfigSchemaType, TagWithTypedColor } from "@devpad/schema";
 import ChevronLeft from "lucide-solid/icons/chevron-left";
 import ChevronRight from "lucide-solid/icons/chevron-right";
@@ -7,7 +8,6 @@ import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For, Index } from "solid-js";
 import { createStore } from "solid-js/store";
-import { getApiClient } from "@/utils/api-client";
 
 // Default configurations for helper tags
 const DEFAULT_CONFIGS = {
@@ -157,7 +157,7 @@ const TodoScannerConfig = ({
 		if (!validate()) return;
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			await apiClient.projects.config.save({
 				config: {
 					tags: config.tags.filter(tag => tag.name && tag.match.length > 0),

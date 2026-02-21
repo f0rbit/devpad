@@ -1,5 +1,6 @@
 ---
-import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import { rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 
@@ -51,11 +52,11 @@ const user_history = history_result.value;
 </PageLayout>
 
 <script>
-	import { getApiClient } from "../utils/api-client";
+	import { getBrowserClient } from "@devpad/core/ui/client";
 	
 	async function add_key() {
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.auth.keys.create();
 			console.log(result);
 			location.reload();
@@ -66,7 +67,7 @@ const user_history = history_result.value;
 
 	async function delete_key(id: string) {
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			await apiClient.auth.keys.revoke(id);
 			location.reload();
 		} catch (error) {

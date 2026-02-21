@@ -1,7 +1,7 @@
 ---
 import SettingsPage from "@/components/settings/settings-page";
 import AppLayout from "@/layouts/app-layout.astro";
-import { getServerApiClient } from "@/lib/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 
 type Token = { id: string; name: string | null; note: string | null; enabled: boolean; created_at: string };
 

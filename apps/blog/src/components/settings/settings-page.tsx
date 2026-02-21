@@ -1,7 +1,8 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { AccessKey, User as SchemaUser } from "@devpad/schema/blog";
 import { Button } from "@f0rbit/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
-import { getClient, unwrap } from "@/lib/client";
+import { unwrap } from "@/lib/client";
 import { date } from "../../lib/date-utils";
 import DevpadConnection from "./devpad-connection";
 import TokenForm from "./token-form";
@@ -50,7 +51,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 
 	const fetchTokens = async () => {
 		try {
-			const data = unwrap(await getClient().blog.tokens.list());
+			const data = unwrap(await getBrowserClient().blog.tokens.list());
 			setTokens((data.tokens ?? []) as Token[]);
 		} catch {
 			setTokensError("Failed to fetch tokens");
@@ -68,7 +69,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 	const handleToggle = async (id: number, enabled: boolean) => {
 		setTokensError(null);
 		try {
-			unwrap(await getClient().blog.tokens.update(String(id), { enabled }));
+			unwrap(await getBrowserClient().blog.tokens.update(String(id), { enabled }));
 			refetchTokens();
 		} catch {
 			setTokensError("Failed to update token");
@@ -78,7 +79,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 	const handleDelete = async (id: number) => {
 		setTokensError(null);
 		try {
-			unwrap(await getClient().blog.tokens.delete(String(id)));
+			unwrap(await getBrowserClient().blog.tokens.delete(String(id)));
 			refetchTokens();
 		} catch {
 			setTokensError("Failed to delete token");
@@ -86,7 +87,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 	};
 
 	const handleCreate = async (data: { name: string; note?: string }): Promise<{ key: string }> => {
-		const result = unwrap(await getClient().blog.tokens.create(data));
+		const result = unwrap(await getBrowserClient().blog.tokens.create(data));
 		refetchTokens();
 		return { key: result.token };
 	};

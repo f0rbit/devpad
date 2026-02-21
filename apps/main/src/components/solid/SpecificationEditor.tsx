@@ -1,5 +1,6 @@
 // SpecificationEditor.jsx
 
+import { getBrowserClient } from "@devpad/core/ui/client";
 import Github from "lucide-solid/icons/github";
 import Pencil from "lucide-solid/icons/pencil";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
@@ -9,7 +10,6 @@ import { remark } from "remark";
 import remarkHtml from "remark-html";
 import { createEffect, createSignal } from "solid-js";
 import { LoadingIndicator, type LoadingState } from "@/components/solid/LoadingIndicator";
-import { getApiClient } from "@/utils/api-client";
 
 interface Props {
 	project_id: string;
@@ -31,7 +31,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 		setSaving("idle");
 		setFetching("loading");
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.projects.specification(project_id);
 			if (!result.ok) throw new Error(result.error.message);
 			setMarkdown(result.value ?? "");
@@ -50,8 +50,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 		setSaving("loading");
 		setFetching("idle");
 		try {
-			const apiClient = getApiClient();
-			// Use the new clean update interface - much simpler!
+			const apiClient = getBrowserClient();
 			await apiClient.projects.update(project_id, {
 				specification: markdown(),
 			});

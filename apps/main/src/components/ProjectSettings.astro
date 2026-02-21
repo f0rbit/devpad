@@ -67,7 +67,7 @@ const _mode = project ? "edit" : "create";
 </section>
 
 <script>
-	import { getApiClient } from "@/utils/api-client";
+	import { getBrowserClient } from "@devpad/core/ui/client";
 	import type { UpsertProject } from "@devpad/schema";
 	
 	async function create_project() {
@@ -110,7 +110,7 @@ const _mode = project ? "edit" : "create";
 		};
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			await apiClient.projects.upsert(body);
 			// go to project page
 			window.location.href = `/project/${project_id}`;
@@ -141,7 +141,7 @@ const _mode = project ? "edit" : "create";
 		errorElement.innerText = "";
 		
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const stream = await apiClient.projects.scan.initiate(projectId);
 			const reader = stream.getReader();
 			
