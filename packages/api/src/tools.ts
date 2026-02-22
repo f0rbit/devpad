@@ -538,13 +538,6 @@ export const tools: Record<string, ToolDefinition> = {
 	},
 };
 
-// Helper to convert Zod schema to JSON Schema for MCP
-export function zodToMCPSchema(schema: z.ZodType<any>) {
-	// This will be imported from zod-to-json-schema for MCP server
-	// For now, returning a placeholder
-	return schema;
-}
-
 // Get all tool names
 export const toolNames = Object.keys(tools);
 

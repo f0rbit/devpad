@@ -37,16 +37,6 @@ export const upsert_todo = z.object({
 
 export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
 
-export const ConfigSchema = z.object({
-	tags: z.array(
-		z.object({
-			name: z.string(),
-			match: z.array(z.string()),
-		})
-	),
-	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
-});
-
 export const upsert_tag = z.object({
 	id: z.string().optional(),
 	title: z.string(),

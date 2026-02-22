@@ -1,9 +1,8 @@
 import { Database } from "bun:sqlite";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import path from "node:path";
 import { api_keys, user } from "@devpad/schema";
-import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
+import { createBunDatabase } from "@devpad/schema/database/bun";
 
 export const TEST_USER_ID = "test-user-12345";
 export const DEBUG_LOGGING = Bun.env.DEBUG_LOGGING === "true";
@@ -12,36 +11,6 @@ export function log(...args: any[]) {
 	if (DEBUG_LOGGING) {
 		console.log(...args);
 	}
-}
-
-export async function setupTestDatabase(dbPath: string): Promise<void> {
-	const dbDir = path.dirname(dbPath);
-	if (!fs.existsSync(dbDir)) {
-		fs.mkdirSync(dbDir, { recursive: true });
-	}
-
-	if (fs.existsSync(dbPath)) {
-		fs.unlinkSync(dbPath);
-	}
-
-	log("🗄️ Setting up test database at:", dbPath);
-
-	const sqlite = new Database(dbPath);
-
-	let currentDir = __dirname;
-	while (currentDir !== path.dirname(currentDir)) {
-		if (fs.existsSync(path.join(currentDir, "package.json"))) break;
-		currentDir = path.dirname(currentDir);
-	}
-
-	const migrationsFolder = path.join(currentDir, "packages", "schema", "src", "database", "drizzle");
-	if (!fs.existsSync(migrationsFolder)) {
-		throw new Error(`Migration folder not found: ${migrationsFolder}`);
-	}
-
-	migrateBunDatabase(sqlite, migrationsFolder);
-	sqlite.close();
-	log("Test database setup complete");
 }
 
 export async function createTestUser(dbPath: string): Promise<string> {

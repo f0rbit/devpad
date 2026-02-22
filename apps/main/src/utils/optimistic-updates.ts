@@ -9,17 +9,6 @@ function getUserFriendlyErrorMessage(error: unknown): string {
 	return "An unexpected error occurred";
 }
 
-// Toast manager import (will be available when component is created)
-let toastManager: any = null;
-try {
-	// Dynamically import toast manager to avoid circular dependencies
-	import("@/components/solid/ToastManager").then(module => {
-		toastManager = module.toastManager;
-	});
-} catch {
-	// Toast manager not available, continue without it
-}
-
 export type UpdateState = "idle" | "loading" | "success" | "error";
 
 export interface OptimisticUpdateOptions<T> {
@@ -29,16 +18,8 @@ export interface OptimisticUpdateOptions<T> {
 	updateFn: (data: T) => Promise<T>;
 	/** How long to show the success state (default: 2000ms) */
 	successDuration?: number;
-	/** How long to show the error toast (default: 5000ms) */
+	/** How long to show the error state (default: 5000ms) */
 	errorDuration?: number;
-	/** Show success toast notification */
-	showSuccessToast?: boolean;
-	/** Show error toast notification */
-	showErrorToast?: boolean;
-	/** Success toast message */
-	successMessage?: string;
-	/** Error toast title (will use friendly error message if not provided) */
-	errorTitle?: string;
 	/** Callback when update succeeds */
 	onSuccess?: (data: T) => void;
 	/** Callback when update fails */
@@ -85,7 +66,7 @@ export interface OptimisticUpdateResult<T> {
  * </button>
  */
 export function createOptimisticUpdate<T extends Record<string, any>>(options: OptimisticUpdateOptions<T>): OptimisticUpdateResult<T> {
-	const { initialData, updateFn, successDuration = 2000, errorDuration = 5000, showSuccessToast = false, showErrorToast = true, successMessage = "Updated successfully", errorTitle = "Update failed", onSuccess, onError } = options;
+	const { initialData, updateFn, successDuration = 2000, errorDuration = 5000, onSuccess, onError } = options;
 
 	const [data, setData] = createSignal<T>(initialData);
 	const [state, setState] = createSignal<UpdateState>("idle");
@@ -126,11 +107,6 @@ export function createOptimisticUpdate<T extends Record<string, any>>(options: O
 				setState("idle");
 			}, successDuration);
 
-			// Show success toast if enabled
-			if (showSuccessToast && toastManager) {
-				toastManager.success("Success", successMessage);
-			}
-
 			// Call success callback
 			onSuccess?.(result);
 		} catch (err) {
@@ -141,11 +117,6 @@ export function createOptimisticUpdate<T extends Record<string, any>>(options: O
 			// Set user-friendly error message
 			const errorMessage = getUserFriendlyErrorMessage(err);
 			setError(errorMessage);
-
-			// Show error toast if enabled
-			if (showErrorToast && toastManager) {
-				toastManager.error(errorTitle, errorMessage);
-			}
 
 			// Show error state for specified duration
 			errorTimeout = window.setTimeout(() => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { ArrayBufferedQueue } from "../../src/types";
+import { ArrayBufferedQueue } from "../../../src/request";
 
 describe("ArrayBufferedQueue", () => {
 	it("should initialize with a capacity", () => {
