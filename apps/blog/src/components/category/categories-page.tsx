@@ -1,7 +1,8 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Category as SchemaCategory } from "@devpad/schema/blog";
 import { Button, buildTree, Spinner, Tree } from "@f0rbit/ui";
 import { type Component, createMemo, createResource, createSignal, Show } from "solid-js";
-import { getClient, unwrap } from "@/lib/client";
+import { unwrap } from "@/lib/client";
 import CategoryForm from "./category-form";
 
 type Category = Pick<SchemaCategory, "id" | "name" | "parent">;
@@ -22,7 +23,7 @@ const fetchCategories = async (): Promise<Category[]> => {
 	if (typeof window === "undefined") {
 		return [];
 	}
-	const data = unwrap(await getClient().blog.categories.tree());
+	const data = unwrap(await getBrowserClient().blog.categories.tree());
 	return flattenTree((data.categories ?? []) as CategoryNode[]);
 };
 
@@ -63,7 +64,7 @@ const CategoriesPage: Component<Props> = props => {
 		if (!confirm(`Delete category "${name}"? This cannot be undone.`)) return;
 		setError(null);
 		try {
-			unwrap(await getClient().blog.categories.delete(encodeURIComponent(name)));
+			unwrap(await getBrowserClient().blog.categories.delete(encodeURIComponent(name)));
 			refreshCategories();
 		} catch {
 			setError("Failed to delete category");
@@ -84,7 +85,7 @@ const CategoriesPage: Component<Props> = props => {
 	const handleCreate = async (data: { name: string; parent: string }) => {
 		setError(null);
 		try {
-			unwrap(await getClient().blog.categories.create(data));
+			unwrap(await getBrowserClient().blog.categories.create(data));
 			refreshCategories();
 		} catch {
 			setError("Failed to create category");

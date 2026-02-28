@@ -2,7 +2,7 @@
 import TimelineList from "../../components/solid/TimelineList";
 import AppLayout from "../../layouts/AppLayout.astro";
 import { type TimelineGroup } from "../../utils/types";
-import { getServerApiClient } from "../../utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 
 const profileSlug = Astro.url.searchParams.get("profile");
 

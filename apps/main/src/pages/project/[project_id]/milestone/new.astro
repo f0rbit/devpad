@@ -1,5 +1,6 @@
 ---
-import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import { rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 
@@ -54,7 +55,7 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 </PageLayout>
 
 <script>
-	import { getApiClient } from "@/utils/api-client";
+	import { getBrowserClient } from "@devpad/core/ui/client";
 
 	async function createMilestone() {
 		const errorEl = document.getElementById("error") as HTMLParagraphElement;
@@ -85,7 +86,7 @@ if (project.owner_id !== user.id) return new Response(null, { status: 401, statu
 		}
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.milestones.create({
 				name,
 				description,

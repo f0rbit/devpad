@@ -1,5 +1,5 @@
 ---
-import { getServerApiClient } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import MilestonesManager from "@/components/solid/MilestonesManager";
@@ -36,10 +36,32 @@ for (const milestone of milestones) {
 		console.error(`Failed to fetch goals for milestone ${milestone.id}:`, goals_result.error.message);
 	}
 }
+
+const tasks_result = await api_client.tasks.getByProject(project.id);
+const all_tasks = tasks_result.ok ? tasks_result.value : [];
+
+const goal_task_counts: Record<string, { total: number; completed: number }> = {};
+for (const t of all_tasks) {
+	if (t.task.goal_id) {
+		if (!goal_task_counts[t.task.goal_id]) {
+			goal_task_counts[t.task.goal_id] = { total: 0, completed: 0 };
+		}
+		goal_task_counts[t.task.goal_id].total++;
+		if (t.task.progress === "COMPLETED") {
+			goal_task_counts[t.task.goal_id].completed++;
+		}
+	}
+}
 ---
 
 <PageLayout title={`Milestones & Goals - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
-		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones ?? undefined} initialGoalsMap={goals_map} client:load />
+		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones ?? undefined} initialGoalsMap={goals_map} goalTaskCounts={goal_task_counts} client:load />
 	</ProjectLayout>
 </PageLayout>
+
+<style>
+	.step-title:empty {
+		display: none;
+	}
+</style>

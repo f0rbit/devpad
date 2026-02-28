@@ -1,10 +1,10 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { TaskWithDetails as Task, UpdateAction, UpdateData } from "@devpad/schema";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
 import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
-import { getApiClient } from "@/utils/api-client";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 
 interface Props {
@@ -68,7 +68,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 		);
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			await apiClient.projects.scan.update(project_id, {
 				id: update_id,
 				actions: grouped,
@@ -84,7 +84,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 
 	const ignoreUpdate = async () => {
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			await apiClient.projects.scan.update(project_id, {
 				id: update_id,
 				actions: {},

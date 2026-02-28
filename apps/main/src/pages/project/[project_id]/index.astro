@@ -1,7 +1,8 @@
 ---
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import { rethrow } from "@/utils/api-client";
 
 const { project_id } = Astro.params;
 

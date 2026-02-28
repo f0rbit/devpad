@@ -1,7 +1,8 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button, ChipInput } from "@f0rbit/ui";
 import type { Component } from "solid-js";
 import { createSignal, For, onMount, Show } from "solid-js";
-import { getClient, unwrap } from "../../lib/client";
+import { unwrap } from "../../lib/client";
 import { date } from "../../lib/date-utils";
 import { form } from "../../lib/form-utils";
 import PostPreview from "./post-preview";
@@ -113,7 +114,7 @@ const PostEditor: Component<PostEditorProps> = props => {
 		// Fetch categories if not provided
 		if (props.categories && props.categories.length > 0) return;
 		try {
-			const data = unwrap(await getClient().blog.categories.tree());
+			const data = unwrap(await getBrowserClient().blog.categories.tree());
 			const flatCategories = flattenCategoryTree((data.categories ?? []) as CategoryNode[]);
 			setCategories(flatCategories);
 		} catch (e) {
@@ -140,7 +141,7 @@ const PostEditor: Component<PostEditorProps> = props => {
 
 	const saveNewPost = async (data: PostFormData) => {
 		const post = unwrap(
-			await getClient().blog.posts.create({
+			await getBrowserClient().blog.posts.create({
 				slug: data.slug,
 				title: data.title,
 				content: data.content,

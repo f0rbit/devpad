@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Project, TaskWithDetails, UpsertTag } from "@devpad/schema";
 import Calendar from "lucide-solid/icons/calendar";
 import CalendarClock from "lucide-solid/icons/calendar-clock";
@@ -12,7 +13,6 @@ import SquareDot from "lucide-solid/icons/square-dot";
 import Target from "lucide-solid/icons/target";
 import { createSignal, For, onMount } from "solid-js";
 import { TagBadge } from "@/components/solid/TagEditor";
-import { getApiClient } from "@/utils/api-client";
 import { advanceTaskProgress, formatDueDate, getPriorityClass, getProgressIconType, isPastDue, isProgressClickable } from "@/utils/task-status";
 
 interface Props {
@@ -30,7 +30,7 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 
 	onMount(async () => {
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.goals.find(goal_id);
 			if (result.ok && result.value) {
 				setGoalName(result.value.name);

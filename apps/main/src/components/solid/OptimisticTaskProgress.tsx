@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Task, TaskWithDetails } from "@devpad/schema";
 import Circle from "lucide-solid/icons/circle";
 import CircleCheck from "lucide-solid/icons/circle-check";
@@ -7,7 +8,6 @@ import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { Show } from "solid-js";
 import { OptimisticStatus } from "@/components/solid/OptimisticStatus";
-import { getApiClient } from "@/utils/api-client";
 import { createOptimisticUpdate } from "@/utils/optimistic-updates";
 
 type Progress = Task["progress"];
@@ -29,7 +29,7 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 	const progressUpdate = createOptimisticUpdate({
 		initialData: props.task.task,
 		updateFn: async updatedTask => {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.upsert({
 				id: updatedTask.id,
 				progress: updatedTask.progress,

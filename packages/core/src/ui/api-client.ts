@@ -2,8 +2,20 @@ import ApiClient from "@devpad/api";
 
 const SESSION_SENTINELS = new Set(["injected", "verified"]);
 
-export function getServerApiClient(locals: App.Locals): ApiClient {
-	const runtime = (locals as any).runtime;
+interface AstroLocals {
+	session: { id: string } | null;
+	runtime?: {
+		env?: {
+			__api?: { fetch: (request: Request, env: any, ctx: any) => Promise<Response> };
+			API_URL?: string;
+			[key: string]: unknown;
+		};
+		ctx?: { waitUntil: (promise: Promise<unknown>) => void; passThroughOnException: () => void };
+	};
+}
+
+export function getServerApiClient(locals: AstroLocals): ApiClient {
+	const runtime = locals.runtime;
 	const api_app = runtime?.env?.__api;
 	const base_url = process.env.PUBLIC_API_SERVER_URL || runtime?.env?.API_URL || "";
 
@@ -18,11 +30,11 @@ export function getServerApiClient(locals: App.Locals): ApiClient {
 	}
 
 	const custom_fetch = api_app
-		? async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-				const request = new Request(input, init);
-				const ctx = runtime.ctx ?? { waitUntil: () => {}, passThroughOnException: () => {} };
-				return api_app.fetch(request, runtime.env, ctx);
-			}
+		? ((async (input: string | Request, init?: RequestInit): Promise<Response> => {
+				const request = new Request(input as string, init);
+				const ctx = runtime?.ctx ?? { waitUntil: () => {}, passThroughOnException: () => {} };
+				return api_app.fetch(request, runtime?.env, ctx);
+			}) as unknown as typeof fetch)
 		: undefined;
 
 	return new ApiClient({

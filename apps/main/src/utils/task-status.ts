@@ -1,5 +1,5 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { TaskWithDetails } from "@devpad/schema";
-import { getApiClient } from "@/utils/api-client";
 
 export type Progress = TaskWithDetails["task"]["progress"];
 export type Priority = TaskWithDetails["task"]["priority"];
@@ -71,7 +71,7 @@ export function getPriorityClass(priority: Priority, hasEndTime: boolean = true)
  */
 export async function updateTaskProgress(taskId: string, ownerId: string, newProgress: Progress, onSuccess?: (progress: Progress) => void, onError?: (error: any) => void): Promise<void> {
 	try {
-		const apiClient = getApiClient();
+		const apiClient = getBrowserClient();
 		await apiClient.tasks.upsert({
 			id: taskId,
 			progress: newProgress,

@@ -1,7 +1,6 @@
 ---
 import Layout from "./Layout.astro";
-import DevpadLogo from "@/components/solid/DevpadLogo";
-import GithubLogin from "@/components/solid/GithubLogin";
+import { DevpadHeader, DevpadFooter } from "@devpad/core/ui";
 
 interface Props {
 	title: string;
@@ -13,41 +12,23 @@ const user = Astro.locals.user;
 const pathname = Astro.url.pathname;
 
 const { title, description, keywords, canonical } = Astro.props;
+
+const currentApp = pathname.startsWith("/project") ? "projects" as const
+	: pathname.startsWith("/todo") ? "tasks" as const
+	: pathname.startsWith("/docs") ? "docs" as const
+	: undefined;
 ---
 
 <Layout title={title} description={description} keywords={keywords} canonical={canonical}>
 	<body>
 		<div id="container">
 			<header class="unified-header">
-				<div class="unified-header__row1">
-					<div class="unified-header__left">
-						<a href="/" class="unified-header__logo">
-							<DevpadLogo size={18} />
-							<span>devpad</span>
-						</a>
-					</div>
-					<nav class="unified-header__apps">
-						<a href="/project" class:list={["unified-header__app", { active: pathname.startsWith("/project") }]}>projects</a>
-						<a href="/todo" class:list={["unified-header__app", { active: pathname.startsWith("/todo") }]}>tasks</a>
-						<a href="https://blog.devpad.tools" class="unified-header__app">blog</a>
-						<a href="https://media.devpad.tools" class="unified-header__app">media</a>
-						<a href="/docs" class:list={["unified-header__app", { active: pathname.startsWith("/docs") }]}>docs</a>
-					</nav>
-					<div class="unified-header__auth">
-						{user ? (
-							<a href="/account" class:list={[{ active: pathname.startsWith("/account") }]}>account</a>
-						) : (
-							<GithubLogin client:load />
-						)}
-					</div>
-				</div>
+				<DevpadHeader client:load currentApp={currentApp} currentPath={pathname} user={user} authVariant="main" />
 			</header>
 			<slot />
 		</div>
 		<br />
 		<br />
-		<footer>
-			<p>© 2025 devpad</p>
-		</footer>
+		<DevpadFooter client:load />
 	</body>
 </Layout>

@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import { TAG_COLOURS, type TagWithTypedColor as Tag, type TagColor, type UpsertTag } from "@devpad/schema";
 import ChevronDown from "lucide-solid/icons/chevron-down";
 import ChevronUp from "lucide-solid/icons/chevron-up";
@@ -7,7 +8,6 @@ import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
-import { getApiClient } from "@/utils/api-client";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -42,7 +42,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 		if (creating()) return;
 		try {
 			const values = currentTags().map(t => ({ ...t, owner_id }));
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.saveTags(values);
 			console.log("result", result);
 			window.location.reload();

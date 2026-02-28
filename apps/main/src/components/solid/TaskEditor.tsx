@@ -1,3 +1,4 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { HistoryAction, Project, TagWithTypedColor, TaskWithDetails, UpsertTag } from "@devpad/schema";
 import Check from "lucide-solid/icons/check";
 import ChevronDown from "lucide-solid/icons/chevron-down";
@@ -10,7 +11,6 @@ import { GoalSelector } from "@/components/solid/GoalSelector";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
-import { getApiClient } from "@/utils/api-client";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { PRIORITY_OPTIONS, PROGRESS_OPTIONS, type Priority, type Progress, VISIBILITY_OPTIONS, type Visibility } from "@/utils/task-status";
 
@@ -22,9 +22,10 @@ interface Props {
 	user_id: string;
 	project_map: Record<string, Project>;
 	default_project_id?: string | null;
+	default_goal_id?: string | null;
 }
 
-const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map, default_project_id }: Props) => {
+const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map, default_project_id, default_goal_id }: Props) => {
 	const [state, setState] = createStore({
 		title: task?.task?.title ?? "",
 		summary: task?.task?.summary ?? null,
@@ -35,7 +36,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		end_time: task?.task?.end_time ?? null,
 		priority: (task?.task?.priority ?? "LOW") as Priority,
 		project_id: default_project_id ?? task?.task?.project_id ?? null,
-		goal_id: task?.task?.goal_id ?? null,
+		goal_id: default_goal_id ?? task?.task?.goal_id ?? null,
 	});
 	const [currentTags, setCurrentTags] = createSignal(current_tags);
 	const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
@@ -46,7 +47,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		setRequestState("loading");
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.upsert({
 				id: task?.task?.id ?? null,
 				title: state.title,

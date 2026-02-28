@@ -1,20 +1,9 @@
-import { ApiClient } from "@devpad/api";
+import { getBrowserClient } from "@devpad/core/ui/client";
 
 const API_HOST = import.meta.env.PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
-function createClient(): ApiClient {
-	return new ApiClient({
-		base_url: `${API_HOST}/api/v1`,
-		auth_mode: "cookie",
-		credentials: "include",
-	});
-}
-
-let _client: ApiClient | null = null;
-
-function getClient(): ApiClient {
-	if (!_client) _client = createClient();
-	return _client;
+export function getClient() {
+	return getBrowserClient(API_HOST);
 }
 
 const normalizePath = (path: string) => (path.startsWith("/") ? path : `/${path}`);
@@ -29,4 +18,4 @@ const apiUrls = {
 	me: () => `${API_HOST}/api/v1/me`,
 };
 
-export { apiUrls, createClient, getClient };
+export { apiUrls };

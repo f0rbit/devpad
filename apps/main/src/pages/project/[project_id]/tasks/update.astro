@@ -1,5 +1,6 @@
 ---
-import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import { rethrow } from "@/utils/api-client";
 import type { TaskWithDetails } from "@devpad/schema";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
@@ -57,7 +58,7 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 </PageLayout>
 
 <script>
-	import { getApiClient } from "@/utils/api-client";
+	import { getBrowserClient } from "@devpad/core/ui/client";
 	
 	function hook_check() {
 		const update_check = document.getElementById("update-check")!;
@@ -66,7 +67,7 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 		const output = document.getElementById("output");
 		if (!output) throw new Error("Output element not found");
 		update_check.addEventListener("click", async () => {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			try {
 				const stream = await apiClient.projects.scan.initiate(project_id);
 				output.innerText = "";

@@ -1,6 +1,7 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button, MultiSelect, type MultiSelectOption } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
-import { getClient, unwrap } from "@/lib/client";
+import { unwrap } from "@/lib/client";
 
 type Project = {
 	id: string;
@@ -18,7 +19,7 @@ type ProjectSelectorProps = {
 
 const fetchProjects = async (): Promise<Project[]> => {
 	if (typeof window === "undefined") return [];
-	const result = await getClient().projects.list();
+	const result = await getBrowserClient().projects.list();
 	if (!result.ok) return [];
 	return result.value as Project[];
 };
@@ -56,7 +57,7 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		try {
-			await getClient().projects.list();
+			await getBrowserClient().projects.list();
 			setFetchTrigger(n => n + 1);
 		} finally {
 			setRefreshing(false);

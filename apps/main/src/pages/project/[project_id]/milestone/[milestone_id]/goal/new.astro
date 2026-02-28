@@ -1,5 +1,6 @@
 ---
-import { getServerApiClient, rethrow } from "@/utils/api-client";
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import { rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 
@@ -53,7 +54,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 </PageLayout>
 
 <script>
-	import { getApiClient } from "@/utils/api-client";
+	import { getBrowserClient } from "@devpad/core/ui/client";
 
 	async function createGoal() {
 		const errorEl = document.getElementById("error") as HTMLParagraphElement;
@@ -82,7 +83,7 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 		}
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 			const result = await apiClient.goals.create({
 				name,
 				description: description ?? undefined,

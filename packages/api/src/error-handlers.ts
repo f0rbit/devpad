@@ -206,34 +206,3 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
 
 	return "An unexpected error occurred";
 }
-
-/**
- * Retry wrapper for API calls with exponential backoff
- */
-export async function withRetry<T>(operation: () => Promise<T>, maxRetries: number = 3, baseDelay: number = 1000): Promise<T> {
-	let lastError: unknown;
-
-	for (let attempt = 1; attempt <= maxRetries; attempt++) {
-		try {
-			return await operation();
-		} catch (error) {
-			lastError = error;
-
-			// Don't retry authentication or validation errors
-			if (isAuthenticationError(error) || error instanceof ValidationError) {
-				throw error;
-			}
-
-			// Don't retry on final attempt
-			if (attempt === maxRetries) {
-				break;
-			}
-
-			// Exponential backoff
-			const delay = baseDelay * Math.pow(2, attempt - 1);
-			await new Promise(resolve => setTimeout(resolve, delay));
-		}
-	}
-
-	throw lastError;
-}

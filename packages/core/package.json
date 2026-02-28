@@ -4,10 +4,7 @@
 	"private": true,
 	"description": "Core business logic and services for Devpad",
 	"type": "module",
-	"main": "./src/index.ts",
-	"types": "./src/index.ts",
 	"exports": {
-		".": "./src/index.ts",
 		"./services": "./src/services/index.ts",
 		"./auth": "./src/auth/index.ts",
 		"./logger": "./src/utils/client-logger.ts",
@@ -23,7 +20,12 @@
 		"./services/media/timeline": "./src/services/media/timeline/index.ts",
 		"./services/media/cron": "./src/services/media/cron/index.ts",
 		"./services/media/storage": "./src/services/media/storage.ts",
-		"./services/media/sync": "./src/services/media/sync.ts"
+		"./services/media/sync": "./src/services/media/sync.ts",
+		"./ui": "./src/ui/index.ts",
+		"./ui/styles": "./src/ui/styles/globals.css",
+		"./ui/api-client": "./src/ui/api-client.ts",
+		"./ui/client": "./src/ui/client.ts",
+		"./ui/middleware": "./src/ui/middleware.ts"
 	},
 	"scripts": {
 		"test": "bun test"
@@ -44,6 +46,9 @@
 		"@octokit/fixtures": "^23.1.1",
 		"@types/node": "^20.11.24",
 		"typescript": "^5.9.2"
+	},
+	"peerDependencies": {
+		"solid-js": "^1.9.0"
 	},
 	"keywords": [
 		"devpad",

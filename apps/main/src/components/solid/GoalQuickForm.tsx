@@ -1,10 +1,10 @@
+import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Goal, Milestone } from "@devpad/schema";
 import Check from "lucide-solid/icons/check";
 import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
-import { getApiClient } from "@/utils/api-client";
 
 interface Props {
 	mode: "create" | "edit";
@@ -42,7 +42,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 		setErrorMessage("");
 
 		try {
-			const apiClient = getApiClient();
+			const apiClient = getBrowserClient();
 
 			let result;
 			if (mode === "create") {
