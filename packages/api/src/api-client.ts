@@ -93,9 +93,9 @@ export class ApiClient {
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (name?: string): Promise<ApiResult<{ message: string; key: string }>> =>
+			create: (name?: string): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> =>
 				wrap(() =>
-					this.clients.auth.post<{ message: string; key: string }>("/keys", {
+					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", {
 						body: name ? { name } : {},
 					})
 				),

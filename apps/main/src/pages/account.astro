@@ -3,6 +3,7 @@ import { getServerApiClient } from "@devpad/core/ui/api-client";
 import { rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
+import ApiKeyManager from "@/components/solid/ApiKeyManager";
 
 const user = Astro.locals.user;
 
@@ -25,63 +26,9 @@ const user_history = history_result.value;
 	<div class="flex-col" style="gap: 15px;">
 		<a href="/api/auth/logout" style="width: min-content;">logout</a>
 		<br />
-		<h3>api keys</h3>
-		{
-			keys.length === 0 ? (
-				<p>you don't have any api keys yet</p>
-			) : (
-				<div style="margin-top: -10px">
-					<ul>
-						{keys.map((key) => (
-							<li>
-								<code>{key.key_hash}</code>{" "}
-								<a data-keyid={key.id} class="delete-key">
-									&times;
-								</a>
-							</li>
-						))}
-					</ul>
-				</div>
-			)
-		}
-		<a id="add-key" role="button"> + generate </a>
+		<ApiKeyManager keys={keys} client:load />
 		<br />
 		<h3>history</h3>
-		<HistoryTimeline actions={user_history} view="account" />
+		<HistoryTimeline actions={user_history} view="account" client:load />
 	</div>
 </PageLayout>
-
-<script>
-	import { getBrowserClient } from "@devpad/core/ui/client";
-	
-	async function add_key() {
-		try {
-			const apiClient = getBrowserClient();
-			const result = await apiClient.auth.keys.create();
-			console.log(result);
-			location.reload();
-		} catch (error) {
-			console.error(error);
-		}
-	}
-
-	async function delete_key(id: string) {
-		try {
-			const apiClient = getBrowserClient();
-			await apiClient.auth.keys.revoke(id);
-			location.reload();
-		} catch (error) {
-			console.error(error);
-			alert(error);
-		}
-	}
-
-	document.getElementById("add-key")?.addEventListener("click", add_key);
-	document.querySelectorAll(".delete-key").forEach((el) => {
-		el.addEventListener("click", (e) => {
-			// @ts-ignore
-			const keyid = e.target.getAttribute("data-keyid");
-			delete_key(keyid);
-		});
-	});
-</script>

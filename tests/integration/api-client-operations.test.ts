@@ -183,6 +183,10 @@ describe("API client operations integration", () => {
 				expect(keyResult.value).toBeDefined();
 				expect(keyResult.value.message).toBeDefined();
 				expect(keyResult.value.key).toBeDefined();
+				expect(keyResult.value.key.raw_key).toBeDefined();
+				expect(typeof keyResult.value.key.raw_key).toBe("string");
+				expect(keyResult.value.key.raw_key.startsWith("devpad_")).toBe(true);
+				expect(keyResult.value.key.key.name).toBe("test-key");
 			}
 		});
 	});
