@@ -231,7 +231,7 @@ const TodoScannerConfig = ({
 									<X />
 								</a>
 							</div>
-							<div class="flex-col" style="border-left: 1px solid var(--input-border); padding-left: 10px; gap: 4px;">
+							<div class="flex-col" style="border-left: 1px solid var(--border); padding-left: 10px; gap: 4px;">
 								<For each={tag().match}>
 									{(match, matchIndex) => (
 										<div class="flex-row" style="gap: 10px">
@@ -316,7 +316,7 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 				<div class="flex-row" style="gap: 4px">
 					<For each={available()}>
 						{name => (
-							<button onClick={() => add(name)} class="button-reset" style="font-size: small; border: 1px solid var(--input-border); border-radius: 5px; padding: 2px 8px;" title={`Add boilerplate config for ${name}`}>
+							<button onClick={() => add(name)} class="button-reset" style="font-size: small; border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px;" title={`Add boilerplate config for ${name}`}>
 								<a role="button" class="flex-row">
 									+ {name}
 								</a>

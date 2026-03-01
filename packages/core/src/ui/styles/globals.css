@@ -8,20 +8,12 @@
 	--text-link: oklch(45.92% 0.0149 300.97);
 	--hover-filter: brightness(50%);
 	--input-placeholder: oklch(70% 0.03 290);
-	--input-text: var(--fg);
 	--input-focus: var(--fg-subtle);
 	--item-red: oklch(0.95 0.05 20);
 	--item-green: oklch(0.95 0.05 150);
 	--item-red-border: color-mix(in srgb, var(--item-red) 90%, var(--fg) 10%);
 	--item-green-border: color-mix(in srgb, var(--item-green) 90%, var(--fg) 10%);
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
-	--bg-primary: var(--bg);
-	--text-primary: var(--fg);
-	--text-secondary: var(--fg-muted);
-	--text-tertiary: var(--fg-subtle);
-	--text-muted: var(--fg-faint);
-	--input-background: var(--bg-alt);
-	--input-border: var(--border);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -311,7 +303,7 @@ input[type="datetime-local"] {
 	border: 1px solid var(--border);
 	border-radius: 4px;
 	background: var(--bg-alt);
-	color: var(--input-text);
+	color: var(--fg);
 	padding: 2px 2px 2px 5px;
 	font-size: smaller;
 }
@@ -342,7 +334,7 @@ input[type="password"] {
 	border: 1px solid var(--border);
 	border-radius: 4px;
 	background: var(--bg-alt);
-	color: var(--input-text);
+	color: var(--fg);
 	padding: 6px 8px;
 	font-size: smaller;
 	width: 100%;
