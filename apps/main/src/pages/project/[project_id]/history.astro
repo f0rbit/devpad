@@ -1,26 +1,16 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import HistoryTimeline from "@/components/solid/HistoryTimeline";
 
-/** @idea scan history should be able to be inspected to see breakdown of changes and what we accepted/rejected */
+const project_id = Astro.params.project_id!;
 
-const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
 
-const api_client = getServerApiClient(Astro.locals);
-
-const project_result = await api_client.projects.getByName(project_id);
-if (!project_result.ok) return rethrow(project_result.error);
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
-
-const history_result = await api_client.projects.history(project.id);
+const history_result = await client.projects.history(project.id);
 if (!history_result.ok) return rethrow(history_result.error);
 const history = history_result.value;
 ---

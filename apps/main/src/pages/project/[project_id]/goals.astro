@@ -1,44 +1,29 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import MilestonesManager from "@/components/solid/MilestonesManager";
+import { getProject } from "@/utils/api-client";
 import type { Goal } from "@devpad/schema";
 
-const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+const project_id = Astro.params.project_id!;
 
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
 
-const api_client = getServerApiClient(Astro.locals);
+const [milestones_result, tasks_result] = await Promise.all([
+	client.milestones.getByProject(project.id),
+	client.tasks.getByProject(project.id),
+]);
 
-const project_result = await api_client.projects.getByName(project_id);
-if (!project_result.ok) return new Response(null, { status: 500, statusText: project_result.error.message });
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-
-if (project.owner_id !== user.id) {
-	return new Response(null, { status: 403, statusText: "Access denied" });
-}
-
-const milestones_result = await api_client.milestones.getByProject(project.id);
-if (!milestones_result.ok) {
-	console.error("Failed to fetch milestones:", milestones_result.error.message);
-}
 const milestones = milestones_result.ok ? milestones_result.value : [];
+const all_tasks = tasks_result.ok ? tasks_result.value : [];
 
 const goals_map: Record<string, Goal[]> = {};
 for (const milestone of milestones) {
-	const goals_result = await api_client.milestones.goals(milestone.id);
+	const goals_result = await client.milestones.goals(milestone.id);
 	goals_map[milestone.id] = goals_result.ok ? goals_result.value : [];
-	if (!goals_result.ok) {
-		console.error(`Failed to fetch goals for milestone ${milestone.id}:`, goals_result.error.message);
-	}
 }
-
-const tasks_result = await api_client.tasks.getByProject(project.id);
-const all_tasks = tasks_result.ok ? tasks_result.value : [];
 
 const goal_task_counts: Record<string, { total: number; completed: number }> = {};
 for (const t of all_tasks) {

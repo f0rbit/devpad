@@ -21,9 +21,9 @@ const sub_pages = [
 	{ name: "tasks", href: "/tasks" },
 ];
 
-const apiClient = getServerApiClient(Astro.locals);
+const client = getServerApiClient(Astro.locals);
 
-const result = await apiClient.projects.getByName(project_id);
+const result = await client.projects.getByName(project_id);
 if (!result.ok || !result.value) return new Response(null, { status: 404, statusText: "Project not found" });
 const project = result.value;
 

@@ -11,13 +11,15 @@ if (!user) {
 	return new Response(null, { status: 401, statusText: "Unauthorized" });
 }
 
-const api_client = getServerApiClient(Astro.locals);
+const client = getServerApiClient(Astro.locals);
 
-const keys_result = await api_client.auth.keys.list();
+const [keys_result, history_result] = await Promise.all([
+	client.auth.keys.list(),
+	client.user.history(),
+]);
 if (!keys_result.ok) return rethrow(keys_result.error);
 const keys = keys_result.value;
 
-const history_result = await api_client.user.history();
 if (!history_result.ok) return rethrow(history_result.error);
 const user_history = history_result.value;
 ---

@@ -1,23 +1,14 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import SpecificationEditor from "@/components/solid/SpecificationEditor";
 
-const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+const project_id = Astro.params.project_id!;
 
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
-
-const api_client = getServerApiClient(Astro.locals);
-
-const result = await api_client.projects.getByName(project_id);
-if (!result.ok) return rethrow(result.error);
-const project = result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { project } = guard;
 ---
 
 <PageLayout title={`Specification - ${project_id}`}>

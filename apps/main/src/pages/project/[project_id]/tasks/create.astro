@@ -1,32 +1,24 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
 import TaskEditor from "@/components/solid/TaskEditor";
 
-const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+const project_id = Astro.params.project_id!;
+
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project, user } = guard;
+
 const goal_id_param = Astro.url.searchParams.get("goal_id") || null;
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const api_client = getServerApiClient(Astro.locals);
-
-// Get the project to verify access and pre-select it
-const project_result = await api_client.projects.getByName(project_id);
-if (!project_result.ok) return rethrow(project_result.error);
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
-
-// Create project map with just this project for the TaskEditor
-const map_result = await api_client.projects.map();
+const [map_result, tags_result] = await Promise.all([
+	client.projects.map(),
+	client.tags.list(),
+]);
 if (!map_result.ok) return rethrow(map_result.error);
 const project_map = map_result.value;
 
-// Get user tags for the task editor
-const tags_result = await api_client.tags.list();
 if (!tags_result.ok) return rethrow(tags_result.error);
 const user_tags = tags_result.value;
 ---

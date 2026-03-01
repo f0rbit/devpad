@@ -110,8 +110,8 @@ const _mode = project ? "edit" : "create";
 		};
 
 		try {
-			const apiClient = getBrowserClient();
-			await apiClient.projects.upsert(body);
+			const client = getBrowserClient();
+			await client.projects.upsert(body);
 			// go to project page
 			window.location.href = `/project/${project_id}`;
 		} catch (error) {
@@ -141,8 +141,8 @@ const _mode = project ? "edit" : "create";
 		errorElement.innerText = "";
 		
 		try {
-			const apiClient = getBrowserClient();
-			const stream = await apiClient.projects.scan.initiate(projectId);
+			const client = getBrowserClient();
+			const stream = await client.projects.scan.initiate(projectId);
 			const reader = stream.getReader();
 			
 			while (true) {

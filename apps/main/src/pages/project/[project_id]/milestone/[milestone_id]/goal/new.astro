@@ -1,24 +1,16 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 
-const { project_id, milestone_id } = Astro.params;
-if (!project_id || !milestone_id) return new Response(null, { status: 404, statusText: "Not found" });
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client } = guard;
 
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+const project_id = Astro.params.project_id!;
+const milestone_id = Astro.params.milestone_id!;
 
-const apiClient = getServerApiClient(Astro.locals);
-
-const project_result = await apiClient.projects.getByName(project_id);
-if (!project_result.ok) return rethrow(project_result.error);
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
-
-const milestone_result = await apiClient.milestones.find(milestone_id);
+const milestone_result = await client.milestones.find(milestone_id);
 if (!milestone_result.ok) return rethrow(milestone_result.error);
 const milestone = milestone_result.value;
 if (!milestone) return new Response(null, { status: 404, statusText: "Milestone not found" });
@@ -83,8 +75,8 @@ if (!milestone) return new Response(null, { status: 404, statusText: "Milestone 
 		}
 
 		try {
-			const apiClient = getBrowserClient();
-			const result = await apiClient.goals.create({
+		const client = getBrowserClient();
+		const result = await client.goals.create({
 				name,
 				description: description ?? undefined,
 				target_time: target_time ?? undefined,
