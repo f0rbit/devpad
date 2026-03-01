@@ -1,32 +1,23 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { TaskSorter } from "@/components/solid/TaskSorter";
 
-const { project_id, milestone_id, goal_id } = Astro.params;
-if (!project_id || !milestone_id || !goal_id) {
-	return new Response(null, { status: 404, statusText: "Invalid parameters" });
-}
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project, user } = guard;
 
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+const project_id = Astro.params.project_id!;
+const milestone_id = Astro.params.milestone_id!;
+const goal_id = Astro.params.goal_id!;
 
-const apiClient = getServerApiClient(Astro.locals);
-
-const project_result = await apiClient.projects.getByName(project_id);
-if (!project_result.ok) return rethrow(project_result.error);
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
-
-const milestone_result = await apiClient.milestones.find(milestone_id);
+const milestone_result = await client.milestones.find(milestone_id);
 if (!milestone_result.ok) return rethrow(milestone_result.error);
 const milestone = milestone_result.value;
 if (!milestone) return new Response(null, { status: 404, statusText: "Milestone not found" });
 
-const goal_result = await apiClient.goals.find(goal_id);
+const goal_result = await client.goals.find(goal_id);
 if (!goal_result.ok) return rethrow(goal_result.error);
 const goal = goal_result.value;
 if (!goal) return new Response(null, { status: 404, statusText: "Goal not found" });
@@ -38,11 +29,12 @@ if (goal.milestone_id !== milestone.id) {
 const project_map: Record<string, typeof project> = {};
 project_map[project.id] = project;
 
-const tasks_result = await apiClient.tasks.list();
+const [tasks_result, tags_result] = await Promise.all([
+	client.tasks.list(),
+	client.tags.list(),
+]);
 if (!tasks_result.ok) return rethrow(tasks_result.error);
 const allTasks = tasks_result.value;
-
-const tags_result = await apiClient.tags.list();
 if (!tags_result.ok) return rethrow(tags_result.error);
 const tags = tags_result.value;
 

@@ -18,12 +18,12 @@ const STATUS_LABELS: Record<Project["status"], string> = {
 
 const STATUS_COLORS: Record<Project["status"], string> = {
 	DEVELOPMENT: "var(--text-link)",
-	PAUSED: "var(--text-muted)",
-	RELEASED: "color-mix(in srgb, var(--text-secondary) 70%, green)",
-	LIVE: "color-mix(in srgb, var(--text-secondary) 70%, green)",
-	FINISHED: "color-mix(in srgb, var(--text-secondary) 70%, green)",
-	ABANDONED: "color-mix(in srgb, var(--text-secondary) 70%, red)",
-	STOPPED: "color-mix(in srgb, var(--text-secondary) 70%, orange)",
+	PAUSED: "var(--fg-faint)",
+	RELEASED: "color-mix(in srgb, var(--fg-muted) 70%, green)",
+	LIVE: "color-mix(in srgb, var(--fg-muted) 70%, green)",
+	FINISHED: "color-mix(in srgb, var(--fg-muted) 70%, green)",
+	ABANDONED: "color-mix(in srgb, var(--fg-muted) 70%, red)",
+	STOPPED: "color-mix(in srgb, var(--fg-muted) 70%, orange)",
 };
 
 export const ProjectCard = (props: Props) => {
@@ -38,7 +38,7 @@ export const ProjectCard = (props: Props) => {
 			<div style={{ height: "100%" }} />
 			<div class="flex-col" style={{ "font-size": "small", gap: "6px" }}>
 				<span class="flex-row">
-					<span style={{ color: "var(--text-muted)" }}>{formatDueDate(project.updated_at)}</span>
+					<span style={{ color: "var(--fg-faint)" }}>{formatDueDate(project.updated_at)}</span>
 					<span
 						style={{
 							color: STATUS_COLORS[project.status],
@@ -49,7 +49,7 @@ export const ProjectCard = (props: Props) => {
 						{STATUS_LABELS[project.status]}
 					</span>
 					{project.repo_url && (
-						<span class="icons" style={{ color: "var(--text-muted)" }} title="GitHub repository">
+						<span class="icons" style={{ color: "var(--fg-faint)" }} title="GitHub repository">
 							<Github size={14} />
 						</span>
 					)}

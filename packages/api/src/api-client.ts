@@ -93,9 +93,9 @@ export class ApiClient {
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (name?: string): Promise<ApiResult<{ message: string; key: string }>> =>
+			create: (name?: string): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> =>
 				wrap(() =>
-					this.clients.auth.post<{ message: string; key: string }>("/keys", {
+					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", {
 						body: name ? { name } : {},
 					})
 				),
@@ -331,7 +331,7 @@ export class ApiClient {
 		/**
 		 * Create new milestone
 		 */
-		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string }): Promise<ApiResult<Milestone>> =>
+		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string; finished_at?: string }): Promise<ApiResult<Milestone>> =>
 			wrap(() => this.clients.milestones.post<any>("/milestones", { body: data })),
 
 		/**
@@ -344,6 +344,7 @@ export class ApiClient {
 				description?: string;
 				target_time?: string;
 				target_version?: string;
+				finished_at?: string | null;
 			}
 		): Promise<ApiResult<Milestone>> =>
 			wrap(async () => {
@@ -362,6 +363,7 @@ export class ApiClient {
 					description: data.description ?? milestone.description,
 					target_time: data.target_time ?? milestone.target_time,
 					target_version: data.target_version ?? milestone.target_version,
+					finished_at: data.finished_at !== undefined ? data.finished_at : milestone.finished_at,
 				};
 
 				return this.clients.milestones.patch<any>(`/milestones/${id}`, {
@@ -397,12 +399,12 @@ export class ApiClient {
 		/**
 		 * Create new goal
 		 */
-		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string }): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<any>("/goals", { body: data })),
+		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string; finished_at?: string }): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<any>("/goals", { body: data })),
 
 		/**
 		 * Update goal
 		 */
-		update: async (id: string, data: { name?: string; description?: string; target_time?: string }): Promise<ApiResult<Goal>> =>
+		update: async (id: string, data: { name?: string; description?: string; target_time?: string; finished_at?: string | null }): Promise<ApiResult<Goal>> =>
 			wrap(async () => {
 				// Fetch the existing goal to get required fields
 				const result = await this.goals.find(id);
@@ -418,6 +420,7 @@ export class ApiClient {
 					name: data.name ?? goal.name,
 					description: data.description ?? goal.description,
 					target_time: data.target_time ?? goal.target_time,
+					finished_at: data.finished_at !== undefined ? data.finished_at : goal.finished_at,
 				};
 
 				return this.clients.goals.patch<any>(`/goals/${id}`, {

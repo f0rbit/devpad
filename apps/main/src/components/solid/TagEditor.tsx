@@ -100,8 +100,8 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upser
 				onInput={e => setTitle(e.currentTarget.value)}
 				onChange={save}
 				style={{
-					background: "var(--input-background)",
-					border: "1px solid var(--input-border)",
+					background: "var(--bg-alt)",
+					border: "1px solid var(--border)",
 					padding: "5px",
 					"border-radius": "5px",
 					"font-size": "14px",
@@ -118,8 +118,8 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upser
 			/>
 			<div
 				style={{
-					background: "var(--input-background)",
-					border: "1px solid var(--input-border)",
+					background: "var(--bg-alt)",
+					border: "1px solid var(--border)",
 					padding: "5px",
 					"border-radius": "5px",
 					"font-size": "small",
@@ -155,8 +155,8 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 			{/* Display Current Selected Color */}
 			<button
 				style={{
-					background: "var(--input-background)",
-					border: "1px solid var(--input-border)",
+					background: "var(--bg-alt)",
+					border: "1px solid var(--border)",
 					padding: "5px",
 					"border-radius": "5px",
 					"font-size": "14px",
@@ -164,13 +164,13 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 					display: "flex",
 					"align-items": "center",
 					gap: "5px",
-					color: "var(--input-text)",
+					color: "var(--fg)",
 					width: "100%",
 				}}
 				onClick={togglePopup}
 				disabled={enabled() === false}
 			>
-				{value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--text-secondary); font-size: small; height: 21px; line-height: 21px;">Select Colour</span>}
+				{value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--fg-muted); font-size: small; height: 21px; line-height: 21px;">Select Colour</span>}
 				{isOpen() ? <ChevronUp /> : <ChevronDown />}
 			</button>
 
@@ -181,8 +181,8 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 						position: "absolute",
 						top: "calc(100% + 5px)",
 						left: 0,
-						background: "var(--input-background)",
-						border: "1px solid var(--input-border)",
+						background: "var(--bg-alt)",
+						border: "1px solid var(--border)",
 						"border-radius": "5px",
 						"box-shadow": "0 2px 5px rgba(0, 0, 0, 0.2)",
 						padding: "5px",
@@ -214,8 +214,8 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>; c
 		<div
 			style={{
 				background: colour() ? TAG_COLOURS[colour()!].colour : "none",
-				color: colour() ? TAG_COLOURS[colour()!].text : "var(--text-secondary)",
-				border: `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--input-border)"}`,
+				color: colour() ? TAG_COLOURS[colour()!].text : "var(--fg-muted)",
+				border: `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--border)"}`,
 			}}
 			class="tag-badge"
 		>

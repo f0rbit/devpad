@@ -27,7 +27,7 @@ app.post("/", requireAuth, async c => {
 	const parsed = create_key_schema.safeParse(body);
 	if (!parsed.success) return c.json({ error: "Invalid request body", details: parsed.error.issues }, 400);
 
-	const result = await keys.createApiKey(db, auth_user.id);
+	const result = await keys.createApiKey(db, auth_user.id, "devpad", parsed.data.name);
 	if (!result.ok) return c.json({ error: "Failed to create API key" }, 500);
 
 	return c.json({ message: "API key created successfully", key: result.value });

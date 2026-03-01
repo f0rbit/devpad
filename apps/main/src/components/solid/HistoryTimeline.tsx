@@ -117,7 +117,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 		}).format(utcDate);
 
 		return (
-			<div class="date-highlighted flex-row" style={{ color: "var(--text-tertiary)" }}>
+			<div class="date-highlighted flex-row" style={{ color: "var(--fg-subtle)" }}>
 				<div class="date">{timeString}</div>
 				<div class="year">{dateString}</div>
 			</div>
@@ -192,7 +192,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 				<ActionDate />
 			</div>
 			<div>{action.description}</div>
-			<div style="padding-left: 15px; border-left: 1px solid var(--input-border); margin-left: 5px; font-size: 0.9em; color: var(--text-tertiary)">
+			<div style="padding-left: 15px; border-left: 1px solid var(--border); margin-left: 5px; font-size: 0.9em; color: var(--fg-subtle)">
 				<Data />
 			</div>
 		</div>

@@ -15,27 +15,21 @@ let tasks: TaskWithDetails[] = [];
 let tags: TagWithTypedColor[] = [];
 
 if (user) {
-	try {
-		const api_client = getServerApiClient(Astro.locals);
+	const client = getServerApiClient(Astro.locals);
 
-		// Get projects list and convert to map format
-		const project_map_result = await api_client.projects.map();
-		if (!project_map_result.ok) return rethrow(project_map_result.error);
+	const [project_map_result, tasks_result, tags_result] = await Promise.all([
+		client.projects.map(),
+		client.tasks.list(),
+		client.tags.list(),
+	]);
 
-		const tasks_result = await api_client.tasks.list();
-		if (!tasks_result.ok) return rethrow(tasks_result.error);
+	if (!project_map_result.ok) return rethrow(project_map_result.error);
+	if (!tasks_result.ok) return rethrow(tasks_result.error);
+	if (!tags_result.ok) return rethrow(tags_result.error);
 
-		const tags_result = await api_client.tags.list();
-		if (!tags_result.ok) return rethrow(tags_result.error);
-
-		project_map = project_map_result.value;
-		tasks = tasks_result.value;
-		tags = tags_result.value;
-	} catch (error) {
-		// the error here is that the user is not logged in/authenticated.
-		// which we can safely ignore since this is optional.
-		user = null;
-	}
+	project_map = project_map_result.value;
+	tasks = tasks_result.value;
+	tags = tags_result.value;
 }
 
 const keywords = [

@@ -175,13 +175,25 @@ devpad/
 - Apps no longer import `@f0rbit/ui/styles` directly -- it's included via `globals.css` in `@devpad/core/ui/styles`
 - App-specific tokens that DON'T come from `@f0rbit/ui`: `--text-link`, `--hover-filter`, `--input-placeholder`, `--input-focus`, `--item-red`, `--item-green`, `--item-red-border`, `--item-green-border`
 - When writing new CSS, use `@f0rbit/ui` token names (`--fg`, `--bg`, `--accent`, `--border`, `--bg-alt`, `--fg-muted`, `--fg-subtle`, `--fg-faint`, etc.)
-- NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they no longer exist in CSS files (some inline styles still reference them via `:root` aliases)
+- NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they have been fully removed from the codebase (no `:root` aliases, no inline style consumers)
+
+## SSR Data Fetching Conventions
+- Variable name for API client: `client` (one word, all apps)
+- Main app project pages: use `getProject(Astro)` from `@/utils/api-client` for the guard pattern (validates params, auth, ownership — returns `{ client, project, user }` or `Response`)
+- Parallel fetches: use `Promise.all()` for independent API calls, destructure results
+- Error handling by app:
+  - Main: `rethrow()` from `@/utils/api-client` (returns HTTP Response with error code)
+  - Blog: local error strings rendered in template
+  - Media: try/catch with silent fallback to client-side fetch
+- `getServerApiClient()` is in `packages/core/src/ui/api-client.ts` (shared across all 3 apps)
 
 ## Known Pre-existing LSP Errors
 These type errors exist and should be ignored:
 - `CategoryServiceError`/`PostServiceError` type mismatches in blog routes
 - `packages/worker/src/index.ts` fetch type signature
 - `packages/schema/src/validation.ts` regex pattern
+- `showSuccessToast` in `OptimisticTaskProgress.tsx`
+- Astro check false positives: `rethrow` and `getProject` sometimes reported as unused despite being used
 
 ## AI Provenance & Protection System
 

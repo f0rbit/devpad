@@ -1,29 +1,20 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject, rethrow } from "@/utils/api-client";
 import type { TaskWithDetails } from "@devpad/schema";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
 import { UpdateDiffList } from "@/components/solid/UpdateDiff";
 
-const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
+const project_id = Astro.params.project_id!;
 
-const apiClient = getServerApiClient(Astro.locals);
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
 
-const project_result = await apiClient.projects.getByName(project_id);
-if (!project_result.ok) return rethrow(project_result.error);
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
-
-const tasks_result = await apiClient.tasks.getByProject(project.id);
+const tasks_result = await client.tasks.getByProject(project.id);
 if (!tasks_result.ok) return rethrow(tasks_result.error);
 const project_tasks = tasks_result.value;
 
-// Build a map of task.codebases_tasks.id -> task
 const codebase_task_map = project_tasks.reduce(
 	(acc, task) => {
 		if (!task.codebase_tasks) return acc;
@@ -33,14 +24,12 @@ const codebase_task_map = project_tasks.reduce(
 	{} as Record<string, TaskWithDetails>
 );
 
-// Get pending scan updates for this project
-const updates_result = await apiClient.projects.scan.updates(project.id);
+const updates_result = await client.projects.scan.updates(project.id);
 if (!updates_result.ok) {
 	console.error("Error fetching updates:", updates_result.error);
 }
 const pending_updates = updates_result.ok ? updates_result.value : null;
 
-// Get the most recent pending update
 const update = pending_updates && pending_updates.length > 0 ? pending_updates[0] : null;
 
 const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse(update.data) : update.data) : null;
@@ -67,9 +56,9 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 		const output = document.getElementById("output");
 		if (!output) throw new Error("Output element not found");
 		update_check.addEventListener("click", async () => {
-			const apiClient = getBrowserClient();
+			const client = getBrowserClient();
 			try {
-				const stream = await apiClient.projects.scan.initiate(project_id);
+				const stream = await client.projects.scan.initiate(project_id);
 				output.innerText = "";
 				
 				const reader = stream.getReader();

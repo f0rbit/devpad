@@ -11,16 +11,10 @@ let user = Astro.locals.user;
 let projects: Project[] = [];
 
 if (user) {
-	try {
-		const api_client = getServerApiClient(Astro.locals);
-		const result = await api_client.projects.list();
-		if (!result.ok) return rethrow(result.error);
-		projects = result.value;
-	} catch (error) {
-		// the error here is that the user is not logged in/authenticated.
-		// which we can safely ignore since this is optional.
-		user = null;
-	}
+	const client = getServerApiClient(Astro.locals);
+	const result = await client.projects.list();
+	if (!result.ok) return rethrow(result.error);
+	projects = result.value;
 }
 
 //

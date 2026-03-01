@@ -45,7 +45,7 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	return (
 		<div style="display: flex; align-items: center; gap: 3px;" title={`Goal: ${goalName()}`}>
 			<Target size={14} />
-			<span style={{ "font-size": "small", color: "var(--text-secondary)" }}>{goalName()}</span>
+			<span style={{ "font-size": "small", color: "var(--fg-muted)" }}>{goalName()}</span>
 		</div>
 	);
 };
@@ -115,7 +115,7 @@ export const TaskCard = (props: Props) => {
 					{task.goal_id && <GoalInfo goal_id={task.goal_id} />}
 					{project_name && props.draw_project && (
 						<a href={`/project/${project_name}/tasks`}>
-							<span style={{ "font-size": "small", color: "var(--text-tertiary)" }}>
+							<span style={{ "font-size": "small", color: "var(--fg-subtle)" }}>
 								{" - "}
 								{project_name}
 							</span>

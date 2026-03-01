@@ -29,15 +29,6 @@ function deriveStatus(milestone: Milestone, goals: Goal[]): StepStatus {
 	return goals.every(g => g.finished_at) ? "completed" : "current";
 }
 
-function buildDescription(milestone: Milestone, goals: Goal[]): string {
-	const parts: string[] = [];
-	if (milestone.target_version) parts.push(`v${milestone.target_version}`);
-	const date = formatDate(milestone.target_time);
-	if (date) parts.push(date);
-	parts.push(goals.length === 0 ? "no goals" : `${goals.length} goal${goals.length === 1 ? "" : "s"}`);
-	return parts.join(" · ");
-}
-
 function ProgressCircle(props: { percentage: number; size?: number }) {
 	const size = () => props.size ?? 18;
 	const strokeWidth = 2.5;
@@ -88,9 +79,8 @@ export default function MilestonesManager(props: Props) {
 						{milestone => {
 							const goals = goalsFor(milestone.id);
 							const status = deriveStatus(milestone, goals);
-							const description = buildDescription(milestone, goals);
 							return (
-								<Step title="" description={description} status={status}>
+								<Step title="" status={status}>
 									<div class="stack-sm">
 										<div class="row-between" style={{ "align-items": "center" }}>
 											<span style={{ "font-size": "1.1rem", "font-weight": "500" }}>{milestone.name}</span>
@@ -100,7 +90,7 @@ export default function MilestonesManager(props: Props) {
 										</div>
 
 										<Show when={milestone.description}>
-											<p class="text-sm text-subtle" style={{ margin: "0" }}>
+											<p class="text-sm text-faint" style={{ margin: "0" }}>
 												{milestone.description}
 											</p>
 										</Show>

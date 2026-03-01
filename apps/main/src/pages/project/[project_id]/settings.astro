@@ -1,43 +1,34 @@
 ---
-import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
+import { getProject, rethrow } from "@/utils/api-client";
 import PageLayout from "../../../layouts/PageLayout.astro";
 import ProjectLayout from "../../../layouts/ProjectLayout.astro";
 import ProjectSettings from "../../../components/ProjectSettings.astro";
 import ConfigEditor from "../../../components/solid/ConfigEditor";
 
+const project_id = Astro.params.project_id!;
 
-const { project_id } = Astro.params;
-if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
 
-const user = Astro.locals.user;
-if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
-
-const apiClient = getServerApiClient(Astro.locals);
-
-const project_result = await apiClient.projects.getByName(project_id);
-if (!project_result.ok) return rethrow(project_result.error);
-const project = project_result.value;
-if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
-if (project.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Access denied" });
-
-const config_result = await apiClient.projects.config.load(project.id);
+const [config_result, tags_result] = await Promise.all([
+	client.projects.config.load(project.id),
+	client.tags.list(),
+]);
 if (!config_result.ok) return rethrow(config_result.error);
 const config = config_result.value;
+if (!tags_result.ok) return rethrow(tags_result.error);
+const available_tags = tags_result.value;
 
 const [owner, repo] = project.repo_url ? project.repo_url.split("/").slice(-2) : [null, null];
 
 let branches: any[] | null = null;
 if (owner && repo) {
-	const branches_result = await apiClient.github.branches(owner, repo);
+	const branches_result = await client.github.branches(owner, repo);
 	if (branches_result.ok) {
 		branches = branches_result.value;
 	}
 }
-
-const tags_result = await apiClient.tags.list();
-if (!tags_result.ok) return rethrow(tags_result.error);
-const available_tags = tags_result.value;
 ---
 
 <PageLayout title={`Settings - ${project_id}`}>

@@ -148,6 +148,7 @@ export const tools: Record<string, ToolDefinition> = {
 							description: input.description,
 							target_time: input.target_time,
 							target_version: input.target_version,
+							finished_at: input.finished_at,
 						})
 					: await client.milestones.create({
 							project_id: input.project_id,
@@ -155,6 +156,7 @@ export const tools: Record<string, ToolDefinition> = {
 							description: input.description,
 							target_time: input.target_time,
 							target_version: input.target_version,
+							finished_at: input.finished_at,
 						})
 			),
 	},
@@ -185,12 +187,14 @@ export const tools: Record<string, ToolDefinition> = {
 							name: input.name,
 							description: input.description,
 							target_time: input.target_time,
+							finished_at: input.finished_at,
 						})
 					: await client.goals.create({
 							milestone_id: input.milestone_id,
 							name: input.name,
 							description: input.description,
 							target_time: input.target_time,
+							finished_at: input.finished_at,
 						})
 			),
 	},
