@@ -169,12 +169,19 @@ credentialRoutes.get("/:platform", async c => {
 
 	const platform = platformResult.data as Platform;
 	const hasCredentials = await credential.exists(ctx, profileId, platform);
-	const credentials = hasCredentials ? await credential.get(ctx, profileId, platform) : null;
+	if (!hasCredentials) {
+		return c.json({ exists: false, isVerified: false, clientId: null });
+	}
+
+	const credentialResult = await credential.get(ctx, profileId, platform);
+	if (!credentialResult.ok) {
+		return serverError(c, credentialResult.error.message ?? "Failed to load credentials");
+	}
 
 	return c.json({
-		exists: hasCredentials,
-		isVerified: credentials?.isVerified ?? false,
-		clientId: credentials?.clientId ?? null,
+		exists: true,
+		isVerified: credentialResult.value?.isVerified ?? false,
+		clientId: credentialResult.value?.clientId ?? null,
 	});
 });
 
@@ -215,38 +222,7 @@ credentialRoutes.post("/:platform", async c => {
 			return badRequest(c, validation.error);
 		}
 
-		try {
-			const saveResult = await credential.save(ctx, {
-				profileId: profile_id,
-				platform,
-				clientId: client_id,
-				clientSecret: client_secret,
-				redirectUri: redirect_uri,
-			});
-
-			const setupResult = await setupRedditAccount(ctx, profile_id, client_id, client_secret, reddit_username.trim());
-
-			if (!setupResult.ok) {
-				await credential.delete(ctx, profile_id, platform);
-				return badRequest(c, setupResult.error);
-			}
-
-			await credential.verify(ctx, profile_id, platform);
-
-			return c.json({
-				success: true,
-				id: saveResult.id,
-				accountId: setupResult.accountId,
-				message: "Reddit connected successfully!",
-			});
-		} catch (error) {
-			log.error("Reddit setup failed", { error });
-			return serverError(c, "Failed to setup Reddit connection");
-		}
-	}
-
-	try {
-		const result = await credential.save(ctx, {
+		const saveResult = await credential.save(ctx, {
 			profileId: profile_id,
 			platform,
 			clientId: client_id,
@@ -254,15 +230,44 @@ credentialRoutes.post("/:platform", async c => {
 			redirectUri: redirect_uri,
 		});
 
+		if (!saveResult.ok) {
+			return serverError(c, saveResult.error.message ?? "Failed to save credentials");
+		}
+
+		const setupResult = await setupRedditAccount(ctx, profile_id, client_id, client_secret, reddit_username.trim());
+
+		if (!setupResult.ok) {
+			await credential.delete(ctx, profile_id, platform);
+			return badRequest(c, setupResult.error);
+		}
+
+		await credential.verify(ctx, profile_id, platform);
+
 		return c.json({
 			success: true,
-			id: result.id,
-			message: `Credentials saved. Click 'Connect with ${platform.charAt(0).toUpperCase() + platform.slice(1)}' to complete setup.`,
+			id: saveResult.value.id,
+			accountId: setupResult.accountId,
+			message: "Reddit connected successfully!",
 		});
-	} catch (error) {
-		log.error("Failed to save credentials", { error });
-		return serverError(c, "Failed to save credentials");
 	}
+
+	const result = await credential.save(ctx, {
+		profileId: profile_id,
+		platform,
+		clientId: client_id,
+		clientSecret: client_secret,
+		redirectUri: redirect_uri,
+	});
+
+	if (!result.ok) {
+		return serverError(c, result.error.message ?? "Failed to save credentials");
+	}
+
+	return c.json({
+		success: true,
+		id: result.value.id,
+		message: `Credentials saved. Click 'Connect with ${platform.charAt(0).toUpperCase() + platform.slice(1)}' to complete setup.`,
+	});
 });
 
 credentialRoutes.delete("/:platform", async c => {

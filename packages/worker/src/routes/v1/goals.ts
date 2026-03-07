@@ -74,7 +74,8 @@ app.delete("/:id", requireAuth, async c => {
 
 	if (!goal_id) return c.json({ error: "Missing goal ID" }, 400);
 
-	const result = await goals.deleteGoal(db, goal_id, auth_user.id);
+	const auth_channel = c.get("auth_channel");
+	const result = await goals.deleteGoal(db, goal_id, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);

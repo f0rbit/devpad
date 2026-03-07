@@ -1,6 +1,6 @@
 import type { Milestone, UpsertMilestone } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
-import { goal, milestone, project } from "@devpad/schema/database/schema";
+import { action, goal, milestone, project } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
@@ -78,10 +78,15 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 	}
 
 	if (!result) return err({ kind: "db_error", message: "Milestone upsert failed" });
+
+	const action_type: ActionType = !exists ? "CREATE_MILESTONE" : "UPDATE_MILESTONE";
+	const action_desc = !exists ? "Created milestone" : "Updated milestone";
+	await addMilestoneAction(db, { owner_id, milestone_id: result.id, project_id: data.project_id, name: result.name, type: action_type, description: action_desc, channel: auth_channel });
+
 	return ok(result);
 }
 
-export async function deleteMilestone(db: Database, milestone_id: string, owner_id: string): Promise<Result<void, ServiceError>> {
+export async function deleteMilestone(db: Database, milestone_id: string, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<void, ServiceError>> {
 	const milestone_result = await getMilestone(db, milestone_id);
 	if (!milestone_result.ok) return milestone_result;
 	if (!milestone_result.value) return err({ kind: "not_found", resource: "milestone", id: milestone_id });
@@ -89,6 +94,8 @@ export async function deleteMilestone(db: Database, milestone_id: string, owner_
 	const owns_result = await doesUserOwnProject(db, owner_id, milestone_result.value.project_id);
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return err({ kind: "forbidden", reason: "User does not own this project" });
+
+	await addMilestoneAction(db, { owner_id, milestone_id, project_id: milestone_result.value.project_id, name: milestone_result.value.name, type: "DELETE_MILESTONE", description: "Deleted milestone", channel: auth_channel });
 
 	await db.update(goal).set({ deleted: true, updated_at: new Date().toISOString() }).where(eq(goal.milestone_id, milestone_id));
 
@@ -110,6 +117,32 @@ export async function completeMilestone(db: Database, milestone_id: string, owne
 	return upsertMilestone(db, data as UpsertMilestone, owner_id, auth_channel);
 }
 
-export async function addMilestoneAction(_db: Database, _data: { owner_id: string; milestone_id: string; type: ActionType; description: string; channel?: "user" | "api" }): Promise<Result<boolean, ServiceError>> {
+export async function addMilestoneAction(
+	db: Database,
+	{
+		owner_id,
+		milestone_id,
+		project_id,
+		name,
+		type,
+		description,
+		channel = "user",
+	}: {
+		owner_id: string;
+		milestone_id: string;
+		project_id: string;
+		name: string;
+		type: ActionType;
+		description: string;
+		channel?: "user" | "api";
+	}
+): Promise<Result<boolean, ServiceError>> {
+	await db.insert(action).values({
+		owner_id,
+		type,
+		description,
+		data: { project_id, milestone_id, name },
+		channel,
+	});
 	return ok(true);
 }

@@ -1,7 +1,7 @@
-import type { AccountId, DatabaseError, ForbiddenError, NotFoundError, Platform, UserId } from "@devpad/schema/media";
+import type { AccountId, DatabaseError, ForbiddenError, NotFoundError, Platform, StoreError, UserId } from "@devpad/schema/media";
 import { accountSettings, accounts, errors, profiles, rateLimits } from "@devpad/schema/media";
 import type { Backend } from "@f0rbit/corpus";
-import { ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
+import { err, ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { createLogger } from "../../utils/logger";
 import type { Database } from "./db";
@@ -88,37 +88,40 @@ const resolveStoreFromId = (backend: Backend, storeId: string) => {
 	}
 };
 
-const deleteStoreSnapshots = async (backend: Backend, storeId: string): Promise<boolean> => {
+const deleteStoreSnapshots = async (backend: Backend, storeId: string): Promise<Result<boolean, StoreError>> => {
 	log.info("Deleting snapshots for store", { step: "store", storeId });
 
 	const storeResult = resolveStoreFromId(backend, storeId);
 
 	if (!storeResult || !storeResult.ok) {
 		log.info("Store not found", { step: "store", storeId });
-		return false;
+		return ok(false);
 	}
 
-	const store = storeResult.value.store;
+	const resolved = storeResult.value.store;
 	let deletedCount = 0;
 
-	try {
-		for await (const snapshot of store.list()) {
-			const deleteResult = await store.delete(snapshot.version);
-			if (deleteResult.ok) {
-				deletedCount++;
-			} else {
-				log.warn("Failed to delete snapshot", { step: "store", version: snapshot.version, error: deleteResult.error });
+	const listResult = await try_catch_async(
+		async () => {
+			for await (const snapshot of resolved.list()) {
+				const deleteResult = await resolved.delete(snapshot.version);
+				if (deleteResult.ok) {
+					deletedCount++;
+				} else {
+					log.warn("Failed to delete snapshot", { step: "store", version: snapshot.version, error: deleteResult.error });
+				}
 			}
+		},
+		(error): StoreError => {
+			log.info("Store listing failed (store may be empty)", { step: "store", storeId, error: String(error) });
+			return { kind: "store_error", operation: "list", message: `Store listing failed for ${storeId}: ${String(error)}` };
 		}
-	} catch (error) {
-		// Store listing can fail if there are no snapshots or if the store doesn't exist in corpus
-		// This is expected for newly created accounts that haven't been synced yet
-		log.info("Store listing failed (store may be empty)", { step: "store", storeId, error: String(error) });
-		return false;
-	}
+	);
+
+	if (!listResult.ok) return listResult;
 
 	log.info("Deleted snapshots", { step: "store", deletedCount, storeId });
-	return deletedCount > 0;
+	return ok(deletedCount > 0);
 };
 
 const deleteGitHubStores = async (backend: Backend, accountId: string): Promise<string[]> => {
@@ -130,7 +133,7 @@ const deleteGitHubStores = async (backend: Backend, accountId: string): Promise<
 
 	for (const { storeId } of commitStores) {
 		const deleted = await deleteStoreSnapshots(backend, storeId);
-		if (deleted) deletedStores.push(storeId);
+		if (deleted.ok && deleted.value) deletedStores.push(storeId);
 	}
 
 	log.info("Listing PR stores for account", { step: "github", accountId });
@@ -139,13 +142,13 @@ const deleteGitHubStores = async (backend: Backend, accountId: string): Promise<
 
 	for (const { storeId } of prStores) {
 		const deleted = await deleteStoreSnapshots(backend, storeId);
-		if (deleted) deletedStores.push(storeId);
+		if (deleted.ok && deleted.value) deletedStores.push(storeId);
 	}
 
 	const metaStoreId = store.id.github.meta(accountId);
 	log.info("Deleting meta store", { step: "github", storeId: metaStoreId });
 	const metaDeleted = await deleteStoreSnapshots(backend, metaStoreId);
-	if (metaDeleted) deletedStores.push(metaStoreId);
+	if (metaDeleted.ok && metaDeleted.value) deletedStores.push(metaStoreId);
 
 	return deletedStores;
 };
@@ -156,17 +159,17 @@ const deleteRedditStores = async (backend: Backend, accountId: string): Promise<
 	const metaStoreId = store.id.reddit.meta(accountId);
 	log.info("Deleting meta store", { step: "reddit", storeId: metaStoreId });
 	const metaDeleted = await deleteStoreSnapshots(backend, metaStoreId);
-	if (metaDeleted) deletedStores.push(metaStoreId);
+	if (metaDeleted.ok && metaDeleted.value) deletedStores.push(metaStoreId);
 
 	const postsStoreId = store.id.reddit.posts(accountId);
 	log.info("Deleting posts store", { step: "reddit", storeId: postsStoreId });
 	const postsDeleted = await deleteStoreSnapshots(backend, postsStoreId);
-	if (postsDeleted) deletedStores.push(postsStoreId);
+	if (postsDeleted.ok && postsDeleted.value) deletedStores.push(postsStoreId);
 
 	const commentsStoreId = store.id.reddit.comments(accountId);
 	log.info("Deleting comments store", { step: "reddit", storeId: commentsStoreId });
 	const commentsDeleted = await deleteStoreSnapshots(backend, commentsStoreId);
-	if (commentsDeleted) deletedStores.push(commentsStoreId);
+	if (commentsDeleted.ok && commentsDeleted.value) deletedStores.push(commentsStoreId);
 
 	return deletedStores;
 };
@@ -175,7 +178,7 @@ const deleteRawStore = async (backend: Backend, platform: string, accountId: str
 	const rawStoreId = store.id.raw(platform, accountId);
 	log.info("Deleting raw store", { step: "raw", storeId: rawStoreId });
 	const deleted = await deleteStoreSnapshots(backend, rawStoreId);
-	return deleted ? [rawStoreId] : [];
+	return deleted.ok && deleted.value ? [rawStoreId] : [];
 };
 
 const deleteCorpusStores = async (backend: Backend, account: AccountInfo): Promise<string[]> => {
