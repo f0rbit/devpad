@@ -10,6 +10,7 @@ import { type Accessor, createEffect, createSignal, For } from "solid-js";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagSelect } from "@/components/solid/TagPicker";
 import { TaskCard } from "./TaskCard";
+import { TaskQuickAdd } from "./TaskQuickAdd";
 
 const options = ["upcoming", "recent", "priority", "progress"] as const;
 
@@ -22,6 +23,10 @@ type Props = {
 	tags: UserTag[];
 	user_id: string;
 	defaultView: TaskView | null;
+	quick_add?: {
+		project_id: string;
+		user_id: string;
+	};
 };
 
 // task sorting functions
@@ -49,7 +54,7 @@ const by_due_date = (a: TaskType, b: TaskType) => {
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, tags, user_id, defaultView }: Props) {
+export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, tags, user_id, defaultView, quick_add }: Props) {
 	const [tasks, setTasks] = createSignal<TaskType[]>(defaultTasks);
 	const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
 	const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
@@ -153,6 +158,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 
 	return (
 		<div class="flex-col">
+			{quick_add && <TaskQuickAdd project_id={quick_add.project_id} user_id={quick_add.user_id} onCreated={task => setTasks(prev => [task, ...prev])} />}
 			<div class="task-filters" style={{ gap: "9px" }}>
 				<Search />
 				<input type="text" placeholder="Search" value={search()} onInput={e => setSearch(e.target.value)} />
