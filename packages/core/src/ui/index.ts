@@ -1,3 +1,4 @@
+export { AiProvenance } from "./ai-provenance";
 export type { DevpadAuthProps } from "./devpad-auth";
 export { DevpadAuth } from "./devpad-auth";
 export { DevpadFooter } from "./devpad-footer";

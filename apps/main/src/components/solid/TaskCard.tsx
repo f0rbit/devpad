@@ -1,3 +1,4 @@
+import { AiProvenance } from "@devpad/core/ui";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Project, TaskWithDetails, UpsertTag } from "@devpad/schema";
 import Calendar from "lucide-solid/icons/calendar";
@@ -94,6 +95,7 @@ export const TaskCard = (props: Props) => {
 					<a href={`/todo/${task.id}`} class="task-title">
 						{task.title}
 					</a>
+					<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
 				</span>
 			</div>
 			{task.summary && <p class="task-summary">{task.summary}</p>}
