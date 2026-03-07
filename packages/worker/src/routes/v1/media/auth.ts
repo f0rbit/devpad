@@ -9,9 +9,9 @@ type RedditOAuthState = { byo?: boolean };
 
 const resolveRedditSecrets = async (ctx: MediaAppContext, state: OAuthState<RedditOAuthState>, envSecrets: PlatformSecrets): Promise<PlatformSecrets> => {
 	if (!state.byo) return envSecrets;
-	const byoCredentials = await credential.get(ctx, state.profile_id, "reddit");
-	if (!byoCredentials) return { clientId: undefined, clientSecret: undefined };
-	return { clientId: byoCredentials.clientId, clientSecret: byoCredentials.clientSecret };
+	const byoResult = await credential.get(ctx, state.profile_id, "reddit");
+	if (!byoResult.ok || !byoResult.value) return { clientId: undefined, clientSecret: undefined };
+	return { clientId: byoResult.value.clientId, clientSecret: byoResult.value.clientSecret };
 };
 
 const onRedditSuccess = async (ctx: MediaAppContext, state: OAuthState<RedditOAuthState>): Promise<void> => {
@@ -125,7 +125,8 @@ authRoutes.get("/reddit", async c => {
 	if (!validation.ok) return validation.error;
 	const { user_id, profile_id } = validation.value;
 
-	const byoCredentials = await credential.get(ctx, profile_id, "reddit");
+	const byoResult = await credential.get(ctx, profile_id, "reddit");
+	const byoCredentials = byoResult.ok ? byoResult.value : null;
 	const clientId = byoCredentials?.clientId ?? c.get("oauth_secrets").reddit_client_id;
 
 	if (!clientId) {

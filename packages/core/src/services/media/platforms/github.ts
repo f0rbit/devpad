@@ -209,7 +209,8 @@ export class GitHubProvider {
 		const repoMetas = await parallel_map(
 			repos,
 			async (repo): Promise<GitHubRepoMeta> => {
-				const branches = await this.fetchBranches(octokit, repo.owner.login, repo.name);
+				const branchesResult = await this.fetchBranches(octokit, repo.owner.login, repo.name);
+				const branches = branchesResult.ok ? branchesResult.value : [];
 				return {
 					owner: repo.owner.login,
 					name: repo.name,
@@ -233,28 +234,44 @@ export class GitHubProvider {
 		};
 	}
 
-	private async fetchBranches(octokit: Octokit, owner: string, repo: string): Promise<string[]> {
+	private async fetchBranches(octokit: Octokit, owner: string, repo: string): Promise<Result<string[], ProviderError>> {
 		try {
 			const { data: branches } = (await octokit.rest.repos.listBranches({
 				owner,
 				repo,
 				per_page: 100,
 			})) as OctokitResponse<BranchData[]>;
-			return branches.map(b => b.name);
+			return ok(branches.map(b => b.name));
 		} catch (error) {
-			log.warn("Failed to fetch branches", { owner, repo, error });
-			return [];
+			return err(mapOctokitError(error));
 		}
 	}
 
 	private async fetchAllRepoData(octokit: Octokit, repoMetas: GitHubRepoMeta[], username: string): Promise<Map<string, { commits: GitHubRepoCommitsStore; prs: GitHubRepoPRsStore }>> {
 		let processed = 0;
 		const total = repoMetas.length;
+		const empty_commits = (repoMeta: GitHubRepoMeta): GitHubRepoCommitsStore => ({
+			owner: repoMeta.owner,
+			repo: repoMeta.name,
+			branches: repoMeta.branches,
+			commits: [],
+			total_commits: 0,
+			fetched_at: new Date().toISOString(),
+		});
+		const empty_prs = (repoMeta: GitHubRepoMeta): GitHubRepoPRsStore => ({
+			owner: repoMeta.owner,
+			repo: repoMeta.name,
+			pull_requests: [],
+			total_prs: 0,
+			fetched_at: new Date().toISOString(),
+		});
 
 		const results = await parallel_map(
 			repoMetas,
 			async (repoMeta): Promise<[string, { commits: GitHubRepoCommitsStore; prs: GitHubRepoPRsStore }]> => {
-				const [commits, prs] = await Promise.all([this.fetchRepoCommits(octokit, repoMeta, username), this.fetchRepoPRs(octokit, repoMeta, username)]);
+				const [commitsResult, prsResult] = await Promise.all([this.fetchRepoCommits(octokit, repoMeta, username), this.fetchRepoPRs(octokit, repoMeta, username)]);
+				const commits = commitsResult.ok ? commitsResult.value : empty_commits(repoMeta);
+				const prs = prsResult.ok ? prsResult.value : empty_prs(repoMeta);
 				processed++;
 				if (processed % 10 === 0 || processed === total) {
 					log.debug("Progress", { processed, total, repo: repoMeta.full_name });
@@ -267,7 +284,7 @@ export class GitHubProvider {
 		return new Map(results);
 	}
 
-	private async fetchRepoCommits(octokit: Octokit, repoMeta: GitHubRepoMeta, username: string): Promise<GitHubRepoCommitsStore> {
+	private async fetchRepoCommits(octokit: Octokit, repoMeta: GitHubRepoMeta, username: string): Promise<Result<GitHubRepoCommitsStore, ProviderError>> {
 		const { owner, name, branches } = repoMeta;
 		const commitMap = new Map<string, GitHubRepoCommit>();
 
@@ -313,17 +330,17 @@ export class GitHubProvider {
 			}
 		}
 
-		return {
+		return ok({
 			owner,
 			repo: name,
 			branches,
 			commits: Array.from(commitMap.values()),
 			total_commits: commitMap.size,
 			fetched_at: new Date().toISOString(),
-		};
+		});
 	}
 
-	private async fetchRepoPRs(octokit: Octokit, repoMeta: GitHubRepoMeta, username: string): Promise<GitHubRepoPRsStore> {
+	private async fetchRepoPRs(octokit: Octokit, repoMeta: GitHubRepoMeta, username: string): Promise<Result<GitHubRepoPRsStore, ProviderError>> {
 		const { owner, name } = repoMeta;
 
 		try {
@@ -346,7 +363,8 @@ export class GitHubProvider {
 			const prsWithCommits = await parallel_map(
 				userPRs,
 				async (pr): Promise<GitHubRepoPR> => {
-					const commitShas = await this.fetchPRCommits(octokit, owner, name, pr.number);
+					const commitsResult = await this.fetchPRCommits(octokit, owner, name, pr.number);
+					const commitShas = commitsResult.ok ? commitsResult.value : [];
 					const state = pr.merged_at ? "merged" : pr.state;
 
 					return {
@@ -374,26 +392,19 @@ export class GitHubProvider {
 				this.config.prCommitConcurrency
 			);
 
-			return {
+			return ok({
 				owner,
 				repo: name,
 				pull_requests: prsWithCommits,
 				total_prs: prsWithCommits.length,
 				fetched_at: new Date().toISOString(),
-			};
+			});
 		} catch (error) {
-			log.warn("Failed to fetch PRs for repo", { owner, repo: name, error });
-			return {
-				owner,
-				repo: name,
-				pull_requests: [],
-				total_prs: 0,
-				fetched_at: new Date().toISOString(),
-			};
+			return err(mapOctokitError(error));
 		}
 	}
 
-	private async fetchPRCommits(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<string[]> {
+	private async fetchPRCommits(octokit: Octokit, owner: string, repo: string, prNumber: number): Promise<Result<string[], ProviderError>> {
 		try {
 			const { data: commits } = (await octokit.rest.pulls.listCommits({
 				owner,
@@ -401,10 +412,9 @@ export class GitHubProvider {
 				pull_number: prNumber,
 				per_page: 250,
 			})) as OctokitResponse<PRCommitData[]>;
-			return commits.map(c => c.sha);
+			return ok(commits.map(c => c.sha));
 		} catch (error) {
-			log.warn("Failed to fetch PR commits", { owner, repo, prNumber, error });
-			return [];
+			return err(mapOctokitError(error));
 		}
 	}
 }
