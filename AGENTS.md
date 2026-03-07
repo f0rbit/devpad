@@ -170,12 +170,28 @@ devpad/
 - Blog post list shows project badges as clickable links back to `https://devpad.tools/project/{name}`
 - Blog post editor page shows linked projects as clickable pills
 
-## CSS Token Architecture
-- `@f0rbit/ui` is the source of truth for design tokens (all 3 apps import `@devpad/core/ui/styles` which `@import`s `@f0rbit/ui/styles`)
+## CSS & @f0rbit/ui Convention
+- `@f0rbit/ui` is the source of truth for design tokens AND utility classes (all 3 apps import `@devpad/core/ui/styles` which `@import`s `@f0rbit/ui/styles`)
 - Apps no longer import `@f0rbit/ui/styles` directly -- it's included via `globals.css` in `@devpad/core/ui/styles`
+- **Avoid adding custom CSS classes to `globals.css`** -- use `@f0rbit/ui` classes, components, and inline styles instead. Read `https://f0rbit.github.io/ui/llms.txt` for the full API.
 - App-specific tokens that DON'T come from `@f0rbit/ui`: `--text-link`, `--hover-filter`, `--input-placeholder`, `--input-focus`, `--item-red`, `--item-green`, `--item-red-border`, `--item-green-border`
 - When writing new CSS, use `@f0rbit/ui` token names (`--fg`, `--bg`, `--accent`, `--border`, `--bg-alt`, `--fg-muted`, `--fg-subtle`, `--fg-faint`, etc.)
-- NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they have been fully removed from the codebase (no `:root` aliases, no inline style consumers)
+- NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they have been fully removed from the codebase
+
+### @f0rbit/ui Utility Class Composition (CRITICAL)
+Layout utilities use a **base + modifier** pattern. Modifiers only set CSS variables — they do NOT include `display: flex`. You MUST always include the base class:
+- `.stack` = `display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-md))`
+- `.stack-sm` = MODIFIER ONLY, sets `--stack-gap: var(--space-sm)` — **must pair with `.stack`**
+- `.stack-lg` = MODIFIER ONLY, sets `--stack-gap: var(--space-lg)` — **must pair with `.stack`**
+- `.row` = `display: flex; flex-direction: row; align-items: center; gap: var(--row-gap, var(--space-sm))`
+- `.row-sm` = MODIFIER ONLY, sets `--row-gap: var(--space-xs)` — **must pair with `.row`**
+- `.row-lg` = MODIFIER ONLY, sets `--row-gap: var(--space-md)` — **must pair with `.row`**
+- `.row-between` = MODIFIER ONLY, sets `justify-content: space-between` — **must pair with `.row`**
+- `.row-end` = MODIFIER ONLY, sets `justify-content: flex-end` — **must pair with `.row`**
+- `.row-start` = MODIFIER ONLY, sets `align-items: flex-start` — **must pair with `.row`**
+
+Correct: `class="row row-sm"`, `class="stack stack-lg"`, `class="row row-between"`
+WRONG: `class="row-sm"`, `class="stack-lg"`, `class="row-between"` (no flex layout applied!)
 
 ## SSR Data Fetching Conventions
 - Variable name for API client: `client` (one word, all apps)
