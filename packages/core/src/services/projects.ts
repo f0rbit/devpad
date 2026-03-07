@@ -53,15 +53,11 @@ export async function addProjectAction(
 	db: Database,
 	{ owner_id, project_id, type, description, channel = "user" }: { owner_id: string; project_id: string; type: ActionType; description: string; channel?: "user" | "api" }
 ): Promise<Result<boolean, ServiceError>> {
-	const owns_result = await doesUserOwnProject(db, owner_id, project_id);
-	if (!owns_result.ok) return owns_result;
-	if (!owns_result.value) return ok(false);
-
 	await db.insert(action).values({
 		owner_id,
 		type,
 		description,
-		data: JSON.stringify({ project_id }),
+		data: { project_id },
 		channel,
 	});
 	return ok(true);

@@ -193,7 +193,7 @@ async function processScanItem(db: Database, update_item: any, actions_map: Reco
 				owner_id: user_id,
 				type: "UPDATE_TASK",
 				description: "Task unlinked from codebase (via scan)",
-				data: JSON.stringify({ task_id: unlink_tasks[0].id, project_id }),
+				data: { task_id: unlink_tasks[0].id, project_id },
 			});
 		}
 		return;
@@ -207,7 +207,7 @@ async function processScanItem(db: Database, update_item: any, actions_map: Reco
 				owner_id: user_id,
 				type: "DELETE_TASK",
 				description: "Task deleted (via scan)",
-				data: JSON.stringify({ task_id: delete_tasks[0].id, project_id }),
+				data: { task_id: delete_tasks[0].id, project_id },
 			});
 		}
 		return;
@@ -221,7 +221,7 @@ async function processScanItem(db: Database, update_item: any, actions_map: Reco
 				owner_id: user_id,
 				type: "UPDATE_TASK",
 				description: "Task completed (via scan)",
-				data: JSON.stringify({ task_id: complete_tasks[0].id, project_id }),
+				data: { task_id: complete_tasks[0].id, project_id },
 			});
 		}
 		return;

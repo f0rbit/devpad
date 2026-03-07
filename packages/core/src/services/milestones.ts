@@ -81,7 +81,7 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 
 	const action_type: ActionType = !exists ? "CREATE_MILESTONE" : "UPDATE_MILESTONE";
 	const action_desc = !exists ? "Created milestone" : "Updated milestone";
-	await addMilestoneAction(db, { owner_id, milestone_id: result.id, project_id: data.project_id, type: action_type, description: action_desc, channel: auth_channel });
+	await addMilestoneAction(db, { owner_id, milestone_id: result.id, project_id: data.project_id, name: result.name, type: action_type, description: action_desc, channel: auth_channel });
 
 	return ok(result);
 }
@@ -95,7 +95,7 @@ export async function deleteMilestone(db: Database, milestone_id: string, owner_
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return err({ kind: "forbidden", reason: "User does not own this project" });
 
-	await addMilestoneAction(db, { owner_id, milestone_id, project_id: milestone_result.value.project_id, type: "DELETE_MILESTONE", description: "Deleted milestone", channel: auth_channel });
+	await addMilestoneAction(db, { owner_id, milestone_id, project_id: milestone_result.value.project_id, name: milestone_result.value.name, type: "DELETE_MILESTONE", description: "Deleted milestone", channel: auth_channel });
 
 	await db.update(goal).set({ deleted: true, updated_at: new Date().toISOString() }).where(eq(goal.milestone_id, milestone_id));
 
@@ -123,6 +123,7 @@ export async function addMilestoneAction(
 		owner_id,
 		milestone_id,
 		project_id,
+		name,
 		type,
 		description,
 		channel = "user",
@@ -130,30 +131,17 @@ export async function addMilestoneAction(
 		owner_id: string;
 		milestone_id: string;
 		project_id: string;
+		name: string;
 		type: ActionType;
 		description: string;
 		channel?: "user" | "api";
 	}
 ): Promise<Result<boolean, ServiceError>> {
-	const owns_result = await doesUserOwnProject(db, owner_id, project_id);
-	if (!owns_result.ok) return owns_result;
-	if (!owns_result.value) return ok(false);
-
-	const milestone_result = await getMilestone(db, milestone_id);
-	if (!milestone_result.ok) return milestone_result;
-	if (!milestone_result.value) return ok(false);
-
-	const data = {
-		project_id,
-		milestone_id,
-		name: milestone_result.value.name,
-	};
-
 	await db.insert(action).values({
 		owner_id,
 		type,
 		description,
-		data: JSON.stringify(data),
+		data: { project_id, milestone_id, name },
 		channel,
 	});
 	return ok(true);

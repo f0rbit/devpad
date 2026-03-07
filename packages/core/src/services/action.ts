@@ -57,7 +57,20 @@ function sortByDate(a: HistoryAction, b: HistoryAction) {
 }
 
 export async function getProjectHistory(db: Database, project_id: string): Promise<Result<HistoryAction[], ServiceError>> {
-	const project_filter: ActionType[] = ["CREATE_PROJECT", "UPDATE_PROJECT", "DELETE_PROJECT", "CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
+	const project_filter: ActionType[] = [
+		"CREATE_PROJECT",
+		"UPDATE_PROJECT",
+		"DELETE_PROJECT",
+		"CREATE_TASK",
+		"UPDATE_TASK",
+		"DELETE_TASK",
+		"CREATE_MILESTONE",
+		"UPDATE_MILESTONE",
+		"DELETE_MILESTONE",
+		"CREATE_GOAL",
+		"UPDATE_GOAL",
+		"DELETE_GOAL",
+	];
 
 	const project_result = await getProjectById(db, project_id);
 	if (!project_result.ok) return ok([]);

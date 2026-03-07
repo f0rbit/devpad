@@ -6,7 +6,6 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
 import type { ServiceError } from "./errors.js";
-import { doesUserOwnProject } from "./projects.js";
 import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
@@ -79,29 +78,13 @@ export async function getTask(db: Database, task_id: string): Promise<Result<Tas
 
 export async function addTaskAction(
 	db: Database,
-	{ owner_id, task_id, type, description, project_id, channel = "user" }: { owner_id: string; task_id: string; type: ActionType; description: string; project_id: string | null; channel?: "user" | "api" }
+	{ owner_id, task_id, title, type, description, project_id, channel = "user" }: { owner_id: string; task_id: string; title: string; type: ActionType; description: string; project_id: string | null; channel?: "user" | "api" }
 ): Promise<Result<boolean, ServiceError>> {
-	if (project_id) {
-		const owns_result = await doesUserOwnProject(db, owner_id, project_id);
-		if (!owns_result.ok) return owns_result;
-		if (!owns_result.value) return ok(false);
-	}
-
-	const task_result = await getTask(db, task_id);
-	if (!task_result.ok) return task_result;
-	if (!task_result.value) return ok(false);
-
-	const data = {
-		task_id,
-		project_id: project_id ?? undefined,
-		title: task_result.value.task.title,
-	};
-
 	await db.insert(action).values({
 		owner_id,
 		type,
 		description,
-		data: JSON.stringify(data),
+		data: { task_id, project_id: project_id ?? undefined, title },
 		channel,
 	});
 	return ok(true);
@@ -214,7 +197,7 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const action_type: ActionType = !exists ? "CREATE_TASK" : "UPDATE_TASK";
 	const action_desc = !exists ? "Created task" : fresh_complete ? "Completed task" : "Updated task";
 
-	await addTaskAction(db, { owner_id, task_id: new_todo.id, type: action_type, description: action_desc, project_id, channel: auth_channel });
+	await addTaskAction(db, { owner_id, task_id: new_todo.id, title: new_todo.title, type: action_type, description: action_desc, project_id, channel: auth_channel });
 
 	if (tag_ids.length > 0) {
 		await upsertTaskTags(db, new_todo.id, tag_ids);
