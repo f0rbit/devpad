@@ -111,7 +111,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 
 	return (
 		<div class="goal-selector-container">
-			<div class="flex-row" style={{ gap: "5px", "align-items": "center" }}>
+			<div class="row-sm" style={{ gap: "5px" }}>
 				<select id="goal-selector" value={selected()} disabled={disabled || loading() || !project_id} onChange={e => handleSelectionChange(e.target.value)} style={{ "flex-grow": "1" }}>
 					<option value="" selected={selected() === ""}>
 						{!project_id ? "Select project first" : "No goal"}
@@ -139,10 +139,10 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 				</select>
 
 				<Show when={selectedGoal()}>
-					<button type="button" class="icon-button" title="Edit goal" onClick={() => handleEditGoal(selectedGoal()!)} disabled={disabled}>
+					<button type="button" class="btn btn-icon btn-sm" title="Edit goal" onClick={() => handleEditGoal(selectedGoal()!)} disabled={disabled}>
 						<Edit size={14} />
 					</button>
-					<button type="button" class="icon-button" title="Clear goal selection" onClick={handleClearSelection} disabled={disabled}>
+					<button type="button" class="btn btn-icon btn-sm" title="Clear goal selection" onClick={handleClearSelection} disabled={disabled}>
 						<X size={14} />
 					</button>
 				</Show>

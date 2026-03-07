@@ -101,7 +101,7 @@ const CategoriesPage: Component<Props> = props => {
 	return (
 		<div class="stack" style={{ gap: "24px" }}>
 			<Show when={error()}>
-				<div class="form-error">
+				<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
 					<p class="text-sm">{error()}</p>
 				</div>
 			</Show>
@@ -111,7 +111,7 @@ const CategoriesPage: Component<Props> = props => {
 			</Show>
 
 			<Show when={categories.error}>
-				<div class="form-error">
+				<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
 					<p class="text-sm">Failed to load categories</p>
 				</div>
 			</Show>

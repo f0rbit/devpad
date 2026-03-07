@@ -187,11 +187,11 @@ const TodoScannerConfig = ({
 		<div style="font-size: 0.9em">
 			{/* section to pick branch */}
 			{branches != null ? (
-				<div class="flex-col" style="gap: 6px; margin-bottom: 20px">
-					<div class="flex-row" style="gap: 20px">
+				<div class="stack-sm" style="gap: 6px; margin-bottom: 20px">
+					<div class="row" style="gap: 20px">
 						<h6>branch</h6>
 					</div>
-					<div class="flex-row" style="gap: 8px">
+					<div class="row">
 						<GitBranch />
 						<select value={config.branch ?? ""} onChange={e => selectBranch(e.target.value)}>
 							<For each={branches}>
@@ -213,10 +213,10 @@ const TodoScannerConfig = ({
 					</option>
 				))}
 			</datalist>
-			<div class="flex-col" style="gap: 6px">
-				<div class="flex-row" style="gap: 20px">
+			<div class="stack-sm" style="gap: 6px">
+				<div class="row" style="gap: 20px">
 					<h6>tags</h6>
-					<a role="button" onClick={addTag} title="Add Tag" class="flex-row">
+					<a role="button" onClick={addTag} title="Add Tag" class="row-sm">
 						<Plus />
 						add tag
 					</a>
@@ -224,25 +224,25 @@ const TodoScannerConfig = ({
 				</div>
 				<Index each={config.tags}>
 					{(tag, index) => (
-						<div class="flex-col" style="gap: 4px">
-							<div class="flex-row" style="gap: 10px">
+						<div class="stack-sm" style="gap: 4px">
+							<div class="row" style="gap: 10px">
 								<input type="text" placeholder="Tag Name" list="tags" value={tag().name} onInput={e => updateTagName(index, e.target.value)} />
-								<a role="button" onClick={() => removeTag(index)} title="Remove Tag" class="flex-row">
+								<a role="button" onClick={() => removeTag(index)} title="Remove Tag" class="row-sm">
 									<X />
 								</a>
 							</div>
-							<div class="flex-col" style="border-left: 1px solid var(--border); padding-left: 10px; gap: 4px;">
+							<div class="stack-sm" style="border-left: 1px solid var(--border); padding-left: 10px; gap: 4px;">
 								<For each={tag().match}>
 									{(match, matchIndex) => (
-										<div class="flex-row" style="gap: 10px">
+										<div class="row" style="gap: 10px">
 											<input type="text" placeholder="Match Pattern" value={match} onInput={e => updateMatch(index, matchIndex(), e.target.value)} />
-											<a role="button" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="flex-row">
+											<a role="button" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="row-sm">
 												<Minus />
 											</a>
 										</div>
 									)}
 								</For>
-								<a role="button" onClick={() => addMatch(index)} title="Add Match" class="flex-row" style="font-size: small">
+								<a role="button" onClick={() => addMatch(index)} title="Add Match" class="row-sm" style="font-size: small">
 									<Plus onClick={() => addMatch(index)} />
 									add match
 								</a>
@@ -254,19 +254,19 @@ const TodoScannerConfig = ({
 			</div>
 			<br />
 
-			<div class="flex-col" style="gap: 6px">
-				<div class="flex-row" style="gap: 20px">
+			<div class="stack-sm" style="gap: 6px">
+				<div class="row" style="gap: 20px">
 					<h6>ignore paths</h6>
-					<a role="button" onClick={addIgnorePath} title="Add Ignore Path" class="flex-row">
+					<a role="button" onClick={addIgnorePath} title="Add Ignore Path" class="row-sm">
 						<Plus />
 						add path
 					</a>
 				</div>
 				<For each={config.ignore}>
 					{(path, index) => (
-						<div class="flex-row" style="gap: 4px">
+						<div class="row-sm">
 							<input type="text" placeholder="Ignore Path" value={path} onChange={e => updateIgnorePath(index(), e.target.value)} />
-							<a role="button" onClick={() => removeIgnorePath(index())} title="Remove Path" class="flex-row">
+							<a role="button" onClick={() => removeIgnorePath(index())} title="Remove Path" class="row-sm">
 								<Minus />
 							</a>
 						</div>
@@ -276,8 +276,8 @@ const TodoScannerConfig = ({
 			</div>
 
 			<br />
-			<div class="flex-row" style="gap: 20px">
-				<a role="button" onClick={save} title="Export Config" class="flex-row">
+			<div class="row" style="gap: 20px">
+				<a role="button" onClick={save} title="Export Config" class="row-sm">
 					save
 				</a>
 			</div>
@@ -306,18 +306,22 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 
 	// have a little > icon that opens the list
 	return (
-		<div class="flex-row" style="gap: 10px; height: 21px">
+		<div class="row" style="gap: 10px; height: 21px">
 			{available().length > 0 && (
-				<a role="button" onClick={() => setOpen(!open())} class="flex-row">
+				<a role="button" onClick={() => setOpen(!open())} class="row-sm">
 					{open() ? <ChevronLeft /> : <ChevronRight />}
 				</a>
 			)}
 			{open() && (
-				<div class="flex-row" style="gap: 4px">
+				<div class="row-sm">
 					<For each={available()}>
 						{name => (
-							<button onClick={() => add(name)} class="button-reset" style="font-size: small; border: 1px solid var(--border); border-radius: 5px; padding: 2px 8px;" title={`Add boilerplate config for ${name}`}>
-								<a role="button" class="flex-row">
+							<button
+								onClick={() => add(name)}
+								style={{ background: "none", font: "inherit", cursor: "pointer", "font-size": "small", border: "1px solid var(--border)", "border-radius": "5px", padding: "2px 8px" }}
+								title={`Add boilerplate config for ${name}`}
+							>
+								<a role="button" class="row-sm">
 									+ {name}
 								</a>
 							</button>

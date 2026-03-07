@@ -174,11 +174,13 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 			<div class="timeline-icon">
 				<GitCommit size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<span class="text-xs muted nowrap shrink-0">{format.relative(firstCommit()?.timestamp ?? props.group.date)}</span>
-				<div class="flex-row justify-between items-start" style={{ gap: "1rem" }}>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
+					{format.relative(firstCommit()?.timestamp ?? props.group.date)}
+				</span>
+				<div class="row-between items-start" style={{ gap: "1rem" }}>
 					<span class="inline-flex items-baseline">
-						<span class="secondary font-medium">{displayRepo()}</span>
+						<span class="text-muted font-medium">{displayRepo()}</span>
 						<Show when={props.group.branch}>
 							<span class="muted font-medium">{`:${props.group.branch}`}</span>
 						</Show>
@@ -192,7 +194,7 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 						</div>
 					}
 				>
-					<button class="button-reset inline-flex text-xs muted" style={{ gap: "0.25rem", padding: "0.125rem 0" }} onClick={() => setExpanded(!expanded())}>
+					<button class="inline-flex text-xs muted" style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", gap: "0.25rem" }} onClick={() => setExpanded(!expanded())}>
 						<Show when={expanded()} fallback={<ChevronRight size={14} />}>
 							<ChevronDown size={14} />
 						</Show>
@@ -213,10 +215,10 @@ function NestedCommitRow(props: { commit: TimelineItem }) {
 	const payload = () => props.commit.payload as { sha?: string };
 
 	return (
-		<div class="flex-row items-baseline" style={{ gap: "0.5rem", padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
-			<code class="text-xs muted mono shrink-0">{payload().sha?.slice(0, 7)}</code>
-			<Show when={props.commit.url} fallback={<span class="secondary truncate">{props.commit.title}</span>}>
-				<a href={props.commit.url} target="_blank" rel="noopener noreferrer" class="secondary truncate">
+		<div class="row items-baseline" style={{ padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
+			<code class="text-xs muted font-mono shrink-0">{payload().sha?.slice(0, 7)}</code>
+			<Show when={props.commit.url} fallback={<span class="text-muted truncate">{props.commit.title}</span>}>
+				<a href={props.commit.url} target="_blank" rel="noopener noreferrer" class="text-muted truncate">
 					{props.commit.title}
 				</a>
 			</Show>
@@ -250,27 +252,29 @@ function PullRequestRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon timeline-icon-pr">
 				<GitPullRequest size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="flex-row items-center text-xs" style={{ gap: "0.375rem" }}>
-					<span class="muted nowrap shrink-0">{format.relative(props.item.timestamp)}</span>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
+					<span class="muted shrink-0" style={{ "white-space": "nowrap" }}>
+						{format.relative(props.item.timestamp)}
+					</span>
 					<span class="muted">·</span>
 					<span class={`timeline-state ${stateClass()}`}>{payload().state}</span>
 				</div>
-				<div class="flex-row justify-between items-start" style={{ gap: "1rem" }}>
-					<div class="flex-row items-center flex-wrap min-w-0" style={{ gap: "0.5rem" }}>
-						<Show when={props.item.url} fallback={<span class="secondary font-medium">{props.item.title}</span>}>
-							<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="secondary font-medium">
+				<div class="row-between items-start" style={{ gap: "1rem" }}>
+					<div class="row items-center flex-wrap min-w-0">
+						<Show when={props.item.url} fallback={<span class="text-muted font-medium">{props.item.title}</span>}>
+							<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="text-muted font-medium">
 								{props.item.title}
 							</a>
 						</Show>
 					</div>
 				</div>
-				<div class="flex-row items-baseline text-xs muted" style={{ gap: "0.5rem" }}>
+				<div class="row items-baseline text-xs muted">
 					<span>{displayRepo()}</span>
 					<span>·</span>
 					<span>#{payload().number}</span>
 					<span>·</span>
-					<span class="mono">
+					<span class="font-mono">
 						{payload().head_ref} → {payload().base_ref}
 					</span>
 				</div>
@@ -283,7 +287,7 @@ function PullRequestRow(props: { item: TimelineItem }) {
 							</div>
 						}
 					>
-						<button class="button-reset inline-flex text-xs muted" style={{ gap: "0.25rem", padding: "0.125rem 0" }} onClick={() => setExpanded(!expanded())}>
+						<button class="inline-flex text-xs muted" style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", gap: "0.25rem" }} onClick={() => setExpanded(!expanded())}>
 							<Show when={expanded()} fallback={<ChevronRight size={14} />}>
 								<ChevronDown size={14} />
 							</Show>
@@ -308,10 +312,10 @@ function PRCommitRow(props: { commit: PRCommit }) {
 	};
 
 	return (
-		<div class="flex-row items-baseline" style={{ gap: "0.5rem", padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
-			<code class="text-xs muted mono shrink-0">{props.commit.sha.slice(0, 7)}</code>
-			<Show when={props.commit.url} fallback={<span class="secondary truncate">{truncatedMessage()}</span>}>
-				<a href={props.commit.url} target="_blank" rel="noopener noreferrer" class="secondary truncate">
+		<div class="row items-baseline" style={{ padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
+			<code class="text-xs muted font-mono shrink-0">{props.commit.sha.slice(0, 7)}</code>
+			<Show when={props.commit.url} fallback={<span class="text-muted truncate">{truncatedMessage()}</span>}>
+				<a href={props.commit.url} target="_blank" rel="noopener noreferrer" class="text-muted truncate">
 					{truncatedMessage()}
 				</a>
 			</Show>
@@ -332,17 +336,19 @@ function CommitRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon">
 				<GitCommit size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="flex-row justify-between items-start" style={{ gap: "1rem" }}>
-					<div class="flex-row items-center min-w-0" style={{ gap: "0.5rem" }}>
-						<code class="text-xs muted mono shrink-0">{payload().sha?.slice(0, 7)}</code>
-						<Show when={props.item.url} fallback={<span class="secondary truncate">{props.item.title}</span>}>
-							<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="secondary truncate">
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row-between items-start" style={{ gap: "1rem" }}>
+					<div class="row items-center min-w-0">
+						<code class="text-xs muted font-mono shrink-0">{payload().sha?.slice(0, 7)}</code>
+						<Show when={props.item.url} fallback={<span class="text-muted truncate">{props.item.title}</span>}>
+							<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="text-muted truncate">
 								{props.item.title}
 							</a>
 						</Show>
 					</div>
-					<span class="text-xs muted nowrap shrink-0">{format.relative(props.item.timestamp)}</span>
+					<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
+						{format.relative(props.item.timestamp)}
+					</span>
 				</div>
 				<Show when={displayRepo()}>
 					<span class="text-xs muted">{displayRepo()}</span>
@@ -370,16 +376,18 @@ function RedditPostRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon timeline-icon-reddit">
 				<MessageSquareText size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<span class="text-xs muted nowrap">{format.relative(props.item.timestamp)}</span>
-				<div class="flex-row items-start" style={{ gap: "0.5rem" }}>
-					<Show when={props.item.url} fallback={<span class="secondary font-medium">{props.item.title}</span>}>
-						<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="secondary font-medium">
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
+					{format.relative(props.item.timestamp)}
+				</span>
+				<div class="row items-start">
+					<Show when={props.item.url} fallback={<span class="text-muted font-medium">{props.item.title}</span>}>
+						<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="text-muted font-medium">
 							{props.item.title}
 						</a>
 					</Show>
 				</div>
-				<div class="flex-row items-center text-xs muted" style={{ gap: "0.5rem" }}>
+				<div class="row items-center text-xs muted">
 					<Show when={payload().subreddit}>
 						<span>r/{payload().subreddit}</span>
 						<span>·</span>
@@ -422,7 +430,7 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 	const CommentText = () => <span>{payload().content}</span>;
 
 	const ExpandLink = () => (
-		<div class="flex-row items-center text-xs" style={{ gap: "0.375rem" }}>
+		<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
 			<button type="button" class="reddit-expand-label" onClick={() => setExpanded(!expanded())} style={{ "margin-top": "-0.15rem" }}>
 				{expanded() ? "show less" : "show more"}
 			</button>
@@ -440,9 +448,11 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon timeline-icon-reddit-comment">
 				<Reply size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="flex-row items-center text-xs" style={{ gap: "0.375rem" }}>
-					<span class="muted nowrap shrink-0">{format.relative(props.item.timestamp)}</span>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
+					<span class="muted shrink-0" style={{ "white-space": "nowrap" }}>
+						{format.relative(props.item.timestamp)}
+					</span>
 					<Show when={payload().is_op}>
 						<Badge variant="accent">OP</Badge>
 					</Show>
@@ -455,7 +465,7 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 								<CommentText />
 							</div>
 							<Show when={props.item.url}>
-								<div class="flex-row items-center text-xs" style={{ gap: "0.375rem" }}>
+								<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
 									<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="reddit-expand-label">
 										see comment
 									</a>
@@ -469,7 +479,7 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 					</div>
 					<ExpandLink />
 				</Show>
-				<div class="flex-row items-center text-xs muted" style={{ gap: "0.5rem", "flex-wrap": "wrap" }}>
+				<div class="row items-center text-xs muted" style={{ "flex-wrap": "wrap" }}>
 					<span>r/{payload().subreddit}</span>
 					<span>·</span>
 					<span class="inline-flex items-center" style={{ gap: "0.25rem" }}>
@@ -495,9 +505,9 @@ function GenericRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon">
 				<div class="timeline-dot" />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="flex-row justify-between items-start" style={{ gap: "1rem" }}>
-					<div class="flex-row items-center" style={{ gap: "0.5rem" }}>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row-between items-start" style={{ gap: "1rem" }}>
+					<div class="row items-center">
 						<Badge>{props.item.type}</Badge>
 						<Show when={props.item.url} fallback={<span>{props.item.title}</span>}>
 							<a href={props.item.url} target="_blank" rel="noopener noreferrer">
@@ -505,7 +515,9 @@ function GenericRow(props: { item: TimelineItem }) {
 							</a>
 						</Show>
 					</div>
-					<span class="text-xs muted nowrap shrink-0">{format.relative(props.item.timestamp)}</span>
+					<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
+						{format.relative(props.item.timestamp)}
+					</span>
 				</div>
 			</div>
 		</div>

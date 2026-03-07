@@ -37,7 +37,7 @@ const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse
 
 <PageLayout title={`Update Codebase - ${project_id}`}>
 	<ProjectTasksLayout project_id={project_id}>
-		<div class="flex-col" style="gap: 10px">
+		<div class="stack-sm" style="gap: 10px">
 		<a role="button" id="update-check" data-project-id={project.id}> check for updates </a>
 		<p id="output"></p>
 		<div></div>

@@ -39,7 +39,7 @@ const projectName = (id: string): string => projectMap[id] ?? id;
 
     <div id="posts-container">
       {error ? (
-        <div class="form-error">{error}</div>
+        <div style="padding: 0.5rem 0.75rem; background: var(--item-red); border: 1px solid var(--item-red-border); border-radius: 4px">{error}</div>
       ) : posts.length === 0 ? (
         <div class="empty-state">
           <p>No posts yet.</p>

@@ -181,7 +181,7 @@ const PostEditor: Component<PostEditorProps> = props => {
 	return (
 		<div class="post-editor">
 			<Show when={formState.error()}>
-				<div class="form-error">{formState.error()}</div>
+				<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>{formState.error()}</div>
 			</Show>
 
 			{/* Title + Metadata section with border */}

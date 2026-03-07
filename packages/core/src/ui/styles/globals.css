@@ -382,226 +382,37 @@ footer {
 }
 
 /* ==========================================================================
-   LAYOUT UTILITIES
-   ========================================================================== */
-
-.flex-col {
-	display: flex;
-	flex-direction: column;
-	gap: 24px;
-}
-
-.flex-col > section {
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-
-.flex-row {
-	display: flex;
-	flex-direction: row;
-	gap: 4px;
-	align-items: center;
-}
-
-.flex-1 {
-	flex: 1;
-}
-
-.icons {
-	display: flex;
-	gap: 4px;
-	flex-direction: row;
-	align-items: center;
-
-	a {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-}
-
-.button-reset {
-	background: none;
-	border: none;
-	padding: 0;
-	font: inherit;
-	cursor: pointer;
-	outline: inherit;
-}
-
-/* ==========================================================================
-   ICON UTILITIES
-   ========================================================================== */
-
-.lucide {
-	width: 1.1rem;
-	height: 1.1rem;
-}
-
-.spinner {
-	animation: spin 1s linear infinite;
-}
-
-.success-icon {
-	color: oklch(from var(--item-green) 0.8 0.15 h);
-}
-
-.error-icon {
-	color: oklch(from var(--item-red) 0.8 0.15 h);
-}
-
-/* ==========================================================================
-   TEXT UTILITIES
-   ========================================================================== */
-
-.primary {
-	color: var(--fg);
-}
-
-.secondary {
-	color: var(--fg-muted);
-}
-
-.mono {
-	font-family: monospace;
-}
-
-.nowrap {
-	white-space: nowrap;
-}
-
-/* ==========================================================================
-   AUTH STYLES
-   ========================================================================== */
-
-.github-login {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	padding: 1px 5px;
-	border: 1px solid var(--border);
-	border-radius: 4px;
-	cursor: pointer;
-	font-size: 0.85rem;
-}
-
-.auth-btn {
-	background: none;
-	border: 1px solid var(--border);
-	border-radius: 4px;
-	padding: 4px 12px;
-	font-size: 0.875rem;
-	cursor: pointer;
-	color: var(--text-link);
-	transition: all 0.15s;
-}
-
-.auth-btn:hover {
-	border-color: var(--text-link);
-	filter: var(--hover-filter);
-}
-
-.login-btn {
-	margin-left: 8px;
-}
-
-.logout-btn {
-	background: none;
-	border: none;
-	padding: 4px 8px;
-	font-size: 0.75rem;
-}
-
-.user-info {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-	margin-left: 8px;
-	padding-left: 8px;
-	border-left: 1px solid var(--border);
-}
-
-.user-name {
-	font-size: 0.875rem;
-	color: var(--fg-muted);
-	max-width: 150px;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-/* ==========================================================================
-   ERROR & SUCCESS STATES
-   ========================================================================== */
-
-.required {
-	color: oklch(from var(--item-red) 0.6 0.15 h);
-}
-
-.input-error {
-	border-color: oklch(from var(--item-red) 0.6 0.15 h) !important;
-}
-
-.error-text {
-	color: oklch(from var(--item-red) 0.6 0.15 h);
-}
-
-.form-error {
-	padding: 0.5rem 0.75rem;
-	background: var(--item-red);
-	border: 1px solid var(--item-red-border);
-	border-radius: 4px;
-}
-
-.form-success {
-	padding: 0.5rem 0.75rem;
-	background: var(--item-green);
-	border: 1px solid var(--item-green-border);
-	border-radius: 4px;
-}
-
-/* ==========================================================================
    AI PROVENANCE
    ========================================================================== */
 
 .ai-provenance {
 	display: inline-flex;
 	align-items: center;
-	color: oklch(65% 0.15 290);
 	flex-shrink: 0;
 }
 
+.ai-provenance--created-and-modified {
+	color: oklch(55% 0.18 290);
+}
+
+.ai-provenance--created {
+	color: oklch(65% 0.1 290);
+}
+
+.ai-provenance--modified {
+	color: oklch(55% 0.15 200);
+}
+
 @media (prefers-color-scheme: dark) {
-	.ai-provenance {
-		color: oklch(75% 0.12 290);
+	.ai-provenance--created-and-modified {
+		color: oklch(75% 0.15 290);
 	}
-}
 
-/* ==========================================================================
-   QUICK ADD
-   ========================================================================== */
+	.ai-provenance--created {
+		color: oklch(70% 0.08 290);
+	}
 
-.quick-add {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding: 6px 0;
-	border-bottom: 1px solid var(--border);
-	margin-bottom: 9px;
-}
-
-.quick-add input[type="text"] {
-	flex: 1;
-	border: 1px solid var(--border);
-	border-radius: 4px;
-	background: var(--bg-alt);
-	color: var(--fg);
-	padding: 4px 8px;
-	font-size: smaller;
-}
-
-.quick-add select {
-	width: auto;
-	min-width: 80px;
+	.ai-provenance--modified {
+		color: oklch(70% 0.12 200);
+	}
 }

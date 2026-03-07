@@ -47,10 +47,6 @@
 	color: var(--fg-faint);
 }
 
-form.flex-col {
-	gap: 16px;
-}
-
 .filter-toggles {
 	display: flex;
 	flex-direction: column;

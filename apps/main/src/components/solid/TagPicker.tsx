@@ -2,7 +2,7 @@
 
 import type { TagWithTypedColor as Tag, UpsertTag } from "@devpad/schema";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, createEffect } from "solid-js";
+import { createEffect, createSignal, For } from "solid-js";
 import { TagBadge } from "@/components/solid/TagEditor";
 
 export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag | null) => void }) {
@@ -90,7 +90,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 	}
 
 	return (
-		<div ref={container} class="flex-row">
+		<div ref={container} class="row-sm">
 			<input
 				type="text"
 				list="tags"
@@ -109,7 +109,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 			<a role="button" onClick={add}>
 				<Plus />
 			</a>
-			<div class="flex-row" style="flex-wrap: wrap;">
+			<div class="cluster">
 				<For each={tags()}>{tag => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />}</For>
 			</div>
 		</div>

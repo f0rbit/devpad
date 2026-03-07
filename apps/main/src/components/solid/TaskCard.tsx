@@ -83,7 +83,7 @@ export const TaskCard = (props: Props) => {
 
 	// Only apply card styling in grid view
 	const cardClass = props.view === "grid" ? "card" : "";
-	const containerClass = cardClass ? `${cardClass} flex-col` : "flex-col";
+	const containerClass = cardClass ? `${cardClass} stack-sm` : "stack-sm";
 
 	return (
 		<div class={containerClass} style={{ gap: "3px", height: "100%" }}>
@@ -95,18 +95,17 @@ export const TaskCard = (props: Props) => {
 					<a href={`/todo/${task.id}`} class="task-title">
 						{task.title}
 					</a>
-					<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
 				</span>
 			</div>
 			{task.summary && <p class="task-summary">{task.summary}</p>}
 			<div style={{ height: "100%" }} />
-			<div class="flex-col" style={{ "font-size": "small", gap: "6px" }}>
+			<div class="stack-sm" style={{ "font-size": "small", gap: "6px" }}>
 				{tag_list.length > 0 && (
-					<span class="flex-row">
+					<span class="row-sm">
 						<For each={tag_list}>{tag => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}</For>
 					</span>
 				)}
-				<span class={`flex-row ${priority_class}`}>
+				<span class={`row-sm ${priority_class}`}>
 					{has_linked && (
 						<div style="display: flex;" title="This task is linked to a codebase">
 							<Link />
@@ -123,6 +122,9 @@ export const TaskCard = (props: Props) => {
 							</span>
 						</a>
 					)}
+					<span style={{ "margin-left": "auto" }}>
+						<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
+					</span>
 				</span>
 			</div>
 		</div>

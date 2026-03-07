@@ -25,7 +25,7 @@ const user_history = history_result.value;
 ---
 
 <PageLayout title="Account - devpad">
-	<div class="flex-col" style="gap: 15px;">
+	<div class="stack" style="gap: 15px;">
 		<a href="/api/auth/logout" style="width: min-content;">logout</a>
 		<br />
 		<ApiKeyManager keys={keys} client:load />

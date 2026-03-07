@@ -58,7 +58,7 @@ const keywords = [
     user && (
       <main>
         <section>
-          <div class="flex-row" style="justify-content: space-between; margin-bottom: 1rem;">
+          <div class="row-between" style="margin-bottom: 1rem;">
             <h3>projects</h3>
             <a href="/project/create">+ add</a>
           </div>
@@ -123,34 +123,34 @@ const keywords = [
     <section class="landing-section">
       <h2 class="section-title text-xl font-bold">your projects at a glance</h2>
       <div class="grid grid-3">
-        <div class="card flex-col" style="gap: 3px;">
+        <div class="card stack-sm" style="gap: 3px;">
           <div><span class="task-title">game-engine</span></div>
           <p class="task-summary">a 2D engine built with WebGL</p>
           <div style="height: 100%;"></div>
-          <div class="flex-col" style="font-size: small; gap: 6px;">
-            <span class="flex-row">
+          <div class="stack-sm" style="font-size: small; gap: 6px;">
+            <span class="row-sm">
               <span style="color: var(--fg-faint);">2 days ago</span>
               <span style="color: color-mix(in srgb, var(--fg-muted) 70%, green); font-weight: 500; margin-left: auto;">Live</span>
             </span>
           </div>
         </div>
-        <div class="card flex-col" style="gap: 3px;">
+        <div class="card stack-sm" style="gap: 3px;">
           <div><span class="task-title">blog-theme</span></div>
           <p class="task-summary">custom astro theme for technical writing</p>
           <div style="height: 100%;"></div>
-          <div class="flex-col" style="font-size: small; gap: 6px;">
-            <span class="flex-row">
+          <div class="stack-sm" style="font-size: small; gap: 6px;">
+            <span class="row-sm">
               <span style="color: var(--fg-faint);">5 days ago</span>
               <span style="color: var(--text-link); font-weight: 500; margin-left: auto;">Development</span>
             </span>
           </div>
         </div>
-        <div class="card flex-col" style="gap: 3px;">
+        <div class="card stack-sm" style="gap: 3px;">
           <div><span class="task-title">cli-tool</span></div>
           <p class="task-summary">command-line interface for devpad</p>
           <div style="height: 100%;"></div>
-          <div class="flex-col" style="font-size: small; gap: 6px;">
-            <span class="flex-row">
+          <div class="stack-sm" style="font-size: small; gap: 6px;">
+            <span class="row-sm">
               <span style="color: var(--fg-faint);">2 weeks ago</span>
               <span style="color: var(--fg-muted); font-weight: 500; margin-left: auto;">Paused</span>
             </span>

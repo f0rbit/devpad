@@ -115,11 +115,11 @@ export default function PlatformCard(props: Props) {
 
 	return (
 		<div class={cardClass()}>
-			<div class="flex-row justify-between">
-				<div class="flex-row" style={{ gap: "12px" }}>
+			<div class="row-between" style={{ gap: "4px" }}>
+				<div class="row" style={{ gap: "12px" }}>
 					<PlatformIcon platform={props.platform} size={24} />
-					<div class="flex-row" style={{ "margin-bottom": state() === "inactive" ? "-0.15rem" : "" }}>
-						<h6 class="secondary font-medium">{format.platform(props.platform)}</h6>
+					<div class="row-sm" style={{ "margin-bottom": state() === "inactive" ? "-0.15rem" : "" }}>
+						<h6 class="text-muted font-medium">{format.platform(props.platform)}</h6>
 						<Show when={props.connection} keyed>
 							{connection => (
 								<>
@@ -136,7 +136,7 @@ export default function PlatformCard(props: Props) {
 						</Show>
 					</div>
 				</div>
-				<div class="flex-row items-center" style={{ gap: "8px" }}>
+				<div class="row items-center">
 					<Status state={mapState(state())} />
 					<Show when={props.connection} keyed>
 						{connection => <ConnectionActions accountId={connection.account_id} isActive={connection.is_active} state={state() as "active" | "inactive"} onAction={props.onConnectionChange} />}

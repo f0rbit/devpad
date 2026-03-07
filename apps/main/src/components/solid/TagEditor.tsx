@@ -52,7 +52,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 	}
 
 	return (
-		<div class="flex-col" style="gap: 5px;">
+		<div class="stack-sm" style="gap: 5px;">
 			{currentTags().length === 0 && !creating() ? <p>you haven't created any tags yet</p> : null}
 
 			<div class="tag-grid">
@@ -66,11 +66,11 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 				{creating() && <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} />}
 			</div>
 
-			<a role="button" onClick={create} class="flex-row" style="margin-top: 10px">
+			<a role="button" onClick={create} class="row-sm" style="margin-top: 10px">
 				<Plus />
 				add
 			</a>
-			<a role="button" onClick={save} class="flex-row" style="margin-top: 10px">
+			<a role="button" onClick={save} class="row-sm" style="margin-top: 10px">
 				<Save />
 				save
 			</a>
@@ -195,12 +195,12 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 				>
 					<For each={Object.keys(TAG_COLOURS) as TagColor[]}>
 						{name => (
-							<button onClick={() => onChange(name)} class="button-reset">
+							<button onClick={() => onChange(name)} style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}>
 								<TagBadge name={() => name} colour={() => name} />
 							</button>
 						)}
 					</For>
-					<button onClick={() => onChange(null)} class="button-reset">
+					<button onClick={() => onChange(null)} style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}>
 						<TagBadge name={() => "None"} colour={() => null} />
 					</button>
 				</div>
@@ -221,7 +221,7 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>; c
 		>
 			{name()}
 			{onRemove && (
-				<div onClick={onRemove} class="flex-row">
+				<div onClick={onRemove} class="row-sm">
 					<X size={16} />
 				</div>
 			)}

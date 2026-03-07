@@ -36,7 +36,7 @@ if (catResult.ok) {
 			<h1 class="page-title">Categories</h1>
 		</header>
 		{error ? (
-			<div class="form-error">{error}</div>
+			<div style="padding: 0.5rem 0.75rem; background: var(--item-red); border: 1px solid var(--item-red-border); border-radius: 4px">{error}</div>
 		) : (
 			<CategoriesPage client:load initialCategories={categories} />
 		)}

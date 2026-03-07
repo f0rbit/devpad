@@ -151,7 +151,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 				</Show>
 
 				<form class="filter-add-form" onSubmit={handleSubmit}>
-					<h6 class="secondary font-medium">Add Filter</h6>
+					<h6 class="text-muted font-medium">Add Filter</h6>
 
 					<FormField label="Account">
 						<Select value={accountId()} onChange={e => handleAccountChange(e.currentTarget.value)}>

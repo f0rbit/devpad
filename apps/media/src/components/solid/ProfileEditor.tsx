@@ -1,5 +1,5 @@
-import { Show, createSignal } from "solid-js";
-import { Modal, ModalHeader, ModalTitle, ModalBody, ModalFooter, Button, FormField, Input, Textarea } from "@f0rbit/ui";
+import { Button, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Textarea } from "@f0rbit/ui";
+import { createSignal, Show } from "solid-js";
 
 export type Profile = {
 	id: string;
@@ -102,7 +102,7 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 					</FormField>
 
 					<Show when={error()}>
-						<div class="form-error">{error()}</div>
+						<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>{error()}</div>
 					</Show>
 				</form>
 			</ModalBody>

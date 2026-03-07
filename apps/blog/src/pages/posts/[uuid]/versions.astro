@@ -63,14 +63,14 @@ const backUrl = postInfo ? `/posts/${postInfo.slug}` : "/posts";
 		<header>
 			<h1 class="page-title row">
 				<a href={backUrl} title="Back to post" class="back-arrow">
-					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 1.1rem; height: 1.1rem"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
 				</a>
 				Version History
 			</h1>
 		</header>
 
 		{error ? (
-			<div class="form-error">{error}</div>
+			<div style="padding: 0.5rem 0.75rem; background: var(--item-red); border: 1px solid var(--item-red-border); border-radius: 4px">{error}</div>
 		) : versions.length > 0 ? (
 			<div class="versions-layout" data-uuid={uuid} data-current-hash={currentHash} data-post-slug={postInfo?.slug ?? ""}>
 				<aside class="versions-sidebar">
@@ -110,7 +110,7 @@ const backUrl = postInfo ? `/posts/${postInfo.slug}` : "/posts";
 					</div>
 					<div class="preview-content">
 						<div id="preview-loading" class="preview-loading">
-							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide spinner"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+							<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="animate-spin" style="width: 1.1rem; height: 1.1rem"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
 							Loading...
 						</div>
 						<pre id="preview-text" class="preview-text"></pre>
