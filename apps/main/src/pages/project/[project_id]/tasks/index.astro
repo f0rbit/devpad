@@ -3,6 +3,7 @@ import { getProject, rethrow } from "@/utils/api-client";
 import type { Project } from "@devpad/schema";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
+import { ProjectContextSetter } from "@/components/solid/ProjectContextSetter";
 import { TaskSorter } from "@/components/solid/TaskSorter";
 
 const project_id = Astro.params.project_id!;
@@ -26,6 +27,16 @@ const tags = tags_result.value;
 
 <PageLayout title={`Tasks - ${project_id}`}>
 	<ProjectTasksLayout project_id={project_id}>
-		<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"recent"} tags={tags} user_id={user.id} defaultView={user.task_view || "list"} />
+		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
+		<TaskSorter
+			client:load
+			tasks={tasks}
+			project_map={project_map}
+			defaultOption={"recent"}
+			tags={tags}
+			user_id={user.id}
+			defaultView={user.task_view || "list"}
+			quick_add={{ project_id: project.id, user_id: user.id }}
+		/>
 	</ProjectTasksLayout>
 </PageLayout>

@@ -4,6 +4,7 @@
 
 import type { HistoryAction, ScanStatus } from "@devpad/schema";
 import ArrowRight from "lucide-solid/icons/arrow-right";
+import Bot from "lucide-solid/icons/bot";
 import FileMinus2 from "lucide-solid/icons/file-minus-2";
 import FilePen from "lucide-solid/icons/file-pen";
 import FilePlus2 from "lucide-solid/icons/file-plus-2";
@@ -13,7 +14,7 @@ import FolderPlus from "lucide-solid/icons/folder-plus";
 import GitBranch from "lucide-solid/icons/git-branch";
 import ScanText from "lucide-solid/icons/scan-text";
 import Type from "lucide-solid/icons/type";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, Show } from "solid-js";
 
 const pageSize = () => 10;
 
@@ -189,6 +190,11 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 		<div class="timeline-item">
 			<div class="flex-row" style={{ "font-size": "smaller" }}>
 				<ActionIcon type={action.type} />
+				<Show when={action.channel === "api"}>
+					<span class="ai-provenance" title="AI action">
+						<Bot size={12} />
+					</span>
+				</Show>
 				<ActionDate />
 			</div>
 			<div>{action.description}</div>

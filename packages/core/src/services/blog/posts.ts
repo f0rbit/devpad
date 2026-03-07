@@ -19,6 +19,7 @@ import {
 } from "@devpad/schema/blog";
 import { blog_categories as categories, blog_post_projects as postProjects, blog_posts as posts, blog_tags as tags } from "@devpad/schema/database/blog";
 import { and, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm";
+import { batchedQuery } from "../batch";
 import { rows } from "../errors";
 import { corpus as postsCorpus } from "./corpus";
 
@@ -63,7 +64,7 @@ const getCategoryWithDescendants = async (db: DrizzleDB, userId: string, categor
 const fetchTagsForPosts = async (db: DrizzleDB, postIds: number[]): Promise<Map<number, string[]>> => {
 	if (postIds.length === 0) return new Map();
 
-	const tagRows = await db.select().from(tags).where(inArray(tags.post_id, postIds));
+	const tagRows = await batchedQuery(postIds, condition => db.select().from(tags).where(condition), tags.post_id);
 
 	return tagRows.reduce((acc, row) => {
 		const existing = acc.get(row.post_id) ?? [];
@@ -82,7 +83,7 @@ const syncTags = async (db: DrizzleDB, postId: number, tagNames: string[]): Prom
 const fetchProjectIdsForPosts = async (db: DrizzleDB, postIds: number[]): Promise<Map<number, string[]>> => {
 	if (postIds.length === 0) return new Map();
 
-	const rows = await db.select().from(postProjects).where(inArray(postProjects.post_id, postIds));
+	const rows = await batchedQuery(postIds, condition => db.select().from(postProjects).where(condition), postProjects.post_id);
 
 	return rows.reduce((acc, row) => {
 		const existing = acc.get(row.post_id) ?? [];

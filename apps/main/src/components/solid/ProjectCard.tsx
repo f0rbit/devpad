@@ -1,3 +1,4 @@
+import { AiProvenance } from "@devpad/core/ui";
 import type { Project } from "@devpad/schema";
 import Github from "lucide-solid/icons/github";
 import { formatDueDate } from "@/utils/task-status";
@@ -31,8 +32,9 @@ export const ProjectCard = (props: Props) => {
 
 	return (
 		<a href={`/project/${project.project_id}`} class="card flex-col" style={{ gap: "3px", width: "100%", height: "100%", "text-decoration": "none" }}>
-			<div>
+			<div class="flex-row" style={{ "align-items": "center", gap: "4px" }}>
 				<span class="task-title">{project.name}</span>
+				<AiProvenance created_by={project.created_by} modified_by={project.modified_by} size={12} />
 			</div>
 			{project.description && <p class="task-summary">{project.description}</p>}
 			<div style={{ height: "100%" }} />

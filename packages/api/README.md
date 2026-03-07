@@ -1,149 +1,152 @@
 # @devpad/api
 
-TypeScript client library for the Devpad API - project and task management made simple.
+TypeScript API client for [devpad](https://devpad.tools) — project management, task tracking, milestones, goals, and more.
 
 ## Installation
 
 ```bash
-npm install @devpad/api
-# or
-yarn add @devpad/api
-# or
 bun add @devpad/api
 ```
 
-## Quick Start
+## Quick start
 
 ```typescript
-import DevpadApiClient from '@devpad/api';
+import ApiClient from "@devpad/api";
 
-const client = new DevpadApiClient({
-  api_key: 'your-api-key-here',
-  base_url: 'https://devpad.tools/api/v1' // optional, defaults to localhost:4321
-});
-
-// Create a project
-const project = await client.projects.create({
-  name: 'My New Project',
-  description: 'A project created via API',
-  visibility: 'private'
-});
-
-// Create a task
-const task = await client.tasks.create({
-  project_id: project.data.project_id,
-  title: 'Implement new feature',
-  description: 'Add user authentication',
-  status: 'pending',
-  priority: 'high',
-  tags: ['feature', 'auth']
+const client = new ApiClient({
+  base_url: "https://devpad.tools/api/v1",
+  api_key: "your-api-key",
 });
 ```
 
-## API Reference
+The constructor also accepts `auth_mode`, `credentials`, `default_headers`, and `custom_fetch`. Auth mode is auto-detected from the `api_key` format.
 
-### DevpadApiClient
+## Error handling
 
-Main client class that provides access to all API endpoints.
-
-```typescript
-const client = new DevpadApiClient({
-  api_key: string;          // Required: Your Devpad API key
-  base_url?: string;        // Optional: API base URL (defaults to localhost:4321/api/v1)
-});
-```
-
-### Projects API
-
-#### `client.projects.list()`
-Get all projects for the authenticated user.
-
-#### `client.projects.get(id: string)`
-Get a specific project by ID.
-
-#### `client.projects.getByName(name: string)`
-Get a project by name.
-
-#### `client.projects.create(data: ProjectCreate)`
-Create a new project.
-
-#### `client.projects.update(project_id: string, data: Partial<ProjectUpdate>)`
-Update an existing project.
-
-#### `client.projects.upsert(data: ProjectUpsert)`
-Create or update a project (unified endpoint).
-
-### Tasks API
-
-#### `client.tasks.list(options?: { project_id?: string; tag_id?: string })`
-Get tasks, optionally filtered by project or tag.
-
-#### `client.tasks.get(id: string)`
-Get a specific task by ID.
-
-#### `client.tasks.getByProject(project_id: string)`
-Get all tasks for a specific project.
-
-#### `client.tasks.create(data: TaskCreate)`
-Create a new task.
-
-#### `client.tasks.update(task_id: string, data: Partial<TaskUpdate>)`
-Update an existing task.
-
-#### `client.tasks.upsert(data: TaskUpsert)`
-Create or update a task (unified endpoint).
-
-### Types
-
-The library exports TypeScript types for all API operations:
+All methods return `ApiResult<T>` which is `Result<T, ApiResultError>` from `@f0rbit/corpus`. No try/catch needed.
 
 ```typescript
-import { 
-  ProjectType, 
-  TaskType, 
-  TagType,
-  ProjectCreate,
-  ProjectUpdate, 
-  ProjectUpsert,
-  TaskCreate,
-  TaskUpdate,
-  TaskUpsert,
-  ApiResponse 
-} from '@devpad/api';
-```
+import ApiClient, { type ApiResult } from "@devpad/api";
 
-### Error Handling
+const result = await client.projects.list();
 
-The client throws typed errors for different failure scenarios:
-
-```typescript
-import { ApiError, AuthenticationError, NetworkError } from '@devpad/api';
-
-try {
-  await client.projects.create({ name: 'Test Project' });
-} catch (error) {
-  if (error instanceof AuthenticationError) {
-    console.error('Invalid API key');
-  } else if (error instanceof ApiError) {
-    console.error('API Error:', error.message, error.statusCode);
-  } else if (error instanceof NetworkError) {
-    console.error('Network Error:', error.message);
-  }
+if (!result.ok) {
+  console.error(result.error.message, result.error.status_code);
+  return;
 }
+
+const projects = result.value;
 ```
 
-## Authentication
+The `ok()` and `err()` constructors are re-exported for building your own Results.
 
-To use this API client, you need a Devpad API key. You can generate one through the Devpad web interface at your account settings.
+## API reference
 
-## Development
+### Projects
 
-This package is built with TypeScript and uses Bun for development. The source code is available at [github.com/f0rbit/devpad](https://github.com/f0rbit/devpad).
+```typescript
+client.projects.list()
+client.projects.find(id)
+client.projects.getByName(name)
+client.projects.create(data)
+client.projects.upsert(data)
+client.projects.config.load(id)
+client.projects.config.save(id, config)
+client.projects.history(id)
+client.projects.specification(id)
+client.projects.scan.initiate(name)
+client.projects.scan.updates(id)
+client.projects.map()
+```
+
+### Tasks
+
+```typescript
+client.tasks.list(params?)          // optional { project_id, tag_id }
+client.tasks.find(id)
+client.tasks.getByProject(id)
+client.tasks.create(data)
+client.tasks.upsert(data)
+client.tasks.delete(id)
+client.tasks.history.get(id)
+```
+
+### Milestones
+
+```typescript
+client.milestones.list(params?)     // optional { project_id }
+client.milestones.find(id)
+client.milestones.getByProject(id)
+client.milestones.create(data)
+client.milestones.update(id, data)
+client.milestones.delete(id)
+client.milestones.goals(id)
+```
+
+### Goals
+
+```typescript
+client.goals.list()
+client.goals.find(id)
+client.goals.create(data)
+client.goals.update(id, data)
+client.goals.delete(id)
+```
+
+### Tags
+
+```typescript
+client.tags.list()
+client.tags.save(tags)
+```
+
+### Auth
+
+```typescript
+client.auth.keys.list()
+client.auth.keys.create(data)
+client.auth.keys.update(id, data)
+client.auth.keys.delete(id)
+client.auth.user()
+client.auth.login(code)
+client.auth.loginUrl()
+```
+
+### User
+
+```typescript
+client.user.history()
+```
+
+### GitHub
+
+```typescript
+client.github.repos()
+client.github.branches(owner, repo)
+```
+
+Blog and media namespaces also exist but are documented separately.
+
+## Types
+
+```typescript
+import ApiClient, {
+  type ApiResult,
+  type ApiResultError,
+  type AuthMode,        // "session" | "key" | "cookie"
+} from "@devpad/api";
+
+// Schema types re-exported for convenience
+import type {
+  Project,
+  TaskWithDetails,
+  UpsertProject,
+  UpsertTodo,
+} from "@devpad/api";
+```
+
+Result utilities `ok` and `err` are also exported from the main entry point.
 
 ## License
 
 MIT
-
-## Support
-
-For issues and feature requests, please visit the [GitHub repository](https://github.com/f0rbit/devpad/issues).

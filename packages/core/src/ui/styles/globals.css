@@ -560,3 +560,48 @@ footer {
 	border: 1px solid var(--item-green-border);
 	border-radius: 4px;
 }
+
+/* ==========================================================================
+   AI PROVENANCE
+   ========================================================================== */
+
+.ai-provenance {
+	display: inline-flex;
+	align-items: center;
+	color: oklch(65% 0.15 290);
+	flex-shrink: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+	.ai-provenance {
+		color: oklch(75% 0.12 290);
+	}
+}
+
+/* ==========================================================================
+   QUICK ADD
+   ========================================================================== */
+
+.quick-add {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 0;
+	border-bottom: 1px solid var(--border);
+	margin-bottom: 9px;
+}
+
+.quick-add input[type="text"] {
+	flex: 1;
+	border: 1px solid var(--border);
+	border-radius: 4px;
+	background: var(--bg-alt);
+	color: var(--fg);
+	padding: 4px 8px;
+	font-size: smaller;
+}
+
+.quick-add select {
+	width: auto;
+	min-width: 80px;
+}

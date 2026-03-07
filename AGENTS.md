@@ -216,10 +216,22 @@ These type errors exist and should be ignored:
 - `getAIActivity()` in `packages/core/src/services/action.ts`
 - `activity.ai()` on the API client, `devpad_activity_ai` MCP tool
 
+### AI Provenance UI
+- `AiProvenance` component in `packages/core/src/ui/ai-provenance.tsx` — shared across all 3 apps
+- Uses oklch purple (hue 290) via `.ai-provenance` CSS class in `globals.css`
+- Entity-level: `created_by`/`modified_by` fields on Task, Project, Milestone, Goal → renders purple Bot icon
+- Action-level: `channel` field on HistoryAction → Bot icon rendered directly in HistoryTimeline
+
 ### Milestone/Goal Ownership
 - Milestone and goal tables use `entity()` not `owned_entity()` — no `owner_id` column
 - Ownership is checked via the parent project
 - Provenance columns (`created_by`, `modified_by`, `protected`) still apply via `provenance()` in `entity()`
+
+## Project Context
+- `sessionStorage` key: `devpad_project_context` — stores `{ id, name }` for current project
+- Set by `ProjectContextSetter` component on project pages (`client:load`)
+- Read by `TaskSorter` (initial filter) and `TaskEditor` (default project)
+- Cleared on `/project` index page (project list)
 
 # Debugging
 When running integration tests, logs will get piped to `packages/worker/server.log`, only read the logs if you're looking for errors.

@@ -73,10 +73,14 @@ export async function getProjectHistory(db: Database, project_id: string): Promi
 
 	const mapped_scan: HistoryAction[] = scan_result.value.map((s: any) => ({
 		id: `scan-${s.id}`,
-		type: "SCAN",
+		type: "SCAN" as const,
 		description: `Scanned branch '${s.branch}'`,
 		created_at: s.created_at,
 		deleted: false,
+		channel: "user" as const,
+		created_by: "user" as const,
+		modified_by: "user" as const,
+		protected: false,
 		data: { project_id, message: s.commit_msg, status: s.status },
 	}));
 
