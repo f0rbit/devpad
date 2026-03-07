@@ -81,7 +81,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 		<div class="card card-flat" style={{ "margin-top": "8px" }}>
 			<h4>{mode === "create" ? "Create New Goal" : "Edit Goal"}</h4>
 
-			<form onSubmit={handleSubmit} class="stack-sm">
+			<form onSubmit={handleSubmit} class="stack stack-sm">
 				<div class="form-field">
 					<label for="goal-name" class="form-field-label">
 						Goal Name *
@@ -132,7 +132,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 					<div class="form-field-error">{errorMessage()}</div>
 				</Show>
 
-				<div class="row-end" style={{ "margin-top": "4px" }}>
+				<div class="row row-end" style={{ "margin-top": "4px" }}>
 					<button type="button" onClick={onCancel} disabled={requestState() === "loading"} class="btn btn-secondary">
 						Cancel
 					</button>

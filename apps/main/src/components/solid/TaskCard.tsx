@@ -83,7 +83,7 @@ export const TaskCard = (props: Props) => {
 
 	// Only apply card styling in grid view
 	const cardClass = props.view === "grid" ? "card" : "";
-	const containerClass = cardClass ? `${cardClass} stack-sm` : "stack-sm";
+	const containerClass = cardClass ? `${cardClass} stack stack-sm` : "stack stack-sm";
 
 	return (
 		<div class={containerClass} style={{ gap: "3px", height: "100%" }}>
@@ -99,13 +99,13 @@ export const TaskCard = (props: Props) => {
 			</div>
 			{task.summary && <p class="task-summary">{task.summary}</p>}
 			<div style={{ height: "100%" }} />
-			<div class="stack-sm" style={{ "font-size": "small", gap: "6px" }}>
+			<div class="stack stack-sm" style={{ "font-size": "small", gap: "6px" }}>
 				{tag_list.length > 0 && (
-					<span class="row-sm">
+					<span class="row row-sm">
 						<For each={tag_list}>{tag => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}</For>
 					</span>
 				)}
-				<span class={`row-sm ${priority_class}`}>
+				<span class={`row row-sm ${priority_class}`}>
 					{has_linked && (
 						<div style="display: flex;" title="This task is linked to a codebase">
 							<Link />

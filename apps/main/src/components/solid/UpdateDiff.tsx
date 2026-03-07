@@ -99,16 +99,16 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	};
 
 	return (
-		<div class="stack-lg diff-list">
+		<div class="stack stack-lg diff-list">
 			{same.length > 0 && (
 				<details class="boxed">
-					<summary class="row-sm" style="justify-content: center">
+					<summary class="row row-sm" style="justify-content: center">
 						<ChevronUp class="up-arrow" />
 						<ChevronDown class="down-arrow" />
 						<span>{same.length} tasks were the same</span>
 					</summary>
 					<br />
-					<div class="stack-lg">
+					<div class="stack stack-lg">
 						{same.map(item => (
 							<UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />
 						))}
@@ -117,11 +117,11 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 			)}
 			{others.length > 0 && others.map(item => <UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />)}
 			<hr />
-			<div class="row-sm" style="gap: 20px; justify-content: center;">
-				<a role="button" onClick={saveActions} class="row-sm">
+			<div class="row row-sm" style="gap: 20px; justify-content: center;">
+				<a role="button" onClick={saveActions} class="row row-sm">
 					<Save /> save actions
 				</a>
-				<a role="button" onClick={ignoreUpdate} class="row-sm">
+				<a role="button" onClick={ignoreUpdate} class="row row-sm">
 					<Trash /> ignore updates
 				</a>
 			</div>
@@ -150,17 +150,17 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	const new_context = data.new?.context ? buildCodeContext(data.new.context) : null;
 
 	return (
-		<div class="stack-sm" style="gap: 2px;">
-			<h5 class="row-sm">
+		<div class="stack stack-sm" style="gap: 2px;">
+			<h5 class="row row-sm">
 				{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
 				<span>{update.type}</span>
 				<span> - </span>
 				{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" onInput={e => onTitleChange(update.id, e.currentTarget.value)} />}
 			</h5>
-			<div class="row-sm">
+			<div class="row row-sm">
 				<span>{update.tag}</span> - <code>{path}</code>
 			</div>
-			<div style="padding-left: 0ch; gap: 3px;" class="stack-sm">
+			<div style="padding-left: 0ch; gap: 3px;" class="stack stack-sm">
 				{data.old && (
 					<div class="item old">
 						<code>{data.old.text}</code>
@@ -174,7 +174,7 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 			</div>
 			<div style="position: relative; padding-top: 2px">
 				<Context old_context={old_context} new_context={new_context} />
-				<div class="button-container row-sm">
+				<div class="button-container row row-sm">
 					<For each={available_actions}>
 						{label => (
 							<>
@@ -196,8 +196,8 @@ function Context({ old_context, new_context }: { old_context: string | null; new
 	if (!old_context && !new_context) return <></>;
 
 	return (
-		<div class="stack-lg">
-			<div style="width: max-content" class="row-sm label-modal" onClick={() => setOpen(!open())}>
+		<div class="stack stack-lg">
+			<div style="width: max-content" class="row row-sm label-modal" onClick={() => setOpen(!open())}>
 				<ChevronUp style={{ display: open() ? "none" : "unset" }} />
 				<ChevronDown style={{ display: open() ? "unset" : "none" }} />
 				<span>Context</span>

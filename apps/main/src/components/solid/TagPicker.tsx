@@ -90,7 +90,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 	}
 
 	return (
-		<div ref={container} class="row-sm">
+		<div ref={container} class="row row-sm">
 			<input
 				type="text"
 				list="tags"

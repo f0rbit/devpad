@@ -65,11 +65,11 @@ function CommitGroupRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon">
 				<GitCommit size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
 					{props.item.timestamp}
 				</span>
-				<div class="row-between items-start" style={{ gap: "1rem" }}>
+				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<span class="inline-flex items-baseline">
 						<span class="text-muted font-medium">{props.item.repo}</span>
 						<span class="muted font-medium">{`:${props.item.branch}`}</span>
@@ -96,7 +96,7 @@ function RedditPostRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon timeline-icon-reddit">
 				<MessageSquareText size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
 					{props.item.timestamp}
 				</span>
@@ -124,7 +124,7 @@ function TweetRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon" style={{ color: "var(--fg)" }}>
 				<PlatformIcon platform="twitter" size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
 					{props.item.timestamp}
 				</span>
@@ -140,7 +140,7 @@ function BlueskyPostRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon" style={{ color: "oklch(55% 0.15 230)" }}>
 				<PlatformIcon platform="bluesky" size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
 					{props.item.timestamp}
 				</span>

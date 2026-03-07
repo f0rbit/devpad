@@ -174,11 +174,11 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 			<div class="timeline-icon">
 				<GitCommit size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
 					{format.relative(firstCommit()?.timestamp ?? props.group.date)}
 				</span>
-				<div class="row-between items-start" style={{ gap: "1rem" }}>
+				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<span class="inline-flex items-baseline">
 						<span class="text-muted font-medium">{displayRepo()}</span>
 						<Show when={props.group.branch}>
@@ -252,15 +252,15 @@ function PullRequestRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon timeline-icon-pr">
 				<GitPullRequest size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
 					<span class="muted shrink-0" style={{ "white-space": "nowrap" }}>
 						{format.relative(props.item.timestamp)}
 					</span>
 					<span class="muted">·</span>
 					<span class={`timeline-state ${stateClass()}`}>{payload().state}</span>
 				</div>
-				<div class="row-between items-start" style={{ gap: "1rem" }}>
+				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<div class="row items-center flex-wrap min-w-0">
 						<Show when={props.item.url} fallback={<span class="text-muted font-medium">{props.item.title}</span>}>
 							<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="text-muted font-medium">
@@ -336,8 +336,8 @@ function CommitRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon">
 				<GitCommit size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="row-between items-start" style={{ gap: "1rem" }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<div class="row items-center min-w-0">
 						<code class="text-xs muted font-mono shrink-0">{payload().sha?.slice(0, 7)}</code>
 						<Show when={props.item.url} fallback={<span class="text-muted truncate">{props.item.title}</span>}>
@@ -376,7 +376,7 @@ function RedditPostRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon timeline-icon-reddit">
 				<MessageSquareText size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
 					{format.relative(props.item.timestamp)}
 				</span>
@@ -430,7 +430,7 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 	const CommentText = () => <span>{payload().content}</span>;
 
 	const ExpandLink = () => (
-		<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
+		<div class="row row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
 			<button type="button" class="reddit-expand-label" onClick={() => setExpanded(!expanded())} style={{ "margin-top": "-0.15rem" }}>
 				{expanded() ? "show less" : "show more"}
 			</button>
@@ -448,8 +448,8 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon timeline-icon-reddit-comment">
 				<Reply size={16} />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
 					<span class="muted shrink-0" style={{ "white-space": "nowrap" }}>
 						{format.relative(props.item.timestamp)}
 					</span>
@@ -465,7 +465,7 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 								<CommentText />
 							</div>
 							<Show when={props.item.url}>
-								<div class="row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
+								<div class="row row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
 									<a href={props.item.url} target="_blank" rel="noopener noreferrer" class="reddit-expand-label">
 										see comment
 									</a>
@@ -505,8 +505,8 @@ function GenericRow(props: { item: TimelineItem }) {
 			<div class="timeline-icon">
 				<div class="timeline-dot" />
 			</div>
-			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<div class="row-between items-start" style={{ gap: "1rem" }}>
+			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<div class="row items-center">
 						<Badge>{props.item.type}</Badge>
 						<Show when={props.item.url} fallback={<span>{props.item.title}</span>}>
