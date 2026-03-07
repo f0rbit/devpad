@@ -1,6 +1,6 @@
 import type { Goal, UpsertGoal } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
-import { goal, milestone, project } from "@devpad/schema/database/schema";
+import { action, goal, milestone, project } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
@@ -79,10 +79,15 @@ export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: strin
 	}
 
 	if (!result) return err({ kind: "db_error", message: "Goal upsert failed" });
+
+	const action_type: ActionType = !exists ? "CREATE_GOAL" : "UPDATE_GOAL";
+	const action_desc = !exists ? "Created goal" : "Updated goal";
+	await addGoalAction(db, { owner_id, goal_id: result.id, milestone_id: data.milestone_id, project_id: milestone_result.value.project_id, type: action_type, description: action_desc, channel: auth_channel });
+
 	return ok(result);
 }
 
-export async function deleteGoal(db: Database, goal_id: string, owner_id: string): Promise<Result<void, ServiceError>> {
+export async function deleteGoal(db: Database, goal_id: string, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<void, ServiceError>> {
 	const goal_result = await getGoal(db, goal_id);
 	if (!goal_result.ok) return goal_result;
 	if (!goal_result.value) return err({ kind: "not_found", resource: "goal", id: goal_id });
@@ -94,6 +99,8 @@ export async function deleteGoal(db: Database, goal_id: string, owner_id: string
 	const owns_result = await doesUserOwnProject(db, owner_id, milestone_result.value.project_id);
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return err({ kind: "forbidden", reason: "User does not own this project" });
+
+	await addGoalAction(db, { owner_id, goal_id, milestone_id: goal_result.value.milestone_id, project_id: milestone_result.value.project_id, type: "DELETE_GOAL", description: "Deleted goal", channel: auth_channel });
 
 	await db.update(goal).set({ deleted: true, updated_at: new Date().toISOString() }).where(eq(goal.id, goal_id));
 
@@ -109,6 +116,47 @@ export async function completeGoal(db: Database, goal_id: string, owner_id: stri
 	return upsertGoal(db, data as UpsertGoal, owner_id, auth_channel);
 }
 
-export async function addGoalAction(_db: Database, _data: { owner_id: string; goal_id: string; type: ActionType; description: string; channel?: "user" | "api" }): Promise<Result<boolean, ServiceError>> {
+export async function addGoalAction(
+	db: Database,
+	{
+		owner_id,
+		goal_id,
+		milestone_id,
+		project_id,
+		type,
+		description,
+		channel = "user",
+	}: {
+		owner_id: string;
+		goal_id: string;
+		milestone_id: string;
+		project_id: string;
+		type: ActionType;
+		description: string;
+		channel?: "user" | "api";
+	}
+): Promise<Result<boolean, ServiceError>> {
+	const owns_result = await doesUserOwnProject(db, owner_id, project_id);
+	if (!owns_result.ok) return owns_result;
+	if (!owns_result.value) return ok(false);
+
+	const goal_result = await getGoal(db, goal_id);
+	if (!goal_result.ok) return goal_result;
+	if (!goal_result.value) return ok(false);
+
+	const data = {
+		project_id,
+		milestone_id,
+		goal_id,
+		name: goal_result.value.name,
+	};
+
+	await db.insert(action).values({
+		owner_id,
+		type,
+		description,
+		data: JSON.stringify(data),
+		channel,
+	});
 	return ok(true);
 }

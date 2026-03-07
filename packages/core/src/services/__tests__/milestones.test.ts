@@ -310,17 +310,37 @@ describe("milestones", () => {
 	});
 
 	describe("addMilestoneAction", () => {
-		test("returns true (no-op)", async () => {
-			const db = createSequenceMockDb();
+		test("records action for valid ownership", async () => {
+			const db = createSequenceMockDb({
+				select_sequence: [[{ ...mockProject, owner_id: "user_abc" }], [mockMilestone]],
+			});
 			const result = await addMilestoneAction(db, {
 				owner_id: "user_abc",
 				milestone_id: "ms_1",
-				type: "CREATE_TASK",
-				description: "test",
+				project_id: "proj_1",
+				type: "CREATE_MILESTONE",
+				description: "Created milestone",
 			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe(true);
+			}
+		});
+
+		test("returns false when user does not own project", async () => {
+			const db = createSequenceMockDb({
+				select_sequence: [[]],
+			});
+			const result = await addMilestoneAction(db, {
+				owner_id: "user_abc",
+				milestone_id: "ms_1",
+				project_id: "proj_1",
+				type: "CREATE_MILESTONE",
+				description: "Created milestone",
+			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.value).toBe(false);
 			}
 		});
 	});

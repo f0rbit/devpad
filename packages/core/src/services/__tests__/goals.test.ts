@@ -330,17 +330,39 @@ describe("goals", () => {
 	});
 
 	describe("addGoalAction", () => {
-		test("returns true (no-op)", async () => {
-			const db = createSequenceMockDb();
+		test("records action for valid ownership", async () => {
+			const db = createSequenceMockDb({
+				select_sequence: [[{ ...mockProject, owner_id: "user_abc" }], [mockGoal]],
+			});
 			const result = await addGoalAction(db, {
 				owner_id: "user_abc",
 				goal_id: "goal_1",
-				type: "CREATE_TASK",
-				description: "test",
+				milestone_id: "ms_1",
+				project_id: "project_1",
+				type: "CREATE_GOAL",
+				description: "Created goal",
 			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe(true);
+			}
+		});
+
+		test("returns false when user does not own project", async () => {
+			const db = createSequenceMockDb({
+				select_sequence: [[]],
+			});
+			const result = await addGoalAction(db, {
+				owner_id: "user_abc",
+				goal_id: "goal_1",
+				milestone_id: "ms_1",
+				project_id: "project_1",
+				type: "CREATE_GOAL",
+				description: "Created goal",
+			});
+			expect(result.ok).toBe(true);
+			if (result.ok) {
+				expect(result.value).toBe(false);
 			}
 		});
 	});
