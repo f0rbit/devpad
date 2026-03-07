@@ -568,13 +568,32 @@ footer {
 .ai-provenance {
 	display: inline-flex;
 	align-items: center;
-	color: oklch(65% 0.15 290);
 	flex-shrink: 0;
 }
 
+.ai-provenance--created-and-modified {
+	color: oklch(55% 0.18 290);
+}
+
+.ai-provenance--created {
+	color: oklch(65% 0.1 290);
+}
+
+.ai-provenance--modified {
+	color: oklch(55% 0.15 200);
+}
+
 @media (prefers-color-scheme: dark) {
-	.ai-provenance {
-		color: oklch(75% 0.12 290);
+	.ai-provenance--created-and-modified {
+		color: oklch(75% 0.15 290);
+	}
+
+	.ai-provenance--created {
+		color: oklch(70% 0.08 290);
+	}
+
+	.ai-provenance--modified {
+		color: oklch(70% 0.12 200);
 	}
 }
 
@@ -604,4 +623,54 @@ footer {
 .quick-add select {
 	width: auto;
 	min-width: 80px;
+}
+
+/* ==========================================================================
+   GOAL QUICK FORM
+   ========================================================================== */
+
+.goal-quick-form-overlay {
+	margin-top: 8px;
+	padding: 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+}
+
+.goal-quick-form h4 {
+	margin: 0 0 10px;
+}
+
+.goal-quick-form form {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.goal-quick-form .form-group {
+	display: flex;
+	flex-direction: column;
+	gap: 3px;
+}
+
+.goal-quick-form .form-group label {
+	font-size: smaller;
+	color: var(--fg-muted);
+}
+
+.goal-quick-form .form-actions {
+	display: flex;
+	gap: 6px;
+	justify-content: flex-end;
+	margin-top: 4px;
+}
+
+.goal-quick-form .help-text {
+	font-size: smaller;
+	color: var(--fg-subtle);
+}
+
+.goal-quick-form .error-message {
+	color: var(--error, #c44);
+	font-size: smaller;
 }

@@ -126,10 +126,10 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 					</Show>
 
 					<div class="form-actions">
-						<button type="button" onClick={onCancel} disabled={requestState() === "loading"} class="button secondary">
+						<button type="button" onClick={onCancel} disabled={requestState() === "loading"} class="btn btn-secondary">
 							Cancel
 						</button>
-						<button type="submit" disabled={requestState() === "loading"} class="button primary">
+						<button type="submit" disabled={requestState() === "loading"} class="btn">
 							<Show when={requestState() === "loading"}>
 								<Loader class="icon spinner" size={16} />
 							</Show>

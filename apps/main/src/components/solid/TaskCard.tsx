@@ -95,7 +95,6 @@ export const TaskCard = (props: Props) => {
 					<a href={`/todo/${task.id}`} class="task-title">
 						{task.title}
 					</a>
-					<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
 				</span>
 			</div>
 			{task.summary && <p class="task-summary">{task.summary}</p>}
@@ -123,6 +122,9 @@ export const TaskCard = (props: Props) => {
 							</span>
 						</a>
 					)}
+					<span style={{ "margin-left": "auto" }}>
+						<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
+					</span>
 				</span>
 			</div>
 		</div>

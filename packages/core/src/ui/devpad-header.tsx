@@ -24,7 +24,7 @@ const APP_DOMAIN: Record<AppId, Domain> = {
 const APP_PATH: Record<AppId, string> = {
 	projects: "/project",
 	tasks: "/todo",
-	blog: "/",
+	blog: "/posts",
 	media: "/dashboard",
 	docs: "/docs",
 };
