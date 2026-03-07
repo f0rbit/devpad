@@ -73,7 +73,7 @@ const projectName = (id: string): string => projectMap[id] ?? id;
 		<header>
 			<h1 class="page-title row">
 				<a href="/posts" title="Back to posts" class="back-arrow">
-					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 1.1rem; height: 1.1rem"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
 				</a>
 				Edit Post
 			</h1>
@@ -91,13 +91,13 @@ const projectName = (id: string): string => projectMap[id] ?? id;
 		)}
 
 		{error ? (
-			<div class="form-error">{error}</div>
-		) : post ? (
-			<div id="editor-container" data-uuid={post.uuid}>
-				<PostEditor client:load post={post} categories={categories} projects={projects} onFormReady={() => {}} />
-			</div>
-		) : (
-			<div class="form-error">Post not found</div>
+		<div style="padding: 0.5rem 0.75rem; background: var(--item-red); border: 1px solid var(--item-red-border); border-radius: 4px">{error}</div>
+	) : post ? (
+		<div id="editor-container" data-uuid={post.uuid}>
+			<PostEditor client:load post={post} categories={categories} projects={projects} onFormReady={() => {}} />
+		</div>
+	) : (
+		<div style="padding: 0.5rem 0.75rem; background: var(--item-red); border: 1px solid var(--item-red-border); border-radius: 4px">Post not found</div>
 		)}
 	</section>
 </AppLayout>

@@ -119,12 +119,12 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 							<span>exit</span>
 						</a>
 					</div>
-					{error() && <p class="error-icon">{error()}</p>}
+					{error() && <p style={{ color: "var(--error-fg)" }}>{error()}</p>}
 					<textarea value={markdown()} rows={50} onInput={e => setMarkdown(e.target.value)} style={{ width: "100%", "font-family": "monospace", "font-size": "medium" }} />
 				</>
 			) : (
 				<>
-					<a role="button" class="edit icons" onClick={() => setIsEditing(true)}>
+					<a role="button" class="edit row-sm" onClick={() => setIsEditing(true)}>
 						<Pencil />
 						edit
 					</a>

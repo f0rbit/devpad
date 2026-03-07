@@ -78,72 +78,78 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 	};
 
 	return (
-		<div class="goal-quick-form-overlay">
-			<div class="goal-quick-form">
-				<h4>{mode === "create" ? "Create New Goal" : "Edit Goal"}</h4>
+		<div class="card card-flat" style={{ "margin-top": "8px" }}>
+			<h4>{mode === "create" ? "Create New Goal" : "Edit Goal"}</h4>
 
-				<form onSubmit={handleSubmit}>
-					<div class="form-group">
-						<label for="goal-name">Goal Name *</label>
-						<input type="text" id="goal-name" value={state.name} onInput={e => setState({ name: e.target.value })} placeholder="Enter goal name..." disabled={requestState() === "loading"} required />
-					</div>
+			<form onSubmit={handleSubmit} class="stack-sm">
+				<div class="form-field">
+					<label for="goal-name" class="form-field-label">
+						Goal Name *
+					</label>
+					<input type="text" id="goal-name" value={state.name} onInput={e => setState({ name: e.target.value })} placeholder="Enter goal name..." disabled={requestState() === "loading"} required />
+				</div>
 
-					<div class="form-group">
-						<label for="goal-milestone">Milestone *</label>
-						<select id="goal-milestone" value={state.milestone_id} onChange={e => setState({ milestone_id: e.target.value })} disabled={requestState() === "loading" || mode === "edit"} required>
-							<option value="">Select milestone</option>
-							<For each={milestones}>
-								{milestone => (
-									<option value={milestone.id} selected={milestone.id === state.milestone_id}>
-										{milestone.name}
-									</option>
-								)}
-							</For>
-						</select>
-						<Show when={mode === "edit"}>
-							<small class="help-text">Milestone cannot be changed when editing</small>
-						</Show>
-					</div>
-
-					<div class="form-group">
-						<label for="goal-description">Description</label>
-						<textarea id="goal-description" value={state.description} onInput={e => setState({ description: e.target.value })} placeholder="Optional description..." disabled={requestState() === "loading"} rows={3} />
-					</div>
-
-					<div class="form-group">
-						<label for="goal-target-time">Target Date</label>
-						<input
-							type="date"
-							id="goal-target-time"
-							value={state.target_time ? state.target_time.split("T")[0] : ""}
-							onInput={e => setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" })}
-							disabled={requestState() === "loading"}
-						/>
-					</div>
-
-					<Show when={errorMessage()}>
-						<div class="error-message">{errorMessage()}</div>
+				<div class="form-field">
+					<label for="goal-milestone" class="form-field-label">
+						Milestone *
+					</label>
+					<select id="goal-milestone" value={state.milestone_id} onChange={e => setState({ milestone_id: e.target.value })} disabled={requestState() === "loading" || mode === "edit"} required>
+						<option value="">Select milestone</option>
+						<For each={milestones}>
+							{milestone => (
+								<option value={milestone.id} selected={milestone.id === state.milestone_id}>
+									{milestone.name}
+								</option>
+							)}
+						</For>
+					</select>
+					<Show when={mode === "edit"}>
+						<small class="text-xs text-subtle">Milestone cannot be changed when editing</small>
 					</Show>
+				</div>
 
-					<div class="form-actions">
-						<button type="button" onClick={onCancel} disabled={requestState() === "loading"} class="btn btn-secondary">
-							Cancel
-						</button>
-						<button type="submit" disabled={requestState() === "loading"} class="btn">
-							<Show when={requestState() === "loading"}>
-								<Loader class="icon spinner" size={16} />
-							</Show>
-							<Show when={requestState() === "success"}>
-								<Check class="icon success-icon" size={16} />
-							</Show>
-							<Show when={requestState() === "error"}>
-								<X class="icon error-icon" size={16} />
-							</Show>
-							{mode === "create" ? "Create Goal" : "Update Goal"}
-						</button>
-					</div>
-				</form>
-			</div>
+				<div class="form-field">
+					<label for="goal-description" class="form-field-label">
+						Description
+					</label>
+					<textarea id="goal-description" value={state.description} onInput={e => setState({ description: e.target.value })} placeholder="Optional description..." disabled={requestState() === "loading"} rows={3} />
+				</div>
+
+				<div class="form-field">
+					<label for="goal-target-time" class="form-field-label">
+						Target Date
+					</label>
+					<input
+						type="date"
+						id="goal-target-time"
+						value={state.target_time ? state.target_time.split("T")[0] : ""}
+						onInput={e => setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" })}
+						disabled={requestState() === "loading"}
+					/>
+				</div>
+
+				<Show when={errorMessage()}>
+					<div class="form-field-error">{errorMessage()}</div>
+				</Show>
+
+				<div class="row-end" style={{ "margin-top": "4px" }}>
+					<button type="button" onClick={onCancel} disabled={requestState() === "loading"} class="btn btn-secondary">
+						Cancel
+					</button>
+					<button type="submit" disabled={requestState() === "loading"} class="btn">
+						<Show when={requestState() === "loading"}>
+							<Loader class="icon animate-spin" size={16} />
+						</Show>
+						<Show when={requestState() === "success"}>
+							<Check class="icon" style={{ color: "var(--success-fg)" }} size={16} />
+						</Show>
+						<Show when={requestState() === "error"}>
+							<X class="icon" style={{ color: "var(--error-fg)" }} size={16} />
+						</Show>
+						{mode === "create" ? "Create Goal" : "Update Goal"}
+					</button>
+				</div>
+			</form>
 		</div>
 	);
 }

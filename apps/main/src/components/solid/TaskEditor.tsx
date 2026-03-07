@@ -100,7 +100,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				</textarea>
 
 				<label for="progress">Progress</label>
-				<div class="flex-row combined-row">
+				<div class="row-sm combined-row">
 					<select id="progress" name="progress" value={state.progress} onChange={e => setState({ progress: e.target.value as Progress })}>
 						<For each={PROGRESS_OPTIONS}>
 							{option => (
@@ -121,7 +121,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				<input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={e => setState({ end_time: e.target.value })} />
 			</div>
 			<details class="boxed">
-				<summary class="flex-row" style="font-size: smaller;">
+				<summary class="row-sm" style="font-size: smaller;">
 					<ChevronUp class="up-arrow" />
 					<ChevronDown class="down-arrow" />
 					More Options
@@ -160,9 +160,9 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<a role="button" id="save-button" onClick={saveTask}>
 				save
 			</a>
-			<Loader class="icon spinner" classList={{ hidden: requestState() !== "loading" }} />
-			<Check class="icon success-icon" classList={{ hidden: requestState() !== "success" }} />
-			<X class="icon error-icon" classList={{ hidden: requestState() !== "error" }} />
+			<Loader class="icon animate-spin" classList={{ hidden: requestState() !== "loading" }} />
+			<Check class="icon" style={{ color: "var(--success-fg)" }} classList={{ hidden: requestState() !== "success" }} />
+			<X class="icon" style={{ color: "var(--error-fg)" }} classList={{ hidden: requestState() !== "error" }} />
 			<br />
 			<br />
 			<div id="response" class="response"></div>
@@ -189,8 +189,8 @@ const LinkedCode = ({ code }: { code: NonNullable<TaskWithDetails["codebase_task
 	const context = buildCodeContext(code.context);
 
 	return (
-		<div class="flex-col" style={{ gap: "2px" }}>
-			<div class="flex-row">
+		<div class="stack-sm" style={{ gap: "2px" }}>
+			<div class="row-sm">
 				<span>{code.type}</span>
 				<span> - </span>
 				<code>{path}</code>

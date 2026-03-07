@@ -50,17 +50,17 @@ export default function ConnectionCard(props: Props) {
 
 	return (
 		<div class={`card platform-${props.connection.platform}`}>
-			<div class="flex-row justify-between">
-				<div class="flex-row" style={{ gap: "12px" }}>
+			<div class="row-between" style={{ gap: "4px" }}>
+				<div class="row" style={{ gap: "12px" }}>
 					<PlatformIcon platform={props.connection.platform} />
-					<div class="flex-col" style={{ gap: "2px" }}>
+					<div class="stack-sm" style={{ gap: "2px" }}>
 						<h6>{format.platform(props.connection.platform)}</h6>
 						<span class="tertiary text-sm">{props.connection.platform_username ?? "Connected"}</span>
 					</div>
 				</div>
-				<div class="flex-row icons">
+				<div class="row-sm">
 					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
-						<RefreshCw size={18} class={refreshing() ? "spinner" : ""} />
+						<RefreshCw size={18} class={refreshing() ? "animate-spin" : ""} />
 					</Button>
 					<Button icon variant="ghost" label="Remove connection" onClick={handleDelete} disabled={deleting()}>
 						<Trash2 size={18} />
@@ -73,7 +73,7 @@ export default function ConnectionCard(props: Props) {
 			</Show>
 
 			<Show when={error()}>
-				<small class="error-icon">{error()}</small>
+				<small style={{ color: "var(--error-fg)" }}>{error()}</small>
 			</Show>
 		</div>
 	);

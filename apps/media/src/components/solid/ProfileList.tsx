@@ -103,11 +103,11 @@ export default function ProfileList(props: ProfileListProps) {
 	};
 
 	return (
-		<div class="flex-col">
-			<div class="flex-row justify-between items-center">
-				<h6 class="secondary font-medium">Your Profiles</h6>
+		<div class="stack-lg">
+			<div class="row-between" style={{ gap: "4px" }}>
+				<h6 class="text-muted font-medium">Your Profiles</h6>
 				<Button size="sm" onClick={() => setShowCreateForm(true)}>
-					<span class="flex-row" style={{ gap: "4px" }}>
+					<span class="row-sm">
 						<Plus size={14} />
 						Create Profile
 					</span>
@@ -186,9 +186,9 @@ function ProfileCard(props: ProfileCardProps) {
 
 	return (
 		<Card class={props.isCurrent ? "card-active" : ""}>
-			<CardHeader class="flex-row justify-between items-start">
-				<div class="flex-col" style={{ gap: "2px" }}>
-					<div class="flex-row items-center" style={{ gap: "8px" }}>
+			<CardHeader class="row-between items-start" style={{ gap: "4px" }}>
+				<div class="stack-sm" style={{ gap: "2px" }}>
+					<div class="row items-center">
 						<CardTitle>{props.profile.name}</CardTitle>
 						<Show when={props.isCurrent}>
 							<Badge variant="success">Currently Viewing</Badge>
@@ -196,7 +196,7 @@ function ProfileCard(props: ProfileCardProps) {
 					</div>
 					<CardDescription>/{props.profile.slug}</CardDescription>
 				</div>
-				<div class="flex-row icons">
+				<div class="row-sm">
 					<Button icon variant="ghost" label="View timeline" onClick={props.onView}>
 						<Eye size={18} />
 					</Button>
@@ -215,13 +215,13 @@ function ProfileCard(props: ProfileCardProps) {
 				</CardContent>
 			</Show>
 
-			<CardFooter class="flex-row items-center" style={{ gap: "8px" }}>
-				<code class="text-xs mono truncate" style={{ flex: "1", padding: "4px 8px", background: "var(--bg-alt)", "border-radius": "4px", border: "1px solid var(--border)" }}>
+			<CardFooter class="row items-center">
+				<code class="text-xs font-mono truncate" style={{ flex: "1", padding: "4px 8px", background: "var(--bg-alt)", "border-radius": "4px", border: "1px solid var(--border)" }}>
 					{endpoint}
 				</code>
 				<Button icon variant="ghost" label={props.copied ? "Copied!" : "Copy endpoint"} onClick={props.onCopy}>
 					<Show when={props.copied} fallback={<Copy size={16} />}>
-						<Check size={16} class="success-icon" />
+						<Check size={16} style={{ color: "var(--success-fg)" }} />
 					</Show>
 				</Button>
 			</CardFooter>
@@ -281,7 +281,7 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 					<CardTitle>Create New Profile</CardTitle>
 				</CardHeader>
 
-				<CardContent class="flex-col" style={{ gap: "12px" }}>
+				<CardContent class="stack-sm" style={{ gap: "12px" }}>
 					<FormField label="Name" id="create-profile-name">
 						<Input id="create-profile-name" value={name()} onInput={e => handleNameChange(e.currentTarget.value)} placeholder="My Public Timeline" />
 					</FormField>
@@ -295,11 +295,13 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 					</FormField>
 
 					<Show when={error()}>
-						<p class="error-icon text-sm">{error()}</p>
+						<p class="text-sm" style={{ color: "var(--error-fg)" }}>
+							{error()}
+						</p>
 					</Show>
 				</CardContent>
 
-				<CardFooter class="flex-row" style={{ gap: "8px", "justify-content": "flex-end" }}>
+				<CardFooter class="row-end">
 					<Button variant="secondary" onClick={props.onCancel}>
 						Cancel
 					</Button>
@@ -356,7 +358,7 @@ function EditProfileForm(props: EditProfileFormProps) {
 					<CardTitle>Edit Profile</CardTitle>
 				</CardHeader>
 
-				<CardContent class="flex-col" style={{ gap: "12px" }}>
+				<CardContent class="stack-sm" style={{ gap: "12px" }}>
 					<FormField label="Name" id="edit-profile-name">
 						<Input id="edit-profile-name" value={name()} onInput={e => setName(e.currentTarget.value)} placeholder="My Public Timeline" />
 					</FormField>
@@ -370,11 +372,13 @@ function EditProfileForm(props: EditProfileFormProps) {
 					</FormField>
 
 					<Show when={error()}>
-						<p class="error-icon text-sm">{error()}</p>
+						<p class="text-sm" style={{ color: "var(--error-fg)" }}>
+							{error()}
+						</p>
 					</Show>
 				</CardContent>
 
-				<CardFooter class="flex-row" style={{ gap: "8px", "justify-content": "flex-end" }}>
+				<CardFooter class="row-end">
 					<Button variant="secondary" onClick={props.onCancel}>
 						Cancel
 					</Button>

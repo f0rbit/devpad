@@ -51,22 +51,20 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 	};
 
 	return (
-		<div class="quick-add">
-			<input type="text" placeholder="Add task..." value={title()} onInput={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} disabled={loading()} />
-			<select value={priority()} onChange={e => setPriority(e.target.value as "LOW" | "MEDIUM" | "HIGH")} disabled={loading()}>
+		<div class="row" style={{ padding: "6px 0", "border-bottom": "1px solid var(--border)", "margin-bottom": "9px" }}>
+			<input type="text" class="input" style={{ flex: 1 }} placeholder="Add task..." value={title()} onInput={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} disabled={loading()} />
+			<select class="select" style={{ width: "auto", "min-width": "80px" }} value={priority()} onChange={e => setPriority(e.target.value as "LOW" | "MEDIUM" | "HIGH")} disabled={loading()}>
 				<option value="LOW">LOW</option>
 				<option value="MEDIUM">MEDIUM</option>
 				<option value="HIGH">HIGH</option>
 			</select>
-			<button type="button" class="button-reset" onClick={handleSubmit} disabled={loading()}>
-				<Show when={loading()} fallback={<Plus class="lucide" />}>
-					<Loader class="lucide spinner" />
+			<button type="button" class="btn btn-ghost btn-icon btn-sm" onClick={handleSubmit} disabled={loading()}>
+				<Show when={loading()} fallback={<Plus style={{ width: "1.1rem", height: "1.1rem" }} />}>
+					<Loader class="animate-spin" style={{ width: "1.1rem", height: "1.1rem" }} />
 				</Show>
 			</button>
 			<Show when={error()}>
-				<span class="error-text" style={{ "font-size": "smaller" }}>
-					{error()}
-				</span>
+				<span style={{ color: "var(--error-fg)", "font-size": "smaller" }}>{error()}</span>
 			</Show>
 		</div>
 	);

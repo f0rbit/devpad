@@ -8,9 +8,9 @@ export type LoadingState = "idle" | "loading" | "success" | "error";
 export function LoadingIndicator({ state, idle }: { state: Accessor<LoadingState>; idle: JSX.Element }) {
 	return (
 		<>
-			{state() === "loading" && <Loader class="spinner" />}
-			{state() === "success" && <Check class="success-icon" />}
-			{state() === "error" && <X class="error-icon" />}
+			{state() === "loading" && <Loader class="animate-spin" />}
+			{state() === "success" && <Check style={{ color: "var(--success-fg)" }} />}
+			{state() === "error" && <X style={{ color: "var(--error-fg)" }} />}
 			{state() !== "loading" && state() !== "success" && state() !== "error" && idle}
 		</>
 	);

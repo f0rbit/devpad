@@ -65,20 +65,22 @@ function CommitGroupRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon">
 				<GitCommit size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<span class="text-xs muted nowrap shrink-0">{props.item.timestamp}</span>
-				<div class="flex-row justify-between items-start" style={{ gap: "1rem" }}>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
+					{props.item.timestamp}
+				</span>
+				<div class="row-between items-start" style={{ gap: "1rem" }}>
 					<span class="inline-flex items-baseline">
-						<span class="secondary font-medium">{props.item.repo}</span>
+						<span class="text-muted font-medium">{props.item.repo}</span>
 						<span class="muted font-medium">{`:${props.item.branch}`}</span>
 					</span>
 				</div>
 				<div class="timeline-nested-list">
 					<For each={props.item.commits}>
 						{commit => (
-							<div class="flex-row items-baseline" style={{ gap: "0.5rem", padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
-								<code class="text-xs muted mono shrink-0">{commit.sha}</code>
-								<span class="secondary truncate">{commit.message}</span>
+							<div class="row items-baseline" style={{ padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
+								<code class="text-xs muted font-mono shrink-0">{commit.sha}</code>
+								<span class="text-muted truncate">{commit.message}</span>
 							</div>
 						)}
 					</For>
@@ -94,12 +96,14 @@ function RedditPostRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon timeline-icon-reddit">
 				<MessageSquareText size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<span class="text-xs muted nowrap">{props.item.timestamp}</span>
-				<div class="flex-row items-start" style={{ gap: "0.5rem" }}>
-					<span class="secondary font-medium">{props.item.title}</span>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
+					{props.item.timestamp}
+				</span>
+				<div class="row items-start">
+					<span class="text-muted font-medium">{props.item.title}</span>
 				</div>
-				<div class="flex-row items-center text-xs muted" style={{ gap: "0.5rem" }}>
+				<div class="row items-center text-xs muted">
 					<span>r/{props.item.subreddit}</span>
 					<span>·</span>
 					<span class="inline-flex items-center" style={{ gap: "0.25rem" }}>
@@ -120,9 +124,11 @@ function TweetRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon" style={{ color: "var(--fg)" }}>
 				<PlatformIcon platform="twitter" size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<span class="text-xs muted nowrap">{props.item.timestamp}</span>
-				<span class="secondary">{props.item.content}</span>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
+					{props.item.timestamp}
+				</span>
+				<span class="text-muted">{props.item.content}</span>
 			</div>
 		</div>
 	);
@@ -134,9 +140,11 @@ function BlueskyPostRow(props: { item: MockTimelineItem }) {
 			<div class="timeline-icon" style={{ color: "oklch(55% 0.15 230)" }}>
 				<PlatformIcon platform="bluesky" size={16} />
 			</div>
-			<div class="flex-col" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
-				<span class="text-xs muted nowrap">{props.item.timestamp}</span>
-				<span class="secondary">{props.item.content}</span>
+			<div class="stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
+				<span class="text-xs muted" style={{ "white-space": "nowrap" }}>
+					{props.item.timestamp}
+				</span>
+				<span class="text-muted">{props.item.content}</span>
 			</div>
 		</div>
 	);

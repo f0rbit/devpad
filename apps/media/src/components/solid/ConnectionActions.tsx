@@ -55,10 +55,10 @@ export default function ConnectionActions(props: Props) {
 
 	return (
 		<>
-			<div class="flex-row icons">
+			<div class="row-sm">
 				<Show when={props.state === "active"}>
 					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
-						<RefreshCw size={18} class={refreshing() ? "spinner" : ""} />
+						<RefreshCw size={18} class={refreshing() ? "animate-spin" : ""} />
 					</Button>
 					<Button icon variant="ghost" label="Pause syncing" onClick={handleToggle} disabled={toggling()}>
 						<Pause size={18} />
@@ -74,7 +74,7 @@ export default function ConnectionActions(props: Props) {
 				</Button>
 			</div>
 			<Show when={error()}>
-				<small class="error-text">{error()}</small>
+				<small style={{ color: "var(--error-fg)" }}>{error()}</small>
 			</Show>
 		</>
 	);

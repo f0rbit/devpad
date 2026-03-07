@@ -114,7 +114,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 								</div>
 								<div class="profile-row">
 									<span class="profile-row__label">User ID</span>
-									<span class="profile-row__value mono text-sm">{userData.id}</span>
+									<span class="profile-row__value font-mono text-sm">{userData.id}</span>
 								</div>
 								<div class="profile-row">
 									<span class="profile-row__label">Created</span>
@@ -174,7 +174,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 				<h3 class="settings-section__title">API Tokens</h3>
 				<div class="settings-section__content">
 					<Show when={tokensError()}>
-						<div class="form-error">
+						<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
 							<p class="text-sm">{tokensError()}</p>
 						</div>
 					</Show>

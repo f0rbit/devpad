@@ -21,7 +21,7 @@ body {
 	flex-direction: row;
 	justify-content: center;
 
-	.lucide {
+	svg {
 		width: unset;
 		height: unset;
 		cursor: pointer;
@@ -376,7 +376,7 @@ details[open] .down-arrow {
 	top: 0;
 }
 
-.specification-editor button .lucide {
+.specification-editor button svg {
 	width: 1rem;
 	height: 1rem;
 }

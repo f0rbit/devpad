@@ -1,5 +1,5 @@
 import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Textarea } from "@f0rbit/ui";
-import { type Component, Show, createSignal } from "solid-js";
+import { type Component, createSignal, Show } from "solid-js";
 import { form } from "../../lib/form-utils";
 
 interface TokenFormProps {
@@ -58,13 +58,13 @@ const TokenForm: Component<TokenFormProps> = props => {
 					<>
 						<ModalBody>
 							<div class="modal-form">
-								<div class="form-success">
+								<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-green)", border: "1px solid var(--item-green-border)", "border-radius": "4px" }}>
 									<p class="text-sm font-medium">Token created successfully!</p>
 								</div>
 								<div class="form-row">
 									<label>API Key (copy now - shown only once)</label>
 									<div class="row" style={{ gap: "8px" }}>
-										<input type="text" value={generatedKey() ?? ""} readonly class="mono flex-1" />
+										<input type="text" value={generatedKey() ?? ""} readonly class="font-mono" style={{ flex: 1 }} />
 										<Button variant="secondary" onClick={copyToClipboard}>
 											Copy
 										</Button>
@@ -84,13 +84,13 @@ const TokenForm: Component<TokenFormProps> = props => {
 				<ModalBody>
 					<form onSubmit={handleSubmit} class="modal-form">
 						<Show when={formState.error()}>
-							<div class="form-error">
+							<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
 								<p class="text-sm">{formState.error()}</p>
 							</div>
 						</Show>
 						<div class="form-row">
 							<label for="token-name">
-								Name <span class="required">*</span>
+								Name <span style={{ color: "var(--error-fg)" }}>*</span>
 							</label>
 							<Input value={name()} onInput={setName} placeholder="Token name" disabled={formState.submitting()} />
 						</div>

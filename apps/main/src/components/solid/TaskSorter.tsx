@@ -158,7 +158,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 	};
 
 	return (
-		<div class="flex-col">
+		<div class="stack-lg">
 			{quick_add && <TaskQuickAdd project_id={quick_add.project_id} user_id={quick_add.user_id} onCreated={task => setTasks(prev => [task, ...prev])} />}
 			<div class="task-filters" style={{ gap: "9px" }}>
 				<Search />
@@ -180,7 +180,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 				<Tag />
 				<TagSelect tags={tags} onSelect={tag => setTag(tag?.id ?? null)} />
 
-				<div class="icons" style={{ gap: "9px", "margin-left": "auto", "grid-column": "span 2" }}>
+				<div class="row-sm" style={{ gap: "9px", "margin-left": "auto", "grid-column": "span 2" }}>
 					<a
 						role="button"
 						onClick={e => {
@@ -219,7 +219,7 @@ type ListProps = {
 
 function ListView({ tasks, project_map, user_tags, update }: ListProps) {
 	return (
-		<ul class="flex-col" style={{ gap: "9px" }}>
+		<ul class="stack-sm" style={{ gap: "9px" }}>
 			<For each={tasks()}>
 				{task => {
 					let project = null;

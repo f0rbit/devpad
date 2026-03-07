@@ -84,7 +84,9 @@ export default function PlatformSetupForm(props: Props) {
 				<Input id="platform-username" value={username()} onInput={e => setUsername(e.currentTarget.value)} placeholder={config().usernamePlaceholder} />
 			</FormField>
 			<Show when={error()}>
-				<p class="error-icon text-sm">{error()}</p>
+				<p class="text-sm" style={{ color: "var(--error-fg)" }}>
+					{error()}
+				</p>
 			</Show>
 			<button type="submit" disabled={submitting() || !token()}>
 				{submitting() ? "Connecting..." : `Connect ${format.platform(props.platform)}`}

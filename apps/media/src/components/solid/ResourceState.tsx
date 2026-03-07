@@ -26,7 +26,11 @@ type ErrorDisplayProps = {
 
 export function ErrorDisplay(props: ErrorDisplayProps) {
 	const text = () => (props.prefix ? `${props.prefix}: ${props.message}` : props.message);
-	return <p class={`error-icon ${props.class ?? ""}`}>{text()}</p>;
+	return (
+		<p class={props.class ?? ""} style={{ color: "var(--error-fg)" }}>
+			{text()}
+		</p>
+	);
 }
 
 type Resource<T> = {

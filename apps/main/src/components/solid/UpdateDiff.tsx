@@ -99,16 +99,16 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	};
 
 	return (
-		<div class="flex-col diff-list">
+		<div class="stack-lg diff-list">
 			{same.length > 0 && (
 				<details class="boxed">
-					<summary class="flex-row" style="justify-content: center">
+					<summary class="row-sm" style="justify-content: center">
 						<ChevronUp class="up-arrow" />
 						<ChevronDown class="down-arrow" />
 						<span>{same.length} tasks were the same</span>
 					</summary>
 					<br />
-					<div class="flex-col">
+					<div class="stack-lg">
 						{same.map(item => (
 							<UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />
 						))}
@@ -117,11 +117,11 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 			)}
 			{others.length > 0 && others.map(item => <UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />)}
 			<hr />
-			<div class="icons" style="gap: 20px; justify-content: center;">
-				<a role="button" onClick={saveActions} class="flex-row">
+			<div class="row-sm" style="gap: 20px; justify-content: center;">
+				<a role="button" onClick={saveActions} class="row-sm">
 					<Save /> save actions
 				</a>
-				<a role="button" onClick={ignoreUpdate} class="flex-row">
+				<a role="button" onClick={ignoreUpdate} class="row-sm">
 					<Trash /> ignore updates
 				</a>
 			</div>
@@ -150,17 +150,17 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	const new_context = data.new?.context ? buildCodeContext(data.new.context) : null;
 
 	return (
-		<div class="flex-col" style="gap: 2px;">
-			<h5 class="flex-row">
+		<div class="stack-sm" style="gap: 2px;">
+			<h5 class="row-sm">
 				{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
 				<span>{update.type}</span>
 				<span> - </span>
 				{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" onInput={e => onTitleChange(update.id, e.currentTarget.value)} />}
 			</h5>
-			<div class="flex-row">
+			<div class="row-sm">
 				<span>{update.tag}</span> - <code>{path}</code>
 			</div>
-			<div style="padding-left: 0ch; gap: 3px;" class="flex-col">
+			<div style="padding-left: 0ch; gap: 3px;" class="stack-sm">
 				{data.old && (
 					<div class="item old">
 						<code>{data.old.text}</code>
@@ -174,7 +174,7 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 			</div>
 			<div style="position: relative; padding-top: 2px">
 				<Context old_context={old_context} new_context={new_context} />
-				<div class="button-container flex-row">
+				<div class="button-container row-sm">
 					<For each={available_actions}>
 						{label => (
 							<>
@@ -196,8 +196,8 @@ function Context({ old_context, new_context }: { old_context: string | null; new
 	if (!old_context && !new_context) return <></>;
 
 	return (
-		<div class="flex-col">
-			<div style="width: max-content" class="flex-row label-modal" onClick={() => setOpen(!open())}>
+		<div class="stack-lg">
+			<div style="width: max-content" class="row-sm label-modal" onClick={() => setOpen(!open())}>
 				<ChevronUp style={{ display: open() ? "none" : "unset" }} />
 				<ChevronDown style={{ display: open() ? "unset" : "none" }} />
 				<span>Context</span>

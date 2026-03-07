@@ -138,21 +138,21 @@ const keywords = [
 					</svg>
 				</div>
 				<div class="card card-flat pipeline-task">
-					<div class="flex-col" style="gap: 3px;">
+					<div class="stack-sm" style="gap: 3px;">
 						<div>
 							<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
 							<span class="task-title">implement token refresh with retry logic</span>
 						</div>
 						<p class="task-summary">src/auth/session.ts &middot; line 6</p>
-						<div class="flex-col" style="font-size: small; gap: 6px;">
-							<span class="flex-row">
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+							<span class="row-sm">
 								<span class="tag-dot" style="background: var(--text-link);"></span>
 								<span style="color: var(--fg-muted);">auth</span>
 							</span>
-							<span class="flex-row priority-high">
-								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-								<span>unstarted</span>
-							</span>
+						<span class="row-sm priority-high">
+							<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+							<span>unstarted</span>
+						</span>
 						</div>
 					</div>
 				</div>
@@ -191,34 +191,34 @@ const keywords = [
 				<TabPanel value="projects">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">track every project with status, version, and linked resources.</p>
 					<div class="grid grid-3">
-						<div class="card flex-col" style="gap: 3px;">
-							<div><span class="task-title">game-engine</span></div>
-							<p class="task-summary">a 2D game engine built with WebGL and TypeScript</p>
-							<div style="height: 100%;"></div>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row">
+					<div class="card stack-sm" style="gap: 3px;">
+						<div><span class="task-title">game-engine</span></div>
+						<p class="task-summary">a 2D game engine built with WebGL and TypeScript</p>
+						<div style="height: 100%;"></div>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm">
 									<span style="color: var(--fg-faint);">2 days ago</span>
 									<span style="color: color-mix(in srgb, var(--fg-muted) 70%, green); font-weight: 500; margin-left: auto;">Live</span>
 								</span>
 							</div>
 						</div>
-						<div class="card flex-col" style="gap: 3px;">
-							<div><span class="task-title">blog-theme</span></div>
-							<p class="task-summary">a minimal theme for the devpad blog platform</p>
-							<div style="height: 100%;"></div>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row">
+					<div class="card stack-sm" style="gap: 3px;">
+						<div><span class="task-title">blog-theme</span></div>
+						<p class="task-summary">a minimal theme for the devpad blog platform</p>
+						<div style="height: 100%;"></div>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm">
 									<span style="color: var(--fg-faint);">5 days ago</span>
 									<span style="color: var(--text-link); font-weight: 500; margin-left: auto;">Development</span>
 								</span>
 							</div>
 						</div>
-						<div class="card flex-col" style="gap: 3px;">
-							<div><span class="task-title">cli-tool</span></div>
-							<p class="task-summary">command-line interface for managing devpad resources</p>
-							<div style="height: 100%;"></div>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row">
+					<div class="card stack-sm" style="gap: 3px;">
+						<div><span class="task-title">cli-tool</span></div>
+						<p class="task-summary">command-line interface for managing devpad resources</p>
+						<div style="height: 100%;"></div>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm">
 									<span style="color: var(--fg-faint);">2 weeks ago</span>
 									<span style="color: var(--fg-muted); font-weight: 500; margin-left: auto;">Paused</span>
 								</span>
@@ -229,56 +229,56 @@ const keywords = [
 				<TabPanel value="tasks">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">scan your codebase or create tasks manually. filter by project, tag, or priority.</p>
 					<div class="stack" style="gap: var(--space-sm);">
-						<div class="flex-col" style="gap: 3px;">
-							<div>
-								<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
-								<span class="task-title">implement token refresh with retry logic</span>
-							</div>
-							<p class="task-summary">auth module needs graceful retry on token expiry</p>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row priority-high">
-									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-									<span>tomorrow</span>
-								</span>
+					<div class="stack-sm" style="gap: 3px;">
+						<div>
+							<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+							<span class="task-title">implement token refresh with retry logic</span>
+						</div>
+						<p class="task-summary">auth module needs graceful retry on token expiry</p>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+							<span class="row-sm priority-high">
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+								<span>tomorrow</span>
+							</span>
 							</div>
 						</div>
-						<div class="flex-col" style="gap: 3px;">
-							<div>
-								<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span>
-								<span class="task-title">add dark mode toggle</span>
-							</div>
-							<p class="task-summary">settings page needs a theme switcher component</p>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row priority-medium">
+					<div class="stack-sm" style="gap: 3px;">
+						<div>
+							<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="12" r="3"/></svg></span>
+							<span class="task-title">add dark mode toggle</span>
+						</div>
+						<p class="task-summary">settings page needs a theme switcher component</p>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm priority-medium">
 									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
 									<span>next week</span>
 								</span>
 							</div>
 						</div>
-						<div class="flex-col" style="gap: 3px;">
-							<div>
-								<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
-								<span class="task-title">write API documentation</span>
-							</div>
-							<p class="task-summary">document all public endpoints with examples</p>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row priority-none">
+					<div class="stack-sm" style="gap: 3px;">
+						<div>
+							<span class="progress-icon"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/></svg></span>
+							<span class="task-title">write API documentation</span>
+						</div>
+						<p class="task-summary">document all public endpoints with examples</p>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm priority-none">
 									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
 									<span>no due date</span>
 								</span>
 							</div>
 						</div>
-						<div class="flex-col" style="gap: 3px;">
-							<div>
-								<span class="progress-icon"><div class="priority-low"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg></div></span>
-								<span class="task-title" style="text-decoration: line-through; color: var(--fg-faint);">fix login redirect bug</span>
-							</div>
-							<p class="task-summary">oauth callback was redirecting to wrong page</p>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row priority-high">
-									<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-									<span>yesterday</span>
-								</span>
+					<div class="stack-sm" style="gap: 3px;">
+						<div>
+							<span class="progress-icon"><div class="priority-low"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg></div></span>
+							<span class="task-title" style="text-decoration: line-through; color: var(--fg-faint);">fix login redirect bug</span>
+						</div>
+						<p class="task-summary">oauth callback was redirecting to wrong page</p>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+							<span class="row-sm priority-high">
+								<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+								<span>yesterday</span>
+							</span>
 							</div>
 						</div>
 					</div>
@@ -286,23 +286,23 @@ const keywords = [
 				<TabPanel value="blog">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">write posts linked to projects. markdown editor with live preview.</p>
 					<div class="grid grid-2">
-						<div class="card flex-col" style="gap: 3px;">
-							<div><span class="task-title">building a game engine from scratch</span></div>
-							<p class="task-summary">a deep dive into WebGL rendering pipelines and entity component systems</p>
-							<div style="height: 100%;"></div>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row">
+					<div class="card stack-sm" style="gap: 3px;">
+						<div><span class="task-title">building a game engine from scratch</span></div>
+						<p class="task-summary">a deep dive into WebGL rendering pipelines and entity component systems</p>
+						<div style="height: 100%;"></div>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm">
 									<span style="color: var(--fg-faint);">jan 15, 2026</span>
 									<span style="color: var(--fg-faint); margin-left: auto;">development</span>
 								</span>
 							</div>
 						</div>
-						<div class="card flex-col" style="gap: 3px;">
-							<div><span class="task-title">API-first project management</span></div>
-							<p class="task-summary">why every feature in devpad is an API call and how to build your own integrations</p>
-							<div style="height: 100%;"></div>
-							<div class="flex-col" style="font-size: small; gap: 6px;">
-								<span class="flex-row">
+					<div class="card stack-sm" style="gap: 3px;">
+						<div><span class="task-title">API-first project management</span></div>
+						<p class="task-summary">why every feature in devpad is an API call and how to build your own integrations</p>
+						<div style="height: 100%;"></div>
+						<div class="stack-sm" style="font-size: small; gap: 6px;">
+								<span class="row-sm">
 									<span style="color: var(--fg-faint);">jan 28, 2026</span>
 									<span style="color: var(--fg-faint); margin-left: auto;">tutorial</span>
 								</span>
@@ -335,23 +335,23 @@ const keywords = [
 				<TabPanel value="media">
 					<p class="text-sm text-muted" style="margin-bottom: var(--space-md);">GitHub, Reddit, Bluesky, YouTube — one feed.</p>
 					<div class="stack" style="gap: 0;">
-						<div class="flex-col" style="gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
-							<div class="flex-row" style="gap: var(--space-xs);">
-								<span class="text-xs text-faint">github</span>
+					<div class="stack-sm" style="gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
+						<div class="row-sm">
+							<span class="text-xs text-faint">github</span>
 								<span class="text-xs text-faint" style="margin-left: auto;">2 hours ago</span>
 							</div>
 							<span class="task-title text-sm">pushed 3 commits to f0rbit/engine</span>
 						</div>
-						<div class="flex-col" style="gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
-							<div class="flex-row" style="gap: var(--space-xs);">
-								<span class="text-xs text-faint">reddit</span>
+					<div class="stack-sm" style="gap: var(--space-xs); padding: var(--space-sm) 0; border-bottom: 1px solid var(--border);">
+						<div class="row-sm">
+							<span class="text-xs text-faint">reddit</span>
 								<span class="text-xs text-faint" style="margin-left: auto;">yesterday</span>
 							</div>
 							<span class="task-title text-sm">posted in r/typescript about code scanning patterns</span>
 						</div>
-						<div class="flex-col" style="gap: var(--space-xs); padding: var(--space-sm) 0;">
-							<div class="flex-row" style="gap: var(--space-xs);">
-								<span class="text-xs text-faint">bluesky</span>
+					<div class="stack-sm" style="gap: var(--space-xs); padding: var(--space-sm) 0;">
+						<div class="row-sm">
+							<span class="text-xs text-faint">bluesky</span>
 								<span class="text-xs text-faint" style="margin-left: auto;">3 days ago</span>
 							</div>
 							<span class="task-title text-sm">shared a thread about building developer tools</span>

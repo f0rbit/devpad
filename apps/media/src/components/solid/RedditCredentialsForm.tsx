@@ -52,7 +52,12 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 		<div class="credentials-form">
 			<div class="credentials-header">
 				<p class="muted text-sm">Reddit requires you to create your own app for API access.</p>
-				<button type="button" class="button-reset text-sm" style={{ color: "var(--text-link)", "text-decoration": "underline" }} onClick={() => setShowHelp(!showHelp())}>
+				<button
+					type="button"
+					class="text-sm"
+					style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", color: "var(--text-link)", "text-decoration": "underline" }}
+					onClick={() => setShowHelp(!showHelp())}
+				>
 					{showHelp() ? "Hide instructions" : "How to get credentials"}
 				</button>
 			</div>
@@ -76,7 +81,7 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 				</div>
 			</Show>
 
-			<form onSubmit={handleSubmit} class="flex-col" style={{ gap: "12px", "margin-top": "12px" }}>
+			<form onSubmit={handleSubmit} class="stack-sm" style={{ gap: "12px", "margin-top": "12px" }}>
 				<FormField label="Your Reddit Username" id="reddit-username">
 					<Input id="reddit-username" value={redditUsername()} onInput={e => setRedditUsername(e.currentTarget.value)} placeholder="e.g., spez" disabled={submitting()} />
 				</FormField>
@@ -90,7 +95,9 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 				</FormField>
 
 				<Show when={error()}>
-					<p class="error-icon text-sm">{error()}</p>
+					<p class="text-sm" style={{ color: "var(--error-fg)" }}>
+						{error()}
+					</p>
 				</Show>
 
 				<Button type="submit" loading={submitting()} style={{ "margin-top": "4px" }}>
