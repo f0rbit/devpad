@@ -4,6 +4,7 @@ import { action, codebase_tasks, task, task_tag } from "@devpad/schema/database/
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
+import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
 import type { ServiceError } from "./errors.js";
 import { doesUserOwnProject } from "./projects.js";
 import { getTaskTags, upsertTag } from "./tags.js";
@@ -25,7 +26,7 @@ async function fetchTasksWithDetails(db: Database, where_conditions: (SQL | unde
 
 	const task_ids = tasks.map(t => t.task.id);
 	if (task_ids.length > 0) {
-		const tags = await db.select().from(task_tag).where(inArray(task_tag.task_id, task_ids));
+		const tags = await batchedQuery(task_ids, condition => db.select().from(task_tag).where(condition), task_tag.task_id);
 
 		const mapped_tags = new Map<string, string[]>();
 		for (const t of tags) {
@@ -55,7 +56,19 @@ export async function getTasksByTag(db: Database, tag_id: string): Promise<Resul
 	const task_ids = task_tag_relations.map((rel: any) => rel.task_id as string);
 
 	if (task_ids.length === 0) return ok([]);
-	return fetchTasksWithDetails(db, [inArray(task.id, task_ids)]);
+
+	if (task_ids.length <= D1_PARAM_LIMIT) {
+		return fetchTasksWithDetails(db, [inArray(task.id, task_ids)]);
+	}
+
+	const all_tasks: Task[] = [];
+	for (let i = 0; i < task_ids.length; i += D1_PARAM_LIMIT) {
+		const chunk = task_ids.slice(i, i + D1_PARAM_LIMIT);
+		const result = await fetchTasksWithDetails(db, [inArray(task.id, chunk)]);
+		if (!result.ok) return result;
+		all_tasks.push(...result.value);
+	}
+	return ok(all_tasks);
 }
 
 export async function getTask(db: Database, task_id: string): Promise<Result<Task | null, ServiceError>> {
@@ -98,15 +111,8 @@ export async function getUpsertedTaskMap(db: Database, codebase_items: UpdateDat
 	const result = new Map<string, string>();
 	if (codebase_items.length === 0) return ok(result);
 
-	const existing_tasks = await db
-		.select()
-		.from(task)
-		.where(
-			inArray(
-				task.codebase_task_id,
-				codebase_items.map(item => item.id)
-			)
-		);
+	const item_ids = codebase_items.map(item => item.id);
+	const existing_tasks = await batchedQuery(item_ids, condition => db.select().from(task).where(condition), task.codebase_task_id);
 
 	for (const t of existing_tasks) {
 		if (t.codebase_task_id) {

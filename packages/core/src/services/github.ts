@@ -4,6 +4,7 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
 import { inArray } from "drizzle-orm";
+import { batchedQuery } from "./batch.js";
 import type { ServiceError } from "./errors.js";
 
 type GitHubBranchFromAPI = Endpoints["GET /repos/{owner}/{repo}/branches"]["response"]["data"][0];
@@ -83,7 +84,7 @@ export async function getBranches(db: Database, owner: string, repo: string, acc
 
 async function getCommitDetails(db: Database, owner: string, repo: string, commit_shas: Set<string>, access_token: string) {
 	const shas = Array.from(commit_shas);
-	const existing = await db.select().from(commit_detail).where(inArray(commit_detail.sha, shas));
+	const existing = await batchedQuery(shas, condition => db.select().from(commit_detail).where(condition), commit_detail.sha);
 
 	const existing_shas = new Set(existing.map((c: any) => c.sha));
 	const missing_shas = Array.from(shas.filter(sha => !existing_shas.has(sha)));
