@@ -12,6 +12,7 @@ import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
+import { getProjectContext } from "@/utils/project-context";
 import { PRIORITY_OPTIONS, PROGRESS_OPTIONS, type Priority, type Progress, VISIBILITY_OPTIONS, type Visibility } from "@/utils/task-status";
 
 interface Props {
@@ -35,7 +36,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 		start_time: task?.task?.start_time ?? null,
 		end_time: task?.task?.end_time ?? null,
 		priority: (task?.task?.priority ?? "LOW") as Priority,
-		project_id: default_project_id ?? task?.task?.project_id ?? null,
+		project_id: default_project_id ?? task?.task?.project_id ?? getProjectContext()?.id ?? null,
 		goal_id: default_goal_id ?? task?.task?.goal_id ?? null,
 	});
 	const [currentTags, setCurrentTags] = createSignal(current_tags);

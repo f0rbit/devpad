@@ -9,6 +9,7 @@ import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
 import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagSelect } from "@/components/solid/TagPicker";
+import { getProjectContext } from "@/utils/project-context";
 import { TaskCard } from "./TaskCard";
 import { TaskQuickAdd } from "./TaskQuickAdd";
 
@@ -59,7 +60,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 	const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
 	const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
 	const [search, setSearch] = createSignal("");
-	const [project, setProject] = createSignal<string | null>(null); // id of selected project
+	const [project, setProject] = createSignal<string | null>(getProjectContext()?.id ?? null);
 	const [tag, setTag] = createSignal<string | null>(null); // id of selected tag
 	const [goal] = createSignal<string | null>(null); // id of selected goal
 	const [view, setView] = createSignal<TaskView>(defaultView ?? "list");

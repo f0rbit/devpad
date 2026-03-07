@@ -1,6 +1,7 @@
 ---
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { ProjectContextSetter } from "@/components/solid/ProjectContextSetter";
 import { getProject } from "@/utils/api-client";
 
 const project_id = Astro.params.project_id!;
@@ -12,6 +13,7 @@ const { project } = guard;
 
 <PageLayout title={`${project_id} - devpad`}>
 	<ProjectLayout project_id={project_id}>
+		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
 		<p>{project!.description}</p>
 		{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
 		<p>
