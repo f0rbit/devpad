@@ -100,7 +100,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				</textarea>
 
 				<label for="progress">Progress</label>
-				<div class="row-sm combined-row">
+				<div class="row row-sm combined-row">
 					<select id="progress" name="progress" value={state.progress} onChange={e => setState({ progress: e.target.value as Progress })}>
 						<For each={PROGRESS_OPTIONS}>
 							{option => (
@@ -121,7 +121,7 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				<input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={e => setState({ end_time: e.target.value })} />
 			</div>
 			<details class="boxed">
-				<summary class="row-sm" style="font-size: smaller;">
+				<summary class="row row-sm" style="font-size: smaller;">
 					<ChevronUp class="up-arrow" />
 					<ChevronDown class="down-arrow" />
 					More Options
@@ -189,8 +189,8 @@ const LinkedCode = ({ code }: { code: NonNullable<TaskWithDetails["codebase_task
 	const context = buildCodeContext(code.context);
 
 	return (
-		<div class="stack-sm" style={{ gap: "2px" }}>
-			<div class="row-sm">
+		<div class="stack stack-sm" style={{ gap: "2px" }}>
+			<div class="row row-sm">
 				<span>{code.type}</span>
 				<span> - </span>
 				<code>{path}</code>

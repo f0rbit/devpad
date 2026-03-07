@@ -43,53 +43,53 @@ const keywords = [
 	canonical="https://devpad.tools/docs"
 >
 	<h3>API</h3>
-	<div class="stack-sm" style="gap: 5px;">
+	<div class="stack stack-sm" style="gap: 5px;">
 		<span>The API is available at <a href="https://devpad.tools/api/v1">devpad.tools/api/v1</a></span>
 		<span>You should put an <code>API_KEY</code> in the <code>Authorization</code> header for each request in this format:</span>
 		<Code code={`Authorization: Bearer <API_KEY>`} lang="http" />
 		<span>API keys are generated on the <a href="/account">account</a> page.</span>
 	</div>
 	<br />
-	<div class="stack-lg">
+	<div class="stack stack-lg">
 		<section>
 			<h4>projects</h4>
 			<p>
 				This endpoint fetches the data associated with each project. Note that only projects with <code>visibility == "PUBLIC"</code> will be returned in
 				<code>/projects</code> (with no query params)
 			</p>
-			<div class="stack-sm" style="gap: 10px;">
+			<div class="stack stack-sm" style="gap: 10px;">
 				<div>
 					<code>GET /projects</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Array&ltProject&gt</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>200 - Array&ltProject&gt</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>GET /projects?id=&ltstring&gt - id is project.id</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Project</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>404 - Not Found</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - Project</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>404 - Not Found</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>GET /projects?name=&ltstring&gt - name is project.project_id</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Project</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>404 - Not Found</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - Project</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>404 - Not Found</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>PATCH /projects - Create or update a project</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Project (created or updated project)</code></p>
-						<p class="row-sm"><code>400 - Bad Request (validation error)</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - Project (created or updated project)</code></p>
+						<p class="row row-sm"><code>400 - Bad Request (validation error)</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 					<p style="margin-top: 8px; font-size: 14px;">Request body should contain a partial Project object. Omit <code>id</code> for creation, include <code>id</code> for updates.</p>
 				</div>
@@ -119,48 +119,48 @@ const keywords = [
 			<p>
 				This endpoint retrieves task information. Note that only tasks with <code>visibility == "PUBLIC"</code> will be returned in <code>/tasks</code> (with no query params)
 			</p>
-			<div class="stack-sm" style="gap: 10px;">
+			<div class="stack stack-sm" style="gap: 10px;">
 				<div>
 					<code>GET /tasks</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Array&ltTaskUnion&gt</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>200 - Array&ltTaskUnion&gt</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>GET /tasks?id=&ltstring&gt - id is task.id</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - TaskUnion</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>404 - Not Found</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - TaskUnion</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>404 - Not Found</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>GET /tasks?tag=&ltstring&gt - tag is tag.id</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Array&ltTaskUnion&gt</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>404 - Not Found</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - Array&ltTaskUnion&gt</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>404 - Not Found</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>GET /tasks?project=&ltstring&gt - project is task.project_id</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Array&ltTaskUnion&gt</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>404 - Not Found</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - Array&ltTaskUnion&gt</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>404 - Not Found</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 				</div>
 				<div>
 					<code>PATCH /tasks - Create or update a task</code>
 					<ul style="padding-left: 20px;">
-						<p class="row-sm"><code>200 - Task (created or updated task)</code></p>
-						<p class="row-sm"><code>400 - Bad Request (validation error)</code></p>
-						<p class="row-sm"><code>401 - Unauthorized</code></p>
-						<p class="row-sm"><code>500 - Internal Server Error</code></p>
+						<p class="row row-sm"><code>200 - Task (created or updated task)</code></p>
+						<p class="row row-sm"><code>400 - Bad Request (validation error)</code></p>
+						<p class="row row-sm"><code>401 - Unauthorized</code></p>
+						<p class="row row-sm"><code>500 - Internal Server Error</code></p>
 					</ul>
 					<p style="margin-top: 8px; font-size: 14px;">Request body should contain a task object with <code>owner_id</code>. Omit <code>id</code> for creation, include <code>id</code> for updates. Can optionally include <code>tags</code> array.</p>
 				</div>

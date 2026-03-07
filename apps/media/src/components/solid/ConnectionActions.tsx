@@ -55,7 +55,7 @@ export default function ConnectionActions(props: Props) {
 
 	return (
 		<>
-			<div class="row-sm">
+			<div class="row row-sm">
 				<Show when={props.state === "active"}>
 					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
 						<RefreshCw size={18} class={refreshing() ? "animate-spin" : ""} />

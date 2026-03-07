@@ -111,7 +111,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 
 	return (
 		<div class="goal-selector-container">
-			<div class="row-sm" style={{ gap: "5px" }}>
+			<div class="row row-sm" style={{ gap: "5px" }}>
 				<select id="goal-selector" value={selected()} disabled={disabled || loading() || !project_id} onChange={e => handleSelectionChange(e.target.value)} style={{ "flex-grow": "1" }}>
 					<option value="" selected={selected() === ""}>
 						{!project_id ? "Select project first" : "No goal"}

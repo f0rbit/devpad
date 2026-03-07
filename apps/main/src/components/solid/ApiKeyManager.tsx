@@ -76,8 +76,8 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 	};
 
 	return (
-		<div class="stack-sm">
-			<div class="row-between" style={{ "align-items": "center" }}>
+		<div class="stack stack-sm">
+			<div class="row row-between" style={{ "align-items": "center" }}>
 				<h3 style={{ margin: "0" }}>api keys</h3>
 				<Button size="sm" onClick={() => setShowCreate(true)}>
 					<Plus size={14} /> create key
@@ -91,7 +91,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 			</Show>
 
 			<Show when={keys().length > 0} fallback={<Empty title="No API keys" description="Create an API key to access the devpad API." />}>
-				<div class="stack-sm">
+				<div class="stack stack-sm">
 					<For each={keys()}>
 						{key => (
 							<div

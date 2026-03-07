@@ -103,11 +103,11 @@ export default function ProfileList(props: ProfileListProps) {
 	};
 
 	return (
-		<div class="stack-lg">
-			<div class="row-between" style={{ gap: "4px" }}>
+		<div class="stack stack-lg">
+			<div class="row row-between" style={{ gap: "4px" }}>
 				<h6 class="text-muted font-medium">Your Profiles</h6>
 				<Button size="sm" onClick={() => setShowCreateForm(true)}>
-					<span class="row-sm">
+					<span class="row row-sm">
 						<Plus size={14} />
 						Create Profile
 					</span>
@@ -186,8 +186,8 @@ function ProfileCard(props: ProfileCardProps) {
 
 	return (
 		<Card class={props.isCurrent ? "card-active" : ""}>
-			<CardHeader class="row-between items-start" style={{ gap: "4px" }}>
-				<div class="stack-sm" style={{ gap: "2px" }}>
+			<CardHeader class="row row-between items-start" style={{ gap: "4px" }}>
+				<div class="stack stack-sm" style={{ gap: "2px" }}>
 					<div class="row items-center">
 						<CardTitle>{props.profile.name}</CardTitle>
 						<Show when={props.isCurrent}>
@@ -196,7 +196,7 @@ function ProfileCard(props: ProfileCardProps) {
 					</div>
 					<CardDescription>/{props.profile.slug}</CardDescription>
 				</div>
-				<div class="row-sm">
+				<div class="row row-sm">
 					<Button icon variant="ghost" label="View timeline" onClick={props.onView}>
 						<Eye size={18} />
 					</Button>
@@ -281,7 +281,7 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 					<CardTitle>Create New Profile</CardTitle>
 				</CardHeader>
 
-				<CardContent class="stack-sm" style={{ gap: "12px" }}>
+				<CardContent class="stack stack-sm" style={{ gap: "12px" }}>
 					<FormField label="Name" id="create-profile-name">
 						<Input id="create-profile-name" value={name()} onInput={e => handleNameChange(e.currentTarget.value)} placeholder="My Public Timeline" />
 					</FormField>
@@ -301,7 +301,7 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 					</Show>
 				</CardContent>
 
-				<CardFooter class="row-end">
+				<CardFooter class="row row-end">
 					<Button variant="secondary" onClick={props.onCancel}>
 						Cancel
 					</Button>
@@ -358,7 +358,7 @@ function EditProfileForm(props: EditProfileFormProps) {
 					<CardTitle>Edit Profile</CardTitle>
 				</CardHeader>
 
-				<CardContent class="stack-sm" style={{ gap: "12px" }}>
+				<CardContent class="stack stack-sm" style={{ gap: "12px" }}>
 					<FormField label="Name" id="edit-profile-name">
 						<Input id="edit-profile-name" value={name()} onInput={e => setName(e.currentTarget.value)} placeholder="My Public Timeline" />
 					</FormField>
@@ -378,7 +378,7 @@ function EditProfileForm(props: EditProfileFormProps) {
 					</Show>
 				</CardContent>
 
-				<CardFooter class="row-end">
+				<CardFooter class="row row-end">
 					<Button variant="secondary" onClick={props.onCancel}>
 						Cancel
 					</Button>

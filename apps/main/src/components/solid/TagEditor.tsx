@@ -52,7 +52,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 	}
 
 	return (
-		<div class="stack-sm" style="gap: 5px;">
+		<div class="stack stack-sm" style="gap: 5px;">
 			{currentTags().length === 0 && !creating() ? <p>you haven't created any tags yet</p> : null}
 
 			<div class="tag-grid">
@@ -66,11 +66,11 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 				{creating() && <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} />}
 			</div>
 
-			<a role="button" onClick={create} class="row-sm" style="margin-top: 10px">
+			<a role="button" onClick={create} class="row row-sm" style="margin-top: 10px">
 				<Plus />
 				add
 			</a>
-			<a role="button" onClick={save} class="row-sm" style="margin-top: 10px">
+			<a role="button" onClick={save} class="row row-sm" style="margin-top: 10px">
 				<Save />
 				save
 			</a>
@@ -221,7 +221,7 @@ export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>; c
 		>
 			{name()}
 			{onRemove && (
-				<div onClick={onRemove} class="row-sm">
+				<div onClick={onRemove} class="row row-sm">
 					<X size={16} />
 				</div>
 			)}

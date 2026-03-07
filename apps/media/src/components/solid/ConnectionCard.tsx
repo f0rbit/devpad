@@ -50,15 +50,15 @@ export default function ConnectionCard(props: Props) {
 
 	return (
 		<div class={`card platform-${props.connection.platform}`}>
-			<div class="row-between" style={{ gap: "4px" }}>
+			<div class="row row-between" style={{ gap: "4px" }}>
 				<div class="row" style={{ gap: "12px" }}>
 					<PlatformIcon platform={props.connection.platform} />
-					<div class="stack-sm" style={{ gap: "2px" }}>
+					<div class="stack stack-sm" style={{ gap: "2px" }}>
 						<h6>{format.platform(props.connection.platform)}</h6>
 						<span class="tertiary text-sm">{props.connection.platform_username ?? "Connected"}</span>
 					</div>
 				</div>
-				<div class="row-sm">
+				<div class="row row-sm">
 					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
 						<RefreshCw size={18} class={refreshing() ? "animate-spin" : ""} />
 					</Button>

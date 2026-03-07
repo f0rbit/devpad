@@ -82,8 +82,8 @@ export default function MilestonesManager(props: Props) {
 							const status = deriveStatus(milestone, goals);
 							return (
 								<Step title="" status={status}>
-									<div class="stack-sm">
-										<div class="row-between" style={{ "align-items": "center" }}>
+									<div class="stack stack-sm">
+										<div class="row row-between" style={{ "align-items": "center" }}>
 											<span style={{ display: "flex", "align-items": "center", gap: "0.25rem", "font-size": "1.1rem", "font-weight": "500" }}>
 												{milestone.name}
 												<AiProvenance created_by={milestone.created_by} modified_by={milestone.modified_by} size={14} />
@@ -99,7 +99,7 @@ export default function MilestonesManager(props: Props) {
 											</p>
 										</Show>
 
-										<div class="stack-sm" style={{ "margin-top": "0.25rem" }}>
+										<div class="stack stack-sm" style={{ "margin-top": "0.25rem" }}>
 											<For each={goals}>
 												{goal => {
 													const counts = () => (props.goalTaskCounts || {})[goal.id];

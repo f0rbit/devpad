@@ -99,7 +99,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 	const hasValidProfile = () => !!profileSlug() && !!currentProfile();
 
 	return (
-		<div class="stack-lg">
+		<div class="stack stack-lg">
 			<Show when={!profileSlug()}>
 				<NoProfileSelectedError />
 			</Show>

@@ -31,15 +31,15 @@ export const ProjectCard = (props: Props) => {
 	const { project } = props;
 
 	return (
-		<a href={`/project/${project.project_id}`} class="card stack-sm" style={{ gap: "3px", width: "100%", height: "100%", "text-decoration": "none" }}>
-			<div class="row-sm">
+		<a href={`/project/${project.project_id}`} class="card stack stack-sm" style={{ gap: "3px", width: "100%", height: "100%", "text-decoration": "none" }}>
+			<div class="row row-sm">
 				<span class="task-title">{project.name}</span>
 				<AiProvenance created_by={project.created_by} modified_by={project.modified_by} size={12} />
 			</div>
 			{project.description && <p class="task-summary">{project.description}</p>}
 			<div style={{ height: "100%" }} />
-			<div class="stack-sm" style={{ "font-size": "small", gap: "6px" }}>
-				<span class="row-sm">
+			<div class="stack stack-sm" style={{ "font-size": "small", gap: "6px" }}>
+				<span class="row row-sm">
 					<span style={{ color: "var(--fg-faint)" }}>{formatDueDate(project.updated_at)}</span>
 					<span
 						style={{
@@ -51,7 +51,7 @@ export const ProjectCard = (props: Props) => {
 						{STATUS_LABELS[project.status]}
 					</span>
 					{project.repo_url && (
-						<span class="row-sm" style={{ color: "var(--fg-faint)" }} title="GitHub repository">
+						<span class="row row-sm" style={{ color: "var(--fg-faint)" }} title="GitHub repository">
 							<Github size={14} />
 						</span>
 					)}

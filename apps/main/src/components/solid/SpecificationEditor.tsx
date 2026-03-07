@@ -124,7 +124,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 				</>
 			) : (
 				<>
-					<a role="button" class="edit row-sm" onClick={() => setIsEditing(true)}>
+					<a role="button" class="edit row row-sm" onClick={() => setIsEditing(true)}>
 						<Pencil />
 						edit
 					</a>

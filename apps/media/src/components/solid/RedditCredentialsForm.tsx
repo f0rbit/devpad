@@ -81,7 +81,7 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 				</div>
 			</Show>
 
-			<form onSubmit={handleSubmit} class="stack-sm" style={{ gap: "12px", "margin-top": "12px" }}>
+			<form onSubmit={handleSubmit} class="stack stack-sm" style={{ gap: "12px", "margin-top": "12px" }}>
 				<FormField label="Your Reddit Username" id="reddit-username">
 					<Input id="reddit-username" value={redditUsername()} onInput={e => setRedditUsername(e.currentTarget.value)} placeholder="e.g., spez" disabled={submitting()} />
 				</FormField>

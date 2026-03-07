@@ -66,7 +66,7 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 		};
 
 		return (
-			<div class="row-sm">
+			<div class="row row-sm">
 				{renderPageNumbers().map(item => (
 					<a role="button" class={item === page() ? "active" : ""} onClick={() => typeof item === "number" && setPage(item)}>
 						{item === "..." ? "..." : item + 1}
@@ -77,12 +77,12 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 	};
 
 	return (
-		<div class="stack-lg">
+		<div class="stack stack-lg">
 			<div class="timeline-container">
 				<For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>{action => <TimelineItem action={action} view={props.view} />}</For>
 			</div>
 			<div>
-				<div class="stack-lg">
+				<div class="stack stack-lg">
 					<PageControls />
 				</div>
 			</div>
@@ -118,7 +118,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 		}).format(utcDate);
 
 		return (
-			<div class="date-highlighted row-sm" style={{ color: "var(--fg-subtle)" }}>
+			<div class="date-highlighted row row-sm" style={{ color: "var(--fg-subtle)" }}>
 				<div class="date">{timeString}</div>
 				<div class="year">{dateString}</div>
 			</div>
@@ -188,7 +188,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 
 	return (
 		<div class="timeline-item">
-			<div class="row-sm" style={{ "font-size": "smaller" }}>
+			<div class="row row-sm" style={{ "font-size": "smaller" }}>
 				<ActionIcon type={action.type} />
 				<Show when={action.channel === "api"}>
 					<span class="ai-provenance" title="AI action">
