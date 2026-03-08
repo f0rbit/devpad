@@ -4,6 +4,10 @@
    CUSTOM PROPERTIES
    ========================================================================== */
 
+body {
+	-webkit-font-smoothing: auto;
+}
+
 :root {
 	--text-link: oklch(45.92% 0.0149 300.97);
 	--hover-filter: brightness(50%);
@@ -119,27 +123,14 @@ html select {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	border-top: 1px solid var(--border);
-	padding-top: 6px;
-	padding-bottom: 6px;
+	padding-top: 4px;
+	padding-bottom: 4px;
 }
 
 .unified-header__subnav {
 	display: flex;
 	gap: 8px;
 	align-items: center;
-}
-
-.unified-header__subnav a {
-	color: var(--accent);
-	text-decoration: none;
-	font-size: 0.8rem;
-}
-
-.unified-header__subnav a.active {
-	color: var(--fg);
-	text-decoration: underline;
-	text-underline-offset: 4px;
 }
 
 .unified-header__controls {
@@ -156,8 +147,7 @@ html select {
 		font-size: 0.75rem;
 	}
 	.unified-header__subnav {
-		gap: 4px;
-		font-size: 0.7rem;
+		gap: 6px;
 	}
 }
 
