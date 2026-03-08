@@ -6,7 +6,6 @@ type ProvenanceState = "created-and-modified" | "created" | "modified";
 interface AiProvenanceProps {
 	created_by?: "user" | "api" | null;
 	modified_by?: "user" | "api" | null;
-	size?: number;
 }
 
 export function AiProvenance(props: AiProvenanceProps) {
@@ -34,7 +33,7 @@ export function AiProvenance(props: AiProvenanceProps) {
 	return (
 		<Show when={show()}>
 			<span class={`ai-provenance ai-provenance--${state()}`} title={label()}>
-				<Bot size={props.size ?? 14} />
+				<Bot size={16} />
 			</span>
 		</Show>
 	);

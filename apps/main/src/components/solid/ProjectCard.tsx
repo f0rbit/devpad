@@ -34,7 +34,7 @@ export const ProjectCard = (props: Props) => {
 		<a href={`/project/${project.project_id}`} class="card stack stack-sm" style={{ gap: "3px", width: "100%", height: "100%", "text-decoration": "none" }}>
 			<div class="row row-sm">
 				<span class="task-title">{project.name}</span>
-				<AiProvenance created_by={project.created_by} modified_by={project.modified_by} size={12} />
+				<AiProvenance created_by={project.created_by} modified_by={project.modified_by} />
 			</div>
 			{project.description && <p class="task-summary">{project.description}</p>}
 			<div style={{ height: "100%" }} />
