@@ -1,6 +1,6 @@
 import type { AccountWithUser, ApiError, BadRequestError, EncryptionError, NotFoundError } from "@devpad/schema/media";
 import { type AccountId, accountSettings, accounts, errors, type Platform, type ProfileId, profileId, profiles, type UserId } from "@devpad/schema/media";
-import { match, ok, pipe, type Result } from "@f0rbit/corpus";
+import { match, ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import { createLogger } from "../../../utils/logger";
 import { requireAccountOwnership, requireProfileOwnership } from "../auth-ownership";
@@ -445,7 +445,8 @@ const getRedditSubreddits = async (ctx: AppContext, uid: UserId, accId: AccountI
 };
 
 const getRedditCredentials = async (ctx: AppContext, profileIdStr: string): Promise<RedditCredentials | null> => {
-	const byoCredentials = await credential.get(ctx, profileIdStr, "reddit");
+	const byoResult = await credential.get(ctx, profileIdStr, "reddit");
+	const byoCredentials = byoResult.ok ? byoResult.value : null;
 
 	const clientId = byoCredentials?.clientId ?? ctx.env?.REDDIT_CLIENT_ID;
 	const clientSecret = byoCredentials?.clientSecret ?? ctx.env?.REDDIT_CLIENT_SECRET;
@@ -705,13 +706,16 @@ const refreshAllAccounts = async (ctx: AppContext, userId: string): Promise<Refr
 	let failed = 0;
 
 	for (const account of otherAccounts) {
-		try {
-			const snapshot = await processAccount(ctx, account);
-			if (snapshot) {
-				succeeded++;
+		const result = await try_catch_async(
+			() => processAccount(ctx, account),
+			e => {
+				log.error("Account refresh failed", { account_id: account.id, error: String(e) });
+				return e;
 			}
-		} catch (e) {
-			log.error("Account refresh failed", { account_id: account.id, error: String(e) });
+		);
+		if (result.ok && result.value) {
+			succeeded++;
+		} else if (!result.ok) {
 			failed++;
 		}
 	}

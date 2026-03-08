@@ -1,4 +1,6 @@
+import { type EncryptionError, errors } from "@devpad/schema/errors";
 import { type Platform, platformCredentials } from "@devpad/schema/media";
+import { ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import type { AppContext } from "../context";
 import { secrets, uuid } from "../utils";
@@ -23,12 +25,12 @@ export type DecryptedCredentials = {
 	isVerified: boolean;
 };
 
-const save = async (ctx: AppContext, input: CredentialInput): Promise<{ id: string }> => {
+const save = async (ctx: AppContext, input: CredentialInput): Promise<Result<{ id: string }, EncryptionError>> => {
 	const { profileId, platform, clientId, clientSecret, redirectUri, metadata } = input;
 
 	const encryptResult = await secrets.encrypt(clientSecret, ctx.encryptionKey);
 	if (!encryptResult.ok) {
-		throw new Error("Failed to encrypt client secret");
+		return errors.encryptionError("encrypt", "Failed to encrypt client secret");
 	}
 
 	const now = new Date().toISOString();
@@ -52,7 +54,7 @@ const save = async (ctx: AppContext, input: CredentialInput): Promise<{ id: stri
 			})
 			.where(eq(platformCredentials.id, existing.id));
 
-		return { id: existing.id };
+		return ok({ id: existing.id });
 	}
 
 	const id = uuid();
@@ -69,10 +71,10 @@ const save = async (ctx: AppContext, input: CredentialInput): Promise<{ id: stri
 		updated_at: now,
 	});
 
-	return { id };
+	return ok({ id });
 };
 
-const get = async (ctx: AppContext, profileId: string, platform: Platform): Promise<DecryptedCredentials | null> => {
+const get = async (ctx: AppContext, profileId: string, platform: Platform): Promise<Result<DecryptedCredentials | null, EncryptionError>> => {
 	const row = await ctx.db
 		.select()
 		.from(platformCredentials)
@@ -80,15 +82,15 @@ const get = async (ctx: AppContext, profileId: string, platform: Platform): Prom
 		.get();
 
 	if (!row) {
-		return null;
+		return ok(null);
 	}
 
 	const decryptResult = await secrets.decrypt(row.client_secret_encrypted, ctx.encryptionKey);
 	if (!decryptResult.ok) {
-		throw new Error("Failed to decrypt client secret");
+		return errors.encryptionError("decrypt", "Failed to decrypt client secret");
 	}
 
-	return {
+	return ok({
 		id: row.id,
 		profileId: row.profile_id,
 		platform: row.platform as Platform,
@@ -97,7 +99,7 @@ const get = async (ctx: AppContext, profileId: string, platform: Platform): Prom
 		redirectUri: row.redirect_uri,
 		metadata: row.metadata ? JSON.parse(row.metadata) : null,
 		isVerified: row.is_verified ?? false,
-	};
+	});
 };
 
 const remove = async (ctx: AppContext, profileId: string, platform: Platform): Promise<boolean> => {

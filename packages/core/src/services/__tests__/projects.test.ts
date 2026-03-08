@@ -82,7 +82,7 @@ describe("projects", () => {
 			if (!result.ok) {
 				expect(result.error.kind).toBe("not_found");
 				if (result.error.kind === "not_found") {
-					expect(result.error.entity).toBe("project");
+					expect(result.error.resource).toBe("project");
 				}
 			}
 		});

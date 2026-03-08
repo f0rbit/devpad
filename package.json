@@ -17,7 +17,7 @@
 		"dev:media": "PUBLIC_API_SERVER_URL=http://localhost:3001/api/v1 bun run --filter=@devpad/media-app dev",
 		"dev:all": "DATABASE_FILE=database/local.db concurrently \"bun run dev\" \"bun run dev:server\" \"bun run dev:blog\" \"bun run dev:media\"",
 		"test": "bun run --filter=@devpad/* test",
-		"test:unit": "bun test unit",
+		"test:unit": "bun test packages/",
 		"test:integration": "bun test integration/ --max-concurrency 1",
 		"test:all": "bun run test:unit && bun run test:integration",
 		"e2e": "playwright test",
