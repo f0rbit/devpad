@@ -122,7 +122,7 @@ export const TaskCard = (props: Props) => {
 							</span>
 						</a>
 					)}
-					<span style={{ "margin-left": "auto" }}>
+					<span style={{ "margin-left": "auto", display: "flex" }}>
 						<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
 					</span>
 				</span>
