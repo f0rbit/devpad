@@ -16,11 +16,11 @@ const authUser = Astro.locals.user;
 		<header class="unified-header">
 			<DevpadHeader client:load currentApp="blog" user={authUser} />
 			<div class="unified-header__row2">
-				<nav class="unified-header__subnav">
-					<a href="/posts" class:list={[{ active: pathname.startsWith("/posts") }]}>posts</a>
-					<a href="/categories" class:list={[{ active: pathname.startsWith("/categories") }]}>categories</a>
-					<a href="/settings" class:list={[{ active: pathname.startsWith("/settings") }]}>settings</a>
-				</nav>
+			<nav class="unified-header__subnav">
+				<a href="/posts" class:list={["unified-header__app", { active: pathname.startsWith("/posts") }]}>posts</a>
+				<a href="/categories" class:list={["unified-header__app", { active: pathname.startsWith("/categories") }]}>categories</a>
+				<a href="/settings" class:list={["unified-header__app", { active: pathname.startsWith("/settings") }]}>settings</a>
+			</nav>
 			</div>
 		</header>
 

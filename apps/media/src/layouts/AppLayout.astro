@@ -44,11 +44,11 @@ if (isAuthenticated) {
 			<header class="unified-header">
 				<DevpadHeader client:load currentApp="media" user={user} />
 				<div class="unified-header__row2">
-					<nav class="unified-header__subnav">
-						<a href={buildUrl("/dashboard")} class:list={[{ active: pathname.startsWith("/dashboard") }]}>dashboard</a>
-						<a href={buildUrl("/timeline")} class:list={[{ active: pathname.startsWith("/timeline") }]}>timeline</a>
-						<a href={buildUrl("/connections")} class:list={[{ active: pathname.startsWith("/connections") }]}>connections</a>
-					</nav>
+				<nav class="unified-header__subnav">
+					<a href={buildUrl("/dashboard")} class:list={["unified-header__app", { active: pathname.startsWith("/dashboard") }]}>dashboard</a>
+					<a href={buildUrl("/timeline")} class:list={["unified-header__app", { active: pathname.startsWith("/timeline") }]}>timeline</a>
+					<a href={buildUrl("/connections")} class:list={["unified-header__app", { active: pathname.startsWith("/connections") }]}>connections</a>
+				</nav>
 					<div class="unified-header__controls">
 						<ProfileSelector
 							client:load
