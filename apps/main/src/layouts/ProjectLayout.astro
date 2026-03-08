@@ -21,7 +21,7 @@ const active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.na
 ---
 
 <main>
-	<h3>{project_id}</h3>
+	<h1>{project_id}</h1>
 	<nav>
 		{
 			pages.map((p) => (

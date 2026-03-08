@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /posts
+Disallow: /categories
+Disallow: /settings
+
+Sitemap: https://blog.devpad.tools/sitemap-index.xml

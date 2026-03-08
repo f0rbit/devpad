@@ -19,7 +19,7 @@ export default defineConfig({
 	integrations: [
 		solidJs(),
 		sitemap({
-			customPages: [`${site}/`, `${site}/docs/`],
+			customPages: [`${site}/`, `${site}/project`, `${site}/todo`, `${site}/docs`],
 		}),
 	],
 	vite: {

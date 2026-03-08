@@ -1,39 +1,50 @@
 ---
+import "@devpad/core/ui/styles";
+import "@/main.css";
+
 interface Props {
 	title: string;
 	description?: string;
 	keywords?: string[];
 	canonical?: string;
+	noindex?: boolean;
 }
 
-const dark_mode = false;
+const DEFAULT_DESCRIPTION = "Developer tools for project management, task tracking, blogging, and media aggregation.";
 
-import "@devpad/core/ui/styles";
-import "@/main.css";
+const { title, description = DEFAULT_DESCRIPTION, keywords = [], canonical, noindex = false } = Astro.props;
 
-const { title, description = "devpad.tools", keywords = [], canonical = null } = Astro.props;
+const canonicalUrl = canonical ?? Astro.url.href;
 ---
 
 <!doctype html>
-<html lang="en" class={dark_mode ? "dark" : ""}>
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		{keywords.length > 0 && <meta name="keywords" content={keywords.join(", ")} />}
-		<meta name="title" content={title} />
-		<meta name="og:title" content={title} />
-		<meta name="author" content="forbit" />
-		<meta name="description" content={description} />
-		<meta name="og:description" content={description} />
-		<meta name="og:type" content="website" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="stylesheet" href="https://use.typekit.net/jmv8pmn.css" />
 		<link rel="sitemap" href="/sitemap-index.xml" />
-		<meta name="generator" content={Astro.generator} />
-		{canonical && <link rel="canonical" href={canonical} />}
-		{canonical && <meta name="og:url" content={canonical} />}
 		<title>{title}</title>
+
+		<meta name="description" content={description} />
+		{keywords.length > 0 && <meta name="keywords" content={keywords.join(", ")} />}
+		<meta name="author" content="forbit" />
+		<meta name="generator" content={Astro.generator} />
+
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalUrl} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:site_name" content="devpad" />
+
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:url" content={canonicalUrl} />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+
+		<link rel="canonical" href={canonicalUrl} />
+		{noindex && <meta name="robots" content="noindex, nofollow" />}
 	</head>
 	<slot />
-
 </html>

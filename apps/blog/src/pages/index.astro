@@ -11,9 +11,27 @@ import Sparkles from "lucide-astro/Sparkles";
 import Tag from "lucide-astro/Tag";
 
 const isAuthenticated = !!Astro.locals.user;
+
+const structuredData = {
+	"@context": "https://schema.org",
+	"@type": "WebSite",
+	name: "devpad blog",
+	url: "https://blog.devpad.tools",
+	description: "A blog platform for developers. Write in markdown, link posts to projects, and publish with version control.",
+	isPartOf: {
+		"@type": "WebSite",
+		name: "devpad",
+		url: "https://devpad.tools",
+	},
+};
 ---
 
-<BaseLayout title="Blog - devpad">
+<BaseLayout
+	title="Blog"
+	description="A blog platform for developers. Write in markdown, link posts to projects, and publish with version control."
+	canonical="https://blog.devpad.tools"
+>
+	<script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
   <div class="landing">
     <nav class="landing-nav row row-between">
       <a href="/" class="font-medium" style="text-decoration: none; color: var(--fg); font-size: 1.25rem;">blog</a>
