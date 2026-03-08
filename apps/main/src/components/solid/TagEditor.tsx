@@ -59,7 +59,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 				<div>Title</div>
 				<div>Color</div>
 				<div style="margin: auto auto;" title="Render tag in tasks list">
-					<Eye />
+					<Eye size={16} />
 				</div>
 				<div></div>
 				<For each={currentTags()}>{tag => !tag.deleted && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}</For>
@@ -67,11 +67,11 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 			</div>
 
 			<a role="button" onClick={create} class="row row-sm" style="margin-top: 10px">
-				<Plus />
+				<Plus size={16} />
 				add
 			</a>
 			<a role="button" onClick={save} class="row row-sm" style="margin-top: 10px">
-				<Save />
+				<Save size={16} />
 				save
 			</a>
 		</div>
@@ -171,7 +171,7 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 				disabled={enabled() === false}
 			>
 				{value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--fg-muted); font-size: small; height: 21px; line-height: 21px;">Select Colour</span>}
-				{isOpen() ? <ChevronUp /> : <ChevronDown />}
+				{isOpen() ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
 			</button>
 
 			{/* Popup List */}

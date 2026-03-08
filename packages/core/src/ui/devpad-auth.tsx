@@ -22,7 +22,7 @@ export function DevpadAuth(props: DevpadAuthProps) {
 						<path d="M21 12a9 9 0 1 1-6.219-8.56" />
 					</svg>
 				) : (
-					<GithubLogo size={20} />
+					<GithubLogo size={16} />
 				)}
 				login
 			</button>

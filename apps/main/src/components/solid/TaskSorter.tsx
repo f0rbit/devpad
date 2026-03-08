@@ -161,9 +161,9 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 		<div class="stack stack-lg">
 			{quick_add && <TaskQuickAdd project_id={quick_add.project_id} user_id={quick_add.user_id} onCreated={task => setTasks(prev => [task, ...prev])} />}
 			<div class="task-filters" style={{ gap: "9px" }}>
-				<Search />
+				<Search size={16} />
 				<input type="text" placeholder="Search" value={search()} onInput={e => setSearch(e.target.value)} />
-				<ArrowDownWideNarrow />
+				<ArrowDownWideNarrow size={16} />
 				<select value={selectedOption()} onChange={e => setSelectedOption(e.target.value as SortOption)}>
 					{options.map(option => (
 						<option value={option} selected={option === selectedOption()}>
@@ -173,11 +173,11 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 				</select>
 				{Object.keys(project_map).length > 1 && (
 					<>
-						<FolderSearch />
+						<FolderSearch size={16} />
 						<ProjectSelector project_map={project_map} default_id={project()} callback={project_id => setProject(project_id)} disabled={false} />
 					</>
 				)}
-				<Tag />
+				<Tag size={16} />
 				<TagSelect tags={tags} onSelect={tag => setTag(tag?.id ?? null)} />
 
 				<div class="row row-sm" style={{ gap: "9px", "margin-left": "auto", "grid-column": "span 2" }}>
@@ -188,7 +188,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 							selectView("list");
 						}}
 					>
-						<LayoutList />
+						<LayoutList size={16} />
 					</a>
 					<a
 						role="button"
@@ -197,7 +197,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 							selectView("grid");
 						}}
 					>
-						<LayoutGrid />
+						<LayoutGrid size={16} />
 					</a>
 				</div>
 			</div>

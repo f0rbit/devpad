@@ -86,10 +86,10 @@ export default function MilestonesManager(props: Props) {
 										<div class="row row-between" style={{ "align-items": "center" }}>
 											<span style={{ display: "flex", "align-items": "center", gap: "0.25rem", "font-size": "1.1rem", "font-weight": "500" }}>
 												{milestone.name}
-												<AiProvenance created_by={milestone.created_by} modified_by={milestone.modified_by} size={14} />
+												<AiProvenance created_by={milestone.created_by} modified_by={milestone.modified_by} />
 											</span>
 											<a href={`/project/${props.projectSlug}/milestone/${milestone.id}`} class="text-muted" title="Edit milestone" style={{ "flex-shrink": "0", "text-decoration": "none" }}>
-												<Edit size={14} />
+												<Edit size={16} />
 											</a>
 										</div>
 
@@ -118,7 +118,7 @@ export default function MilestonesManager(props: Props) {
 																	<ProgressCircle percentage={pct()} />
 																</Show>
 																<span class="text-sm">{goal.name}</span>
-																<AiProvenance created_by={goal.created_by} modified_by={goal.modified_by} size={12} />
+																<AiProvenance created_by={goal.created_by} modified_by={goal.modified_by} />
 															</div>
 															<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
 																<Show when={counts() && counts()!.total > 0}>
@@ -143,7 +143,7 @@ export default function MilestonesManager(props: Props) {
 											href={`/project/${props.projectSlug}/milestone/${milestone.id}/goal/new`}
 											style={{ display: "flex", "align-items": "center", gap: "0.25rem", color: "var(--text-link)", "font-size": "smaller", "text-decoration": "none" }}
 										>
-											<Plus size={14} /> add goal
+											<Plus size={16} /> add goal
 										</a>
 									</div>
 								</Step>
@@ -154,7 +154,7 @@ export default function MilestonesManager(props: Props) {
 			</Show>
 
 			<a href={`/project/${props.projectSlug}/milestone/new`} class="row text-sm" style={{ gap: "0.25rem", color: "var(--text-link)", "text-decoration": "none", "margin-top": "1rem" }}>
-				<Plus size={14} /> create milestone
+				<Plus size={16} /> create milestone
 			</a>
 		</div>
 	);

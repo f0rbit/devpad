@@ -160,7 +160,7 @@ export function ActivityPreview(props: ActivityPreviewProps) {
 						{item => (
 							<div class="activity-preview-item">
 								<div class="activity-preview-icon">
-									<PlatformIcon platform={getPlatform(item)} size={14} />
+									<PlatformIcon platform={getPlatform(item)} size={16} />
 								</div>
 								<span class="activity-preview-title">{getTitle(item)}</span>
 								<span class="activity-preview-time">{format.relative(getTimestamp(item))}</span>

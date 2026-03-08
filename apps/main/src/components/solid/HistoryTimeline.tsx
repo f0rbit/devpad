@@ -192,7 +192,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 				<ActionIcon type={action.type} />
 				<Show when={action.channel === "api"}>
 					<span class="ai-provenance" title="AI action">
-						<Bot size={12} />
+						<Bot size={16} />
 					</span>
 				</Show>
 				<ActionDate />

@@ -210,7 +210,7 @@ function FilterItem(props: FilterItemProps) {
 	return (
 		<div class={`filter-item ${isInclude() ? "filter-item-include" : "filter-item-exclude"}`}>
 			<div class="filter-item-icon">
-				<PlatformIcon platform={props.filter.platform} size={14} />
+				<PlatformIcon platform={props.filter.platform} size={16} />
 			</div>
 			<div class="filter-item-content">
 				<span class={`filter-item-type ${isInclude() ? "filter-type-include" : "filter-type-exclude"}`}>{isInclude() ? "Include" : "Exclude"}</span>
@@ -220,7 +220,7 @@ function FilterItem(props: FilterItemProps) {
 				</Show>
 			</div>
 			<Button icon variant="ghost" onClick={props.onRemove} label="Remove filter">
-				<X size={14} />
+				<X size={16} />
 			</Button>
 		</div>
 	);

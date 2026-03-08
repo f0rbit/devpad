@@ -58,19 +58,19 @@ export default function ConnectionActions(props: Props) {
 			<div class="row row-sm">
 				<Show when={props.state === "active"}>
 					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
-						<RefreshCw size={18} class={refreshing() ? "animate-spin" : ""} />
+						<RefreshCw size={16} class={refreshing() ? "animate-spin" : ""} />
 					</Button>
 					<Button icon variant="ghost" label="Pause syncing" onClick={handleToggle} disabled={toggling()}>
-						<Pause size={18} />
+						<Pause size={16} />
 					</Button>
 				</Show>
 				<Show when={props.state === "inactive"}>
 					<Button icon variant="ghost" label="Resume syncing" onClick={handleToggle} disabled={toggling()}>
-						<Play size={18} />
+						<Play size={16} />
 					</Button>
 				</Show>
 				<Button icon variant="ghost" label="Remove connection" onClick={handleDelete} disabled={deleting()}>
-					<Trash2 size={18} />
+					<Trash2 size={16} />
 				</Button>
 			</div>
 			<Show when={error()}>

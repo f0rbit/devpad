@@ -67,7 +67,7 @@ export function DevpadHeader(props: DevpadHeaderProps) {
 		<div class="unified-header__row1">
 			<div class="unified-header__left">
 				<a href={logoHref} class="unified-header__logo">
-					<DevpadLogo size={18} />
+					<DevpadLogo size={16} />
 					<span>devpad</span>
 				</a>
 			</div>

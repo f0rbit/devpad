@@ -122,8 +122,8 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			</div>
 			<details class="boxed">
 				<summary class="row row-sm" style="font-size: smaller;">
-					<ChevronUp class="up-arrow" />
-					<ChevronDown class="down-arrow" />
+					<ChevronUp size={16} class="up-arrow" />
+					<ChevronDown size={16} class="down-arrow" />
 					More Options
 				</summary>
 				<div class="editor">
@@ -160,9 +160,9 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<a role="button" id="save-button" onClick={saveTask}>
 				save
 			</a>
-			<Loader class="icon animate-spin" classList={{ hidden: requestState() !== "loading" }} />
-			<Check class="icon" style={{ color: "var(--success-fg)" }} classList={{ hidden: requestState() !== "success" }} />
-			<X class="icon" style={{ color: "var(--error-fg)" }} classList={{ hidden: requestState() !== "error" }} />
+			<Loader size={16} class="icon animate-spin" classList={{ hidden: requestState() !== "loading" }} />
+			<Check size={16} class="icon" style={{ color: "var(--success-fg)" }} classList={{ hidden: requestState() !== "success" }} />
+			<X size={16} class="icon" style={{ color: "var(--error-fg)" }} classList={{ hidden: requestState() !== "error" }} />
 			<br />
 			<br />
 			<div id="response" class="response"></div>

@@ -62,7 +62,7 @@ const isOverdue = goal.target_time && new Date(goal.target_time) < new Date() &&
 			<div class="card-header">
 				<div class="row" style="gap: 0.75rem; align-items: center;">
 					<h3 class="card-title">{goal.name}</h3>
-					<AiProvenance client:load created_by={goal.created_by} modified_by={goal.modified_by} size={14} />
+					<AiProvenance client:load created_by={goal.created_by} modified_by={goal.modified_by} />
 					{goal.finished_at && <span class="badge badge-success">Completed</span>}
 					{!goal.finished_at && isOverdue && <span class="badge badge-error">Overdue</span>}
 				</div>

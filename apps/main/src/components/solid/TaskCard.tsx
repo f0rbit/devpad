@@ -45,7 +45,7 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 
 	return (
 		<div style="display: flex; align-items: center; gap: 3px;" title={`Goal: ${goalName()}`}>
-			<Target size={14} />
+			<Target size={16} />
 			<span style={{ "font-size": "small", color: "var(--fg-muted)" }}>{goalName()}</span>
 		</div>
 	);
@@ -123,7 +123,7 @@ export const TaskCard = (props: Props) => {
 						</a>
 					)}
 					<span style={{ "margin-left": "auto", display: "flex" }}>
-						<AiProvenance created_by={task.created_by} modified_by={task.modified_by} size={12} />
+						<AiProvenance created_by={task.created_by} modified_by={task.modified_by} />
 					</span>
 				</span>
 			</div>
