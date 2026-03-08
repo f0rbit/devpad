@@ -1,7 +1,3 @@
-body {
-	-webkit-font-smoothing: auto;
-}
-
 .task-title {
 	color: var(--fg-muted);
 }
