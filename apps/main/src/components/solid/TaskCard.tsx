@@ -70,9 +70,9 @@ export const TaskCard = (props: Props) => {
 
 	const Clock = () => {
 		const end_time = task.end_time;
-		if (!end_time) return <Calendar />;
-		if (isPastDue(end_time)) return <CalendarX2 />;
-		return <CalendarClock />;
+		if (!end_time) return <Calendar size={16} />;
+		if (isPastDue(end_time)) return <CalendarX2 size={16} />;
+		return <CalendarClock size={16} />;
 	};
 
 	const progress = async () => {
@@ -108,7 +108,7 @@ export const TaskCard = (props: Props) => {
 				<span class={`row row-sm ${priority_class}`}>
 					{has_linked && (
 						<div style="display: flex;" title="This task is linked to a codebase">
-							<Link />
+							<Link size={16} />
 						</div>
 					)}
 					<Clock />
@@ -162,14 +162,14 @@ export function TaskProgress({ progress, onClick, type }: { progress: TaskWithDe
 	if (clickable) {
 		return (
 			<a role="button" onClick={onClick}>
-				<IconComponent />
+				<IconComponent size={16} />
 			</a>
 		);
 	}
 
 	return (
 		<div class="priority-low">
-			<IconComponent />
+			<IconComponent size={16} />
 		</div>
 	);
 }

@@ -128,19 +128,19 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 	const ActionIcon = ({ type }: { type: HistoryAction["type"] }) => {
 		switch (type) {
 			case "SCAN":
-				return <ScanText />;
+				return <ScanText size={16} />;
 			case "UPDATE_PROJECT":
-				return <FolderPen />;
+				return <FolderPen size={16} />;
 			case "CREATE_PROJECT":
-				return <FolderPlus />;
+				return <FolderPlus size={16} />;
 			case "DELETE_PROJECT":
-				return <FolderMinus />;
+				return <FolderMinus size={16} />;
 			case "CREATE_TASK":
-				return <FilePlus2 />;
+				return <FilePlus2 size={16} />;
 			case "UPDATE_TASK":
-				return <FilePen />;
+				return <FilePen size={16} />;
 			case "DELETE_TASK":
-				return <FileMinus2 />;
+				return <FileMinus2 size={16} />;
 			default:
 				return <span>?</span>;
 		}
@@ -152,9 +152,9 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 				const { message, status } = action.data as { message: string; status: Omit<ScanStatus, "PENDING"> };
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
-						<GitBranch />
+						<GitBranch size={16} />
 						<span>{message}</span>
-						<ArrowRight />
+						<ArrowRight size={16} />
 						<span>{status.toLowerCase()}</span>
 					</div>
 				);
@@ -165,7 +165,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 				if (!title) return null;
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
-						<Type />
+						<Type size={16} />
 						<span>{title}</span>
 					</div>
 				);
@@ -177,7 +177,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 				if (!name || !href) return null;
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
-						<FolderPlus />
+						<FolderPlus size={16} />
 						<a href={`/project/${href}`}>{name}</a>
 					</div>
 				);

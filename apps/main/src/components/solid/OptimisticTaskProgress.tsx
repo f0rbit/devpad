@@ -77,24 +77,24 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 		if (type() === "box") {
 			switch (progress) {
 				case "COMPLETED":
-					return <SquareCheck class="text-green-600" />;
+					return <SquareCheck size={16} class="text-green-600" />;
 				case "IN_PROGRESS":
-					return <SquareDot class="text-blue-600" />;
+					return <SquareDot size={16} class="text-blue-600" />;
 				case "UNSTARTED":
-					return <Square class="text-gray-400" />;
+					return <Square size={16} class="text-gray-400" />;
 				default:
-					return <Square class="text-gray-400" />;
+					return <Square size={16} class="text-gray-400" />;
 			}
 		} else {
 			switch (progress) {
 				case "COMPLETED":
-					return <CircleCheck class="text-green-600" />;
+					return <CircleCheck size={16} class="text-green-600" />;
 				case "IN_PROGRESS":
-					return <CircleDot class="text-blue-600" />;
+					return <CircleDot size={16} class="text-blue-600" />;
 				case "UNSTARTED":
-					return <Circle class="text-gray-400" />;
+					return <Circle size={16} class="text-gray-400" />;
 				default:
-					return <Circle class="text-gray-400" />;
+					return <Circle size={16} class="text-gray-400" />;
 			}
 		}
 	};

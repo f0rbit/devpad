@@ -192,7 +192,7 @@ const TodoScannerConfig = ({
 						<h6>branch</h6>
 					</div>
 					<div class="row">
-						<GitBranch />
+						<GitBranch size={16} />
 						<select value={config.branch ?? ""} onChange={e => selectBranch(e.target.value)}>
 							<For each={branches}>
 								{branch => (
@@ -217,7 +217,7 @@ const TodoScannerConfig = ({
 				<div class="row" style="gap: 20px">
 					<h6>tags</h6>
 					<a role="button" onClick={addTag} title="Add Tag" class="row row-sm">
-						<Plus />
+						<Plus size={16} />
 						add tag
 					</a>
 					<ConfigDefaults tags={() => config.tags} add={addDefaultTag} />
@@ -228,7 +228,7 @@ const TodoScannerConfig = ({
 							<div class="row" style="gap: 10px">
 								<input type="text" placeholder="Tag Name" list="tags" value={tag().name} onInput={e => updateTagName(index, e.target.value)} />
 								<a role="button" onClick={() => removeTag(index)} title="Remove Tag" class="row row-sm">
-									<X />
+									<X size={16} />
 								</a>
 							</div>
 							<div class="stack stack-sm" style="border-left: 1px solid var(--border); padding-left: 10px; gap: 4px;">
@@ -237,13 +237,13 @@ const TodoScannerConfig = ({
 										<div class="row" style="gap: 10px">
 											<input type="text" placeholder="Match Pattern" value={match} onInput={e => updateMatch(index, matchIndex(), e.target.value)} />
 											<a role="button" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="row row-sm">
-												<Minus />
+												<Minus size={16} />
 											</a>
 										</div>
 									)}
 								</For>
 								<a role="button" onClick={() => addMatch(index)} title="Add Match" class="row row-sm" style="font-size: small">
-									<Plus onClick={() => addMatch(index)} />
+									<Plus size={16} onClick={() => addMatch(index)} />
 									add match
 								</a>
 							</div>
@@ -258,7 +258,7 @@ const TodoScannerConfig = ({
 				<div class="row" style="gap: 20px">
 					<h6>ignore paths</h6>
 					<a role="button" onClick={addIgnorePath} title="Add Ignore Path" class="row row-sm">
-						<Plus />
+						<Plus size={16} />
 						add path
 					</a>
 				</div>
@@ -267,7 +267,7 @@ const TodoScannerConfig = ({
 						<div class="row row-sm">
 							<input type="text" placeholder="Ignore Path" value={path} onChange={e => updateIgnorePath(index(), e.target.value)} />
 							<a role="button" onClick={() => removeIgnorePath(index())} title="Remove Path" class="row row-sm">
-								<Minus />
+								<Minus size={16} />
 							</a>
 						</div>
 					)}
@@ -309,7 +309,7 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 		<div class="row" style="gap: 10px; height: 21px">
 			{available().length > 0 && (
 				<a role="button" onClick={() => setOpen(!open())} class="row row-sm">
-					{open() ? <ChevronLeft /> : <ChevronRight />}
+					{open() ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
 				</a>
 			)}
 			{open() && (

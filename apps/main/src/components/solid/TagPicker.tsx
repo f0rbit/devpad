@@ -107,7 +107,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 				))}
 			</datalist>
 			<a role="button" onClick={add}>
-				<Plus />
+				<Plus size={16} />
 			</a>
 			<div class="cluster">
 				<For each={tags()}>{tag => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />}</For>
