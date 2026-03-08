@@ -136,13 +136,20 @@ html select {
 .unified-header__subnav a {
 	color: var(--accent);
 	text-decoration: none;
-	font-size: 0.9rem;
+	font-size: 1rem;
+	font-weight: 400;
+	line-height: 1;
+	transition: filter 0.15s;
 }
 
 .unified-header__subnav a.active {
 	color: var(--fg);
 	text-decoration: underline;
-	text-underline-offset: 4px;
+	text-underline-offset: 2px;
+}
+
+.unified-header__subnav a:hover {
+	filter: var(--hover-filter);
 }
 
 .unified-header__controls {
@@ -159,8 +166,8 @@ html select {
 		font-size: 0.75rem;
 	}
 	.unified-header__subnav {
-		gap: 4px;
-		font-size: 0.8rem;
+		gap: 6px;
+		font-size: 0.75rem;
 	}
 }
 
