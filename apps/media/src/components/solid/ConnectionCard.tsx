@@ -60,10 +60,10 @@ export default function ConnectionCard(props: Props) {
 				</div>
 				<div class="row row-sm">
 					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
-						<RefreshCw size={18} class={refreshing() ? "animate-spin" : ""} />
+						<RefreshCw size={16} class={refreshing() ? "animate-spin" : ""} />
 					</Button>
 					<Button icon variant="ghost" label="Remove connection" onClick={handleDelete} disabled={deleting()}>
-						<Trash2 size={18} />
+						<Trash2 size={16} />
 					</Button>
 				</div>
 			</div>

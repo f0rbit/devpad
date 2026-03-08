@@ -80,7 +80,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 			<div class="row row-between" style={{ "align-items": "center" }}>
 				<h3 style={{ margin: "0" }}>api keys</h3>
 				<Button size="sm" onClick={() => setShowCreate(true)}>
-					<Plus size={14} /> create key
+					<Plus size={16} /> create key
 				</Button>
 			</div>
 
@@ -104,7 +104,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 								}}
 							>
 								<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
-									<Key size={14} class="text-faint" />
+									<Key size={16} class="text-faint" />
 									<span class={key.name ? "text-sm" : "text-sm text-faint"}>{key.name || "Unnamed key"}</span>
 									<Badge variant="info">{key.scope}</Badge>
 								</div>
@@ -125,7 +125,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 										}}
 										title="Delete key"
 									>
-										<Trash2 size={14} />
+										<Trash2 size={16} />
 									</button>
 								</div>
 							</div>
@@ -193,11 +193,11 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 					<Button variant="ghost" onClick={handleCopy}>
 						{copied() ? (
 							<>
-								<Check size={14} /> copied
+								<Check size={16} /> copied
 							</>
 						) : (
 							<>
-								<Copy size={14} /> copy
+								<Copy size={16} /> copy
 							</>
 						)}
 					</Button>

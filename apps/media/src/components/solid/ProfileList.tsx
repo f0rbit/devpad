@@ -108,7 +108,7 @@ export default function ProfileList(props: ProfileListProps) {
 				<h6 class="text-muted font-medium">Your Profiles</h6>
 				<Button size="sm" onClick={() => setShowCreateForm(true)}>
 					<span class="row row-sm">
-						<Plus size={14} />
+						<Plus size={16} />
 						Create Profile
 					</span>
 				</Button>
@@ -198,13 +198,13 @@ function ProfileCard(props: ProfileCardProps) {
 				</div>
 				<div class="row row-sm">
 					<Button icon variant="ghost" label="View timeline" onClick={props.onView}>
-						<Eye size={18} />
+						<Eye size={16} />
 					</Button>
 					<Button icon variant="ghost" label="Edit profile" onClick={props.onEdit}>
-						<Pencil size={18} />
+						<Pencil size={16} />
 					</Button>
 					<Button icon variant="ghost" label="Delete profile" onClick={props.onDelete}>
-						<Trash2 size={18} />
+						<Trash2 size={16} />
 					</Button>
 				</div>
 			</CardHeader>

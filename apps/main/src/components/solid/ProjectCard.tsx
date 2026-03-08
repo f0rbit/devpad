@@ -52,7 +52,7 @@ export const ProjectCard = (props: Props) => {
 					</span>
 					{project.repo_url && (
 						<span class="row row-sm" style={{ color: "var(--fg-faint)" }} title="GitHub repository">
-							<Github size={14} />
+							<Github size={16} />
 						</span>
 					)}
 				</span>

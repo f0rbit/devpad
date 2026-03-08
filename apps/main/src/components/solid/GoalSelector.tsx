@@ -140,10 +140,10 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 
 				<Show when={selectedGoal()}>
 					<button type="button" class="btn btn-icon btn-sm" title="Edit goal" onClick={() => handleEditGoal(selectedGoal()!)} disabled={disabled}>
-						<Edit size={14} />
+						<Edit size={16} />
 					</button>
 					<button type="button" class="btn btn-icon btn-sm" title="Clear goal selection" onClick={handleClearSelection} disabled={disabled}>
-						<X size={14} />
+						<X size={16} />
 					</button>
 				</Show>
 			</div>

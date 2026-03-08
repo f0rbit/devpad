@@ -103,8 +103,8 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 			{same.length > 0 && (
 				<details class="boxed">
 					<summary class="row row-sm" style="justify-content: center">
-						<ChevronUp class="up-arrow" />
-						<ChevronDown class="down-arrow" />
+						<ChevronUp size={16} class="up-arrow" />
+						<ChevronDown size={16} class="down-arrow" />
 						<span>{same.length} tasks were the same</span>
 					</summary>
 					<br />
@@ -119,10 +119,10 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 			<hr />
 			<div class="row row-sm" style="gap: 20px; justify-content: center;">
 				<a role="button" onClick={saveActions} class="row row-sm">
-					<Save /> save actions
+					<Save size={16} /> save actions
 				</a>
 				<a role="button" onClick={ignoreUpdate} class="row row-sm">
-					<Trash /> ignore updates
+					<Trash size={16} /> ignore updates
 				</a>
 			</div>
 		</div>
@@ -198,8 +198,8 @@ function Context({ old_context, new_context }: { old_context: string | null; new
 	return (
 		<div class="stack stack-lg">
 			<div style="width: max-content" class="row row-sm label-modal" onClick={() => setOpen(!open())}>
-				<ChevronUp style={{ display: open() ? "none" : "unset" }} />
-				<ChevronDown style={{ display: open() ? "unset" : "none" }} />
+				<ChevronUp size={16} style={{ display: open() ? "none" : "unset" }} />
+				<ChevronDown size={16} style={{ display: open() ? "unset" : "none" }} />
 				<span>Context</span>
 			</div>
 			<div style={{ "margin-top": "5px", display: open() ? "grid" : "none" }}>

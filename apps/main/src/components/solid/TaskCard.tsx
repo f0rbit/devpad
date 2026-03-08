@@ -45,7 +45,7 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 
 	return (
 		<div style="display: flex; align-items: center; gap: 3px;" title={`Goal: ${goalName()}`}>
-			<Target size={14} />
+			<Target size={16} />
 			<span style={{ "font-size": "small", color: "var(--fg-muted)" }}>{goalName()}</span>
 		</div>
 	);

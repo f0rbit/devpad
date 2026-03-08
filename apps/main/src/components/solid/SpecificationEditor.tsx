@@ -100,22 +100,22 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 				<>
 					<div class="controls">
 						<a role="button" onClick={save}>
-							<LoadingIndicator state={saving} idle={<Save />} />
+							<LoadingIndicator state={saving} idle={<Save size={16} />} />
 							save
 						</a>
 						{has_github && (
 							<a role="button" onClick={fetchSpecification}>
-								<LoadingIndicator state={fetching} idle={<Github />} />
+								<LoadingIndicator state={fetching} idle={<Github size={16} />} />
 								fetch
 							</a>
 						)}
 						<a role="button" onClick={resetMarkdown}>
-							<RotateCcw />
+							<RotateCcw size={16} />
 							reset
 						</a>
 						<div style={{ flex: 1 }} />
 						<a role="button" onClick={exitEditing}>
-							<X style="margin-right: -3px;" />
+							<X size={16} style="margin-right: -3px;" />
 							<span>exit</span>
 						</a>
 					</div>
@@ -125,7 +125,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 			) : (
 				<>
 					<a role="button" class="edit row row-sm" onClick={() => setIsEditing(true)}>
-						<Pencil />
+						<Pencil size={16} />
 						edit
 					</a>
 					<div innerHTML={parsedMarkdown()} />

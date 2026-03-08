@@ -195,8 +195,8 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 					}
 				>
 					<button class="inline-flex text-xs muted" style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", gap: "0.25rem" }} onClick={() => setExpanded(!expanded())}>
-						<Show when={expanded()} fallback={<ChevronRight size={14} />}>
-							<ChevronDown size={14} />
+						<Show when={expanded()} fallback={<ChevronRight size={16} />}>
+							<ChevronDown size={16} />
 						</Show>
 						<span>{props.group.commits.length} commits</span>
 					</button>
@@ -288,8 +288,8 @@ function PullRequestRow(props: { item: TimelineItem }) {
 						}
 					>
 						<button class="inline-flex text-xs muted" style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", gap: "0.25rem" }} onClick={() => setExpanded(!expanded())}>
-							<Show when={expanded()} fallback={<ChevronRight size={14} />}>
-								<ChevronDown size={14} />
+							<Show when={expanded()} fallback={<ChevronRight size={16} />}>
+								<ChevronDown size={16} />
 							</Show>
 							<span>{commits().length} commits</span>
 						</button>
@@ -393,7 +393,7 @@ function RedditPostRow(props: { item: TimelineItem }) {
 						<span>·</span>
 					</Show>
 					<span class="inline-flex items-center" style={{ gap: "0.25rem" }}>
-						<ArrowBigUp size={12} />
+						<ArrowBigUp size={16} />
 						<span>{score()}</span>
 					</span>
 					<span>·</span>
@@ -483,7 +483,7 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 					<span>r/{payload().subreddit}</span>
 					<span>·</span>
 					<span class="inline-flex items-center" style={{ gap: "0.25rem" }}>
-						<ArrowBigUp size={12} />
+						<ArrowBigUp size={16} />
 						<span>{payload().score}</span>
 					</span>
 					<span>·</span>

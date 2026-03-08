@@ -148,7 +148,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 					when={!hasNoProfiles()}
 					fallback={
 						<a href={buildUrl("/connections", currentSlug())} class="profile-selector-create-link">
-							<Plus size={14} />
+							<Plus size={16} />
 							<span>Create Profile</span>
 						</a>
 					}
@@ -158,7 +158,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 							<Button variant="secondary" class="profile-selector-button">
 								<Users size={16} class="profile-selector-icon" />
 								<span class="profile-selector-label">{buttonLabel()}</span>
-								<Chevron facing="down" size={14} />
+								<Chevron facing="down" size={16} />
 							</Button>
 						</DropdownTrigger>
 						<DropdownMenu>
@@ -166,7 +166,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 								{profile => (
 									<DropdownItem active={currentSlug() === profile.slug} onClick={() => handleSelect(profile.slug)}>
 										<Show when={currentSlug() === profile.slug}>
-											<Check size={14} />
+											<Check size={16} />
 										</Show>
 										{profile.name}
 									</DropdownItem>
@@ -174,7 +174,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 							</For>
 							<DropdownDivider />
 							<DropdownItem onClick={handleManageProfiles}>
-								<Plus size={14} />
+								<Plus size={16} />
 								Manage Profiles
 							</DropdownItem>
 						</DropdownMenu>
