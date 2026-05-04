@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /account
+Disallow: /project/create
+Disallow: /todo/new
+Disallow: /todo/tags
+
+Sitemap: https://devpad.tools/sitemap-index.xml
