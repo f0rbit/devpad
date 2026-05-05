@@ -4,7 +4,7 @@ A collection of tools for the development lifecycle. [devpad.tools](https://devp
 
 ## What is devpad?
 
-devpad is a self-hosted platform for managing the development lifecycle. It combines project management, task tracking (with automatic scanning of TODO/FIXME comments from your codebase), milestones, goals, a blog integration, and a media timeline. The frontend is built with Astro + SolidJS, the API runs on Hono (Cloudflare Workers compatible), and data lives in SQLite (D1 in production) via Drizzle ORM.
+devpad is a self-hosted platform for managing the development lifecycle. It combines project management, task tracking (with automatic scanning of TODO/FIXME comments from your codebase), milestones, goals, a blog integration, a media timeline, and a [pulse](https://github.com/f0rbit/pulse) analytics dashboard for projects that opt in. The frontend is built with Astro + SolidJS, the API runs on Hono (Cloudflare Workers compatible), and data lives in SQLite (D1 in production) via Drizzle ORM.
 
 ## Repository structure
 

@@ -2,13 +2,26 @@
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { ProjectContextSetter } from "@/components/solid/ProjectContextSetter";
+import PulseWidget from "@/components/solid/project/PulseWidget";
 import { getProject } from "@/utils/api-client";
 
 const project_id = Astro.params.project_id!;
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
-const { project } = guard;
+const { client, project } = guard;
+
+// Best-effort pulse summary — page must render even if pulse is unreachable.
+const pulse_result = await client.pulse.summary({ project_id: project.id, range: "7d" });
+let pulse_summary: any = null;
+let pulse_error: string | null = null;
+if (pulse_result.ok) {
+	pulse_summary = pulse_result.value;
+} else {
+	const code = pulse_result.error?.code ?? "";
+	const status = pulse_result.error?.status_code;
+	pulse_error = code === "pulse_unreachable" || status === 503 ? "pulse_unreachable" : (pulse_result.error?.message ?? code ?? "pulse_error");
+}
 ---
 
 <PageLayout title={`${project_id} - devpad`}>
@@ -19,5 +32,6 @@ const { project } = guard;
 		<p>
 			<span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></span>
 		</p>
+		<PulseWidget projectSlug={project_id} summary={pulse_summary} error={pulse_error} client:visible />
 	</ProjectLayout>
 </PageLayout>
