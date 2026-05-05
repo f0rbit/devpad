@@ -102,19 +102,20 @@ const errors_list = Array.isArray(errors_data) ? errors_data : Array.isArray(err
 <PageLayout title={`Pulse - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
 		<div class="stack stack-md">
-			<nav class="row" style="gap: 0.5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;" aria-label="pulse tabs" data-testid="pulse-tabs">
+			<h5>project pulse</h5>
+			<nav aria-label="pulse tabs" data-testid="pulse-tabs">
 				{tabs.map(t => (
 					<a
 						href={`/project/${project_id}/pulse${t.name === "overview" ? "" : `?tab=${t.name}`}`}
 						class={active_tab === t.name ? "active" : ""}
 						data-tab={t.name}
 						data-testid={`pulse-tab-${t.name}`}
-						style={`padding: 0.25rem 0.75rem; text-decoration: none; ${active_tab === t.name ? "border-bottom: 2px solid var(--accent); font-weight: 500;" : "color: var(--text-faint);"}`}
 					>
 						{t.label}
 					</a>
 				))}
 			</nav>
+			<br />
 
 			{unreachable && (
 				<div class="stack stack-sm" data-testid="pulse-unreachable" style="padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius, 4px);">
