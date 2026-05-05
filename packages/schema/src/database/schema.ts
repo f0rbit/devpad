@@ -73,7 +73,7 @@ export const api_keys = sqliteTable("api_keys", {
 	key_hash: text("key_hash").notNull().unique(),
 	name: text("name"),
 	note: text("note"),
-	scope: text("scope", { enum: ["devpad", "blog", "media", "all"] })
+	scope: text("scope", { enum: ["devpad", "blog", "media", "pulse", "all"] })
 		.notNull()
 		.default("all"),
 	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),

@@ -5,6 +5,7 @@ import goals from "./goals.js";
 import keys from "./keys.js";
 import milestones from "./milestones.js";
 import projects from "./projects.js";
+import pulse from "./pulse.js";
 import scanning from "./scanning.js";
 import tags from "./tags.js";
 import tasks from "./tasks.js";
@@ -22,6 +23,7 @@ app.route("/keys", keys);
 app.route("/user", user);
 app.route("/tags", tags);
 app.route("/activity", activity);
+app.route("/pulse", pulse);
 
 app.route("/projects", scanning);
 

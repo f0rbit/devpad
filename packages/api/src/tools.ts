@@ -540,6 +540,110 @@ export const tools: Record<string, ToolDefinition> = {
 			return unwrap(await client.media.timeline.get(user_id, params));
 		},
 	},
+
+	// Pulse analytics tools
+	devpad_pulse_summary: {
+		name: "devpad_pulse_summary",
+		description: "Get summary analytics for a project (pageviews, sessions, errors, latency)",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			range: z.enum(["24h", "7d", "30d", "90d"]).describe("Time range"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.summary({ project_id: input.project_id, range: input.range })),
+	},
+
+	devpad_pulse_events: {
+		name: "devpad_pulse_events",
+		description: "List events for a project with optional filtering",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			name: z.string().optional().describe("Event name filter (pageview, error, log, etc)"),
+			level: z.string().optional().describe("Log level filter (debug, info, warn, error, critical)"),
+			ts_from: z.number().optional().describe("Start timestamp (unix ms)"),
+			ts_to: z.number().optional().describe("End timestamp (unix ms)"),
+			search: z.string().optional().describe("Search substring in event properties"),
+			limit: z.number().optional().describe("Max events to return (max 500)"),
+			cursor: z.string().optional().describe("Pagination cursor"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.events(input)),
+	},
+
+	devpad_pulse_errors: {
+		name: "devpad_pulse_errors",
+		description: "List error issues for a project, optionally grouped by fingerprint",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			range: z.enum(["24h", "7d", "30d", "90d"]).describe("Time range"),
+			group_by_fingerprint: z.boolean().optional().describe("Group by error fingerprint (true) or list all (false)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.errors({ project_id: input.project_id, range: input.range, group_by_fingerprint: input.group_by_fingerprint })),
+	},
+
+	devpad_pulse_logs: {
+		name: "devpad_pulse_logs",
+		description: "List logs for a project with optional level and message filtering",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			range: z.enum(["24h", "7d", "30d", "90d"]).describe("Time range"),
+			level: z.string().optional().describe("Log level filter"),
+			search: z.string().optional().describe("Search in log messages"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.logs(input)),
+	},
+
+	devpad_pulse_latency: {
+		name: "devpad_pulse_latency",
+		description: "Get request latency metrics (p50, p95, p99) for a project",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			range: z.enum(["24h", "7d", "30d", "90d"]).describe("Time range"),
+			route: z.string().optional().describe("Filter by HTTP route"),
+			percentiles: z.array(z.number()).optional().describe("Percentiles to compute (default [50, 95, 99])"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.latency(input)),
+	},
+
+	devpad_alerts_list: {
+		name: "devpad_alerts_list",
+		description: "List notification subscriptions (alerts) for a project",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.subs.list(input)),
+	},
+
+	devpad_alerts_subscribe: {
+		name: "devpad_alerts_subscribe",
+		description: "Create a new notification subscription (alert) for events",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			name: z.string().describe("Subscription name"),
+			filter: z.record(z.any()).describe("Event filter (name, level, url_pattern, properties)"),
+			channel: z.record(z.any()).describe("Notification channel (kind + config: discord, ntfy, email)"),
+			cooldown_seconds: z.number().optional().describe("Cooldown between notifications (default 60)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.subs.create(input)),
+	},
+
+	devpad_alerts_unsubscribe: {
+		name: "devpad_alerts_unsubscribe",
+		description: "Delete a notification subscription by ID",
+		inputSchema: z.object({
+			id: z.string().describe("Subscription ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.subs.delete(input.id)),
+	},
+
+	devpad_pulse_key_create: {
+		name: "devpad_pulse_key_create",
+		description: "Create a new ingest key for a project (returns plaintext once)",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			name: z.string().optional().describe("Key name/label"),
+			rate_limit_per_min: z.number().optional().describe("Rate limit in requests per minute (default 600)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pulse.keys.create(input)),
+	},
 };
 
 // Get all tool names

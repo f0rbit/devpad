@@ -6,7 +6,7 @@ import { and, eq } from "drizzle-orm";
 
 export type KeyError = { kind: "not_found"; resource?: string } | { kind: "conflict"; resource?: string; message?: string } | { kind: "db_error"; message?: string };
 
-type ApiKeyScope = "devpad" | "blog" | "media" | "all";
+type ApiKeyScope = "devpad" | "blog" | "media" | "pulse" | "all";
 
 const hashKey = async (raw_key: string): Promise<string> => {
 	const encoder = new TextEncoder();
@@ -103,4 +103,33 @@ export async function deleteApiKey(db: Database, key_id: string): Promise<Result
 	if (!rows || rows.length === 0) return err({ kind: "not_found" });
 
 	return ok(undefined);
+}
+
+export async function getUserAndScopeByApiKey(db: Database, raw_key: string): Promise<Result<{ user: User; scope: string }, KeyError>> {
+	const key_hash = await hashKey(raw_key);
+
+	const key_rows = await db
+		.select()
+		.from(api_keys)
+		.where(and(eq(api_keys.key_hash, key_hash), eq(api_keys.enabled, true), eq(api_keys.deleted, false)))
+		.catch((e: Error) => e);
+
+	if (key_rows instanceof Error) return err({ kind: "db_error", message: key_rows.message });
+
+	if (!key_rows || key_rows.length === 0) return err({ kind: "not_found" });
+	if (key_rows.length > 1) return err({ kind: "conflict", resource: "api_key", message: "Multiple matching keys found" });
+
+	const api_key = key_rows[0];
+
+	const users = await db
+		.select()
+		.from(user)
+		.where(eq(user.id, api_key.user_id))
+		.catch((e: Error) => e);
+
+	if (users instanceof Error) return err({ kind: "db_error", message: users.message });
+
+	if (!users || users.length === 0) return err({ kind: "not_found", resource: "user" });
+
+	return ok({ user: users[0] as User, scope: api_key.scope });
 }

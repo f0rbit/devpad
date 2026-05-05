@@ -153,6 +153,7 @@ app.get("/session", async c => {
 	const user = c.get("user");
 	const session = c.get("session");
 
+	const api_key_scope = c.get("api_key_scope");
 	if (!user || !session) {
 		return c.json({ authenticated: false, user: null, session: null });
 	}
@@ -178,6 +179,7 @@ app.get("/session", async c => {
 					task_view: user.task_view,
 				},
 		session: { id: session.id },
+		...(api_key_scope && { scope: api_key_scope }),
 	});
 });
 

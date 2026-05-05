@@ -8,6 +8,7 @@ const setNullAuth = (c: any) => {
 	c.set("user", null);
 	c.set("session", null);
 	c.set("auth_channel", "user");
+	c.set("api_key_scope", null);
 };
 
 export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
@@ -18,16 +19,17 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	if (auth_header?.startsWith("Bearer ")) {
 		const token = auth_header.slice(7);
 
-		const key_result = await keys.getUserByApiKey(db, token);
+		const key_result = await keys.getUserAndScopeByApiKey(db, token);
 		if (key_result.ok) {
 			c.set("user", {
-				id: key_result.value.id,
-				github_id: key_result.value.github_id!,
-				name: key_result.value.name!,
-				task_view: key_result.value.task_view as "list" | "grid",
+				id: key_result.value.user.id,
+				github_id: key_result.value.user.github_id!,
+				name: key_result.value.user.name!,
+				task_view: key_result.value.user.task_view as "list" | "grid",
 			});
 			c.set("session", null);
 			c.set("auth_channel", "api");
+			c.set("api_key_scope", key_result.value.scope);
 			return next();
 		}
 	}
@@ -45,6 +47,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 			});
 			c.set("session", session_data);
 			c.set("auth_channel", "user");
+			c.set("api_key_scope", null);
 
 			if (session_data.fresh) {
 				c.header("Set-Cookie", createSessionCookie(session_data.id, cookieConfig(config.environment)));

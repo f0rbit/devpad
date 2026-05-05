@@ -74,6 +74,7 @@ export class ApiClient {
 			tags: new HttpClient({ ...clientOptions, category: "tags" }),
 			blog: new HttpClient({ ...clientOptions, category: "blog" }),
 			media: new HttpClient({ ...clientOptions, category: "media" }),
+			pulse: new HttpClient({ ...clientOptions, category: "pulse" }),
 		} as const;
 	}
 
@@ -81,12 +82,13 @@ export class ApiClient {
 	 * Auth namespace with Result-wrapped operations
 	 */
 	public readonly auth = {
-		session: (): Promise<ApiResult<{ authenticated: boolean; user: any; session: any }>> =>
+		session: (): Promise<ApiResult<{ authenticated: boolean; user: any; session: any; scope?: string }>> =>
 			wrap(() =>
 				this.clients.auth_root.get<{
 					authenticated: boolean;
 					user: any;
 					session: any;
+					scope?: string;
 				}>("/auth/session")
 			),
 
@@ -804,6 +806,161 @@ export class ApiClient {
 	public history() {
 		return this.clients.projects.history();
 	}
+
+	/**
+	 * Pulse analytics and monitoring namespace
+	 */
+	public readonly pulse = {
+		/**
+		 * Get summary analytics for a project
+		 */
+		summary: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number } }): Promise<ApiResult<any>> =>
+			wrap(() =>
+				this.clients.pulse.get<any>("/summary/:project_id".replace(":project_id", input.project_id), {
+					query: typeof input.range === "string" ? { range: input.range } : { from: String(input.range.from), to: String(input.range.to) },
+				})
+			),
+
+		/**
+		 * List events for a project
+		 */
+		events: (input: { project_id: string; name?: string; level?: string; ts_from?: number; ts_to?: number; search?: string; limit?: number; cursor?: string }): Promise<ApiResult<any>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (input.name) query.name = input.name;
+				if (input.level) query.level = input.level;
+				if (typeof input.ts_from === "number") query.ts_from = String(input.ts_from);
+				if (typeof input.ts_to === "number") query.ts_to = String(input.ts_to);
+				if (input.search) query.search = input.search;
+				if (input.limit) query.limit = String(input.limit);
+				if (input.cursor) query.cursor = input.cursor;
+				return this.clients.pulse.get<any>("/events/:project_id".replace(":project_id", input.project_id), { query });
+			}),
+
+		/**
+		 * List error issues for a project
+		 */
+		errors: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number }; group_by_fingerprint?: boolean }): Promise<ApiResult<any>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (typeof input.range === "string") {
+					query.range = input.range;
+				} else {
+					query.from = String(input.range.from);
+					query.to = String(input.range.to);
+				}
+				if (input.group_by_fingerprint) query.group_by_fingerprint = "true";
+				return this.clients.pulse.get<any>("/errors/:project_id".replace(":project_id", input.project_id), { query });
+			}),
+
+		/**
+		 * List logs for a project
+		 */
+		logs: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number }; level?: string; search?: string }): Promise<ApiResult<any>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (typeof input.range === "string") {
+					query.range = input.range;
+				} else {
+					query.from = String(input.range.from);
+					query.to = String(input.range.to);
+				}
+				if (input.level) query.level = input.level;
+				if (input.search) query.search = input.search;
+				return this.clients.pulse.get<any>("/logs/:project_id".replace(":project_id", input.project_id), { query });
+			}),
+
+		/**
+		 * Get latency metrics for a project
+		 */
+		latency: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number }; route?: string; percentiles?: number[] }): Promise<ApiResult<any>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (typeof input.range === "string") {
+					query.range = input.range;
+				} else {
+					query.from = String(input.range.from);
+					query.to = String(input.range.to);
+				}
+				if (input.route) query.route = input.route;
+				if (input.percentiles && input.percentiles.length > 0) query.percentiles = input.percentiles.join(",");
+				return this.clients.pulse.get<any>("/latency/:project_id".replace(":project_id", input.project_id), { query });
+			}),
+
+		/**
+		 * Subscription management
+		 */
+		subs: {
+			/**
+			 * List subscriptions for a project
+			 */
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
+				wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
+
+			/**
+			 * Create a subscription
+			 */
+			create: (input: { project_id: string; name: string; filter: any; channel: any; cooldown_seconds?: number }): Promise<ApiResult<{ id: string }>> =>
+				wrap(() =>
+					this.clients.pulse.post<{ id: string }>("/admin/subs", {
+						body: {
+							project_id: input.project_id,
+							name: input.name,
+							filter: input.filter,
+							channel: input.channel,
+							cooldown_seconds: input.cooldown_seconds,
+						},
+					})
+				),
+
+			/**
+			 * Get a subscription by ID
+			 */
+			get: (id: string): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.get<any>(`/admin/subs/${id}`)),
+
+			/**
+			 * Update a subscription
+			 */
+			update: (id: string, patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>): Promise<ApiResult<any>> =>
+				wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
+
+			/**
+			 * Delete a subscription
+			 */
+			delete: (id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/subs/${id}`)),
+		},
+
+		/**
+		 * Ingest key management
+		 */
+		keys: {
+			/**
+			 * List ingest keys for a project
+			 */
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
+				wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
+
+			/**
+			 * Create a new ingest key (returns plaintext only once)
+			 */
+			create: (input: { project_id: string; name?: string; rate_limit_per_min?: number }): Promise<ApiResult<{ id: string; key: string }>> =>
+				wrap(() =>
+					this.clients.pulse.post<{ id: string; key: string }>("/admin/keys", {
+						body: {
+							project_id: input.project_id,
+							name: input.name,
+							rate_limit_per_min: input.rate_limit_per_min,
+						},
+					})
+				),
+
+			/**
+			 * Delete an ingest key
+			 */
+			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
+		},
+	};
 
 	/**
 	 * Get the API key
