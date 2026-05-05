@@ -12,6 +12,8 @@ export type AppConfig = {
 	frontend_url: string;
 	jwt_secret: string;
 	encryption_key: string;
+	pulse_api_base?: string;
+	pulse_internal_key?: string;
 };
 
 export type OAuthSecrets = {
@@ -30,6 +32,7 @@ export type AppVariables = {
 	user: AuthUser;
 	session: SessionData | null;
 	auth_channel: AuthChannel;
+	api_key_scope: string | null;
 	blogContext: BlogAppContext;
 	mediaContext: MediaAppContext;
 	config: AppConfig;

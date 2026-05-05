@@ -249,6 +249,41 @@ These type errors exist and should be ignored:
 - Read by `TaskSorter` (initial filter) and `TaskEditor` (default project)
 - Cleared on `/project` index page (project list)
 
+## Pulse Integration
+
+devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloudflare Worker; source: `~/dev/pulse`). The integration is server-to-server only — admin keys never reach the browser.
+
+### Auth + scope
+- `api_keys.scope` enum includes `"pulse"` (added in migration `0007_add_pulse_scope.sql`). Use this scope when issuing keys for analytics access; `"all"` is a superset.
+- `AppVariables.api_key_scope` is `null` for cookie-auth (browser sessions) and a scope literal (`"pulse"`, `"all"`, etc.) for API-key auth. Routes that branch on scope must handle `null`.
+- `getUserAndScopeByApiKey()` in `packages/core/src/auth/keys.ts` returns both user_id and scope; auth middleware exposes scope via `c.set("api_key_scope", ...)`.
+
+### Worker proxy — `/v1/pulse/*`
+- `packages/worker/src/routes/v1/pulse.ts` is a server-to-server forwarder. It holds `pulse_internal_key` (config-injected) and forwards to `pulse_api_base` after rewriting `/v1/pulse/<rest>` → `/<rest>`.
+- Ownership enforcement is per-route via `doesUserOwnProject` from `packages/core/src/services/projects.ts`. Pulse trusts whatever devpad forwards — the boundary is here, not upstream.
+- 60s edge cache on `GET /summary | /errors | /logs | /latency`. None on `/events` or `/admin/*`.
+- Pulse-unreachable (fetch failure or network 502) maps to 503 with `{ error: "pulse_unreachable" }`. Treat 503 as "pulse not deployed yet," not as an error in dashboard pages.
+
+### ApiClient — `client.pulse.*`
+- `client.pulse.{summary, events, errors, logs, latency}` for reads, `client.pulse.subs.*` for subscription CRUD, `client.pulse.keys.*` for ingest-key issuance. All return `ApiResult<T>` (devpad's existing wrapper).
+- All methods hit devpad's `/v1/pulse/*` proxy — they do NOT call pulse directly. Public site never sees pulse's URL or admin keys.
+- **Rebuild `@devpad/api` after editing `packages/api/src/api-client.ts`.** `apps/main` consumes `dist/index.d.ts`, not source. Run `cd packages/api && bun run build` before typechecking dependent packages or you'll see stale type errors.
+
+### MCP tools
+8 tools in `packages/api/src/tools.ts`: `devpad_pulse_summary`, `devpad_pulse_events`, `devpad_pulse_errors`, `devpad_pulse_logs`, `devpad_pulse_latency`, `devpad_alerts_list`, `devpad_alerts_subscribe`, `devpad_alerts_unsubscribe`, `devpad_pulse_key_create`. Same Zod schema → tool description pattern as the rest of `tools.ts`.
+
+### Dashboard
+- `apps/main/src/pages/project/[project_id]/pulse.astro` — server-rendered Astro shell with five tabs (overview / errors / logs / requests / subscriptions). Tab state is URL-driven (`?tab=...`) for deep-linkability.
+- Per-tab components live in `apps/main/src/components/solid/pulse/`. Use `client:visible` for read-only tabs and `client:load` only for the subscriptions tab (which mounts an interactive form). Do NOT use `client:only="solid-js"` — server-rendering preserves the empty-state SDK install snippet and the unreachable-503 fallback.
+- `apps/main/src/components/solid/project/PulseWidget.tsx` is a compact widget on the project overview page (KPIs + 7-day sparkline; click → `/project/[id]/pulse`).
+- Empty state shows the SDK install snippet using `import.meta.env.PUBLIC_PULSE_INGEST_URL` (default `https://pulse.devpad.tools`). When adding new public-side env vars, document them here and in wrangler config.
+
+## Hono Gotchas
+- **`c.req.url` and `c.req.method` are getters, not functions.** `c.req.url()` typechecks (`Function.prototype.toString` exists) but TypeErrors at runtime. Same with `method`. Phase 3 verification caught a real instance of this in the pulse proxy.
+
+## Test Runner Gotchas
+- `bun test` from repo root loads Playwright `.spec.ts` files and fails them with "Playwright Test did not expect test.describe() to be called here". This is a pre-existing fail-mode and the correct invocation is `bun run e2e:local` (which spins up a dev server). New e2e specs inherit this fail-mode — don't try to "fix" it by changing `bun test` config.
+
 # Debugging
 When running integration tests, logs will get piped to `packages/worker/server.log`, only read the logs if you're looking for errors.
 

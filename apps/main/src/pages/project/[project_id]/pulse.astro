@@ -1,0 +1,175 @@
+---
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import PulseOverview from "@/components/solid/pulse/PulseOverview";
+import PulseErrors from "@/components/solid/pulse/PulseErrors";
+import PulseLogs from "@/components/solid/pulse/PulseLogs";
+import PulseRequests from "@/components/solid/pulse/PulseRequests";
+import PulseSubscriptions from "@/components/solid/pulse/PulseSubscriptions";
+import { getProject } from "@/utils/api-client";
+
+const project_id = Astro.params.project_id!;
+
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
+
+const VALID_TABS = ["overview", "errors", "logs", "requests", "subscriptions"] as const;
+type TabName = (typeof VALID_TABS)[number];
+const tab_param = Astro.url.searchParams.get("tab") ?? "overview";
+const active_tab: TabName = (VALID_TABS as readonly string[]).includes(tab_param) ? (tab_param as TabName) : "overview";
+
+const tabs: Array<{ name: TabName; label: string }> = [
+	{ name: "overview", label: "overview" },
+	{ name: "errors", label: "errors" },
+	{ name: "logs", label: "logs" },
+	{ name: "requests", label: "requests" },
+	{ name: "subscriptions", label: "subscriptions" },
+];
+
+// Always load summary (drives overview KPIs + empty-state detection).
+const summary_result = await client.pulse.summary({ project_id: project.id, range: "7d" });
+
+let unreachable = false;
+let summary: any = null;
+let summary_error: string | null = null;
+if (summary_result.ok) {
+	summary = summary_result.value;
+} else {
+	const code = summary_result.error?.code ?? "";
+	if (code === "pulse_unreachable" || summary_result.error?.status_code === 503) {
+		unreachable = true;
+	} else {
+		summary_error = summary_result.error?.message ?? code ?? "Failed to load pulse summary";
+	}
+}
+
+// Determine "no data yet" state — used to show SDK install instructions.
+const totals = summary?.totals ?? {};
+const has_any_data = Boolean(totals.pageviews || totals.errors || totals.logs || totals.requests);
+
+// Fetch tab-specific data only when needed and reachable.
+let errors_data: any = null;
+let errors_error: string | null = null;
+let logs_data: any = null;
+let logs_error: string | null = null;
+let latency_data: any = null;
+let latency_error: string | null = null;
+let subs_data: any[] = [];
+let subs_error: string | null = null;
+
+if (!unreachable && active_tab === "errors") {
+	const r = await client.pulse.errors({ project_id: project.id, range: "7d", group_by_fingerprint: true });
+	if (r.ok) errors_data = r.value;
+	else errors_error = r.error?.message ?? "Failed to load errors";
+}
+if (!unreachable && active_tab === "logs") {
+	const r = await client.pulse.logs({ project_id: project.id, range: "24h" });
+	if (r.ok) logs_data = r.value;
+	else logs_error = r.error?.message ?? "Failed to load logs";
+}
+if (!unreachable && active_tab === "requests") {
+	const r = await client.pulse.latency({ project_id: project.id, range: "24h" });
+	if (r.ok) latency_data = r.value;
+	else latency_error = r.error?.message ?? "Failed to load latency";
+}
+if (!unreachable && active_tab === "subscriptions") {
+	const r = await client.pulse.subs.list({ project_id: project.id });
+	if (r.ok) subs_data = (r.value ?? []) as any[];
+	else subs_error = r.error?.message ?? "Failed to load subscriptions";
+}
+
+// Empty-state SDK helper: look up an ingest key (only if no data yet AND on overview).
+let ingest_key_id: string | null = null;
+let has_ingest_key = false;
+if (!unreachable && !has_any_data && active_tab === "overview") {
+	const keys_result = await client.pulse.keys.list({ project_id: project.id });
+	if (keys_result.ok && Array.isArray(keys_result.value) && keys_result.value.length > 0) {
+		has_ingest_key = true;
+		ingest_key_id = keys_result.value[0]?.id ?? null;
+	}
+}
+
+// Public ingest endpoint surfaced to users in the empty-state SDK snippet.
+// Override with PUBLIC_PULSE_INGEST_URL for self-hosted deployments.
+const pulse_ingest_url = import.meta.env.PUBLIC_PULSE_INGEST_URL ?? "https://pulse.devpad.tools";
+
+// Logs (logs are returned wrapped in {events: [...]} or plain — normalise).
+const logs_list = Array.isArray(logs_data) ? logs_data : Array.isArray(logs_data?.events) ? logs_data.events : Array.isArray(logs_data?.logs) ? logs_data.logs : [];
+const errors_list = Array.isArray(errors_data) ? errors_data : Array.isArray(errors_data?.issues) ? errors_data.issues : Array.isArray(errors_data?.errors) ? errors_data.errors : [];
+---
+
+<PageLayout title={`Pulse - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<div class="stack stack-md">
+			<nav class="row" style="gap: 0.5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;" aria-label="pulse tabs" data-testid="pulse-tabs">
+				{tabs.map(t => (
+					<a
+						href={`/project/${project_id}/pulse${t.name === "overview" ? "" : `?tab=${t.name}`}`}
+						class={active_tab === t.name ? "active" : ""}
+						data-tab={t.name}
+						data-testid={`pulse-tab-${t.name}`}
+						style={`padding: 0.25rem 0.75rem; text-decoration: none; ${active_tab === t.name ? "border-bottom: 2px solid var(--accent); font-weight: 500;" : "color: var(--text-faint);"}`}
+					>
+						{t.label}
+					</a>
+				))}
+			</nav>
+
+			{unreachable && (
+				<div class="stack stack-sm" data-testid="pulse-unreachable" style="padding: 1.5rem; border: 1px solid var(--border); border-radius: var(--radius, 4px);">
+					<h3 style="margin: 0;">analytics service offline</h3>
+					<p class="text-sm text-faint" style="margin: 0;">The pulse worker is unreachable right now. Try again later.</p>
+				</div>
+			)}
+
+			{!unreachable && !has_any_data && active_tab === "overview" && (
+				<div class="stack stack-sm" data-testid="pulse-empty" style="padding: 1.5rem; border: 1px dashed var(--border); border-radius: var(--radius, 4px);">
+					<h3 style="margin: 0;">no analytics data yet</h3>
+					<p class="text-sm text-faint" style="margin: 0;">Add the pulse SDK to start collecting events:</p>
+					<pre style="margin: 0; padding: 0.75rem; background: var(--bg-subtle, #1a1a1a); border-radius: var(--radius, 4px); font-size: 0.8rem; overflow: auto;"><code>{`import { createPulse } from "@f0rbit/pulse-client/browser";
+
+const pulse = createPulse({
+  project_id: "${project.id}",
+  ingest_key: "<your-ingest-key>",
+  endpoint: "${pulse_ingest_url}",
+});
+
+pulse.event("signup", { plan: "pro" });`}</code></pre>
+					{has_ingest_key ? (
+						<p class="text-sm text-faint" style="margin: 0;">
+							This project already has an ingest key (<code>{ingest_key_id}</code>). Re-display it via the API or create a new one.
+						</p>
+					) : (
+						<form method="POST" action={`/project/${project_id}/pulse/keys/create`} style="margin: 0;">
+							<button type="submit" class="button" data-testid="pulse-create-key" disabled>
+								Create ingest key (coming soon)
+							</button>
+							<p class="text-sm text-faint" style="margin: 0.25rem 0 0 0;">Use <code>client.pulse.keys.create()</code> from a script for now.</p>
+						</form>
+					)}
+				</div>
+			)}
+
+			{!unreachable && (active_tab !== "overview" || has_any_data) && (
+				<>
+					{active_tab === "overview" && (
+						<PulseOverview projectId={project.id} projectSlug={project_id} summary={summary} error={summary_error} client:visible />
+					)}
+					{active_tab === "errors" && (
+						<PulseErrors projectId={project.id} projectSlug={project_id} issues={errors_list} error={errors_error} client:visible />
+					)}
+					{active_tab === "logs" && (
+						<PulseLogs projectId={project.id} projectSlug={project_id} logs={logs_list} error={logs_error} client:visible />
+					)}
+					{active_tab === "requests" && (
+						<PulseRequests projectId={project.id} projectSlug={project_id} latency={latency_data} error={latency_error} client:visible />
+					)}
+					{active_tab === "subscriptions" && (
+						<PulseSubscriptions projectId={project.id} projectSlug={project_id} subscriptions={subs_data} error={subs_error} client:load />
+					)}
+				</>
+			)}
+		</div>
+	</ProjectLayout>
+</PageLayout>
