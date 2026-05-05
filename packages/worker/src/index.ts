@@ -85,6 +85,25 @@ export const createApi = (options?: ApiOptions) => {
 		app.use("*", configMiddleware);
 	}
 
+	// TODO(pulse): uncomment after publishing @f0rbit/pulse-client
+	// import { createPulse } from "@f0rbit/pulse-client/server";
+	// import { pulseTracing } from "@f0rbit/pulse-client/hono";
+	//
+	// app.use("*", async (c, next) => {
+	// 	const config = c.get("config");
+	// 	if (!config.pulse_api_base || !config.pulse_devpad_ingest_key || !config.devpad_project_id) {
+	// 		await next();
+	// 		return;
+	// 	}
+	// 	const pulse = createPulse({
+	// 		project_id: config.devpad_project_id,
+	// 		ingest_key: config.pulse_devpad_ingest_key,
+	// 		endpoint: config.pulse_api_base,
+	// 		release: config.git_sha,
+	// 	});
+	// 	return pulseTracing({ pulse })(c, next);
+	// });
+
 	app.use("*", authMiddleware);
 	if (options?.blogContext && options?.mediaContext) {
 		const blog_ctx = options.blogContext;

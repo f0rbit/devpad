@@ -24,6 +24,8 @@ invocation_logs = true
 ENVIRONMENT = "production"
 API_URL = "https://devpad.tools"
 FRONTEND_URL = "https://devpad.tools"
+PULSE_API_BASE = "https://pulse.devpad.tools"
+DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
 
 [[d1_databases]]
 binding = "DB"
@@ -51,6 +53,8 @@ routes = [
 ENVIRONMENT = "preview"
 API_URL = "https://staging.devpad.tools"
 FRONTEND_URL = "https://staging.devpad.tools"
+PULSE_API_BASE = "https://pulse.devpad.tools"
+DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
 
 [[env.preview.d1_databases]]
 binding = "DB"
@@ -81,3 +85,10 @@ invocation_logs = true
 # REDDIT_CLIENT_SECRET
 # TWITTER_CLIENT_ID
 # TWITTER_CLIENT_SECRET
+
+# Pulse self-instrumentation (set once devpad is registered as a project on pulse):
+# PULSE_INTERNAL_KEY            (devpad bearer with scope=pulse, server-to-server proxy)
+# PULSE_DEVPAD_INGEST_KEY       (pk_* ingest key for devpad's project — write-only public key)
+# GIT_SHA                       (build-time, set in workflow env block — also as PUBLIC_GIT_SHA for the browser)
+#
+# All Pulse vars are graceful no-op if unset.

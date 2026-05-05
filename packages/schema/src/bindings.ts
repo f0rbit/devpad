@@ -20,4 +20,9 @@ export type Bindings = {
 	REDDIT_CLIENT_SECRET: string;
 	TWITTER_CLIENT_ID: string;
 	TWITTER_CLIENT_SECRET: string;
+	PULSE_API_BASE?: string;
+	PULSE_INTERNAL_KEY?: string;
+	PULSE_DEVPAD_INGEST_KEY?: string;
+	DEVPAD_PROJECT_ID?: string;
+	GIT_SHA?: string;
 };

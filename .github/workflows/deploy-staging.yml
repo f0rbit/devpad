@@ -35,6 +35,10 @@ jobs:
           NODE_ENV: production
           PUBLIC_API_SERVER_URL: https://staging.devpad.tools/api/v1
           SITE_URL: https://staging.devpad.tools
+          PUBLIC_PULSE_INGEST_URL: ${{ vars.PUBLIC_PULSE_INGEST_URL }}
+          PUBLIC_DEVPAD_PROJECT_ID: ${{ vars.PUBLIC_DEVPAD_PROJECT_ID }}
+          PUBLIC_DEVPAD_PULSE_INGEST_KEY: ${{ secrets.PUBLIC_DEVPAD_PULSE_INGEST_KEY }}
+          PUBLIC_GIT_SHA: ${{ github.sha }}
 
       - name: Apply D1 migrations
         run: bunx wrangler d1 migrations apply DB --remote --env preview

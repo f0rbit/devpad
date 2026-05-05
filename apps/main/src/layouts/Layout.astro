@@ -15,6 +15,12 @@ const DEFAULT_DESCRIPTION = "Developer tools for project management, task tracki
 const { title, description = DEFAULT_DESCRIPTION, keywords = [], canonical, noindex = false } = Astro.props;
 
 const canonicalUrl = canonical ?? Astro.url.href;
+
+const PULSE_INGEST_URL = import.meta.env.PUBLIC_PULSE_INGEST_URL;
+const DEVPAD_PROJECT_ID = import.meta.env.PUBLIC_DEVPAD_PROJECT_ID;
+const PULSE_INGEST_KEY = import.meta.env.PUBLIC_DEVPAD_PULSE_INGEST_KEY;
+const RELEASE = import.meta.env.PUBLIC_GIT_SHA;
+const pulse_ready = Boolean(PULSE_INGEST_URL && DEVPAD_PROJECT_ID && PULSE_INGEST_KEY);
 ---
 
 <!doctype html>
@@ -45,6 +51,22 @@ const canonicalUrl = canonical ?? Astro.url.href;
 
 		<link rel="canonical" href={canonicalUrl} />
 		{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+		{pulse_ready && (
+			<script is:inline define:vars={{ PULSE_INGEST_URL, DEVPAD_PROJECT_ID, PULSE_INGEST_KEY, RELEASE }}>
+				// TODO(pulse): uncomment after publishing @f0rbit/pulse-client
+				// import("@f0rbit/pulse-client").then(({ createPulse }) => {
+				// 	window.__pulse = createPulse({
+				// 		project_id: DEVPAD_PROJECT_ID,
+				// 		ingest_key: PULSE_INGEST_KEY,
+				// 		endpoint: PULSE_INGEST_URL,
+				// 		auto_pageview: true,
+				// 		release: RELEASE,
+				// 	});
+				// });
+				console.debug("[pulse] env present, awaiting SDK publish");
+			</script>
+		)}
 	</head>
 	<slot />
 </html>

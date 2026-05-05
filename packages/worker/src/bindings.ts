@@ -14,6 +14,9 @@ export type AppConfig = {
 	encryption_key: string;
 	pulse_api_base?: string;
 	pulse_internal_key?: string;
+	pulse_devpad_ingest_key?: string;
+	devpad_project_id?: string;
+	git_sha?: string;
 };
 
 export type OAuthSecrets = {
