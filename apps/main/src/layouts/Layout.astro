@@ -54,17 +54,15 @@ const pulse_ready = Boolean(PULSE_INGEST_URL && DEVPAD_PROJECT_ID && PULSE_INGES
 
 		{pulse_ready && (
 			<script is:inline define:vars={{ PULSE_INGEST_URL, DEVPAD_PROJECT_ID, PULSE_INGEST_KEY, RELEASE }}>
-				// TODO(pulse): uncomment after publishing @f0rbit/pulse-client
-				// import("@f0rbit/pulse-client").then(({ createPulse }) => {
-				// 	window.__pulse = createPulse({
-				// 		project_id: DEVPAD_PROJECT_ID,
-				// 		ingest_key: PULSE_INGEST_KEY,
-				// 		endpoint: PULSE_INGEST_URL,
-				// 		auto_pageview: true,
-				// 		release: RELEASE,
-				// 	});
-				// });
-				console.debug("[pulse] env present, awaiting SDK publish");
+				import("@f0rbit/pulse-client").then(({ createPulse }) => {
+					window.__pulse = createPulse({
+						project_id: DEVPAD_PROJECT_ID,
+						ingest_key: PULSE_INGEST_KEY,
+						endpoint: PULSE_INGEST_URL,
+						auto_pageview: true,
+						release: RELEASE,
+					});
+				});
 			</script>
 		)}
 	</head>

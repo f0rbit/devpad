@@ -21,6 +21,7 @@
 		"@f0rbit/ui": "^0.1.9",
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
+		"@f0rbit/pulse-client": "^0.0.1",
 		"@types/bun": "^1.0.12",
 		"astro": "^5.13.7",
 		"lucide-solid": "^0.454.0",
