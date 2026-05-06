@@ -10,6 +10,11 @@ export const configMiddleware = createMiddleware<AppContext>(async (c, next) => 
 		frontend_url: env.FRONTEND_URL,
 		jwt_secret: env.JWT_SECRET,
 		encryption_key: env.ENCRYPTION_KEY,
+		pulse_api_base: env.PULSE_API_BASE,
+		pulse_internal_key: env.PULSE_INTERNAL_KEY,
+		pulse_devpad_ingest_key: env.PULSE_DEVPAD_INGEST_KEY,
+		devpad_project_id: env.DEVPAD_PROJECT_ID,
+		git_sha: env.GIT_SHA,
 	};
 
 	const oauth_secrets: OAuthSecrets = {

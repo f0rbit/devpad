@@ -6,6 +6,8 @@ import type { Bindings } from "@devpad/schema/bindings";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Database } from "@devpad/schema/database/types";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
+import { createPulse } from "@f0rbit/pulse-client";
+import { pulseTracing } from "@f0rbit/pulse-client/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppConfig, AppContext, OAuthSecrets } from "./bindings.js";
@@ -84,6 +86,21 @@ export const createApi = (options?: ApiOptions) => {
 	} else {
 		app.use("*", configMiddleware);
 	}
+
+	app.use("*", async (c, next) => {
+		const config = c.get("config");
+		if (!config.pulse_api_base || !config.pulse_devpad_ingest_key || !config.devpad_project_id) {
+			await next();
+			return;
+		}
+		const pulse = createPulse({
+			project_id: config.devpad_project_id,
+			ingest_key: config.pulse_devpad_ingest_key,
+			endpoint: config.pulse_api_base,
+			release: config.git_sha,
+		});
+		return pulseTracing({ pulse })(c, next);
+	});
 
 	app.use("*", authMiddleware);
 	if (options?.blogContext && options?.mediaContext) {
