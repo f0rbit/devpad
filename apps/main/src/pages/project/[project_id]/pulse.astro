@@ -128,7 +128,7 @@ const errors_list = Array.isArray(errors_data) ? errors_data : Array.isArray(err
 				<div class="stack stack-sm" data-testid="pulse-empty" style="padding: 1.5rem; border: 1px dashed var(--border); border-radius: var(--radius, 4px);">
 					<h3 style="margin: 0;">no analytics data yet</h3>
 					<p class="text-sm text-faint" style="margin: 0;">Add the pulse SDK to start collecting events:</p>
-					<pre style="margin: 0; padding: 0.75rem; background: var(--bg-subtle, #1a1a1a); border-radius: var(--radius, 4px); font-size: 0.8rem; overflow: auto;"><code>{`import { createPulse } from "@f0rbit/pulse-client/browser";
+					<pre style="margin: 0; padding: 0.75rem; background: var(--bg-subtle, #1a1a1a); border-radius: var(--radius, 4px); font-size: 0.8rem; overflow: auto;"><code>{`import { createPulse } from "@f0rbit/pulse-client";
 
 const pulse = createPulse({
   project_id: "${project.id}",

@@ -6,7 +6,7 @@ import type { Bindings } from "@devpad/schema/bindings";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Database } from "@devpad/schema/database/types";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
-import { createPulse } from "@f0rbit/pulse-client/server";
+import { createPulse } from "@f0rbit/pulse-client";
 import { pulseTracing } from "@f0rbit/pulse-client/hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
