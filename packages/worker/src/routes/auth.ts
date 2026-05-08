@@ -154,7 +154,7 @@ app.get("/session", async c => {
 	const session = c.get("session");
 
 	const api_key_scope = c.get("api_key_scope");
-	if (!user || !session) {
+	if (!user) {
 		return c.json({ authenticated: false, user: null, session: null });
 	}
 
@@ -178,7 +178,7 @@ app.get("/session", async c => {
 					github_id: user.github_id,
 					task_view: user.task_view,
 				},
-		session: { id: session.id },
+		session: session ? { id: session.id } : null,
 		...(api_key_scope && { scope: api_key_scope }),
 	});
 });
