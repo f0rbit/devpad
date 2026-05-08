@@ -53,7 +53,9 @@ routes = [
 ENVIRONMENT = "preview"
 API_URL = "https://staging.devpad.tools"
 FRONTEND_URL = "https://staging.devpad.tools"
-PULSE_API_BASE = "https://pulse-production-pulseapiscript-doseawwm.dev-818.workers.dev"
+# Stage isolation: staging devpad → staging pulse → staging devpad (validates keys against the right DB).
+# Production keeps the production pulse URL above.
+PULSE_API_BASE = "https://pulse-preview-pulseapiscript-srzukuoe.dev-818.workers.dev"
 DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
 
 [[env.preview.d1_databases]]
