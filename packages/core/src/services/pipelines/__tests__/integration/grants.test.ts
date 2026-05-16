@@ -18,11 +18,7 @@ const build_mock_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant
 	...overrides,
 });
 
-function create_mock_db(responses: {
-	list?: PipelineGrant[];
-	insert?: PipelineGrant[];
-	update?: PipelineGrant[];
-} = {}) {
+function create_mock_db(responses: { list?: PipelineGrant[]; insert?: PipelineGrant[]; update?: PipelineGrant[] } = {}) {
 	const chain: any = {
 		select: () => chain,
 		from: () => chain,
@@ -67,10 +63,7 @@ function create_mock_db(responses: {
 describe("grants service", () => {
 	describe("list_grants", () => {
 		test("returns list of grants for a package", async () => {
-			const grants = [
-				build_mock_grant({ id: "grant_1" }),
-				build_mock_grant({ id: "grant_2", scope: "github:read:my-org/*" }),
-			];
+			const grants = [build_mock_grant({ id: "grant_1" }), build_mock_grant({ id: "grant_2", scope: "github:read:my-org/*" })];
 			const db = create_mock_db({ list: grants });
 
 			const result = await list_grants(db, "pipeline-package_pkg");
@@ -104,12 +97,7 @@ describe("grants service", () => {
 			];
 			const db = create_mock_db({ list: grants });
 
-			const result = await check_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"anthropic:messages"
-			);
+			const result = await check_grant(db, "pipeline-package_pkg", "staging", "anthropic:messages");
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe(true);
@@ -126,12 +114,7 @@ describe("grants service", () => {
 			];
 			const db = create_mock_db({ list: grants });
 
-			const result = await check_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"anthropic:messages"
-			);
+			const result = await check_grant(db, "pipeline-package_pkg", "staging", "anthropic:messages");
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe(false);
@@ -148,12 +131,7 @@ describe("grants service", () => {
 			];
 			const db = create_mock_db({ list: grants });
 
-			const result = await check_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"anthropic:messages"
-			);
+			const result = await check_grant(db, "pipeline-package_pkg", "staging", "anthropic:messages");
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe(false);
@@ -170,12 +148,7 @@ describe("grants service", () => {
 			];
 			const db = create_mock_db({ list: grants });
 
-			const result = await check_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"github:read:my-org/repo-x"
-			);
+			const result = await check_grant(db, "pipeline-package_pkg", "staging", "github:read:my-org/repo-x");
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe(true);
@@ -194,12 +167,7 @@ describe("grants service", () => {
 			];
 			const db = create_mock_db({ insert: inserted });
 
-			const result = await request_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"anthropic:messages"
-			);
+			const result = await request_grant(db, "pipeline-package_pkg", "staging", "anthropic:messages");
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.granted_at).not.toBeNull();
@@ -216,12 +184,7 @@ describe("grants service", () => {
 			];
 			const db = create_mock_db({ insert: inserted });
 
-			const result = await request_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"github:read:my-org/*"
-			);
+			const result = await request_grant(db, "pipeline-package_pkg", "staging", "github:read:my-org/*");
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.granted_at).toBeNull();
@@ -231,12 +194,7 @@ describe("grants service", () => {
 		test("returns error if insert fails", async () => {
 			const db = create_mock_db({ insert: [] });
 
-			const result = await request_grant(
-				db,
-				"pipeline-package_pkg",
-				"staging",
-				"anthropic:messages"
-			);
+			const result = await request_grant(db, "pipeline-package_pkg", "staging", "anthropic:messages");
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.kind).toBe("store_error");

@@ -21,7 +21,12 @@
 		"./services/media/cron": "./src/services/media/cron/index.ts",
 		"./services/media/storage": "./src/services/media/storage.ts",
 		"./services/media/sync": "./src/services/media/sync.ts",
+		"./services/pipelines": "./src/services/pipelines/index.ts",
 		"./services/pipelines/gates": "./src/services/pipelines/gates/index.ts",
+		"./services/pipelines/state-machine": "./src/services/pipelines/state-machine.ts",
+		"./services/pipelines/runs": "./src/services/pipelines/runs.ts",
+		"./services/pipelines/deploy": "./src/services/pipelines/deploy.ts",
+		"./services/pipelines/rollback": "./src/services/pipelines/rollback.ts",
 		"./ui": "./src/ui/index.ts",
 		"./ui/styles": "./src/ui/styles/globals.css",
 		"./ui/api-client": "./src/ui/api-client.ts",
@@ -33,6 +38,8 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@devpad/pipeline-fakes": "workspace:*",
+		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@f0rbit/corpus": "^0.3.5",
 		"@octokit/auth-oauth-app": "^9.0.1",

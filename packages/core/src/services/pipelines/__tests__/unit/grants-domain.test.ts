@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { evaluate_grant_check, is_auto_approvable, is_grant_match } from "../../grants-domain.js";
 import type { PipelineGrant } from "@devpad/schema";
+import { evaluate_grant_check, is_auto_approvable, is_grant_match } from "../../grants-domain.js";
 
 describe("grants-domain", () => {
 	describe("is_grant_match", () => {
@@ -79,10 +79,7 @@ describe("grants-domain", () => {
 
 		for (const tc of test_cases) {
 			test(tc.description, () => {
-				const result = is_grant_match(
-					{ scope: tc.grant_scope },
-					tc.requested_scope
-				);
+				const result = is_grant_match({ scope: tc.grant_scope }, tc.requested_scope);
 				expect(result).toBe(tc.should_match);
 			});
 		}
@@ -111,9 +108,7 @@ describe("grants-domain", () => {
 	});
 
 	describe("evaluate_grant_check", () => {
-		const build_grant = (
-			overrides: Partial<PipelineGrant> = {}
-		): PipelineGrant => ({
+		const build_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant => ({
 			id: "pipeline-grant_123",
 			package_id: "pipeline-package_pkg",
 			stage_name: "staging",
@@ -151,11 +146,7 @@ describe("grants-domain", () => {
 				}),
 			];
 
-			const result = evaluate_grant_check(
-				grants,
-				"anthropic:messages",
-				"staging"
-			);
+			const result = evaluate_grant_check(grants, "anthropic:messages", "staging");
 			expect(result.granted).toBe(false);
 			expect(result.reason).toContain("No approved grant found");
 		});
@@ -195,11 +186,7 @@ describe("grants-domain", () => {
 				}),
 			];
 
-			const result = evaluate_grant_check(
-				grants,
-				"github:read:my-org/repo-x",
-				"staging"
-			);
+			const result = evaluate_grant_check(grants, "github:read:my-org/repo-x", "staging");
 			expect(result.granted).toBe(true);
 		});
 

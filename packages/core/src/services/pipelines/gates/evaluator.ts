@@ -21,6 +21,7 @@ export interface PulseEmitter {
 export interface ApprovalStore {
 	write_pending(run_id: string, stage: string, scope?: string): Promise<Result<void, StoreError>>;
 	read_decision(run_id: string, stage: string): Promise<Result<Decision | null, StoreError>>;
+	write_decision(run_id: string, stage: string, decision: Decision): Promise<Result<void, StoreError>>;
 }
 
 export type PulseEvent =
