@@ -30,3 +30,21 @@ export type {
 	StageContext,
 	TransitionKey,
 } from "./types.ts";
+
+// Scaffolder pure surface — consumed by `@devpad/cli` for `pipelines init`.
+export {
+	compute_compatibility_date,
+	derive_template_vars,
+	render_template,
+	SCAFFOLDER_TEMPLATES,
+	type TemplateEntry,
+	validate_package_name,
+} from "./scaffolder/index.ts";
+export type {
+	DefaultGateKind,
+	RenderError as ScaffolderRenderError,
+	RolloutMode,
+	ScaffolderInput,
+	TemplateVars,
+	ValidationError as ScaffolderValidationError,
+} from "./scaffolder/index.ts";

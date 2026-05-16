@@ -13,7 +13,8 @@
 	],
 	"scripts": {
 		"build": "bun build src/index.ts --outdir dist --target node --packages=bundle",
-		"test": "bun test",
+		"test": "bun test tests/unit tests/integration",
+		"typecheck": "tsc --noEmit",
 		"prepublishOnly": "bun run build"
 	},
 	"keywords": [
@@ -45,7 +46,9 @@
 	"dependencies": {},
 	"devDependencies": {
 		"@devpad/api": "workspace:*",
+		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",
+		"@f0rbit/corpus": "file:../../../corpus",
 		"@types/node": "^20.11.24",
 		"bun-types": "latest",
 		"chalk": "^5.3.0",

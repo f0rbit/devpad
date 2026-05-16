@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.alchemy/
+.wrangler/
+.dev.vars
+.env
+.env.local
+playwright-report/
+test-results/
+*.log

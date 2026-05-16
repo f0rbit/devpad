@@ -14,7 +14,8 @@
 		"./discriminator": "./src/discriminator.ts",
 		"./dsl": "./src/dsl.ts",
 		"./default-gradual": "./src/default-gradual.ts",
-		"./default-atomic": "./src/default-atomic.ts"
+		"./default-atomic": "./src/default-atomic.ts",
+		"./scaffolder": "./src/scaffolder/index.ts"
 	},
 	"scripts": {
 		"test": "bun test",
