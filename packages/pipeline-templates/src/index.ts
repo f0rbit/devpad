@@ -1,0 +1,32 @@
+/**
+ * @module pipeline-templates
+ *
+ * Pure DSL for declaring deployment pipeline templates. Every export is
+ * either a data shape, a pure constructor, or a deterministic function
+ * over data — no IO, no time, no randomness. Downstream consumers in
+ * `@devpad/core` (state machine, gate evaluators) and `@devpad/pipelines`
+ * (Durable Object) get this package's outputs handed to them and never
+ * have to reach back in.
+ */
+
+export { defaultAtomic, defaultAtomicGates } from "./default-atomic.ts";
+export { defaultGradual, defaultGradualGates } from "./default-gradual.ts";
+export { type ResolvedRollout, resolve_rollout } from "./discriminator.ts";
+export { type DslError, type ExtendTemplateOverrides, extendTemplate } from "./dsl.ts";
+export { analysis, auto, manual } from "./gates.ts";
+export { type DurationParseError, expand_rollout, parse_duration } from "./rollout.ts";
+export type {
+	AnalysisTemplateRef,
+	BakeWindow,
+	Duration,
+	ForcedAtomicReason,
+	Gate,
+	GateVerdict,
+	PipelineTemplate,
+	PostDeployCheck,
+	PreDeployCheck,
+	Rollout,
+	Stage,
+	StageContext,
+	TransitionKey,
+} from "./types.ts";
