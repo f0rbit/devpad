@@ -23,7 +23,11 @@ import { pipeline_package, user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
-import { type DoCtx, type LineageProvider, type ManifestProvider, make_routes, make_run_handler, type RoutesDeps, type TemplateResolver } from "../../src/index.ts";
+// Import from source modules directly (NOT `../../src/index.ts`) so the
+// test bundle skips `grants-rpc-entrypoint.ts`, which pulls in the
+// `cloudflare:workers` runtime-only module that bun can't resolve.
+import { type LineageProvider, type ManifestProvider, make_routes, type RoutesDeps, type TemplateResolver } from "../../src/routes.ts";
+import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
 
 export const SCRIPT_NAME_FOR = (package_id: string): string => `pipeline_${package_id}`;
 

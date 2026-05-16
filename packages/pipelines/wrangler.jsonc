@@ -3,10 +3,16 @@
 	"name": "devpad-pipelines",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-05-01",
-	"compatibility_flags": ["nodejs_compat"],
+	// service-bindings RPC + nodejs interop for hono/zod
+	"compatibility_flags": ["nodejs_compat", "rpc"],
 	"observability": {
 		"enabled": true
 	},
+	// The Worker exports two RPC-callable classes:
+	// - default Hono `fetch` (orchestrator routes)
+	// - `PipelinesGrantsEndpoint extends WorkerEntrypoint` (consumed by vault via
+	//   `services[].entrypoint = "PipelinesGrantsEndpoint"`)
+	// Both classes share the same `DB` binding below.
 	"durable_objects": {
 		"bindings": [
 			{

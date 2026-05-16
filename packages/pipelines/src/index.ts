@@ -69,6 +69,9 @@ export default {
 export type { PipelineEnv } from "./bindings.ts";
 export type { DoRouter, DoStub } from "./do-router.ts";
 export { make_cf_router } from "./do-router.ts";
+export { PipelinesGrantsEndpoint } from "./grants-rpc-entrypoint.ts";
+export type { CallerIdentity, GrantCheckResponse, GrantRpcError, PipelinesGrantsRPC } from "./grants-rpc.ts";
+export { PipelinesGrantsService } from "./grants-rpc.ts";
 export type { LineageProvider, ManifestProvider, RoutesDeps, TemplateResolver } from "./routes.ts";
 export { make_routes } from "./routes.ts";
 export type { DoCtx, RunDoServices } from "./run-do.ts";
