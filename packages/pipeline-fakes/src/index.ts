@@ -25,4 +25,11 @@ export type {
 } from "./github-provider.ts";
 export { type AnthropicCall, InMemoryAnthropicProvider } from "./in-memory-anthropic.ts";
 export { InMemoryCloudflareProvider } from "./in-memory-cloudflare.ts";
+export {
+	type DurableObjectFetcher,
+	type DurableObjectIdFake,
+	InMemoryDurableObjectNamespace,
+	InMemoryDurableObjectState,
+	type StorageFake,
+} from "./in-memory-do.ts";
 export { type DispatchRecord, InMemoryGithubProvider } from "./in-memory-github.ts";

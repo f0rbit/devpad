@@ -1,0 +1,87 @@
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "devpad-pipelines",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-05-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "PIPELINE_RUNS",
+				"class_name": "PipelineRunDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["PipelineRunDO"]
+		}
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "devpad-unified-db",
+			"database_id": "43bc9f1b-70a9-4844-b3c6-9c95e14bacbf"
+		}
+	],
+	"r2_buckets": [
+		{
+			"binding": "CORPUS_BUCKET",
+			"bucket_name": "devpad-corpus"
+		}
+	],
+	"services": [
+		{
+			"binding": "ANTHROPIC",
+			"service": "vault"
+		},
+		{
+			"binding": "PULSE",
+			"service": "pulse"
+		}
+	],
+	"vars": {
+		"ENVIRONMENT": "production"
+	},
+	"env": {
+		"staging": {
+			"name": "devpad-pipelines-staging",
+			"vars": {
+				"ENVIRONMENT": "staging"
+			},
+			"d1_databases": [
+				{
+					"binding": "DB",
+					"database_name": "devpad-unified-db-staging",
+					"database_id": "00000000-0000-0000-0000-000000000000"
+				}
+			],
+			"r2_buckets": [
+				{
+					"binding": "CORPUS_BUCKET",
+					"bucket_name": "devpad-corpus-staging"
+				}
+			],
+			"services": [
+				{
+					"binding": "ANTHROPIC",
+					"service": "vault-staging"
+				},
+				{
+					"binding": "PULSE",
+					"service": "pulse-staging"
+				}
+			]
+		},
+		"production": {
+			"name": "devpad-pipelines",
+			"vars": {
+				"ENVIRONMENT": "production"
+			}
+		}
+	}
+}

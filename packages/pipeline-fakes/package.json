@@ -13,10 +13,12 @@
 		"./github": "./src/github-provider.ts",
 		"./github/in-memory": "./src/in-memory-github.ts",
 		"./anthropic": "./src/anthropic-provider.ts",
-		"./anthropic/in-memory": "./src/in-memory-anthropic.ts"
+		"./anthropic/in-memory": "./src/in-memory-anthropic.ts",
+		"./durable-object/in-memory": "./src/in-memory-do.ts"
 	},
 	"scripts": {
 		"test": "bun test",
+		"typecheck": "tsc --noEmit",
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
