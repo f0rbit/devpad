@@ -5,6 +5,7 @@ import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
 import ora from "ora";
+import { register_pipelines_commands } from "./commands/pipelines.ts";
 
 const isTTY = process.stdout.isTTY;
 
@@ -556,5 +557,9 @@ user.command("preferences")
 			handleError(error);
 		}
 	});
+
+// Pipelines subcommand group — `init` is fully local (no API key);
+// `run` / `approve` / `cancel` / `rollback` use the default API client.
+register_pipelines_commands(program, () => getApiClient());
 
 await program.parseAsync(process.argv);

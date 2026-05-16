@@ -1,0 +1,30 @@
+{
+	"$schema": "../../../../../node_modules/wrangler/config-schema.json",
+	"name": "anthropic-search",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-05-17",
+	// RPC service bindings for vault + pulse, nodejs_compat for hono/zod
+	"compatibility_flags": ["nodejs_compat", "rpc"],
+	"observability": {
+		"enabled": true
+	},
+	"env": {
+		"staging": {
+			"name": "anthropic-search-staging"
+		},
+		"production": {
+			"name": "anthropic-search"
+		}
+	},
+	"services": [
+		{
+			"binding": "ANTHROPIC",
+			"service": "vault",
+			"entrypoint": "AnthropicVault"
+		},
+		{
+			"binding": "PULSE",
+			"service": "pulse"
+		}
+	]
+}

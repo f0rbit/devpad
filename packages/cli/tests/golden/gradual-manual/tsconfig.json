@@ -14,11 +14,9 @@
 		"isolatedModules": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"noImplicitReturns": true,
-		"noFallthroughCasesInSwitch": true,
 		"noEmit": true,
-		"types": ["bun-types", "node"]
+		"types": ["@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*", "tests/**/*.ts"],
-	"exclude": ["node_modules", "dist", "tests/golden/**/*", "tests/**/*.spec.ts"]
+	"include": ["src/**/*", "infra.ts", "pipeline.ts", "grants.ts", "e2e/**/*"],
+	"exclude": ["node_modules", "dist", ".alchemy"]
 }
