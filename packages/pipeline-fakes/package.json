@@ -1,0 +1,30 @@
+{
+	"name": "@devpad/pipeline-fakes",
+	"version": "0.0.1",
+	"private": true,
+	"description": "In-memory Provider-pattern fakes for Cloudflare, GitHub, and Anthropic APIs used across devpad/pipelines tests",
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./cloudflare": "./src/cloudflare-provider.ts",
+		"./cloudflare/in-memory": "./src/in-memory-cloudflare.ts",
+		"./github": "./src/github-provider.ts",
+		"./github/in-memory": "./src/in-memory-github.ts",
+		"./anthropic": "./src/anthropic-provider.ts",
+		"./anthropic/in-memory": "./src/in-memory-anthropic.ts"
+	},
+	"scripts": {
+		"test": "bun test",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@f0rbit/corpus": "^0.3.5",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"@types/node": "^24.3.0",
+		"typescript": "^5.3.3"
+	}
+}
