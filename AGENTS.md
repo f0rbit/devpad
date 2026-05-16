@@ -152,11 +152,12 @@ The pipelines module reuses the unified `Database` type — pipeline tables (`pi
 
 ### Known transient hacks (remove when applicable)
 - Root `package.json` has an `overrides` entry pinning `@f0rbit/corpus` to `file:../corpus` because the new `version_set_store` export isn't published yet. Remove once corpus 0.4.0+ ships to npm with `VersionSetManifest`.
-- `PipelineEnv.ANTHROPIC` is typed as `Fetcher`. Swap to vault's published RPC class once vault gains its first adapter (Phase 2).
 - This file-override is the root cause of the pre-existing `packages/schema/src/database/full-schema.ts` TS2742 portability warning. Don't chase it.
 
 ### Drizzle-kit + manual migrations
 If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a manual migration not in `meta/_journal.json`, rename the generated SQL + snapshot to the next available index and add a matching journal entry. The journal advances monotonically; drizzle-kit's filename numbering is advisory. (We hit this with `0007_add_pulse_scope.sql` already on disk when generating `0008_pipelines.sql`.)
+
+**Hand-written ALTER migrations don't generate paired snapshots.** When you add a column via a hand-written SQL migration (e.g. adding `window_ms` to `pipeline_analysis_template`), drizzle-kit doesn't auto-produce a paired entry in `meta/<n>_snapshot.json`. The migration still applies correctly at runtime since `_journal.json` is the source of truth — but the next time someone runs `drizzle-kit generate`, the snapshot may drift. Run `bunx drizzle-kit generate` after the next schema change to reconcile.
 
 ### Biome style for status enums
 `packages/schema/src/database/schema.ts` uses single-line const arrays for status enums (e.g. `RUN_STATUSES`, `STAGE_EVENT_KINDS`). Don't break this style — biome's format rule enforces it.

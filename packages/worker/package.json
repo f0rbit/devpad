@@ -23,6 +23,7 @@
 	"dependencies": {
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
+		"@f0rbit/corpus": "^0.3.5",
 		"@f0rbit/pulse-client": "^0.0.1",
 		"@hono/zod-validator": "^0.4.1",
 		"drizzle-orm": "^0.44.7",
