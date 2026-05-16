@@ -1,16 +1,56 @@
-# placeholder: Task 3.3 fills this in.
-# The deploy workflow is intentionally a stub here so the scaffold remains
-# self-contained and the file path is reserved. Task 3.3 (parallel) lands
-# the real template covering: build → upload-artifacts → versions-upload →
-# start-run. Do NOT add `wrangler deploy` here — promotion is the
-# orchestrator's job.
-
 name: deploy
+
 on:
   push:
     branches: [main]
+  pull_request:
+
 jobs:
-  noop:
+  build:
     runs-on: ubuntu-latest
+    outputs:
+      version_set_id: ${{ steps.upload.outputs.version_set_id }}
     steps:
-      - run: echo "placeholder: replaced by Task 3.3"
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun test
+
+      - name: Build worker bundle
+        run: bun run build
+
+      - id: upload
+        name: Upload artifacts to corpus
+        env:
+          DEVPAD_API_KEY: ${{ secrets.DEVPAD_API_KEY }}
+          DEVPAD_BASE_URL: ${{ secrets.DEVPAD_BASE_URL || 'https://devpad.tools/api/v1' }}
+        run: |
+          bunx @devpad/pipelines-cli artifacts upload \
+            --package anthropic-search \
+            --bundle dist/_worker.js \
+            --manifest dist/manifest.json \
+            --infra-plan infra.ts \
+            --pipeline pipeline.ts \
+            --grants grants.ts \
+            --output version-set.json
+          echo "version_set_id=$(jq -r .id version-set.json)" >> $GITHUB_OUTPUT
+
+      - name: Versions upload (no deploy)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload
+
+      - if: github.ref == 'refs/heads/main'
+        name: Start pipeline run
+        env:
+          DEVPAD_API_KEY: ${{ secrets.DEVPAD_API_KEY }}
+          DEVPAD_BASE_URL: ${{ secrets.DEVPAD_BASE_URL || 'https://devpad.tools/api/v1' }}
+        run: |
+          bunx @devpad/pipelines-cli runs start \
+            --package anthropic-search \
+            --version-set-id ${{ steps.upload.outputs.version_set_id }}

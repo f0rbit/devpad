@@ -6,11 +6,20 @@
  * wrap `client.pipelines.*` so we never re-implement HTTP plumbing.
  */
 
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { type ApiClient, ApiClient as ApiClientCtor } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
 import ora from "ora";
+import { createCorpusBackend } from "../corpus-backend.ts";
+import {
+	type ArtifactInputs,
+	type VersionSetOutput,
+	build_manifest,
+	compute_hash,
+	validate_artifact_paths,
+} from "../pipelines-artifacts-helpers.ts";
 import { scaffold_package, type ScaffolderError } from "../scaffolder/index.ts";
 import type { DefaultGateKind, RolloutMode } from "../scaffolder/types.ts";
 
@@ -139,6 +148,100 @@ const action_rollback = (client_factory: ClientFactory) => async (run_id: string
 	spinner.succeed(`rolled back ${run_id}`);
 };
 
+interface ArtifactsUploadOptions {
+	package: string;
+	bundle: string;
+	manifest: string;
+	infraPlan: string;
+	pipeline: string;
+	grants: string;
+	output: string;
+	gitSha?: string;
+	compatibilityDate?: string;
+}
+
+export const action_artifacts_upload = async (options: ArtifactsUploadOptions): Promise<void> => {
+	const spinner = make_spinner("Uploading artifacts to corpus...").start();
+
+	const inputs: ArtifactInputs = {
+		package_name: options.package,
+		bundle_path: options.bundle,
+		manifest_path: options.manifest,
+		infra_plan_path: options.infraPlan,
+		pipeline_path: options.pipeline,
+		grants_path: options.grants,
+		git_sha: options.gitSha,
+		compatibility_date: options.compatibilityDate,
+	};
+
+	const validation_result = validate_artifact_paths(inputs);
+	if (!validation_result.ok) return fail_with(spinner, validation_result.error.message);
+
+	const bundle = readFileSync(options.bundle);
+	const manifest_text = readFileSync(options.manifest, "utf8");
+	const manifest_obj = JSON.parse(manifest_text);
+	const infra_plan = readFileSync(options.infraPlan);
+	const pipeline = readFileSync(options.pipeline);
+	const grants = readFileSync(options.grants);
+
+	const bundle_hash = compute_hash(bundle).slice(0, 12);
+	const manifest_hash = compute_hash(Buffer.from(manifest_text)).slice(0, 12);
+	const infra_plan_hash = compute_hash(infra_plan).slice(0, 12);
+	const pipeline_hash = compute_hash(pipeline).slice(0, 12);
+	const grants_hash = compute_hash(grants).slice(0, 12);
+
+	const artifacts = {
+		bundle,
+		bundle_ref: `worker-bundles/${bundle_hash}`,
+		manifest: manifest_obj,
+		manifest_ref: `env-manifests/${manifest_hash}`,
+		infra_plan,
+		infra_plan_ref: `infra-plans/${infra_plan_hash}`,
+		pipeline,
+		pipeline_ref: `pipelines/${pipeline_hash}`,
+		grants,
+		grants_ref: `grants/${grants_hash}`,
+	};
+
+	const manifest_result = build_manifest(inputs, artifacts);
+	if (!manifest_result.ok) return fail_with(spinner, manifest_result.error.message);
+
+	const backend = await createCorpusBackend();
+	const { version_set_store } = await import("@f0rbit/corpus");
+	const version_sets = version_set_store(backend);
+
+	const put_result = await version_sets.put(manifest_result.value);
+	if (!put_result.ok) {
+		const error_msg = put_result.error.kind === "storage_error" ? put_result.error.cause?.message || "Storage error" : "Failed to store manifest";
+		return fail_with(spinner, error_msg);
+	}
+
+	const version_set_id = put_result.value.version;
+	const output: VersionSetOutput = {
+		id: version_set_id,
+		version: version_set_id,
+		package: inputs.package_name,
+	};
+
+	writeFileSync(options.output, `${JSON.stringify(output, null, 2)}\n`);
+	spinner.succeed("Artifacts uploaded successfully");
+	console.log(chalk.green(`Version Set ID: ${version_set_id}`));
+};
+
+interface RunsStartOptions {
+	package: string;
+	versionSetId: string;
+}
+
+const action_runs_start = (client_factory: ClientFactory) => async (options: RunsStartOptions): Promise<void> => {
+	const spinner = make_spinner("Starting pipeline run...").start();
+	const client = client_factory();
+	const result = await client.pipelines.create({ package_id: options.package, version_set_id: options.versionSetId });
+	if (!result.ok) return fail_with(spinner, result.error.message);
+	spinner.succeed(`run ${result.value.run_id} (${result.value.status})`);
+	console.log(chalk.green(`Run ID: ${result.value.run_id}`));
+};
+
 /**
  * Mount the `pipelines` subcommand group on a Commander program. The
  * factory pattern keeps `pipelines init` callable without a configured
@@ -179,6 +282,30 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.command("rollback <run-id>")
 		.description("Roll a run back to its previous production version")
 		.action(action_rollback(client_factory));
+
+	const artifacts = pipelines.command("artifacts").description("Manage pipeline artifacts");
+
+	artifacts
+		.command("upload")
+		.description("Upload artifacts to corpus")
+		.requiredOption("--package <name>", "Package name")
+		.requiredOption("--bundle <path>", "Path to worker bundle (dist/_worker.js)")
+		.requiredOption("--manifest <path>", "Path to manifest (dist/manifest.json)")
+		.requiredOption("--infra-plan <path>", "Path to infra plan (infra.ts)")
+		.requiredOption("--pipeline <path>", "Path to pipeline definition (pipeline.ts)")
+		.requiredOption("--grants <path>", "Path to grants definition (grants.ts)")
+		.requiredOption("--output <path>", "Output path for version set JSON")
+		.option("--git-sha <sha>", "Git SHA (default: from environment or zeroed)")
+		.option("--compatibility-date <date>", "Compatibility date (default: 2025-05-01)")
+		.action(action_artifacts_upload);
+
+	const runs = pipelines.command("runs").description("Manage pipeline runs");
+
+	runs.command("start")
+		.description("Start a pipeline run with an explicit version set")
+		.requiredOption("--package <name>", "Package name")
+		.requiredOption("--version-set-id <id>", "Version set ID from corpus")
+		.action(action_runs_start(client_factory));
 
 	return pipelines;
 };

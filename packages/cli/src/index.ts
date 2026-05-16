@@ -559,6 +559,7 @@ user.command("preferences")
 	});
 
 // Pipelines subcommand group — `init` is fully local (no API key);
+// `artifacts upload` runs locally against the corpus backend;
 // `run` / `approve` / `cancel` / `rollback` use the default API client.
 register_pipelines_commands(program, () => getApiClient());
 

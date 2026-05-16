@@ -26,7 +26,9 @@
 		"@f0rbit/corpus": "file:../../../corpus"
 	},
 	"devDependencies": {
+		"@types/js-yaml": "^4.0.9",
 		"@types/node": "^24.3.0",
+		"js-yaml": "^4.1.0",
 		"typescript": "^5.3.3"
 	}
 }
