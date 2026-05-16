@@ -82,7 +82,7 @@ export const config_schema = z.object({
 			match: z.array(z.string()),
 		})
 	),
-	ignore: z.array(z.string().regex(/^[^]*$/, "Invalid path")),
+	ignore: z.array(z.string().regex(/^[\s\S]*$/, "Invalid path")),
 });
 
 export const upsert_milestone = z.object({

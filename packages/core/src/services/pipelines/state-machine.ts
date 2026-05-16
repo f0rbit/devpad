@@ -99,6 +99,8 @@ export type TransitionResult = {
 
 const TERMINAL: ReadonlySet<RunStatus> = new Set(["completed", "rolled_back", "failed", "cancelled"]);
 
+export const is_terminal_status = (status: RunStatus): boolean => TERMINAL.has(status);
+
 const transition_key_for = (from: Stage, to: Stage): TransitionKey => `${from.name}→${to.name}` as TransitionKey;
 
 const has_bake = (stage: Stage): boolean => stage.bake !== null && stage.bake.ms > 0;

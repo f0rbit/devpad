@@ -23,7 +23,7 @@
  */
 
 import type { AdvanceError, ResolvedPlan, RunDeps, RunEvent, TransitionOutput } from "@devpad/core/services/pipelines";
-import { advance_run, approve_stage, cancel_run, request_rollback, tick_bake_complete } from "@devpad/core/services/pipelines";
+import { advance_run, approve_stage, cancel_run, get_run, is_terminal_status, request_rollback, tick_bake_complete } from "@devpad/core/services/pipelines";
 import type { ApprovalDecision } from "@devpad/schema";
 import type { Result } from "@f0rbit/corpus";
 import { z } from "zod";
@@ -201,6 +201,17 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 	};
 
 	const fire_alarm = async (): Promise<void> => {
+		// Idempotency guard: if the run reached a terminal state between
+		// `setAlarm` and the alarm firing (e.g. an out-of-band cancel or
+		// rollback), drop the alarm cleanly without trying to advance the
+		// state machine — `tick_bake_complete` would `terminal_state`-error
+		// on the next transition and we'd emit a spurious pulse event.
+		const run = await get_run(services.deps.db, run_id);
+		if (run.ok && is_terminal_status(run.value.status)) {
+			await ctx.storage.deleteAlarm();
+			await ctx.storage.delete(STORAGE_KEYS.last_alarm_ms);
+			return;
+		}
 		const plan = await ctx.storage.get<ResolvedPlan>(STORAGE_KEYS.plan);
 		if (plan === undefined) return;
 		await ctx.storage.delete(STORAGE_KEYS.last_alarm_ms);

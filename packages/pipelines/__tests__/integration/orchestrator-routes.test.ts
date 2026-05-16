@@ -219,3 +219,44 @@ describe("orchestrator routes — DO state surface", () => {
 		expect(body.value!.last_alarm_ms).not.toBeNull();
 	});
 });
+
+describe("orchestrator routes — DO alarm idempotency", () => {
+	test("alarm fired after terminal-state cancel is a no-op", async () => {
+		const h = await build_harness();
+		const create = await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
+		const { run_id } = expect_ok<{ run_id: string }>(create.body);
+
+		// Reach `baking` with an alarm scheduled.
+		await approve(h.app, run_id, "onebox", "approved");
+		expect((await run_status_of(h.db, run_id)).status).toBe("baking");
+
+		// Out-of-band cancel. Sets status to `cancelled` and calls
+		// `deleteAlarm` — but a real DO race can still fire the alarm
+		// after the status flipped. Drive that race manually.
+		const cancel_res = await post_json(h.app, `/runs/${run_id}/cancel`, {});
+		expect(cancel_res.status).toBe(200);
+		expect((await run_status_of(h.db, run_id)).status).toBe("cancelled");
+
+		const events_before = await events_of(h.db, run_id);
+		const pulse_before = h.deps.pulse.emitted.length;
+		const deploys_before = (await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)).ok
+			? ((await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)) as { ok: true; value: unknown[] }).value.length
+			: 0;
+
+		// Fire the alarm — must not error, must not advance, must not emit pulse, must not deploy.
+		await h.fire_alarm(run_id);
+
+		const final = await run_status_of(h.db, run_id);
+		expect(final.status).toBe("cancelled");
+		expect(final.current_stage).toBe("onebox");
+
+		const events_after = await events_of(h.db, run_id);
+		expect(events_after.length).toBe(events_before.length);
+
+		expect(h.deps.pulse.emitted.length).toBe(pulse_before);
+
+		const deploys_after_list = await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`);
+		if (!deploys_after_list.ok) throw new Error("list failed");
+		expect(deploys_after_list.value.length).toBe(deploys_before);
+	});
+});

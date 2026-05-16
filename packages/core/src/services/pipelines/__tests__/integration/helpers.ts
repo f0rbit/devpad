@@ -1,5 +1,4 @@
 import { Database as BunSqlite } from "bun:sqlite";
-import { resolve } from "node:path";
 import { InMemoryCloudflareProvider } from "@devpad/pipeline-fakes";
 import type { PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
@@ -8,11 +7,9 @@ import type { Database } from "@devpad/schema/database/types";
 import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../../gates/__tests__/helpers.js";
 import type { RunDeps } from "../../runs.js";
 
-const MIGRATIONS_DIR = resolve(import.meta.dir, "../../../../../../schema/src/database/drizzle");
-
 export function create_test_db(): Database {
 	const sqlite = new BunSqlite(":memory:");
-	migrateBunDatabase(sqlite, MIGRATIONS_DIR);
+	migrateBunDatabase(sqlite);
 	return createBunDatabase(sqlite);
 }
 

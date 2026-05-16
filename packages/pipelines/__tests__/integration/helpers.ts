@@ -13,7 +13,6 @@
  */
 
 import { Database as BunSqlite } from "bun:sqlite";
-import { resolve } from "node:path";
 import type { RunDeps } from "@devpad/core/services/pipelines";
 import type { Decision, EmitError, PulseEvent, StoreError } from "@devpad/core/services/pipelines/gates";
 import { InMemoryCloudflareProvider, InMemoryDurableObjectNamespace, type InMemoryDurableObjectState } from "@devpad/pipeline-fakes";
@@ -25,8 +24,6 @@ import type { Database } from "@devpad/schema/database/types";
 import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
 import { type DoCtx, type LineageProvider, type ManifestProvider, make_routes, make_run_handler, type RoutesDeps, type TemplateResolver } from "../../src/index.ts";
-
-const MIGRATIONS_DIR = resolve(import.meta.dir, "../../../schema/src/database/drizzle");
 
 export const SCRIPT_NAME_FOR = (package_id: string): string => `pipeline_${package_id}`;
 
@@ -56,7 +53,7 @@ export class InMemoryApprovalStore {
 
 export const create_test_db = (): Database => {
 	const sqlite = new BunSqlite(":memory:");
-	migrateBunDatabase(sqlite, MIGRATIONS_DIR);
+	migrateBunDatabase(sqlite);
 	return createBunDatabase(sqlite);
 };
 

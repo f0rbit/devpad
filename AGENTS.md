@@ -133,6 +133,34 @@ devpad/
 - `drizzle-orm` is deduplicated via root `package.json` overrides (needed because `@f0rbit/corpus` has it as direct dep)
 - Blog's `DrizzleDB` and Media's `Database` are both re-exports of the unified `Database` type
 
+## Pipelines module
+
+The `packages/pipelines/` Worker is a separate Cloudflare Worker (not part of `devpad-unified`), exporting a `PipelineRunDO` Durable Object and a Hono REST API. The Worker holds **no upstream API keys** — all third-party traffic crosses the security boundary into `~/dev/vault` (separate repo, separate Cloudflare account) via the `ANTHROPIC` service binding. The orchestrator hosts the grants registry (`pipeline_grant` table) and exposes a `grants.check(caller, scope)` RPC that vault calls.
+
+### Architecture rules
+- **DO holds no business logic.** If you're writing transition logic inside `make_run_handler`, push it down into `@devpad/core/services/pipelines/runs.ts`.
+- **State machine is pure.** `state-machine.ts` is deterministic — no clock, no random, no IO. Side effects belong in `runs.ts`.
+- **Resolved rollout/gates JSON in `pipeline_run`** is the source of truth for in-flight runs, not the template files. Template edits don't affect running pipelines.
+- **Forced-atomic gates fallback.** When the discriminator rewrites a declared `gradual` to `atomic` (DO migrations or unaffinitised assets), `resolve_run_plan` falls back to `defaultAtomicGates` since the declared gate map's transition keys no longer apply.
+
+### Database
+The pipelines module reuses the unified `Database` type — pipeline tables (`pipeline_*`) sit in the same D1 instance. Migrations land under `packages/schema/src/database/drizzle/` like everything else. The vault repo (`~/dev/vault`) does NOT bind to this D1; vault reaches grants exclusively through the pipelines `grants.check` RPC.
+
+### Testing
+- Pipeline tests use the `@devpad/pipeline-fakes` package for in-memory Cloudflare / GitHub / Anthropic / DurableObject substitutes.
+- Test DB harness pattern: `packages/core/src/services/pipelines/__tests__/integration/helpers.ts` uses `createBunDatabase` + migration replay. New core service tests should follow this pattern.
+
+### Known transient hacks (remove when applicable)
+- Root `package.json` has an `overrides` entry pinning `@f0rbit/corpus` to `file:../corpus` because the new `version_set_store` export isn't published yet. Remove once corpus 0.4.0+ ships to npm with `VersionSetManifest`.
+- `PipelineEnv.ANTHROPIC` is typed as `Fetcher`. Swap to vault's published RPC class once vault gains its first adapter (Phase 2).
+- This file-override is the root cause of the pre-existing `packages/schema/src/database/full-schema.ts` TS2742 portability warning. Don't chase it.
+
+### Drizzle-kit + manual migrations
+If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a manual migration not in `meta/_journal.json`, rename the generated SQL + snapshot to the next available index and add a matching journal entry. The journal advances monotonically; drizzle-kit's filename numbering is advisory. (We hit this with `0007_add_pulse_scope.sql` already on disk when generating `0008_pipelines.sql`.)
+
+### Biome style for status enums
+`packages/schema/src/database/schema.ts` uses single-line const arrays for status enums (e.g. `RUN_STATUSES`, `STAGE_EVENT_KINDS`). Don't break this style — biome's format rule enforces it.
+
 ## Worker Architecture
 - Routes NEVER read `c.env` -- all config comes from `c.get("config")` and `c.get("oauth_secrets")`
 - `AppConfig` and `OAuthSecrets` types defined in `packages/worker/src/bindings.ts`
@@ -207,7 +235,6 @@ WRONG: `class="row-sm"`, `class="stack-lg"`, `class="row-between"` (no flex layo
 These type errors exist and should be ignored:
 - `CategoryServiceError`/`PostServiceError` type mismatches in blog routes
 - `packages/worker/src/index.ts` fetch type signature
-- `packages/schema/src/validation.ts` regex pattern
 - `showSuccessToast` in `OptimisticTaskProgress.tsx`
 - Astro check false positives: `rethrow` and `getProject` sometimes reported as unused despite being used
 
