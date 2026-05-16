@@ -4,6 +4,7 @@ import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
 import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
+import type { PipelineRun } from "@devpad/schema/types";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -75,6 +76,7 @@ export class ApiClient {
 			blog: new HttpClient({ ...clientOptions, category: "blog" }),
 			media: new HttpClient({ ...clientOptions, category: "media" }),
 			pulse: new HttpClient({ ...clientOptions, category: "pulse" }),
+			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
 		} as const;
 	}
 
@@ -960,6 +962,55 @@ export class ApiClient {
 			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> =>
 				wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
 		},
+	};
+
+	/**
+	 * Pipelines namespace with Result-wrapped operations
+	 */
+	public readonly pipelines = {
+		/**
+		 * List pipeline runs
+		 */
+		list: (): Promise<ApiResult<PipelineRun[]>> =>
+			wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs")),
+
+		/**
+		 * Get a pipeline run by ID
+		 */
+		get: (run_id: string): Promise<ApiResult<PipelineRun>> =>
+			wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
+
+		/**
+		 * Create a new pipeline run
+		 */
+		create: (input: { package_id: string; version_set_id: string }): Promise<ApiResult<{ run_id: string; status: string }>> =>
+			wrap(() =>
+				this.clients.pipelines.post<{ run_id: string; status: string }>("/runs", {
+					body: input,
+				})
+			),
+
+		/**
+		 * Approve a stage in a pipeline run
+		 */
+		approve: (run_id: string, input: { stage_name: string; decision: "approved" | "denied"; user_id: string; reason?: string }): Promise<ApiResult<void>> =>
+			wrap(() =>
+				this.clients.pipelines.post<void>(`/runs/${run_id}/approve`, {
+					body: input,
+				})
+			),
+
+		/**
+		 * Cancel a pipeline run
+		 */
+		cancel: (run_id: string): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
+
+		/**
+		 * Rollback a pipeline run
+		 */
+		rollback: (run_id: string): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
 	};
 
 	/**

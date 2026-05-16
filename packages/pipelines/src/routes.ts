@@ -24,12 +24,12 @@ import { Hono } from "hono";
 import { z } from "zod";
 import type { DoRouter } from "./do-router.ts";
 
-const create_run_body = z.object({
+export const create_run_body = z.object({
 	package_id: z.string().min(1),
 	version_set_id: z.string().min(1),
 });
 
-const approve_body = z.object({
+export const approve_body = z.object({
 	stage_name: z.string().min(1),
 	decision: z.enum(["approved", "denied"]),
 	user_id: z.string().min(1),

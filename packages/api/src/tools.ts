@@ -644,6 +644,72 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.keys.create(input)),
 	},
+
+	devpad_pipelines_list: {
+		name: "devpad_pipelines_list",
+		description: "List all pipeline runs",
+		inputSchema: z.object({}),
+		execute: async client => unwrap(await client.pipelines.list()),
+	},
+
+	devpad_pipelines_get: {
+		name: "devpad_pipelines_get",
+		description: "Get a pipeline run by ID",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.get(input.run_id)),
+	},
+
+	devpad_pipelines_create: {
+		name: "devpad_pipelines_create",
+		description: "Create a new pipeline run",
+		inputSchema: z.object({
+			package_id: z.string().describe("Package ID"),
+			version_set_id: z.string().describe("Version set ID to deploy"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.create(input)),
+	},
+
+	devpad_pipelines_approve: {
+		name: "devpad_pipelines_approve",
+		description: "Approve or deny a stage in a pipeline run",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+			stage_name: z.string().describe("Stage name to approve"),
+			decision: z.enum(["approved", "denied"]).describe("Approval decision"),
+			user_id: z.string().describe("User ID making the decision"),
+			reason: z.string().optional().describe("Optional reason for the decision"),
+		}),
+		execute: async (client, input) => {
+			unwrap(await client.pipelines.approve(input.run_id, input));
+			return { success: true };
+		},
+	},
+
+	devpad_pipelines_cancel: {
+		name: "devpad_pipelines_cancel",
+		description: "Cancel a pipeline run",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => {
+			unwrap(await client.pipelines.cancel(input.run_id));
+			return { success: true };
+		},
+	},
+
+	devpad_pipelines_rollback: {
+		name: "devpad_pipelines_rollback",
+		description: "Rollback a completed or failed pipeline run",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => {
+			unwrap(await client.pipelines.rollback(input.run_id));
+			return { success: true };
+		},
+	},
 };
 
 // Get all tool names
