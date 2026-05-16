@@ -21,6 +21,7 @@
 		"./services/media/cron": "./src/services/media/cron/index.ts",
 		"./services/media/storage": "./src/services/media/storage.ts",
 		"./services/media/sync": "./src/services/media/sync.ts",
+		"./services/pipelines/gates": "./src/services/pipelines/gates/index.ts",
 		"./ui": "./src/ui/index.ts",
 		"./ui/styles": "./src/ui/styles/globals.css",
 		"./ui/api-client": "./src/ui/api-client.ts",
@@ -28,7 +29,8 @@
 		"./ui/middleware": "./src/ui/middleware.ts"
 	},
 	"scripts": {
-		"test": "bun test"
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@devpad/schema": "workspace:*",
