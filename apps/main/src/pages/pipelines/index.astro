@@ -1,0 +1,65 @@
+---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { PipelinePackage } from "@devpad/schema";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { rethrow } from "@/utils/api-client";
+
+const user = Astro.locals.user;
+let packages: PipelinePackage[] = [];
+
+if (user) {
+	const client = getServerApiClient(Astro.locals);
+	const result = await client.pipelines.list();
+	if (!result.ok) return rethrow(result.error);
+	// For now, just use runs to get package info - will need a real packages endpoint
+	packages = [];
+}
+
+const keywords = ["pipelines", "deployments", "releases", "stages", "production"];
+---
+
+<PageLayout
+	title="Pipelines - devpad"
+	description="Manage deployment pipelines. Track package releases, stages, and version sets. Monitor gradual rollouts and control approvals."
+	keywords={keywords}
+	canonical="https://devpad.tools/pipelines"
+>
+	{
+		user ? (
+			<main>
+				<div class="row row-sm" style="margin-bottom: 1rem;">
+					<h1>pipelines</h1>
+				</div>
+				{packages.length === 0 ? (
+					<div class="stack stack-lg">
+						<p class="text-muted">No packages found. Create a package to get started.</p>
+					</div>
+				) : (
+					<div class="stack stack-md">
+						{packages.map(pkg => (
+							<a href={`/pipelines/${pkg.id}`} style="text-decoration: none; color: inherit;">
+								<div class="card card-interactive stack stack-sm">
+									<div class="row row-between">
+										<div>
+											<h3 style="margin: 0;">{pkg.name}</h3>
+										</div>
+									</div>
+									{pkg.repo_url && <p class="text-sm text-faint">{pkg.repo_url}</p>}
+								</div>
+							</a>
+						))}
+					</div>
+				)}
+			</main>
+		) : (
+			<main>
+				<section class="landing-hero">
+					<h1 style="font-size: 2.5rem; font-weight: 600; margin: 0;">pipelines</h1>
+					<p class="text-lg text-muted hero-description">
+						manage deployment pipelines. control releases across stages, approve promotions, and monitor rollouts.
+					</p>
+				</section>
+			</main>
+		)
+	}
+</PageLayout>

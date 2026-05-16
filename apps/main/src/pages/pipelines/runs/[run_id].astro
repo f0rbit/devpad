@@ -1,0 +1,127 @@
+---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { PipelineRun } from "@devpad/schema";
+import RunProgress from "@/components/solid/pipelines/RunProgress";
+import StageGate from "@/components/solid/pipelines/StageGate";
+import RollbackButton from "@/components/solid/pipelines/RollbackButton";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { rethrow } from "@/utils/api-client";
+
+const { run_id } = Astro.params;
+const user = Astro.locals.user;
+let run: PipelineRun | null = null;
+
+if (user && run_id) {
+	const client = getServerApiClient(Astro.locals);
+	const result = await client.pipelines.get(run_id);
+	if (!result.ok) return rethrow(result.error);
+	run = result.value;
+}
+
+const keywords = ["pipeline", "run", "deployment", "stage", "approval"];
+---
+
+<PageLayout
+	title={`Run ${run_id} - devpad`}
+	description="Pipeline run details. Monitor stage progress, approvals, and events."
+	keywords={keywords}
+	canonical={`https://devpad.tools/pipelines/runs/${run_id}`}
+>
+	{
+		user && run ? (
+			<main>
+				<div class="row row-sm" style="margin-bottom: 1rem;">
+					<div>
+						<a href={`/pipelines/${run.package_id}`} style="text-decoration: none; color: var(--text-link); font-size: 0.9rem;">
+							← back to package
+						</a>
+						<h1 style="margin: 0.5rem 0 0 0;">{run.id.substring(0, 12)}</h1>
+						<p class="text-sm text-faint" style="margin: 0.5rem 0 0 0;">
+							Status: <strong>{run.status}</strong> · Shape: <strong>{run.shape}</strong>
+						</p>
+					</div>
+				</div>
+
+				<div class="stack stack-lg">
+					<div class="stack stack-md">
+						<h2>stage progress</h2>
+						<RunProgress client:load run={run} />
+					</div>
+
+					{run.current_stage && (
+						<div class="stack stack-md">
+							<h2>current stage gate</h2>
+							<StageGate client:load run={run} />
+						</div>
+					)}
+
+					<div class="stack stack-md">
+						<div class="row row-between">
+							<h2 style="margin: 0;">actions</h2>
+						</div>
+						<div class="row" style="gap: var(--space-sm); flex-wrap: wrap;">
+							{(run.status === "in-progress" || run.status === "pending") && (
+								<RollbackButton client:load run_id={run.id} />
+							)}
+						</div>
+					</div>
+
+					<div class="stack stack-md">
+						<h2>run details</h2>
+						<div class="card card-flat stack stack-sm">
+							<div class="row row-sm">
+								<span class="text-sm text-faint" style="min-width: 120px;">
+									Run ID
+								</span>
+								<code style="font-family: monospace; color: var(--fg-muted);">{run.id}</code>
+							</div>
+							<div class="row row-sm">
+								<span class="text-sm text-faint" style="min-width: 120px;">
+									Version Set
+								</span>
+								<code style="font-family: monospace; color: var(--fg-muted);">{run.version_set_id}</code>
+							</div>
+							<div class="row row-sm">
+								<span class="text-sm text-faint" style="min-width: 120px;">
+									Rollout Shape
+								</span>
+								<span style="color: var(--fg);">{run.shape}</span>
+							</div>
+							{run.forced_atomic_reason && (
+								<div class="row row-sm">
+									<span class="text-sm text-faint" style="min-width: 120px;">
+										Forced Atomic
+									</span>
+									<span style="color: var(--warning);">{run.forced_atomic_reason}</span>
+								</div>
+							)}
+							{run.started_at && (
+								<div class="row row-sm">
+									<span class="text-sm text-faint" style="min-width: 120px;">
+										Started
+									</span>
+									<span style="color: var(--fg-muted);">{new Date(run.started_at).toLocaleString()}</span>
+								</div>
+							)}
+							{run.finished_at && (
+								<div class="row row-sm">
+									<span class="text-sm text-faint" style="min-width: 120px;">
+										Finished
+									</span>
+									<span style="color: var(--fg-muted);">{new Date(run.finished_at).toLocaleString()}</span>
+								</div>
+							)}
+						</div>
+					</div>
+				</div>
+			</main>
+		) : (
+			<main>
+				<section class="landing-hero">
+					<h1>access denied or run not found</h1>
+					<p class="text-muted">You must be signed in to view run details.</p>
+				</section>
+			</main>
+		)
+	}
+</PageLayout>
