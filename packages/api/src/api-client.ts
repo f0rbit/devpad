@@ -3,8 +3,7 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
-import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
-import type { PipelineRun } from "@devpad/schema/types";
+import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, PipelineRun, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -896,8 +895,7 @@ export class ApiClient {
 			/**
 			 * List subscriptions for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
-				wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> => wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a subscription
@@ -923,8 +921,7 @@ export class ApiClient {
 			/**
 			 * Update a subscription
 			 */
-			update: (id: string, patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>): Promise<ApiResult<any>> =>
-				wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
+			update: (id: string, patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
 
 			/**
 			 * Delete a subscription
@@ -939,8 +936,7 @@ export class ApiClient {
 			/**
 			 * List ingest keys for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
-				wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> => wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a new ingest key (returns plaintext only once)
@@ -959,8 +955,7 @@ export class ApiClient {
 			/**
 			 * Delete an ingest key
 			 */
-			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> =>
-				wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
+			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
 		},
 	};
 
@@ -971,14 +966,12 @@ export class ApiClient {
 		/**
 		 * List pipeline runs
 		 */
-		list: (): Promise<ApiResult<PipelineRun[]>> =>
-			wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs")),
+		list: (): Promise<ApiResult<PipelineRun[]>> => wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs")),
 
 		/**
 		 * Get a pipeline run by ID
 		 */
-		get: (run_id: string): Promise<ApiResult<PipelineRun>> =>
-			wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
+		get: (run_id: string): Promise<ApiResult<PipelineRun>> => wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
 
 		/**
 		 * Create a new pipeline run
@@ -1003,14 +996,12 @@ export class ApiClient {
 		/**
 		 * Cancel a pipeline run
 		 */
-		cancel: (run_id: string): Promise<ApiResult<void>> =>
-			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
+		cancel: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
 
 		/**
 		 * Rollback a pipeline run
 		 */
-		rollback: (run_id: string): Promise<ApiResult<void>> =>
-			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+		rollback: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
 	};
 
 	/**

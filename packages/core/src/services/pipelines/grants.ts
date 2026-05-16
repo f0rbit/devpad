@@ -1,26 +1,20 @@
 import type { PipelineGrant, UpsertPipelineGrant } from "@devpad/schema";
 import { pipeline_grant } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { err, ok, match, type Result } from "@f0rbit/corpus";
+import { err, match, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
 import { evaluate_grant_check, is_auto_approvable } from "./grants-domain.js";
 
 export type { GrantVerdict } from "./grants-domain.js";
-export { is_grant_match, is_auto_approvable, evaluate_grant_check } from "./grants-domain.js";
+export { evaluate_grant_check, is_auto_approvable, is_grant_match } from "./grants-domain.js";
 
 /**
  * List all grants for a package.
  */
-export async function list_grants(
-	db: Database,
-	package_id: string
-): Promise<Result<PipelineGrant[], ServiceError>> {
+export async function list_grants(db: Database, package_id: string): Promise<Result<PipelineGrant[], ServiceError>> {
 	try {
-		const grants = await db
-			.select()
-			.from(pipeline_grant)
-			.where(eq(pipeline_grant.package_id, package_id));
+		const grants = await db.select().from(pipeline_grant).where(eq(pipeline_grant.package_id, package_id));
 
 		return ok(grants);
 	} catch (e) {
@@ -35,19 +29,14 @@ export async function list_grants(
  * Check if a scope is granted at a stage for a package.
  * Returns true if granted, false otherwise (via Result error propagation).
  */
-export async function check_grant(
-	db: Database,
-	package_id: string,
-	stage_name: string,
-	scope: string
-): Promise<Result<boolean, ServiceError>> {
+export async function check_grant(db: Database, package_id: string, stage_name: string, scope: string): Promise<Result<boolean, ServiceError>> {
 	return match(
 		await list_grants(db, package_id),
-		(grants) => {
+		grants => {
 			const verdict = evaluate_grant_check(grants, scope, stage_name);
 			return ok(verdict.granted) as Result<boolean, ServiceError>;
 		},
-		(error) => err(error) as Result<boolean, ServiceError>
+		error => err(error) as Result<boolean, ServiceError>
 	);
 }
 
@@ -55,12 +44,7 @@ export async function check_grant(
  * Request a new grant. Auto-approves if policy says so, otherwise leaves pending.
  * TODO(phase-2): emit devpad approval item for manual approvals.
  */
-export async function request_grant(
-	db: Database,
-	package_id: string,
-	stage_name: string,
-	scope: string
-): Promise<Result<PipelineGrant, ServiceError>> {
+export async function request_grant(db: Database, package_id: string, stage_name: string, scope: string): Promise<Result<PipelineGrant, ServiceError>> {
 	try {
 		const now = new Date().toISOString();
 		const auto_approvable = is_auto_approvable(scope, stage_name);
@@ -107,11 +91,7 @@ export async function request_grant(
 /**
  * Approve an existing grant.
  */
-export async function approve_grant(
-	db: Database,
-	grant_id: string,
-	user_id: string
-): Promise<Result<PipelineGrant, ServiceError>> {
+export async function approve_grant(db: Database, grant_id: string, user_id: string): Promise<Result<PipelineGrant, ServiceError>> {
 	try {
 		const now = new Date().toISOString();
 

@@ -1,5 +1,5 @@
-export type { GateEvaluator, PulseEmitter, ApprovalStore, PulseEvent, Decision, GateError, EmitError, StoreError } from "./evaluator.js";
-export { ManualGateEvaluator } from "./manual.js";
-export { AutoGateEvaluator, decide_auto } from "./auto.js";
 export { AnalysisGateEvaluator } from "./analysis.js";
-export { gateEvaluatorFor, type GateEvaluatorDeps } from "./registry.js";
+export { AutoGateEvaluator, decide_auto } from "./auto.js";
+export type { ApprovalStore, Decision, EmitError, GateError, GateEvaluator, PulseEmitter, PulseEvent, StoreError } from "./evaluator.js";
+export { ManualGateEvaluator } from "./manual.js";
+export { type GateEvaluatorDeps, gateEvaluatorFor } from "./registry.js";

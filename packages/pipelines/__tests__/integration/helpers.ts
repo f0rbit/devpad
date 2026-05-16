@@ -15,17 +15,16 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import { resolve } from "node:path";
 import type { RunDeps } from "@devpad/core/services/pipelines";
+import type { Decision, EmitError, PulseEvent, StoreError } from "@devpad/core/services/pipelines/gates";
 import { InMemoryCloudflareProvider, InMemoryDurableObjectNamespace, type InMemoryDurableObjectState } from "@devpad/pipeline-fakes";
 import { extendTemplate, type PipelineTemplate } from "@devpad/pipeline-templates";
-import { type ApprovalDecision, type PipelinePackage, type User } from "@devpad/schema";
+import type { ApprovalDecision, PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { pipeline_package, user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
-
-import { make_routes, make_run_handler, type DoCtx, type LineageProvider, type ManifestProvider, type RoutesDeps, type TemplateResolver } from "../../src/index.ts";
-import type { Decision, EmitError, PulseEvent, StoreError } from "@devpad/core/services/pipelines/gates";
+import { type DoCtx, type LineageProvider, type ManifestProvider, make_routes, make_run_handler, type RoutesDeps, type TemplateResolver } from "../../src/index.ts";
 
 const MIGRATIONS_DIR = resolve(import.meta.dir, "../../../schema/src/database/drizzle");
 
@@ -199,4 +198,5 @@ export const get_json = async <T = unknown>(app: ReturnType<typeof make_routes>,
 	return { status: res.status, body: (await res.json()) as Envelope<T> };
 };
 
-export const approve = async (app: ReturnType<typeof make_routes>, run_id: string, stage_name: string, decision: ApprovalDecision, user_id = "user_test", reason?: string) => post_json(app, `/runs/${run_id}/approve`, { stage_name, decision, user_id, reason });
+export const approve = async (app: ReturnType<typeof make_routes>, run_id: string, stage_name: string, decision: ApprovalDecision, user_id = "user_test", reason?: string) =>
+	post_json(app, `/runs/${run_id}/approve`, { stage_name, decision, user_id, reason });

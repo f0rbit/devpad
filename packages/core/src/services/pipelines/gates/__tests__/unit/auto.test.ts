@@ -1,6 +1,6 @@
-import { describe, test, expect } from "bun:test";
-import { decide_auto } from "../../auto.js";
+import { describe, expect, test } from "bun:test";
 import type { StageContext } from "@devpad/pipeline-templates";
+import { decide_auto } from "../../auto.js";
 
 describe("decide_auto", () => {
 	test("returns Pass verdict", () => {

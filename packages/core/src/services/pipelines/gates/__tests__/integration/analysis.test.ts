@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { StageContext } from "@devpad/pipeline-templates";
 import { AnalysisGateEvaluator } from "../../analysis.js";
 import { InMemoryPulseEmitter } from "../helpers.js";
-import type { StageContext } from "@devpad/pipeline-templates";
 
 describe("AnalysisGateEvaluator", () => {
 	let pulse: InMemoryPulseEmitter;

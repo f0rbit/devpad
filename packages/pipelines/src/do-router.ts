@@ -22,10 +22,7 @@ export interface DoRouter {
  * the production wiring passes the actual namespace through and the
  * test wiring passes the in-memory fake.
  */
-export const make_cf_router = (namespace: {
-	idFromName(name: string): unknown;
-	get(id: unknown): { fetch(request: Request): Promise<Response> };
-}): DoRouter => ({
+export const make_cf_router = (namespace: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } }): DoRouter => ({
 	get(run_id) {
 		const id = namespace.idFromName(run_id);
 		const stub = namespace.get(id);

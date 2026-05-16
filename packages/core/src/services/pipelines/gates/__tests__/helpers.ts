@@ -1,6 +1,6 @@
-import { ok } from "@f0rbit/corpus";
-import type { Decision, PulseEvent, PulseEmitter, ApprovalStore, EmitError, StoreError } from "../evaluator.js";
 import type { Result } from "@f0rbit/corpus";
+import { ok } from "@f0rbit/corpus";
+import type { ApprovalStore, Decision, EmitError, PulseEmitter, PulseEvent, StoreError } from "../evaluator.js";
 
 export class InMemoryPulseEmitter implements PulseEmitter {
 	emitted: PulseEvent[] = [];

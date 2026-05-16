@@ -66,10 +66,10 @@ export default {
 	fetch: app.fetch,
 };
 
-export { make_routes } from "./routes.ts";
-export { make_run_handler } from "./run-do.ts";
-export { make_cf_router } from "./do-router.ts";
-export type { DoCtx, RunDoServices } from "./run-do.ts";
-export type { DoRouter, DoStub } from "./do-router.ts";
-export type { LineageProvider, ManifestProvider, RoutesDeps, TemplateResolver } from "./routes.ts";
 export type { PipelineEnv } from "./bindings.ts";
+export type { DoRouter, DoStub } from "./do-router.ts";
+export { make_cf_router } from "./do-router.ts";
+export type { LineageProvider, ManifestProvider, RoutesDeps, TemplateResolver } from "./routes.ts";
+export { make_routes } from "./routes.ts";
+export type { DoCtx, RunDoServices } from "./run-do.ts";
+export { make_run_handler } from "./run-do.ts";

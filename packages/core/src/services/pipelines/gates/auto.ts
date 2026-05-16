@@ -1,7 +1,7 @@
-import { ok } from "@f0rbit/corpus";
-import type { StageContext, GateVerdict } from "@devpad/pipeline-templates";
-import type { GateEvaluator, GateError } from "./evaluator.js";
+import type { GateVerdict, StageContext } from "@devpad/pipeline-templates";
 import type { Result } from "@f0rbit/corpus";
+import { ok } from "@f0rbit/corpus";
+import type { GateError, GateEvaluator } from "./evaluator.js";
 
 export function decide_auto(_ctx: StageContext): GateVerdict {
 	return { verdict: "Pass" };

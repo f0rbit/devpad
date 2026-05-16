@@ -1,8 +1,8 @@
 import type { Gate } from "@devpad/pipeline-templates";
-import { ManualGateEvaluator } from "./manual.js";
-import { AutoGateEvaluator } from "./auto.js";
 import { AnalysisGateEvaluator } from "./analysis.js";
-import type { GateEvaluator, PulseEmitter, ApprovalStore } from "./evaluator.js";
+import { AutoGateEvaluator } from "./auto.js";
+import type { ApprovalStore, GateEvaluator, PulseEmitter } from "./evaluator.js";
+import { ManualGateEvaluator } from "./manual.js";
 
 export interface GateEvaluatorDeps {
 	pulse: PulseEmitter;
@@ -17,8 +17,9 @@ export function gateEvaluatorFor(gate: Gate, deps: GateEvaluatorDeps): GateEvalu
 			return new AutoGateEvaluator();
 		case "analysis":
 			return new AnalysisGateEvaluator(deps.pulse);
-		default:
+		default: {
 			const _exhaustive: never = gate;
 			throw new Error(`Unknown gate type: ${_exhaustive}`);
+		}
 	}
 }

@@ -1,7 +1,7 @@
-import { ok, pipe, err } from "@f0rbit/corpus";
-import type { StageContext, GateVerdict } from "@devpad/pipeline-templates";
-import type { GateEvaluator, ApprovalStore, PulseEmitter, GateError, EmitError, StoreError } from "./evaluator.js";
+import type { GateVerdict, StageContext } from "@devpad/pipeline-templates";
 import type { Result } from "@f0rbit/corpus";
+import { err, ok, pipe } from "@f0rbit/corpus";
+import type { ApprovalStore, EmitError, GateError, GateEvaluator, PulseEmitter, StoreError } from "./evaluator.js";
 
 export class ManualGateEvaluator implements GateEvaluator {
 	private pulse: PulseEmitter;

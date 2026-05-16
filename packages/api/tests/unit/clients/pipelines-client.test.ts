@@ -111,14 +111,7 @@ describe("Pipelines API Client", () => {
 });
 
 describe("Pipelines MCP tool schemas", () => {
-	const expected_tools = [
-		"devpad_pipelines_list",
-		"devpad_pipelines_get",
-		"devpad_pipelines_create",
-		"devpad_pipelines_approve",
-		"devpad_pipelines_cancel",
-		"devpad_pipelines_rollback",
-	];
+	const expected_tools = ["devpad_pipelines_list", "devpad_pipelines_get", "devpad_pipelines_create", "devpad_pipelines_approve", "devpad_pipelines_cancel", "devpad_pipelines_rollback"];
 
 	it("registers every expected pipelines tool", () => {
 		for (const name of expected_tools) {

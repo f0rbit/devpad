@@ -1,7 +1,7 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { ManualGateEvaluator } from "../../manual.js";
-import { InMemoryPulseEmitter, InMemoryApprovalStore } from "../helpers.js";
+import { beforeEach, describe, expect, test } from "bun:test";
 import type { StageContext } from "@devpad/pipeline-templates";
+import { ManualGateEvaluator } from "../../manual.js";
+import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../helpers.js";
 
 describe("ManualGateEvaluator", () => {
 	let pulse: InMemoryPulseEmitter;

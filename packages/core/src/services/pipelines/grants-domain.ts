@@ -64,14 +64,10 @@ export function is_grant_match(grant: { scope: string }, scope: string): boolean
  * Phase 1: only ("anthropic:messages", "staging") auto-approves.
  * Easy to extend with new entries as policy evolves.
  */
-const AUTO_APPROVAL_POLICY: Array<[scope: string, stage: string]> = [
-	["anthropic:messages", "staging"],
-];
+const AUTO_APPROVAL_POLICY: Array<[scope: string, stage: string]> = [["anthropic:messages", "staging"]];
 
 export function is_auto_approvable(scope: string, stage_name: string): boolean {
-	return AUTO_APPROVAL_POLICY.some(
-		([policy_scope, policy_stage]) => policy_scope === scope && policy_stage === stage_name
-	);
+	return AUTO_APPROVAL_POLICY.some(([policy_scope, policy_stage]) => policy_scope === scope && policy_stage === stage_name);
 }
 
 export interface GrantVerdict {
@@ -83,14 +79,8 @@ export interface GrantVerdict {
  * Evaluate a list of grants against a requested scope and stage.
  * Returns { granted: true } if any grant matches, otherwise { granted: false, reason }.
  */
-export function evaluate_grant_check(
-	grants: PipelineGrant[],
-	scope: string,
-	stage_name: string
-): GrantVerdict {
-	const matching_grants = grants.filter((g) =>
-		g.stage_name === stage_name && is_grant_match(g, scope) && g.granted_at !== null
-	);
+export function evaluate_grant_check(grants: PipelineGrant[], scope: string, stage_name: string): GrantVerdict {
+	const matching_grants = grants.filter(g => g.stage_name === stage_name && is_grant_match(g, scope) && g.granted_at !== null);
 
 	if (matching_grants.length > 0) {
 		return { granted: true };

@@ -1,10 +1,10 @@
-import { describe, test, expect, beforeEach } from "bun:test";
-import { gateEvaluatorFor } from "../../registry.js";
-import { InMemoryPulseEmitter, InMemoryApprovalStore } from "../helpers.js";
-import { ManualGateEvaluator } from "../../manual.js";
-import { AutoGateEvaluator } from "../../auto.js";
-import { AnalysisGateEvaluator } from "../../analysis.js";
+import { beforeEach, describe, expect, test } from "bun:test";
 import type { Gate } from "@devpad/pipeline-templates";
+import { AnalysisGateEvaluator } from "../../analysis.js";
+import { AutoGateEvaluator } from "../../auto.js";
+import { ManualGateEvaluator } from "../../manual.js";
+import { gateEvaluatorFor } from "../../registry.js";
+import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../helpers.js";
 
 describe("gateEvaluatorFor", () => {
 	let pulse: InMemoryPulseEmitter;
