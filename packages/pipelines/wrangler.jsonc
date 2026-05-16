@@ -43,7 +43,8 @@
 	"services": [
 		{
 			"binding": "ANTHROPIC",
-			"service": "vault"
+			"service": "vault",
+			"entrypoint": "AnthropicVault"
 		},
 		{
 			"binding": "PULSE",
@@ -75,7 +76,8 @@
 			"services": [
 				{
 					"binding": "ANTHROPIC",
-					"service": "vault-staging"
+					"service": "vault-staging",
+					"entrypoint": "AnthropicVault"
 				},
 				{
 					"binding": "PULSE",

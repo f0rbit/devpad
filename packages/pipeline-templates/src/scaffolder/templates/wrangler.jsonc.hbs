@@ -1,0 +1,30 @@
+{
+	"$schema": "../../../../../node_modules/wrangler/config-schema.json",
+	"name": "{{package_name}}",
+	"main": "src/index.ts",
+	"compatibility_date": "{{compatibility_date}}",
+	// RPC service bindings for vault + pulse, nodejs_compat for hono/zod
+	"compatibility_flags": ["nodejs_compat", "rpc"],
+	"observability": {
+		"enabled": true
+	},
+	"env": {
+		"staging": {
+			"name": "{{package_name}}-staging"
+		},
+		"production": {
+			"name": "{{package_name}}"
+		}
+	},
+	"services": [
+		{
+			"binding": "ANTHROPIC",
+			"service": "vault",
+			"entrypoint": "AnthropicVault"
+		},
+		{
+			"binding": "PULSE",
+			"service": "pulse"
+		}
+	]
+}
