@@ -397,6 +397,7 @@ export const pipeline_analysis_template = sqliteTable("pipeline_analysis_templat
 	name: text("name").notNull(),
 	query_dsl: text("query_dsl", { mode: "json" }).notNull(),
 	threshold_dsl: text("threshold_dsl", { mode: "json" }).notNull(),
+	window_ms: integer("window_ms").notNull().default(600_000),
 });
 
 // relations

@@ -14,7 +14,7 @@ import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { advance_run, approve_stage, create_run, tick_bake_complete } from "../../runs.js";
-import { create_test_db, make_deps, script_name_for, seed_package, seed_user } from "./helpers.js";
+import { create_test_db, make_deps, script_name_for, seed_analysis_template, seed_package, seed_user } from "./helpers.js";
 
 const manifest: VersionSetManifest = {
 	package: "gates-table-pkg",
@@ -98,7 +98,15 @@ describe("cartesian gate × rollout matrix", () => {
 		const u = await seed_user(db);
 		const p = await seed_package(db, u.id);
 		pkg_id = p.id;
-		deps = make_deps(db);
+		// Inject a fixed "now" far ahead of any deploy event timestamp so
+		// the analysis gate's window is always closed. Combined with an
+		// empty threshold DSL on the seeded template, every analysis
+		// transition resolves to Pass without inspecting pulse metrics.
+		deps = make_deps(db, { now: () => Number.MAX_SAFE_INTEGER });
+
+		// Seed an analysis template matching the id used by `build_template`
+		// so the real evaluator finds a row to read.
+		await seed_analysis_template(db, u.id, { id: "at_default", threshold_dsl: "" });
 
 		// Pre-seed a prior deployment so partial-traffic stages have a
 		// predecessor to ramp down without bootstrapping to 100%.

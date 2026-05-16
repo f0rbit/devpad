@@ -33,3 +33,5 @@ export {
 	type StorageFake,
 } from "./in-memory-do.ts";
 export { type DispatchRecord, InMemoryGithubProvider } from "./in-memory-github.ts";
+export { InMemoryPulseSummaryProvider, type PulseSummaryCall } from "./in-memory-pulse-summary.ts";
+export type { MetricSnapshot, PulseError as PulseSummaryError, PulseSummaryProvider, PulseSummaryQuery } from "./pulse-summary-provider.ts";

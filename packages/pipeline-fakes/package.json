@@ -14,7 +14,9 @@
 		"./github/in-memory": "./src/in-memory-github.ts",
 		"./anthropic": "./src/anthropic-provider.ts",
 		"./anthropic/in-memory": "./src/in-memory-anthropic.ts",
-		"./durable-object/in-memory": "./src/in-memory-do.ts"
+		"./durable-object/in-memory": "./src/in-memory-do.ts",
+		"./pulse-summary": "./src/pulse-summary-provider.ts",
+		"./pulse-summary/in-memory": "./src/in-memory-pulse-summary.ts"
 	},
 	"scripts": {
 		"test": "bun test",
