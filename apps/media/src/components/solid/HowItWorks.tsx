@@ -1,7 +1,7 @@
-import { Stepper, Step } from "@f0rbit/ui";
+import { Step, Stepper } from "@f0rbit/ui";
+import LayoutList from "lucide-solid/icons/layout-list";
 import Link from "lucide-solid/icons/link";
 import RefreshCw from "lucide-solid/icons/refresh-cw";
-import LayoutList from "lucide-solid/icons/layout-list";
 
 export default function HowItWorks() {
 	return (

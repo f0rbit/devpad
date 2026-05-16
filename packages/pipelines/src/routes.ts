@@ -15,6 +15,7 @@
 
 import type { ResolvedPlan } from "@devpad/core/services/pipelines";
 import { create_run, get_run, resolve_run_plan } from "@devpad/core/services/pipelines";
+import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -32,6 +33,15 @@ export const create_run_body = z.object({
 export const approve_body = z.object({
 	stage_name: z.string().min(1),
 	decision: z.enum(["approved", "denied"]),
+	user_id: z.string().min(1),
+	reason: z.string().optional(),
+});
+
+export const grant_approve_body = z.object({
+	user_id: z.string().min(1),
+});
+
+export const grant_deny_body = z.object({
 	user_id: z.string().min(1),
 	reason: z.string().optional(),
 });
@@ -170,6 +180,40 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (plan === null) return json_err(500, { code: "plan_unavailable", run_id });
 		const response = await do_call(deps, run_id, "rollback", { plan });
 		return passthrough(response);
+	});
+
+	app.get("/grants", async c => {
+		const deps = c.get("deps");
+		const package_id = c.req.query("package_id");
+		if (!package_id) return json_err(400, { code: "missing_param", param: "package_id" });
+
+		const grants_result = await list_grants(deps.db, package_id);
+		if (!grants_result.ok) return json_err(500, grants_result.error);
+		return json_ok(grants_result.value);
+	});
+
+	app.post("/grants/:id/approve", async c => {
+		const deps = c.get("deps");
+		const body = await c.req.json().catch(() => null);
+		const parsed = grant_approve_body.safeParse(body);
+		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
+
+		const grant_id = c.req.param("id");
+		const result = await approve_grant(deps.db, grant_id, parsed.data.user_id);
+		if (!result.ok) return json_err(result.error.kind === "not_found" ? 404 : 500, result.error);
+		return json_ok(result.value);
+	});
+
+	app.post("/grants/:id/deny", async c => {
+		const deps = c.get("deps");
+		const body = await c.req.json().catch(() => null);
+		const parsed = grant_deny_body.safeParse(body);
+		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
+
+		const grant_id = c.req.param("id");
+		const result = await deny_grant(deps.db, grant_id, parsed.data.user_id, parsed.data.reason);
+		if (!result.ok) return json_err(result.error.kind === "not_found" ? 404 : 500, result.error);
+		return json_ok({ success: true });
 	});
 
 	app.get("/health", c => c.json({ status: "ok", timestamp: new Date().toISOString() }));

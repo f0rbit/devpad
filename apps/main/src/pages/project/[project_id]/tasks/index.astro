@@ -1,10 +1,10 @@
 ---
-import { getProject, rethrow } from "@/utils/api-client";
 import type { Project } from "@devpad/schema";
-import PageLayout from "@/layouts/PageLayout.astro";
-import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
 import { ProjectContextSetter } from "@/components/solid/ProjectContextSetter";
 import { TaskSorter } from "@/components/solid/TaskSorter";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
+import { getProject, rethrow } from "@/utils/api-client";
 
 const project_id = Astro.params.project_id!;
 
@@ -14,10 +14,7 @@ const { client, project, user } = guard;
 
 const project_map = { [project.id]: project } as Record<string, Project>;
 
-const [tasks_result, tags_result] = await Promise.all([
-	client.tasks.getByProject(project.id),
-	client.tags.list(),
-]);
+const [tasks_result, tags_result] = await Promise.all([client.tasks.getByProject(project.id), client.tags.list()]);
 if (!tasks_result.ok) return rethrow(tasks_result.error);
 const tasks = tasks_result.value;
 

@@ -1,19 +1,16 @@
 ---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { Post } from "@devpad/schema/blog";
 import { Button } from "@f0rbit/ui";
 import AppLayout from "@/layouts/app-layout.astro";
-import { getServerApiClient } from "@devpad/core/ui/api-client";
 import { date } from "@/lib/date-utils";
-import type { Post } from "@devpad/schema/blog";
 
 let posts: Post[] = [];
 let projectMap: Record<string, string> = {};
 let error: string | null = null;
 
 const client = getServerApiClient(Astro.locals);
-const [postsResult, projectsResult] = await Promise.all([
-	client.blog.posts.list({ limit: 100 }),
-	client.projects.list(),
-]);
+const [postsResult, projectsResult] = await Promise.all([client.blog.posts.list({ limit: 100 }), client.projects.list()]);
 
 if (postsResult.ok) {
 	posts = postsResult.value.posts ?? [];

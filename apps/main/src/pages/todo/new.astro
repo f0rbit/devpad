@@ -1,18 +1,15 @@
 ---
 import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
-import PageLayout from "@/layouts/PageLayout.astro";
 import TaskEditor from "@/components/solid/TaskEditor";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { rethrow } from "@/utils/api-client";
 
 const user = Astro.locals.user;
 if (!user) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
 const client = getServerApiClient(Astro.locals);
 
-const [map_result, tags_result] = await Promise.all([
-	client.projects.map(),
-	client.tags.list(),
-]);
+const [map_result, tags_result] = await Promise.all([client.projects.map(), client.tags.list()]);
 
 if (!map_result.ok) return rethrow(map_result.error);
 const project_map = map_result.value;

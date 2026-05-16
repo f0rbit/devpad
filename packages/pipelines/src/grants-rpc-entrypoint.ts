@@ -10,9 +10,9 @@
  * bun-native tests.
  */
 
+import { WorkerEntrypoint } from "cloudflare:workers";
 import type { Database } from "@devpad/schema/database/types";
 import type { Result } from "@f0rbit/corpus";
-import { WorkerEntrypoint } from "cloudflare:workers";
 import type { PipelineEnv } from "./bindings.ts";
 import { type CallerIdentity, type GrantCheckResponse, type GrantRpcError, type PipelinesGrantsRPC, PipelinesGrantsService } from "./grants-rpc.ts";
 

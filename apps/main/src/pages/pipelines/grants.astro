@@ -1,0 +1,46 @@
+---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { PipelineGrant } from "@devpad/schema";
+import GrantsList from "@/components/solid/pipelines/GrantsList";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { rethrow } from "@/utils/api-client";
+
+const user = Astro.locals.user;
+let grants: PipelineGrant[] = [];
+
+if (user) {
+	const client = getServerApiClient(Astro.locals);
+	const result = await client.pipelines.grants.list();
+	if (!result.ok) return rethrow(result.error);
+	grants = result.value;
+}
+
+const keywords = ["grants", "permissions", "pipeline", "access control", "deployment", "approval", "permissions management"];
+---
+
+<PageLayout
+	title="Pipeline Grants - devpad"
+	description="Manage pipeline grants and permissions. Review pending grants, approve or deny access to scopes at different pipeline stages."
+	keywords={keywords}
+	canonical="https://devpad.tools/pipelines/grants"
+>
+	{
+		user ? (
+			<main>
+				<div class="row row-sm" style="margin-bottom: 1rem;">
+					<h1>pipeline grants</h1>
+				</div>
+				<GrantsList client:load grants={grants} user_id={user.id} />
+			</main>
+		) : (
+			<main>
+				<section class="landing-hero">
+					<h1 style="font-size: 2.5rem; font-weight: 600; margin: 0;">pipeline grants</h1>
+					<p class="text-lg text-muted hero-description">
+						manage permissions for your pipeline stages. approve or deny access to required scopes.
+					</p>
+				</section>
+			</main>
+		)
+	}
+</PageLayout>

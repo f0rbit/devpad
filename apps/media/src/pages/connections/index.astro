@@ -1,9 +1,9 @@
 ---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 import ConnectionList from "../../components/solid/ConnectionList";
 import ProfileList from "../../components/solid/ProfileList";
 import AppLayout from "../../layouts/AppLayout.astro";
-import { type ConnectionWithSettings, type ProfileSummary } from "../../utils/types";
-import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { ConnectionWithSettings, ProfileSummary } from "../../utils/types";
 
 const profileSlug = Astro.url.searchParams.get("profile");
 

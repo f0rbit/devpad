@@ -78,7 +78,9 @@ export default function PulseLogs(props: PulseLogsProps) {
 					<For each={filtered()}>
 						{(log, idx) => (
 							<div class="row" style={{ "align-items": "baseline", gap: "0.5rem", padding: "0.25rem 0", "border-bottom": "1px solid var(--border)" }}>
-								<span class="text-faint" style={{ "min-width": "70px" }}>{fmtTime(log.ts)}</span>
+								<span class="text-faint" style={{ "min-width": "70px" }}>
+									{fmtTime(log.ts)}
+								</span>
 								<Badge variant={levelVariant(log.level) as any}>{log.level ?? "info"}</Badge>
 								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>{log.message ?? log.name ?? `log #${idx() + 1}`}</span>
 								<Show when={log.route}>

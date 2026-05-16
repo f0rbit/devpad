@@ -9,6 +9,8 @@ import { evaluate_grant_check, is_auto_approvable } from "./grants-domain.js";
 export type { GrantVerdict } from "./grants-domain.js";
 export { evaluate_grant_check, is_auto_approvable, is_grant_match } from "./grants-domain.js";
 
+export const AUTO_APPROVE_USER = "system:auto-approve";
+
 /**
  * List all grants for a package.
  */
@@ -54,7 +56,7 @@ export async function request_grant(db: Database, package_id: string, stage_name
 			stage_name,
 			scope,
 			granted_at: auto_approvable ? now : null,
-			granted_by: null, // Phase 1: no user context for auto-approval
+			granted_by: auto_approvable ? AUTO_APPROVE_USER : null,
 		};
 
 		const inserted = await db
@@ -119,6 +121,41 @@ export async function approve_grant(db: Database, grant_id: string, user_id: str
 		return err({
 			kind: "db_error",
 			message: `Failed to approve grant ${grant_id}`,
+		} as ServiceError);
+	}
+}
+
+/**
+ * Deny an existing grant.
+ */
+export async function deny_grant(db: Database, grant_id: string, user_id: string, reason?: string): Promise<Result<void, ServiceError>> {
+	try {
+		const now = new Date().toISOString();
+
+		const updated = await db
+			.update(pipeline_grant)
+			.set({
+				granted_at: null,
+				granted_by: null,
+				updated_at: now,
+				modified_by: "user",
+			})
+			.where(eq(pipeline_grant.id, grant_id))
+			.returning();
+
+		if (!updated[0]) {
+			return err({
+				kind: "not_found",
+				resource: "grant",
+				id: grant_id,
+			} as ServiceError);
+		}
+
+		return ok(undefined);
+	} catch (e) {
+		return err({
+			kind: "db_error",
+			message: `Failed to deny grant ${grant_id}`,
 		} as ServiceError);
 	}
 }

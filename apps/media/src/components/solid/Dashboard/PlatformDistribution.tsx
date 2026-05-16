@@ -1,5 +1,5 @@
-import type { PlatformCount } from "@/utils/analytics";
 import { For } from "solid-js";
+import type { PlatformCount } from "@/utils/analytics";
 import PlatformIcon from "../PlatformIcon";
 
 type PlatformDistributionProps = {

@@ -1,14 +1,14 @@
 ---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 import type { Project, TagWithTypedColor, TaskWithDetails } from "@devpad/schema";
 import Plus from "lucide-solid/icons/plus";
 import Tag from "lucide-solid/icons/tag";
 import GithubLogin from "@/components/solid/GithubLogin";
 import { TaskSorter } from "@/components/solid/TaskSorter";
 import PageLayout from "@/layouts/PageLayout.astro";
-import { getServerApiClient } from "@devpad/core/ui/api-client";
 import { rethrow } from "@/utils/api-client";
 
-let user = Astro.locals.user;
+const user = Astro.locals.user;
 
 let project_map: Record<string, Project> = {};
 let tasks: TaskWithDetails[] = [];
@@ -17,11 +17,7 @@ let tags: TagWithTypedColor[] = [];
 if (user) {
 	const client = getServerApiClient(Astro.locals);
 
-	const [project_map_result, tasks_result, tags_result] = await Promise.all([
-		client.projects.map(),
-		client.tasks.list(),
-		client.tags.list(),
-	]);
+	const [project_map_result, tasks_result, tags_result] = await Promise.all([client.projects.map(), client.tasks.list(), client.tags.list()]);
 
 	if (!project_map_result.ok) return rethrow(project_map_result.error);
 	if (!tasks_result.ok) return rethrow(tasks_result.error);
