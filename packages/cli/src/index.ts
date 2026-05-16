@@ -5,6 +5,15 @@ import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
 import ora from "ora";
+import { readFileSync, writeFileSync } from "fs";
+import { createCorpusBackend } from "./corpus-backend.js";
+import {
+	compute_hash,
+	validate_artifact_paths,
+	build_manifest,
+	type ArtifactInputs,
+	type VersionSetOutput,
+} from "./pipelines-artifacts-helpers.js";
 
 const isTTY = process.stdout.isTTY;
 
@@ -553,6 +562,162 @@ user.command("preferences")
 			spinner.succeed("Preferences updated");
 		} catch (error) {
 			spinner.fail("Failed to update preferences");
+			handleError(error);
+		}
+	});
+
+// Pipelines command group
+const pipelines = program.command("pipelines").description("Manage pipelines");
+
+const pipelinesArtifacts = pipelines.command("artifacts").description("Manage pipeline artifacts");
+
+pipelinesArtifacts
+	.command("upload")
+	.description("Upload artifacts to corpus")
+	.requiredOption("--package <name>", "Package name")
+	.requiredOption("--bundle <path>", "Path to worker bundle (dist/_worker.js)")
+	.requiredOption("--manifest <path>", "Path to manifest (dist/manifest.json)")
+	.requiredOption("--infra-plan <path>", "Path to infra plan (infra.ts)")
+	.requiredOption("--pipeline <path>", "Path to pipeline definition (pipeline.ts)")
+	.requiredOption("--grants <path>", "Path to grants definition (grants.ts)")
+	.requiredOption("--output <path>", "Output path for version set JSON")
+	.option("--git-sha <sha>", "Git SHA (default: from environment or zeroed)")
+	.option("--compatibility-date <date>", "Compatibility date (default: 2025-05-01)")
+	.action(async options => {
+		const spinner = createSpinner("Uploading artifacts to corpus...").start();
+		try {
+			const inputs: ArtifactInputs = {
+				package_name: options.package,
+				bundle_path: options.bundle,
+				manifest_path: options.manifest,
+				infra_plan_path: options.infraPlan,
+				pipeline_path: options.pipeline,
+				grants_path: options.grants,
+				git_sha: options.gitSha,
+				compatibility_date: options.compatibilityDate,
+			};
+
+			// Validate paths
+			const validation_result = validate_artifact_paths(inputs);
+			if (!validation_result.ok) {
+				spinner.fail("Validation failed");
+				console.error(chalk.red(`Error: ${validation_result.error.message}`));
+				process.exit(1);
+			}
+
+			// Read all artifact files
+			const bundle = readFileSync(options.bundle);
+			const manifest_text = readFileSync(options.manifest, "utf8");
+			const manifest_obj = JSON.parse(manifest_text);
+			const infra_plan = readFileSync(options.infraPlan);
+			const pipeline = readFileSync(options.pipeline);
+			const grants = readFileSync(options.grants);
+
+			// Compute hashes for artifact references
+			const bundle_hash = compute_hash(bundle).slice(0, 12);
+			const manifest_hash = compute_hash(Buffer.from(manifest_text)).slice(0, 12);
+			const infra_plan_hash = compute_hash(infra_plan).slice(0, 12);
+			const pipeline_hash = compute_hash(pipeline).slice(0, 12);
+			const grants_hash = compute_hash(grants).slice(0, 12);
+
+			// Build the manifest
+			const artifacts = {
+				bundle,
+				bundle_ref: `worker-bundles/${bundle_hash}`,
+				manifest: manifest_obj,
+				manifest_ref: `env-manifests/${manifest_hash}`,
+				infra_plan,
+				infra_plan_ref: `infra-plans/${infra_plan_hash}`,
+				pipeline,
+				pipeline_ref: `pipelines/${pipeline_hash}`,
+				grants,
+				grants_ref: `grants/${grants_hash}`,
+			};
+
+			const manifest_result = build_manifest(inputs, artifacts);
+			if (!manifest_result.ok) {
+				spinner.fail("Failed to build manifest");
+				console.error(chalk.red(`Error: ${manifest_result.error.message}`));
+				process.exit(1);
+			}
+
+			// Create corpus backend and store
+			const backend = await createCorpusBackend();
+			const { version_set_store } = await import("@f0rbit/corpus");
+			const version_sets = version_set_store(backend);
+
+			// Upload manifest to corpus
+			const put_result = await version_sets.put(manifest_result.value);
+			if (!put_result.ok) {
+				spinner.fail("Failed to upload manifest");
+				const error_msg = put_result.error.kind === "storage_error"
+					? put_result.error.cause?.message || "Storage error"
+					: "Failed to store manifest";
+				console.error(chalk.red(`Error: ${error_msg}`));
+				process.exit(1);
+			}
+
+			const version_set_id = put_result.value.version;
+			const output: VersionSetOutput = {
+				id: version_set_id,
+				version: version_set_id,
+				package: inputs.package_name,
+			};
+
+			// Write output
+			writeFileSync(options.output, JSON.stringify(output, null, 2) + "\n");
+
+			spinner.succeed(`Artifacts uploaded successfully`);
+			console.log(chalk.green(`Version Set ID: ${version_set_id}`));
+		} catch (error) {
+			spinner.fail("Failed to upload artifacts");
+			handleError(error);
+		}
+	});
+
+const pipelinesRuns = pipelines.command("runs").description("Manage pipeline runs");
+
+pipelinesRuns
+	.command("start")
+	.description("Start a pipeline run")
+	.requiredOption("--package <name>", "Package name")
+	.requiredOption("--version-set-id <id>", "Version set ID from corpus")
+	.action(async options => {
+		const spinner = createSpinner("Starting pipeline run...").start();
+		try {
+			const apiKey = process.env.DEVPAD_API_KEY || Bun.env.DEVPAD_API_KEY;
+			const baseUrl = process.env.DEVPAD_BASE_URL || "https://devpad.tools/api/v1";
+
+			if (!apiKey) {
+				spinner.fail("Missing API key");
+				console.error(chalk.red("Error: DEVPAD_API_KEY environment variable is required"));
+				process.exit(1);
+			}
+
+			const response = await fetch(`${baseUrl}/pipelines/runs`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${apiKey}`,
+				},
+				body: JSON.stringify({
+					package_id: options.package,
+					version_set_id: options.versionSetId,
+				}),
+			});
+
+			if (!response.ok) {
+				const error_text = await response.text();
+				spinner.fail("Failed to start run");
+				console.error(chalk.red(`HTTP ${response.status}: ${error_text}`));
+				process.exit(1);
+			}
+
+			const run = await response.json();
+			spinner.succeed(`Pipeline run started`);
+			console.log(chalk.green(`Run ID: ${run.id}`));
+		} catch (error) {
+			spinner.fail("Failed to start pipeline run");
 			handleError(error);
 		}
 	});

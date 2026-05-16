@@ -42,7 +42,9 @@
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@f0rbit/corpus": "workspace:*"
+	},
 	"devDependencies": {
 		"@devpad/api": "workspace:*",
 		"@devpad/schema": "workspace:*",
@@ -51,6 +53,7 @@
 		"chalk": "^5.3.0",
 		"commander": "^12.0.0",
 		"console-table-printer": "^2.12.1",
+		"js-yaml": "^4.1.0",
 		"ora": "^8.0.1",
 		"typescript": "^5.9.2",
 		"zod": "^3.22.4"
