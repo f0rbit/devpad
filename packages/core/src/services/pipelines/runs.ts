@@ -29,6 +29,7 @@
  */
 
 import type { CloudflareProvider } from "@devpad/pipeline-fakes";
+import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
 import type { ApprovalDecision, PipelineRun, PipelineStageEvent, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
@@ -49,6 +50,8 @@ export type RunDeps = {
 	cf: CloudflareProvider;
 	pulse: PulseEmitter;
 	approvals: ApprovalStore;
+	pulse_summary?: PulseSummaryProvider;
+	now?: () => number;
 	lineage?: (package_id: string) => Promise<Result<VersionSetRef[], ServiceError>>;
 };
 
@@ -323,7 +326,13 @@ export const approve_stage = async (deps: RunDeps, input: { run_id: string; stag
 	return advance_run(deps, input.run_id, { kind: "gate_verdict", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason }, plan);
 };
 
-const gate_deps_from = (deps: RunDeps): GateEvaluatorDeps => ({ pulse: deps.pulse, approvals: deps.approvals });
+const gate_deps_from = (deps: RunDeps): GateEvaluatorDeps => ({
+	pulse: deps.pulse,
+	approvals: deps.approvals,
+	db: deps.db,
+	pulse_summary: deps.pulse_summary,
+	now: deps.now,
+});
 
 /**
  * Execute the side-effect output produced by a transition. Returns the

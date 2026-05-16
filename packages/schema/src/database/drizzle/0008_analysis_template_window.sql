@@ -1,0 +1,1 @@
+ALTER TABLE `pipeline_analysis_template` ADD `window_ms` integer DEFAULT 600000 NOT NULL;
