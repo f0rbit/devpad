@@ -4,10 +4,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { PipelinesGrantsService } from "../../src/grants-rpc.ts";
 import { create_test_db, seed_package, seed_user } from "./helpers.ts";
 
-const seed_grant = async (
-	db: Database,
-	overrides: { package_id: string; stage_name: string; scope: string; granted_at?: string | null; id?: string }
-): Promise<void> => {
+const seed_grant = async (db: Database, overrides: { package_id: string; stage_name: string; scope: string; granted_at?: string | null; id?: string }): Promise<void> => {
 	const now = new Date().toISOString();
 	await db.insert(pipeline_grant).values({
 		id: overrides.id ?? `pipeline-grant_${crypto.randomUUID()}`,

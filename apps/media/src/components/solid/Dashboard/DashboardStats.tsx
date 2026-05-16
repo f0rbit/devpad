@@ -1,6 +1,6 @@
+import { Stat } from "@f0rbit/ui";
 import type { DashboardStats as Stats } from "@/utils/analytics";
 import { format } from "@/utils/formatters";
-import { Stat } from "@f0rbit/ui";
 
 type Props = {
 	stats: Stats;

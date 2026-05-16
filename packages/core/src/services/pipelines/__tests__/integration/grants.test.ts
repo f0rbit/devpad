@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PipelineGrant } from "@devpad/schema";
-import { approve_grant, check_grant, list_grants, request_grant } from "../../grants.js";
+import { approve_grant, check_grant, deny_grant, list_grants, request_grant } from "../../grants.js";
 
 const build_mock_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant => ({
 	id: "pipeline-grant_123",
@@ -225,6 +225,49 @@ describe("grants service", () => {
 			const db = create_mock_db({ update: [] });
 
 			const result = await approve_grant(db, "pipeline-grant_missing", "user_approver");
+			expect(result.ok).toBe(false);
+			if (!result.ok) {
+				expect(result.error.kind).toBe("not_found");
+				if (result.error.kind === "not_found") {
+					expect(result.error.resource).toBe("grant");
+				}
+			}
+		});
+	});
+
+	describe("deny_grant", () => {
+		test("denies an approved grant", async () => {
+			const updated = [
+				build_mock_grant({
+					id: "pipeline-grant_123",
+					granted_at: null,
+					granted_by: null,
+				}),
+			];
+			const db = create_mock_db({ update: updated });
+
+			const result = await deny_grant(db, "pipeline-grant_123", "user_denier");
+			expect(result.ok).toBe(true);
+		});
+
+		test("denies a pending grant", async () => {
+			const updated = [
+				build_mock_grant({
+					id: "pipeline-grant_123",
+					granted_at: null,
+					granted_by: null,
+				}),
+			];
+			const db = create_mock_db({ update: updated });
+
+			const result = await deny_grant(db, "pipeline-grant_123", "user_denier");
+			expect(result.ok).toBe(true);
+		});
+
+		test("returns not_found if grant does not exist", async () => {
+			const db = create_mock_db({ update: [] });
+
+			const result = await deny_grant(db, "pipeline-grant_missing", "user_denier");
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.kind).toBe("not_found");

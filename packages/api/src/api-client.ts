@@ -1002,6 +1002,41 @@ export class ApiClient {
 		 * Rollback a pipeline run
 		 */
 		rollback: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+
+		/**
+		 * Grants namespace
+		 */
+		grants: {
+			/**
+			 * List grants for a package
+			 */
+			list: (package_id?: string): Promise<ApiResult<any[]>> =>
+				wrap(() =>
+					this.clients.pipelines.get<any[]>("/grants", {
+						query: package_id ? { package_id } : {},
+					})
+				),
+
+			/**
+			 * Approve a grant
+			 */
+			approve: (grant_id: string, user_id: string): Promise<ApiResult<any>> =>
+				wrap(() =>
+					this.clients.pipelines.post<any>(`/grants/${grant_id}/approve`, {
+						body: { user_id },
+					})
+				),
+
+			/**
+			 * Deny a grant
+			 */
+			deny: (grant_id: string, user_id: string, reason?: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() =>
+					this.clients.pipelines.post<{ success: boolean }>(`/grants/${grant_id}/deny`, {
+						body: { user_id, reason },
+					})
+				),
+		},
 	};
 
 	/**

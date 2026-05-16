@@ -1,8 +1,8 @@
 ---
-import { getProject, rethrow } from "@/utils/api-client";
+import TaskEditor from "@/components/solid/TaskEditor";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
-import TaskEditor from "@/components/solid/TaskEditor";
+import { getProject, rethrow } from "@/utils/api-client";
 
 const project_id = Astro.params.project_id!;
 
@@ -12,10 +12,7 @@ const { client, project, user } = guard;
 
 const goal_id_param = Astro.url.searchParams.get("goal_id") || null;
 
-const [map_result, tags_result] = await Promise.all([
-	client.projects.map(),
-	client.tags.list(),
-]);
+const [map_result, tags_result] = await Promise.all([client.projects.map(), client.tags.list()]);
 if (!map_result.ok) return rethrow(map_result.error);
 const project_map = map_result.value;
 

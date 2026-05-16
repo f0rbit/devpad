@@ -1,8 +1,8 @@
 ---
 import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
-import PageLayout from "@/layouts/PageLayout.astro";
 import TaskEditor from "@/components/solid/TaskEditor";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { rethrow } from "@/utils/api-client";
 
 const { todo_id } = Astro.params;
 if (!todo_id) return new Response(null, { status: 404, statusText: "Task not found" });
@@ -18,10 +18,7 @@ const task = task_result.value;
 if (!task || !task.task) return new Response(null, { status: 404, statusText: "Task not found" });
 if (task.task.owner_id !== user.id) return new Response(null, { status: 401, statusText: "Unauthorized" });
 
-const [project_map_result, tags_result] = await Promise.all([
-	client.projects.map(),
-	client.tags.list(),
-]);
+const [project_map_result, tags_result] = await Promise.all([client.projects.map(), client.tags.list()]);
 
 if (!project_map_result.ok) return rethrow(project_map_result.error);
 const project_map = project_map_result.value;

@@ -141,7 +141,13 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 			</Show>
 
 			<Show when={showCreate()}>
-				<Modal open onClose={() => { setShowCreate(false); resetForm(); }}>
+				<Modal
+					open
+					onClose={() => {
+						setShowCreate(false);
+						resetForm();
+					}}
+				>
 					<ModalHeader>
 						<ModalTitle>new subscription</ModalTitle>
 					</ModalHeader>
@@ -164,8 +170,19 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 						</div>
 					</ModalBody>
 					<ModalFooter>
-						<Button variant={"secondary" as any} onClick={() => { setShowCreate(false); resetForm(); }} disabled={loading()}>cancel</Button>
-						<Button onClick={handleCreate} disabled={loading()} data-testid="pulse-sub-submit">{loading() ? "creating…" : "create"}</Button>
+						<Button
+							variant={"secondary" as any}
+							onClick={() => {
+								setShowCreate(false);
+								resetForm();
+							}}
+							disabled={loading()}
+						>
+							cancel
+						</Button>
+						<Button onClick={handleCreate} disabled={loading()} data-testid="pulse-sub-submit">
+							{loading() ? "creating…" : "create"}
+						</Button>
 					</ModalFooter>
 				</Modal>
 			</Show>
@@ -176,11 +193,17 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 						<ModalTitle>delete subscription</ModalTitle>
 					</ModalHeader>
 					<ModalBody>
-						<p>Delete <strong>{deleteTarget()!.name ?? "this subscription"}</strong>? Notifications will stop immediately.</p>
+						<p>
+							Delete <strong>{deleteTarget()!.name ?? "this subscription"}</strong>? Notifications will stop immediately.
+						</p>
 					</ModalBody>
 					<ModalFooter>
-						<Button variant={"secondary" as any} onClick={() => setDeleteTarget(null)} disabled={loading()}>cancel</Button>
-						<Button variant={"danger" as any} onClick={handleDelete} disabled={loading()}>{loading() ? "deleting…" : "delete"}</Button>
+						<Button variant={"secondary" as any} onClick={() => setDeleteTarget(null)} disabled={loading()}>
+							cancel
+						</Button>
+						<Button variant={"danger" as any} onClick={handleDelete} disabled={loading()}>
+							{loading() ? "deleting…" : "delete"}
+						</Button>
 					</ModalFooter>
 				</Modal>
 			</Show>

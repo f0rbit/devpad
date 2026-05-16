@@ -1,9 +1,9 @@
 ---
-import { getProject, rethrow } from "@/utils/api-client";
+import { AiProvenance } from "@devpad/core/ui";
+import { TaskSorter } from "@/components/solid/TaskSorter";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { TaskSorter } from "@/components/solid/TaskSorter";
-import { AiProvenance } from "@devpad/core/ui";
+import { getProject, rethrow } from "@/utils/api-client";
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
@@ -30,10 +30,7 @@ if (goal.milestone_id !== milestone.id) {
 const project_map: Record<string, typeof project> = {};
 project_map[project.id] = project;
 
-const [tasks_result, tags_result] = await Promise.all([
-	client.tasks.list(),
-	client.tags.list(),
-]);
+const [tasks_result, tags_result] = await Promise.all([client.tasks.list(), client.tags.list()]);
 if (!tasks_result.ok) return rethrow(tasks_result.error);
 const allTasks = tasks_result.value;
 if (!tags_result.ok) return rethrow(tags_result.error);

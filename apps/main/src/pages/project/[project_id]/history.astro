@@ -1,8 +1,8 @@
 ---
-import { getProject, rethrow } from "@/utils/api-client";
+import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import HistoryTimeline from "@/components/solid/HistoryTimeline";
+import { getProject, rethrow } from "@/utils/api-client";
 
 const project_id = Astro.params.project_id!;
 

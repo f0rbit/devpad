@@ -1,5 +1,5 @@
 import { Spinner } from "@f0rbit/ui";
-import { Show, createEffect, createSignal } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { markdown } from "../../lib/markdown";
 
 type Props = {

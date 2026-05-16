@@ -1,9 +1,9 @@
 ---
 import { getProject, rethrow } from "@/utils/api-client";
-import PageLayout from "../../../layouts/PageLayout.astro";
-import ProjectLayout from "../../../layouts/ProjectLayout.astro";
 import ProjectSettings from "../../../components/ProjectSettings.astro";
 import ConfigEditor from "../../../components/solid/ConfigEditor";
+import PageLayout from "../../../layouts/PageLayout.astro";
+import ProjectLayout from "../../../layouts/ProjectLayout.astro";
 
 const project_id = Astro.params.project_id!;
 
@@ -11,10 +11,7 @@ const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
 const { client, project } = guard;
 
-const [config_result, tags_result] = await Promise.all([
-	client.projects.config.load(project.id),
-	client.tags.list(),
-]);
+const [config_result, tags_result] = await Promise.all([client.projects.config.load(project.id), client.tags.list()]);
 if (!config_result.ok) return rethrow(config_result.error);
 const config = config_result.value;
 if (!tags_result.ok) return rethrow(tags_result.error);

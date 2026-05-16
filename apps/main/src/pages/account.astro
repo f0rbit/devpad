@@ -1,9 +1,9 @@
 ---
 import { getServerApiClient } from "@devpad/core/ui/api-client";
-import { rethrow } from "@/utils/api-client";
-import PageLayout from "@/layouts/PageLayout.astro";
-import HistoryTimeline from "@/components/solid/HistoryTimeline";
 import ApiKeyManager from "@/components/solid/ApiKeyManager";
+import HistoryTimeline from "@/components/solid/HistoryTimeline";
+import PageLayout from "@/layouts/PageLayout.astro";
+import { rethrow } from "@/utils/api-client";
 
 const user = Astro.locals.user;
 
@@ -13,10 +13,7 @@ if (!user) {
 
 const client = getServerApiClient(Astro.locals);
 
-const [keys_result, history_result] = await Promise.all([
-	client.auth.keys.list(),
-	client.user.history(),
-]);
+const [keys_result, history_result] = await Promise.all([client.auth.keys.list(), client.user.history()]);
 if (!keys_result.ok) return rethrow(keys_result.error);
 const keys = keys_result.value;
 

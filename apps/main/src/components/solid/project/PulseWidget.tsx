@@ -41,7 +41,14 @@ export default function PulseWidget(props: PulseWidgetProps) {
 				<span style={{ "font-weight": 500 }}>pulse</span>
 				<span class="text-sm text-faint">last 7 days</span>
 			</div>
-			<Show when={!isUnreachable()} fallback={<p class="text-sm text-faint" style={{ margin: 0 }}>analytics offline</p>}>
+			<Show
+				when={!isUnreachable()}
+				fallback={
+					<p class="text-sm text-faint" style={{ margin: 0 }}>
+						analytics offline
+					</p>
+				}
+			>
 				<div class="row" style={{ gap: "1rem", "align-items": "center" }}>
 					<div class="stack stack-xs">
 						<span class="text-sm text-faint">pageviews</span>

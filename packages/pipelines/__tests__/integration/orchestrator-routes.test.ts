@@ -239,9 +239,7 @@ describe("orchestrator routes — DO alarm idempotency", () => {
 
 		const events_before = await events_of(h.db, run_id);
 		const pulse_before = h.deps.pulse.emitted.length;
-		const deploys_before = (await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)).ok
-			? ((await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)) as { ok: true; value: unknown[] }).value.length
-			: 0;
+		const deploys_before = (await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)).ok ? ((await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)) as { ok: true; value: unknown[] }).value.length : 0;
 
 		// Fire the alarm — must not error, must not advance, must not emit pulse, must not deploy.
 		await h.fire_alarm(run_id);

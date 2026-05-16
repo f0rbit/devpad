@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { ApiError, AuthenticationError, NetworkError, ValidationError } from "../../../src/errors";
 import { getUserFriendlyErrorMessage, parseZodErrors } from "../../../src/error-handlers";
+import { ApiError, AuthenticationError, NetworkError, ValidationError } from "../../../src/errors";
 
 describe("User-friendly error messages", () => {
 	describe("parseZodErrors", () => {

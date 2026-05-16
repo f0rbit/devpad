@@ -1,12 +1,12 @@
 ---
-import GithubLogin from "@/components/solid/GithubLogin";
-import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
-import PageLayout from "@/layouts/PageLayout.astro";
 import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { Project } from "@devpad/schema";
+import GithubLogin from "@/components/solid/GithubLogin";
+import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
-import { Project } from "@devpad/schema";
+import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
 
-let user = Astro.locals.user;
+const user = Astro.locals.user;
 
 let projects: Project[] = [];
 

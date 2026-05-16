@@ -1,6 +1,6 @@
 ---
+import { DevpadFooter, DevpadHeader } from "@devpad/core/ui";
 import Layout from "./Layout.astro";
-import { DevpadHeader, DevpadFooter } from "@devpad/core/ui";
 
 interface Props {
 	title: string;
@@ -14,10 +14,7 @@ const pathname = Astro.url.pathname;
 
 const { title, description, keywords, canonical, noindex } = Astro.props;
 
-const currentApp = pathname.startsWith("/project") ? "projects" as const
-	: pathname.startsWith("/todo") ? "tasks" as const
-	: pathname.startsWith("/docs") ? "docs" as const
-	: undefined;
+const currentApp = pathname.startsWith("/project") ? ("projects" as const) : pathname.startsWith("/todo") ? ("tasks" as const) : pathname.startsWith("/docs") ? ("docs" as const) : undefined;
 ---
 
 <Layout title={title} description={description} keywords={keywords} canonical={canonical} noindex={noindex}>

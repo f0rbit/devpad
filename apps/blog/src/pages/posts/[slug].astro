@@ -1,8 +1,8 @@
 ---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 import { Button } from "@f0rbit/ui";
 import PostEditor from "@/components/post/post-editor";
 import AppLayout from "@/layouts/app-layout.astro";
-import { getServerApiClient } from "@devpad/core/ui/api-client";
 
 const { slug } = Astro.params;
 
@@ -44,11 +44,7 @@ let error: string | null = null;
 
 const client = getServerApiClient(Astro.locals);
 
-const [postResult, catResult, projResult] = await Promise.all([
-	client.blog.posts.getBySlug(slug!),
-	client.blog.categories.tree(),
-	client.projects.list(),
-]);
+const [postResult, catResult, projResult] = await Promise.all([client.blog.posts.getBySlug(slug!), client.blog.categories.tree(), client.projects.list()]);
 
 if (postResult.ok) {
 	post = postResult.value as unknown as Post;

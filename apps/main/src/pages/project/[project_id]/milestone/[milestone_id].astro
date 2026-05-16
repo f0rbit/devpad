@@ -1,7 +1,7 @@
 ---
-import { getProject, rethrow } from "@/utils/api-client";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getProject, rethrow } from "@/utils/api-client";
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
