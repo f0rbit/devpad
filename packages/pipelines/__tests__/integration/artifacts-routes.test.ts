@@ -235,4 +235,66 @@ describe("POST /artifacts/version-set", () => {
 		const res = await post_manifest(app, valid_manifest, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res.status).toBe(503);
 	});
+
+	test("second put for the same package stamps the previous version as parent so lineage walks back", async () => {
+		const { app, backend } = build_routes_deps();
+
+		// Upload A
+		const res_a = await post_manifest(app, valid_manifest, { authorization: auth_header(PIPELINES_TOKEN) });
+		expect(res_a.status).toBe(200);
+		const body_a = (await res_a.json()) as { ok: true; value: { version_set_id: string } };
+
+		// Upload B for the same package (different git_sha so dedup doesn't collapse).
+		// Memory backend's created_at comes from Date.now() — a 2ms delay
+		// guarantees B's created_at > A's even on fast machines so the
+		// "latest" lookup picks A as B's parent.
+		await new Promise(r => setTimeout(r, 2));
+		const manifest_b: VersionSetManifest = { ...valid_manifest, git_sha: "fedcba9876543210fedcba9876543210fedcba98" };
+		const res_b = await post_manifest(app, manifest_b, { authorization: auth_header(PIPELINES_TOKEN) });
+		expect(res_b.status).toBe(200);
+		const body_b = (await res_b.json()) as { ok: true; value: { version_set_id: string } };
+
+		// Lineage from B should be [B, A]
+		const store = version_set_store(backend);
+		const chain = await store.lineage(body_b.value.version_set_id);
+		expect(chain.ok).toBe(true);
+		if (!chain.ok) return;
+		expect(chain.value.map(r => r.version)).toEqual([body_b.value.version_set_id, body_a.value.version_set_id]);
+		expect(chain.value.every(r => r.package === "test-pkg")).toBe(true);
+	});
+
+	test("first put for a fresh package has empty parents (lineage = [self])", async () => {
+		const { app, backend } = build_routes_deps();
+		const fresh: VersionSetManifest = { ...valid_manifest, package: "fresh-pkg" };
+		const res = await post_manifest(app, fresh, { authorization: auth_header(PIPELINES_TOKEN) });
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { ok: true; value: { version_set_id: string } };
+
+		const store = version_set_store(backend);
+		const chain = await store.lineage(body.value.version_set_id);
+		expect(chain.ok).toBe(true);
+		if (!chain.ok) return;
+		expect(chain.value).toHaveLength(1);
+		expect(chain.value[0]?.version).toBe(body.value.version_set_id);
+	});
+
+	test("parent lookup is scoped to the package — uploads for a different package are not picked up as parents", async () => {
+		const { app, backend } = build_routes_deps();
+		// Upload one for pkg-a
+		const a_first = await post_manifest(app, { ...valid_manifest, package: "pkg-a" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		expect(a_first.status).toBe(200);
+		await new Promise(r => setTimeout(r, 2));
+		// Then an UNRELATED package — should NOT inherit a parent from pkg-a
+		const b_first = await post_manifest(app, { ...valid_manifest, package: "pkg-b" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		expect(b_first.status).toBe(200);
+		const body = (await b_first.json()) as { ok: true; value: { version_set_id: string } };
+
+		const store = version_set_store(backend);
+		const chain = await store.lineage(body.value.version_set_id);
+		expect(chain.ok).toBe(true);
+		if (!chain.ok) return;
+		// pkg-b's lineage stays at length 1 — pkg-a's snapshot must not leak in
+		expect(chain.value).toHaveLength(1);
+		expect(chain.value[0]?.package).toBe("pkg-b");
+	});
 });

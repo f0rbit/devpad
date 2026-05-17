@@ -19,7 +19,7 @@ import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pi
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import type { Backend, Result, VersionSetManifest } from "@f0rbit/corpus";
+import type { Backend, Result, SnapshotMeta, VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -386,6 +386,37 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	return json_ok({ version, content_hash, store_id, ref: data_key });
 };
 
+/**
+ * Find the most recent existing version-set for a package — used to
+ * stamp `parents` on a fresh put so `store.lineage(version)` walks back
+ * through history. Without this the lineage chain is always [self] and
+ * rollback can't find a predecessor.
+ *
+ * Cloudflare backend `metadata.list` orders by `created_at DESC` and
+ * filters by tag in-memory after the query. The memory backend ignores
+ * `opts.tags` entirely and yields in insertion order. To be robust
+ * against both we iterate the whole stream, post-filter by the `pkg:*`
+ * tag, and pick the max-by-`created_at`. Cap iteration at a sane bound
+ * so a runaway store doesn't stall the route.
+ *
+ * "Latest" here = latest uploaded, not latest successfully deployed.
+ * Phase 11+ can refine if rolling forward over a broken predecessor
+ * becomes a real concern.
+ */
+const PARENT_LOOKUP_SCAN_LIMIT = 256;
+const latest_version_for_package = async (backend: Backend, package_name: string): Promise<string | null> => {
+	const pkg_tag = `pkg:${package_name}`;
+	let best: SnapshotMeta | null = null;
+	let scanned = 0;
+	for await (const meta of backend.metadata.list("version-sets", { tags: [pkg_tag] })) {
+		if (!meta.tags?.includes(pkg_tag)) continue;
+		if (best === null || meta.created_at > best.created_at) best = meta;
+		scanned += 1;
+		if (scanned >= PARENT_LOOKUP_SCAN_LIMIT) break;
+	}
+	return best === null ? null : best.version;
+};
+
 const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): Promise<Response> => {
 	const auth_fail = await apply_auth(deps, request);
 	if (auth_fail !== null) return auth_fail;
@@ -399,7 +430,14 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 
 	const manifest = parsed.data as VersionSetManifest;
 	const store = version_set_store(deps.backend);
-	const put = await store.put(manifest);
+
+	// Look up the most recent existing version-set for this package so we
+	// can stamp it as a parent — needed for `store.lineage` to walk back
+	// through history, which the rollback route relies on.
+	const parent_version = await latest_version_for_package(deps.backend, manifest.package);
+	const put = await store.put(manifest, parent_version === null ? undefined : {
+		parents: [{ store_id: "version-sets", version: parent_version, role: "predecessor" }],
+	});
 	if (!put.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put.error) });
 
 	if (deps.pulse !== undefined)
