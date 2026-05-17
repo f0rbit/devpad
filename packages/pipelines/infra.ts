@@ -36,25 +36,21 @@ import { D1Database, DurableObjectNamespace, R2Bucket, Secret, SecretsStore, Wor
 
 const app = await alchemy("devpad-pipelines");
 
-const stage = app.stage;
-const is_staging = stage === "staging";
-
-// Phase 12: the orchestrator is a platform singleton. We retain
-// `is_staging` only for the orchestrator's own resource naming (so a
-// future canary deploy of the orchestrator itself is still possible)
-// — but the upstream service bindings to vault/pulse are now hardcoded
-// to the production singletons because there is only one of each.
-const worker_name = is_staging ? "devpad-pipelines-staging" : "devpad-pipelines";
-const d1_name = is_staging ? "devpad-unified-db-preview" : "devpad-unified-db";
-const r2_name = is_staging ? "devpad-corpus-staging" : "devpad-corpus";
+// Phase 12/13.C: the orchestrator is a platform singleton. The
+// `is_staging` conditional was removed — there is no `devpad-pipelines-staging`
+// stage at runtime. The orchestrator deploys once against the production
+// `devpad-unified-db` D1 + `devpad-corpus` R2. Stage scoping for upstream
+// services is on `caller.environment` (vault grants) and on pulse event
+// tags; the workload Workers themselves retain their per-stage names.
+const worker_name = "devpad-pipelines";
 
 const db = await D1Database("DB", {
-	name: d1_name,
+	name: "devpad-unified-db",
 	adopt: true,
 });
 
 const corpus = await R2Bucket("CORPUS_BUCKET", {
-	name: r2_name,
+	name: "devpad-corpus",
 	adopt: true,
 });
 
@@ -82,12 +78,12 @@ const wire_cf_token = Boolean(process.env.CF_API_TOKEN);
 const wire_pipelines_token = Boolean(process.env.PIPELINES_TOKEN);
 
 const bindings: Bindings = {
-	ENVIRONMENT: is_staging ? "staging" : "production",
+	ENVIRONMENT: "production",
 	DB: db,
 	CORPUS_BUCKET: corpus,
 	PIPELINE_RUNS: pipeline_runs,
-	ANTHROPIC: WorkerRef({ service: "vault-production" }),
-	PULSE: WorkerRef({ service: "pulse-api-production" }),
+	ANTHROPIC: WorkerRef({ service: "vault" }),
+	PULSE: WorkerRef({ service: "pulse-api" }),
 	CF_ACCOUNT_ID: process.env.CF_ACCOUNT_ID ?? "81874bc21b868deba3276f551acde354",
 };
 

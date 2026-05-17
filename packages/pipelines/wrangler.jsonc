@@ -44,12 +44,12 @@
 	"services": [
 		{
 			"binding": "ANTHROPIC",
-			"service": "vault-production",
+			"service": "vault",
 			"entrypoint": "AnthropicVault"
 		},
 		{
 			"binding": "PULSE",
-			"service": "pulse-api-production"
+			"service": "pulse-api"
 		}
 	],
 	"vars": {
@@ -62,11 +62,11 @@
 			"secret_name": "PIPELINES_TOKEN"
 		}
 	],
-	// Phase 12: orchestrator is a platform singleton — only `devpad-pipelines`
-	// exists. `env.staging` is retained as a do-not-use scaffold for any
-	// future canary work on the orchestrator itself; we do not currently
-	// deploy it. Upstream platform services (vault, pulse) are likewise
-	// singletons, hence the singleton service bindings above.
+	// Phase 12/13.C: orchestrator is a platform singleton — only
+	// `devpad-pipelines` exists. The staging stage was removed in Phase 13.C
+	// (the orchestrator deploys once, no `--stage staging`). Upstream
+	// platform services (vault, pulse) are likewise singletons, hence the
+	// singleton service bindings above.
 	"env": {
 		"production": {
 			"name": "devpad-pipelines",

@@ -6,11 +6,11 @@
  * `alchemy run` against this file emits the version, the orchestrator
  * picks it up via the version-set manifest.
  *
- * Platform services (vault, pulse) are singletons — `vault-production`
- * and `pulse-api-production` are the only Workers, regardless of which
- * stage of this package is calling. Stage scoping happens at the
- * `caller.environment` RPC arg (vault grants) and on pulse event tags,
- * not by routing to a different upstream Worker.
+ * Platform services (vault, pulse) are singletons — `vault` and
+ * `pulse-api` are the only Workers, regardless of which stage of this
+ * package is calling. Stage scoping happens at the `caller.environment`
+ * RPC arg (vault grants) and on pulse event tags, not by routing to a
+ * different upstream Worker.
  *
  * Pulse observability is OPTIONAL. The emitter no-ops when the project
  * id / ingest key aren't bound, so we only wire them when the operator
@@ -31,8 +31,8 @@ const environment = stage === "staging" ? "staging" : "production";
 const worker_name = stage === "staging" ? "gradual-analysis-staging" : "gradual-analysis";
 
 const bindings: Bindings = {
-	ANTHROPIC: WorkerRef({ service: "vault-production" }),
-	PULSE: WorkerRef({ service: "pulse-api-production" }),
+	ANTHROPIC: WorkerRef({ service: "vault" }),
+	PULSE: WorkerRef({ service: "pulse-api" }),
 	ENVIRONMENT: environment,
 };
 

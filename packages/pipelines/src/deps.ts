@@ -95,22 +95,24 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
  * Worker, and `nodejs_compat`. The caller-identity `CALLER_*` trio is
  * added downstream by `deploy_stage`.
  *
- * Phase 12: platform services (vault, pulse) collapsed to singletons —
- * one Worker each, regardless of which environment is calling. Stage
- * scoping moved from "which vault/pulse you talk to" into `caller.environment`
- * on the RPC identity arg (Phase 7) and on pulse event tags. The demo
- * Worker's own `staging`/`production` split stays — it's only the
- * upstream platform bindings that are singletons.
+ * Phase 12/13.C: platform services (vault, pulse) collapsed to singletons —
+ * one Worker each, regardless of which environment is calling. Renamed
+ * `vault-production` → `vault` and `pulse-api-production` → `pulse-api`
+ * in Phase 13.C. Stage scoping moved from "which vault/pulse you talk
+ * to" into `caller.environment` on the RPC identity arg (Phase 7) and
+ * on pulse event tags. The demo Worker's own `staging`/`production`
+ * split stays — it's only the upstream platform bindings that are
+ * singletons.
  */
 const default_bindings_for = (_input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
-	// vault-production's `AnthropicVault` is exported as the module
-	// default — service bindings that target the default export must
-	// NOT specify an `entrypoint`. (Setting `entrypoint: "AnthropicVault"`
-	// triggers `entrypoint name not found in this worker` at runtime
-	// because CF only looks up *named* exports for `entrypoint`.)
+	// vault's `AnthropicVault` is exported as the module default —
+	// service bindings that target the default export must NOT specify
+	// an `entrypoint`. (Setting `entrypoint: "AnthropicVault"` triggers
+	// `entrypoint name not found in this worker` at runtime because CF
+	// only looks up *named* exports for `entrypoint`.)
 	return [
-		{ type: "service", name: "ANTHROPIC", service: "vault-production" },
-		{ type: "service", name: "PULSE", service: "pulse-api-production" },
+		{ type: "service", name: "ANTHROPIC", service: "vault" },
+		{ type: "service", name: "PULSE", service: "pulse-api" },
 	];
 };
 

@@ -49,14 +49,14 @@ describe("scaffolder wrangler.jsonc template", () => {
 		// the scaffolded Worker bind to the same upstream Worker. Stage
 		// scoping is enforced via `caller.environment` on the RPC identity
 		// arg and on pulse event tags.
-		expect(anthropic_binding?.service).toBe("vault-production");
+		expect(anthropic_binding?.service).toBe("vault");
 
 		// Verify PULSE binding exists (singleton)
 		const pulse_binding = config.services.find(
 			(s: { binding: string }) => s.binding === "PULSE",
 		);
 		expect(pulse_binding).toBeDefined();
-		expect(pulse_binding?.service).toBe("pulse-api-production");
+		expect(pulse_binding?.service).toBe("pulse-api");
 	});
 
 	test("rendered template has staging/production env blocks", () => {

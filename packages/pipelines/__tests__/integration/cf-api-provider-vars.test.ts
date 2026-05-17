@@ -231,8 +231,8 @@ describe("cf-api-provider — caller-identity vars", () => {
 			script_name: "anthropic-search",
 			bundle,
 			bindings: [
-				{ type: "service", name: "ANTHROPIC", service: "vault-production", entrypoint: "AnthropicVault" },
-				{ type: "service", name: "PULSE", service: "pulse-api-production" },
+				{ type: "service", name: "ANTHROPIC", service: "vault", entrypoint: "AnthropicVault" },
+				{ type: "service", name: "PULSE", service: "pulse-api" },
 			],
 			vars: [{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" }],
 			compatibility_date: "2026-05-17",
@@ -245,8 +245,8 @@ describe("cf-api-provider — caller-identity vars", () => {
 		expect(metadata.compatibility_date).toBe("2026-05-17");
 		expect(metadata.compatibility_flags).toEqual(["nodejs_compat"]);
 		expect(metadata.bindings).toEqual([
-			{ type: "service", name: "ANTHROPIC", service: "vault-production", entrypoint: "AnthropicVault" },
-			{ type: "service", name: "PULSE", service: "pulse-api-production" },
+			{ type: "service", name: "ANTHROPIC", service: "vault", entrypoint: "AnthropicVault" },
+			{ type: "service", name: "PULSE", service: "pulse-api" },
 			{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" },
 		]);
 	});

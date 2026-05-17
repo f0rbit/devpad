@@ -41,12 +41,12 @@
 	"services": [
 		{
 			"binding": "ANTHROPIC",
-			"service": "vault-production",
+			"service": "vault",
 			"entrypoint": "AnthropicVault"
 		},
 		{
 			"binding": "PULSE",
-			"service": "pulse-api-production"
+			"service": "pulse-api"
 		}
 	]
 }
