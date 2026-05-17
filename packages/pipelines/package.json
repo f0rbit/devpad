@@ -21,7 +21,7 @@
 		"@devpad/core": "workspace:*",
 		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",
-		"@f0rbit/corpus": "^0.5.0",
+		"@f0rbit/corpus": "^0.6.0",
 		"alchemy": "^0.93.7",
 		"drizzle-orm": "^0.44.7",
 		"hono": "^4.6.0",

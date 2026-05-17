@@ -66,7 +66,7 @@
         "@astrojs/solid-js": "^5.1.3",
         "@devpad/api": "workspace:*",
         "@devpad/schema": "workspace:*",
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "@f0rbit/ui": "^0.1.9",
         "astro": "^5.16.15",
         "lucide-solid": "^0.454.0",
@@ -81,7 +81,7 @@
       "name": "@devpad/api",
       "version": "2.0.0",
       "dependencies": {
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "zod": "^3.22.4",
       },
       "devDependencies": {
@@ -100,7 +100,7 @@
         "devpad": "./dist/index.js",
       },
       "dependencies": {
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
       },
       "devDependencies": {
         "@devpad/api": "workspace:*",
@@ -124,7 +124,7 @@
         "@devpad/pipeline-fakes": "workspace:*",
         "@devpad/pipeline-templates": "workspace:*",
         "@devpad/schema": "workspace:*",
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "@octokit/auth-oauth-app": "^9.0.1",
         "@octokit/rest": "^22.0.0",
         "@octokit/types": "^14.1.0",
@@ -164,7 +164,7 @@
       "name": "@devpad/pipeline-fakes",
       "version": "0.0.1",
       "dependencies": {
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "zod": "^3.22.4",
       },
       "devDependencies": {
@@ -176,7 +176,7 @@
       "name": "@devpad/pipeline-templates",
       "version": "0.0.1",
       "dependencies": {
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "zod": "^3.22.4",
       },
       "devDependencies": {
@@ -193,7 +193,7 @@
         "@devpad/core": "workspace:*",
         "@devpad/pipeline-templates": "workspace:*",
         "@devpad/schema": "workspace:*",
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "alchemy": "^0.93.7",
         "drizzle-orm": "^0.44.7",
         "hono": "^4.6.0",
@@ -211,7 +211,7 @@
       "name": "@devpad/schema",
       "version": "2.0.0",
       "dependencies": {
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "drizzle-orm": "^0.44.7",
         "drizzle-zod": "^0.7.0",
         "zod": "^3.22.4",
@@ -229,7 +229,7 @@
       "dependencies": {
         "@devpad/core": "workspace:*",
         "@devpad/schema": "workspace:*",
-        "@f0rbit/corpus": "^0.5.0",
+        "@f0rbit/corpus": "^0.6.0",
         "@f0rbit/pulse-client": "^0.0.1",
         "@hono/zod-validator": "^0.4.1",
         "drizzle-orm": "^0.44.7",
@@ -244,7 +244,6 @@
     },
   },
   "overrides": {
-    "@f0rbit/corpus": "file:../corpus",
     "drizzle-orm": "^0.44.7",
   },
   "packages": {
@@ -505,6 +504,8 @@
     "@eslint/js": ["@eslint/js@8.57.1", "", {}, "sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q=="],
 
     "@ewoudenberg/difflib": ["@ewoudenberg/difflib@0.1.0", "", { "dependencies": { "heap": ">= 0.2.0" } }, "sha512-OU5P5mJyD3OoWYMWY+yIgwvgNS9cFAU10f+DDuvtogcWQOoJIsQ4Hy2McSfUfhKjq8L0FuWVb4Rt7kgA+XK86A=="],
+
+    "@f0rbit/corpus": ["@f0rbit/corpus@0.6.0", "", { "dependencies": { "drizzle-orm": "^0.44.7" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }, "sha512-Qf1k7051q3eoxMFeClM6gK1GM0CDRP+gfxW8TZKtda7LhY3dnZGSkYKd/cf0x/Kh9085hJWNiI6G2AuKdES7QA=="],
 
     "@f0rbit/pulse-client": ["@f0rbit/pulse-client@0.0.1", "", { "peerDependencies": { "hono": "^4.0.0" }, "optionalPeers": ["hono"] }, "sha512-3cjOgezFwYXSkw1ub0jUqM9hvDf1sKMj9Lk7cChqKn2W6kIqaBsPVtIaJ+K2L1E5LSvJZDs20U5GUnN9yAB13g=="],
 
@@ -906,7 +907,7 @@
 
     "camelcase": ["camelcase@8.0.0", "", {}, "sha512-8WB3Jcas3swSvjIeA2yvCJ+Miyz5l1ZmB6HFb9R1317dt9LCQoswg/BGrmAmkWVEszSrrg4RwmO46qIm2OEnSA=="],
 
-    "caniuse-lite": ["caniuse-lite@1.0.30001792", "", {}, "sha512-hVLMUZFgR4JJ6ACt1uEESvQN1/dBVqPAKY0hgrV70eN3391K6juAfTjKZLKvOMsx8PxA7gsY1/tLMMTcfFLLpw=="],
+    "caniuse-lite": ["caniuse-lite@1.0.30001793", "", {}, "sha512-iwSsYWaCOoh26cV8NwNRViHlrfUvYsHDfRVcbtmw0Kg6PJIZZXwMkj1442FYLBGkeUf1juAsU3DTfxW579mrPA=="],
 
     "ccount": ["ccount@2.0.1", "", {}, "sha512-eyrF0jiFpY+3drT6383f1qhkbGsLSifNAjA61IUjZjmLCWjItY6LB9ft9YhoDgwfmclB2zhu51Lc7+95b8NRAg=="],
 
@@ -1852,7 +1853,7 @@
 
     "tsup": ["tsup@8.5.1", "", { "dependencies": { "bundle-require": "^5.1.0", "cac": "^6.7.14", "chokidar": "^4.0.3", "consola": "^3.4.0", "debug": "^4.4.0", "esbuild": "^0.27.0", "fix-dts-default-cjs-exports": "^1.0.0", "joycon": "^3.1.1", "picocolors": "^1.1.1", "postcss-load-config": "^6.0.1", "resolve-from": "^5.0.0", "rollup": "^4.34.8", "source-map": "^0.7.6", "sucrase": "^3.35.0", "tinyexec": "^0.3.2", "tinyglobby": "^0.2.11", "tree-kill": "^1.2.2" }, "peerDependencies": { "@microsoft/api-extractor": "^7.36.0", "@swc/core": "^1", "postcss": "^8.4.12", "typescript": ">=4.5.0" }, "optionalPeers": ["@microsoft/api-extractor", "@swc/core", "postcss", "typescript"], "bin": { "tsup": "dist/cli-default.js", "tsup-node": "dist/cli-node.js" } }, "sha512-xtgkqwdhpKWr3tKPmCkvYmS9xnQK3m3XgxZHwSUjvfTjp7YfXe5tT3GgWi0F2N+ZSMsOeWeZFh7ZZFg5iPhing=="],
 
-    "tsx": ["tsx@4.22.0", "", { "dependencies": { "esbuild": "~0.28.0" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "bin": { "tsx": "dist/cli.mjs" } }, "sha512-8ccZMPD69s1AbKXx0C5ddTNZfNjwV04iIKgjZmKfKxMynEtSYcK0Lh7iQFh53fI5Yu4pb9usgAiqyPmEONaALg=="],
+    "tsx": ["tsx@4.22.1", "", { "dependencies": { "esbuild": "~0.28.0" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "bin": { "tsx": "dist/cli.mjs" } }, "sha512-TvncJykhxAzFCk0VQZKBTClall4Pm7qXDSodb6uxi8QFa8X8mT6ABjxxsQ2opDRYxG7AzcRWXaFtruz5HJKuWg=="],
 
     "type-check": ["type-check@0.4.0", "", { "dependencies": { "prelude-ls": "^1.2.1" } }, "sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew=="],
 
@@ -2040,17 +2041,9 @@
 
     "@cspotcode/source-map-support/@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.9", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.0.3", "@jridgewell/sourcemap-codec": "^1.4.10" } }, "sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ=="],
 
-    "@devpad/api/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
     "@devpad/api/@types/node": ["@types/node@20.19.41", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-ECymXOukMnOoVkC2bb1Vc/w/836DXncOg5m8Xj1RH7xSHZJWNYY6Zh7EH477vcnD5egKNNfy2RpNOmuChhFPgQ=="],
 
-    "@devpad/blog-app/@astrojs/solid-js": ["@astrojs/solid-js@5.1.3", "", { "dependencies": { "vite": "^6.4.1", "vite-plugin-solid": "^2.11.8" }, "peerDependencies": { "solid-devtools": "^0.30.1", "solid-js": "^1.8.5" }, "optionalPeers": ["solid-devtools"] }, "sha512-KxfYt4y1d7BuSw6EsN1EaPoGYsIES7bEI6AtTbncuabRUUMZs+mOWOeOdmgnwVLj+jbNbhBjUZsqr77eUviZdw=="],
-
-    "@devpad/cli/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
     "@devpad/cli/@types/node": ["@types/node@20.19.41", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-ECymXOukMnOoVkC2bb1Vc/w/836DXncOg5m8Xj1RH7xSHZJWNYY6Zh7EH477vcnD5egKNNfy2RpNOmuChhFPgQ=="],
-
-    "@devpad/core/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
 
     "@devpad/core/@types/node": ["@types/node@20.19.41", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-ECymXOukMnOoVkC2bb1Vc/w/836DXncOg5m8Xj1RH7xSHZJWNYY6Zh7EH477vcnD5egKNNfy2RpNOmuChhFPgQ=="],
 
@@ -2058,19 +2051,7 @@
 
     "@devpad/media-app/@astrojs/solid-js": ["@astrojs/solid-js@5.1.3", "", { "dependencies": { "vite": "^6.4.1", "vite-plugin-solid": "^2.11.8" }, "peerDependencies": { "solid-devtools": "^0.30.1", "solid-js": "^1.8.5" }, "optionalPeers": ["solid-devtools"] }, "sha512-KxfYt4y1d7BuSw6EsN1EaPoGYsIES7bEI6AtTbncuabRUUMZs+mOWOeOdmgnwVLj+jbNbhBjUZsqr77eUviZdw=="],
 
-    "@devpad/media-app/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
-    "@devpad/pipeline-fakes/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
-    "@devpad/pipeline-templates/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
-    "@devpad/pipelines/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
-    "@devpad/schema/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
-
     "@devpad/schema/@types/node": ["@types/node@20.19.41", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-ECymXOukMnOoVkC2bb1Vc/w/836DXncOg5m8Xj1RH7xSHZJWNYY6Zh7EH477vcnD5egKNNfy2RpNOmuChhFPgQ=="],
-
-    "@devpad/worker/@f0rbit/corpus": ["@f0rbit/corpus@file:../corpus", { "dependencies": { "drizzle-orm": "^0.44.7" }, "devDependencies": { "@types/bun": "latest" }, "peerDependencies": { "typescript": "^5", "zod": "^3" } }],
 
     "@esbuild-kit/core-utils/esbuild": ["esbuild@0.18.20", "", { "optionalDependencies": { "@esbuild/android-arm": "0.18.20", "@esbuild/android-arm64": "0.18.20", "@esbuild/android-x64": "0.18.20", "@esbuild/darwin-arm64": "0.18.20", "@esbuild/darwin-x64": "0.18.20", "@esbuild/freebsd-arm64": "0.18.20", "@esbuild/freebsd-x64": "0.18.20", "@esbuild/linux-arm": "0.18.20", "@esbuild/linux-arm64": "0.18.20", "@esbuild/linux-ia32": "0.18.20", "@esbuild/linux-loong64": "0.18.20", "@esbuild/linux-mips64el": "0.18.20", "@esbuild/linux-ppc64": "0.18.20", "@esbuild/linux-riscv64": "0.18.20", "@esbuild/linux-s390x": "0.18.20", "@esbuild/linux-x64": "0.18.20", "@esbuild/netbsd-x64": "0.18.20", "@esbuild/openbsd-x64": "0.18.20", "@esbuild/sunos-x64": "0.18.20", "@esbuild/win32-arm64": "0.18.20", "@esbuild/win32-ia32": "0.18.20", "@esbuild/win32-x64": "0.18.20" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-ceqxoedUrcayh7Y7ZX6NdbbDzGROiyVBgC4PriJThBKSVPWnnFHZAkfI1lJT8QFkOwH4qOS2SJkS4wvpGl8BpA=="],
 

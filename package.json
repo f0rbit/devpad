@@ -36,12 +36,10 @@
 		"build:worker": "bun scripts/build-unified.ts"
 	},
 	"overrides": {
-		"drizzle-orm": "^0.44.7",
-		"@f0rbit/corpus": "file:../corpus"
+		"drizzle-orm": "^0.44.7"
 	},
 	"resolutions": {
-		"drizzle-orm": "^0.44.7",
-		"@f0rbit/corpus": "file:../corpus"
+		"drizzle-orm": "^0.44.7"
 	},
 	"packageManager": "bun@1.0.0",
 	"devDependencies": {
