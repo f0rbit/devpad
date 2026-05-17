@@ -91,19 +91,20 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
 /**
  * Default bindings the orchestrator stamps onto every uploaded worker
  * version. Mirrors the wrangler.jsonc the scaffolder generates: a
- * service binding to the env-appropriate vault Worker, a service
- * binding to the env-appropriate pulse Worker, and `nodejs_compat`. The
- * caller-identity `CALLER_*` trio is added downstream by
- * `deploy_stage`.
+ * service binding to the vault Worker, a service binding to the pulse
+ * Worker, and `nodejs_compat`. The caller-identity `CALLER_*` trio is
+ * added downstream by `deploy_stage`.
  *
- * Phase 7 will replace this with bindings discovered from the package's
- * `infra.ts` / `wrangler.jsonc` baked into the version-set manifest.
+ * Phase 6 caveat: both demo packages target `vault-staging` /
+ * `pulse-api-staging` in their committed wrangler.jsonc — that's the
+ * "production wiring of the demo", not an env-split. Until Phase 7
+ * surfaces the bindings array from the version-set manifest, we hard
+ * code those two service names here.
  */
-const default_bindings_for = (input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
-	const suffix = input.environment === "staging" ? "staging" : "production";
+const default_bindings_for = (_input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
 	return [
-		{ type: "service", name: "ANTHROPIC", service: `vault-${suffix}`, entrypoint: "AnthropicVault" },
-		{ type: "service", name: "PULSE", service: `pulse-api-${suffix}` },
+		{ type: "service", name: "ANTHROPIC", service: "vault-staging", entrypoint: "AnthropicVault" },
+		{ type: "service", name: "PULSE", service: "pulse-api-staging" },
 	];
 };
 
