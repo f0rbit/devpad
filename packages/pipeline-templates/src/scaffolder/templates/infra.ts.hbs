@@ -27,14 +27,13 @@ import { Secret, SecretsStore, Worker, WorkerRef } from "alchemy/cloudflare";
 const app = await alchemy("{{package_name}}");
 
 const stage = app.stage;
-const is_staging = stage === "staging";
-
-const worker_name = is_staging ? "{{package_name}}-staging" : "{{package_name}}";
+const environment = stage === "staging" ? "staging" : "production";
+const worker_name = stage === "staging" ? "{{package_name}}-staging" : "{{package_name}}";
 
 const bindings: Bindings = {
 	ANTHROPIC: WorkerRef({ service: "vault-production" }),
 	PULSE: WorkerRef({ service: "pulse-api-production" }),
-	ENVIRONMENT: is_staging ? "staging" : "production",
+	ENVIRONMENT: environment,
 };
 
 const pulse_project_id = process.env.PULSE_PROJECT_ID;
