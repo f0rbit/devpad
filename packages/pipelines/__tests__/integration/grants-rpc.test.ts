@@ -120,4 +120,25 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 		if (!result.ok) return;
 		expect(result.value.granted).toBe(false);
 	});
+
+	// Regression: the RPC entrypoint must wrap `env.DB` via `createD1Database`
+	// before constructing the service. If the raw D1 binding is passed
+	// through, the drizzle query builder is undefined and `check_grant`
+	// produces a `store_error`. The wrapped-DB path mirrors what
+	// `PipelinesGrantsEndpoint` now does in production.
+	test("wrapped-DB path produces no store_error and returns granted=true", async () => {
+		await seed_grant(db, { package_id, stage_name: "staging", scope: "anthropic:messages" });
+
+		// `create_test_db()` returns a drizzle-wrapped Database — the same
+		// shape `createD1Database(env.DB)` produces inside the Worker.
+		const wrapped = new PipelinesGrantsService(db);
+		const result = await wrapped.check({ package: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
+
+		expect(result.ok).toBe(true);
+		if (!result.ok) {
+			expect(result.error.kind).not.toBe("store_error");
+			return;
+		}
+		expect(result.value.granted).toBe(true);
+	});
 });

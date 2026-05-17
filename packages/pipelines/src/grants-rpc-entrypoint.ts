@@ -11,14 +11,22 @@
  */
 
 import { WorkerEntrypoint } from "cloudflare:workers";
-import type { Database } from "@devpad/schema/database/types";
+import { createD1Database } from "@devpad/schema/database/d1";
 import type { Result } from "@f0rbit/corpus";
 import type { PipelineEnv } from "./bindings.ts";
 import { type CallerIdentity, type GrantCheckResponse, type GrantRpcError, type PipelinesGrantsRPC, PipelinesGrantsService } from "./grants-rpc.ts";
 
 export class PipelinesGrantsEndpoint extends WorkerEntrypoint<PipelineEnv> implements PipelinesGrantsRPC {
+	private service_cached: PipelinesGrantsService | null = null;
+
+	private get service(): PipelinesGrantsService {
+		if (this.service_cached !== null) return this.service_cached;
+		const db = createD1Database(this.env.DB);
+		this.service_cached = new PipelinesGrantsService(db);
+		return this.service_cached;
+	}
+
 	async check(caller: CallerIdentity, scope: string): Promise<Result<GrantCheckResponse, GrantRpcError>> {
-		const service = new PipelinesGrantsService(this.env.DB as unknown as Database);
-		return service.check(caller, scope);
+		return this.service.check(caller, scope);
 	}
 }
