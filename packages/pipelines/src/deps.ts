@@ -102,8 +102,13 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
  * code those two service names here.
  */
 const default_bindings_for = (_input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
+	// vault-staging's `AnthropicVault` is exported as the module
+	// default — service bindings that target the default export must
+	// NOT specify an `entrypoint`. (Setting `entrypoint: "AnthropicVault"`
+	// triggers `entrypoint name not found in this worker` at runtime
+	// because CF only looks up *named* exports for `entrypoint`.)
 	return [
-		{ type: "service", name: "ANTHROPIC", service: "vault-staging", entrypoint: "AnthropicVault" },
+		{ type: "service", name: "ANTHROPIC", service: "vault-staging" },
 		{ type: "service", name: "PULSE", service: "pulse-api-staging" },
 	];
 };
