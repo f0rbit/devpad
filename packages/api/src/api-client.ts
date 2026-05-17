@@ -964,9 +964,17 @@ export class ApiClient {
 	 */
 	public readonly pipelines = {
 		/**
-		 * List pipeline runs
+		 * List pipeline runs ordered by `created_at` DESC. Optional filters
+		 * narrow by package and/or status; `limit` defaults to 50 server-side
+		 * and is capped at 200.
 		 */
-		list: (): Promise<ApiResult<PipelineRun[]>> => wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs")),
+		list: (filter?: { package_id?: string; status?: string; limit?: number }): Promise<ApiResult<PipelineRun[]>> => {
+			const query: Record<string, string> = {};
+			if (filter?.package_id !== undefined) query.package_id = filter.package_id;
+			if (filter?.status !== undefined) query.status = filter.status;
+			if (filter?.limit !== undefined) query.limit = String(filter.limit);
+			return wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs", Object.keys(query).length > 0 ? { query } : undefined));
+		},
 
 		/**
 		 * Get a pipeline run by ID

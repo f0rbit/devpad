@@ -37,7 +37,7 @@ import { pipeline_approval, pipeline_run, pipeline_stage_event } from "@devpad/s
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
 import { environment_for_stage } from "./caller-identity.js";
 import { type BundleProvider, type DeployError, deploy_stage } from "./deploy.js";
@@ -224,6 +224,34 @@ export const get_run = async (db: Database, run_id: string): Promise<Result<Pipe
 		return ok(row);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to read pipeline_run ${run_id}: ${String(e)}` } as ServiceError);
+	}
+};
+
+/**
+ * List runs ordered by `created_at` DESC, optionally filtered by
+ * package and/or status. Used by the catalog UI and the `GET /runs`
+ * route. The cap on `limit` (200) is enforced by the caller; this
+ * service accepts whatever it's given.
+ */
+export type ListRunsFilter = {
+	package_id?: string;
+	status?: PipelineRun["status"];
+	limit?: number;
+};
+
+export const list_runs = async (db: Database, filter: ListRunsFilter = {}): Promise<Result<PipelineRun[], ServiceError>> => {
+	try {
+		const conditions = [];
+		if (filter.package_id !== undefined) conditions.push(eq(pipeline_run.package_id, filter.package_id));
+		if (filter.status !== undefined) conditions.push(eq(pipeline_run.status, filter.status));
+
+		const limit = filter.limit ?? 50;
+		const base = db.select().from(pipeline_run);
+		const where = conditions.length === 0 ? base : conditions.length === 1 ? base.where(conditions[0]) : base.where(and(...conditions));
+		const rows = await where.orderBy(desc(pipeline_run.created_at)).limit(limit);
+		return ok(rows);
+	} catch (e) {
+		return err({ kind: "db_error", message: `failed to list pipeline_run: ${String(e)}` } as ServiceError);
 	}
 };
 

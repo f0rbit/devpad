@@ -26,6 +26,8 @@ export {
 	create_run,
 	drive_run,
 	get_run,
+	list_runs,
+	type ListRunsFilter,
 	type RunDeps,
 	type RunRecord,
 	record_stage_event,
