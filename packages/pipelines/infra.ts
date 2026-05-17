@@ -2,9 +2,11 @@
  * Alchemy IaC for the pipelines orchestrator Worker.
  *
  * Bindings:
- * - `DB` — devpad's existing D1 (shared with apps/main). Adopted, NOT created.
- *   Production: devpad-unified-db, Staging: devpad-unified-db-preview.
- * - `CORPUS_BUCKET` — existing R2 bucket. Adopted.
+ * - `DB` — devpad's existing D1 (`devpad-unified-db`), shared with apps/main.
+ *   Adopted, NOT created. The orchestrator is a Phase-13.C singleton; the
+ *   staging stage was removed and there is no longer a `devpad-unified-db-preview`
+ *   binding alternative.
+ * - `CORPUS_BUCKET` — existing R2 bucket (`devpad-corpus`). Adopted.
  * - `PIPELINE_RUNS` — Durable Object namespace bound to `PipelineRunDO`
  *   (SQLite-backed; migration tag v1).
  * - `ANTHROPIC` — service binding to vault Worker (RPC entrypoint `AnthropicVault`).
