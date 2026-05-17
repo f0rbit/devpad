@@ -114,6 +114,9 @@ export const upsert_goal = z.object({
 export const rollout_shape = z.union([z.literal("gradual"), z.literal("atomic")]);
 export type RolloutShapeZ = z.infer<typeof rollout_shape>;
 
+export const run_kind = z.union([z.literal("deploy"), z.literal("rollback")]);
+export type RunKindZ = z.infer<typeof run_kind>;
+
 export const run_status = z.union([
 	z.literal("queued"),
 	z.literal("deploying"),
@@ -184,6 +187,7 @@ export const upsert_pipeline_run = z.object({
 	package_id: z.string(),
 	version_set_id: z.string(),
 	shape: rollout_shape,
+	kind: run_kind.optional(),
 	status: run_status.optional(),
 	current_stage: z.string().nullable().optional(),
 	resolved_rollout: resolved_rollout,

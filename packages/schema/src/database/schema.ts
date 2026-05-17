@@ -316,6 +316,9 @@ export const ignore_path = sqliteTable("ignore_path", {
 export const ROLLOUT_SHAPES = ["gradual", "atomic"] as const;
 export type RolloutShape = (typeof ROLLOUT_SHAPES)[number];
 
+export const RUN_KINDS = ["deploy", "rollback"] as const;
+export type RunKind = (typeof RUN_KINDS)[number];
+
 export const RUN_STATUSES = ["queued", "deploying", "baking", "awaiting_approval", "rolling_back", "completed", "rolled_back", "failed", "cancelled"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
 
@@ -346,6 +349,7 @@ export const pipeline_run = sqliteTable("pipeline_run", {
 		.references(() => pipeline_package.id),
 	version_set_id: text("version_set_id").notNull(),
 	shape: text("shape", { enum: ROLLOUT_SHAPES }).notNull(),
+	kind: text("kind", { enum: RUN_KINDS }).notNull().default("deploy"),
 	status: text("status", { enum: RUN_STATUSES }).notNull().default("queued"),
 	current_stage: text("current_stage"),
 	resolved_rollout: text("resolved_rollout", { mode: "json" }).notNull(),

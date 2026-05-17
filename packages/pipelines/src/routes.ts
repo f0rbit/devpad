@@ -14,7 +14,7 @@
  */
 
 import type { ResolvedPlan } from "@devpad/core/services/pipelines";
-import { create_run, get_run, resolve_run_plan } from "@devpad/core/services/pipelines";
+import { create_run, get_run, is_terminal_status, resolve_run_plan } from "@devpad/core/services/pipelines";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package } from "@devpad/schema/database/schema";
@@ -190,12 +190,50 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	app.post("/runs/:id/rollback", async c => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
-		const run = await get_run(deps.db, run_id);
-		if (!run.ok) return json_err(run.error.kind === "not_found" ? 404 : 500, run.error);
-		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
-		if (plan === null) return json_err(500, { code: "plan_unavailable", run_id });
-		const response = await do_call(deps, run_id, "rollback", { plan });
-		return passthrough(response);
+		const source_run = await get_run(deps.db, run_id);
+		if (!source_run.ok) return json_err(source_run.error.kind === "not_found" ? 404 : 500, source_run.error);
+
+		// Resolve the predecessor in lineage. If there is none, this run
+		// has nothing to roll back to and we refuse — the operator should
+		// re-upload a known-good version-set instead.
+		const previous_version_set_id = await deps.lineage.previous(source_run.value.package_id, source_run.value.version_set_id);
+		if (previous_version_set_id === null) {
+			return json_err(400, { code: "no_previous_version_set", run_id, version_set_id: source_run.value.version_set_id });
+		}
+
+		// In-flight source runs get cancelled first so we don't have two
+		// runs trying to mutate the same script. Terminal-state sources are
+		// left alone — the new rollback run carries the audit trail.
+		if (!is_terminal_status(source_run.value.status)) {
+			const source_plan = await reconstruct_plan(deps, source_run.value.package_id, source_run.value.version_set_id);
+			if (source_plan !== null) {
+				await do_call(deps, run_id, "cancel", { plan: source_plan }).catch(() => null);
+			}
+		}
+
+		// Build the rollback run targeting the predecessor at 100%.
+		const manifest = await deps.manifests.get(previous_version_set_id);
+		if (manifest === null) return json_err(404, { code: "not_found", resource: "version_set_manifest", id: previous_version_set_id });
+		const template = await deps.templates.resolve(source_run.value.package_id, previous_version_set_id);
+		if (template === null) return json_err(404, { code: "not_found", resource: "pipeline_template", id: source_run.value.package_id });
+		const predecessor_of_predecessor = await deps.lineage.previous(source_run.value.package_id, previous_version_set_id);
+
+		const created = await create_run(deps.db, {
+			package_id: source_run.value.package_id,
+			template,
+			manifest,
+			version_set_id: previous_version_set_id,
+			previous_version_set_id: predecessor_of_predecessor,
+			kind: "rollback",
+		});
+		if (!created.ok) return json_err(500, created.error);
+
+		const { run, plan } = created.value;
+		const advance_res = await do_call(deps, run.id, "advance", { plan });
+		const advance_body = await advance_res.json().catch(() => null);
+		if (advance_res.status >= 400) return json_err(advance_res.status, advance_body);
+
+		return json_ok({ run_id: run.id, status: run.status, kind: run.kind, target_version_set_id: previous_version_set_id, source_run_id: run_id, plan, advance: advance_body });
 	});
 
 	app.get("/grants", async c => {

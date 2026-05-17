@@ -141,7 +141,7 @@ describe("orchestrator routes — cancel mid-run", () => {
 });
 
 describe("orchestrator routes — rollback", () => {
-	test("POST /runs/:id/rollback redeploys v0 at 100%", async () => {
+	test("POST /runs/:id/rollback on in-flight run cancels source, creates new rollback run that redeploys v0 at 100%", async () => {
 		const h = await build_harness();
 		const create = await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
 		const { run_id } = expect_ok<{ run_id: string }>(create.body);
@@ -149,17 +149,51 @@ describe("orchestrator routes — rollback", () => {
 		await approve(h.app, run_id, "onebox", "approved");
 		expect((await run_status_of(h.db, run_id)).status).toBe("baking");
 
-		const rb = await post_json(h.app, `/runs/${run_id}/rollback`, {});
+		const rb = await post_json<{ run_id: string; kind: string; target_version_set_id: string; source_run_id: string }>(h.app, `/runs/${run_id}/rollback`, {});
 		expect(rb.status).toBe(200);
+		const rb_value = expect_ok<{ run_id: string; kind: string; target_version_set_id: string; source_run_id: string }>(rb.body);
+		expect(rb_value.run_id).not.toBe(run_id);
+		expect(rb_value.kind).toBe("rollback");
+		expect(rb_value.target_version_set_id).toBe("vs_v0");
+		expect(rb_value.source_run_id).toBe(run_id);
 
-		const final = await run_status_of(h.db, run_id);
-		expect(final.status).toBe("rolled_back");
+		// Source run was cancelled (was in-flight); new rollback run completed.
+		const source = await run_status_of(h.db, run_id);
+		expect(source.status).toBe("cancelled");
+		const rollback = await run_status_of(h.db, rb_value.run_id);
+		expect(rollback.status).toBe("completed");
+		expect(rollback.kind).toBe("rollback");
+		expect(rollback.version_set_id).toBe("vs_v0");
 
-		// Rollback redeploys on the non-staging (main) script.
+		// Rollback redeploys on the non-staging (main) script at 100%.
 		const list = await h.deps.cf.deployments.list(SCRIPT_NAME_FOR());
 		if (!list.ok) throw new Error("list failed");
 		const last = list.value[list.value.length - 1];
 		expect(last.strategy.versions[0].percentage).toBe(100);
+	});
+
+	test("POST /runs/:id/rollback on terminal-state run creates a new rollback run without touching the source", async () => {
+		const h = await build_harness();
+		const create = await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
+		const { run_id } = expect_ok<{ run_id: string }>(create.body);
+
+		// Drive the source run to a terminal state by cancelling it first.
+		await post_json(h.app, `/runs/${run_id}/cancel`, {});
+		const source_before = await run_status_of(h.db, run_id);
+		expect(source_before.status).toBe("cancelled");
+
+		const rb = await post_json<{ run_id: string; kind: string }>(h.app, `/runs/${run_id}/rollback`, {});
+		expect(rb.status).toBe(200);
+		const rb_value = expect_ok<{ run_id: string; kind: string }>(rb.body);
+		expect(rb_value.run_id).not.toBe(run_id);
+		expect(rb_value.kind).toBe("rollback");
+
+		// Source unchanged, new rollback run completed.
+		const source_after = await run_status_of(h.db, run_id);
+		expect(source_after.status).toBe("cancelled");
+		const rollback = await run_status_of(h.db, rb_value.run_id);
+		expect(rollback.status).toBe("completed");
+		expect(rollback.kind).toBe("rollback");
 	});
 });
 
@@ -197,15 +231,17 @@ describe("orchestrator routes — validation + errors", () => {
 		expect(res.status).toBe(400);
 	});
 
-	test("POST /runs/:id/rollback without previous version returns 409", async () => {
+	test("POST /runs/:id/rollback without previous version returns 400 no_previous_version_set", async () => {
 		const h = await build_harness();
-		h.previous_for.set("vs_v1", "");
 		// Clear lineage so previous = null
 		h.previous_for.delete("vs_v1");
 		const create = await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
 		const { run_id } = expect_ok<{ run_id: string }>(create.body);
-		const rb = await post_json(h.app, `/runs/${run_id}/rollback`, {});
-		expect(rb.status).toBe(409);
+		const rb = await post_json<unknown>(h.app, `/runs/${run_id}/rollback`, {});
+		expect(rb.status).toBe(400);
+		expect(rb.body.ok).toBe(false);
+		const error = rb.body.error as { code: string };
+		expect(error.code).toBe("no_previous_version_set");
 	});
 });
 

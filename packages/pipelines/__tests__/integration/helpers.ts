@@ -166,7 +166,12 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 		strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
 	});
 
-	const manifest_for = new Map<string, VersionSetManifest>([["vs_v1", default_manifest]]);
+	// vs_v0 also has a manifest so the new rollback route (which creates
+	// a synthetic run targeting the predecessor) can reconstruct its plan.
+	const manifest_for = new Map<string, VersionSetManifest>([
+		["vs_v1", default_manifest],
+		["vs_v0", default_manifest],
+	]);
 	const previous_for = new Map<string, string>([["vs_v1", "vs_v0"]]);
 
 	const namespace = new InMemoryDurableObjectNamespace<{ deps: RunDeps }>({ deps }, (ctx, env) => {

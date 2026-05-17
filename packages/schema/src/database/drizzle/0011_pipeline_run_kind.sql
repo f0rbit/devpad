@@ -1,0 +1,1 @@
+ALTER TABLE `pipeline_run` ADD `kind` text DEFAULT 'deploy' NOT NULL;

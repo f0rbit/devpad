@@ -132,14 +132,35 @@ export const create_run = async (
 		manifest: VersionSetManifest;
 		version_set_id: string;
 		previous_version_set_id?: string | null;
+		/** Run kind. Defaults to "deploy". Set "rollback" when creating a
+		 * synthetic run that re-deploys the predecessor version-set at 100%
+		 * (see `/runs/:id/rollback`). Rollback runs are forced atomic — we
+		 * do not gradually roll back. */
+		kind?: "deploy" | "rollback";
 	}
 ): Promise<Result<{ run: PipelineRun; plan: ResolvedPlan }, ServiceError>> => {
-	const plan = resolve_run_plan({
+	const kind = input.kind ?? "deploy";
+	const base_plan = resolve_run_plan({
 		template: input.template,
 		manifest: input.manifest,
 		version_set_id: input.version_set_id,
 		previous_version_set_id: input.previous_version_set_id ?? null,
 	});
+	// Rollback runs deploy the prior version atomically; collapse the
+	// resolved plan to an atomic-prod stage with auto gates so the state
+	// machine never tries to walk onebox/wave* on the way back and never
+	// pauses for manual approval (operators triggering a rollback already
+	// approved by hitting the endpoint).
+	const plan: ResolvedPlan =
+		kind === "rollback"
+			? {
+					stages: expand_rollout({ type: "atomic" }),
+					gates: { "staging→atomic-prod": { type: "auto" } } as Record<TransitionKey, Gate>,
+					forced_reason: null,
+					version_set_id: input.version_set_id,
+					previous_version_set_id: input.previous_version_set_id ?? null,
+				}
+			: base_plan;
 	const shape = plan.stages.some(s => s.name === "atomic-prod") ? "atomic" : "gradual";
 
 	const now = new Date().toISOString();
@@ -149,6 +170,7 @@ export const create_run = async (
 		package_id: input.package_id,
 		version_set_id: input.version_set_id,
 		shape,
+		kind,
 		status: "queued",
 		current_stage: plan.stages[0]?.name ?? null,
 		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape) as never,

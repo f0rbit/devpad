@@ -78,6 +78,13 @@
       "when": 1778995262759,
       "tag": "0010_pipeline_script_names",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1779015577150,
+      "tag": "0011_pipeline_run_kind",
+      "breakpoints": true
     }
   ]
 }
