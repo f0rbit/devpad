@@ -40,7 +40,7 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
 import { environment_for_stage } from "./caller-identity.js";
-import { type DeployError, deploy_stage } from "./deploy.js";
+import { type BundleProvider, type DeployError, deploy_stage } from "./deploy.js";
 import type { ApprovalStore, GateError, GateEvaluatorDeps, PulseEmitter } from "./gates/index.js";
 import { gateEvaluatorFor } from "./gates/index.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
@@ -50,6 +50,7 @@ import { type ResolvedPlan, type RunEvent, type RunState, type TransitionError, 
 export type RunDeps = {
 	db: Database;
 	cf: CloudflareProvider;
+	bundles: BundleProvider;
 	pulse: PulseEmitter;
 	approvals: ApprovalStore;
 	pulse_summary?: PulseSummaryProvider;
@@ -363,7 +364,7 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 			kind: "deploy_started",
 			payload: { traffic: output.stage.traffic, version_set_id: output.version_set_id },
 		});
-		const deployed = await deploy_stage(deps.cf, {
+		const deployed = await deploy_stage(deps.cf, deps.bundles, {
 			script_name: resolved.value.script_name,
 			stage: output.stage,
 			version_set_id: output.version_set_id,

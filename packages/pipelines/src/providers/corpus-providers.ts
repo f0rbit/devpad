@@ -16,9 +16,11 @@
  */
 
 import type { Backend, VersionSetManifest } from "@f0rbit/corpus";
-import { pipeline_template_store, version_set_store } from "@f0rbit/corpus";
+import { ok, err, pipeline_template_store, type Result, version_set_store } from "@f0rbit/corpus";
+import type { BundleFetchError, BundlePayload, BundleProvider } from "@devpad/core/services/pipelines";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { extendTemplate, PipelineTemplateSchema } from "@devpad/pipeline-templates";
+import type { VersionBinding } from "@devpad/pipeline-fakes";
 import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes.ts";
 
 /**
@@ -123,6 +125,60 @@ export const make_corpus_template_resolver = (backend: Backend, manifests: Manif
 		},
 	};
 };
+
+/**
+ * Production bundle provider — resolves `version_set_id` to the
+ * compiled Worker bundle bytes the orchestrator needs for a multipart
+ * upload. Path:
+ *
+ *   1. Read the version-set manifest by version (corpus snapshot key).
+ *   2. Pull `manifest.builds.worker.artifact_ref` (e.g.
+ *      `worker-bundles/<content_hash>`) out of the manifest.
+ *   3. Fetch the raw bytes via `backend.data.get(artifact_ref).bytes()`.
+ *
+ * `bindings_for` lets the caller supply environment-specific bindings
+ * (e.g. `ANTHROPIC` -> `vault-staging` vs `vault-production`). The
+ * caller-identity trio is added downstream in `deploy_stage`; only the
+ * non-`plain_text` bindings flow through here.
+ *
+ * Phase 6 caveat: the manifest does NOT yet carry the package's
+ * declared bindings (service / kv / DO / secrets) — Phase 7 will add a
+ * `builds.worker.metadata` field to the manifest and surface it here.
+ * Today this provider returns only the bundle bytes; the caller
+ * supplements with the CALLER_* trio (computed in deploy_stage) and
+ * the orchestrator-side default bindings via `bindings_for`.
+ */
+export const make_corpus_bundle_provider = (
+	backend: Backend,
+	manifests: ManifestProvider,
+	options: {
+		bindings_for?: (input: { package_name: string; environment: "staging" | "production" }) => VersionBinding[];
+		compatibility_flags?: string[];
+	} = {},
+): BundleProvider => ({
+	get: async (input): Promise<Result<BundlePayload, BundleFetchError>> => {
+		const manifest = await manifests.get(input.version_set_id);
+		if (manifest === null) {
+			return err({ code: "bundle_unavailable", message: `no version-set manifest found for ${input.version_set_id}` });
+		}
+		const artifact_ref = manifest.builds?.worker?.artifact_ref;
+		if (artifact_ref === undefined || artifact_ref === "") {
+			return err({ code: "bundle_unavailable", message: `manifest for ${input.version_set_id} has no builds.worker.artifact_ref` });
+		}
+		const handle_result = await backend.data.get(artifact_ref);
+		if (!handle_result.ok) {
+			return err({ code: "bundle_unavailable", message: `corpus data.get(${artifact_ref}) failed: ${handle_result.error.kind}` });
+		}
+		const bytes = await handle_result.value.bytes();
+		const bindings = options.bindings_for?.({ package_name: input.package_name, environment: input.environment }) ?? [];
+		return ok({
+			bytes,
+			compatibility_date: manifest.builds.worker.compatibility_date,
+			compatibility_flags: options.compatibility_flags,
+			bindings,
+		});
+	},
+});
 
 const extract_template_content_hash = (template_ref: string): string | null => {
 	// The CLI emits the namespaced form `pipeline-templates/<content_hash>`

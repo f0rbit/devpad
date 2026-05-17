@@ -1,5 +1,8 @@
 export {
 	build_deployment_request,
+	type BundleFetchError,
+	type BundlePayload,
+	type BundleProvider,
 	type DeployError,
 	type DeploymentResult,
 	type DeployRequest,

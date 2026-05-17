@@ -15,12 +15,33 @@
  * same `version_set_id` instead of uploading twice.
  */
 
-import type { CloudflareError, CloudflareProvider, CreateDeploymentInput, WorkerVar, WorkerVersion } from "@devpad/pipeline-fakes";
+import type { CloudflareError, CloudflareProvider, CreateDeploymentInput, VersionBinding, WorkerVar, WorkerVersion } from "@devpad/pipeline-fakes";
 import type { Stage } from "@devpad/pipeline-templates";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { compute_caller_identity_vars } from "./caller-identity.js";
 
-export type DeployError = CloudflareError | { code: "no_version_uploaded"; message: string };
+export type BundleFetchError = { code: "bundle_unavailable"; message: string };
+
+export type DeployError = CloudflareError | BundleFetchError | { code: "no_version_uploaded"; message: string };
+
+/**
+ * Read-side shape the orchestrator uses to fetch a compiled worker
+ * bundle for a given version-set. Production wiring resolves
+ * `version_set_id` to the manifest's `builds.worker.artifact_ref` and
+ * pulls the bytes from R2 via the corpus `Backend.data` client. Tests
+ * inject a stub that returns a fixed `Uint8Array`.
+ */
+export type BundlePayload = {
+	bytes: Uint8Array;
+	main_module?: string;
+	compatibility_date?: string;
+	compatibility_flags?: string[];
+	bindings?: VersionBinding[];
+};
+
+export interface BundleProvider {
+	get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>>;
+}
 
 export type DeploymentResult = {
 	version: WorkerVersion;
@@ -108,11 +129,22 @@ const find_existing_version = async (cf: CloudflareProvider, script_name: string
 	return ok(match ?? null);
 };
 
-const upload_version = async (cf: CloudflareProvider, script_name: string, version_set_id: string, vars: WorkerVar[]): Promise<Result<WorkerVersion, CloudflareError>> => {
+const upload_version = async (
+	cf: CloudflareProvider,
+	script_name: string,
+	version_set_id: string,
+	vars: WorkerVar[],
+	bundle: BundlePayload,
+): Promise<Result<WorkerVersion, CloudflareError>> => {
 	return cf.versions.upload({
 		script_name,
 		annotations: { [VERSION_KEY]: version_set_id },
 		vars,
+		bundle: bundle.bytes,
+		main_module: bundle.main_module,
+		compatibility_date: bundle.compatibility_date,
+		compatibility_flags: bundle.compatibility_flags,
+		bindings: bundle.bindings,
 	});
 };
 
@@ -155,6 +187,7 @@ const lookup_previous_active_version = async (cf: CloudflareProvider, script_nam
  */
 export const deploy_stage = async (
 	cf: CloudflareProvider,
+	bundles: BundleProvider,
 	input: {
 		script_name: string;
 		stage: Stage;
@@ -169,7 +202,14 @@ export const deploy_stage = async (
 	if (!existing.ok) return existing;
 
 	const identity_vars = compute_caller_identity_vars({ package_name, environment, version_set_id });
-	const version_result = existing.value !== null ? ok(existing.value) : await upload_version(cf, script_name, version_set_id, identity_vars);
+	let version_result: Result<WorkerVersion, CloudflareError | BundleFetchError>;
+	if (existing.value !== null) {
+		version_result = ok(existing.value);
+	} else {
+		const bundle = await bundles.get({ version_set_id, package_name, environment });
+		if (!bundle.ok) return bundle;
+		version_result = await upload_version(cf, script_name, version_set_id, identity_vars, bundle.value);
+	}
 	if (!version_result.ok) return version_result;
 	const version = version_result.value;
 

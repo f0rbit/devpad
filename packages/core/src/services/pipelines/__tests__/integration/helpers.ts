@@ -1,11 +1,30 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import { InMemoryCloudflareProvider, InMemoryPulseSummaryProvider } from "@devpad/pipeline-fakes";
+import { ok, type Result } from "@f0rbit/corpus";
 import type { PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { pipeline_analysis_template, pipeline_package, user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../../gates/__tests__/helpers.js";
+import type { BundleFetchError, BundlePayload, BundleProvider } from "../../deploy.js";
 import type { RunDeps } from "../../runs.js";
+
+/**
+ * In-memory bundle provider for tests. Returns a fixed stub bundle for
+ * every `version_set_id` — most tests don't care about the bytes, just
+ * that the deploy path can pull them. Tests that DO care about bundle
+ * round-trip override this in a `cf.versions.upload` assertion against
+ * the in-memory CF fake.
+ */
+export class InMemoryBundleProvider implements BundleProvider {
+	bytes: Uint8Array = new TextEncoder().encode("export default { fetch: () => new Response('test') };");
+	calls: Array<{ version_set_id: string; package_name: string; environment: "staging" | "production" }> = [];
+
+	async get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>> {
+		this.calls.push(input);
+		return ok({ bytes: this.bytes });
+	}
+}
 
 export function create_test_db(): Database {
 	const sqlite = new BunSqlite(":memory:");
@@ -53,15 +72,17 @@ export type TestDeps = RunDeps & {
 	pulse: InMemoryPulseEmitter;
 	approvals: InMemoryApprovalStore;
 	cf: InMemoryCloudflareProvider;
+	bundles: InMemoryBundleProvider;
 	pulse_summary: InMemoryPulseSummaryProvider;
 };
 
 export function make_deps(db: Database, opts: { now?: () => number } = {}): TestDeps {
 	const cf = new InMemoryCloudflareProvider();
+	const bundles = new InMemoryBundleProvider();
 	const pulse = new InMemoryPulseEmitter();
 	const approvals = new InMemoryApprovalStore();
 	const pulse_summary = new InMemoryPulseSummaryProvider();
-	return { db, cf, pulse, approvals, pulse_summary, now: opts.now };
+	return { db, cf, bundles, pulse, approvals, pulse_summary, now: opts.now };
 }
 
 /**

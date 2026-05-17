@@ -36,6 +36,7 @@ import { make_d1_approval_store } from "../../src/providers/approval-store.ts";
 import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "../../src/providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "../../src/providers/pulse.ts";
 import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
+import { InMemoryBundleProvider } from "./helpers.ts";
 
 const make_db = () => {
 	const sqlite = new BunSqlite(":memory:");
@@ -206,6 +207,7 @@ describe("deps factory — production wiring shape", () => {
 		const deps: RunDeps = {
 			db,
 			cf,
+			bundles: new InMemoryBundleProvider(),
 			pulse: make_pulse_emitter(fetcher),
 			approvals: make_d1_approval_store(db),
 			pulse_summary: make_pulse_summary_client(fetcher),
@@ -294,6 +296,7 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 		const deps: RunDeps = {
 			db,
 			cf,
+			bundles: new InMemoryBundleProvider(),
 			pulse: make_pulse_emitter(fetcher),
 			approvals: make_d1_approval_store(db),
 			pulse_summary: make_pulse_summary_client(fetcher),

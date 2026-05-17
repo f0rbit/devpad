@@ -13,7 +13,7 @@
  */
 
 import { Database as BunSqlite } from "bun:sqlite";
-import type { RunDeps } from "@devpad/core/services/pipelines";
+import type { BundleFetchError, BundlePayload, BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
 import type { Decision, EmitError, PulseEvent, StoreError } from "@devpad/core/services/pipelines/gates";
 import { InMemoryCloudflareProvider, InMemoryDurableObjectNamespace, type InMemoryDurableObjectState } from "@devpad/pipeline-fakes";
 import { extendTemplate, type PipelineTemplate } from "@devpad/pipeline-templates";
@@ -47,6 +47,15 @@ export class InMemoryPulseEmitter {
 	async emit(event: PulseEvent): Promise<Result<void, EmitError>> {
 		this.emitted.push(event);
 		return ok(undefined);
+	}
+}
+
+export class InMemoryBundleProvider implements BundleProvider {
+	bytes: Uint8Array = new TextEncoder().encode("export default {};");
+	calls: Array<{ version_set_id: string; package_name: string; environment: "staging" | "production" }> = [];
+	async get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>> {
+		this.calls.push(input);
+		return ok({ bytes: this.bytes });
 	}
 }
 
@@ -117,11 +126,12 @@ export const default_manifest: VersionSetManifest = {
 	infra_plan_ref: "r2://infra/v1",
 };
 
-export const make_run_deps = (db: Database): RunDeps & { cf: InMemoryCloudflareProvider; pulse: InMemoryPulseEmitter; approvals: InMemoryApprovalStore } => {
+export const make_run_deps = (db: Database): RunDeps & { cf: InMemoryCloudflareProvider; bundles: InMemoryBundleProvider; pulse: InMemoryPulseEmitter; approvals: InMemoryApprovalStore } => {
 	const cf = new InMemoryCloudflareProvider();
+	const bundles = new InMemoryBundleProvider();
 	const pulse = new InMemoryPulseEmitter();
 	const approvals = new InMemoryApprovalStore();
-	return { db, cf, pulse, approvals };
+	return { db, cf, bundles, pulse, approvals };
 };
 
 export type TestHarness = {

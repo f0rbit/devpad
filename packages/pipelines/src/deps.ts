@@ -23,18 +23,18 @@
  */
 
 import { createD1Database } from "@devpad/schema/database/d1";
-import type { RunDeps } from "@devpad/core/services/pipelines";
+import type { BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
 import type { Backend } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
-import type { CloudflareProvider } from "@devpad/pipeline-fakes";
+import type { CloudflareProvider, VersionBinding } from "@devpad/pipeline-fakes";
 import { require_bearer_token } from "./auth.ts";
 import type { PipelineEnv } from "./bindings.ts";
 import { make_cf_router } from "./do-router.ts";
 import { make_d1_approval_store } from "./providers/approval-store.ts";
 import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
-import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "./providers/corpus-providers.ts";
+import { make_corpus_bundle_provider, make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "./providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
-import type { AuthGate, PulseEmitterLite, RoutesDeps } from "./routes.ts";
+import type { AuthGate, ManifestProvider, PulseEmitterLite, RoutesDeps } from "./routes.ts";
 
 /**
  * Wraps `env.CF_API_TOKEN.get()` so the provider can pull the secret on
@@ -89,6 +89,31 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
 };
 
 /**
+ * Default bindings the orchestrator stamps onto every uploaded worker
+ * version. Mirrors the wrangler.jsonc the scaffolder generates: a
+ * service binding to the env-appropriate vault Worker, a service
+ * binding to the env-appropriate pulse Worker, and `nodejs_compat`. The
+ * caller-identity `CALLER_*` trio is added downstream by
+ * `deploy_stage`.
+ *
+ * Phase 7 will replace this with bindings discovered from the package's
+ * `infra.ts` / `wrangler.jsonc` baked into the version-set manifest.
+ */
+const default_bindings_for = (input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
+	const suffix = input.environment === "staging" ? "staging" : "production";
+	return [
+		{ type: "service", name: "ANTHROPIC", service: `vault-${suffix}`, entrypoint: "AnthropicVault" },
+		{ type: "service", name: "PULSE", service: `pulse-api-${suffix}` },
+	];
+};
+
+const make_bundle_provider = (backend: Backend, manifests: ManifestProvider): BundleProvider =>
+	make_corpus_bundle_provider(backend, manifests, {
+		bindings_for: default_bindings_for,
+		compatibility_flags: ["nodejs_compat"],
+	});
+
+/**
  * Shared core providers used by both the routes layer and the DO. Built
  * once per Worker invocation so the pulse emitter / approval store /
  * corpus backend instances are reused across requests.
@@ -103,7 +128,9 @@ const build_core = (env: PipelineEnv) => {
 	const pulse = make_pulse_emitter(env.PULSE);
 	const pulse_summary = make_pulse_summary_client(env.PULSE);
 	const approvals = make_d1_approval_store(db);
-	return { db, backend, cf, pulse, pulse_summary, approvals };
+	const manifests = make_corpus_manifest_provider(backend);
+	const bundles = make_bundle_provider(backend, manifests);
+	return { db, backend, cf, pulse, pulse_summary, approvals, manifests, bundles };
 };
 
 /**
@@ -117,6 +144,7 @@ export const build_run_deps_from_env = (env: PipelineEnv): RunDeps => {
 	return {
 		db: core.db,
 		cf: core.cf,
+		bundles: core.bundles,
 		pulse: core.pulse,
 		approvals: core.approvals,
 		pulse_summary: core.pulse_summary,
@@ -133,12 +161,11 @@ export const build_routes_deps_from_env = (env: PipelineEnv): RoutesDeps => {
 	const core = build_core(env);
 	const auth: AuthGate = { check: request => require_bearer_token(env, request) };
 	const pulse_lite: PulseEmitterLite = { emit: async event => core.pulse.emit(event as never) };
-	const manifests = make_corpus_manifest_provider(core.backend);
 	return {
 		db: core.db,
 		do_router: make_cf_router(env.PIPELINE_RUNS as unknown as { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } }),
-		manifests,
-		templates: make_corpus_template_resolver(core.backend, manifests),
+		manifests: core.manifests,
+		templates: make_corpus_template_resolver(core.backend, core.manifests),
 		lineage: make_corpus_lineage_provider(core.backend),
 		backend: core.backend,
 		auth,
