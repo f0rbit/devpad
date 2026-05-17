@@ -16,8 +16,6 @@ import { make_corpus_manifest_provider, make_corpus_template_resolver } from "..
 const atomic_template: PipelineTemplate = {
 	rollout: { type: "atomic" },
 	gates: { "staging→atomic-prod": { type: "auto" } },
-	pre_deploy_checks: [],
-	post_deploy_checks: [],
 };
 
 const make_manifest = (overrides?: Partial<VersionSetManifest>): VersionSetManifest => ({
@@ -134,8 +132,6 @@ describe("make_corpus_template_resolver", () => {
 				"onebox→wave1": { type: "manual" },
 				"wave1→full": { type: "auto" },
 			},
-			pre_deploy_checks: [],
-			post_deploy_checks: [],
 		};
 
 		const backend = create_memory_backend();

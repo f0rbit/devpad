@@ -15,8 +15,6 @@ describe("extendTemplate", () => {
 		const tpl = unwrap_ok(extendTemplate());
 		expect(tpl.rollout).toEqual(defaultGradual);
 		expect(tpl.gates).toEqual(defaultGradualGates);
-		expect(tpl.pre_deploy_checks).toEqual([]);
-		expect(tpl.post_deploy_checks).toEqual([]);
 	});
 
 	test("empty overrides object is equivalent to no-op", () => {
@@ -176,18 +174,6 @@ describe("extendTemplate", () => {
 		if (tpl.rollout.type !== "gradual") throw new Error("expected gradual");
 		expect(tpl.rollout.stages[0]).toEqual({ name: "onebox", traffic: 2, bake: { ms: 600_000 } });
 		expect(tpl.gates["staging→onebox"]).toEqual({ type: "auto" });
-	});
-
-	test("pre_deploy_checks / post_deploy_checks pass through (Phase 1 empty default)", () => {
-		const tpl = unwrap_ok(extendTemplate());
-		expect(tpl.pre_deploy_checks).toEqual([]);
-		expect(tpl.post_deploy_checks).toEqual([]);
-		const tpl2 = unwrap_ok(
-			extendTemplate({
-				pre_deploy_checks: [{ kind: "blocker", policy: "business-hours" }],
-			})
-		);
-		expect(tpl2.pre_deploy_checks).toEqual([{ kind: "blocker", policy: "business-hours" }]);
 	});
 
 	test("auto gate with afterBake flag preserved through override", () => {

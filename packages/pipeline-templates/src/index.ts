@@ -20,8 +20,6 @@ export {
 	GradualRolloutSchema,
 	ManualGateSchema,
 	PipelineTemplateSchema,
-	PostDeployCheckSchema,
-	PreDeployCheckSchema,
 	RolloutSchema,
 	StageSchema,
 } from "./schema.ts";
@@ -37,8 +35,6 @@ export type {
 	Gate,
 	GateVerdict,
 	PipelineTemplate,
-	PostDeployCheck,
-	PreDeployCheck,
 	Rollout,
 	Stage,
 	StageContext,

@@ -26,7 +26,7 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { defaultAtomic, defaultAtomicGates } from "./default-atomic.ts";
 import { defaultGradual, defaultGradualGates } from "./default-gradual.ts";
 import { parse_duration } from "./rollout.ts";
-import type { Duration, Gate, PipelineTemplate, PostDeployCheck, PreDeployCheck, Rollout, TransitionKey } from "./types.ts";
+import type { Duration, Gate, PipelineTemplate, Rollout, TransitionKey } from "./types.ts";
 
 export type DslError = { code: "unknown_stage"; message: string; stage: string } | { code: "unknown_transition"; message: string; transition: string } | { code: "duration_parse"; message: string; input: string };
 
@@ -53,8 +53,6 @@ type RolloutOverride = GradualRolloutOverride | AtomicRolloutOverride;
 export type ExtendTemplateOverrides = {
 	rollout?: RolloutOverride;
 	gates?: Partial<Record<TransitionKey, Gate>>;
-	pre_deploy_checks?: PreDeployCheck[];
-	post_deploy_checks?: PostDeployCheck[];
 };
 
 const is_atomic_override = (r: RolloutOverride | undefined): r is AtomicRolloutOverride => r !== undefined && r.type === "atomic";
@@ -133,8 +131,6 @@ export const extendTemplate = (overrides: ExtendTemplateOverrides = {}): Result<
 		return ok({
 			rollout: { type: "atomic" },
 			gates: gates_result.value,
-			pre_deploy_checks: overrides.pre_deploy_checks ?? [],
-			post_deploy_checks: overrides.post_deploy_checks ?? [],
 		});
 	}
 
@@ -157,7 +153,5 @@ export const extendTemplate = (overrides: ExtendTemplateOverrides = {}): Result<
 	return ok({
 		rollout: rollout_result.value,
 		gates: gates_result.value,
-		pre_deploy_checks: overrides.pre_deploy_checks ?? [],
-		post_deploy_checks: overrides.post_deploy_checks ?? [],
 	});
 };

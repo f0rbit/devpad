@@ -52,9 +52,6 @@ export const GateSchema: z.ZodType<Gate> = z.discriminatedUnion("type", [
 	AnalysisGateSchema,
 ]);
 
-export const PreDeployCheckSchema = z.object({ kind: z.string(), policy: z.string() });
-export const PostDeployCheckSchema = z.object({ kind: z.string(), policy: z.string() });
-
 /**
  * Top-level pipeline template schema. Source of truth for the serialised
  * JSON blob persisted in the `pipeline-templates` corpus store. Mirrors
@@ -68,6 +65,4 @@ export const PostDeployCheckSchema = z.object({ kind: z.string(), policy: z.stri
 export const PipelineTemplateSchema: z.ZodType<PipelineTemplate> = z.object({
 	rollout: RolloutSchema,
 	gates: z.record(GateSchema),
-	pre_deploy_checks: z.array(PreDeployCheckSchema),
-	post_deploy_checks: z.array(PostDeployCheckSchema),
 });

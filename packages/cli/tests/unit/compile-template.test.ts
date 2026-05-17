@@ -13,8 +13,6 @@ import { compile_template_to_json, parse_template_from_json } from "../../src/pi
 const atomic_template: PipelineTemplate = {
 	rollout: { type: "atomic" },
 	gates: { "staging→atomic-prod": { type: "auto" } },
-	pre_deploy_checks: [],
-	post_deploy_checks: [],
 };
 
 const gradual_template: PipelineTemplate = {
@@ -31,8 +29,6 @@ const gradual_template: PipelineTemplate = {
 		"onebox→wave1": { type: "auto", afterBake: true },
 		"wave1→full": { type: "analysis", template: { template_id: "default" } },
 	},
-	pre_deploy_checks: [{ kind: "no_deploy_window", policy: "weekday" }],
-	post_deploy_checks: [],
 };
 
 describe("compile_template_to_json", () => {
@@ -67,8 +63,6 @@ describe("compile_template_to_json", () => {
 		const broken = {
 			rollout: { type: "exponential" },
 			gates: {},
-			pre_deploy_checks: [],
-			post_deploy_checks: [],
 		} as unknown as PipelineTemplate;
 		const result = compile_template_to_json(broken);
 		expect(result.ok).toBe(false);
@@ -117,8 +111,6 @@ describe("parse_template_from_json", () => {
 			JSON.stringify({
 				rollout: { type: "atomic" },
 				gates: { "staging→atomic-prod": { type: "unrecognised" } },
-				pre_deploy_checks: [],
-				post_deploy_checks: [],
 			}),
 		);
 		expect(result.ok).toBe(false);

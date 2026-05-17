@@ -67,15 +67,6 @@ export type Rollout =
 export type ForcedAtomicReason = "do_migrations" | "asset_affinity_none";
 
 /**
- * Forward-compat slot for Phase 3 deployment blockers (time-of-day, holidays,
- * etc.). Phase 1 always ships an empty array.
- */
-export type PreDeployCheck = { kind: string; policy: string };
-
-/** Forward-compat slot mirroring {@link PreDeployCheck}. */
-export type PostDeployCheck = { kind: string; policy: string };
-
-/**
  * Top-level package template. `gates` is keyed by the literal transition
  * string (e.g. `"staging→onebox"`) so a typo in the override DSL becomes a
  * compile error rather than a silent no-op.
@@ -83,8 +74,6 @@ export type PostDeployCheck = { kind: string; policy: string };
 export type PipelineTemplate = {
 	rollout: Rollout;
 	gates: Record<TransitionKey, Gate>;
-	pre_deploy_checks: PreDeployCheck[];
-	post_deploy_checks: PostDeployCheck[];
 };
 
 /**
