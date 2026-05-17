@@ -55,6 +55,13 @@
 	"vars": {
 		"ENVIRONMENT": "production"
 	},
+	"secrets_store_secrets": [
+		{
+			"binding": "PIPELINES_TOKEN",
+			"store_id": "default_secrets_store",
+			"secret_name": "PIPELINES_TOKEN"
+		}
+	],
 	"env": {
 		"staging": {
 			"name": "devpad-pipelines-staging",

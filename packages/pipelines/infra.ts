@@ -68,10 +68,15 @@ const pipeline_runs = DurableObjectNamespace<unknown>("PIPELINE_RUNS", {
 // secret is bound. This lets pass-1 ship the wiring without blocking on
 // token provisioning. Pass 2 (after the token lands in `.env`) binds it.
 //
+// `PIPELINES_TOKEN` follows the same lazy pattern — the bearer middleware
+// returns `auth_unavailable` for `POST /artifacts/*` until the secret is
+// provisioned. Read-only routes keep working without it.
+//
 // Cloudflare currently caps accounts at one Secrets Store. The account
 // already has the auto-provisioned `default_secrets_store` (shared with
 // vault on the same account). Adopt rather than fail on the cap.
 const wire_cf_token = Boolean(process.env.CF_API_TOKEN);
+const wire_pipelines_token = Boolean(process.env.PIPELINES_TOKEN);
 
 const bindings: Bindings = {
 	ENVIRONMENT: is_staging ? "staging" : "production",
@@ -83,17 +88,27 @@ const bindings: Bindings = {
 	CF_ACCOUNT_ID: process.env.CF_ACCOUNT_ID ?? "81874bc21b868deba3276f551acde354",
 };
 
-if (wire_cf_token) {
+if (wire_cf_token || wire_pipelines_token) {
 	const secrets_store = await SecretsStore("pipelines-secrets", {
 		name: "default_secrets_store",
 		adopt: true,
 	});
-	const cf_api_token = await Secret("CF_API_TOKEN", {
-		name: "CF_API_TOKEN",
-		store: secrets_store,
-		value: alchemy.secret.env.CF_API_TOKEN,
-	});
-	bindings.CF_API_TOKEN = cf_api_token;
+	if (wire_cf_token) {
+		const cf_api_token = await Secret("CF_API_TOKEN", {
+			name: "CF_API_TOKEN",
+			store: secrets_store,
+			value: alchemy.secret.env.CF_API_TOKEN,
+		});
+		bindings.CF_API_TOKEN = cf_api_token;
+	}
+	if (wire_pipelines_token) {
+		const pipelines_token = await Secret("PIPELINES_TOKEN", {
+			name: "PIPELINES_TOKEN",
+			store: secrets_store,
+			value: alchemy.secret.env.PIPELINES_TOKEN,
+		});
+		bindings.PIPELINES_TOKEN = pipelines_token;
+	}
 }
 
 export const worker = await Worker("pipelines", {

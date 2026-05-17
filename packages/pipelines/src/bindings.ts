@@ -81,4 +81,11 @@ export type PipelineEnv = {
 	// orchestrator) still typecheck; the factory throws lazily when an
 	// actual CF API call is made without it.
 	CF_API_TOKEN?: SecretsStoreSecret;
+	// Shared bearer secret guarding `POST /artifacts/*`. CLI clients
+	// running in CI present this via `Authorization: Bearer <token>` to
+	// upload manifest + blob artifacts into the orchestrator's corpus
+	// stores. Optional at the type level — a deploy without the secret
+	// still serves the read-only routes; artifact uploads return
+	// `auth_unavailable` until the secret is provisioned.
+	PIPELINES_TOKEN?: SecretsStoreSecret;
 };

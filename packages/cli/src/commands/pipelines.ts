@@ -12,7 +12,8 @@ import { type ApiClient, ApiClient as ApiClientCtor } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
 import ora from "ora";
-import { createCorpusBackend } from "../corpus-backend.ts";
+import { selectCorpusBackend, type CorpusBackendMode } from "../corpus-backend.ts";
+import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend.ts";
 import {
 	type ArtifactInputs,
 	type VersionSetOutput,
@@ -101,10 +102,6 @@ const default_client_factory = (): ApiClient => {
 	return new ApiClientCtor({ api_key, base_url });
 };
 
-const print_json = (data: unknown): void => {
-	process.stdout.write(`${JSON.stringify(data, null, 2)}\n`);
-};
-
 type ClientFactory = () => ApiClient;
 
 
@@ -149,7 +146,18 @@ interface ArtifactsUploadOptions {
 	output: string;
 	gitSha?: string;
 	compatibilityDate?: string;
+	orchestratorUrl?: string;
+	token?: string;
+	mode?: string;
 }
+
+const resolve_mode = (options: ArtifactsUploadOptions): { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined } => {
+	const explicit = options.mode === "memory" || options.mode === "cloudflare-http" ? (options.mode as CorpusBackendMode) : undefined;
+	const url = options.orchestratorUrl ?? process.env.DEVPAD_PIPELINES_URL;
+	const token = options.token ?? process.env.DEVPAD_PIPELINES_TOKEN;
+	const mode: CorpusBackendMode = explicit ?? (url !== undefined && url !== "" && token !== undefined && token !== "" ? "cloudflare-http" : "memory");
+	return { mode, pipelines_url: url, pipelines_token: token };
+};
 
 export const action_artifacts_upload = async (options: ArtifactsUploadOptions): Promise<void> => {
 	const spinner = make_spinner("Uploading artifacts to corpus...").start();
@@ -175,39 +183,76 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	const pipeline = readFileSync(options.pipeline);
 	const grants = readFileSync(options.grants);
 
-	const bundle_hash = compute_hash(bundle).slice(0, 12);
-	const manifest_hash = compute_hash(Buffer.from(manifest_text)).slice(0, 12);
-	const infra_plan_hash = compute_hash(infra_plan).slice(0, 12);
-	const pipeline_hash = compute_hash(pipeline).slice(0, 12);
-	const grants_hash = compute_hash(grants).slice(0, 12);
+	const resolved = resolve_mode(options);
+
+	// In HTTP mode we upload each blob through `/artifacts/blob` and use
+	// the server-assigned `<store_id>/<content_hash>` refs in the
+	// manifest. In memory mode we keep the legacy short-hash refs so the
+	// existing CI/test scripts that snapshot the manifest output stay
+	// stable.
+	let bundle_ref: string;
+	let manifest_ref: string;
+	let infra_plan_ref: string;
+	let pipeline_ref: string;
+	let grants_ref: string;
+
+	if (resolved.mode === "cloudflare-http") {
+		if (resolved.pipelines_url === undefined || resolved.pipelines_token === undefined) {
+			return fail_with(spinner, "cloudflare-http mode requires --orchestrator-url + --token (or DEVPAD_PIPELINES_URL + DEVPAD_PIPELINES_TOKEN)");
+		}
+		const http_input = { pipelines_url: resolved.pipelines_url, pipelines_token: resolved.pipelines_token };
+		const refs = await upload_blobs_http(http_input, { bundle, manifest_text, infra_plan, pipeline, grants });
+		if (!refs.ok) return fail_with(spinner, refs.error);
+		bundle_ref = refs.value.bundle_ref;
+		manifest_ref = refs.value.manifest_ref;
+		infra_plan_ref = refs.value.infra_plan_ref;
+		pipeline_ref = refs.value.pipeline_ref;
+		grants_ref = refs.value.grants_ref;
+	} else {
+		bundle_ref = `worker-bundles/${compute_hash(bundle).slice(0, 12)}`;
+		manifest_ref = `env-manifests/${compute_hash(Buffer.from(manifest_text)).slice(0, 12)}`;
+		infra_plan_ref = `infra-plans/${compute_hash(infra_plan).slice(0, 12)}`;
+		pipeline_ref = `pipelines/${compute_hash(pipeline).slice(0, 12)}`;
+		grants_ref = `grants/${compute_hash(grants).slice(0, 12)}`;
+	}
 
 	const artifacts = {
 		bundle,
-		bundle_ref: `worker-bundles/${bundle_hash}`,
+		bundle_ref,
 		manifest: manifest_obj,
-		manifest_ref: `env-manifests/${manifest_hash}`,
+		manifest_ref,
 		infra_plan,
-		infra_plan_ref: `infra-plans/${infra_plan_hash}`,
+		infra_plan_ref,
 		pipeline,
-		pipeline_ref: `pipelines/${pipeline_hash}`,
+		pipeline_ref,
 		grants,
-		grants_ref: `grants/${grants_hash}`,
+		grants_ref,
 	};
 
 	const manifest_result = build_manifest(inputs, artifacts);
 	if (!manifest_result.ok) return fail_with(spinner, manifest_result.error.message);
 
-	const backend = await createCorpusBackend();
-	const { version_set_store } = await import("@f0rbit/corpus");
-	const version_sets = version_set_store(backend);
+	let version_set_id: string;
 
-	const put_result = await version_sets.put(manifest_result.value);
-	if (!put_result.ok) {
-		const error_msg = put_result.error.kind === "storage_error" ? put_result.error.cause?.message || "Storage error" : "Failed to store manifest";
-		return fail_with(spinner, error_msg);
+	if (resolved.mode === "cloudflare-http") {
+		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const upload = await upload_version_set(http_input, manifest_result.value);
+		if (!upload.ok) {
+			return fail_with(spinner, `version-set upload failed: ${format_http_error(upload.error)}`);
+		}
+		version_set_id = upload.value.version_set_id;
+	} else {
+		const backend = await selectCorpusBackend({ mode: "memory" });
+		const { version_set_store } = await import("@f0rbit/corpus");
+		const version_sets = version_set_store(backend);
+		const put_result = await version_sets.put(manifest_result.value);
+		if (!put_result.ok) {
+			const error_msg = put_result.error.kind === "storage_error" ? put_result.error.cause?.message || "Storage error" : "Failed to store manifest";
+			return fail_with(spinner, error_msg);
+		}
+		version_set_id = put_result.value.version;
 	}
 
-	const version_set_id = put_result.value.version;
 	const output: VersionSetOutput = {
 		id: version_set_id,
 		version: version_set_id,
@@ -218,6 +263,35 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	spinner.succeed("Artifacts uploaded successfully");
 	console.log(chalk.green(`Version Set ID: ${version_set_id}`));
 };
+
+const format_http_error = (e: { kind: string; status?: number; status_text?: string; cause?: unknown; message?: string }): string => {
+	if (e.kind === "http") return `HTTP ${e.status} ${e.status_text}`;
+	if (e.kind === "network") return `network error: ${String(e.cause)}`;
+	return e.message ?? "unknown error";
+};
+
+type HttpUploadInput = { pipelines_url: string; pipelines_token: string };
+type BlobInputs = { bundle: Buffer; manifest_text: string; infra_plan: Buffer; pipeline: Buffer; grants: Buffer };
+type BlobRefs = { bundle_ref: string; manifest_ref: string; infra_plan_ref: string; pipeline_ref: string; grants_ref: string };
+
+const upload_blobs_http = async (input: HttpUploadInput, blobs: BlobInputs): Promise<{ ok: true; value: BlobRefs } | { ok: false; error: string }> => {
+	const pairs: Array<{ key: keyof BlobRefs; store: string; bytes: Uint8Array }> = [
+		{ key: "bundle_ref", store: "worker-bundles", bytes: to_u8(blobs.bundle) },
+		{ key: "manifest_ref", store: "env-manifests", bytes: new TextEncoder().encode(blobs.manifest_text) },
+		{ key: "infra_plan_ref", store: "infra-plans", bytes: to_u8(blobs.infra_plan) },
+		{ key: "pipeline_ref", store: "pipelines", bytes: to_u8(blobs.pipeline) },
+		{ key: "grants_ref", store: "grants", bytes: to_u8(blobs.grants) },
+	];
+	const out: Partial<BlobRefs> = {};
+	for (const { key, store, bytes } of pairs) {
+		const upload = await upload_blob_to_store(input, store, bytes);
+		if (!upload.ok) return { ok: false, error: `${store} upload failed: ${format_http_error(upload.error)}` };
+		out[key] = upload.value.ref;
+	}
+	return { ok: true, value: out as BlobRefs };
+};
+
+const to_u8 = (b: Buffer): Uint8Array => new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
 
 interface RunsStartOptions {
 	package: string;
@@ -283,6 +357,9 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.requiredOption("--output <path>", "Output path for version set JSON")
 		.option("--git-sha <sha>", "Git SHA (default: from environment or zeroed)")
 		.option("--compatibility-date <date>", "Compatibility date (default: 2025-05-01)")
+		.option("--orchestrator-url <url>", "Orchestrator base URL (default: $DEVPAD_PIPELINES_URL)")
+		.option("--token <token>", "Bearer token (default: $DEVPAD_PIPELINES_TOKEN)")
+		.option("--mode <mode>", "Backend mode: memory | cloudflare-http (default: auto)")
 		.action(action_artifacts_upload);
 
 	const runs = pipelines.command("runs").description("Manage pipeline runs");

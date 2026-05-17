@@ -41,6 +41,8 @@ jobs:
         env:
           DEVPAD_API_KEY: ${{ secrets.DEVPAD_API_KEY }}
           DEVPAD_BASE_URL: ${{ secrets.DEVPAD_BASE_URL || 'https://devpad.tools/api/v1' }}
+          DEVPAD_PIPELINES_URL: ${{ secrets.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
+          DEVPAD_PIPELINES_TOKEN: ${{ secrets.DEVPAD_PIPELINES_TOKEN }}
         run: |
           bun "$RUNNER_TEMP/devpad/packages/cli/src/index.ts" pipelines artifacts upload \
             --package gradual-manual \

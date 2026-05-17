@@ -19,10 +19,12 @@ import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pi
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import type { VersionSetManifest } from "@f0rbit/corpus";
+import type { Backend, Result, VersionSetManifest } from "@f0rbit/corpus";
+import { VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
+import type { AuthError } from "./auth.ts";
 import type { DoRouter } from "./do-router.ts";
 
 export const create_run_body = z.object({
@@ -58,12 +60,26 @@ export interface LineageProvider {
 	previous(package_id: string, version_set_id: string): Promise<string | null>;
 }
 
+export interface AuthGate {
+	check(request: Request): Promise<Result<void, AuthError>>;
+}
+
+export interface PulseEmitterLite {
+	emit(event: { event: string } & Record<string, unknown>): Promise<unknown>;
+}
+
 export type RoutesDeps = {
 	db: Database;
 	do_router: DoRouter;
 	manifests: ManifestProvider;
 	templates: TemplateResolver;
 	lineage: LineageProvider;
+	// Optional: present when this Worker is wired to accept artifact
+	// uploads. Old tests that only exercise `/runs` continue to pass a
+	// minimal `RoutesDeps` without these.
+	backend?: Backend;
+	auth?: AuthGate;
+	pulse?: PulseEmitterLite;
 };
 
 type AppCtx = { Variables: { deps: RoutesDeps } };
@@ -216,9 +232,134 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok({ success: true });
 	});
 
+	// ─── Artifact upload routes ─────────────────────────────────────
+	//
+	// `POST /artifacts/blob` — accepts an `application/octet-stream`
+	// body and stores it in a named corpus store. Returns the assigned
+	// version, content hash, and the `<store_id>/<content_hash>` ref the
+	// CLI uses when building the manifest body.
+	//
+	// `POST /artifacts/version-set` — accepts a JSON `VersionSetManifest`
+	// body and stores it via `version_set_store(...).put(...)`. Returns
+	// the corpus version (`version_set_id`).
+	//
+	// Both routes are gated by `auth.check(request)` reading
+	// `env.PIPELINES_TOKEN`. Read-only routes above this point are
+	// intentionally unauthenticated.
+
+	app.post("/artifacts/blob", async c => apply_artifact_blob(c.req.raw, c.get("deps")));
+	app.post("/artifacts/version-set", async c => apply_artifact_version_set(c.req.raw, c.get("deps")));
+
 	app.get("/health", c => c.json({ status: "ok", timestamp: new Date().toISOString() }));
 
 	return app;
+};
+
+const MAX_BLOB_SIZE_BYTES = 25 * 1024 * 1024; // 25 MiB — generous for worker bundles + assets
+const BLOB_STORE_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
+
+const apply_auth = async (deps: RoutesDeps, request: Request): Promise<Response | null> => {
+	if (deps.auth === undefined) {
+		return json_err(503, { code: "auth_unavailable", message: "artifact upload not configured on this Worker" });
+	}
+	const check = await deps.auth.check(request);
+	if (!check.ok) {
+		const status = check.error.code === "auth_unavailable" ? 503 : 401;
+		return json_err(status, check.error);
+	}
+	return null;
+};
+
+const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<Response> => {
+	const auth_fail = await apply_auth(deps, request);
+	if (auth_fail !== null) return auth_fail;
+	if (deps.backend === undefined) return json_err(503, { code: "backend_unavailable", message: "corpus backend not configured" });
+
+	const store_id = request.headers.get("x-store-id");
+	if (store_id === null || !BLOB_STORE_ID_PATTERN.test(store_id)) {
+		return json_err(400, { code: "invalid_store_id", message: "x-store-id header required: [a-z0-9-]{1,64}" });
+	}
+
+	const content_length = Number(request.headers.get("content-length") ?? "0");
+	if (content_length > MAX_BLOB_SIZE_BYTES) {
+		return json_err(413, { code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES });
+	}
+
+	const buffer = await request.arrayBuffer().catch(() => null);
+	if (buffer === null) return json_err(400, { code: "invalid_body", message: "could not read body" });
+	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES) return json_err(413, { code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES });
+
+	const bytes = new Uint8Array(buffer);
+	const content_hash = await sha256_hex(bytes);
+	const version = generate_version();
+	const data_key = `${store_id}/${content_hash}`;
+
+	const put_data = await deps.backend.data.put(data_key, bytes);
+	if (!put_data.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put_data.error) });
+
+	const meta = {
+		store_id,
+		version,
+		parents: [],
+		created_at: new Date(),
+		content_hash,
+		content_type: "application/octet-stream" as const,
+		size_bytes: bytes.byteLength,
+		data_key,
+	};
+	const put_meta = await deps.backend.metadata.put(meta);
+	if (!put_meta.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put_meta.error) });
+
+	if (deps.pulse !== undefined) await deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }).catch(() => undefined);
+
+	return json_ok({ version, content_hash, store_id, ref: data_key });
+};
+
+const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): Promise<Response> => {
+	const auth_fail = await apply_auth(deps, request);
+	if (auth_fail !== null) return auth_fail;
+	if (deps.backend === undefined) return json_err(503, { code: "backend_unavailable", message: "corpus backend not configured" });
+
+	const body = await request.json().catch(() => null);
+	if (body === null) return json_err(400, { code: "invalid_body", message: "request body is not valid JSON" });
+
+	const parsed = VersionSetManifestSchema.safeParse(body);
+	if (!parsed.success) return json_err(400, { code: "invalid_manifest", issues: parsed.error.issues });
+
+	const manifest = parsed.data as VersionSetManifest;
+	const store = version_set_store(deps.backend);
+	const put = await store.put(manifest);
+	if (!put.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put.error) });
+
+	if (deps.pulse !== undefined)
+		await deps.pulse.emit({ event: "artifact_uploaded", store_id: "version-sets", content_hash: put.value.content_hash, kind: "version_set", package: manifest.package }).catch(() => undefined);
+
+	return json_ok({ version_set_id: put.value.version, content_hash: put.value.content_hash, package: manifest.package });
+};
+
+const format_corpus_error = (e: { kind: string; message?: string; cause?: { message?: string } }): string => {
+	if (e.message !== undefined) return e.message;
+	if (e.cause?.message !== undefined) return e.cause.message;
+	return e.kind;
+};
+
+const sha256_hex = async (bytes: Uint8Array): Promise<string> => {
+	const digest = await crypto.subtle.digest("SHA-256", bytes);
+	const view = new Uint8Array(digest);
+	let out = "";
+	for (let i = 0; i < view.length; i++) out += view[i].toString(16).padStart(2, "0");
+	return out;
+};
+
+/**
+ * Generate a time-sortable lexicographic version id. Mirrors the corpus
+ * default — a millisecond timestamp + 6 random hex chars — but kept
+ * local so the route handler doesn't reach into corpus internals.
+ */
+const generate_version = (): string => {
+	const ts = Date.now().toString(36).padStart(9, "0");
+	const rand = Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+	return `v_${ts}_${rand}`;
 };
 
 const passthrough = async (response: Response): Promise<Response> => {
