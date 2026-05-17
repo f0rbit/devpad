@@ -119,7 +119,9 @@ describe("scaffold_package — golden tree", () => {
 });
 
 describe("scaffold_package — typecheck", () => {
-	test("generated atomic+auto package typechecks", async () => {
+	// `bunx tsc` startup + downloading typescript on cold cache can push past
+	// the default 5s test timeout; give it room.
+	test("generated atomic+auto package typechecks", { timeout: 60_000 }, async () => {
 		const target = await make_tmp_target();
 		const result = await scaffold_package(
 			{

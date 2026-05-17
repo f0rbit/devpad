@@ -29,7 +29,18 @@ import { ok } from "@f0rbit/corpus";
 import { type LineageProvider, type ManifestProvider, make_routes, type RoutesDeps, type TemplateResolver } from "../../src/routes.ts";
 import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
 
-export const SCRIPT_NAME_FOR = (package_id: string): string => `pipeline_${package_id}`;
+/**
+ * Test helper mirroring `resolve_script_name`'s convention:
+ *   staging → `${name}-staging`, all others → `${name}`.
+ *
+ * The default `seed_package` fixture uses name = "test-pkg" — staging
+ * deploys land on `test-pkg-staging`, everything else on `test-pkg`.
+ */
+export const SCRIPT_NAME_FOR = (opts: { name?: string; stage_name?: string } = {}): string => {
+	const name = opts.name ?? "test-pkg";
+	if (opts.stage_name === "staging") return `${name}-staging`;
+	return name;
+};
 
 export class InMemoryPulseEmitter {
 	emitted: PulseEvent[] = [];
@@ -135,8 +146,9 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 	if (!built.ok) throw new Error(`template build failed: ${JSON.stringify(built.error)}`);
 	const template = built.value;
 
-	// Pre-seed v0 so partial-traffic deploys can ramp.
-	const script = SCRIPT_NAME_FOR(pkg.id);
+	// Pre-seed v0 on the non-staging script — that's where onebox/wave* and
+	// atomic-prod land. Staging deploys to its own `${name}-staging` script.
+	const script = SCRIPT_NAME_FOR();
 	const v0 = await deps.cf.versions.upload({ script_name: script, annotations: { version_set_id: "vs_v0" } });
 	if (!v0.ok) throw new Error("v0 upload failed");
 	await deps.cf.deployments.create({

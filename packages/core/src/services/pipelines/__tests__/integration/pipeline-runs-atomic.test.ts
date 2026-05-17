@@ -64,12 +64,16 @@ describe("pipeline runs — user-declared atomic", () => {
 		expect(final.status).toBe("completed");
 		expect(final.current_stage).toBe("atomic-prod");
 
-		const script = script_name_for(pkg_id);
-		const list = await deps.cf.deployments.list(script);
-		if (!list.ok) throw new Error("list failed");
-		expect(list.value).toHaveLength(2); // staging + atomic-prod
+		// staging on `${name}-staging`, atomic-prod on `${name}`.
+		const staging_list = await deps.cf.deployments.list(script_name_for({ stage_name: "staging" }));
+		if (!staging_list.ok) throw new Error("staging list failed");
+		expect(staging_list.value).toHaveLength(1);
+
+		const main_list = await deps.cf.deployments.list(script_name_for());
+		if (!main_list.ok) throw new Error("main list failed");
+		expect(main_list.value).toHaveLength(1); // atomic-prod
 		// atomic-prod always at 100% single-version
-		expect(list.value[1].strategy.versions).toHaveLength(1);
-		expect(list.value[1].strategy.versions[0].percentage).toBe(100);
+		expect(main_list.value[0].strategy.versions).toHaveLength(1);
+		expect(main_list.value[0].strategy.versions[0].percentage).toBe(100);
 	});
 });

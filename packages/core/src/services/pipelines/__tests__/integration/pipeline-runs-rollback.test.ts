@@ -37,7 +37,8 @@ describe("pipeline runs — rollback", () => {
 		deps = make_deps(db);
 
 		// Pre-seed a v0 version + deployment so we have something to roll back to.
-		const script = script_name_for(pkg_id);
+		// Rollback redeploys on the non-staging script (where onebox/wave* land).
+		const script = script_name_for();
 		const v0 = await deps.cf.versions.upload({ script_name: script, annotations: { version_set_id: "vs_v0" } });
 		if (!v0.ok) throw new Error("v0 upload failed");
 		v0_version_id = v0.value.id;
@@ -77,7 +78,7 @@ describe("pipeline runs — rollback", () => {
 		expect(final.finished_at).not.toBeNull();
 
 		// Verify the LAST deployment is at 100% pointing to v0.
-		const script = script_name_for(pkg_id);
+		const script = script_name_for();
 		const list = await deps.cf.deployments.list(script);
 		if (!list.ok) throw new Error("list failed");
 		const last = list.value[list.value.length - 1];

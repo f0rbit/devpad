@@ -3,7 +3,7 @@ import { extendTemplate } from "@devpad/pipeline-templates";
 import { pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
-import { approve, build_harness, type Envelope, get_json, post_json, type TestHarness } from "./helpers.ts";
+import { approve, build_harness, type Envelope, get_json, post_json, SCRIPT_NAME_FOR, type TestHarness } from "./helpers.ts";
 
 const run_status_of = async (db: Database, run_id: string) => (await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0]!;
 
@@ -78,15 +78,20 @@ describe("orchestrator routes — full gradual run via HTTP", () => {
 		await h.fire_alarm(run_id);
 		await h.fire_alarm(run_id);
 
-		const list = await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`);
-		if (!list.ok) throw new Error("list failed");
-		const post_seed = list.value.slice(1);
-		// staging + onebox + wave1 + wave2 + full
-		expect(post_seed.length).toBe(5);
-		expect(post_seed[1].strategy.versions.find(v => v.percentage === 1)).toBeDefined();
-		expect(post_seed[2].strategy.versions.find(v => v.percentage === 10)).toBeDefined();
-		expect(post_seed[3].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
-		expect(post_seed[4].strategy.versions[0].percentage).toBe(100);
+		// After 5.B, staging lands on `${name}-staging` and the rest on `${name}`.
+		const staging_list = await h.deps.cf.deployments.list(SCRIPT_NAME_FOR({ stage_name: "staging" }));
+		if (!staging_list.ok) throw new Error("staging list failed");
+		expect(staging_list.value).toHaveLength(1); // staging
+
+		const main_list = await h.deps.cf.deployments.list(SCRIPT_NAME_FOR());
+		if (!main_list.ok) throw new Error("main list failed");
+		const post_seed = main_list.value.slice(1);
+		// onebox + wave1 + wave2 + full on main script
+		expect(post_seed.length).toBe(4);
+		expect(post_seed[0].strategy.versions.find(v => v.percentage === 1)).toBeDefined();
+		expect(post_seed[1].strategy.versions.find(v => v.percentage === 10)).toBeDefined();
+		expect(post_seed[2].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
+		expect(post_seed[3].strategy.versions[0].percentage).toBe(100);
 		h.deps.cf.assertPercentageSum();
 	});
 });
@@ -150,7 +155,8 @@ describe("orchestrator routes — rollback", () => {
 		const final = await run_status_of(h.db, run_id);
 		expect(final.status).toBe("rolled_back");
 
-		const list = await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`);
+		// Rollback redeploys on the non-staging (main) script.
+		const list = await h.deps.cf.deployments.list(SCRIPT_NAME_FOR());
 		if (!list.ok) throw new Error("list failed");
 		const last = list.value[list.value.length - 1];
 		expect(last.strategy.versions[0].percentage).toBe(100);
@@ -239,7 +245,8 @@ describe("orchestrator routes — DO alarm idempotency", () => {
 
 		const events_before = await events_of(h.db, run_id);
 		const pulse_before = h.deps.pulse.emitted.length;
-		const deploys_before = (await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)).ok ? ((await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`)) as { ok: true; value: unknown[] }).value.length : 0;
+		const main_script = SCRIPT_NAME_FOR();
+		const deploys_before = (await h.deps.cf.deployments.list(main_script)).ok ? ((await h.deps.cf.deployments.list(main_script)) as { ok: true; value: unknown[] }).value.length : 0;
 
 		// Fire the alarm — must not error, must not advance, must not emit pulse, must not deploy.
 		await h.fire_alarm(run_id);
@@ -253,7 +260,7 @@ describe("orchestrator routes — DO alarm idempotency", () => {
 
 		expect(h.deps.pulse.emitted.length).toBe(pulse_before);
 
-		const deploys_after_list = await h.deps.cf.deployments.list(`pipeline_${h.pkg.id}`);
+		const deploys_after_list = await h.deps.cf.deployments.list(main_script);
 		if (!deploys_after_list.ok) throw new Error("list failed");
 		expect(deploys_after_list.value.length).toBe(deploys_before);
 	});

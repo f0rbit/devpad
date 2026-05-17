@@ -52,12 +52,14 @@ describe("pipeline runs — full gradual happy path", () => {
 
 		// Pre-seed a previous deployment so partial-traffic stages have a
 		// predecessor to ramp down. Without this, the deploy bootstraps
-		// to 100% and the percentage assertions become meaningless.
-		const script = script_name_for(pkg_id);
-		const seed_version = await deps.cf.versions.upload({ script_name: script, annotations: { version_set_id: "vs_v0" } });
+		// to 100% and the percentage assertions become meaningless. Seed
+		// on the non-staging script — that's where onebox/wave1/wave2/full
+		// land. The staging stage deploys to its own `${name}-staging` script.
+		const main_script = script_name_for();
+		const seed_version = await deps.cf.versions.upload({ script_name: main_script, annotations: { version_set_id: "vs_v0" } });
 		if (!seed_version.ok) throw new Error("seed upload failed");
 		await deps.cf.deployments.create({
-			script_name: script,
+			script_name: main_script,
 			strategy: {
 				strategy: "percentage",
 				versions: [{ version_id: seed_version.value.id, percentage: 100 }],
@@ -140,38 +142,38 @@ describe("pipeline runs — full gradual happy path", () => {
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 
-		const script = script_name_for(pkg_id);
-		const list = await deps.cf.deployments.list(script);
-		if (!list.ok) throw new Error("list failed");
-		// Filter out the pre-seed deployment, look at the run's deployments.
-		const post_seed = list.value.slice(1);
+		// After 5.B, staging lands on `${name}-staging` and onebox/wave1/wave2/full
+		// land on `${name}`. So the staging deploy lives on a different script.
+		const staging_script = script_name_for({ stage_name: "staging" });
+		const main_script = script_name_for();
 
-		// staging + onebox + wave1 + wave2 + full = 5 deploys after seed. But
-		// staging deploys at 0% which maps to single-version 100% in the
-		// payload — we still record the call. So expect 5 calls.
-		expect(post_seed.length).toBe(5);
+		const staging_list = await deps.cf.deployments.list(staging_script);
+		if (!staging_list.ok) throw new Error("staging list failed");
+		// One staging deploy at 100% single-version (env-routed elsewhere).
+		expect(staging_list.value).toHaveLength(1);
+		expect(staging_list.value[0].strategy.versions[0].percentage).toBe(100);
 
-		const find_new_pct = (idx: number) => post_seed[idx].strategy.versions.find(v => v.version_id !== post_seed[0].strategy.versions[0].version_id)?.percentage ?? post_seed[idx].strategy.versions[0].percentage;
-
-		// staging is the first run deploy, at 100% single-version (env-routed elsewhere)
-		expect(post_seed[0].strategy.versions[0].percentage).toBe(100);
+		const main_list = await deps.cf.deployments.list(main_script);
+		if (!main_list.ok) throw new Error("main list failed");
+		// pre-seed + onebox + wave1 + wave2 + full = 5; slice off the pre-seed.
+		const post_seed = main_list.value.slice(1);
+		expect(post_seed.length).toBe(4);
 
 		// onebox at 1%, with v0 at 99%
-		expect(post_seed[1].strategy.versions).toHaveLength(2);
-		const v1_id = post_seed[1].strategy.versions.find(v => v.percentage === 1)?.version_id;
+		expect(post_seed[0].strategy.versions).toHaveLength(2);
+		const v1_id = post_seed[0].strategy.versions.find(v => v.percentage === 1)?.version_id;
 		expect(v1_id).toBeDefined();
-		expect(post_seed[1].strategy.versions.find(v => v.percentage === 99)).toBeDefined();
+		expect(post_seed[0].strategy.versions.find(v => v.percentage === 99)).toBeDefined();
 
 		// wave1 at 10%
-		expect(post_seed[2].strategy.versions.find(v => v.percentage === 10)).toBeDefined();
-		expect(post_seed[2].strategy.versions.find(v => v.percentage === 90)).toBeDefined();
+		expect(post_seed[1].strategy.versions.find(v => v.percentage === 10)).toBeDefined();
+		expect(post_seed[1].strategy.versions.find(v => v.percentage === 90)).toBeDefined();
 
 		// wave2 at 50%
-		expect(post_seed[3].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
-		expect(post_seed[3].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
+		expect(post_seed[2].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
 
 		// full at 100% (single-version)
-		expect(post_seed[4].strategy.versions[0].percentage).toBe(100);
+		expect(post_seed[3].strategy.versions[0].percentage).toBe(100);
 
 		// And percentages always sum to 100 — fake invariant
 		deps.cf.assertPercentageSum();

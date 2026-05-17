@@ -110,7 +110,8 @@ describe("cartesian gate × rollout matrix", () => {
 
 		// Pre-seed a prior deployment so partial-traffic stages have a
 		// predecessor to ramp down without bootstrapping to 100%.
-		const script = script_name_for(pkg_id);
+		// Seed on the non-staging script — staging deploys to its own.
+		const script = script_name_for();
 		const seed = await deps.cf.versions.upload({ script_name: script, annotations: { version_set_id: "vs_v0" } });
 		if (!seed.ok) throw new Error("seed upload failed");
 		await deps.cf.deployments.create({

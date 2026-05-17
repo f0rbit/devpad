@@ -64,7 +64,21 @@ export function make_deps(db: Database, opts: { now?: () => number } = {}): Test
 	return { db, cf, pulse, approvals, pulse_summary, now: opts.now };
 }
 
-export const script_name_for = (package_id: string): string => `pipeline_${package_id}`;
+/**
+ * Test helper mirroring `resolve_script_name`'s convention:
+ *   staging → `${name}-staging`, all others → `${name}`.
+ *
+ * The default `seed_package` fixture uses name = "test-pkg", which means
+ * staging deploys land on `test-pkg-staging` and every other stage lands
+ * on `test-pkg`. Callers that pre-seed a v0 deployment should seed it on
+ * the non-staging script (where most of the run's deploys go); the
+ * `staging` deploy lands on a separate script and shouldn't conflict.
+ */
+export const script_name_for = (opts: { name?: string; stage_name?: string } = {}): string => {
+	const name = opts.name ?? "test-pkg";
+	if (opts.stage_name === "staging") return `${name}-staging`;
+	return name;
+};
 
 /**
  * Seed a `pipeline_analysis_template` row with the given threshold DSL.
