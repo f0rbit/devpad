@@ -74,7 +74,7 @@ export class ApiClient {
 			tags: new HttpClient({ ...clientOptions, category: "tags" }),
 			blog: new HttpClient({ ...clientOptions, category: "blog" }),
 			media: new HttpClient({ ...clientOptions, category: "media" }),
-			pulse: new HttpClient({ ...clientOptions, category: "pulse" }),
+			pulse: new HttpClient({ ...clientOptions, base_url: `${base_url}/pulse`, category: "pulse" }),
 		} as const;
 	}
 
