@@ -35,6 +35,8 @@ jobs:
           git clone --depth=1 --branch "$DEVPAD_REF" https://github.com/f0rbit/devpad.git "$RUNNER_TEMP/devpad"
           cd "$RUNNER_TEMP/devpad"
           bun install --frozen-lockfile
+          # build @devpad/api so the CLI can import from dist/
+          bun run --filter @devpad/api build
 
       - id: upload
         name: Upload artifacts to corpus
