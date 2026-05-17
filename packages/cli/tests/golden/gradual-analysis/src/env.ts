@@ -55,7 +55,6 @@ export type VaultError =
 	| { kind: "upstream_error"; cause: { kind: string; message: string } };
 
 export interface AnthropicVaultBinding {
-	messages_create(input: AnthropicMessageInput, identity: CallerIdentity): Promise<Result<AnthropicMessage, VaultError>>;
 	messages: {
 		create(input: AnthropicMessageInput, identity: CallerIdentity): Promise<Result<AnthropicMessage, VaultError>>;
 	};
