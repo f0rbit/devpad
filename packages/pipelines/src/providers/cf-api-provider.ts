@@ -32,6 +32,7 @@ import type {
 	CloudflareProvider,
 	CreateDeploymentInput,
 	UploadVersionInput,
+	VersionBinding,
 	WorkerDeployment,
 	WorkerMeta,
 	WorkerVar,
@@ -54,24 +55,21 @@ type CfEnvelope<T> = {
 
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 
-const headers_for = (config: CfApiConfig): Record<string, string> => ({
+const auth_header = (config: CfApiConfig): Record<string, string> => ({
 	authorization: `Bearer ${config.api_token}`,
+});
+
+const json_headers_for = (config: CfApiConfig): Record<string, string> => ({
+	...auth_header(config),
 	"content-type": "application/json",
 });
 
-const cf_call = async <T>(
-	config: CfApiConfig,
-	path: string,
-	init: RequestInit & { method: string },
-): Promise<Result<T, CloudflareError>> => {
+const cf_url = (config: CfApiConfig, path: string): string => {
 	const base = config.base_url ?? CF_API_BASE;
-	const url = `${base}/accounts/${config.account_id}${path}`;
-	let response: Response;
-	try {
-		response = await fetch(url, { ...init, headers: { ...headers_for(config), ...(init.headers ?? {}) } });
-	} catch (e) {
-		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
-	}
+	return `${base}/accounts/${config.account_id}${path}`;
+};
+
+const interpret_response = async <T>(response: Response): Promise<Result<T, CloudflareError>> => {
 	const body_text = await response.text().catch(() => "");
 	if (response.status === 404) return err({ code: "not_found", message: body_text || "cf api 404" });
 	if (response.status === 409) return err({ code: "conflict", message: body_text || "cf api 409" });
@@ -90,7 +88,49 @@ const cf_call = async <T>(
 	return ok(parsed.result);
 };
 
-type CfBinding = { type: string; name: string; text?: string };
+const cf_call = async <T>(
+	config: CfApiConfig,
+	path: string,
+	init: RequestInit & { method: string },
+): Promise<Result<T, CloudflareError>> => {
+	const url = cf_url(config, path);
+	let response: Response;
+	try {
+		response = await fetch(url, { ...init, headers: { ...json_headers_for(config), ...(init.headers ?? {}) } });
+	} catch (e) {
+		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
+	}
+	return interpret_response<T>(response);
+};
+
+/**
+ * Multipart `POST /workers/scripts/:script/versions` upload — the only
+ * shape the CF Workers API accepts for new versions. The body has two
+ * parts: a JSON `metadata` part describing main module / bindings /
+ * compatibility, and a binary script part whose form-field name MUST
+ * equal `metadata.main_module` and whose `Content-Type` distinguishes
+ * an ES module (`application/javascript+module`) from a service-worker
+ * (`application/javascript`).
+ *
+ * `fetch` derives the boundary from the supplied `FormData` — we leave
+ * `Content-Type` unset so the runtime picks it.
+ */
+const cf_upload_multipart = async <T>(
+	config: CfApiConfig,
+	path: string,
+	form: FormData,
+): Promise<Result<T, CloudflareError>> => {
+	const url = cf_url(config, path);
+	let response: Response;
+	try {
+		response = await fetch(url, { method: "POST", body: form, headers: auth_header(config) });
+	} catch (e) {
+		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
+	}
+	return interpret_response<T>(response);
+};
+
+type CfBinding = Record<string, unknown> & { type: string; name: string; text?: string };
 
 type CfWorkerVersionResponse = {
 	id: string;
@@ -139,16 +179,25 @@ const to_worker_deployment = (script_name: string, raw: CfDeploymentResponse): W
 export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider => {
 	const versions = {
 		upload: async (input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>> => {
+			if (input.bundle === undefined) {
+				return err({ code: "validation", message: "cf-api-provider.versions.upload requires `bundle` bytes for multipart upload" });
+			}
 			const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/versions`;
-			const bindings: CfBinding[] = (input.vars ?? []).map(v => ({ type: v.type, name: v.name, text: v.text }));
-			const body: Record<string, unknown> = {
+			const main_module = input.main_module ?? "index.js";
+			const vars_as_bindings: VersionBinding[] = (input.vars ?? []).map(v => ({ type: v.type, name: v.name, text: v.text }));
+			const metadata: Record<string, unknown> = {
+				main_module,
+				bindings: [...(input.bindings ?? []), ...vars_as_bindings],
+				compatibility_date: input.compatibility_date ?? "2024-04-03",
+				compatibility_flags: input.compatibility_flags ?? [],
 				annotations: input.annotations ?? {},
-				metadata: { bindings },
 			};
-			const result = await cf_call<CfWorkerVersionResponse>(config, path, {
-				method: "POST",
-				body: JSON.stringify(body),
-			});
+
+			const form = new FormData();
+			form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+			form.append(main_module, new Blob([input.bundle as BlobPart], { type: "application/javascript+module" }), main_module);
+
+			const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
 			if (!result.ok) return result;
 			return ok(to_worker_version(input.script_name, result.value));
 		},

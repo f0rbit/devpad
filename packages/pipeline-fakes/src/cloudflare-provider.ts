@@ -11,6 +11,17 @@ export type CloudflareError = { code: "not_found"; message: string } | { code: "
  */
 export type WorkerVar = { type: "plain_text"; name: string; text: string };
 
+/**
+ * Free-form binding entry sent as part of `metadata.bindings` on a
+ * multipart version upload. The orchestrator passes through whatever
+ * shape the caller hands it — service / kv_namespace / durable_object /
+ * secret_text / etc. The `name` discriminator is the only universally
+ * required field. Plain-text bindings are normally handed in via
+ * {@link WorkerVar} (`vars`) and merged into the bindings array
+ * downstream.
+ */
+export type VersionBinding = Record<string, unknown> & { type: string; name: string };
+
 export type WorkerVersion = {
 	id: string;
 	script_name: string;
@@ -18,6 +29,13 @@ export type WorkerVersion = {
 	created_on: string;
 	annotations?: Record<string, string>;
 	vars?: WorkerVar[];
+	/**
+	 * Bytes the orchestrator uploaded as the worker script. Recorded by
+	 * the in-memory fake so tests can assert the bundle round-trips. The
+	 * production provider doesn't surface this on read (CF doesn't return
+	 * the bundle on its GET routes) — it stays undefined there.
+	 */
+	bundle?: Uint8Array;
 };
 
 export type DeploymentStrategy = { strategy: "percentage"; versions: Array<{ version_id: string; percentage: number }> };
@@ -38,6 +56,30 @@ export type UploadVersionInput = {
 	script_name: string;
 	annotations?: Record<string, string>;
 	vars?: WorkerVar[];
+	/**
+	 * The compiled worker bundle bytes. Required by the production
+	 * CF API provider (multipart upload demands the script part). The
+	 * in-memory fake accepts uploads without it for backward compat with
+	 * older tests that only exercised the metadata path.
+	 */
+	bundle?: Uint8Array;
+	/**
+	 * Filename of the main ES module entry inside the multipart body.
+	 * Defaults to `"index.js"`. The chosen value is written into
+	 * `metadata.main_module` AND used as the script part's form-field name —
+	 * the CF API rejects uploads where the two disagree.
+	 */
+	main_module?: string;
+	/** ISO date string. Defaults to `2024-04-03` (the rpc-default boundary). */
+	compatibility_date?: string;
+	/** Optional compat flags array (e.g. `["nodejs_compat"]`). */
+	compatibility_flags?: string[];
+	/**
+	 * Non-`plain_text` bindings (service, kv_namespace, durable_object_namespace,
+	 * secret_text, …). Merged with the `vars` mapping into the final
+	 * `metadata.bindings` array on the wire.
+	 */
+	bindings?: VersionBinding[];
 };
 
 export type CreateDeploymentInput = {

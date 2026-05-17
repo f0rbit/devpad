@@ -62,6 +62,32 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 	}
 
 	/**
+	 * Test assertion: the latest version uploaded for `script_name`
+	 * carries a `bundle` matching `expected_bytes`. Throws (test-only) on
+	 * a script with no versions, a version with no bundle recorded, or a
+	 * size/byte mismatch. Used to verify the orchestrator forwards the
+	 * compiled worker bytes through to the upload provider.
+	 */
+	assertLatestVersionBundle(script_name: string, expected_bytes: Uint8Array): void {
+		const state = this.scripts.get(script_name);
+		if (!state || state.versions.length === 0) {
+			throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script ${script_name} has no versions`);
+		}
+		const latest = state.versions[state.versions.length - 1];
+		if (latest.bundle === undefined) {
+			throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" latest version did not record a bundle`);
+		}
+		if (latest.bundle.length !== expected_bytes.length) {
+			throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle length mismatch: got ${latest.bundle.length}, expected ${expected_bytes.length}`);
+		}
+		for (let i = 0; i < latest.bundle.length; i++) {
+			if (latest.bundle[i] !== expected_bytes[i]) {
+				throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle byte mismatch at index ${i}`);
+			}
+		}
+	}
+
+	/**
 	 * Invariant: every deployment's percentage strategy must sum to exactly 100.
 	 * Throws (in test context only) when violated.
 	 */
@@ -87,6 +113,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				created_on: new Date().toISOString(),
 				annotations: input.annotations,
 				vars: input.vars,
+				bundle: input.bundle,
 			};
 			state.versions.push(version);
 			return ok(version);

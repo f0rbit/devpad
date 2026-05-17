@@ -11,6 +11,7 @@ export type {
 	CreateDeploymentInput,
 	DeploymentStrategy,
 	UploadVersionInput,
+	VersionBinding,
 	WorkerDeployment,
 	WorkerMeta,
 	WorkerVar,
