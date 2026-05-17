@@ -71,6 +71,13 @@
       "when": 1778941277404,
       "tag": "0009_analysis_template_window",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1778995262759,
+      "tag": "0010_pipeline_script_names",
+      "breakpoints": true
     }
   ]
 }

@@ -176,6 +176,7 @@ export const upsert_pipeline_package = z.object({
 	name: z.string().min(1).max(200),
 	repo_url: z.string().nullable().optional(),
 	default_template_ref: z.string().nullable().optional(),
+	script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
 });
 
 export const upsert_pipeline_run = z.object({

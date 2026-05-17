@@ -14,6 +14,7 @@ export {
 	rollback_run,
 	type VersionSetRef,
 } from "./rollback.js";
+export { resolve_script_name, type ScriptNameInput } from "./script-name.js";
 export {
 	type AdvanceError,
 	advance_run,

@@ -43,6 +43,7 @@ import { type DeployError, deploy_stage } from "./deploy.js";
 import type { ApprovalStore, GateError, GateEvaluatorDeps, PulseEmitter } from "./gates/index.js";
 import { gateEvaluatorFor } from "./gates/index.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
+import { resolve_script_name } from "./script-name.js";
 import { type ResolvedPlan, type RunEvent, type RunState, type TransitionError, type TransitionOutput, transition } from "./state-machine.js";
 
 export type RunDeps = {
@@ -59,7 +60,6 @@ export type AdvanceError = ServiceError | DeployError | RollbackError | GateErro
 
 export type RunRecord = PipelineRun;
 
-const package_script_name = (package_id: string): string => `pipeline_${package_id}`;
 
 /**
  * Take the package's declared {@link PipelineTemplate} and the
@@ -354,7 +354,7 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 	}
 
 	if (output.kind === "needs_deploy") {
-		const script_name = await package_script_for_run(deps.db, run_id);
+		const script_name = await package_script_for_stage(deps.db, run_id, output.stage.name);
 		if (!script_name.ok) return script_name;
 		await record_stage_event_row(deps.db, {
 			run_id,
@@ -407,11 +407,12 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 	}
 
 	if (output.kind === "needs_rollback") {
-		const script_name = await package_script_for_run(deps.db, run_id);
+		const stage_name = plan.stages[state.stage_index]?.name ?? "staging";
+		const script_name = await package_script_for_stage(deps.db, run_id, stage_name);
 		if (!script_name.ok) return script_name;
 		await record_stage_event_row(deps.db, {
 			run_id,
-			stage_name: plan.stages[state.stage_index]?.name ?? "staging",
+			stage_name,
 			kind: "rollback_started",
 			payload: { target_version_set_id: output.previous_version_set_id },
 		});
@@ -432,10 +433,40 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 	return ok({ output, next_event: null });
 };
 
-const package_script_for_run = async (db: Database, run_id: string): Promise<Result<string, ServiceError>> => {
+const package_script_for_stage = async (
+	db: Database,
+	run_id: string,
+	stage_name: string,
+): Promise<Result<string, ServiceError>> => {
 	const run = await get_run(db, run_id);
 	if (!run.ok) return run;
-	return ok(package_script_name(run.value.package_id));
+
+	const pkg = await db.query.pipeline_package.findFirst({
+		where: (tbl, { eq }) => eq(tbl.id, run.value.package_id),
+	});
+	if (!pkg) {
+		return err({
+			kind: "not_found",
+			resource: "pipeline_package",
+			id: run.value.package_id,
+		} as ServiceError);
+	}
+
+	try {
+		const script_name = resolve_script_name({
+			package: {
+				name: pkg.name,
+				script_name_overrides: pkg.script_name_overrides as Record<string, string> | null,
+			},
+			stage_name,
+		});
+		return ok(script_name);
+	} catch (e) {
+		return err({
+			kind: "validation_error",
+			message: `Failed to resolve script name: ${e instanceof Error ? e.message : String(e)}`,
+		} as ServiceError);
+	}
 };
 
 /**
