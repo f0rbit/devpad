@@ -15,7 +15,7 @@
  * in lockstep if the Anthropic messages RPC contract changes.
  */
 
-import type { D1Database, DurableObjectNamespace, Fetcher, R2Bucket } from "@cloudflare/workers-types";
+import type { D1Database, DurableObjectNamespace, Fetcher, R2Bucket, SecretsStoreSecret } from "@cloudflare/workers-types";
 import type { Result } from "@f0rbit/corpus";
 
 // ─── Vault RPC contract (mirrored from ~/dev/vault/src/types.ts) ─────
@@ -70,4 +70,15 @@ export type PipelineEnv = {
 	ANTHROPIC: Fetcher & AnthropicVaultRPC;
 	PULSE: Fetcher;
 	ENVIRONMENT: "development" | "staging" | "production";
+	// Cloudflare account id the orchestrator deploys runs into. Optional
+	// — only required when a pipeline run actually hits the CF API. Read-
+	// only routes (GET /runs, /grants, /health) don't need it.
+	CF_ACCOUNT_ID?: string;
+	// Cloudflare API token (Secrets Store secret) — `Workers Scripts:Edit`
+	// scope on `CF_ACCOUNT_ID`. Used by the prod CloudflareProvider to
+	// upload versions + create deployments for managed Workers.
+	// Optional at the type level so deploys without the token (read-only
+	// orchestrator) still typecheck; the factory throws lazily when an
+	// actual CF API call is made without it.
+	CF_API_TOKEN?: SecretsStoreSecret;
 };
