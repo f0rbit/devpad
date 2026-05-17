@@ -1,0 +1,1 @@
+ALTER TABLE `pipeline_package` ADD `script_name_overrides` text;
