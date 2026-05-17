@@ -7,7 +7,7 @@
 	"main": "src/index.ts",
 	"scripts": {
 		"dev": "wrangler dev",
-		"build": "bun build src/index.ts --outdir dist --target browser",
+		"build": "bun build src/index.ts --outdir dist --target browser --external cloudflare:*",
 		"deploy:plan": "bunx alchemy run infra.ts --dry-run",
 		"typecheck": "tsc --noEmit",
 		"test": "find src -name '*.test.ts' -o -name '*.spec.ts' | grep -q . && bun test --concurrency 1 src || echo 'no unit tests'",
