@@ -3,7 +3,7 @@
 preload = ["./tests/integration/setup.ts"]
 
 # Exclude golden Playwright specs from ambient bun test runs
-exclude = ["**/packages/cli/tests/golden/**"]
+exclude = ["**/tests/golden/**"]
 
 # Coverage configuration
 coverageSkipTestFiles = true

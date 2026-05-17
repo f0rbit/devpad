@@ -1,0 +1,3 @@
+[test]
+# Exclude golden Playwright specs from ambient bun test runs
+exclude = ["tests/golden/**"]

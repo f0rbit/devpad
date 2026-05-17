@@ -176,8 +176,7 @@ describe("scaffold_package — typecheck", () => {
 		].join("\n");
 		await writeFile(path.join(target, "types-stub.d.ts"), stub);
 
-		const tsc_bin = path.resolve(import.meta.dir, "..", "..", "..", "..", "node_modules", ".bin", "tsc");
-		const proc = spawnSync(tsc_bin, ["-p", "tsconfig.json"], { cwd: target, encoding: "utf8" });
+		const proc = spawnSync("bunx", ["tsc", "-p", "tsconfig.json"], { cwd: target, encoding: "utf8" });
 		if (proc.status !== 0) {
 			throw new Error(`tsc failed:\n${proc.stdout ?? ""}\n${proc.stderr ?? ""}`);
 		}
