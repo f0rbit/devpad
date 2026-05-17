@@ -59,6 +59,9 @@ packages/schema/src/**/*.d.ts.map
 # Cloudflare
 .wrangler/
 
+# Alchemy IaC state (contains resource IDs + encrypted secrets — local only)
+.alchemy/
+
 # Coverage reports
 coverage/
 

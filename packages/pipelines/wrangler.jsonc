@@ -3,8 +3,9 @@
 	"name": "devpad-pipelines",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-05-01",
-	// service-bindings RPC + nodejs interop for hono/zod
-	"compatibility_flags": ["nodejs_compat", "rpc"],
+	// `rpc` is default since 2024-04-03 and is rejected by Cloudflare when
+	// specified explicitly — only `nodejs_compat` is needed.
+	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
 		"enabled": true
 	},
@@ -43,12 +44,12 @@
 	"services": [
 		{
 			"binding": "ANTHROPIC",
-			"service": "vault",
+			"service": "vault-production",
 			"entrypoint": "AnthropicVault"
 		},
 		{
 			"binding": "PULSE",
-			"service": "pulse"
+			"service": "pulse-api-production"
 		}
 	],
 	"vars": {
@@ -63,8 +64,8 @@
 			"d1_databases": [
 				{
 					"binding": "DB",
-					"database_name": "devpad-unified-db-staging",
-					"database_id": "00000000-0000-0000-0000-000000000000"
+					"database_name": "devpad-unified-db-preview",
+					"database_id": "e162775e-2c68-40ac-8ef4-446fd30ba24c"
 				}
 			],
 			"r2_buckets": [
@@ -81,7 +82,7 @@
 				},
 				{
 					"binding": "PULSE",
-					"service": "pulse-staging"
+					"service": "pulse-api-staging"
 				}
 			]
 		},

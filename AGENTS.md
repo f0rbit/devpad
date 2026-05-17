@@ -135,7 +135,38 @@ devpad/
 
 ## Pipelines module
 
-The `packages/pipelines/` Worker is a separate Cloudflare Worker (not part of `devpad-unified`), exporting a `PipelineRunDO` Durable Object and a Hono REST API. The Worker holds **no upstream API keys** — all third-party traffic crosses the security boundary into `~/dev/vault` (separate repo, separate Cloudflare account) via the `ANTHROPIC` service binding. The orchestrator hosts the grants registry (`pipeline_grant` table) and exposes a `grants.check(caller, scope)` RPC that vault calls.
+The `packages/pipelines/` Worker is a separate Cloudflare Worker (not part of `devpad-unified`), exporting a `PipelineRunDO` Durable Object and a Hono REST API. The Worker holds **no upstream API keys** — all third-party traffic crosses the security boundary into `~/dev/vault` (separate repo, **same Cloudflare account** — the boundary is logical, enforced by the service-binding RPC contract and the secrets-store secret name `ANTHROPIC_API_KEY`). The orchestrator hosts the grants registry (`pipeline_grant` table) and exposes a `grants.check(caller, scope)` RPC that vault calls.
+
+### Deployed Workers (Cloudflare)
+
+| Stage | Worker name | URL |
+|-------|-------------|-----|
+| staging | `devpad-pipelines-staging` | `https://devpad-pipelines-staging.dev-818.workers.dev` |
+| production | `devpad-pipelines` | `https://devpad-pipelines.dev-818.workers.dev` |
+
+Deploy via Alchemy from the **devpad repo root**:
+```
+ALCHEMY_CI_STATE_STORE_CHECK=false bunx alchemy deploy ./packages/pipelines/infra.ts --stage <staging|production> --env-file ./.env --profile default
+```
+
+The deploy adopts (never creates) the existing `devpad-unified-db` / `devpad-unified-db-preview` D1 and `devpad-corpus` / `devpad-corpus-staging` R2 buckets shared with the main `devpad-unified` Worker.
+
+### Deploy gotchas (carry-over from vault)
+
+- **Drop `"rpc"` from `compatibilityFlags`.** It became a default 2024-04-03 and Cloudflare rejects the deploy if specified explicitly.
+- **Use the Alchemy OAuth profile `default`** (configured via `bunx alchemy configure`), not the limited `CLOUDFLARE_API_TOKEN` in `devpad/.env`. That env var is commented out for this reason.
+- **Account is capped at one `default_secrets_store`.** When binding a `Secret`, use `SecretsStore("<id>", { name: "default_secrets_store", adopt: true })`. The pipelines Worker has no Secrets bound today, so this doesn't apply yet — but vault does, and any future pipelines secrets must adopt the same store. Bound secrets are scoped by name; the boundary is preserved at the secret level.
+- **`ALCHEMY_PASSWORD` (in devpad/.env) is only required when Alchemy persists Secret values in state.** Pipelines doesn't bind any secrets currently. Generate with `openssl rand -hex 32` and keep stable across deploys if a future deploy adds secrets.
+
+### Cross-repo service-binding wiring (two-pass deploy)
+
+Vault and pipelines bind to each other:
+- vault → pipelines: `GRANTS` (RPC entrypoint `PipelinesGrantsEndpoint`), `PULSE` service binding
+- pipelines → vault: `ANTHROPIC` (RPC entrypoint `AnthropicVault`), `PULSE` service binding
+
+The pulse Workers on this account are named `pulse-api-staging` / `pulse-api-production` (not `pulse-staging` / `pulse`). Both wrangler configs reflect that.
+
+First-time setup uses a two-pass deploy to break the circular dependency: deploy vault without the bindings (vault's `infra.ts` gates `GRANTS` + `PULSE` behind `WIRE_GRANTS_BINDING=true`), deploy pipelines normally (its bindings to vault resolve at upload time since vault already exists), then re-deploy vault with `WIRE_GRANTS_BINDING=true`. Subsequent deploys of either repo don't need the gate — both Workers exist.
 
 ### Architecture rules
 - **DO holds no business logic.** If you're writing transition logic inside `make_run_handler`, push it down into `@devpad/core/services/pipelines/runs.ts`.
