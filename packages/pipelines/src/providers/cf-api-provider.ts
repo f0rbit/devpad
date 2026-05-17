@@ -34,6 +34,7 @@ import type {
 	UploadVersionInput,
 	WorkerDeployment,
 	WorkerMeta,
+	WorkerVar,
 	WorkerVersion,
 } from "@devpad/pipeline-fakes";
 
@@ -89,11 +90,20 @@ const cf_call = async <T>(
 	return ok(parsed.result);
 };
 
+type CfBinding = { type: string; name: string; text?: string };
+
 type CfWorkerVersionResponse = {
 	id: string;
 	number: number;
-	metadata?: { created_on?: string };
+	metadata?: { created_on?: string; bindings?: CfBinding[] };
 	annotations?: Record<string, string>;
+};
+
+const bindings_to_vars = (bindings: CfBinding[] | undefined): WorkerVar[] | undefined => {
+	if (!bindings) return undefined;
+	const plain = bindings.filter((b): b is CfBinding & { text: string } => b.type === "plain_text" && typeof b.text === "string");
+	if (plain.length === 0) return undefined;
+	return plain.map(b => ({ type: "plain_text" as const, name: b.name, text: b.text }));
 };
 
 const to_worker_version = (script_name: string, raw: CfWorkerVersionResponse): WorkerVersion => ({
@@ -102,6 +112,7 @@ const to_worker_version = (script_name: string, raw: CfWorkerVersionResponse): W
 	number: raw.number,
 	created_on: raw.metadata?.created_on ?? new Date().toISOString(),
 	annotations: raw.annotations,
+	vars: bindings_to_vars(raw.metadata?.bindings),
 });
 
 type CfDeploymentResponse = {
@@ -129,9 +140,14 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 	const versions = {
 		upload: async (input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/versions`;
+			const bindings: CfBinding[] = (input.vars ?? []).map(v => ({ type: v.type, name: v.name, text: v.text }));
+			const body: Record<string, unknown> = {
+				annotations: input.annotations ?? {},
+				metadata: { bindings },
+			};
 			const result = await cf_call<CfWorkerVersionResponse>(config, path, {
 				method: "POST",
-				body: JSON.stringify({ annotations: input.annotations ?? {} }),
+				body: JSON.stringify(body),
 			});
 			if (!result.ok) return result;
 			return ok(to_worker_version(input.script_name, result.value));

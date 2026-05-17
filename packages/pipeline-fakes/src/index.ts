@@ -13,6 +13,7 @@ export type {
 	UploadVersionInput,
 	WorkerDeployment,
 	WorkerMeta,
+	WorkerVar,
 	WorkerVersion,
 } from "./cloudflare-provider.ts";
 

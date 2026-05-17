@@ -15,9 +15,10 @@
  * same `version_set_id` instead of uploading twice.
  */
 
-import type { CloudflareError, CloudflareProvider, CreateDeploymentInput, WorkerVersion } from "@devpad/pipeline-fakes";
+import type { CloudflareError, CloudflareProvider, CreateDeploymentInput, WorkerVar, WorkerVersion } from "@devpad/pipeline-fakes";
 import type { Stage } from "@devpad/pipeline-templates";
 import { err, ok, type Result } from "@f0rbit/corpus";
+import { compute_caller_identity_vars } from "./caller-identity.js";
 
 export type DeployError = CloudflareError | { code: "no_version_uploaded"; message: string };
 
@@ -107,10 +108,11 @@ const find_existing_version = async (cf: CloudflareProvider, script_name: string
 	return ok(match ?? null);
 };
 
-const upload_version = async (cf: CloudflareProvider, script_name: string, version_set_id: string): Promise<Result<WorkerVersion, CloudflareError>> => {
+const upload_version = async (cf: CloudflareProvider, script_name: string, version_set_id: string, vars: WorkerVar[]): Promise<Result<WorkerVersion, CloudflareError>> => {
 	return cf.versions.upload({
 		script_name,
 		annotations: { [VERSION_KEY]: version_set_id },
+		vars,
 	});
 };
 
@@ -151,13 +153,23 @@ const lookup_previous_active_version = async (cf: CloudflareProvider, script_nam
  * {@link DeployError} union the helpers return. No throws — every
  * outcome is a {@link Result}.
  */
-export const deploy_stage = async (cf: CloudflareProvider, input: { script_name: string; stage: Stage; version_set_id: string }): Promise<Result<DeploymentResult, DeployError>> => {
-	const { script_name, stage, version_set_id } = input;
+export const deploy_stage = async (
+	cf: CloudflareProvider,
+	input: {
+		script_name: string;
+		stage: Stage;
+		version_set_id: string;
+		package_name: string;
+		environment: "staging" | "production";
+	},
+): Promise<Result<DeploymentResult, DeployError>> => {
+	const { script_name, stage, version_set_id, package_name, environment } = input;
 
 	const existing = await find_existing_version(cf, script_name, version_set_id);
 	if (!existing.ok) return existing;
 
-	const version_result = existing.value !== null ? ok(existing.value) : await upload_version(cf, script_name, version_set_id);
+	const identity_vars = compute_caller_identity_vars({ package_name, environment, version_set_id });
+	const version_result = existing.value !== null ? ok(existing.value) : await upload_version(cf, script_name, version_set_id, identity_vars);
 	if (!version_result.ok) return version_result;
 	const version = version_result.value;
 

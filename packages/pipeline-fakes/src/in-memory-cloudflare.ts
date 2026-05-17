@@ -40,6 +40,28 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 	}
 
 	/**
+	 * Test assertion: every recorded version on `script_name` carries the
+	 * named var with the expected text. Throws (test-only) if any version
+	 * is missing the var or has a mismatched value. No-op if the script has
+	 * no versions.
+	 */
+	assertVersionHasVars(script_name: string, expected: Record<string, string>): void {
+		const state = this.scripts.get(script_name);
+		if (!state) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasVars: script ${script_name} not found`);
+		}
+		for (const version of state.versions) {
+			const actual = new Map((version.vars ?? []).map(v => [v.name, v.text]));
+			for (const [name, text] of Object.entries(expected)) {
+				const got = actual.get(name);
+				if (got !== text) {
+					throw new Error(`InMemoryCloudflareProvider.assertVersionHasVars: script="${script_name}" version="${version.id}" expected ${name}="${text}" got "${got ?? "<missing>"}"`);
+				}
+			}
+		}
+	}
+
+	/**
 	 * Invariant: every deployment's percentage strategy must sum to exactly 100.
 	 * Throws (in test context only) when violated.
 	 */
@@ -64,6 +86,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				number: this.version_counter,
 				created_on: new Date().toISOString(),
 				annotations: input.annotations,
+				vars: input.vars,
 			};
 			state.versions.push(version);
 			return ok(version);
