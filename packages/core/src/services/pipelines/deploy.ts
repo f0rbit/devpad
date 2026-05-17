@@ -64,7 +64,14 @@ export type DeployRequest = {
 	previous_active_version_id: string | null;
 };
 
-const VERSION_KEY = "version_set_id";
+/**
+ * CF accepts only `workers/message`, `workers/tag`, `workers/alias` as
+ * annotation keys (validation error 10021 on anything else). We use
+ * `workers/tag` to carry our `version_set_id` so the orchestrator's
+ * idempotent dedup keeps working — both reads (`versions.list`) and
+ * writes (`versions.upload`) go through this single key.
+ */
+const VERSION_KEY = "workers/tag";
 
 /**
  * Build the Cloudflare `deployments.create` payload for a stage deploy.

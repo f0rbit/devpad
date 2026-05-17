@@ -159,7 +159,7 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 	// Pre-seed v0 on the non-staging script — that's where onebox/wave* and
 	// atomic-prod land. Staging deploys to its own `${name}-staging` script.
 	const script = SCRIPT_NAME_FOR();
-	const v0 = await deps.cf.versions.upload({ script_name: script, annotations: { version_set_id: "vs_v0" } });
+	const v0 = await deps.cf.versions.upload({ script_name: script, annotations: { "workers/tag": "vs_v0" } });
 	if (!v0.ok) throw new Error("v0 upload failed");
 	await deps.cf.deployments.create({
 		script_name: script,

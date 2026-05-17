@@ -246,7 +246,10 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 	): Promise<Result<{ resolved_version_id: string }, CloudflareError>> => {
 		const list = await versions.list(input.script_name);
 		if (!list.ok) return list;
-		const matched = list.value.find(v => v.annotations?.version_set_id === input.version_key);
+		// Mirrors the orchestrator's annotation convention from
+		// `deploy.ts` — `workers/tag` carries the version_set_id (CF
+		// rejects any other annotation key with validation error 10021).
+		const matched = list.value.find(v => v.annotations?.["workers/tag"] === input.version_key);
 		if (!matched) return err({ code: "not_found", message: `no version matches version_key ${input.version_key}` });
 		return ok({ resolved_version_id: matched.id });
 	};

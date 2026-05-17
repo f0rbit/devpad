@@ -54,7 +54,10 @@ export const find_rollback_target = (lineage: VersionSetRef[], current_version_s
 	return ok(target);
 };
 
-const VERSION_KEY = "version_set_id";
+// Mirror `deploy.ts`: store the orchestrator's `version_set_id` in CF's
+// `workers/tag` annotation slot (CF rejects custom annotation keys with
+// validation error 10021).
+const VERSION_KEY = "workers/tag";
 
 const find_version_for = async (cf: CloudflareProvider, script_name: string, version_set_id: string): Promise<Result<WorkerVersion, RollbackError>> => {
 	const list = await cf.versions.list(script_name);
