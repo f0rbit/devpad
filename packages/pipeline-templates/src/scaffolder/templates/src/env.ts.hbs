@@ -13,8 +13,15 @@
  * deploy time. Read them here and pass them as the second arg to every
  * vault call — CF service bindings don't propagate caller vars into the
  * callee's env, so identity must travel as an explicit RPC argument.
+ *
+ * `PULSE_PROJECT_ID` (plain var) + `PULSE_INGEST_KEY` (Secrets Store
+ * secret) are required for the pulse emitter — the `/e` ingest endpoint
+ * requires both a `project_id` body field and an `X-Pulse-Key` header.
+ * Provision these out-of-band; the emitter is fire-and-forget so a
+ * missing key results in dropped events, not a failed deploy.
  */
 
+import type { SecretsStoreSecret } from "@cloudflare/workers-types";
 import type { Result } from "@f0rbit/corpus";
 
 export type AnthropicMessageInput = {
@@ -66,4 +73,11 @@ export type Env = {
 	CALLER_PACKAGE?: string;
 	CALLER_ENV?: string;
 	CALLER_VERSION_SET_ID?: string;
+
+	// Pulse observability config. Plain `var` for the project id,
+	// Secrets Store secret for the `pk_*` public ingest key. Both must
+	// be provisioned per package — see infra.ts. When either is absent
+	// the emitter no-ops (observability is fire-and-forget).
+	PULSE_PROJECT_ID?: string;
+	PULSE_INGEST_KEY?: SecretsStoreSecret;
 };

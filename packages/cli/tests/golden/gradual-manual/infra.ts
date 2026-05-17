@@ -8,10 +8,18 @@
  *
  * Service binding targets are stage-suffixed: `vault-staging` /
  * `vault-production` and `pulse-api-staging` / `pulse-api-production`.
+ *
+ * Pulse observability is OPTIONAL. The emitter no-ops when the project
+ * id / ingest key aren't bound, so we only wire them when the operator
+ * has set the env vars. Provision both before promoting to prod:
+ *   - PULSE_PROJECT_ID  — devpad project id that scopes events
+ *   - PULSE_INGEST_KEY  — pk_* public ingest key from pulse's /admin/keys
+ * Mirrors the same gate vault uses (see ~/dev/vault/infra.ts).
  */
 
 import alchemy from "alchemy";
-import { Worker, WorkerRef } from "alchemy/cloudflare";
+import type { Bindings } from "alchemy/cloudflare";
+import { Secret, SecretsStore, Worker, WorkerRef } from "alchemy/cloudflare";
 
 const app = await alchemy("gradual-manual");
 
@@ -22,6 +30,31 @@ const worker_name = is_staging ? "gradual-manual-staging" : "gradual-manual";
 const vault_service = is_staging ? "vault-staging" : "vault-production";
 const pulse_service = is_staging ? "pulse-api-staging" : "pulse-api-production";
 
+const bindings: Bindings = {
+	ANTHROPIC: WorkerRef({ service: vault_service }),
+	PULSE: WorkerRef({ service: pulse_service }),
+	ENVIRONMENT: is_staging ? "staging" : "production",
+};
+
+const pulse_project_id = process.env.PULSE_PROJECT_ID;
+const pulse_ingest_key_value = process.env.PULSE_INGEST_KEY;
+
+if (pulse_project_id !== undefined && pulse_ingest_key_value !== undefined) {
+	// Adopt the account-wide default secrets store. CF currently caps
+	// accounts at one store; isolation is at the secret-name level.
+	const secrets_store = await SecretsStore("gradual-manual-secrets", {
+		name: "default_secrets_store",
+		adopt: true,
+	});
+	const pulse_ingest_key = await Secret("PULSE_INGEST_KEY", {
+		name: "PULSE_INGEST_KEY",
+		store: secrets_store,
+		value: alchemy.secret.env.PULSE_INGEST_KEY,
+	});
+	bindings.PULSE_PROJECT_ID = pulse_project_id;
+	bindings.PULSE_INGEST_KEY = pulse_ingest_key;
+}
+
 export const worker = await Worker("gradual-manual", {
 	name: worker_name,
 	entrypoint: "./src/index.ts",
@@ -30,11 +63,7 @@ export const worker = await Worker("gradual-manual", {
 	observability: { enabled: true },
 	url: true,
 	adopt: true,
-	bindings: {
-		ANTHROPIC: WorkerRef({ service: vault_service }),
-		PULSE: WorkerRef({ service: pulse_service }),
-		ENVIRONMENT: is_staging ? "staging" : "production",
-	},
+	bindings,
 });
 
 await app.finalize();

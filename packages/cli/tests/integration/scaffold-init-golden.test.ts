@@ -157,6 +157,7 @@ describe("scaffold_package — typecheck", () => {
 				paths: {
 					"cloudflare:workers": ["./types-stub.d.ts"],
 					"@devpad/pipeline-templates": ["./types-stub.d.ts"],
+					"@cloudflare/workers-types": ["./types-stub.d.ts"],
 					"@f0rbit/corpus": ["./types-stub.d.ts"],
 					"@playwright/test": ["./types-stub.d.ts"],
 					alchemy: ["./types-stub.d.ts"],
@@ -172,9 +173,10 @@ describe("scaffold_package — typecheck", () => {
 			"declare module 'cloudflare:workers' { export class WorkerEntrypoint<E = unknown> { env: E; fetch?(request: Request): Promise<Response>; } }",
 			"declare global { type Service<_T = unknown> = { fetch: typeof fetch }; type Fetcher = { fetch: typeof fetch }; const process: { env: Record<string, string | undefined>; }; }",
 			"declare module '@devpad/pipeline-templates' { export const manual: () => unknown; export const auto: (opts?: { afterBake?: boolean }) => unknown; export const analysis: (ref: { template_id: string }) => unknown; export const extendTemplate: (overrides: any) => { ok: boolean }; }",
+			"declare module '@cloudflare/workers-types' { export type SecretsStoreSecret = { get(): Promise<string> }; }",
 			"declare module '@playwright/test' { type Req = { get(url: string): Promise<{ status(): number; json(): Promise<any> }> }; type Ctx = { request: Req }; export const test: (name: string, fn: (ctx: Ctx) => Promise<void>) => void; export const expect: (v: any) => { toBe: (v: any) => void; }; export const defineConfig: <T>(config: T) => T; }",
-			"declare module 'alchemy' { const fn: (name: string) => Promise<{ stage: string; finalize(): Promise<void> }>; export default fn; }",
-			"declare module 'alchemy/cloudflare' { export const Worker: (name: string, opts: any) => Promise<any>; export const WorkerRef: (opts: { service: string }) => any; }",
+			"declare module 'alchemy' { type Alchemy = { stage: string; finalize(): Promise<void>; secret: { env: Record<string, string | undefined> } }; type AlchemyFn = ((name: string) => Promise<Alchemy>) & { secret: { env: Record<string, string | undefined> } }; const fn: AlchemyFn; export default fn; }",
+			"declare module 'alchemy/cloudflare' { export type Bindings = Record<string, unknown>; export const Worker: (name: string, opts: any) => Promise<any>; export const WorkerRef: (opts: { service: string }) => any; export const Secret: (name: string, opts: any) => Promise<any>; export const SecretsStore: (name: string, opts: any) => Promise<any>; }",
 			"declare module '@f0rbit/corpus' { export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }; }",
 			"export {};",
 		].join("\n");
