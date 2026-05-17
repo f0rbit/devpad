@@ -175,7 +175,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 
 		const vars: WorkerVar[] = [
 			{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" },
-			{ type: "plain_text", name: "CALLER_ENVIRONMENT", text: "production" },
+			{ type: "plain_text", name: "CALLER_ENV", text: "production" },
 			{ type: "plain_text", name: "CALLER_VERSION_SET_ID", text: "vs_v1" },
 		];
 
@@ -207,7 +207,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 		expect(metadata.compatibility_flags).toEqual([]);
 		expect(metadata.bindings).toEqual([
 			{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" },
-			{ type: "plain_text", name: "CALLER_ENVIRONMENT", text: "production" },
+			{ type: "plain_text", name: "CALLER_ENV", text: "production" },
 			{ type: "plain_text", name: "CALLER_VERSION_SET_ID", text: "vs_v1" },
 		]);
 
@@ -276,7 +276,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 							created_on: "2026-05-16T00:00:00Z",
 							bindings: [
 								{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" },
-								{ type: "plain_text", name: "CALLER_ENVIRONMENT", text: "production" },
+								{ type: "plain_text", name: "CALLER_ENV", text: "production" },
 								{ type: "plain_text", name: "CALLER_VERSION_SET_ID", text: "vs_abc" },
 								{ type: "secret_text", name: "ANTHROPIC_API_KEY" },
 							],
@@ -298,7 +298,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 		// `WorkerVersion.vars`.
 		expect(v.vars).toEqual([
 			{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" },
-			{ type: "plain_text", name: "CALLER_ENVIRONMENT", text: "production" },
+			{ type: "plain_text", name: "CALLER_ENV", text: "production" },
 			{ type: "plain_text", name: "CALLER_VERSION_SET_ID", text: "vs_abc" },
 		]);
 	});

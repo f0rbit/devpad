@@ -10,7 +10,7 @@ describe("compute_caller_identity_vars", () => {
 		});
 		expect(vars).toEqual([
 			{ type: "plain_text", name: "CALLER_PACKAGE", text: "anthropic-search" },
-			{ type: "plain_text", name: "CALLER_ENVIRONMENT", text: "production" },
+			{ type: "plain_text", name: "CALLER_ENV", text: "production" },
 			{ type: "plain_text", name: "CALLER_VERSION_SET_ID", text: "vs_v1" },
 		]);
 	});
@@ -21,7 +21,7 @@ describe("compute_caller_identity_vars", () => {
 			environment: "staging",
 			version_set_id: "vs_v2",
 		});
-		expect(vars.find(v => v.name === "CALLER_ENVIRONMENT")?.text).toBe("staging");
+		expect(vars.find(v => v.name === "CALLER_ENV")?.text).toBe("staging");
 	});
 
 	test("all three vars use the plain_text binding type vault expects", () => {

@@ -7,9 +7,10 @@
  * which version-set) before issuing a secret. Without them the vault
  * returns `identity_missing`.
  *
- * Locked names — must match vault's resolver:
+ * Locked names — must match vault's resolver
+ * (`vault/src/identity.ts`):
  *  - `CALLER_PACKAGE`         — pipeline package name (e.g. `anthropic-search`)
- *  - `CALLER_ENVIRONMENT`     — `"staging"` or `"production"`
+ *  - `CALLER_ENV`             — `"staging"` or `"production"`
  *  - `CALLER_VERSION_SET_ID`  — the manifest's `version_set_id`
  */
 
@@ -24,7 +25,7 @@ export type CallerIdentityInput = {
 export type CallerIdentityError = { code: "invalid_identity"; message: string };
 
 const CALLER_PACKAGE = "CALLER_PACKAGE";
-const CALLER_ENVIRONMENT = "CALLER_ENVIRONMENT";
+const CALLER_ENV = "CALLER_ENV";
 const CALLER_VERSION_SET_ID = "CALLER_VERSION_SET_ID";
 
 const is_blank = (s: string): boolean => s.trim() === "";
@@ -48,7 +49,7 @@ export const compute_caller_identity_vars = (input: CallerIdentityInput): Worker
 	}
 	return [
 		{ type: "plain_text", name: CALLER_PACKAGE, text: input.package_name },
-		{ type: "plain_text", name: CALLER_ENVIRONMENT, text: input.environment },
+		{ type: "plain_text", name: CALLER_ENV, text: input.environment },
 		{ type: "plain_text", name: CALLER_VERSION_SET_ID, text: input.version_set_id },
 	];
 };

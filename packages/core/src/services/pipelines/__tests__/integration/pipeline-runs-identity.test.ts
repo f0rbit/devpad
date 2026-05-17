@@ -3,7 +3,7 @@
  *
  * Integration coverage for Task 5.C — every Worker version uploaded as
  * part of a pipeline run carries the `CALLER_PACKAGE`,
- * `CALLER_ENVIRONMENT`, `CALLER_VERSION_SET_ID` trio so vault can
+ * `CALLER_ENV`, `CALLER_VERSION_SET_ID` trio so vault can
  * identify the caller and stop returning `identity_missing`.
  *
  * Drives the same `advance_run` / `approve_stage` / `tick_bake_complete`
@@ -39,7 +39,7 @@ const manifest_for = (vs_id: string): VersionSetManifest => ({
 
 const trio_for = (env: "staging" | "production", vs_id: string) => ({
 	CALLER_PACKAGE: PACKAGE_NAME,
-	CALLER_ENVIRONMENT: env,
+	CALLER_ENV: env,
 	CALLER_VERSION_SET_ID: vs_id,
 });
 
@@ -77,7 +77,7 @@ describe("pipeline runs — caller-identity injection", () => {
 			annotations: { "workers/tag": "vs_v0" },
 			vars: [
 				{ type: "plain_text", name: "CALLER_PACKAGE", text: PACKAGE_NAME },
-				{ type: "plain_text", name: "CALLER_ENVIRONMENT", text: "production" },
+				{ type: "plain_text", name: "CALLER_ENV", text: "production" },
 				{ type: "plain_text", name: "CALLER_VERSION_SET_ID", text: "vs_v0" },
 			],
 		});
