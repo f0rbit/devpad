@@ -48,6 +48,8 @@ const is_gate_kind = (s: string): s is DefaultGateKind => (GATE_KINDS as readonl
 
 const fail_with = (spinner: Spinner, message: string): never => {
 	spinner.fail(message);
+	// Always log to stderr — in non-TTY/CI the spinner is silent
+	console.error(`error: ${message}`);
 	process.exit(1);
 };
 

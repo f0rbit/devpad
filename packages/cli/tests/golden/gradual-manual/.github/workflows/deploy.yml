@@ -41,6 +41,10 @@ jobs:
           bun install --frozen-lockfile
           # build @devpad/schema then @devpad/api so the CLI can import from dist/
           bun run build:api
+          # link @devpad/pipeline-templates into this repo's node_modules so
+          # the CLI can dynamic-import pipeline.ts (which imports the package)
+          mkdir -p "$GITHUB_WORKSPACE/node_modules/@devpad"
+          ln -sfn "$RUNNER_TEMP/devpad/packages/pipeline-templates" "$GITHUB_WORKSPACE/node_modules/@devpad/pipeline-templates"
 
       - id: upload
         name: Upload artifacts to corpus

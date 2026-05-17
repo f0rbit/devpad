@@ -13,8 +13,14 @@ function createSpinner(text: string) {
 	if (isTTY) {
 		return ora(text);
 	}
+	// Non-TTY: spinners are silent, but `fail` must surface the error
+	// message to stderr or CI logs are blank when the CLI exits non-zero.
+	const log_stderr = (msg?: string) => {
+		if (msg) console.error(msg);
+		return noopSpinner;
+	};
 	const noop = () => noopSpinner;
-	const noopSpinner = { start: noop, succeed: noop, fail: noop, stop: noop };
+	const noopSpinner = { start: noop, succeed: noop, fail: log_stderr, stop: noop };
 	return noopSpinner;
 }
 
