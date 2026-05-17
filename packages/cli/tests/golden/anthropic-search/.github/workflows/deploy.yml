@@ -68,13 +68,11 @@ jobs:
             --output version-set.json
           echo "version_set_id=$(jq -r .id version-set.json)" >> $GITHUB_OUTPUT
 
-      - name: Versions upload (no deploy)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: "4"
-          command: versions upload --env=""
+      # `wrangler versions upload` is intentionally NOT run here — as of
+      # Phase 6 the orchestrator owns the CF API upload (multipart with
+      # the CALLER_* identity trio baked into metadata.bindings). The
+      # corpus upload above carries the bundle bytes; the orchestrator
+      # streams them straight into CF when it advances the run.
 
       - if: github.ref == 'refs/heads/main'
         name: Start pipeline run
