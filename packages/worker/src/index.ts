@@ -87,6 +87,9 @@ export const createApi = (options?: ApiOptions) => {
 		app.use("*", configMiddleware);
 	}
 
+	// Pulse instrumentation. Created per request because Workers isolates are
+	// short-lived; we extend with waitUntil so the debounced flush completes
+	// before the worker terminates (otherwise queued events are lost).
 	app.use("*", async (c, next) => {
 		const config = c.get("config");
 		if (!config.pulse_api_base || !config.pulse_devpad_ingest_key || !config.devpad_project_id) {
@@ -99,7 +102,31 @@ export const createApi = (options?: ApiOptions) => {
 			endpoint: config.pulse_api_base,
 			release: config.git_sha,
 		});
-		return pulseTracing({ pulse })(c, next);
+		c.set("pulse", pulse);
+		await pulseTracing({ pulse })(c, next);
+		try {
+			c.executionCtx?.waitUntil(pulse.flush());
+		} catch {
+			// executionCtx unavailable in some local/test contexts — skip waitUntil.
+		}
+	});
+
+	// Capture uncaught errors from route handlers via pulse + structured response.
+	app.onError((err, c) => {
+		const pulse = c.get("pulse");
+		if (pulse) {
+			pulse.captureError(err, {
+				method: c.req.method,
+				path: c.req.path,
+			});
+			try {
+				c.executionCtx?.waitUntil(pulse.flush());
+			} catch {
+				// no-op
+			}
+		}
+		console.error("[worker] unhandled error", err);
+		return c.json({ error: "Internal server error" }, 500);
 	});
 
 	app.use("*", authMiddleware);

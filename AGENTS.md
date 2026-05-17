@@ -249,6 +249,16 @@ These type errors exist and should be ignored:
 - Read by `TaskSorter` (initial filter) and `TaskEditor` (default project)
 - Cleared on `/project` index page (project list)
 
+## Cloudflare API Integration (Phase 6 — Workers Versions multipart upload)
+
+- Versions API requires `multipart/form-data`: `metadata` part (JSON) + script as file part (`application/javascript+module`). JSON POST is rejected.
+- Only `workers/message`, `workers/tag`, `workers/alias` are allowed annotation keys on `metadata`. Custom keys return error 10021. We use `workers/tag` for `version_set_id`.
+- Service binding `entrypoint` field on metadata.bindings only resolves to NAMED class exports. Default exports need no `entrypoint` field — mis-setting it causes "entrypoint name not found in this worker" at runtime.
+- When bundling Worker code from outside wrangler (e.g. orchestrator pre-deploy build): use `--external cloudflare:*`, NOT `--packages=external`. The latter externalises everything (npm deps) including `zod` etc. and breaks at runtime with "No such module".
+- `ctx.id.toString()` returns hex; use `ctx.id.name` when round-tripping a string id supplied via `idFromName`. See `packages/pipelines/src/run-do.ts`.
+- CLI spinners (`ora`) are silent in non-TTY (CI) — `.fail(...)` is a no-op. Always also `console.error(message)` alongside `spinner.fail(...)`. The shared printer in `packages/cli/src/printer.ts` handles this correctly.
+- Scaffolded workflows need `actions/setup-node@v4` with `node-version: 22` because wrangler v4 requires Node 22. `oven-sh/setup-bun` alone is not sufficient.
+
 ## Pulse Integration
 
 devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloudflare Worker; source: `~/dev/pulse`). The integration is server-to-server only — admin keys never reach the browser.
@@ -277,6 +287,49 @@ devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloud
 - Per-tab components live in `apps/main/src/components/solid/pulse/`. Use `client:visible` for read-only tabs and `client:load` only for the subscriptions tab (which mounts an interactive form). Do NOT use `client:only="solid-js"` — server-rendering preserves the empty-state SDK install snippet and the unreachable-503 fallback.
 - `apps/main/src/components/solid/project/PulseWidget.tsx` is a compact widget on the project overview page (KPIs + 7-day sparkline; click → `/project/[id]/pulse`).
 - Empty state shows the SDK install snippet using `import.meta.env.PUBLIC_PULSE_INGEST_URL` (default `https://pulse.devpad.tools`). When adding new public-side env vars, document them here and in wrangler config.
+
+## Cross-Repo Invariants (Phase 7+)
+
+- CF service bindings do NOT propagate `vars` from caller's env to callee's env. Identity (and any other caller-attributed metadata) must travel as an explicit RPC argument. See `~/dev/vault/src/handler.ts` — `messages.create(input, identity)` shape is the canonical example.
+- When binding to a named `WorkerEntrypoint` via Alchemy: use `{ type: "service", service: "...", __entrypoint__: "ClassName" }` directly. Alchemy's public `WorkerRef()` factory drops the `entrypoint` field. Known limitation as of v0.93.7.
+- `CALLER_ENV` is the canonical caller-environment env var name (NOT `CALLER_ENVIRONMENT`). Vault reads it; orchestrator writes it. `caller-identity.ts:62`'s `environment_for_stage` maps every stage to `"staging"` or `"production"` — those are the only two values you'll ever see.
+
+## Drizzle / D1 Invariants (Phase 8+)
+
+- RPC entrypoint classes binding `env.DB` (raw `D1Database`) must wrap via `createD1Database(env.DB)` before passing to drizzle-typed services. Raw bindings produce `db_error` at runtime because drizzle's query builder is undefined on raw bindings. See `packages/pipelines/src/grants-rpc-entrypoint.ts` cached-wrap pattern.
+- Pipeline grants must exist (in `pipeline_grant` table) before vault calls succeed. Default seed needed per (package, stage_name, scope) tuple. With `CALLER_ENV` resolving to only `staging|production`, stage_name should be one of those two values.
+
+## Pipeline Run Semantics (Phase 9)
+
+- Analysis gates fail OPEN: when `pipeline_analysis_template` row is missing for a gate's `template_id`, the evaluator returns `{ verdict: "Pass", reason: "no_template_configured" }` + emits a pulse `gate_analysis_no_template` event. To get fail-closed behaviour, populate a real template row. Implicit "default" template doesn't exist.
+- `pipeline_run.kind` is `"deploy" | "rollback"`. Rollback runs are spawned by `POST /runs/:id/rollback` even from terminal states; they target the predecessor version-set via corpus lineage and use atomic shape + auto gate. They're separate run rows with their own audit trail.
+- `wrangler d1 migrations apply` requires a user-level token with `User Details: Read`. The resource-scoped `CF_API_TOKEN` in `.env` (sized for Alchemy) lacks it. Workaround: `bunx wrangler d1 execute <db_name> --remote --file <migration.sql>` from a context where the OAuth profile is used, then `INSERT INTO d1_migrations` manually.
+
+## Pulse Integration (Phase 11)
+
+- Pulse ingest contract: `POST /e` with header `X-Pulse-Key: pk_*`. Body `{ project_id, events: [...] }` where each event has discriminator `name`. Vault + scaffolder template use the `custom_event` shape: `name: "event"`, per-version dimensions (`package`, `environment`, `version_id`) hoisted to top level so pulse's `GET /summary` can group on them; everything else under `properties`. See `~/dev/vault/src/pulse-emitter.ts` for canonical impl.
+- Corpus version-set lineage: orchestrator's `POST /artifacts/version-set` stamps `parents: [{ store_id: "version-sets", version: <latest>, role: "predecessor" }]` from latest uploaded version-set for the package. `version_sets.lineage(version)` walks the chain. Required for rollback semantics.
+- Demo repos vs scaffolder: the scaffolder template (`packages/pipeline-templates/src/scaffolder/templates/`) is the source-of-truth. Existing demos in separate repos must be hand-synced when the template changes — no automated drift detection.
+
+## Singleton Platform Model (Phase 12)
+
+- Platform services (pulse, vault, devpad-pipelines) are deployed ONCE — observability and control plane don't need staging/production splits. Workload Workers (scaffolded packages) DO have staging/production splits. `caller.environment` (from RPC identity arg) is the canonical marker; vault grants honor it; pulse events tag with it.
+- Shared `default_secrets_store` cascade on Alchemy destroy: when multiple Alchemy apps adopt the same store and one destroys its stage, the store can cascade-delete if it ends up empty — taking other apps' live secret bindings with it. Workaround: after a destroy, immediately re-deploy any production stage whose Alchemy state references the shared store. Long-term: each app gets its own store, blocked by CF account-level 1-store cap.
+- Tombstone audits must check Cloudflare runtime telemetry, not just source-tree grep. Phase 13.B found two SST-era D1s with read traffic despite zero source references — turned out to be zombie SST-era Workers still deployed. Use the CF API to enumerate Workers per resource binding before deleting any resource.
+
+## Worker Renames (Phase 13.C)
+
+- CF Worker renames preserve service bindings transparently — consumers pointing at the old name keep working without a redeploy because CF resolves bindings by internal tag, not literal name. Safest rename pattern is in-place (just change the `name` field on the Alchemy Worker resource).
+- Alchemy `Worker(id, { name })` rename pitfall: declaring a "legacy" Worker resource alongside the rename triggers a `rename + create` mess (phantom state). DON'T do blue-green via parallel Alchemy resources. Also: rename detaches secondary resources (custom domains, queue consumers, cron triggers, service bindings) — re-attach via the next deploy. The bindings ON the renamed Worker may be lost; check via API after rename.
+
+## Phantom Deps (Phase 13.D)
+
+- `@devpad/api`'s compiled `dist/` has a phantom dep on `drizzle-orm`: tsup inlines `@devpad/schema`'s database code (which imports drizzle-orm) but leaves the import external. The dep is declared on `@devpad/api`'s package.json so downstream bundlers can resolve it. Don't drop it from api's `dependencies` even though api's own source doesn't reference drizzle-orm directly.
+
+## Wire Envelope Contract (Phase 13.E)
+
+- Orchestrator HTTP API uses `{ ok: true, value }` for success and `{ ok: false, error: { code, message?, ...details } }` for failure. Discriminator is `code`, not `kind`. Service-layer Results use `kind` (corpus convention); the route boundary normalises via `to_wire_error()` in `packages/pipelines/src/routes.ts`. Never `json_err(status, result.error)` — use `wire_err(result.error)` so the envelope is single-wrapped.
+- `CallerIdentity.package_id` is the canonical field name (renamed from `package` in Phase 13.E2). DB column is `pipeline_run.package_id`. Route bodies use `package_id`. The only asymmetry: pulse's `events.package` column stays as-is (pulse's storage contract); vault's `pulse-emitter.ts` translates `caller.package_id` → wire `package` at emission. Comment in `pulse-emitter.ts` marks the translation site.
 
 ## Hono Gotchas
 - **`c.req.url` and `c.req.method` are getters, not functions.** `c.req.url()` typechecks (`Function.prototype.toString` exists) but TypeErrors at runtime. Same with `method`. Phase 3 verification caught a real instance of this in the pulse proxy.
