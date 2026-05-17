@@ -3,8 +3,8 @@
 	"name": "gradual-analysis",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-05-17",
-	// RPC service bindings for vault + pulse, nodejs_compat for hono/zod
-	"compatibility_flags": ["nodejs_compat", "rpc"],
+	// rpc is default since 2024-04-03 and rejected by CF when set explicitly
+	"compatibility_flags": ["nodejs_compat"],
 	"observability": {
 		"enabled": true
 	},
