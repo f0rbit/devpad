@@ -44,7 +44,7 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
-		"@f0rbit/corpus": "file:../../../corpus"
+		"@f0rbit/corpus": "^0.5.0"
 	},
 	"devDependencies": {
 		"@devpad/api": "workspace:*",

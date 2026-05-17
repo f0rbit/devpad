@@ -130,7 +130,7 @@ devpad/
   - `createD1Database` in `d1.ts` -- `as unknown as Database`
   - `createBunDatabase` in `bun.ts` -- `as unknown as Database` (sync-to-async bridge)
 - All service functions in `packages/core/src/services/` take `db: Database`
-- `drizzle-orm` is deduplicated via root `package.json` overrides (needed because `@f0rbit/corpus` has it as direct dep)
+- `drizzle-orm` is deduplicated via root `package.json` overrides
 - Blog's `DrizzleDB` and Media's `Database` are both re-exports of the unified `Database` type
 
 ## Pipelines module
@@ -151,8 +151,6 @@ The pipelines module reuses the unified `Database` type — pipeline tables (`pi
 - Test DB harness pattern: `packages/core/src/services/pipelines/__tests__/integration/helpers.ts` uses `createBunDatabase` + migration replay. New core service tests should follow this pattern.
 
 ### Known transient hacks (remove when applicable)
-- Root `package.json` has an `overrides` entry pinning `@f0rbit/corpus` to `file:../corpus` because the new `version_set_store` export isn't published yet. Remove once corpus 0.4.0+ ships to npm with `VersionSetManifest`.
-- This file-override is the root cause of the pre-existing `packages/schema/src/database/full-schema.ts` TS2742 portability warning. Don't chase it.
 
 ### Drizzle-kit + manual migrations
 If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a manual migration not in `meta/_journal.json`, rename the generated SQL + snapshot to the next available index and add a matching journal entry. The journal advances monotonically; drizzle-kit's filename numbering is advisory. (We hit this with `0007_add_pulse_scope.sql` already on disk when generating `0008_pipelines.sql`.)
