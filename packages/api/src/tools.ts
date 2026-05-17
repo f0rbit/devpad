@@ -715,6 +715,36 @@ export const tools: Record<string, ToolDefinition> = {
 			return { success: true };
 		},
 	},
+
+	devpad_pipelines_grants_list: {
+		name: "devpad_pipelines_grants_list",
+		description: "List vault grants for a pipeline package",
+		inputSchema: z.object({
+			package_id: z.string().describe("Package ID to filter grants by"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.list(input.package_id)),
+	},
+
+	devpad_pipelines_grants_approve: {
+		name: "devpad_pipelines_grants_approve",
+		description: "Approve a pending vault grant request for a pipeline package",
+		inputSchema: z.object({
+			grant_id: z.string().describe("Grant ID to approve"),
+			user_id: z.string().describe("User ID making the approval decision"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.approve(input.grant_id, input.user_id)),
+	},
+
+	devpad_pipelines_grants_deny: {
+		name: "devpad_pipelines_grants_deny",
+		description: "Deny a pending vault grant request for a pipeline package",
+		inputSchema: z.object({
+			grant_id: z.string().describe("Grant ID to deny"),
+			user_id: z.string().describe("User ID making the denial decision"),
+			reason: z.string().optional().describe("Optional reason for the denial"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.deny(input.grant_id, input.user_id, input.reason)),
+	},
 };
 
 // Get all tool names
