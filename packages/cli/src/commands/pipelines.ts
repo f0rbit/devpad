@@ -16,8 +16,11 @@ import { selectCorpusBackend, type CorpusBackendMode } from "../corpus-backend.t
 import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend.ts";
 import {
 	type ArtifactInputs,
+	type CompileError,
 	type VersionSetOutput,
 	build_manifest,
+	compile_pipeline_ts,
+	compile_template_to_json,
 	compute_hash,
 	validate_artifact_paths,
 } from "../pipelines-artifacts-helpers.ts";
@@ -216,6 +219,18 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 		grants_ref = `grants/${compute_hash(grants).slice(0, 12)}`;
 	}
 
+	// Compile pipeline.ts → JSON snapshot, upload to the pipeline-templates
+	// store (HTTP mode only — memory mode keeps the legacy manifest shape
+	// stable for the existing snapshot-based golden tests), and capture
+	// the assigned ref to embed in the version-set manifest.
+	let template_ref: string | undefined;
+	if (resolved.mode === "cloudflare-http") {
+		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const template_upload = await compile_and_upload_template(http_input, options.pipeline);
+		if (!template_upload.ok) return fail_with(spinner, template_upload.error);
+		template_ref = template_upload.value;
+	}
+
 	const artifacts = {
 		bundle,
 		bundle_ref,
@@ -227,6 +242,7 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 		pipeline_ref,
 		grants,
 		grants_ref,
+		template_ref,
 	};
 
 	const manifest_result = build_manifest(inputs, artifacts);
@@ -292,6 +308,36 @@ const upload_blobs_http = async (input: HttpUploadInput, blobs: BlobInputs): Pro
 };
 
 const to_u8 = (b: Buffer): Uint8Array => new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
+
+const format_compile_error = (e: CompileError): string => {
+	if (e.kind === "build_failed") return `pipeline.ts build failed: ${e.message}`;
+	if (e.kind === "import_failed") return `pipeline.ts import failed: ${e.message}`;
+	if (e.kind === "not_a_template") return `pipeline.ts not a template: ${e.message}`;
+	return `pipeline.ts DSL error: ${JSON.stringify(e.cause)}`;
+};
+
+/**
+ * Compile a `pipeline.ts` into a serialised PipelineTemplate JSON, upload
+ * the bytes to the `pipeline-templates` corpus store, and return the
+ * server-assigned `<store_id>/<content_hash>` ref. The ref is later
+ * embedded on the version-set manifest as `template_ref` so the
+ * orchestrator can rehydrate the typed template at run start.
+ */
+const compile_and_upload_template = async (
+	http_input: HttpUploadInput,
+	pipeline_path: string,
+): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
+	const compiled = await compile_pipeline_ts(pipeline_path);
+	if (!compiled.ok) return { ok: false, error: format_compile_error(compiled.error) };
+
+	const json = compile_template_to_json(compiled.value);
+	if (!json.ok) return { ok: false, error: format_compile_error(json.error) };
+
+	const bytes = new TextEncoder().encode(json.value);
+	const upload = await upload_blob_to_store(http_input, "pipeline-templates", bytes);
+	if (!upload.ok) return { ok: false, error: `pipeline-templates upload failed: ${format_http_error(upload.error)}` };
+	return { ok: true, value: upload.value.ref };
+};
 
 interface RunsStartOptions {
 	package: string;

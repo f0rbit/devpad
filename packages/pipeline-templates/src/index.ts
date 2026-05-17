@@ -11,6 +11,20 @@
 
 export { defaultAtomic, defaultAtomicGates } from "./default-atomic.ts";
 export { defaultGradual, defaultGradualGates } from "./default-gradual.ts";
+export {
+	AnalysisGateSchema,
+	AtomicRolloutSchema,
+	AutoGateSchema,
+	DurationSchema,
+	GateSchema,
+	GradualRolloutSchema,
+	ManualGateSchema,
+	PipelineTemplateSchema,
+	PostDeployCheckSchema,
+	PreDeployCheckSchema,
+	RolloutSchema,
+	StageSchema,
+} from "./schema.ts";
 export { type ResolvedRollout, resolve_rollout } from "./discriminator.ts";
 export { type DslError, type ExtendTemplateOverrides, extendTemplate } from "./dsl.ts";
 export { analysis, auto, manual } from "./gates.ts";

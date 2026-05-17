@@ -32,7 +32,7 @@ import type { PipelineEnv } from "./bindings.ts";
 import { make_cf_router } from "./do-router.ts";
 import { make_d1_approval_store } from "./providers/approval-store.ts";
 import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
-import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_default_template_resolver } from "./providers/corpus-providers.ts";
+import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "./providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
 import type { AuthGate, PulseEmitterLite, RoutesDeps } from "./routes.ts";
 
@@ -133,11 +133,12 @@ export const build_routes_deps_from_env = (env: PipelineEnv): RoutesDeps => {
 	const core = build_core(env);
 	const auth: AuthGate = { check: request => require_bearer_token(env, request) };
 	const pulse_lite: PulseEmitterLite = { emit: async event => core.pulse.emit(event as never) };
+	const manifests = make_corpus_manifest_provider(core.backend);
 	return {
 		db: core.db,
 		do_router: make_cf_router(env.PIPELINE_RUNS as unknown as { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } }),
-		manifests: make_corpus_manifest_provider(core.backend),
-		templates: make_default_template_resolver(),
+		manifests,
+		templates: make_corpus_template_resolver(core.backend, manifests),
 		lineage: make_corpus_lineage_provider(core.backend),
 		backend: core.backend,
 		auth,

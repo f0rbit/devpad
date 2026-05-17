@@ -53,7 +53,7 @@ export interface ManifestProvider {
 }
 
 export interface TemplateResolver {
-	resolve(package_id: string): Promise<PipelineTemplate | null>;
+	resolve(package_id: string, version_set_id: string): Promise<PipelineTemplate | null>;
 }
 
 export interface LineageProvider {
@@ -123,11 +123,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const package_row = (await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, parsed.data.package_id)))[0];
 		if (package_row === undefined) return json_err(404, { code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
 
-		const template = await deps.templates.resolve(parsed.data.package_id);
-		if (template === null) return json_err(404, { code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
-
 		const manifest = await deps.manifests.get(parsed.data.version_set_id);
 		if (manifest === null) return json_err(404, { code: "not_found", resource: "version_set_manifest", id: parsed.data.version_set_id });
+
+		const template = await deps.templates.resolve(parsed.data.package_id, parsed.data.version_set_id);
+		if (template === null) return json_err(404, { code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
 
 		const previous_version_set_id = await deps.lineage.previous(parsed.data.package_id, parsed.data.version_set_id);
 
@@ -380,10 +380,10 @@ const passthrough = async (response: Response): Promise<Response> => {
  * the row.
  */
 const reconstruct_plan = async (deps: RoutesDeps, package_id: string, version_set_id: string): Promise<ResolvedPlan | null> => {
-	const template = await deps.templates.resolve(package_id);
-	if (template === null) return null;
 	const manifest = await deps.manifests.get(version_set_id);
 	if (manifest === null) return null;
+	const template = await deps.templates.resolve(package_id, version_set_id);
+	if (template === null) return null;
 	const previous_version_set_id = await deps.lineage.previous(package_id, version_set_id);
 	return resolve_run_plan({ template, manifest, version_set_id, previous_version_set_id });
 };
