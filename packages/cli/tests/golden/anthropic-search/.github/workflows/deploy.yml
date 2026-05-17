@@ -28,7 +28,11 @@ jobs:
       - run: bun run test
 
       - name: Build worker bundle
-        run: bun run build
+        run: |
+          bun run build
+          # CLI expects dist/_worker.js + dist/manifest.json
+          mv dist/index.js dist/_worker.js
+          jq -n --arg name anthropic-search '{name:$name, main:"_worker.js"}' > dist/manifest.json
 
       - name: Clone devpad CLI source
         run: |
