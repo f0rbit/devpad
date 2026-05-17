@@ -647,9 +647,13 @@ export const tools: Record<string, ToolDefinition> = {
 
 	devpad_pipelines_list: {
 		name: "devpad_pipelines_list",
-		description: "List all pipeline runs",
-		inputSchema: z.object({}),
-		execute: async client => unwrap(await client.pipelines.list()),
+		description: "List pipeline runs (newest first). Optionally filter by package and/or status; cap limit at 200.",
+		inputSchema: z.object({
+			package_id: z.string().optional().describe("Filter runs to a specific package"),
+			status: z.enum(["queued", "deploying", "baking", "awaiting_approval", "rolling_back", "completed", "rolled_back", "failed", "cancelled"]).optional().describe("Filter by run status"),
+			limit: z.number().int().positive().max(200).optional().describe("Max rows to return (default 50, cap 200)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.list(input)),
 	},
 
 	devpad_pipelines_get: {

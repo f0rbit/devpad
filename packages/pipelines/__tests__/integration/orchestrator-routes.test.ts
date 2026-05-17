@@ -226,6 +226,95 @@ describe("orchestrator routes — DO state surface", () => {
 	});
 });
 
+describe("orchestrator routes — GET /runs list", () => {
+	test("returns runs ordered by created_at DESC", async () => {
+		const h = await build_harness();
+
+		// Create three runs back-to-back. SQLite's CURRENT_TIMESTAMP is
+		// per-statement so a tight loop can collide; pre-seed distinct
+		// created_at timestamps explicitly so the ordering assertion is
+		// deterministic regardless of clock resolution.
+		const r1 = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
+		const r2 = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
+		const r3 = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
+
+		await h.db.update(pipeline_run).set({ created_at: "2026-05-01T00:00:00.000Z" }).where(eq(pipeline_run.id, r1.run_id));
+		await h.db.update(pipeline_run).set({ created_at: "2026-05-02T00:00:00.000Z" }).where(eq(pipeline_run.id, r2.run_id));
+		await h.db.update(pipeline_run).set({ created_at: "2026-05-03T00:00:00.000Z" }).where(eq(pipeline_run.id, r3.run_id));
+
+		const res = await get_json(h.app, "/runs");
+		expect(res.status).toBe(200);
+		const runs = expect_ok<Array<{ id: string }>>(res.body);
+		expect(runs.length).toBe(3);
+		expect(runs[0].id).toBe(r3.run_id);
+		expect(runs[1].id).toBe(r2.run_id);
+		expect(runs[2].id).toBe(r1.run_id);
+	});
+
+	test("filters by package_id", async () => {
+		const h = await build_harness();
+		await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
+
+		const res = await get_json(h.app, `/runs?package_id=${h.pkg.id}`);
+		expect(res.status).toBe(200);
+		const runs = expect_ok<Array<{ package_id: string }>>(res.body);
+		expect(runs.length).toBeGreaterThan(0);
+		runs.forEach(r => expect(r.package_id).toBe(h.pkg.id));
+
+		const other = await get_json(h.app, "/runs?package_id=pipeline-package_does_not_exist");
+		expect(other.status).toBe(200);
+		expect(expect_ok<unknown[]>(other.body)).toHaveLength(0);
+	});
+
+	test("filters by status", async () => {
+		const h = await build_harness();
+		const r = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
+
+		// Run sits at awaiting_approval after creation.
+		const awaiting = await get_json(h.app, "/runs?status=awaiting_approval");
+		expect(awaiting.status).toBe(200);
+		const awaiting_rows = expect_ok<Array<{ id: string }>>(awaiting.body);
+		expect(awaiting_rows.some(row => row.id === r.run_id)).toBe(true);
+
+		const completed = await get_json(h.app, "/runs?status=completed");
+		expect(completed.status).toBe(200);
+		const completed_rows = expect_ok<Array<{ id: string }>>(completed.body);
+		expect(completed_rows.some(row => row.id === r.run_id)).toBe(false);
+	});
+
+	test("limit clamps to 200 and rejects invalid values", async () => {
+		const h = await build_harness();
+		await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
+
+		const ok_res = await get_json(h.app, "/runs?limit=1");
+		expect(ok_res.status).toBe(200);
+		const rows = expect_ok<unknown[]>(ok_res.body);
+		expect(rows.length).toBe(1);
+
+		const too_big = await get_json(h.app, "/runs?limit=999");
+		expect(too_big.status).toBe(400);
+		expect(too_big.body.ok).toBe(false);
+
+		const not_a_number = await get_json(h.app, "/runs?limit=foo");
+		expect(not_a_number.status).toBe(400);
+	});
+
+	test("invalid status returns 400", async () => {
+		const h = await build_harness();
+		const res = await get_json(h.app, "/runs?status=not_a_status");
+		expect(res.status).toBe(400);
+		expect(res.body.ok).toBe(false);
+	});
+
+	test("empty result set returns empty array, status 200", async () => {
+		const h = await build_harness();
+		const res = await get_json(h.app, "/runs");
+		expect(res.status).toBe(200);
+		const rows = expect_ok<unknown[]>(res.body);
+		expect(rows).toEqual([]);
+	});
+});
+
 describe("orchestrator routes — DO alarm idempotency", () => {
 	test("alarm fired after terminal-state cancel is a no-op", async () => {
 		const h = await build_harness();

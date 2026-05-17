@@ -14,13 +14,13 @@
  */
 
 import type { ResolvedPlan } from "@devpad/core/services/pipelines";
-import { create_run, get_run, resolve_run_plan } from "@devpad/core/services/pipelines";
+import { create_run, get_run, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
-import { pipeline_package } from "@devpad/schema/database/schema";
+import { pipeline_package, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { Backend, Result, VersionSetManifest } from "@f0rbit/corpus";
-import { VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
+import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -47,6 +47,29 @@ export const grant_deny_body = z.object({
 	user_id: z.string().min(1),
 	reason: z.string().optional(),
 });
+
+/**
+ * Query-param parser for `GET /runs`. `limit` defaults to 50, capped at
+ * 200. Unknown statuses fail with a typed error so the catalog UI can
+ * surface the invalid value clearly.
+ */
+const LIST_RUNS_MAX_LIMIT = 200;
+const LIST_RUNS_DEFAULT_LIMIT = 50;
+
+const list_runs_query = z.object({
+	package_id: z.string().min(1).optional(),
+	status: z.enum(RUN_STATUSES).optional(),
+	limit: z.coerce.number().int().positive().max(LIST_RUNS_MAX_LIMIT).optional(),
+});
+
+type ListRunsParsed = { package_id?: string; status?: RunStatus; limit: number };
+type QueryParseError = { code: "invalid_query"; issues: unknown };
+
+const parse_list_runs_query = (raw: Record<string, string>): Result<ListRunsParsed, QueryParseError> => {
+	const parsed = list_runs_query.safeParse(raw);
+	if (!parsed.success) return err({ code: "invalid_query", issues: parsed.error.issues });
+	return ok({ package_id: parsed.data.package_id, status: parsed.data.status, limit: parsed.data.limit ?? LIST_RUNS_DEFAULT_LIMIT });
+};
 
 export interface ManifestProvider {
 	get(version_set_id: string): Promise<VersionSetManifest | null>;
@@ -146,6 +169,16 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (advance_res.status >= 400) return json_err(advance_res.status, advance_body);
 
 		return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
+	});
+
+	app.get("/runs", async c => {
+		const deps = c.get("deps");
+		const filter = parse_list_runs_query(c.req.query());
+		if (!filter.ok) return json_err(400, filter.error);
+
+		const result = await list_runs(deps.db, filter.value);
+		if (!result.ok) return json_err(500, result.error);
+		return json_ok(result.value);
 	});
 
 	app.get("/runs/:id", async c => {
