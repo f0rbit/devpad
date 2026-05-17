@@ -69,7 +69,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload
+          wranglerVersion: "4"
+          command: versions upload --env=""
 
       - if: github.ref == 'refs/heads/main'
         name: Start pipeline run
