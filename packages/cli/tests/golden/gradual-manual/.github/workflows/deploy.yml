@@ -38,15 +38,21 @@ jobs:
           mv dist/index.js dist/_worker.js
           jq -n --arg name gradual-manual '{name:$name, main:"_worker.js"}' > dist/manifest.json
 
-      - name: Clone devpad CLI source
+      - name: Clone and build devpad CLI
         run: |
           git clone --depth=1 --branch "$DEVPAD_REF" https://github.com/f0rbit/devpad.git "$RUNNER_TEMP/devpad"
           cd "$RUNNER_TEMP/devpad"
           bun install --frozen-lockfile
           # build @devpad/schema then @devpad/api so the CLI can import from dist/
           bun run build:api
+          # Bundle the CLI into a single file so transitive deps (drizzle-orm,
+          # zod, etc.) are inlined. Without this, bun's resolver fails to find
+          # transitive workspace deps when the CLI runs from outside the
+          # devpad workspace root.
+          cd packages/cli && bun run build
           # link @devpad/pipeline-templates into this repo's node_modules so
-          # the CLI can dynamic-import pipeline.ts (which imports the package)
+          # the CLI can dynamic-import pipeline.ts (which imports the package
+          # at runtime — the user's pipeline.ts is loaded outside the bundle)
           mkdir -p "$GITHUB_WORKSPACE/node_modules/@devpad"
           ln -sfn "$RUNNER_TEMP/devpad/packages/pipeline-templates" "$GITHUB_WORKSPACE/node_modules/@devpad/pipeline-templates"
 
@@ -58,7 +64,7 @@ jobs:
           DEVPAD_PIPELINES_URL: ${{ secrets.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
           DEVPAD_PIPELINES_TOKEN: ${{ secrets.DEVPAD_PIPELINES_TOKEN }}
         run: |
-          bun "$RUNNER_TEMP/devpad/packages/cli/src/index.ts" pipelines artifacts upload \
+          bun "$RUNNER_TEMP/devpad/packages/cli/dist/index.js" pipelines artifacts upload \
             --package gradual-manual \
             --bundle dist/_worker.js \
             --manifest dist/manifest.json \
