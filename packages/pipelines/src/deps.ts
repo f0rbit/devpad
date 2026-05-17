@@ -27,13 +27,14 @@ import type { RunDeps } from "@devpad/core/services/pipelines";
 import type { Backend } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import type { CloudflareProvider } from "@devpad/pipeline-fakes";
+import { require_bearer_token } from "./auth.ts";
 import type { PipelineEnv } from "./bindings.ts";
 import { make_cf_router } from "./do-router.ts";
 import { make_d1_approval_store } from "./providers/approval-store.ts";
 import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
 import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_default_template_resolver } from "./providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
-import type { RoutesDeps } from "./routes.ts";
+import type { AuthGate, PulseEmitterLite, RoutesDeps } from "./routes.ts";
 
 /**
  * Wraps `env.CF_API_TOKEN.get()` so the provider can pull the secret on
@@ -123,18 +124,23 @@ export const build_run_deps_from_env = (env: PipelineEnv): RunDeps => {
 };
 
 /**
- * Build the `RoutesDeps` injected into the Hono app. The routes only
- * read D1 + corpus and dispatch into the DO — `cf`, `pulse`, and
- * `approvals` are not on this shape (they're consumed by the DO via
- * its own `RunDeps`).
+ * Build the `RoutesDeps` injected into the Hono app. The routes read D1
+ * + corpus, dispatch into the DO, and accept artifact uploads on the
+ * write-side (`POST /artifacts/*`). `cf` and `approvals` are not on
+ * this shape (they're consumed by the DO via its own `RunDeps`).
  */
 export const build_routes_deps_from_env = (env: PipelineEnv): RoutesDeps => {
 	const core = build_core(env);
+	const auth: AuthGate = { check: request => require_bearer_token(env, request) };
+	const pulse_lite: PulseEmitterLite = { emit: async event => core.pulse.emit(event as never) };
 	return {
 		db: core.db,
 		do_router: make_cf_router(env.PIPELINE_RUNS as unknown as { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } }),
 		manifests: make_corpus_manifest_provider(core.backend),
 		templates: make_default_template_resolver(),
 		lineage: make_corpus_lineage_provider(core.backend),
+		backend: core.backend,
+		auth,
+		pulse: pulse_lite,
 	};
 };
