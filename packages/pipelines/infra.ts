@@ -39,11 +39,14 @@ const app = await alchemy("devpad-pipelines");
 const stage = app.stage;
 const is_staging = stage === "staging";
 
+// Phase 12: the orchestrator is a platform singleton. We retain
+// `is_staging` only for the orchestrator's own resource naming (so a
+// future canary deploy of the orchestrator itself is still possible)
+// — but the upstream service bindings to vault/pulse are now hardcoded
+// to the production singletons because there is only one of each.
 const worker_name = is_staging ? "devpad-pipelines-staging" : "devpad-pipelines";
 const d1_name = is_staging ? "devpad-unified-db-preview" : "devpad-unified-db";
 const r2_name = is_staging ? "devpad-corpus-staging" : "devpad-corpus";
-const vault_service = is_staging ? "vault-staging" : "vault-production";
-const pulse_service = is_staging ? "pulse-api-staging" : "pulse-api-production";
 
 const db = await D1Database("DB", {
 	name: d1_name,
@@ -83,8 +86,8 @@ const bindings: Bindings = {
 	DB: db,
 	CORPUS_BUCKET: corpus,
 	PIPELINE_RUNS: pipeline_runs,
-	ANTHROPIC: WorkerRef({ service: vault_service }),
-	PULSE: WorkerRef({ service: pulse_service }),
+	ANTHROPIC: WorkerRef({ service: "vault-production" }),
+	PULSE: WorkerRef({ service: "pulse-api-production" }),
 	CF_ACCOUNT_ID: process.env.CF_ACCOUNT_ID ?? "81874bc21b868deba3276f551acde354",
 };
 

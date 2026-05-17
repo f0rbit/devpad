@@ -95,21 +95,22 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
  * Worker, and `nodejs_compat`. The caller-identity `CALLER_*` trio is
  * added downstream by `deploy_stage`.
  *
- * Phase 6 caveat: both demo packages target `vault-staging` /
- * `pulse-api-staging` in their committed wrangler.jsonc — that's the
- * "production wiring of the demo", not an env-split. Until Phase 7
- * surfaces the bindings array from the version-set manifest, we hard
- * code those two service names here.
+ * Phase 12: platform services (vault, pulse) collapsed to singletons —
+ * one Worker each, regardless of which environment is calling. Stage
+ * scoping moved from "which vault/pulse you talk to" into `caller.environment`
+ * on the RPC identity arg (Phase 7) and on pulse event tags. The demo
+ * Worker's own `staging`/`production` split stays — it's only the
+ * upstream platform bindings that are singletons.
  */
 const default_bindings_for = (_input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
-	// vault-staging's `AnthropicVault` is exported as the module
+	// vault-production's `AnthropicVault` is exported as the module
 	// default — service bindings that target the default export must
 	// NOT specify an `entrypoint`. (Setting `entrypoint: "AnthropicVault"`
 	// triggers `entrypoint name not found in this worker` at runtime
 	// because CF only looks up *named* exports for `entrypoint`.)
 	return [
-		{ type: "service", name: "ANTHROPIC", service: "vault-staging" },
-		{ type: "service", name: "PULSE", service: "pulse-api-staging" },
+		{ type: "service", name: "ANTHROPIC", service: "vault-production" },
+		{ type: "service", name: "PULSE", service: "pulse-api-production" },
 	];
 };
 

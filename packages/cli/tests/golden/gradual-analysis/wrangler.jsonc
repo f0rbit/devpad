@@ -35,15 +35,18 @@
 			"name": "gradual-analysis"
 		}
 	},
+	// Platform services (vault, pulse) are singletons — one Worker each
+	// across both staging and production. Stage scoping is enforced via
+	// `caller.environment` on RPC identity (vault) and event tags (pulse).
 	"services": [
 		{
 			"binding": "ANTHROPIC",
-			"service": "vault-staging",
+			"service": "vault-production",
 			"entrypoint": "AnthropicVault"
 		},
 		{
 			"binding": "PULSE",
-			"service": "pulse-api-staging"
+			"service": "pulse-api-production"
 		}
 	]
 }

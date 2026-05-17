@@ -62,37 +62,12 @@
 			"secret_name": "PIPELINES_TOKEN"
 		}
 	],
+	// Phase 12: orchestrator is a platform singleton — only `devpad-pipelines`
+	// exists. `env.staging` is retained as a do-not-use scaffold for any
+	// future canary work on the orchestrator itself; we do not currently
+	// deploy it. Upstream platform services (vault, pulse) are likewise
+	// singletons, hence the singleton service bindings above.
 	"env": {
-		"staging": {
-			"name": "devpad-pipelines-staging",
-			"vars": {
-				"ENVIRONMENT": "staging"
-			},
-			"d1_databases": [
-				{
-					"binding": "DB",
-					"database_name": "devpad-unified-db-preview",
-					"database_id": "e162775e-2c68-40ac-8ef4-446fd30ba24c"
-				}
-			],
-			"r2_buckets": [
-				{
-					"binding": "CORPUS_BUCKET",
-					"bucket_name": "devpad-corpus-staging"
-				}
-			],
-			"services": [
-				{
-					"binding": "ANTHROPIC",
-					"service": "vault-staging",
-					"entrypoint": "AnthropicVault"
-				},
-				{
-					"binding": "PULSE",
-					"service": "pulse-api-staging"
-				}
-			]
-		},
 		"production": {
 			"name": "devpad-pipelines",
 			"vars": {

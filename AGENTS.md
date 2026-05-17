@@ -137,19 +137,27 @@ devpad/
 
 The `packages/pipelines/` Worker is a separate Cloudflare Worker (not part of `devpad-unified`), exporting a `PipelineRunDO` Durable Object and a Hono REST API. The Worker holds **no upstream API keys** — all third-party traffic crosses the security boundary into `~/dev/vault` (separate repo, **same Cloudflare account** — the boundary is logical, enforced by the service-binding RPC contract and the secrets-store secret name `ANTHROPIC_API_KEY`). The orchestrator hosts the grants registry (`pipeline_grant` table) and exposes a `grants.check(caller, scope)` RPC that vault calls.
 
+### Platform singleton model (Phase 12)
+
+Platform services (`pulse`, `vault`, `devpad-pipelines`) are deployed ONCE — they're control plane (observability backplane, secret broker, orchestrator), not workloads-under-test. Their staging Workers were decommissioned in Phase 12. Stage scoping is enforced at:
+
+- **vault**: `caller.environment` on the RPC identity arg (Phase 7) — `grants.check(...)` matches against this literal.
+- **pulse**: `environment` tag on each event body — events from staging and production callers all land in `pulse-db-production` but are queryable by tag.
+
+Workload Workers (scaffolded packages such as `anthropic-search`, `anthropic-summarize`) **do** keep the staging+production split. Only the upstream platform service bindings collapse to singletons (`vault-production`, `pulse-api-production`).
+
 ### Deployed Workers (Cloudflare)
 
-| Stage | Worker name | URL |
-|-------|-------------|-----|
-| staging | `devpad-pipelines-staging` | `https://devpad-pipelines-staging.dev-818.workers.dev` |
-| production | `devpad-pipelines` | `https://devpad-pipelines.dev-818.workers.dev` |
+| Service | Worker name | URL | Singleton |
+|---------|-------------|-----|-----------|
+| Orchestrator | `devpad-pipelines` | `https://devpad-pipelines.dev-818.workers.dev` | yes |
 
 Deploy via Alchemy from the **devpad repo root**:
 ```
-ALCHEMY_CI_STATE_STORE_CHECK=false bunx alchemy deploy ./packages/pipelines/infra.ts --stage <staging|production> --env-file ./.env --profile default
+ALCHEMY_CI_STATE_STORE_CHECK=false bunx alchemy deploy ./packages/pipelines/infra.ts --stage production --env-file ./.env --profile default
 ```
 
-The deploy adopts (never creates) the existing `devpad-unified-db` / `devpad-unified-db-preview` D1 and `devpad-corpus` / `devpad-corpus-staging` R2 buckets shared with the main `devpad-unified` Worker.
+The `--stage staging` form is still wired in `packages/pipelines/infra.ts` for any future canary deploy of the orchestrator itself, but we do not run it today. The deploy adopts (never creates) the existing `devpad-unified-db` D1 and `devpad-corpus` R2 bucket shared with the main `devpad-unified` Worker.
 
 ### Deploy gotchas (carry-over from vault)
 
@@ -176,7 +184,7 @@ Vault and pipelines bind to each other:
 - vault → pipelines: `GRANTS` (RPC entrypoint `PipelinesGrantsEndpoint`), `PULSE` service binding
 - pipelines → vault: `ANTHROPIC` (RPC entrypoint `AnthropicVault`), `PULSE` service binding
 
-The pulse Workers on this account are named `pulse-api-staging` / `pulse-api-production` (not `pulse-staging` / `pulse`). Both wrangler configs reflect that.
+Post-Phase 12 there is only one pulse Worker on this account, `pulse-api-production` (the `pulse-api-staging` variant was decommissioned). All callers — workloads at either stage and platform services — bind to `pulse-api-production` and tag events with their own `environment`.
 
 First-time setup uses a two-pass deploy to break the circular dependency: deploy vault without the bindings (vault's `infra.ts` gates `GRANTS` + `PULSE` behind `WIRE_GRANTS_BINDING=true`), deploy pipelines normally (its bindings to vault resolve at upload time since vault already exists), then re-deploy vault with `WIRE_GRANTS_BINDING=true`. Subsequent deploys of either repo don't need the gate — both Workers exist.
 
@@ -198,7 +206,7 @@ The pipelines module reuses the unified `Database` type — pipeline tables (`pi
 ### Drizzle / D1 invariants (Phase 8)
 
 - **RPC entrypoints that bind `env.DB` must wrap via `createD1Database(env.DB)` before passing to drizzle-typed services.** Raw `D1Database` bindings produce `db_error` at the first query because drizzle's typed accessor (`db.select()....`) expects the wrapped shape. The cached-wrap pattern lives in `grants-rpc-entrypoint.ts:35` — instantiate the wrapper once per entrypoint instance and reuse for subsequent calls.
-- **`devpad-pipelines` and `devpad-pipelines-staging` share the binding name `DB` but resolve to different physical databases:** production binds to `devpad-unified-db`; staging binds to `devpad-unified-db-preview`. Both are adopted (not created) by alchemy. Don't assume `env.DB` is identical between stages — migration state, grants rows, and run history all diverge.
+- **Post-Phase 12 the orchestrator is a singleton (`devpad-pipelines`) bound to `devpad-unified-db`.** Grants rows + run history live in production-only. If a canary deploy of the orchestrator itself is ever needed, `packages/pipelines/infra.ts`'s `--stage staging` path re-creates a `devpad-pipelines-staging` Worker bound to `devpad-unified-db-preview` — DO NOT assume `env.DB` migration state matches across the two if both are ever live; they share schema, not data.
 - **Pipeline grants must exist BEFORE vault calls succeed.** Vault's grant check is fail-closed: if no `pipeline_grant` row matches `(package, environment, scope)`, the call denies with no escalation. Default seed for a new demo package is one row per stage: `(package, "staging", "anthropic:messages")` + `(package, "production", "anthropic:messages")`. The `environment` column only ever holds those two literals (matching `CALLER_ENV`'s two values) — `dev`, `preview`, etc. simply won't match.
 
 ### Testing

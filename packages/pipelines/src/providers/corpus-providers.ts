@@ -136,10 +136,13 @@ export const make_corpus_template_resolver = (backend: Backend, manifests: Manif
  *      `worker-bundles/<content_hash>`) out of the manifest.
  *   3. Fetch the raw bytes via `backend.data.get(artifact_ref).bytes()`.
  *
- * `bindings_for` lets the caller supply environment-specific bindings
- * (e.g. `ANTHROPIC` -> `vault-staging` vs `vault-production`). The
- * caller-identity trio is added downstream in `deploy_stage`; only the
- * non-`plain_text` bindings flow through here.
+ * `bindings_for` lets the caller supply environment-specific bindings.
+ * After Phase 12 platform services (vault, pulse) are singletons, so
+ * `bindings_for` returns the same service names regardless of
+ * environment — `caller.environment` on RPC identity is the stage marker,
+ * not the upstream Worker name. The caller-identity trio is added
+ * downstream in `deploy_stage`; only the non-`plain_text` bindings flow
+ * through here.
  *
  * Phase 6 caveat: the manifest does NOT yet carry the package's
  * declared bindings (service / kv / DO / secrets) — Phase 7 will add a

@@ -45,17 +45,18 @@ describe("scaffolder wrangler.jsonc template", () => {
 		);
 		expect(anthropic_binding).toBeDefined();
 		expect(anthropic_binding?.entrypoint).toBe("AnthropicVault");
-		// wrangler.jsonc binds the staging vault by default so `wrangler
-		// dev` lights up against a real upstream; production wiring lives
-		// in infra.ts where it is stage-resolved.
-		expect(anthropic_binding?.service).toBe("vault-staging");
+		// Platform services (vault, pulse) are singletons — both stages of
+		// the scaffolded Worker bind to the same upstream Worker. Stage
+		// scoping is enforced via `caller.environment` on the RPC identity
+		// arg and on pulse event tags.
+		expect(anthropic_binding?.service).toBe("vault-production");
 
-		// Verify PULSE binding exists (also staging-targeted by default)
+		// Verify PULSE binding exists (singleton)
 		const pulse_binding = config.services.find(
 			(s: { binding: string }) => s.binding === "PULSE",
 		);
 		expect(pulse_binding).toBeDefined();
-		expect(pulse_binding?.service).toBe("pulse-api-staging");
+		expect(pulse_binding?.service).toBe("pulse-api-production");
 	});
 
 	test("rendered template has staging/production env blocks", () => {
@@ -77,7 +78,7 @@ describe("scaffolder wrangler.jsonc template", () => {
 		expect(config.env.production.name).toBe("test-package");
 	});
 
-	test("template includes nodejs_compat and rpc flags", () => {
+	test("template includes nodejs_compat flag (rpc is default since 2024-04-03)", () => {
 		const template_content = readFileSync(template_path, "utf-8");
 		const rendered = template_content
 			.replace(/{{package_name}}/g, "test-package")
@@ -91,6 +92,8 @@ describe("scaffolder wrangler.jsonc template", () => {
 		const config = JSON.parse(json_only);
 
 		expect(config.compatibility_flags).toContain("nodejs_compat");
-		expect(config.compatibility_flags).toContain("rpc");
+		// `rpc` is a default compat flag since 2024-04-03 and Cloudflare
+		// rejects a deploy that specifies it explicitly — keep it out.
+		expect(config.compatibility_flags).not.toContain("rpc");
 	});
 });
