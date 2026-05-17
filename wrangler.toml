@@ -24,7 +24,7 @@ invocation_logs = true
 ENVIRONMENT = "production"
 API_URL = "https://devpad.tools"
 FRONTEND_URL = "https://devpad.tools"
-PULSE_API_BASE = "https://pulse-production-pulseapiscript-doseawwm.dev-818.workers.dev"
+PULSE_API_BASE = "https://pulse.devpad.tools"
 DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
 
 [[d1_databases]]
@@ -53,9 +53,8 @@ routes = [
 ENVIRONMENT = "preview"
 API_URL = "https://staging.devpad.tools"
 FRONTEND_URL = "https://staging.devpad.tools"
-# Stage isolation: staging devpad → staging pulse → staging devpad (validates keys against the right DB).
-# Production keeps the production pulse URL above.
-PULSE_API_BASE = "https://pulse-preview-pulseapiscript-srzukuoe.dev-818.workers.dev"
+# Single pulse instance (production) for both envs — staging analytics aren't a concern at this scale.
+PULSE_API_BASE = "https://pulse.devpad.tools"
 DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
 
 [[env.preview.d1_databases]]
