@@ -945,9 +945,9 @@ export class ApiClient {
 			/**
 			 * Create a new ingest key (returns plaintext only once)
 			 */
-			create: (input: { project_id: string; name?: string; rate_limit_per_min?: number }): Promise<ApiResult<{ id: string; key: string }>> =>
+			create: (input: { project_id: string; name?: string; rate_limit_per_min?: number }): Promise<ApiResult<{ id: string; plaintext: string; project_id: string }>> =>
 				wrap(() =>
-					this.clients.pulse.post<{ id: string; key: string }>("/admin/keys", {
+					this.clients.pulse.post<{ id: string; plaintext: string; project_id: string }>("/admin/keys", {
 						body: {
 							project_id: input.project_id,
 							name: input.name,

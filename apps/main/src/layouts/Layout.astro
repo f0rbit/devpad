@@ -54,20 +54,9 @@ const pulse_ready = Boolean(PULSE_INGEST_URL && DEVPAD_PROJECT_ID && PULSE_INGES
 
 		{pulse_ready && (
 			<script>
-				import { createPulse } from "@f0rbit/pulse-client";
-				const endpoint = import.meta.env.PUBLIC_PULSE_INGEST_URL;
-				const project_id = import.meta.env.PUBLIC_DEVPAD_PROJECT_ID;
-				const ingest_key = import.meta.env.PUBLIC_DEVPAD_PULSE_INGEST_KEY;
-				const release = import.meta.env.PUBLIC_GIT_SHA;
-				if (endpoint && project_id && ingest_key) {
-					(window as any).__pulse = createPulse({
-						project_id,
-						ingest_key,
-						endpoint,
-						auto_pageview: true,
-						release,
-					});
-				}
+				import { getPulse, installBrowserHandlers } from "@/lib/pulse";
+				getPulse();
+				installBrowserHandlers();
 			</script>
 		)}
 	</head>
