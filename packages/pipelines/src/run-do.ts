@@ -95,7 +95,11 @@ const result_to_response = <T>(result: Result<T, AdvanceError>): Response => {
  */
 export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 	const now = services.now ?? Date.now;
-	const run_id = ctx.id.toString();
+	// Prefer `id.name` so the run_id matches the D1 row id used by the
+	// orchestrator route (`idFromName(row_id)`). Falls back to the hex
+	// id for in-memory tests that construct DoCtx directly.
+	const ctx_id = ctx.id as { name?: string; toString: () => string };
+	const run_id = ctx_id.name ?? ctx_id.toString();
 
 	const persist_plan = async (plan: ResolvedPlan): Promise<void> => {
 		await ctx.storage.put(STORAGE_KEYS.plan, plan);
