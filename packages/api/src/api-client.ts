@@ -95,12 +95,14 @@ export class ApiClient {
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (name?: string): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> =>
-				wrap(() =>
-					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", {
-						body: name ? { name } : {},
-					})
-				),
+			create: (
+				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
+			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
+				const body = typeof input === "string" ? { name: input } : (input ?? {});
+				return wrap(() =>
+					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }),
+				);
+			},
 
 			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
 
