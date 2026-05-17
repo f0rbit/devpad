@@ -245,6 +245,34 @@ describe("orchestrator routes — validation + errors", () => {
 	});
 });
 
+describe("orchestrator routes — wire envelope contract (Phase 13.E1)", () => {
+	test("error envelopes are flat: error has top-level `code`, never a nested `ok: false`", async () => {
+		const h = await build_harness();
+		const res = await post_json(h.app, "/runs", { package_id: "pipeline-package_does_not_exist", version_set_id: "vs_v1" });
+		expect(res.status).toBe(404);
+		expect(res.body.ok).toBe(false);
+		const error = res.body.error as Record<string, unknown>;
+		// Single wrap: `error` is the wire payload, not another envelope.
+		expect(error).not.toHaveProperty("ok");
+		expect(error).not.toHaveProperty("error");
+		// Discriminator is `code`, never `kind`.
+		expect(typeof error.code).toBe("string");
+		expect(error.code).toBe("not_found");
+		expect(error).not.toHaveProperty("kind");
+	});
+
+	test("service-Result errors (kind) are normalised to wire shape (code) at the route boundary", async () => {
+		const h = await build_harness();
+		const res = await get_json(h.app, "/runs/pipeline-run_does_not_exist");
+		expect(res.status).toBe(404);
+		const error = res.body.error as Record<string, unknown>;
+		// `get_run` returns `{ kind: "not_found", resource, id }` — boundary maps to `code`.
+		expect(error.code).toBe("not_found");
+		expect(error).not.toHaveProperty("kind");
+		expect(error.resource).toBe("pipeline_run");
+	});
+});
+
 describe("orchestrator routes — DO state surface", () => {
 	test("GET /runs path on the DO surfaces the persisted plan + alarm", async () => {
 		const h = await build_harness();

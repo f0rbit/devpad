@@ -71,15 +71,37 @@ const json = <T>(value: T, init?: ResponseInit): Response => new Response(JSON.s
 
 const json_ok = <T>(value: T): Response => json({ ok: true, value });
 
-const json_err = (status: number, error: unknown): Response => json({ ok: false, error }, { status });
+/**
+ * Wire-shaped error envelope. Normalises service-layer `kind` to the
+ * public `code` discriminator and flattens any accidental Result
+ * wrapping so the response is never double-wrapped. Mirror of
+ * `routes.ts`'s `to_wire_error` — kept local to avoid a cross-module
+ * helper that pulls Hono into the DO bundle.
+ */
+type WireError = { code: string; message?: string } & Record<string, unknown>;
+
+const to_wire_error = (input: unknown): WireError => {
+	if (input === null || typeof input !== "object") return { code: "unknown", message: String(input) };
+	const rec = input as Record<string, unknown>;
+	if (rec.ok === false && "error" in rec) return to_wire_error(rec.error);
+	const code = typeof rec.code === "string" ? rec.code : typeof rec.kind === "string" ? rec.kind : "unknown";
+	const { kind: _kind, code: _code, ok: _ok, ...rest } = rec;
+	return { code, ...rest };
+};
+
+const json_err = (status: number, error: unknown): Response => json({ ok: false, error: to_wire_error(error) }, { status });
+
+const STATUS_BY_CODE: Record<string, number> = {
+	not_found: 404,
+	no_previous_version: 409,
+	terminal_state: 409,
+	invalid_event: 409,
+	missing_gate: 500,
+};
 
 const error_to_status = (error: AdvanceError): number => {
-	if ("kind" in error && error.kind === "not_found") return 404;
-	if ("code" in error && error.code === "no_previous_version") return 409;
-	if ("code" in error && error.code === "terminal_state") return 409;
-	if ("code" in error && error.code === "invalid_event") return 409;
-	if ("code" in error && error.code === "missing_gate") return 500;
-	return 500;
+	const code = "code" in error ? error.code : "kind" in error ? error.kind : "";
+	return STATUS_BY_CODE[code] ?? 500;
 };
 
 const result_to_response = <T>(result: Result<T, AdvanceError>): Response => {

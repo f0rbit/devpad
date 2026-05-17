@@ -107,11 +107,73 @@ export type RoutesDeps = {
 
 type AppCtx = { Variables: { deps: RoutesDeps } };
 
-const json_err = (status: number, error: unknown) =>
+/**
+ * Public wire envelope. Errors land here as a single flat object —
+ * `{ ok: false, error: { code, message, ...details } }`. Service
+ * Results use `kind` (corpus convention) internally; the route
+ * boundary normalises that to `code` via {@link to_wire_error}.
+ *
+ * Status code mapping is also done at the boundary — service errors
+ * carry their own typed discriminator, but HTTP status is the route's
+ * concern.
+ */
+
+type WireError = { code: string; message?: string } & Record<string, unknown>;
+
+const STATUS_BY_CODE: Record<string, number> = {
+	not_found: 404,
+	validation: 400,
+	validation_error: 400,
+	bad_request: 400,
+	invalid_event: 409,
+	terminal_state: 409,
+	no_previous_version: 409,
+	no_previous_version_set: 400,
+	unauthorized: 401,
+	auth_unavailable: 503,
+	backend_unavailable: 503,
+	storage_error: 500,
+	store_error: 500,
+	db_error: 500,
+	network_error: 502,
+	missing_gate: 500,
+};
+
+const status_for_code = (code: string): number => STATUS_BY_CODE[code] ?? 500;
+
+/**
+ * Normalise a service-layer error (`kind` discriminator, corpus convention)
+ * into the public wire shape (`code` discriminator). Strips any outer
+ * Result wrapping so a `{ ok, value | error }` envelope is never
+ * double-wrapped when bubbled through the route layer.
+ */
+const to_wire_error = (input: unknown): WireError => {
+	if (input === null || typeof input !== "object") return { code: "unknown", message: String(input) };
+	const rec = input as Record<string, unknown>;
+
+	// Strip any accidental Result-envelope wrapping (input was already
+	// `{ ok: false, error: ... }`). Always unwrap to the underlying error.
+	if (rec.ok === false && "error" in rec) return to_wire_error(rec.error);
+
+	const code = typeof rec.code === "string" ? rec.code : typeof rec.kind === "string" ? rec.kind : "unknown";
+	const { kind: _kind, code: _code, ok: _ok, ...rest } = rec;
+	return { code, ...rest };
+};
+
+const json_err_raw = (status: number, error: WireError): Response =>
 	new Response(JSON.stringify({ ok: false, error }), {
 		status,
 		headers: { "content-type": "application/json" },
 	});
+
+/**
+ * Emit a wire error from a service/Result error (or a literal
+ * `WireError`). If `status` is omitted it's derived from the code.
+ */
+const wire_err = (input: unknown, status?: number): Response => {
+	const wire = to_wire_error(input);
+	return json_err_raw(status ?? status_for_code(wire.code), wire);
+};
 
 const json_ok = <T>(value: T) =>
 	new Response(JSON.stringify({ ok: true, value }), {
@@ -141,16 +203,16 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	app.post("/runs", async c => {
 		const body = await c.req.json().catch(() => null);
 		const parsed = create_run_body.safeParse(body);
-		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const deps = c.get("deps");
 		const package_row = (await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, parsed.data.package_id)))[0];
-		if (package_row === undefined) return json_err(404, { code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
+		if (package_row === undefined) return wire_err({ code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
 
 		const manifest = await deps.manifests.get(parsed.data.version_set_id);
-		if (manifest === null) return json_err(404, { code: "not_found", resource: "version_set_manifest", id: parsed.data.version_set_id });
+		if (manifest === null) return wire_err({ code: "not_found", resource: "version_set_manifest", id: parsed.data.version_set_id });
 
 		const template = await deps.templates.resolve(parsed.data.package_id, parsed.data.version_set_id);
-		if (template === null) return json_err(404, { code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
+		if (template === null) return wire_err({ code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
 
 		const previous_version_set_id = await deps.lineage.previous(parsed.data.package_id, parsed.data.version_set_id);
 
@@ -161,12 +223,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			version_set_id: parsed.data.version_set_id,
 			previous_version_set_id,
 		});
-		if (!created.ok) return json_err(500, created.error);
+		if (!created.ok) return wire_err(created.error);
 
 		const { run, plan } = created.value;
 		const advance_res = await do_call(deps, run.id, "advance", { plan });
 		const advance_body = await advance_res.json().catch(() => null);
-		if (advance_res.status >= 400) return json_err(advance_res.status, advance_body);
+		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
 
 		return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
 	});
@@ -174,64 +236,64 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	app.get("/runs", async c => {
 		const deps = c.get("deps");
 		const filter = parse_list_runs_query(c.req.query());
-		if (!filter.ok) return json_err(400, filter.error);
+		if (!filter.ok) return wire_err(filter.error, 400);
 
 		const result = await list_runs(deps.db, filter.value);
-		if (!result.ok) return json_err(500, result.error);
+		if (!result.ok) return wire_err(result.error);
 		return json_ok(result.value);
 	});
 
 	app.get("/runs/:id", async c => {
 		const deps = c.get("deps");
 		const run = await get_run(deps.db, c.req.param("id"));
-		if (!run.ok) return json_err(run.error.kind === "not_found" ? 404 : 500, run.error);
+		if (!run.ok) return wire_err(run.error);
 		return json_ok(run.value);
 	});
 
 	app.post("/runs/:id/approve", async c => {
 		const body = await c.req.json().catch(() => null);
 		const parsed = approve_body.safeParse(body);
-		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 
 		// We need the plan for the DO call — read it from D1 (resolved_rollout + resolved_gates).
 		const run = await get_run(deps.db, run_id);
-		if (!run.ok) return json_err(run.error.kind === "not_found" ? 404 : 500, run.error);
+		if (!run.ok) return wire_err(run.error);
 
 		// Reconstruct the plan from the snapshot stored on the run row.
 		// (The DO has the plan too, but we keep this read self-contained
 		// so the route works even if the DO storage is cold.)
 		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
-		if (plan === null) return json_err(500, { code: "plan_unavailable", run_id });
+		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 
 		const response = await do_call(deps, run_id, "approve", { ...parsed.data, plan });
-		return passthrough(response);
+		return normalise_do_response(response);
 	});
 
 	app.post("/runs/:id/cancel", async c => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 		const run = await get_run(deps.db, run_id);
-		if (!run.ok) return json_err(run.error.kind === "not_found" ? 404 : 500, run.error);
+		if (!run.ok) return wire_err(run.error);
 		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
-		if (plan === null) return json_err(500, { code: "plan_unavailable", run_id });
+		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 		const response = await do_call(deps, run_id, "cancel", { plan });
-		return passthrough(response);
+		return normalise_do_response(response);
 	});
 
 	app.post("/runs/:id/rollback", async c => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 		const source_run = await get_run(deps.db, run_id);
-		if (!source_run.ok) return json_err(source_run.error.kind === "not_found" ? 404 : 500, source_run.error);
+		if (!source_run.ok) return wire_err(source_run.error);
 
 		// Resolve the predecessor in lineage. If there is none, this run
 		// has nothing to roll back to and we refuse — the operator should
 		// re-upload a known-good version-set instead.
 		const previous_version_set_id = await deps.lineage.previous(source_run.value.package_id, source_run.value.version_set_id);
 		if (previous_version_set_id === null) {
-			return json_err(400, { code: "no_previous_version_set", run_id, version_set_id: source_run.value.version_set_id });
+			return wire_err({ code: "no_previous_version_set", run_id, version_set_id: source_run.value.version_set_id }, 400);
 		}
 
 		// In-flight source runs get cancelled first so we don't have two
@@ -246,9 +308,9 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		// Build the rollback run targeting the predecessor at 100%.
 		const manifest = await deps.manifests.get(previous_version_set_id);
-		if (manifest === null) return json_err(404, { code: "not_found", resource: "version_set_manifest", id: previous_version_set_id });
+		if (manifest === null) return wire_err({ code: "not_found", resource: "version_set_manifest", id: previous_version_set_id });
 		const template = await deps.templates.resolve(source_run.value.package_id, previous_version_set_id);
-		if (template === null) return json_err(404, { code: "not_found", resource: "pipeline_template", id: source_run.value.package_id });
+		if (template === null) return wire_err({ code: "not_found", resource: "pipeline_template", id: source_run.value.package_id });
 		const predecessor_of_predecessor = await deps.lineage.previous(source_run.value.package_id, previous_version_set_id);
 
 		const created = await create_run(deps.db, {
@@ -259,12 +321,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			previous_version_set_id: predecessor_of_predecessor,
 			kind: "rollback",
 		});
-		if (!created.ok) return json_err(500, created.error);
+		if (!created.ok) return wire_err(created.error);
 
 		const { run, plan } = created.value;
 		const advance_res = await do_call(deps, run.id, "advance", { plan });
 		const advance_body = await advance_res.json().catch(() => null);
-		if (advance_res.status >= 400) return json_err(advance_res.status, advance_body);
+		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
 
 		return json_ok({ run_id: run.id, status: run.status, kind: run.kind, target_version_set_id: previous_version_set_id, source_run_id: run_id, plan, advance: advance_body });
 	});
@@ -272,10 +334,10 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	app.get("/grants", async c => {
 		const deps = c.get("deps");
 		const package_id = c.req.query("package_id");
-		if (!package_id) return json_err(400, { code: "missing_param", param: "package_id" });
+		if (!package_id) return wire_err({ code: "missing_param", param: "package_id" }, 400);
 
 		const grants_result = await list_grants(deps.db, package_id);
-		if (!grants_result.ok) return json_err(500, grants_result.error);
+		if (!grants_result.ok) return wire_err(grants_result.error);
 		return json_ok(grants_result.value);
 	});
 
@@ -283,11 +345,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const deps = c.get("deps");
 		const body = await c.req.json().catch(() => null);
 		const parsed = grant_approve_body.safeParse(body);
-		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
 		const grant_id = c.req.param("id");
 		const result = await approve_grant(deps.db, grant_id, parsed.data.user_id);
-		if (!result.ok) return json_err(result.error.kind === "not_found" ? 404 : 500, result.error);
+		if (!result.ok) return wire_err(result.error);
 		return json_ok(result.value);
 	});
 
@@ -295,11 +357,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const deps = c.get("deps");
 		const body = await c.req.json().catch(() => null);
 		const parsed = grant_deny_body.safeParse(body);
-		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
 		const grant_id = c.req.param("id");
 		const result = await deny_grant(deps.db, grant_id, parsed.data.user_id, parsed.data.reason);
-		if (!result.ok) return json_err(result.error.kind === "not_found" ? 404 : 500, result.error);
+		if (!result.ok) return wire_err(result.error);
 		return json_ok({ success: true });
 	});
 
@@ -331,12 +393,12 @@ const BLOB_STORE_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 
 const apply_auth = async (deps: RoutesDeps, request: Request): Promise<Response | null> => {
 	if (deps.auth === undefined) {
-		return json_err(503, { code: "auth_unavailable", message: "artifact upload not configured on this Worker" });
+		return wire_err({ code: "auth_unavailable", message: "artifact upload not configured on this Worker" }, 503);
 	}
 	const check = await deps.auth.check(request);
 	if (!check.ok) {
 		const status = check.error.code === "auth_unavailable" ? 503 : 401;
-		return json_err(status, check.error);
+		return wire_err(check.error, status);
 	}
 	return null;
 };
@@ -344,21 +406,21 @@ const apply_auth = async (deps: RoutesDeps, request: Request): Promise<Response 
 const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<Response> => {
 	const auth_fail = await apply_auth(deps, request);
 	if (auth_fail !== null) return auth_fail;
-	if (deps.backend === undefined) return json_err(503, { code: "backend_unavailable", message: "corpus backend not configured" });
+	if (deps.backend === undefined) return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
 	const store_id = request.headers.get("x-store-id");
 	if (store_id === null || !BLOB_STORE_ID_PATTERN.test(store_id)) {
-		return json_err(400, { code: "invalid_store_id", message: "x-store-id header required: [a-z0-9-]{1,64}" });
+		return wire_err({ code: "invalid_store_id", message: "x-store-id header required: [a-z0-9-]{1,64}" }, 400);
 	}
 
 	const content_length = Number(request.headers.get("content-length") ?? "0");
 	if (content_length > MAX_BLOB_SIZE_BYTES) {
-		return json_err(413, { code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES });
+		return wire_err({ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES }, 413);
 	}
 
 	const buffer = await request.arrayBuffer().catch(() => null);
-	if (buffer === null) return json_err(400, { code: "invalid_body", message: "could not read body" });
-	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES) return json_err(413, { code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES });
+	if (buffer === null) return wire_err({ code: "invalid_body", message: "could not read body" }, 400);
+	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES) return wire_err({ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES }, 413);
 
 	const bytes = new Uint8Array(buffer);
 	const content_hash = await sha256_hex(bytes);
@@ -366,7 +428,7 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	const data_key = `${store_id}/${content_hash}`;
 
 	const put_data = await deps.backend.data.put(data_key, bytes);
-	if (!put_data.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put_data.error) });
+	if (!put_data.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put_data.error) });
 
 	const meta = {
 		store_id,
@@ -379,7 +441,7 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 		data_key,
 	};
 	const put_meta = await deps.backend.metadata.put(meta);
-	if (!put_meta.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put_meta.error) });
+	if (!put_meta.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put_meta.error) });
 
 	if (deps.pulse !== undefined) await deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }).catch(() => undefined);
 
@@ -420,13 +482,13 @@ const latest_version_for_package = async (backend: Backend, package_name: string
 const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): Promise<Response> => {
 	const auth_fail = await apply_auth(deps, request);
 	if (auth_fail !== null) return auth_fail;
-	if (deps.backend === undefined) return json_err(503, { code: "backend_unavailable", message: "corpus backend not configured" });
+	if (deps.backend === undefined) return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
 	const body = await request.json().catch(() => null);
-	if (body === null) return json_err(400, { code: "invalid_body", message: "request body is not valid JSON" });
+	if (body === null) return wire_err({ code: "invalid_body", message: "request body is not valid JSON" }, 400);
 
 	const parsed = VersionSetManifestSchema.safeParse(body);
-	if (!parsed.success) return json_err(400, { code: "invalid_manifest", issues: parsed.error.issues });
+	if (!parsed.success) return wire_err({ code: "invalid_manifest", issues: parsed.error.issues }, 400);
 
 	const manifest = parsed.data as VersionSetManifest;
 	const store = version_set_store(deps.backend);
@@ -438,7 +500,7 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	const put = await store.put(manifest, parent_version === null ? undefined : {
 		parents: [{ store_id: "version-sets", version: parent_version, role: "predecessor" }],
 	});
-	if (!put.ok) return json_err(500, { code: "storage_error", message: format_corpus_error(put.error) });
+	if (!put.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put.error) });
 
 	if (deps.pulse !== undefined)
 		await deps.pulse.emit({ event: "artifact_uploaded", store_id: "version-sets", content_hash: put.value.content_hash, kind: "version_set", package: manifest.package }).catch(() => undefined);
@@ -471,9 +533,22 @@ const generate_version = (): string => {
 	return `v_${ts}_${rand}`;
 };
 
-const passthrough = async (response: Response): Promise<Response> => {
-	const body = await response.text();
-	return new Response(body, { status: response.status, headers: { "content-type": "application/json" } });
+/**
+ * Forward a Durable Object subrequest back to the HTTP client without
+ * double-wrapping its envelope. The DO returns the same
+ * `{ ok, value | error }` shape as this route layer; on error we
+ * unwrap and re-emit via {@link wire_err} so the discriminator is
+ * normalised to `code` and the response is single-wrapped.
+ */
+const normalise_do_response = async (response: Response): Promise<Response> => {
+	const text = await response.text();
+	if (response.status < 400) {
+		return new Response(text, { status: response.status, headers: { "content-type": "application/json" } });
+	}
+	const parsed = text === "" ? null : (() => {
+		try { return JSON.parse(text); } catch { return null; }
+	})();
+	return wire_err(parsed, response.status);
 };
 
 /**
