@@ -24,6 +24,7 @@
 	},
 	"dependencies": {
 		"@f0rbit/corpus": "^0.6.0",
+		"drizzle-orm": "^0.44.7",
 		"zod": "^3.22.4"
 	},
 	"devDependencies": {
