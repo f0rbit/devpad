@@ -2,12 +2,22 @@ import type { Result } from "@f0rbit/corpus";
 
 export type CloudflareError = { code: "not_found"; message: string } | { code: "validation"; message: string } | { code: "conflict"; message: string } | { code: "internal"; message: string };
 
+/**
+ * A plain-text Worker var baked into a version at upload time. Mirrors the
+ * Cloudflare REST shape used in `metadata.bindings`.
+ *
+ * Secrets-Store bindings ride a separate channel — these are only for
+ * non-secret deploy-time identity (e.g. CALLER_PACKAGE).
+ */
+export type WorkerVar = { type: "plain_text"; name: string; text: string };
+
 export type WorkerVersion = {
 	id: string;
 	script_name: string;
 	number: number;
 	created_on: string;
 	annotations?: Record<string, string>;
+	vars?: WorkerVar[];
 };
 
 export type DeploymentStrategy = { strategy: "percentage"; versions: Array<{ version_id: string; percentage: number }> };
@@ -27,6 +37,7 @@ export type WorkerMeta = {
 export type UploadVersionInput = {
 	script_name: string;
 	annotations?: Record<string, string>;
+	vars?: WorkerVar[];
 };
 
 export type CreateDeploymentInput = {

@@ -39,6 +39,7 @@ import type { VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
+import { environment_for_stage } from "./caller-identity.js";
 import { type DeployError, deploy_stage } from "./deploy.js";
 import type { ApprovalStore, GateError, GateEvaluatorDeps, PulseEmitter } from "./gates/index.js";
 import { gateEvaluatorFor } from "./gates/index.js";
@@ -354,8 +355,8 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 	}
 
 	if (output.kind === "needs_deploy") {
-		const script_name = await package_script_for_stage(deps.db, run_id, output.stage.name);
-		if (!script_name.ok) return script_name;
+		const resolved = await package_script_for_stage(deps.db, run_id, output.stage.name);
+		if (!resolved.ok) return resolved;
 		await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
@@ -363,9 +364,11 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 			payload: { traffic: output.stage.traffic, version_set_id: output.version_set_id },
 		});
 		const deployed = await deploy_stage(deps.cf, {
-			script_name: script_name.value,
+			script_name: resolved.value.script_name,
 			stage: output.stage,
 			version_set_id: output.version_set_id,
+			package_name: resolved.value.package_name,
+			environment: environment_for_stage(output.stage.name),
 		});
 		if (!deployed.ok) return deployed;
 		await record_stage_event_row(deps.db, {
@@ -408,8 +411,8 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 
 	if (output.kind === "needs_rollback") {
 		const stage_name = plan.stages[state.stage_index]?.name ?? "staging";
-		const script_name = await package_script_for_stage(deps.db, run_id, stage_name);
-		if (!script_name.ok) return script_name;
+		const resolved = await package_script_for_stage(deps.db, run_id, stage_name);
+		if (!resolved.ok) return resolved;
 		await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name,
@@ -417,7 +420,7 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 			payload: { target_version_set_id: output.previous_version_set_id },
 		});
 		const result = await rollback_run(deps.cf, {
-			script_name: script_name.value,
+			script_name: resolved.value.script_name,
 			target_version_set_id: output.previous_version_set_id,
 		});
 		if (!result.ok) return result;
@@ -437,7 +440,7 @@ const package_script_for_stage = async (
 	db: Database,
 	run_id: string,
 	stage_name: string,
-): Promise<Result<string, ServiceError>> => {
+): Promise<Result<{ script_name: string; package_name: string }, ServiceError>> => {
 	const run = await get_run(db, run_id);
 	if (!run.ok) return run;
 
@@ -460,7 +463,7 @@ const package_script_for_stage = async (
 			},
 			stage_name,
 		});
-		return ok(script_name);
+		return ok({ script_name, package_name: pkg.name });
 	} catch (e) {
 		return err({
 			kind: "validation_error",
