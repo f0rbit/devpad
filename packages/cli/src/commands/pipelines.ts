@@ -141,6 +141,38 @@ const action_rollback = (client_factory: ClientFactory) => async (run_id: string
 	spinner.succeed(`rolled back ${run_id}`);
 };
 
+const action_grants_list = (client_factory: ClientFactory) => async (options: { package: string }): Promise<void> => {
+	const spinner = make_spinner(`Listing grants for ${options.package}...`).start();
+	const client = client_factory();
+	const result = await client.pipelines.grants.list(options.package);
+	if (!result.ok) return fail_with(spinner, result.error.message);
+	spinner.succeed(`${result.value.length} grant(s)`);
+	for (const g of result.value) {
+		const granted_at = g.granted_at ?? chalk.dim("pending");
+		console.log(`  ${chalk.bold(g.id)}  ${g.stage_name}  ${chalk.cyan(g.scope)}  ${granted_at}`);
+	}
+};
+
+const action_grants_approve = (client_factory: ClientFactory) => async (grant_id: string, options: { user?: string }): Promise<void> => {
+	const spinner = make_spinner(`Approving grant ${grant_id}...`).start();
+	const user_id = options.user ?? process.env.DEVPAD_USER_ID;
+	if (user_id === undefined) return fail_with(spinner, "--user required (or DEVPAD_USER_ID env var)");
+	const client = client_factory();
+	const result = await client.pipelines.grants.approve(grant_id, user_id);
+	if (!result.ok) return fail_with(spinner, result.error.message);
+	spinner.succeed(`approved grant ${grant_id}`);
+};
+
+const action_grants_deny = (client_factory: ClientFactory) => async (grant_id: string, options: { user?: string; reason?: string }): Promise<void> => {
+	const spinner = make_spinner(`Denying grant ${grant_id}...`).start();
+	const user_id = options.user ?? process.env.DEVPAD_USER_ID;
+	if (user_id === undefined) return fail_with(spinner, "--user required (or DEVPAD_USER_ID env var)");
+	const client = client_factory();
+	const result = await client.pipelines.grants.deny(grant_id, user_id, options.reason);
+	if (!result.ok) return fail_with(spinner, result.error.message);
+	spinner.succeed(`denied grant ${grant_id}`);
+};
+
 interface ArtifactsUploadOptions {
 	package: string;
 	bundle: string;
@@ -417,6 +449,27 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.requiredOption("--package <name>", "Package name")
 		.requiredOption("--version-set-id <id>", "Version set ID from corpus")
 		.action(action_runs_start(client_factory));
+
+	const grants = pipelines.command("grants").description("Manage vault grants");
+
+	grants
+		.command("list")
+		.description("List vault grants for a package")
+		.requiredOption("--package <id>", "Package ID to list grants for")
+		.action(action_grants_list(client_factory));
+
+	grants
+		.command("approve <grant-id>")
+		.description("Approve a pending vault grant")
+		.option("--user <user-id>", "User ID granting approval (defaults to $DEVPAD_USER_ID)")
+		.action(action_grants_approve(client_factory));
+
+	grants
+		.command("deny <grant-id>")
+		.description("Deny a pending vault grant")
+		.option("--user <user-id>", "User ID denying the grant (defaults to $DEVPAD_USER_ID)")
+		.option("--reason <text>", "Optional denial reason")
+		.action(action_grants_deny(client_factory));
 
 	return pipelines;
 };

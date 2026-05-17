@@ -3,7 +3,7 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
-import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, PipelineRun, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
+import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, PipelineGrant, PipelineRun, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -1018,9 +1018,9 @@ export class ApiClient {
 			/**
 			 * List grants for a package
 			 */
-			list: (package_id?: string): Promise<ApiResult<any[]>> =>
+			list: (package_id?: string): Promise<ApiResult<PipelineGrant[]>> =>
 				wrap(() =>
-					this.clients.pipelines.get<any[]>("/grants", {
+					this.clients.pipelines.get<PipelineGrant[]>("/grants", {
 						query: package_id ? { package_id } : {},
 					})
 				),
@@ -1028,9 +1028,9 @@ export class ApiClient {
 			/**
 			 * Approve a grant
 			 */
-			approve: (grant_id: string, user_id: string): Promise<ApiResult<any>> =>
+			approve: (grant_id: string, user_id: string): Promise<ApiResult<PipelineGrant>> =>
 				wrap(() =>
-					this.clients.pipelines.post<any>(`/grants/${grant_id}/approve`, {
+					this.clients.pipelines.post<PipelineGrant>(`/grants/${grant_id}/approve`, {
 						body: { user_id },
 					})
 				),
