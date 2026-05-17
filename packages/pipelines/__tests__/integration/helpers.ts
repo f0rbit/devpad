@@ -152,7 +152,7 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 		return { fetch: h.handle, alarm: h.fire_alarm };
 	});
 
-	const templates: TemplateResolver = { resolve: async () => template };
+	const templates: TemplateResolver = { resolve: async (_pkg, _vs) => template };
 	const manifests: ManifestProvider = { get: async id => manifest_for.get(id) ?? null };
 	const lineage: LineageProvider = { previous: async (_pkg, vs) => previous_for.get(vs) ?? null };
 	const do_router = {

@@ -16,9 +16,9 @@
  */
 
 import type { Backend, VersionSetManifest } from "@f0rbit/corpus";
-import { version_set_store } from "@f0rbit/corpus";
+import { pipeline_template_store, version_set_store } from "@f0rbit/corpus";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
-import { extendTemplate } from "@devpad/pipeline-templates";
+import { extendTemplate, PipelineTemplateSchema } from "@devpad/pipeline-templates";
 import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes.ts";
 
 /**
@@ -60,20 +60,78 @@ export const make_corpus_lineage_provider = (backend: Backend): LineageProvider 
 };
 
 /**
- * Resolve a package's pipeline template. Until template-storage lands
- * (`default_template_ref` is currently always null), we fall back to
- * the built-in default gradual template — pipelines deployed today
- * have not customised their rollout via the DSL.
+ * Resolve a package's pipeline template by reading the
+ * `template_ref` off the version-set manifest and loading the
+ * corresponding `pipeline-templates` corpus blob.
  *
- * Reserved: once a template-storage layer exists (Phase 4+), this
- * resolver will load the template body from corpus and run it through
- * `extendTemplate` to produce the typed {@link PipelineTemplate}.
+ * The CLI compiles a package's `pipeline.ts` to JSON at upload time
+ * (`compile_pipeline_ts`) and uploads the blob to
+ * `pipeline-templates/<content_hash>`. The version-set manifest is
+ * stamped with `template_ref = "pipeline-templates/<content_hash>"`.
+ * At run-start the orchestrator:
+ *
+ *   1. reads the manifest by `version_set_id`,
+ *   2. extracts `template_ref`,
+ *   3. fetches the JSON blob via the corpus store,
+ *   4. validates against `PipelineTemplateSchema` and returns the
+ *      typed result.
+ *
+ * Backward compat: manifests written before this feature shipped will
+ * have `template_ref === undefined`. Those resolve via the built-in
+ * `extendTemplate({})` default — the gradual template every pre-5.D
+ * package implicitly used. Without this fallback, in-flight runs from
+ * the pre-Phase-5 era would 404 at run-start.
  */
-export const make_default_template_resolver = (): TemplateResolver => {
-	const built = extendTemplate({});
-	if (!built.ok) throw new Error(`default template build failed: ${JSON.stringify(built.error)}`);
-	const template: PipelineTemplate = built.value;
+export const make_corpus_template_resolver = (backend: Backend, manifests: ManifestProvider): TemplateResolver => {
+	const version_sets = version_set_store(backend);
+	const templates = pipeline_template_store(backend, PipelineTemplateSchema);
+
+	const default_built = extendTemplate({});
+	if (!default_built.ok) throw new Error(`default template build failed: ${JSON.stringify(default_built.error)}`);
+	const default_template: PipelineTemplate = default_built.value;
+
 	return {
-		resolve: async (_package_id: string): Promise<PipelineTemplate | null> => template,
+		resolve: async (_package_id: string, version_set_id: string): Promise<PipelineTemplate | null> => {
+			const manifest = await manifests.get(version_set_id);
+			if (manifest === null) {
+				// No manifest means an unknown version_set — let the route
+				// surface its own 404. Returning the default would mask the
+				// upstream error.
+				return null;
+			}
+			if (manifest.template_ref === undefined || manifest.template_ref === "") {
+				return default_template;
+			}
+			const content_hash = extract_template_content_hash(manifest.template_ref);
+			if (content_hash === null) {
+				return default_template;
+			}
+			// `template_ref` is `pipeline-templates/<content_hash>` (the
+			// `data_key` the CLI received from `POST /artifacts/blob`). The
+			// corpus snapshot is keyed by `version`, not content_hash, so we
+			// resolve via `find_by_hash` and then load the typed body
+			// through the store.
+			const meta = await backend.metadata.find_by_hash("pipeline-templates", content_hash);
+			if (meta === null) {
+				return null;
+			}
+			const result = await templates.get(meta.version);
+			if (!result.ok) {
+				return null;
+			}
+			return result.value.data;
+		},
 	};
+};
+
+const extract_template_content_hash = (template_ref: string): string | null => {
+	// The CLI emits the namespaced form `pipeline-templates/<content_hash>`
+	// (matches the `data_key` returned by `/artifacts/blob`). Accept the
+	// bare form too for robustness against ref-format drift.
+	if (template_ref.includes("/")) {
+		const parts = template_ref.split("/");
+		const tail = parts[parts.length - 1];
+		return tail !== undefined && tail !== "" ? tail : null;
+	}
+	return template_ref === "" ? null : template_ref;
 };

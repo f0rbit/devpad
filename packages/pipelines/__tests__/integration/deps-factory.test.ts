@@ -33,7 +33,7 @@ import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/b
 import { create_memory_backend, version_set_store, type VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { make_d1_approval_store } from "../../src/providers/approval-store.ts";
-import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_default_template_resolver } from "../../src/providers/corpus-providers.ts";
+import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "../../src/providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "../../src/providers/pulse.ts";
 import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
 
@@ -144,9 +144,14 @@ describe("deps factory — production wiring shape", () => {
 		expect(previous).toBeNull();
 	});
 
-	test("default template resolver returns a typed PipelineTemplate", async () => {
-		const resolver = make_default_template_resolver();
-		const template = await resolver.resolve("pipeline-package_anything");
+	test("corpus template resolver falls back to default gradual when manifest has no template_ref", async () => {
+		const backend = create_memory_backend();
+		const store = version_set_store(backend);
+		const put = await store.put(default_manifest);
+		if (!put.ok) throw new Error("put failed");
+		const manifests = make_corpus_manifest_provider(backend);
+		const resolver = make_corpus_template_resolver(backend, manifests);
+		const template = await resolver.resolve("pipeline-package_anything", put.value.version);
 		expect(template).not.toBeNull();
 		expect(template?.rollout.type).toBe("gradual");
 	});
