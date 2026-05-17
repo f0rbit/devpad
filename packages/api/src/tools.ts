@@ -1,3 +1,4 @@
+import { RUN_STATUSES } from "@devpad/schema/database/schema";
 import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo } from "@devpad/schema/validation";
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
@@ -650,7 +651,7 @@ export const tools: Record<string, ToolDefinition> = {
 		description: "List pipeline runs (newest first). Optionally filter by package and/or status; cap limit at 200.",
 		inputSchema: z.object({
 			package_id: z.string().optional().describe("Filter runs to a specific package"),
-			status: z.enum(["queued", "deploying", "baking", "awaiting_approval", "rolling_back", "completed", "rolled_back", "failed", "cancelled"]).optional().describe("Filter by run status"),
+			status: z.enum(RUN_STATUSES).optional().describe("Filter by run status"),
 			limit: z.number().int().positive().max(200).optional().describe("Max rows to return (default 50, cap 200)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.list(input)),
