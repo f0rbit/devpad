@@ -231,15 +231,27 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 		}
 	});
 
-	test("missing template → Fail with not-found message", async () => {
+	test("missing template → Pass (fail-open) with no_template_configured reason", async () => {
 		await seed_deploy_event(db);
 
 		const evaluator = new AnalysisGateEvaluator({ db, pulse, pulse_summary });
 		const result = await evaluator.evaluate(make_ctx());
 
 		expect(result.ok).toBe(true);
-		if (result.ok && result.value.verdict === "Fail") {
-			expect(result.value.reason).toContain("not found");
+		if (result.ok) {
+			expect(result.value.verdict).toBe("Pass");
+			expect(result.value.reason).toBe("no_template_configured");
+		}
+		// Should emit a single gate_analysis_no_template event and not call pulse summary
+		expect(pulse_summary.calls).toHaveLength(0);
+		expect(pulse.emitted).toHaveLength(1);
+		const event = pulse.emitted[0]!;
+		expect(event.event).toBe("gate_analysis_no_template");
+		if (event.event === "gate_analysis_no_template") {
+			expect(event.template_id).toBe(TEMPLATE_ID);
+			expect(event.reason).toBe("no_template_auto_pass");
+			expect(event.stage).toBe(TO_STAGE);
+			expect(event.run_id).toBe(RUN_ID);
 		}
 	});
 

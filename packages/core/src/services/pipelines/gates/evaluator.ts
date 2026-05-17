@@ -37,6 +37,13 @@ export type PulseEvent =
 			template: { template_id: string };
 			verdict: "Pass" | "Fail" | "Pending";
 			reason?: string;
+	  }
+	| {
+			event: "gate_analysis_no_template";
+			run_id: string;
+			stage: string;
+			template_id: string;
+			reason: "no_template_auto_pass";
 	  };
 
 export type Decision = "approved" | "denied";

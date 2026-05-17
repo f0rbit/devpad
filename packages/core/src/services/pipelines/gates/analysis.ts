@@ -20,11 +20,11 @@ type AnalysisRunCoordinates = {
 	deploy_completed_at_ms: number;
 };
 
-const read_analysis_template = async (db: Database, template_id: string): Promise<Result<AnalysisTemplate, GateError>> => {
+const read_analysis_template = async (db: Database, template_id: string): Promise<Result<AnalysisTemplate | null, GateError>> => {
 	try {
 		const rows = await db.select().from(pipeline_analysis_template).where(eq(pipeline_analysis_template.id, template_id));
 		const row = rows[0];
-		if (!row) return err({ kind: "store_error", operation: "read_analysis_template", message: `template ${template_id} not found` });
+		if (!row) return ok(null);
 		const threshold_dsl = typeof row.threshold_dsl === "string" ? row.threshold_dsl : JSON.stringify(row.threshold_dsl);
 		return ok({
 			template_id: row.id,
@@ -129,6 +129,21 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 				reason: error_reason,
 			});
 			return ok({ verdict: "Fail" as const, reason: error_reason });
+		}
+		// Fail-OPEN when the referenced analysis template doesn't exist.
+		// Rationale: the scaffolder defaults to template_id="default" but corpus
+		// has no implicit-template resolution. Blocking every gradual rollout
+		// because of an unconfigured gate is worse than waving it through. To
+		// opt into fail-closed behaviour, point at a real template.
+		if (template_result.value === null) {
+			await this.pulse.emit({
+				event: "gate_analysis_no_template",
+				run_id: ctx.run_id,
+				stage: ctx.to_stage,
+				template_id: ctx.gate.template.template_id,
+				reason: "no_template_auto_pass",
+			});
+			return ok({ verdict: "Pass" as const, reason: "no_template_configured" });
 		}
 		const template = template_result.value;
 
