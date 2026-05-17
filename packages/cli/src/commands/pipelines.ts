@@ -11,7 +11,6 @@ import path from "node:path";
 import { type ApiClient, ApiClient as ApiClientCtor } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
-import ora from "ora";
 import { selectCorpusBackend, type CorpusBackendMode } from "../corpus-backend.ts";
 import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend.ts";
 import {
@@ -24,34 +23,15 @@ import {
 	compute_hash,
 	validate_artifact_paths,
 } from "../pipelines-artifacts-helpers.ts";
+import { fail_with, make_spinner, print_next_steps as print_next_steps_shared } from "../printer.ts";
 import { scaffold_package, type ScaffolderError } from "../scaffolder/index.ts";
 import type { DefaultGateKind, RolloutMode } from "../scaffolder/types.ts";
-
-type Spinner = { start: (text?: string) => Spinner; succeed: (text?: string) => Spinner; fail: (text?: string) => Spinner; stop: () => Spinner };
-
-const make_spinner = (text: string): Spinner => {
-	if (process.stdout.isTTY) return ora(text) as unknown as Spinner;
-	const noop: Spinner = {
-		start: () => noop,
-		succeed: () => noop,
-		fail: () => noop,
-		stop: () => noop,
-	};
-	return noop;
-};
 
 const ROLLOUT_MODES = ["gradual", "atomic"] as const;
 const GATE_KINDS = ["manual", "auto", "analysis"] as const;
 
 const is_rollout_mode = (s: string): s is RolloutMode => (ROLLOUT_MODES as readonly string[]).includes(s);
 const is_gate_kind = (s: string): s is DefaultGateKind => (GATE_KINDS as readonly string[]).includes(s);
-
-const fail_with = (spinner: Spinner, message: string): never => {
-	spinner.fail(message);
-	// Always log to stderr — in non-TTY/CI the spinner is silent
-	console.error(`error: ${message}`);
-	process.exit(1);
-};
 
 const format_scaffolder_error = (e: ScaffolderError): string => {
 	if (e.code === "render_failed") return `${e.message}\n  variable: ${e.cause.var}\n  near: ${e.cause.template_snippet}`;
@@ -61,16 +41,16 @@ const format_scaffolder_error = (e: ScaffolderError): string => {
 
 const print_next_steps = (target_dir: string, package_name: string, rollout: RolloutMode): void => {
 	const rel = path.relative(process.cwd(), target_dir) || ".";
-	console.log("");
-	console.log(chalk.green(`✓ Scaffolded ${package_name} at ${target_dir}`));
-	console.log("");
-	console.log(chalk.bold("Next steps:"));
-	console.log(`  ${chalk.dim("$")} cd ${rel}`);
-	console.log(`  ${chalk.dim("$")} bun dev                            ${chalk.dim("# local wrangler dev")}`);
-	console.log(`  ${chalk.dim("$")} devpad pipelines runs start        ${chalk.dim(`# trigger a ${rollout} pipeline run`)}`);
-	console.log(`  ${chalk.dim("$")} devpad pipelines approve <run-id> <stage>`);
-	console.log("");
-	console.log(chalk.bold('Read AGENTS.md for hard rules — esp. "don\'t deploy manually".'));
+	print_next_steps_shared(
+		`✓ Scaffolded ${package_name} at ${target_dir}`,
+		[
+			{ command: `cd ${rel}` },
+			{ command: "bun dev                           ", comment: "local wrangler dev" },
+			{ command: "devpad pipelines runs start       ", comment: `trigger a ${rollout} pipeline run` },
+			{ command: "devpad pipelines approve <run-id> <stage>" },
+		],
+		'Read AGENTS.md for hard rules — esp. "don\'t deploy manually".',
+	);
 };
 
 export const action_init = async (name: string, options: { rollout: string; defaultGate: string; dir?: string; skipInstall?: boolean; skipGit?: boolean }): Promise<void> => {
