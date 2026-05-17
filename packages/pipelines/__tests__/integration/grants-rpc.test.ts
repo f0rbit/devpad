@@ -38,7 +38,7 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 	test("returns granted=true when an approved grant matches package/stage/scope", async () => {
 		await seed_grant(db, { package_id, stage_name: "staging", scope: "anthropic:messages" });
 
-		const result = await service.check({ package: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await service.check({ package_id: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
@@ -47,7 +47,7 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 	});
 
 	test("returns granted=false with reason when no matching grant exists", async () => {
-		const result = await service.check({ package: package_id, environment: "production", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await service.check({ package_id: package_id, environment: "production", version_set_id: "vs_v1" }, "anthropic:messages");
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
@@ -59,7 +59,7 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 	test("returns granted=false when a grant exists but is unapproved (granted_at null)", async () => {
 		await seed_grant(db, { package_id, stage_name: "staging", scope: "anthropic:messages", granted_at: null });
 
-		const result = await service.check({ package: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await service.check({ package_id: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
@@ -69,7 +69,7 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 	test("returns granted=false when grant is for a different stage", async () => {
 		await seed_grant(db, { package_id, stage_name: "staging", scope: "anthropic:messages" });
 
-		const result = await service.check({ package: package_id, environment: "production", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await service.check({ package_id: package_id, environment: "production", version_set_id: "vs_v1" }, "anthropic:messages");
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
@@ -79,43 +79,43 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 	test("respects wildcard grants on the trailing scope segment", async () => {
 		await seed_grant(db, { package_id, stage_name: "staging", scope: "github:read:my-org/*" });
 
-		const result = await service.check({ package: package_id, environment: "staging", version_set_id: "vs_v1" }, "github:read:my-org/repo-x");
+		const result = await service.check({ package_id: package_id, environment: "staging", version_set_id: "vs_v1" }, "github:read:my-org/repo-x");
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.value.granted).toBe(true);
 	});
 
-	test("returns invalid_caller when package missing", async () => {
-		const result = await service.check({ package: "", environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
+	test("returns invalid_caller when package_id missing", async () => {
+		const result = await service.check({ package_id: "", environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.kind).toBe("invalid_caller");
 	});
 
 	test("returns invalid_caller when environment missing", async () => {
-		const result = await service.check({ package: package_id, environment: "", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await service.check({ package_id: package_id, environment: "", version_set_id: "vs_v1" }, "anthropic:messages");
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.kind).toBe("invalid_caller");
 	});
 
 	test("returns invalid_caller when version_set_id missing", async () => {
-		const result = await service.check({ package: package_id, environment: "staging", version_set_id: "" }, "anthropic:messages");
+		const result = await service.check({ package_id: package_id, environment: "staging", version_set_id: "" }, "anthropic:messages");
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.kind).toBe("invalid_caller");
 	});
 
 	test("returns invalid_caller when scope missing", async () => {
-		const result = await service.check({ package: package_id, environment: "staging", version_set_id: "vs_v1" }, "");
+		const result = await service.check({ package_id: package_id, environment: "staging", version_set_id: "vs_v1" }, "");
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.kind).toBe("invalid_caller");
 	});
 
 	test("returns granted=false for unknown package (treated as deny, not error)", async () => {
-		const result = await service.check({ package: "pipeline-package_unknown", environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await service.check({ package_id: "pipeline-package_unknown", environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.value.granted).toBe(false);
@@ -132,7 +132,7 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 		// `create_test_db()` returns a drizzle-wrapped Database — the same
 		// shape `createD1Database(env.DB)` produces inside the Worker.
 		const wrapped = new PipelinesGrantsService(db);
-		const result = await wrapped.check({ package: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
+		const result = await wrapped.check({ package_id: package_id, environment: "staging", version_set_id: "vs_v1" }, "anthropic:messages");
 
 		expect(result.ok).toBe(true);
 		if (!result.ok) {

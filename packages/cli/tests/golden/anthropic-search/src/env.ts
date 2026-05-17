@@ -42,7 +42,7 @@ export type AnthropicMessage = {
 };
 
 export type CallerIdentity = {
-	package: string;
+	package_id: string;
 	environment: string;
 	version_set_id: string;
 };

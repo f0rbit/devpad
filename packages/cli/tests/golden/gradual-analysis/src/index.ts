@@ -37,7 +37,7 @@ import type { CallerIdentity, Env } from "./env.ts";
  * vault-side `grant_denied`, not a runtime crash here.
  */
 export const read_caller_identity = (env: Env): CallerIdentity => ({
-	package: env.CALLER_PACKAGE ?? "unknown",
+	package_id: env.CALLER_PACKAGE ?? "unknown",
 	environment: env.CALLER_ENV ?? "unknown",
 	version_set_id: env.CALLER_VERSION_SET_ID ?? "unknown",
 });
@@ -64,7 +64,10 @@ export const emit_pulse = async (
 			project_id: env.PULSE_PROJECT_ID,
 			events: [{
 				name: "event",
-				package: identity.package,
+				// Pulse's wire-side dimension keeps the legacy `package` name
+				// (matches pulse's events table schema). Vault's identity arg
+				// uses `package_id` — translate here at the wire boundary.
+				package: identity.package_id,
 				environment: identity.environment,
 				version_id: identity.version_set_id,
 				properties: { name: event_name, ...properties },
