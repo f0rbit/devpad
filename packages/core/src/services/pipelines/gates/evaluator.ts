@@ -31,10 +31,12 @@ export type PulseEvent =
 			stage: string;
 	  }
 	| {
-			event: "gate_analysis_stub";
+			event: "gate_analysis_verdict";
 			run_id: string;
 			stage: string;
 			template: { template_id: string };
+			verdict: "Pass" | "Fail" | "Pending";
+			reason?: string;
 	  };
 
 export type Decision = "approved" | "denied";

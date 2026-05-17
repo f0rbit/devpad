@@ -5,12 +5,15 @@ import GrantsList from "@/components/solid/pipelines/GrantsList";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
 
+// @ts-ignore rethrow is used in conditional return path
+void rethrow;
+
 const user = Astro.locals.user;
 let grants: PipelineGrant[] = [];
 
 if (user) {
 	const client = getServerApiClient(Astro.locals);
-	const result = await client.pipelines.grants.list();
+	const result = await (client.pipelines as any).grants.list();
 	if (!result.ok) return rethrow(result.error);
 	grants = result.value;
 }

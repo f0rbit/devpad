@@ -34,7 +34,7 @@ export default function GrantsList(props: GrantsListProps) {
 		setLoading(grant.id);
 		setError(null);
 		const client = getBrowserClient();
-		const result = await client.pipelines.grants.approve(grant.id, props.user_id);
+		const result = await (client.pipelines as any).grants.approve(grant.id, props.user_id);
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to approve grant");
 		} else {
@@ -47,7 +47,7 @@ export default function GrantsList(props: GrantsListProps) {
 		setLoading(grant.id);
 		setError(null);
 		const client = getBrowserClient();
-		const result = await client.pipelines.grants.deny(grant.id, props.user_id);
+		const result = await (client.pipelines as any).grants.deny(grant.id, props.user_id);
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to deny grant");
 		} else {
@@ -125,11 +125,11 @@ export default function GrantsList(props: GrantsListProps) {
 
 													<Show when={is_pending(grant)}>
 														<div style={{ display: "flex", gap: "0.5rem" }}>
-															<Button size="xs" variant="primary" disabled={loading() === grant.id} onClick={() => handleApprove(grant)}>
+															<Button size="sm" variant="primary" disabled={loading() === grant.id} onClick={() => handleApprove(grant)}>
 																<Check size={14} />
 																Approve
 															</Button>
-															<Button size="xs" variant="secondary" disabled={loading() === grant.id} onClick={() => handleDeny(grant)}>
+															<Button size="sm" variant="secondary" disabled={loading() === grant.id} onClick={() => handleDeny(grant)}>
 																<X size={14} />
 																Deny
 															</Button>

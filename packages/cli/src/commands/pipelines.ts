@@ -1,9 +1,9 @@
 /**
  * @module @devpad/cli/commands/pipelines
  *
- * `devpad pipelines …` subcommand group: `init`, `run`, `approve`,
- * `cancel`, `rollback`. `init` shells out to the scaffolder; the others
- * wrap `client.pipelines.*` so we never re-implement HTTP plumbing.
+ * `devpad pipelines …` subcommand group: `init`, `runs start`, `approve`,
+ * `cancel`, `rollback`, `artifacts upload`. `init` shells out to the scaffolder;
+ * the others wrap `client.pipelines.*` so we never re-implement HTTP plumbing.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -61,7 +61,7 @@ const print_next_steps = (target_dir: string, package_name: string, rollout: Rol
 	console.log(chalk.bold("Next steps:"));
 	console.log(`  ${chalk.dim("$")} cd ${rel}`);
 	console.log(`  ${chalk.dim("$")} bun dev                            ${chalk.dim("# local wrangler dev")}`);
-	console.log(`  ${chalk.dim("$")} devpad pipelines run ${package_name}    ${chalk.dim(`# trigger a ${rollout} pipeline run`)}`);
+	console.log(`  ${chalk.dim("$")} devpad pipelines runs start        ${chalk.dim(`# trigger a ${rollout} pipeline run`)}`);
 	console.log(`  ${chalk.dim("$")} devpad pipelines approve <run-id> <stage>`);
 	console.log("");
 	console.log(chalk.bold('Read AGENTS.md for hard rules — esp. "don\'t deploy manually".'));
@@ -107,15 +107,6 @@ const print_json = (data: unknown): void => {
 
 type ClientFactory = () => ApiClient;
 
-const action_run = (client_factory: ClientFactory) => async (package_id?: string): Promise<void> => {
-	const spinner = make_spinner("Starting pipeline run...").start();
-	if (package_id === undefined) return fail_with(spinner, "package required: `devpad pipelines run <package-id>`");
-	const client = client_factory();
-	const result = await client.pipelines.create({ package_id, version_set_id: "latest" });
-	if (!result.ok) return fail_with(spinner, result.error.message);
-	spinner.succeed(`run ${result.value.run_id} (${result.value.status})`);
-	print_json(result.value);
-};
 
 const action_approve = (client_factory: ClientFactory) => async (run_id: string, stage: string, options: { user?: string; reason?: string }): Promise<void> => {
 	const spinner = make_spinner(`Approving ${run_id} @ ${stage}...`).start();
@@ -260,11 +251,6 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--skip-install", "Skip `bun install` after scaffolding", false)
 		.option("--skip-git", "Skip `git init` after scaffolding", false)
 		.action(action_init);
-
-	pipelines
-		.command("run [package]")
-		.description("Trigger a pipeline run for a package")
-		.action(action_run(client_factory));
 
 	pipelines
 		.command("approve <run-id> <stage>")

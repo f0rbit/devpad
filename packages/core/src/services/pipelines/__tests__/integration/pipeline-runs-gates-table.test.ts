@@ -2,8 +2,8 @@
  * Cartesian gate × rollout matrix.
  *
  * For each combination of {rollout: gradual, atomic} × {gate: manual,
- * auto, analysis-stub}, the run must complete with the right sequence
- * of `gate_verdict` events and `gate_pending_manual` / `gate_analysis_stub`
+ * auto, analysis}, the run must complete with the right sequence
+ * of `gate_verdict` events and `gate_pending_manual` / `gate_analysis_verdict`
  * pulse events. Manual gates are scripted with a synchronous approve.
  */
 
@@ -158,8 +158,8 @@ describe("cartesian gate × rollout matrix", () => {
 					expect(pending.length).toBe(transitions.length);
 				}
 				if (gate_kind === "analysis") {
-					const stub = deps.pulse.emitted.filter(e => e.event === "gate_analysis_stub");
-					expect(stub.length).toBe(transitions.length);
+					const verdicts = deps.pulse.emitted.filter(e => e.event === "gate_analysis_verdict");
+					expect(verdicts.length).toBe(transitions.length);
 				}
 			});
 		}

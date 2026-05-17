@@ -47,7 +47,7 @@ export default function RollbackButton(props: RollbackButtonProps) {
 						</p>
 						<div class="row" style={{ gap: "var(--space-sm)" }}>
 							<Button
-								variant="destructive"
+								variant="danger"
 								onClick={handle_rollback}
 								disabled={loading()}
 								style={{ "font-size": "0.9rem" }}

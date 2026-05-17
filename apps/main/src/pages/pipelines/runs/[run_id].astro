@@ -7,6 +7,9 @@ import RollbackButton from "@/components/solid/pipelines/RollbackButton";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
 
+// @ts-ignore rethrow is used in conditional return path
+void rethrow;
+
 const { run_id } = Astro.params;
 const user = Astro.locals.user;
 let run: PipelineRun | null = null;
@@ -60,7 +63,7 @@ const keywords = ["pipeline", "run", "deployment", "stage", "approval"];
 							<h2 style="margin: 0;">actions</h2>
 						</div>
 						<div class="row" style="gap: var(--space-sm); flex-wrap: wrap;">
-							{(run.status === "in-progress" || run.status === "pending") && (
+							{(run.status === "deploying" || run.status === "baking" || run.status === "awaiting_approval") && (
 								<RollbackButton client:load run_id={run.id} />
 							)}
 						</div>

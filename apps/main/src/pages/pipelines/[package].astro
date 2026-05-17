@@ -4,6 +4,9 @@ import type { PipelineRun } from "@devpad/schema";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
 
+// @ts-ignore rethrow is used in conditional return path
+void rethrow;
+
 const { package: package_id } = Astro.params;
 const user = Astro.locals.user;
 let runs: PipelineRun[] = [];
@@ -63,20 +66,24 @@ const keywords = ["pipelines", "package", "releases", "version-set"];
 														background: ${
 															run.status === "completed"
 																? "var(--success-bg)"
-																: run.status === "failed"
-																	? "var(--error-bg)"
-																	: run.status === "in-progress"
-																		? "var(--info-bg)"
-																		: "var(--bg-alt)"
+																: run.status === "rolled_back"
+																	? "var(--success-bg)"
+																	: run.status === "failed" || run.status === "cancelled"
+																		? "var(--error-bg)"
+																		: (run.status === "deploying" || run.status === "baking" || run.status === "rolling_back")
+																			? "var(--info-bg)"
+																			: "var(--bg-alt)"
 														};
 														color: ${
 															run.status === "completed"
 																? "var(--success)"
-																: run.status === "failed"
-																	? "var(--error)"
-																	: run.status === "in-progress"
-																		? "var(--info)"
-																		: "var(--fg-muted)"
+																: run.status === "rolled_back"
+																	? "var(--success)"
+																	: run.status === "failed" || run.status === "cancelled"
+																		? "var(--error)"
+																		: (run.status === "deploying" || run.status === "baking" || run.status === "rolling_back")
+																			? "var(--info)"
+																			: "var(--fg-muted)"
 														};
 													`}
 												>

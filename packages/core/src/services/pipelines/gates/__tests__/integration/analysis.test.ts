@@ -153,7 +153,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 		}
 		expect(pulse_summary.calls).toHaveLength(0);
 		expect(pulse.emitted).toHaveLength(1);
-		expect(pulse.emitted[0]?.event).toBe("gate_analysis_stub");
+		expect(pulse.emitted[0]?.event).toBe("gate_analysis_verdict");
+		if (pulse.emitted[0]?.event === "gate_analysis_verdict") {
+			expect(pulse.emitted[0].verdict).toBe("Pending");
+		}
 	});
 
 	test("window_passed_threshold_met: returns Pass and queries pulse with right dimensions", async () => {
@@ -276,7 +279,7 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 		expect(r2.ok && r2.value.verdict).toBe("Pass");
 	});
 
-	test("emits gate_analysis_stub pulse event for backward compat", async () => {
+	test("emits gate_analysis_verdict pulse event with verdict and reason", async () => {
 		await seed_template(db, owner_id, "error_rate > 0.01", 0);
 		await seed_deploy_event(db);
 		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ error_rate: 0 }));
@@ -286,10 +289,12 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 
 		expect(pulse.emitted).toHaveLength(1);
 		const event = pulse.emitted[0]!;
-		expect(event.event).toBe("gate_analysis_stub");
-		if (event.event === "gate_analysis_stub") {
+		expect(event.event).toBe("gate_analysis_verdict");
+		if (event.event === "gate_analysis_verdict") {
 			expect(event.template.template_id).toBe(TEMPLATE_ID);
 			expect(event.stage).toBe(TO_STAGE);
+			expect(event.verdict).toBe("Pass");
+			expect(event.reason).toBeUndefined();
 		}
 	});
 });

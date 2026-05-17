@@ -4,9 +4,8 @@ interface VersionSetDiffProps {
 }
 
 export default function VersionSetDiff(props: VersionSetDiffProps) {
-	const format_json = (obj: Record<string, any>, indent = 0): string => {
-		const str = JSON.stringify(obj, null, 2);
-		return str;
+	const format_json = (obj: Record<string, any>): string => {
+		return JSON.stringify(obj, null, 2);
 	};
 
 	const current_json = format_json(props.current);

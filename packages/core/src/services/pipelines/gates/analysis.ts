@@ -117,36 +117,75 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 			return ok({ verdict: "Pass" as const, reason: "invalid gate type" });
 		}
 
-		// Always emit the stub pulse event for backward compatibility with the
-		// Phase 1 cartesian gate matrix test. Phase 3 will rename + extend the
-		// payload to carry the verdict + metrics inline.
-		await this.pulse.emit({ event: "gate_analysis_stub", run_id: ctx.run_id, stage: ctx.to_stage, template: ctx.gate.template });
-
 		const template_result = await read_analysis_template(this.db, ctx.gate.template.template_id);
 		if (!template_result.ok) {
-			return ok({ verdict: "Fail" as const, reason: template_result.error.message ?? "analysis template unavailable" });
+			const error_reason = template_result.error.message ?? "analysis template unavailable";
+			await this.pulse.emit({
+				event: "gate_analysis_verdict",
+				run_id: ctx.run_id,
+				stage: ctx.to_stage,
+				template: ctx.gate.template,
+				verdict: "Fail",
+				reason: error_reason,
+			});
+			return ok({ verdict: "Fail" as const, reason: error_reason });
 		}
 		const template = template_result.value;
 
 		const thresholds_result = parse_thresholds_or_fail(template.threshold_dsl);
 		if (!thresholds_result.ok) {
-			return ok({ verdict: "Fail" as const, reason: thresholds_result.error.message ?? "threshold_dsl parse error" });
+			const error_reason = thresholds_result.error.message ?? "threshold_dsl parse error";
+			await this.pulse.emit({
+				event: "gate_analysis_verdict",
+				run_id: ctx.run_id,
+				stage: ctx.to_stage,
+				template: ctx.gate.template,
+				verdict: "Fail",
+				reason: error_reason,
+			});
+			return ok({ verdict: "Fail" as const, reason: error_reason });
 		}
 
 		const coords_result = await read_run_coordinates(this.db, ctx.run_id, ctx.from_stage);
 		if (!coords_result.ok) {
-			return ok({ verdict: "Pending" as const, reason: coords_result.error.message ?? "deploy not yet observable" });
+			const error_reason = coords_result.error.message ?? "deploy not yet observable";
+			await this.pulse.emit({
+				event: "gate_analysis_verdict",
+				run_id: ctx.run_id,
+				stage: ctx.to_stage,
+				template: ctx.gate.template,
+				verdict: "Pending",
+				reason: error_reason,
+			});
+			return ok({ verdict: "Pending" as const, reason: error_reason });
 		}
 		const coords = coords_result.value;
 
 		if (is_window_open(this.now(), coords.deploy_completed_at_ms, template.window_ms)) {
-			return ok({ verdict: "Pending" as const, reason: `analysis window still open (window_ms=${template.window_ms})` });
+			const reason = `analysis window still open (window_ms=${template.window_ms})`;
+			await this.pulse.emit({
+				event: "gate_analysis_verdict",
+				run_id: ctx.run_id,
+				stage: ctx.to_stage,
+				template: ctx.gate.template,
+				verdict: "Pending",
+				reason,
+			});
+			return ok({ verdict: "Pending" as const, reason });
 		}
 
 		const snapshot_result = await fetch_snapshot(this.pulse_summary, coords, template, ctx.to_stage);
 		if (!snapshot_result.ok) return snapshot_result;
 
 		const verdict = evaluate_metrics_against_thresholds(snapshot_result.value, thresholds_result.value);
+		await this.pulse.emit({
+			event: "gate_analysis_verdict",
+			run_id: ctx.run_id,
+			stage: ctx.to_stage,
+			template: ctx.gate.template,
+			verdict: verdict.verdict,
+			reason: verdict.reason,
+		});
 		return ok(verdict);
 	}
 }

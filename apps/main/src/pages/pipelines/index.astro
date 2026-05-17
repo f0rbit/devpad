@@ -4,6 +4,9 @@ import type { PipelinePackage } from "@devpad/schema";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
 
+// @ts-ignore rethrow is used in conditional return path
+void rethrow;
+
 const user = Astro.locals.user;
 let packages: PipelinePackage[] = [];
 
