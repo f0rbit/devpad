@@ -127,7 +127,11 @@ describe("github-actions-template", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		expect(template).toContain("bunx @devpad/pipelines-cli artifacts upload");
+		// The published @devpad/cli does not yet ship pipelines support, so
+		// the workflow runs the CLI from a cloned source tree. Anchor on the
+		// `pipelines artifacts upload` invocation rather than the runner.
+		expect(template).toContain("pipelines artifacts upload");
+		expect(template).toContain("packages/cli/src/index.ts");
 		expect(template).toContain("--package");
 		expect(template).toContain("--bundle");
 		expect(template).toContain("--manifest");
@@ -137,20 +141,25 @@ describe("github-actions-template", () => {
 		expect(template).toContain("--output");
 	});
 
-	test("runs-start uses correct CLI syntax", () => {
+	test("runs-start uses correct invocation", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		expect(template).toContain("bunx @devpad/pipelines-cli runs start");
-		expect(template).toContain("--package");
-		expect(template).toContain("--version-set-id");
+		// The "start a run" step POSTs to the orchestrator directly so it
+		// works without an authenticated devpad API key in CI.
+		expect(template).toContain("DEVPAD_PIPELINES_URL");
+		expect(template).toContain("/runs");
+		expect(template).toContain("package_id");
+		expect(template).toContain("version_set_id");
 	});
 
 	test("handles environment variable defaults", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		// DEVPAD_BASE_URL should have a default
+		// DEVPAD_BASE_URL should have a default (artifacts upload still uses it)
 		expect(template).toContain("DEVPAD_BASE_URL || 'https://devpad.tools/api/v1'");
+		// DEVPAD_PIPELINES_URL should fall back to the production orchestrator URL
+		expect(template).toContain("DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev'");
 	});
 });

@@ -155,6 +155,7 @@ describe("scaffold_package — typecheck", () => {
 				paths: {
 					"cloudflare:workers": ["./types-stub.d.ts"],
 					"@devpad/pipeline-templates": ["./types-stub.d.ts"],
+					"@f0rbit/corpus": ["./types-stub.d.ts"],
 					"@playwright/test": ["./types-stub.d.ts"],
 					alchemy: ["./types-stub.d.ts"],
 					"alchemy/cloudflare": ["./types-stub.d.ts"],
@@ -170,8 +171,9 @@ describe("scaffold_package — typecheck", () => {
 			"declare global { type Service<_T = unknown> = { fetch: typeof fetch }; type Fetcher = { fetch: typeof fetch }; const process: { env: Record<string, string | undefined>; }; }",
 			"declare module '@devpad/pipeline-templates' { export const manual: () => unknown; export const auto: (opts?: { afterBake?: boolean }) => unknown; export const analysis: (ref: { template_id: string }) => unknown; export const extendTemplate: (overrides: any) => { ok: boolean }; }",
 			"declare module '@playwright/test' { type Req = { get(url: string): Promise<{ status(): number; json(): Promise<any> }> }; type Ctx = { request: Req }; export const test: (name: string, fn: (ctx: Ctx) => Promise<void>) => void; export const expect: (v: any) => { toBe: (v: any) => void; }; export const defineConfig: <T>(config: T) => T; }",
-			"declare module 'alchemy' { const fn: (name: string) => Promise<{ finalize(): Promise<void> }>; export default fn; }",
-			"declare module 'alchemy/cloudflare' { export const Worker: (name: string, opts: any) => Promise<any>; }",
+			"declare module 'alchemy' { const fn: (name: string) => Promise<{ stage: string; finalize(): Promise<void> }>; export default fn; }",
+			"declare module 'alchemy/cloudflare' { export const Worker: (name: string, opts: any) => Promise<any>; export const WorkerRef: (opts: { service: string }) => any; }",
+			"declare module '@f0rbit/corpus' { export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }; }",
 			"export {};",
 		].join("\n");
 		await writeFile(path.join(target, "types-stub.d.ts"), stub);

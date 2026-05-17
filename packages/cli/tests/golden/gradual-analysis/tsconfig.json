@@ -17,6 +17,6 @@
 		"noEmit": true,
 		"types": ["@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*", "infra.ts", "pipeline.ts", "grants.ts", "e2e/**/*"],
+	"include": ["src/**/*", "infra.ts", "pipeline.ts", "grants.ts", "e2e/**/*", "types/**/*"],
 	"exclude": ["node_modules", "dist", ".alchemy"]
 }

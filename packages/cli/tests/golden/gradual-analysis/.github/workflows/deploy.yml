@@ -1,9 +1,17 @@
 name: deploy
 
+# The published `@devpad/cli` (npm) does not yet include the pipelines
+# subcommands. Until that lands, this workflow clones the devpad repo at
+# `DEVPAD_REF` (default `main`) and invokes the CLI from source. Pin to a
+# tagged release once `@devpad/cli` ships pipelines support.
+
 on:
   push:
     branches: [main]
   pull_request:
+
+env:
+  DEVPAD_REF: ${{ vars.DEVPAD_REF || 'main' }}
 
 jobs:
   build:
@@ -22,13 +30,19 @@ jobs:
       - name: Build worker bundle
         run: bun run build
 
+      - name: Clone devpad CLI source
+        run: |
+          git clone --depth=1 --branch "$DEVPAD_REF" https://github.com/f0rbit/devpad.git "$RUNNER_TEMP/devpad"
+          cd "$RUNNER_TEMP/devpad"
+          bun install --frozen-lockfile
+
       - id: upload
         name: Upload artifacts to corpus
         env:
           DEVPAD_API_KEY: ${{ secrets.DEVPAD_API_KEY }}
           DEVPAD_BASE_URL: ${{ secrets.DEVPAD_BASE_URL || 'https://devpad.tools/api/v1' }}
         run: |
-          bunx @devpad/pipelines-cli artifacts upload \
+          bun "$RUNNER_TEMP/devpad/packages/cli/src/index.ts" pipelines artifacts upload \
             --package gradual-analysis \
             --bundle dist/_worker.js \
             --manifest dist/manifest.json \
@@ -48,9 +62,11 @@ jobs:
       - if: github.ref == 'refs/heads/main'
         name: Start pipeline run
         env:
-          DEVPAD_API_KEY: ${{ secrets.DEVPAD_API_KEY }}
-          DEVPAD_BASE_URL: ${{ secrets.DEVPAD_BASE_URL || 'https://devpad.tools/api/v1' }}
+          DEVPAD_PIPELINES_URL: ${{ secrets.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
+          DEVPAD_PIPELINES_TOKEN: ${{ secrets.DEVPAD_PIPELINES_TOKEN }}
         run: |
-          bunx @devpad/pipelines-cli runs start \
-            --package gradual-analysis \
-            --version-set-id ${{ steps.upload.outputs.version_set_id }}
+          curl -sS -X POST \
+            -H "Content-Type: application/json" \
+            ${DEVPAD_PIPELINES_TOKEN:+-H "Authorization: Bearer $DEVPAD_PIPELINES_TOKEN"} \
+            -d "{\"package_id\":\"gradual-analysis\",\"version_set_id\":\"${{ steps.upload.outputs.version_set_id }}\"}" \
+            "$DEVPAD_PIPELINES_URL/runs"

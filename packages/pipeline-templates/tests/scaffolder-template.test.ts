@@ -45,14 +45,17 @@ describe("scaffolder wrangler.jsonc template", () => {
 		);
 		expect(anthropic_binding).toBeDefined();
 		expect(anthropic_binding?.entrypoint).toBe("AnthropicVault");
-		expect(anthropic_binding?.service).toBe("vault");
+		// wrangler.jsonc binds the staging vault by default so `wrangler
+		// dev` lights up against a real upstream; production wiring lives
+		// in infra.ts where it is stage-resolved.
+		expect(anthropic_binding?.service).toBe("vault-staging");
 
-		// Verify PULSE binding exists
+		// Verify PULSE binding exists (also staging-targeted by default)
 		const pulse_binding = config.services.find(
 			(s: { binding: string }) => s.binding === "PULSE",
 		);
 		expect(pulse_binding).toBeDefined();
-		expect(pulse_binding?.service).toBe("pulse");
+		expect(pulse_binding?.service).toBe("pulse-api-staging");
 	});
 
 	test("rendered template has staging/production env blocks", () => {

@@ -19,12 +19,12 @@
 	"services": [
 		{
 			"binding": "ANTHROPIC",
-			"service": "vault",
+			"service": "vault-staging",
 			"entrypoint": "AnthropicVault"
 		},
 		{
 			"binding": "PULSE",
-			"service": "pulse"
+			"service": "pulse-api-staging"
 		}
 	]
 }

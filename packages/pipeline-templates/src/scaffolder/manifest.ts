@@ -31,5 +31,6 @@ export const SCAFFOLDER_TEMPLATES: TemplateEntry[] = [
 	{ template_path: "src/env.ts.hbs", relative_path: "src/env.ts" },
 	{ template_path: "src/index.ts.hbs", relative_path: "src/index.ts" },
 	{ template_path: "tsconfig.json.hbs", relative_path: "tsconfig.json" },
+	{ template_path: "types/pipeline-templates.d.ts.hbs", relative_path: "types/pipeline-templates.d.ts" },
 	{ template_path: "wrangler.jsonc.hbs", relative_path: "wrangler.jsonc" },
 ];
