@@ -108,6 +108,66 @@ describe("Pipelines API Client", () => {
 		const result = client.pipelines.rollback("run_123");
 		expect(result).toBeInstanceOf(Promise);
 	});
+
+	it("exposes pipelines.packages.* methods", () => {
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+		});
+
+		expect(typeof client.pipelines.packages).toBe("object");
+		expect(typeof client.pipelines.packages.list).toBe("function");
+		expect(typeof client.pipelines.packages.get).toBe("function");
+	});
+
+	it("pipelines.packages.list accepts no filter and returns a promise", () => {
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+		});
+
+		const result = client.pipelines.packages.list();
+		expect(result).toBeInstanceOf(Promise);
+	});
+
+	it("pipelines.packages.list issues GET /packages with project_id query when set", async () => {
+		const recorded: Array<{ url: string; method: string }> = [];
+		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
+			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
+			recorded.push({ url, method: init?.method ?? "GET" });
+			return new Response(JSON.stringify([]), { status: 200, headers: { "content-type": "application/json" } });
+		};
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+			custom_fetch: fake_fetch as unknown as typeof fetch,
+		});
+
+		await client.pipelines.packages.list({ project_id: "project_alpha" });
+		expect(recorded.length).toBe(1);
+		expect(recorded[0].method).toBe("GET");
+		expect(recorded[0].url).toContain("/packages");
+		expect(recorded[0].url).toContain("project_id=project_alpha");
+	});
+
+	it("pipelines.packages.get issues GET /packages/:id", async () => {
+		const recorded: Array<{ url: string; method: string }> = [];
+		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
+			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
+			recorded.push({ url, method: init?.method ?? "GET" });
+			return new Response(JSON.stringify({ id: "pipeline-package_x" }), { status: 200, headers: { "content-type": "application/json" } });
+		};
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+			custom_fetch: fake_fetch as unknown as typeof fetch,
+		});
+
+		await client.pipelines.packages.get("pipeline-package_x");
+		expect(recorded.length).toBe(1);
+		expect(recorded[0].method).toBe("GET");
+		expect(recorded[0].url).toContain("/packages/pipeline-package_x");
+	});
 });
 
 describe("Pipelines MCP tool schemas", () => {
@@ -175,6 +235,30 @@ describe("Pipelines MCP tool schemas", () => {
 	it("devpad_pipelines_rollback requires run_id", () => {
 		const tool = tools.devpad_pipelines_rollback!;
 		expect(tool.inputSchema.safeParse({ run_id: "run_123" }).success).toBe(true);
+		expect(tool.inputSchema.safeParse({}).success).toBe(false);
+	});
+
+	it("registers devpad_pipelines_packages_{list,get} tools", () => {
+		const tool_list = tools.devpad_pipelines_packages_list;
+		const tool_get = tools.devpad_pipelines_packages_get;
+		expect(tool_list).toBeDefined();
+		expect(tool_get).toBeDefined();
+		expect(tool_list?.name).toBe("devpad_pipelines_packages_list");
+		expect(tool_get?.name).toBe("devpad_pipelines_packages_get");
+		expect(typeof tool_list?.execute).toBe("function");
+		expect(typeof tool_get?.execute).toBe("function");
+	});
+
+	it("devpad_pipelines_packages_list accepts empty input and optional project_id", () => {
+		const tool = tools.devpad_pipelines_packages_list!;
+		expect(tool.inputSchema.safeParse({}).success).toBe(true);
+		expect(tool.inputSchema.safeParse({ project_id: "project_alpha" }).success).toBe(true);
+		expect(tool.inputSchema.safeParse({ project_id: 123 }).success).toBe(false);
+	});
+
+	it("devpad_pipelines_packages_get requires package_id", () => {
+		const tool = tools.devpad_pipelines_packages_get!;
+		expect(tool.inputSchema.safeParse({ package_id: "pipeline-package_x" }).success).toBe(true);
 		expect(tool.inputSchema.safeParse({}).success).toBe(false);
 	});
 });

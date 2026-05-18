@@ -745,6 +745,24 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.grants.deny(input.grant_id, input.user_id, input.reason)),
 	},
+
+	devpad_pipelines_packages_list: {
+		name: "devpad_pipelines_packages_list",
+		description: "List pipeline packages. Optionally filter by linked devpad project_id; unlinked packages have project_id = null.",
+		inputSchema: z.object({
+			project_id: z.string().optional().describe("Filter packages by linked devpad project"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.list(input)),
+	},
+
+	devpad_pipelines_packages_get: {
+		name: "devpad_pipelines_packages_get",
+		description: "Get a pipeline package by ID",
+		inputSchema: z.object({
+			package_id: z.string().describe("Pipeline package ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.get(input.package_id)),
+	},
 };
 
 // Get all tool names

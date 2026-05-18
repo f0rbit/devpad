@@ -3,7 +3,7 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
-import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, PipelineGrant, PipelineRun, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
+import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, PipelineGrant, PipelinePackage, PipelineRun, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -1044,6 +1044,27 @@ export class ApiClient {
 						body: { user_id, reason },
 					})
 				),
+		},
+
+		/**
+		 * Packages namespace — read-only catalog of pipeline packages.
+		 * Writes still flow through the existing upsert routes elsewhere.
+		 */
+		packages: {
+			/**
+			 * List packages, optionally filtered by linked devpad project.
+			 * Packages with `project_id = null` are not yet linked.
+			 */
+			list: (filter?: { project_id?: string }): Promise<ApiResult<PipelinePackage[]>> => {
+				const query: Record<string, string> = {};
+				if (filter?.project_id !== undefined) query.project_id = filter.project_id;
+				return wrap(() => this.clients.pipelines.get<PipelinePackage[]>("/packages", Object.keys(query).length > 0 ? { query } : undefined));
+			},
+
+			/**
+			 * Get a single package by id
+			 */
+			get: (package_id: string): Promise<ApiResult<PipelinePackage>> => wrap(() => this.clients.pipelines.get<PipelinePackage>(`/packages/${package_id}`)),
 		},
 	};
 
