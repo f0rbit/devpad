@@ -24,12 +24,16 @@ app.post("/scan", requireAuth, async c => {
 	const project_id = c.req.query("project_id");
 	if (!project_id) return c.json({ error: "project_id parameter required" }, 400);
 
+	const log = c.get("log");
+	const span = log.span("github_scan");
 	return stream(c, async s => {
 		try {
 			for await (const chunk of scanning.initiateScan(db, project_id, auth_user.id, session.access_token!)) {
 				await s.write(chunk);
 			}
+			span.end({ status: "ok", project_id });
 		} catch {
+			span.end({ status: "error", project_id });
 			await s.write("error: scan failed\n");
 		}
 	});
