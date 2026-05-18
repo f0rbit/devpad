@@ -3,6 +3,7 @@ import type { TaskWithDetails } from "@devpad/schema";
 import Loader from "lucide-solid/icons/loader";
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
+import { track } from "@/lib/pulse";
 
 interface Props {
 	project_id: string;
@@ -41,6 +42,7 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 		setTitle("");
 		setPriority("LOW");
 		onCreated(result.value);
+		track("task_created", { project_id, task_id: (result.value as { id?: string })?.id });
 	};
 
 	const handleKeyDown = (e: KeyboardEvent) => {
