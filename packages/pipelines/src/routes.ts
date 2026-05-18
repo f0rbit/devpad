@@ -137,6 +137,7 @@ const STATUS_BY_CODE: Record<string, number> = {
 	store_error: 500,
 	db_error: 500,
 	network_error: 502,
+	assets_upload_failed: 502,
 	missing_gate: 500,
 };
 
@@ -513,13 +514,17 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	// can stamp it as a parent — needed for `store.lineage` to walk back
 	// through history, which the rollback route relies on.
 	const parent_version = await latest_version_for_package(deps.backend, manifest.package);
-	const put = await store.put(manifest, parent_version === null ? undefined : {
-		parents: [{ store_id: "version-sets", version: parent_version, role: "predecessor" }],
-	});
+	const put = await store.put(
+		manifest,
+		parent_version === null
+			? undefined
+			: {
+					parents: [{ store_id: "version-sets", version: parent_version, role: "predecessor" }],
+				}
+	);
 	if (!put.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put.error) });
 
-	if (deps.pulse !== undefined)
-		await deps.pulse.emit({ event: "artifact_uploaded", store_id: "version-sets", content_hash: put.value.content_hash, kind: "version_set", package: manifest.package }).catch(() => undefined);
+	if (deps.pulse !== undefined) await deps.pulse.emit({ event: "artifact_uploaded", store_id: "version-sets", content_hash: put.value.content_hash, kind: "version_set", package: manifest.package }).catch(() => undefined);
 
 	return json_ok({ version_set_id: put.value.version, content_hash: put.value.content_hash, package: manifest.package });
 };
@@ -545,7 +550,9 @@ const sha256_hex = async (bytes: Uint8Array): Promise<string> => {
  */
 const generate_version = (): string => {
 	const ts = Date.now().toString(36).padStart(9, "0");
-	const rand = Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+	const rand = Math.floor(Math.random() * 0xffffff)
+		.toString(16)
+		.padStart(6, "0");
 	return `v_${ts}_${rand}`;
 };
 
@@ -561,9 +568,16 @@ const normalise_do_response = async (response: Response): Promise<Response> => {
 	if (response.status < 400) {
 		return new Response(text, { status: response.status, headers: { "content-type": "application/json" } });
 	}
-	const parsed = text === "" ? null : (() => {
-		try { return JSON.parse(text); } catch { return null; }
-	})();
+	const parsed =
+		text === ""
+			? null
+			: (() => {
+					try {
+						return JSON.parse(text);
+					} catch {
+						return null;
+					}
+				})();
 	return wire_err(parsed, response.status);
 };
 

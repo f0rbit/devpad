@@ -55,7 +55,7 @@ export class InMemoryBundleProvider implements BundleProvider {
 	calls: Array<{ version_set_id: string; package_name: string; environment: "staging" | "production" }> = [];
 	async get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>> {
 		this.calls.push(input);
-		return ok({ bytes: this.bytes });
+		return ok({ kind: "single_file", bytes: this.bytes });
 	}
 }
 

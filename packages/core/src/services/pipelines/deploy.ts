@@ -15,7 +15,7 @@
  * same `version_set_id` instead of uploading twice.
  */
 
-import type { CloudflareError, CloudflareProvider, CreateDeploymentInput, VersionBinding, WorkerVar, WorkerVersion } from "@devpad/pipeline-fakes";
+import type { AssetConfig, AssetUpload, CloudflareError, CloudflareProvider, CreateDeploymentInput, ModuleUpload, VersionBinding, WorkerVar, WorkerVersion } from "@devpad/pipeline-fakes";
 import type { Stage } from "@devpad/pipeline-templates";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { compute_caller_identity_vars } from "./caller-identity.js";
@@ -27,17 +27,38 @@ export type DeployError = CloudflareError | BundleFetchError | { code: "no_versi
 /**
  * Read-side shape the orchestrator uses to fetch a compiled worker
  * bundle for a given version-set. Production wiring resolves
- * `version_set_id` to the manifest's `builds.worker.artifact_ref` and
+ * `version_set_id` to the manifest's `builds.worker.artifact_ref`
+ * (single-file) or `builds.worker.bundle_manifest_ref` (directory) and
  * pulls the bytes from R2 via the corpus `Backend.data` client. Tests
- * inject a stub that returns a fixed `Uint8Array`.
+ * inject a stub that returns either a single-file `Uint8Array` or a
+ * directory bundle of modules + optional assets.
+ *
+ * The discriminator mirrors {@link import("@devpad/pipeline-fakes").UploadVersionInput}'s
+ * `kind` so the orchestrator can forward straight to
+ * `cf.versions.upload(...)` without re-shaping.
+ *
+ * `bindings` carries the orchestrator's defaults (vault + pulse) so the
+ * provider stays the single source for everything except caller identity
+ * (which `deploy_stage` stamps on each call).
  */
-export type BundlePayload = {
-	bytes: Uint8Array;
-	main_module?: string;
-	compatibility_date?: string;
-	compatibility_flags?: string[];
-	bindings?: VersionBinding[];
-};
+export type BundlePayload =
+	| {
+			kind: "single_file";
+			bytes: Uint8Array;
+			main_module?: string;
+			compatibility_date?: string;
+			compatibility_flags?: string[];
+			bindings?: VersionBinding[];
+	  }
+	| {
+			kind: "directory_bundle";
+			modules: ModuleUpload[];
+			main_module: string;
+			compatibility_date: string;
+			compatibility_flags?: string[];
+			bindings?: VersionBinding[];
+			assets?: { assets: AssetUpload[]; config?: AssetConfig };
+	  };
 
 export interface BundleProvider {
 	get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>>;
@@ -136,17 +157,26 @@ const find_existing_version = async (cf: CloudflareProvider, script_name: string
 	return ok(match ?? null);
 };
 
-const upload_version = async (
-	cf: CloudflareProvider,
-	script_name: string,
-	version_set_id: string,
-	vars: WorkerVar[],
-	bundle: BundlePayload,
-): Promise<Result<WorkerVersion, CloudflareError>> => {
+const upload_version = async (cf: CloudflareProvider, script_name: string, version_set_id: string, vars: WorkerVar[], bundle: BundlePayload): Promise<Result<WorkerVersion, CloudflareError>> => {
+	const annotations = { [VERSION_KEY]: version_set_id };
+	if (bundle.kind === "directory_bundle") {
+		return cf.versions.upload({
+			kind: "directory_bundle",
+			script_name,
+			annotations,
+			vars,
+			modules: bundle.modules,
+			main_module: bundle.main_module,
+			compatibility_date: bundle.compatibility_date,
+			compatibility_flags: bundle.compatibility_flags,
+			bindings: bundle.bindings,
+			assets: bundle.assets,
+		});
+	}
 	return cf.versions.upload({
 		kind: "single_file",
 		script_name,
-		annotations: { [VERSION_KEY]: version_set_id },
+		annotations,
 		vars,
 		bundle: bundle.bytes,
 		main_module: bundle.main_module,
@@ -202,7 +232,7 @@ export const deploy_stage = async (
 		version_set_id: string;
 		package_name: string;
 		environment: "staging" | "production";
-	},
+	}
 ): Promise<Result<DeploymentResult, DeployError>> => {
 	const { script_name, stage, version_set_id, package_name, environment } = input;
 

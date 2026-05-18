@@ -22,11 +22,11 @@
  * providers for live ones; every dep type stays identical.
  */
 
-import { createD1Database } from "@devpad/schema/database/d1";
 import type { BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
+import type { CloudflareProvider, VersionBinding } from "@devpad/pipeline-fakes";
+import { createD1Database } from "@devpad/schema/database/d1";
 import type { Backend } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
-import type { CloudflareProvider, VersionBinding } from "@devpad/pipeline-fakes";
 import { require_bearer_token } from "./auth.ts";
 import type { PipelineEnv } from "./bindings.ts";
 import { make_cf_router } from "./do-router.ts";
@@ -34,7 +34,7 @@ import { make_d1_approval_store } from "./providers/approval-store.ts";
 import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
 import { make_corpus_bundle_provider, make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "./providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
-import type { AuthGate, ManifestProvider, PulseEmitterLite, RoutesDeps } from "./routes.ts";
+import type { AuthGate, PulseEmitterLite, RoutesDeps } from "./routes.ts";
 
 /**
  * Wraps `env.CF_API_TOKEN.get()` so the provider can pull the secret on
@@ -116,8 +116,14 @@ const default_bindings_for = (_input: { package_name: string; environment: "stag
 	];
 };
 
-const make_bundle_provider = (backend: Backend, manifests: ManifestProvider): BundleProvider =>
-	make_corpus_bundle_provider(backend, manifests, {
+/**
+ * `make_corpus_bundle_provider` is the directory-aware factory — the
+ * `BundlePayload` discriminated union it emits covers BOTH single-file and
+ * directory-bundle manifests, so one factory satisfies `BundleProvider` for
+ * every package shape (legacy `anthropic-*` Workers AND Astro/Remix bundles).
+ */
+const make_bundle_provider = (backend: Backend): BundleProvider =>
+	make_corpus_bundle_provider(backend, {
 		bindings_for: default_bindings_for,
 		compatibility_flags: ["nodejs_compat"],
 	});
@@ -138,7 +144,7 @@ const build_core = (env: PipelineEnv) => {
 	const pulse_summary = make_pulse_summary_client(env.PULSE);
 	const approvals = make_d1_approval_store(db);
 	const manifests = make_corpus_manifest_provider(backend);
-	const bundles = make_bundle_provider(backend, manifests);
+	const bundles = make_bundle_provider(backend);
 	return { db, backend, cf, pulse, pulse_summary, approvals, manifests, bundles };
 };
 

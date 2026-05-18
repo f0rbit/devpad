@@ -15,13 +15,13 @@
  * `create_cloudflare_backend`.
  */
 
-import type { Backend, VersionSetManifest } from "@f0rbit/corpus";
-import { ok, err, pipeline_template_store, type Result, version_set_store, VersionSetManifestSchema } from "@f0rbit/corpus";
 import type { BundleFetchError, BundlePayload, BundleProvider } from "@devpad/core/services/pipelines";
+import type { AssetUpload, ModuleUpload, VersionBinding } from "@devpad/pipeline-fakes";
+import { AssetManifest, BundleManifest } from "@devpad/pipeline-fakes";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { extendTemplate, PipelineTemplateSchema } from "@devpad/pipeline-templates";
-import type { VersionBinding } from "@devpad/pipeline-fakes";
-import { AssetManifest, BundleManifest } from "@devpad/pipeline-fakes";
+import type { Backend, VersionSetManifest } from "@f0rbit/corpus";
+import { err, ok, pipeline_template_store, type Result, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
 import { z } from "zod";
 import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes.ts";
 
@@ -128,63 +128,6 @@ export const make_corpus_template_resolver = (backend: Backend, manifests: Manif
 	};
 };
 
-/**
- * Production bundle provider — resolves `version_set_id` to the
- * compiled Worker bundle bytes the orchestrator needs for a multipart
- * upload. Path:
- *
- *   1. Read the version-set manifest by version (corpus snapshot key).
- *   2. Pull `manifest.builds.worker.artifact_ref` (e.g.
- *      `worker-bundles/<content_hash>`) out of the manifest.
- *   3. Fetch the raw bytes via `backend.data.get(artifact_ref).bytes()`.
- *
- * `bindings_for` lets the caller supply environment-specific bindings.
- * After Phase 12 platform services (vault, pulse) are singletons, so
- * `bindings_for` returns the same service names regardless of
- * environment — `caller.environment` on RPC identity is the stage marker,
- * not the upstream Worker name. The caller-identity trio is added
- * downstream in `deploy_stage`; only the non-`plain_text` bindings flow
- * through here.
- *
- * Phase 6 caveat: the manifest does NOT yet carry the package's
- * declared bindings (service / kv / DO / secrets) — Phase 7 will add a
- * `builds.worker.metadata` field to the manifest and surface it here.
- * Today this provider returns only the bundle bytes; the caller
- * supplements with the CALLER_* trio (computed in deploy_stage) and
- * the orchestrator-side default bindings via `bindings_for`.
- */
-export const make_corpus_bundle_provider = (
-	backend: Backend,
-	manifests: ManifestProvider,
-	options: {
-		bindings_for?: (input: { package_name: string; environment: "staging" | "production" }) => VersionBinding[];
-		compatibility_flags?: string[];
-	} = {},
-): BundleProvider => ({
-	get: async (input): Promise<Result<BundlePayload, BundleFetchError>> => {
-		const manifest = await manifests.get(input.version_set_id);
-		if (manifest === null) {
-			return err({ code: "bundle_unavailable", message: `no version-set manifest found for ${input.version_set_id}` });
-		}
-		const artifact_ref = manifest.builds?.worker?.artifact_ref;
-		if (artifact_ref === undefined || artifact_ref === "") {
-			return err({ code: "bundle_unavailable", message: `manifest for ${input.version_set_id} has no builds.worker.artifact_ref` });
-		}
-		const handle_result = await backend.data.get(artifact_ref);
-		if (!handle_result.ok) {
-			return err({ code: "bundle_unavailable", message: `corpus data.get(${artifact_ref}) failed: ${handle_result.error.kind}` });
-		}
-		const bytes = await handle_result.value.bytes();
-		const bindings = options.bindings_for?.({ package_name: input.package_name, environment: input.environment }) ?? [];
-		return ok({
-			bytes,
-			compatibility_date: manifest.builds.worker.compatibility_date,
-			compatibility_flags: options.compatibility_flags,
-			bindings,
-		});
-	},
-});
-
 const extract_template_content_hash = (template_ref: string): string | null => {
 	// The CLI emits the namespaced form `pipeline-templates/<content_hash>`
 	// (matches the `data_key` returned by `/artifacts/blob`). Accept the
@@ -216,7 +159,8 @@ const VersionSetManifestWithBundleSchema = VersionSetManifestSchema.extend({
 		worker: VersionSetManifestSchema.shape.builds.shape.worker.extend({
 			bundle_manifest_ref: z.string().optional(),
 		}),
-		assets: VersionSetManifestSchema.shape.builds.shape.assets.unwrap()
+		assets: VersionSetManifestSchema.shape.builds.shape.assets
+			.unwrap()
 			.extend({
 				manifest_ref: z.string().optional(),
 			})
@@ -225,89 +169,6 @@ const VersionSetManifestWithBundleSchema = VersionSetManifestSchema.extend({
 }).passthrough();
 
 type VersionSetManifestWithBundle = z.infer<typeof VersionSetManifestWithBundleSchema>;
-
-/**
- * Wire-level MIME types accepted on a directory-bundle module part.
- * Mirrors Phase 2.A's {@link import("@devpad/pipeline-fakes").UploadVersionInput}
- * (`ModuleUpload.mime_type`) — independently declared so this worktree
- * compiles before Phase 2.A merges.
- */
-export type ModuleMimeType =
-	| "application/javascript+module"
-	| "application/javascript"
-	| "application/wasm"
-	| "application/octet-stream"
-	| "text/plain"
-	| "text/x-python"
-	| "text/x-python-requirement";
-
-/**
- * One module file resolved from the corpus bundle manifest, ready to hand to
- * `cf.versions.upload({ kind: "directory_bundle", modules, ... })`.
- *
- * Mirrors Phase 2.A's `ModuleUpload` shape exactly (field-by-field). The two
- * worktrees declare structurally identical types so the verification phase can
- * collapse them into a single import without breaking either branch
- * in-isolation.
- */
-export type ModuleUpload = {
-	name: string;
-	mime_type: ModuleMimeType;
-	content: Uint8Array;
-};
-
-/**
- * One static-asset file resolved from the corpus asset manifest.
- *
- * `hash` is the BLAKE3-truncated value CF's content-addressed asset store
- * expects on both the upload-session manifest and the per-bucket multipart
- * body. It travels through unchanged from the corpus `AssetPart`.
- */
-export type AssetUpload = {
-	path: string;
-	hash: string;
-	size_bytes: number;
-	mime_type: string;
-	content: Uint8Array;
-};
-
-/**
- * Optional CF-side asset serving config carried verbatim through to
- * `metadata.assets.config` on `cf.versions.upload`. Mirrors Phase 2.A's
- * `AssetConfig` exactly.
- */
-export type AssetConfig = {
-	html_handling?: "auto-trailing-slash" | "force-trailing-slash" | "drop-trailing-slash" | "none";
-	not_found_handling?: "404-page" | "single-page-application" | "none";
-	run_worker_first?: boolean;
-};
-
-/**
- * Discriminated union returned by the directory-aware corpus bundle provider.
- * Mirrors the two `UploadVersionInput.kind` branches the CF API provider
- * accepts so the orchestrator can forward `BundleProviderResult` straight to
- * `cf.versions.upload(...)` once Phase 2.A + 2.B merge.
- *
- * - `single_file` — the legacy bundle-as-Uint8Array path. The manifest carries
- *   `builds.worker.artifact_ref` and no `bundle_manifest_ref`. Used by every
- *   `anthropic-*` package today.
- * - `directory_bundle` — the new multi-module path. The manifest carries
- *   `builds.worker.bundle_manifest_ref` (and optionally
- *   `builds.assets.manifest_ref`). Used by Astro/Remix/etc.
- */
-export type BundleProviderResult =
-	| { kind: "single_file"; bundle: Uint8Array }
-	| {
-		kind: "directory_bundle";
-		modules: ModuleUpload[];
-		main_module: string;
-		compatibility_date: string;
-		compatibility_flags: string[];
-		assets?: {
-			assets: AssetUpload[];
-			config?: AssetConfig;
-		};
-	};
 
 /**
  * Typed error union surfaced by {@link DirectoryBundleProvider.fetch}. Every
@@ -351,13 +212,15 @@ export type BundleProviderError =
  * directory provider re-parses through {@link VersionSetManifestWithBundleSchema}
  * to recover them.
  *
- * Phase 2.B-only interface — parallel to the existing
- * `BundleProvider.get(input)` shape in `@devpad/core/services/pipelines`. The
- * verification phase reconciles by switching `deploy_stage` to consume
- * {@link BundleProviderResult} directly.
+ * The `BundlePayload` it yields is the same type `deploy_stage` consumes via
+ * `BundleProvider.get(input)` — verification phase (Phase 2 merge) collapsed
+ * the two parallel interfaces. {@link make_corpus_bundle_provider_for_deploy}
+ * adapts this provider to satisfy `BundleProvider` (decorates with default
+ * bindings + compatibility flags and maps the typed error to
+ * `BundleFetchError`).
  */
 export interface DirectoryBundleProvider {
-	fetch(version_set_id: string): Promise<Result<BundleProviderResult, BundleProviderError>>;
+	fetch(version_set_id: string): Promise<Result<BundlePayload, BundleProviderError>>;
 }
 
 const fetch_bytes = async (backend: Backend, ref: string): Promise<Result<Uint8Array, string>> => {
@@ -461,8 +324,8 @@ const hydrate_assets = async (backend: Backend, manifest: AssetManifest): Promis
 
 /**
  * Directory-aware bundle provider. Resolves a {@link VersionSetManifest} into
- * a {@link BundleProviderResult} discriminated union that `deploy_stage` can
- * hand straight to `cf.versions.upload`.
+ * a {@link BundlePayload} discriminated union that `deploy_stage` can hand
+ * straight to `cf.versions.upload`.
  *
  * Routing:
  *
@@ -476,7 +339,7 @@ const hydrate_assets = async (backend: Backend, manifest: AssetManifest): Promis
  *
  * - Manifest has only `builds.worker.artifact_ref` → legacy single-file path:
  *     1. Fetch the bundle blob from corpus.
- *     2. Return `{ kind: "single_file", bundle }`.
+ *     2. Return `{ kind: "single_file", bytes }`.
  *
  * - Manifest has BOTH `artifact_ref` and `bundle_manifest_ref` → directory
  *   wins. The manifest is in an inconsistent state (likely a mid-migration
@@ -484,13 +347,14 @@ const hydrate_assets = async (backend: Backend, manifest: AssetManifest): Promis
  *
  * - Manifest has neither → `bundle_unavailable`.
  *
- * The factory is intentionally split from {@link make_corpus_bundle_provider}
- * during Phase 2.B so the legacy `BundleProvider` interface (`get(input)`) in
- * `@devpad/core/services/pipelines` keeps working unchanged. Phase 4
- * verification merges the two paths once Phase 2.A's CF provider lands.
+ * The provider emits the `BundlePayload` discriminated union shared with
+ * `@devpad/core/services/pipelines`. Use {@link make_corpus_bundle_provider}
+ * to get a `BundleProvider`-shaped wrapper that decorates the payload with
+ * default bindings + compatibility flags and maps the typed
+ * {@link BundleProviderError} to `BundleFetchError`.
  */
 export const make_corpus_directory_bundle_provider = (backend: Backend): DirectoryBundleProvider => ({
-	fetch: async (version_set_id: string): Promise<Result<BundleProviderResult, BundleProviderError>> => {
+	fetch: async (version_set_id: string): Promise<Result<BundlePayload, BundleProviderError>> => {
 		const widened_result = await load_widened_manifest(backend, version_set_id);
 		if (!widened_result.ok) return widened_result;
 		const widened = widened_result.value;
@@ -544,7 +408,7 @@ export const make_corpus_directory_bundle_provider = (backend: Backend): Directo
 			if (!bytes.ok) {
 				return err({ kind: "bundle_unavailable", reason: bytes.error });
 			}
-			return ok({ kind: "single_file", bundle: bytes.value });
+			return ok({ kind: "single_file", bytes: bytes.value });
 		}
 
 		return err({
@@ -553,3 +417,69 @@ export const make_corpus_directory_bundle_provider = (backend: Backend): Directo
 		});
 	},
 });
+
+/**
+ * Production `BundleProvider` factory consumed by `deps.ts`. Wraps the
+ * underlying directory-aware {@link DirectoryBundleProvider} so it satisfies
+ * the `BundleProvider.get(input)` interface `deploy_stage` consumes.
+ *
+ * Decorates every payload with:
+ *  - `bindings`: orchestrator-managed defaults (vault + pulse service
+ *    bindings) supplied via `bindings_for`. The caller-identity `CALLER_*`
+ *    trio is stamped downstream in `deploy_stage`.
+ *  - `compatibility_flags`: only stamped on the `single_file` branch when the
+ *    manifest's `builds.worker` field doesn't carry flags. Directory bundles
+ *    carry their own flags from `BundleManifest`, so we leave those alone.
+ *
+ * Errors from the directory provider's `BundleProviderError` union collapse to
+ * the public `bundle_unavailable` `BundleFetchError`, with the typed
+ * discriminator and any contextual fields encoded into the message — the
+ * wire-side never sees the internal kinds, only the public code.
+ */
+export const make_corpus_bundle_provider = (
+	backend: Backend,
+	options: {
+		bindings_for?: (input: { package_name: string; environment: "staging" | "production" }) => VersionBinding[];
+		compatibility_flags?: string[];
+	} = {}
+): BundleProvider => {
+	const directory = make_corpus_directory_bundle_provider(backend);
+	return {
+		get: async (input): Promise<Result<BundlePayload, BundleFetchError>> => {
+			const result = await directory.fetch(input.version_set_id);
+			if (!result.ok) {
+				return err({ code: "bundle_unavailable", message: format_bundle_provider_error(result.error) });
+			}
+			const bindings = options.bindings_for?.({ package_name: input.package_name, environment: input.environment }) ?? [];
+			if (result.value.kind === "single_file") {
+				return ok({
+					...result.value,
+					compatibility_flags: result.value.compatibility_flags ?? options.compatibility_flags,
+					bindings,
+				});
+			}
+			return ok({ ...result.value, bindings });
+		},
+	};
+};
+
+const format_bundle_provider_error = (error: BundleProviderError): string => {
+	switch (error.kind) {
+		case "version_set_missing":
+			return `version_set_missing: ${error.version_set_id}`;
+		case "bundle_unavailable":
+			return `bundle_unavailable: ${error.reason}`;
+		case "bundle_manifest_missing":
+			return `bundle_manifest_missing: ${error.ref}`;
+		case "bundle_manifest_invalid":
+			return `bundle_manifest_invalid: ${error.ref} (${error.reason})`;
+		case "module_fetch_failed":
+			return `module_fetch_failed: ${error.ref} (${error.reason})`;
+		case "asset_manifest_missing":
+			return `asset_manifest_missing: ${error.ref}`;
+		case "asset_manifest_invalid":
+			return `asset_manifest_invalid: ${error.ref} (${error.reason})`;
+		case "asset_fetch_failed":
+			return `asset_fetch_failed: ${error.ref} (${error.reason})`;
+	}
+};

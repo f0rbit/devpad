@@ -4,7 +4,7 @@
  * Exercises all five routing branches the provider implements:
  *
  *  1. Legacy single-file manifest (`builds.worker.artifact_ref` only) →
- *     `{ kind: "single_file", bundle }`.
+ *     `{ kind: "single_file", bytes }`.
  *  2. Directory-bundle manifest without assets
  *     (`builds.worker.bundle_manifest_ref`) →
  *     `{ kind: "directory_bundle", modules, ... }`.
@@ -19,9 +19,9 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { create_memory_backend, version_set_store, type Backend, type VersionSetManifest } from "@f0rbit/corpus";
-import { type AssetManifest, type BundleManifest } from "@devpad/pipeline-fakes";
-import { make_corpus_directory_bundle_provider, type BundleProviderError } from "../../src/providers/corpus-providers.ts";
+import type { AssetManifest, BundleManifest } from "@devpad/pipeline-fakes";
+import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
+import { type BundleProviderError, make_corpus_directory_bundle_provider } from "../../src/providers/corpus-providers.ts";
 
 // VersionSetManifest is "strict" in the corpus types; the directory provider
 // reads the extra Phase 2.B fields from the JSON-serialised manifest. We cast
@@ -153,7 +153,7 @@ const put_manifest = async (backend: Backend, manifest: ManifestWithExtras): Pro
 };
 
 describe("make_corpus_directory_bundle_provider", () => {
-	test("single-file manifest returns { kind: 'single_file', bundle }", async () => {
+	test("single-file manifest returns { kind: 'single_file', bytes }", async () => {
 		const backend = create_memory_backend();
 		const bundle_bytes = new TextEncoder().encode("export default {};");
 		await seed_blob(backend, "worker-bundles/legacy-abc", bundle_bytes);
@@ -167,7 +167,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 		if (!result.ok) return;
 		expect(result.value.kind).toBe("single_file");
 		if (result.value.kind !== "single_file") return;
-		expect(new TextDecoder().decode(result.value.bundle)).toBe("export default {};");
+		expect(new TextDecoder().decode(result.value.bytes)).toBe("export default {};");
 	});
 
 	test("directory-bundle manifest without assets returns hydrated modules", async () => {
@@ -178,7 +178,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 			contents: {
 				"index.js": new TextEncoder().encode("export default { fetch: () => {} };"),
 				"chunks/lib.mjs": new TextEncoder().encode("export const x = 1;"),
-				"RESVG_WASM": new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
+				RESVG_WASM: new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
 			},
 		});
 		const manifest = directory_manifest();
@@ -213,7 +213,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 			contents: {
 				"index.js": new TextEncoder().encode("export default { fetch: () => {} };"),
 				"chunks/lib.mjs": new TextEncoder().encode("export const x = 1;"),
-				"RESVG_WASM": new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
+				RESVG_WASM: new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
 			},
 		});
 		const assets = sample_asset_manifest();
@@ -309,7 +309,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 			contents: {
 				"index.js": new TextEncoder().encode("export default {};"),
 				"chunks/lib.mjs": new TextEncoder().encode("export const x = 1;"),
-				"RESVG_WASM": new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
+				RESVG_WASM: new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
 			},
 		});
 		// Don't seed the asset manifest blob.
@@ -335,7 +335,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 			contents: {
 				"index.js": new TextEncoder().encode("export default {};"),
 				"chunks/lib.mjs": new TextEncoder().encode("export const x = 1;"),
-				"RESVG_WASM": new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
+				RESVG_WASM: new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
 			},
 		});
 		await seed_blob(backend, "asset-manifests/assets-001", new TextEncoder().encode("{ also not valid"));
@@ -359,7 +359,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 			contents: {
 				"index.js": new TextEncoder().encode("export default {};"),
 				"chunks/lib.mjs": new TextEncoder().encode("export const x = 1;"),
-				"RESVG_WASM": new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
+				RESVG_WASM: new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
 			},
 		});
 		const assets = sample_asset_manifest();
@@ -387,7 +387,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 			contents: {
 				"index.js": new TextEncoder().encode("export default {};"),
 				"chunks/lib.mjs": new TextEncoder().encode("export const x = 1;"),
-				"RESVG_WASM": new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
+				RESVG_WASM: new Uint8Array([0x00, 0x61, 0x73, 0x6d]),
 			},
 		});
 		// Seed the legacy artifact too — it should be ignored.

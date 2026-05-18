@@ -1,4 +1,5 @@
 import type { Result } from "@f0rbit/corpus";
+import type { MODULE_MIME_TYPES } from "./manifests.ts";
 
 export type CloudflareError =
 	| { code: "not_found"; message: string }
@@ -74,14 +75,11 @@ export type WorkerMeta = {
 
 /**
  * Wire-level MIME types accepted on a `versions.upload` module part.
- * Mirrors {@link import("./manifests.ts").ModulePart}.
+ * Derived from {@link MODULE_MIME_TYPES} in `./manifests.ts` so the
+ * Zod manifest schema and the wire-level type stay in lockstep — adding
+ * a new MIME (e.g. another Pyodide variant) needs only one edit.
  */
-export type ModuleMimeType =
-	| "application/javascript+module"
-	| "application/javascript"
-	| "application/wasm"
-	| "application/octet-stream"
-	| "text/plain";
+export type ModuleMimeType = (typeof MODULE_MIME_TYPES)[number];
 
 /**
  * One module file inside a directory-bundle Worker upload. The form-field
@@ -136,65 +134,65 @@ export type AssetConfig = {
  */
 export type UploadVersionInput =
 	| {
-		kind: "single_file";
-		script_name: string;
-		annotations?: Record<string, string>;
-		vars?: WorkerVar[];
-		/**
-		 * The compiled worker bundle bytes. Required by the production CF
-		 * API provider (multipart upload demands the script part). The
-		 * in-memory fake accepts uploads without it for backward compat
-		 * with older tests that only exercised the metadata path.
-		 */
-		bundle?: Uint8Array;
-		/**
-		 * Filename of the main ES module entry inside the multipart body.
-		 * Defaults to `"index.js"`. The chosen value is written into
-		 * `metadata.main_module` AND used as the script part's form-field
-		 * name — the CF API rejects uploads where the two disagree.
-		 */
-		main_module?: string;
-		/** ISO date string. Defaults to `2024-04-03` (the rpc-default boundary). */
-		compatibility_date?: string;
-		/** Optional compat flags array (e.g. `["nodejs_compat"]`). */
-		compatibility_flags?: string[];
-		/**
-		 * Non-`plain_text` bindings (service, kv_namespace,
-		 * durable_object_namespace, secret_text, …). Merged with the
-		 * `vars` mapping into the final `metadata.bindings` array on the
-		 * wire.
-		 */
-		bindings?: VersionBinding[];
-	}
+			kind: "single_file";
+			script_name: string;
+			annotations?: Record<string, string>;
+			vars?: WorkerVar[];
+			/**
+			 * The compiled worker bundle bytes. Required by the production CF
+			 * API provider (multipart upload demands the script part). The
+			 * in-memory fake accepts uploads without it for backward compat
+			 * with older tests that only exercised the metadata path.
+			 */
+			bundle?: Uint8Array;
+			/**
+			 * Filename of the main ES module entry inside the multipart body.
+			 * Defaults to `"index.js"`. The chosen value is written into
+			 * `metadata.main_module` AND used as the script part's form-field
+			 * name — the CF API rejects uploads where the two disagree.
+			 */
+			main_module?: string;
+			/** ISO date string. Defaults to `2024-04-03` (the rpc-default boundary). */
+			compatibility_date?: string;
+			/** Optional compat flags array (e.g. `["nodejs_compat"]`). */
+			compatibility_flags?: string[];
+			/**
+			 * Non-`plain_text` bindings (service, kv_namespace,
+			 * durable_object_namespace, secret_text, …). Merged with the
+			 * `vars` mapping into the final `metadata.bindings` array on the
+			 * wire.
+			 */
+			bindings?: VersionBinding[];
+	  }
 	| {
-		kind: "directory_bundle";
-		script_name: string;
-		annotations?: Record<string, string>;
-		vars?: WorkerVar[];
-		/**
-		 * Every module file in the bundle, each uploaded as its own
-		 * multipart part. The {@link ModuleUpload.name} of one of these
-		 * entries MUST equal {@link main_module} (CF rejects uploads where
-		 * they disagree).
-		 */
-		modules: ModuleUpload[];
-		/** Required for directory mode (e.g. `"index.js"`). */
-		main_module: string;
-		/** Required ISO date (CF rejects directory uploads without one). */
-		compatibility_date: string;
-		compatibility_flags?: string[];
-		bindings?: VersionBinding[];
-		/**
-		 * Optional `ASSETS`-binding upload. When present, the provider
-		 * opens an upload session, pushes the bytes, and then stamps
-		 * `metadata.assets = { jwt, config }` on the versions upload so
-		 * the new worker version binds to the just-uploaded asset set.
-		 */
-		assets?: {
-			assets: AssetUpload[];
-			config?: AssetConfig;
-		};
-	};
+			kind: "directory_bundle";
+			script_name: string;
+			annotations?: Record<string, string>;
+			vars?: WorkerVar[];
+			/**
+			 * Every module file in the bundle, each uploaded as its own
+			 * multipart part. The {@link ModuleUpload.name} of one of these
+			 * entries MUST equal {@link main_module} (CF rejects uploads where
+			 * they disagree).
+			 */
+			modules: ModuleUpload[];
+			/** Required for directory mode (e.g. `"index.js"`). */
+			main_module: string;
+			/** Required ISO date (CF rejects directory uploads without one). */
+			compatibility_date: string;
+			compatibility_flags?: string[];
+			bindings?: VersionBinding[];
+			/**
+			 * Optional `ASSETS`-binding upload. When present, the provider
+			 * opens an upload session, pushes the bytes, and then stamps
+			 * `metadata.assets = { jwt, config }` on the versions upload so
+			 * the new worker version binds to the just-uploaded asset set.
+			 */
+			assets?: {
+				assets: AssetUpload[];
+				config?: AssetConfig;
+			};
+	  };
 
 export type CreateDeploymentInput = {
 	script_name: string;

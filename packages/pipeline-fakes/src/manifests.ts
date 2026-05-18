@@ -19,15 +19,7 @@ import { z } from "zod";
  * (`builds.worker.artifact_ref`) keeps working untouched.
  */
 
-const MODULE_MIME_TYPES = [
-	"application/javascript+module",
-	"application/javascript",
-	"application/wasm",
-	"application/octet-stream",
-	"text/plain",
-	"text/x-python",
-	"text/x-python-requirement",
-] as const;
+export const MODULE_MIME_TYPES = ["application/javascript+module", "application/javascript", "application/wasm", "application/octet-stream", "text/plain", "text/x-python", "text/x-python-requirement"] as const;
 
 /**
  * One module file inside a directory-bundle Worker.
@@ -85,12 +77,7 @@ export const AssetPart = z.object({
 export type AssetPart = z.infer<typeof AssetPart>;
 
 const AssetsConfig = z.object({
-	html_handling: z.enum([
-		"auto-trailing-slash",
-		"force-trailing-slash",
-		"drop-trailing-slash",
-		"none",
-	]).optional(),
+	html_handling: z.enum(["auto-trailing-slash", "force-trailing-slash", "drop-trailing-slash", "none"]).optional(),
 	not_found_handling: z.enum(["404-page", "single-page-application", "none"]).optional(),
 	run_worker_first: z.boolean().optional(),
 });

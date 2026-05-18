@@ -1,12 +1,12 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import { InMemoryCloudflareProvider, InMemoryPulseSummaryProvider } from "@devpad/pipeline-fakes";
-import { ok, type Result } from "@f0rbit/corpus";
 import type { PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { pipeline_analysis_template, pipeline_package, user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../../gates/__tests__/helpers.js";
+import { ok, type Result } from "@f0rbit/corpus";
 import type { BundleFetchError, BundlePayload, BundleProvider } from "../../deploy.js";
+import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../../gates/__tests__/helpers.js";
 import type { RunDeps } from "../../runs.js";
 
 /**
@@ -22,7 +22,7 @@ export class InMemoryBundleProvider implements BundleProvider {
 
 	async get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>> {
 		this.calls.push(input);
-		return ok({ bytes: this.bytes });
+		return ok({ kind: "single_file", bytes: this.bytes });
 	}
 }
 
