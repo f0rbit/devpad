@@ -31,11 +31,13 @@ app.post("/", requireAuth, async c => {
 	const result = await keys.createApiKey(db, auth_user.id, parsed.data.scope ?? "devpad", parsed.data.name);
 	if (!result.ok) return c.json({ error: "Failed to create API key" }, 500);
 
+	c.get("log")?.info("api_key_minted", { user_id: auth_user.id, scope: parsed.data.scope ?? "devpad" });
 	return c.json({ message: "API key created successfully", key: result.value });
 });
 
 app.delete("/:key_id", requireAuth, async c => {
 	const db = c.get("db");
+	const auth_user = c.get("user")!;
 	const key_id = c.req.param("key_id");
 
 	if (!key_id) return c.json({ error: "Key ID required" }, 400);
@@ -46,6 +48,7 @@ app.delete("/:key_id", requireAuth, async c => {
 		return c.json({ error: "Failed to delete API key" }, 500);
 	}
 
+	c.get("log")?.info("api_key_revoked", { user_id: auth_user.id });
 	return c.json({ message: "API key deleted successfully", success: true });
 });
 
