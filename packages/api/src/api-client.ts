@@ -3,7 +3,24 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
-import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, PipelineGrant, PipelinePackage, PipelineRun, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
+import type {
+	ApiKey,
+	GetConfigResult,
+	Goal,
+	HistoryAction,
+	Milestone,
+	PipelineGrant,
+	PipelinePackage,
+	PipelineRun,
+	Project,
+	ProjectConfig,
+	SaveConfigRequest,
+	TagWithTypedColor,
+	TaskWithDetails,
+	UpsertProject,
+	UpsertTag,
+	UpsertTodo,
+} from "@devpad/schema/types";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -1047,8 +1064,9 @@ export class ApiClient {
 		},
 
 		/**
-		 * Packages namespace — read-only catalog of pipeline packages.
-		 * Writes still flow through the existing upsert routes elsewhere.
+		 * Packages namespace — full CRUD over pipeline_package rows. Writes
+		 * (create/update/delete) require the orchestrator bearer token; the
+		 * HttpClient picks it up via the standard auth header injection.
 		 */
 		packages: {
 			/**
@@ -1065,6 +1083,27 @@ export class ApiClient {
 			 * Get a single package by id
 			 */
 			get: (package_id: string): Promise<ApiResult<PipelinePackage>> => wrap(() => this.clients.pipelines.get<PipelinePackage>(`/packages/${package_id}`)),
+
+			/**
+			 * Register a new pipeline package. `id` is canonically the same as
+			 * `name` per existing convention but is supplied explicitly so the
+			 * orchestrator can disambiguate renames without conflicts.
+			 */
+			create: (input: { id: string; name: string; owner_id: string; repo_url?: string | null; project_id?: string | null; default_template_ref?: string | null }): Promise<ApiResult<PipelinePackage>> =>
+				wrap(() => this.clients.pipelines.post<PipelinePackage>("/packages", { body: input })),
+
+			/**
+			 * Partially update a package row. Missing keys preserve existing
+			 * values; explicit `null` clears the field.
+			 */
+			update: (package_id: string, input: { repo_url?: string | null; project_id?: string | null; default_template_ref?: string | null; script_name_overrides?: Record<string, string> | null }): Promise<ApiResult<PipelinePackage>> =>
+				wrap(() => this.clients.pipelines.patch<PipelinePackage>(`/packages/${package_id}`, { body: input })),
+
+			/**
+			 * Remove a package. Refuses (409) if pipeline_run rows still
+			 * reference the package — clean up runs first.
+			 */
+			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
 		},
 	};
 

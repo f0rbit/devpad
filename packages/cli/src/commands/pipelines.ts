@@ -38,7 +38,7 @@ const BUILD_SHAPES = ["single-file", "directory-bundle"] as const;
 
 const is_rollout_mode = (s: string): s is RolloutMode => (ROLLOUT_MODES as readonly string[]).includes(s);
 const is_gate_kind = (s: string): s is DefaultGateKind => (GATE_KINDS as readonly string[]).includes(s);
-const is_build_shape = (s: string): s is typeof BUILD_SHAPES[number] => (BUILD_SHAPES as readonly string[]).includes(s);
+const is_build_shape = (s: string): s is (typeof BUILD_SHAPES)[number] => (BUILD_SHAPES as readonly string[]).includes(s);
 
 const format_scaffolder_error = (e: ScaffolderError): string => {
 	if (e.code === "render_failed") return `${e.message}\n  variable: ${e.cause.var}\n  near: ${e.cause.template_snippet}`;
@@ -74,7 +74,7 @@ export const action_init = async (name: string, options: { rollout: string; defa
 		target_dir,
 		rollout: options.rollout,
 		default_gate: options.defaultGate,
-		build_shape: options.buildShape as typeof BUILD_SHAPES[number],
+		build_shape: options.buildShape as (typeof BUILD_SHAPES)[number],
 		skip_install: options.skipInstall === true,
 		skip_git: options.skipGit === true,
 	});
@@ -607,6 +607,160 @@ const action_runs_start =
 		console.log(chalk.green(`Run ID: ${result.value.run_id}`));
 	};
 
+// ─── packages subcommand actions ───────────────────────────────────
+//
+// `packages list / get / create / update / delete` wrap the API client
+// methods added in Phase 14. `create` resolves `--owner-id` from
+// `client.auth.session()` (whoami) when not supplied and maps
+// `--project <slug>` → `project_id` via `client.projects.list()` so the
+// user supplies the human-readable slug instead of memorising the
+// internal id.
+
+export interface PackagesListOptions {
+	project?: string;
+}
+
+export const action_packages_list =
+	(client_factory: ClientFactory) =>
+	async (options: PackagesListOptions): Promise<void> => {
+		const spinner = make_spinner("Listing pipeline packages...").start();
+		const client = client_factory();
+		const filter = options.project !== undefined ? { project_id: await resolve_project_id(client, options.project) } : undefined;
+		if (filter !== undefined && filter.project_id === null) return fail_with(spinner, `project "${options.project}" not found`);
+
+		const result = await client.pipelines.packages.list(filter as { project_id?: string } | undefined);
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`${result.value.length} package(s)`);
+		for (const p of result.value) {
+			const project_label = p.project_id ?? chalk.dim("(unlinked)");
+			const repo_label = p.repo_url ?? chalk.dim("(no repo)");
+			console.log(`  ${chalk.bold(p.id)}  ${chalk.cyan(p.name)}  ${project_label}  ${repo_label}`);
+		}
+	};
+
+export const action_packages_get =
+	(client_factory: ClientFactory) =>
+	async (id: string): Promise<void> => {
+		const spinner = make_spinner(`Fetching ${id}...`).start();
+		const client = client_factory();
+		const result = await client.pipelines.packages.get(id);
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`${result.value.id}`);
+		console.log(JSON.stringify(result.value, null, 2));
+	};
+
+export interface PackagesCreateOptions {
+	name?: string;
+	ownerId?: string;
+	project?: string;
+	repoUrl?: string;
+}
+
+export const action_packages_create =
+	(client_factory: ClientFactory) =>
+	async (name_arg: string | undefined, options: PackagesCreateOptions): Promise<void> => {
+		const name = name_arg ?? options.name;
+		if (name === undefined || name === "") {
+			console.error(chalk.red("error: positional <name> (or --name) is required"));
+			process.exit(1);
+		}
+		const spinner = make_spinner(`Registering ${name}...`).start();
+		const client = client_factory();
+
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		let project_id: string | null | undefined;
+		if (options.project !== undefined) {
+			const resolved = await resolve_project_id(client, options.project);
+			if (resolved === null) return fail_with(spinner, `project "${options.project}" not found`);
+			project_id = resolved;
+		}
+
+		const result = await client.pipelines.packages.create({
+			id: name,
+			name,
+			owner_id,
+			repo_url: options.repoUrl,
+			project_id,
+		});
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`registered ${result.value.id}`);
+		console.log(chalk.green(`  id:         ${result.value.id}`));
+		console.log(`  name:       ${result.value.name}`);
+		console.log(`  project_id: ${result.value.project_id ?? "(unlinked)"}`);
+		console.log(`  repo_url:   ${result.value.repo_url ?? "(none)"}`);
+	};
+
+export interface PackagesUpdateOptions {
+	project?: string;
+	repoUrl?: string;
+	scriptNameOverrides?: string;
+}
+
+export const action_packages_update =
+	(client_factory: ClientFactory) =>
+	async (id: string, options: PackagesUpdateOptions): Promise<void> => {
+		const spinner = make_spinner(`Updating ${id}...`).start();
+		const client = client_factory();
+		const patch: Record<string, unknown> = {};
+		if (options.repoUrl !== undefined) patch.repo_url = options.repoUrl;
+		if (options.project !== undefined) {
+			const resolved = await resolve_project_id(client, options.project);
+			if (resolved === null) return fail_with(spinner, `project "${options.project}" not found`);
+			patch.project_id = resolved;
+		}
+		if (options.scriptNameOverrides !== undefined) {
+			try {
+				patch.script_name_overrides = JSON.parse(options.scriptNameOverrides);
+			} catch (e) {
+				return fail_with(spinner, `--script-name-overrides is not valid JSON: ${String(e)}`);
+			}
+		}
+		if (Object.keys(patch).length === 0) return fail_with(spinner, "no updates supplied (pass --project, --repo-url, or --script-name-overrides)");
+
+		const result = await client.pipelines.packages.update(id, patch);
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`updated ${result.value.id}`);
+	};
+
+export interface PackagesDeleteOptions {
+	force?: boolean;
+}
+
+export const action_packages_delete =
+	(client_factory: ClientFactory) =>
+	async (id: string, _options: PackagesDeleteOptions): Promise<void> => {
+		// `--force` is accepted but is purely a confirmation toggle; the
+		// orchestrator still 409s on active runs (we never cascade).
+		const spinner = make_spinner(`Deleting ${id}...`).start();
+		const client = client_factory();
+		const result = await client.pipelines.packages.delete(id);
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`deleted ${id}`);
+	};
+
+const resolve_owner_id = async (client: ApiClient): Promise<string | null> => {
+	if (process.env.DEVPAD_USER_ID !== undefined && process.env.DEVPAD_USER_ID !== "") return process.env.DEVPAD_USER_ID;
+	const session = await client.auth.session();
+	if (!session.ok) return null;
+	const user = session.value.user as { id?: string } | null;
+	return user?.id ?? null;
+};
+
+/**
+ * Resolve a project slug (`--project <slug>`) to its internal id. We list
+ * the caller's projects and match on either `project_id` (the slug) or
+ * `id` (the internal id) — accepting both keeps the CLI usable from
+ * scripts that already have the internal id handy.
+ */
+const resolve_project_id = async (client: ApiClient, slug_or_id: string): Promise<string | null> => {
+	const list = await client.projects.list();
+	if (!list.ok) return null;
+	const match = list.value.find(p => p.project_id === slug_or_id || p.id === slug_or_id);
+	return match?.id ?? null;
+};
+
 /**
  * Mount the `pipelines` subcommand group on a Commander program. The
  * factory pattern keeps `pipelines init` callable without a configured
@@ -682,6 +836,39 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--user <user-id>", "User ID denying the grant (defaults to $DEVPAD_USER_ID)")
 		.option("--reason <text>", "Optional denial reason")
 		.action(action_grants_deny(client_factory));
+
+	const packages = pipelines
+		.command("packages")
+		.description(
+			"Manage pipeline packages.\n" + "Typical flow: `packages create` to register a pipeline-managed package, then in your repo add\n" + "infra.ts, pipeline.ts, grants.ts, and a CI workflow that calls `pipelines artifacts upload`."
+		);
+
+	packages.command("list").description("List pipeline packages").option("--project <id-or-slug>", "Filter by linked devpad project (accepts project_id or internal id)").action(action_packages_list(client_factory));
+
+	packages.command("get <id>").description("Get a pipeline package by id").action(action_packages_get(client_factory));
+
+	packages
+		.command("create [name]")
+		.description("Register a new pipeline package. By convention `id` equals `name`.")
+		.option("--name <name>", "Package name (alternative to positional)")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.option("--project <id-or-slug>", "Link to devpad project (accepts project_id or internal id)")
+		.option("--repo-url <url>", "Optional git repo URL")
+		.action(action_packages_create(client_factory));
+
+	packages
+		.command("update <id>")
+		.description("Partially update a pipeline package")
+		.option("--project <id-or-slug>", "Link to devpad project (accepts project_id or internal id)")
+		.option("--repo-url <url>", "New git repo URL")
+		.option("--script-name-overrides <json>", "JSON object of stage→script-name overrides")
+		.action(action_packages_update(client_factory));
+
+	packages
+		.command("delete <id>")
+		.description("Delete a pipeline package. Refuses if active pipeline_run rows reference it.")
+		.option("--force", "Confirmation flag (orchestrator still 409s on active runs; you must clean those up first)")
+		.action(action_packages_delete(client_factory));
 
 	return pipelines;
 };

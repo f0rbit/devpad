@@ -16,7 +16,7 @@
 import type { ResolvedPlan } from "@devpad/core/services/pipelines";
 import { create_run, get_run, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
-import { get_package, list_packages } from "@devpad/core/services/pipelines/packages";
+import { create_package, delete_package, get_package, list_packages, update_package } from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -47,6 +47,22 @@ export const grant_approve_body = z.object({
 export const grant_deny_body = z.object({
 	user_id: z.string().min(1),
 	reason: z.string().optional(),
+});
+
+export const create_package_body = z.object({
+	id: z.string().min(1).max(200),
+	name: z.string().min(1).max(200),
+	owner_id: z.string().min(1),
+	repo_url: z.string().nullable().optional(),
+	project_id: z.string().nullable().optional(),
+	default_template_ref: z.string().nullable().optional(),
+});
+
+export const update_package_body = z.object({
+	repo_url: z.string().nullable().optional(),
+	project_id: z.string().nullable().optional(),
+	default_template_ref: z.string().nullable().optional(),
+	script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
 });
 
 /**
@@ -126,6 +142,7 @@ const STATUS_BY_CODE: Record<string, number> = {
 	validation: 400,
 	validation_error: 400,
 	bad_request: 400,
+	conflict: 409,
 	invalid_event: 409,
 	terminal_state: 409,
 	no_previous_version: 409,
@@ -380,6 +397,51 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const result = await get_package(deps.db, c.req.param("id"));
 		if (!result.ok) return wire_err(result.error);
 		return json_ok(result.value);
+	});
+
+	// ─── Package write routes (auth-gated) ──────────────────────────
+	//
+	// POST/PATCH/DELETE `/packages` go through the same bearer-token
+	// gate as `/artifacts/*` so the CLI can register / update / remove
+	// packages without ever touching D1 directly. Read routes above
+	// stay unauthenticated.
+
+	app.post("/packages", async c => {
+		const deps = c.get("deps");
+		const auth_fail = await apply_auth(deps, c.req.raw);
+		if (auth_fail !== null) return auth_fail;
+
+		const body = await c.req.json().catch(() => null);
+		const parsed = create_package_body.safeParse(body);
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
+
+		const result = await create_package(deps.db, parsed.data);
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.patch("/packages/:id", async c => {
+		const deps = c.get("deps");
+		const auth_fail = await apply_auth(deps, c.req.raw);
+		if (auth_fail !== null) return auth_fail;
+
+		const body = await c.req.json().catch(() => null);
+		const parsed = update_package_body.safeParse(body);
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
+
+		const result = await update_package(deps.db, c.req.param("id"), parsed.data);
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.delete("/packages/:id", async c => {
+		const deps = c.get("deps");
+		const auth_fail = await apply_auth(deps, c.req.raw);
+		if (auth_fail !== null) return auth_fail;
+
+		const result = await delete_package(deps.db, c.req.param("id"));
+		if (!result.ok) return wire_err(result.error);
+		return json_ok({ deleted: true });
 	});
 
 	// ─── Artifact upload routes ─────────────────────────────────────

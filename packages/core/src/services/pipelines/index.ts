@@ -1,8 +1,8 @@
 export {
-	build_deployment_request,
 	type BundleFetchError,
 	type BundlePayload,
 	type BundleProvider,
+	build_deployment_request,
 	type DeployError,
 	type DeploymentResult,
 	type DeployRequest,
@@ -10,7 +10,7 @@ export {
 } from "./deploy.js";
 export * from "./grants.js";
 export * from "./grants-domain.js";
-export { get_package, list_packages, type ListPackagesFilter } from "./packages.js";
+export { type CreatePackageInput, create_package, delete_package, get_package, type ListPackagesFilter, list_packages, type UpdatePackageInput, update_package } from "./packages.js";
 export {
 	find_rollback_target,
 	type RollbackError,
@@ -18,7 +18,6 @@ export {
 	rollback_run,
 	type VersionSetRef,
 } from "./rollback.js";
-export { resolve_script_name, type ScriptNameInput } from "./script-name.js";
 export {
 	type AdvanceError,
 	advance_run,
@@ -27,8 +26,8 @@ export {
 	create_run,
 	drive_run,
 	get_run,
-	list_runs,
 	type ListRunsFilter,
+	list_runs,
 	type RunDeps,
 	type RunRecord,
 	record_stage_event,
@@ -36,4 +35,5 @@ export {
 	resolve_run_plan,
 	tick_bake_complete,
 } from "./runs.js";
+export { resolve_script_name, type ScriptNameInput } from "./script-name.js";
 export * from "./state-machine.js";

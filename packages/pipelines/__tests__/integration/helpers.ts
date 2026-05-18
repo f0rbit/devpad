@@ -23,6 +23,7 @@ import { pipeline_package, user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
+import { eq } from "drizzle-orm";
 // Import from source modules directly (NOT `../../src/index.ts`) so the
 // test bundle skips `grants-rpc-entrypoint.ts`, which pulls in the
 // `cloudflare:workers` runtime-only module that bun can't resolve.
@@ -97,14 +98,17 @@ export const seed_user = async (db: Database, id = "user_test"): Promise<User> =
 	return rows[0]!;
 };
 
-export const seed_package = async (db: Database, owner_id: string, id = "pipeline-package_test"): Promise<PipelinePackage> => {
+export const seed_package = async (db: Database, owner_id: string, opts: string | Partial<PipelinePackage> = "pipeline-package_test"): Promise<PipelinePackage> => {
+	const overrides = typeof opts === "string" ? { id: opts } : opts;
 	const now = new Date().toISOString();
+	const id = overrides.id ?? "pipeline-package_test";
 	await db.insert(pipeline_package).values({
 		id,
 		owner_id,
-		name: "test-pkg",
-		repo_url: null,
-		default_template_ref: null,
+		name: overrides.name ?? "test-pkg",
+		repo_url: overrides.repo_url ?? null,
+		default_template_ref: overrides.default_template_ref ?? null,
+		project_id: overrides.project_id ?? null,
 		created_at: now,
 		updated_at: now,
 		created_by: "api",
@@ -112,7 +116,7 @@ export const seed_package = async (db: Database, owner_id: string, id = "pipelin
 		protected: false,
 		deleted: false,
 	} as never);
-	const rows = await db.select().from(pipeline_package);
+	const rows = await db.select().from(pipeline_package).where(eq(pipeline_package.id, id));
 	return rows[0]!;
 };
 

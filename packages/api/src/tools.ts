@@ -763,6 +763,45 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.packages.get(input.package_id)),
 	},
+
+	devpad_pipelines_packages_create: {
+		name: "devpad_pipelines_packages_create",
+		description: "Register a new pipeline-managed package. By convention `id` equals the package `name`. `project_id` optionally links the package to a devpad project.",
+		inputSchema: z.object({
+			id: z.string().describe("Canonical package ID (typically the same as name)"),
+			name: z.string().describe("Package name"),
+			owner_id: z.string().describe("User ID of the owner"),
+			repo_url: z.string().optional().describe("Optional git repo URL"),
+			project_id: z.string().optional().describe("Optional devpad project ID to link"),
+			default_template_ref: z.string().optional().describe("Optional default pipeline template ref"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.create(input)),
+	},
+
+	devpad_pipelines_packages_update: {
+		name: "devpad_pipelines_packages_update",
+		description: "Partially update a pipeline package. Only the provided fields are touched.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline package ID"),
+			repo_url: z.string().nullable().optional(),
+			project_id: z.string().nullable().optional(),
+			default_template_ref: z.string().nullable().optional(),
+			script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
+		}),
+		execute: async (client, input) => {
+			const { id, ...patch } = input;
+			return unwrap(await client.pipelines.packages.update(id, patch));
+		},
+	},
+
+	devpad_pipelines_packages_delete: {
+		name: "devpad_pipelines_packages_delete",
+		description: "Delete a pipeline package. Refuses with conflict if existing pipeline_run rows still reference the package.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline package ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.delete(input.id)),
+	},
 };
 
 // Get all tool names
