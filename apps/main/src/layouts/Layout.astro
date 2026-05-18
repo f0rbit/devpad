@@ -54,9 +54,8 @@ const pulse_ready = Boolean(PULSE_INGEST_URL && DEVPAD_PROJECT_ID && PULSE_INGES
 
 		{pulse_ready && (
 			<script>
-				import { getPulse, installBrowserHandlers } from "@/lib/pulse";
-				getPulse();
-				installBrowserHandlers();
+				// side-effect import: lazy-inits pulse + installs window error handlers.
+				import "@/lib/pulse";
 			</script>
 		)}
 	</head>

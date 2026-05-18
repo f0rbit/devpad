@@ -8,6 +8,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { createPulse } from "@f0rbit/pulse-client";
 import { pulseTracing } from "@f0rbit/pulse-client/hono";
+import { make_log, noop_log } from "./lib/log.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppConfig, AppContext, OAuthSecrets } from "./bindings.js";
@@ -93,6 +94,7 @@ export const createApi = (options?: ApiOptions) => {
 	app.use("*", async (c, next) => {
 		const config = c.get("config");
 		if (!config.pulse_api_base || !config.pulse_devpad_ingest_key || !config.devpad_project_id) {
+			c.set("log", noop_log);
 			await next();
 			return;
 		}
@@ -103,6 +105,7 @@ export const createApi = (options?: ApiOptions) => {
 			release: config.git_sha,
 		});
 		c.set("pulse", pulse);
+		c.set("log", make_log(pulse));
 		await pulseTracing({ pulse })(c, next);
 		try {
 			c.executionCtx?.waitUntil(pulse.flush());
