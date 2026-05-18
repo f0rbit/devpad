@@ -1,0 +1,194 @@
+---
+import GrantsList from "@/components/solid/pipelines/GrantsList";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getProject, rethrow } from "@/utils/api-client";
+import type { PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
+
+// @ts-ignore rethrow is used in conditional return path
+void rethrow;
+
+const project_id = Astro.params.project_id!;
+
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project, user } = guard;
+
+const VALID_TABS = ["runs", "grants"] as const;
+type TabName = (typeof VALID_TABS)[number];
+const tab_param = Astro.url.searchParams.get("tab") ?? "runs";
+const active_tab: TabName = (VALID_TABS as readonly string[]).includes(tab_param) ? (tab_param as TabName) : "runs";
+
+const tabs: Array<{ name: TabName; label: string }> = [
+	{ name: "runs", label: "runs" },
+	{ name: "grants", label: "grants" },
+];
+
+// Find the project's pipeline package (if any). Empty state for projects without one.
+const packages_result = await client.pipelines.packages.list({ project_id: project.id });
+if (!packages_result.ok) return rethrow(packages_result.error);
+const pkg: PipelinePackage | null = packages_result.value[0] ?? null;
+
+let runs: PipelineRun[] = [];
+let runs_error: string | null = null;
+let grants: PipelineGrant[] = [];
+let grants_error: string | null = null;
+
+if (pkg) {
+	if (active_tab === "runs") {
+		const runs_result = await client.pipelines.list({ package_id: pkg.id, limit: 25 });
+		if (runs_result.ok) runs = runs_result.value;
+		else runs_error = runs_result.error?.message ?? "Failed to load runs";
+	}
+	if (active_tab === "grants") {
+		const grants_result = await client.pipelines.grants.list(pkg.id);
+		if (grants_result.ok) grants = grants_result.value;
+		else grants_error = grants_result.error?.message ?? "Failed to load grants";
+	}
+}
+
+const in_flight_statuses = new Set<string>(["queued", "deploying", "baking", "awaiting_approval", "rolling_back"]);
+const in_flight_runs = runs.filter(r => in_flight_statuses.has(r.status));
+const recent_runs = runs.filter(r => !in_flight_statuses.has(r.status));
+
+const status_color = (status: string) => {
+	if (status === "completed" || status === "rolled_back") return { bg: "var(--success-bg)", fg: "var(--success)" };
+	if (status === "failed" || status === "cancelled") return { bg: "var(--error-bg)", fg: "var(--error)" };
+	if (status === "deploying" || status === "baking" || status === "rolling_back") return { bg: "var(--info-bg)", fg: "var(--info)" };
+	if (status === "awaiting_approval") return { bg: "var(--warning-bg, var(--bg-alt))", fg: "var(--warning, var(--item-yellow))" };
+	return { bg: "var(--bg-alt)", fg: "var(--fg-muted)" };
+};
+---
+
+<PageLayout title={`Pipeline - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<div class="stack stack-md">
+			<h5>project pipeline</h5>
+
+			{!pkg ? (
+				<div class="stack stack-sm" data-testid="pipeline-empty" style="padding: 1.5rem; border: 1px dashed var(--border); border-radius: var(--radius, 4px);">
+					<h3 style="margin: 0;">no pipeline linked</h3>
+					<p class="text-sm text-faint" style="margin: 0;">
+						This project doesn't have a pipeline package yet. Link one to track deployments, version sets, and approvals here.
+					</p>
+					<pre style="margin: 0; padding: 0.75rem; background: var(--bg-subtle, #1a1a1a); border-radius: var(--radius, 4px); font-size: 0.8rem; overflow: auto;"><code>{`devpad pipelines packages create --project ${project_id}`}</code></pre>
+				</div>
+			) : (
+				<>
+					<nav aria-label="pipeline tabs" data-testid="pipeline-tabs">
+						{tabs.map(t => (
+							<a
+								href={`/project/${project_id}/pipeline${t.name === "runs" ? "" : `?tab=${t.name}`}`}
+								class={active_tab === t.name ? "active" : ""}
+								data-tab={t.name}
+								data-testid={`pipeline-tab-${t.name}`}
+							>
+								{t.label}
+							</a>
+						))}
+					</nav>
+					<br />
+
+					{active_tab === "runs" && (
+						<div class="stack stack-lg">
+							{runs_error && (
+								<p class="text-sm" style="color: var(--error); margin: 0;">{runs_error}</p>
+							)}
+
+							<div class="stack stack-md">
+								<h2>package</h2>
+								<div class="card card-flat stack stack-sm">
+									<div class="row row-sm">
+										<span class="text-sm text-faint" style="min-width: 120px;">Name</span>
+										<span>{pkg.name}</span>
+									</div>
+									{pkg.repo_url && (
+										<div class="row row-sm">
+											<span class="text-sm text-faint" style="min-width: 120px;">Repo</span>
+											<a href={pkg.repo_url} style="color: var(--text-link);">{pkg.repo_url}</a>
+										</div>
+									)}
+									{pkg.default_template_ref && (
+										<div class="row row-sm">
+											<span class="text-sm text-faint" style="min-width: 120px;">Template</span>
+											<code style="font-family: monospace; color: var(--fg-muted);">{pkg.default_template_ref}</code>
+										</div>
+									)}
+								</div>
+							</div>
+
+							{in_flight_runs.length > 0 && (
+								<div class="stack stack-md">
+									<h2>in flight</h2>
+									<div class="stack stack-sm">
+										{in_flight_runs.map(run => {
+											const c = status_color(run.status);
+											return (
+												<a href={`/project/${project_id}/pipeline/runs/${run.id}`} style="text-decoration: none; color: inherit;">
+													<div class="card card-interactive stack stack-xs">
+														<div class="row row-between">
+															<div style="flex: 1;">
+																<h3 style="margin: 0; font-size: 0.95rem;">{run.id.substring(0, 8)}</h3>
+																<p class="text-xs text-faint" style="margin: 0.25rem 0 0 0;">
+																	{run.kind} · {run.current_stage || "queued"}
+																</p>
+															</div>
+															<span class="status-badge" style={`padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.8rem; background: ${c.bg}; color: ${c.fg};`}>
+																{run.status}
+															</span>
+														</div>
+													</div>
+												</a>
+											);
+										})}
+									</div>
+								</div>
+							)}
+
+							<div class="stack stack-md">
+								<h2>recent runs</h2>
+								{recent_runs.length === 0 && in_flight_runs.length === 0 ? (
+									<p class="text-muted">No runs yet for this package.</p>
+								) : recent_runs.length === 0 ? (
+									<p class="text-muted">No completed runs yet.</p>
+								) : (
+									<div class="stack stack-sm">
+										{recent_runs.map(run => {
+											const c = status_color(run.status);
+											return (
+												<a href={`/project/${project_id}/pipeline/runs/${run.id}`} style="text-decoration: none; color: inherit;">
+													<div class="card card-interactive stack stack-xs">
+														<div class="row row-between">
+															<div style="flex: 1;">
+																<h3 style="margin: 0; font-size: 0.95rem;">{run.id.substring(0, 8)}</h3>
+																<p class="text-xs text-faint" style="margin: 0.25rem 0 0 0;">
+																	{run.kind} · {run.current_stage || "queued"}
+																</p>
+															</div>
+															<span class="status-badge" style={`padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.8rem; background: ${c.bg}; color: ${c.fg};`}>
+																{run.status}
+															</span>
+														</div>
+													</div>
+												</a>
+											);
+										})}
+									</div>
+								)}
+							</div>
+						</div>
+					)}
+
+					{active_tab === "grants" && (
+						<div class="stack stack-md">
+							{grants_error && (
+								<p class="text-sm" style="color: var(--error); margin: 0;">{grants_error}</p>
+							)}
+							<GrantsList client:load grants={grants} user_id={user.id} />
+						</div>
+					)}
+				</>
+			)}
+		</div>
+	</ProjectLayout>
+</PageLayout>

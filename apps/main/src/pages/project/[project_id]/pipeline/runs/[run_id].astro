@@ -1,0 +1,105 @@
+---
+import RollbackButton from "@/components/solid/pipelines/RollbackButton";
+import RunProgress from "@/components/solid/pipelines/RunProgress";
+import StageGate from "@/components/solid/pipelines/StageGate";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getProject, rethrow } from "@/utils/api-client";
+import type { PipelinePackage } from "@devpad/schema";
+
+// @ts-ignore rethrow is used in conditional return path
+void rethrow;
+
+const project_id = Astro.params.project_id!;
+const run_id = Astro.params.run_id!;
+
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
+
+const run_result = await client.pipelines.get(run_id);
+if (!run_result.ok) return rethrow(run_result.error);
+const run = run_result.value;
+
+// Authz cross-check: this run's package must belong to this project. Otherwise
+// 404 (not 403 — don't leak the existence of cross-project run ids).
+const packages_result = await client.pipelines.packages.list({ project_id: project.id });
+if (!packages_result.ok) return rethrow(packages_result.error);
+const owns_run = packages_result.value.some((pkg: PipelinePackage) => pkg.id === run.package_id);
+if (!owns_run) return new Response(null, { status: 404, statusText: "Run not found" });
+---
+
+<PageLayout title={`Run ${run_id} - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<div class="stack stack-md">
+			<a href={`/project/${project_id}/pipeline`} style="text-decoration: none; color: var(--text-link); font-size: 0.9rem;">
+				← back to pipeline
+			</a>
+			<h1 style="margin: 0;">{run.id.substring(0, 12)}</h1>
+			<p class="text-sm text-faint" style="margin: 0;">
+				Status: <strong>{run.status}</strong> · Shape: <strong>{run.shape}</strong>
+			</p>
+
+			<div class="stack stack-lg">
+				<div class="stack stack-md">
+					<h2>stage progress</h2>
+					<RunProgress client:load run={run} />
+				</div>
+
+				{run.current_stage && (
+					<div class="stack stack-md">
+						<h2>current stage gate</h2>
+						<StageGate client:load run={run} />
+					</div>
+				)}
+
+				<div class="stack stack-md">
+					<div class="row row-between">
+						<h2 style="margin: 0;">actions</h2>
+					</div>
+					<div class="row" style="gap: var(--space-sm); flex-wrap: wrap;">
+						{(run.status === "deploying" || run.status === "baking" || run.status === "awaiting_approval") && (
+							<RollbackButton client:load run_id={run.id} />
+						)}
+					</div>
+				</div>
+
+				<div class="stack stack-md">
+					<h2>run details</h2>
+					<div class="card card-flat stack stack-sm">
+						<div class="row row-sm">
+							<span class="text-sm text-faint" style="min-width: 120px;">Run ID</span>
+							<code style="font-family: monospace; color: var(--fg-muted);">{run.id}</code>
+						</div>
+						<div class="row row-sm">
+							<span class="text-sm text-faint" style="min-width: 120px;">Version Set</span>
+							<code style="font-family: monospace; color: var(--fg-muted);">{run.version_set_id}</code>
+						</div>
+						<div class="row row-sm">
+							<span class="text-sm text-faint" style="min-width: 120px;">Rollout Shape</span>
+							<span style="color: var(--fg);">{run.shape}</span>
+						</div>
+						{run.forced_atomic_reason && (
+							<div class="row row-sm">
+								<span class="text-sm text-faint" style="min-width: 120px;">Forced Atomic</span>
+								<span style="color: var(--warning);">{run.forced_atomic_reason}</span>
+							</div>
+						)}
+						{run.started_at && (
+							<div class="row row-sm">
+								<span class="text-sm text-faint" style="min-width: 120px;">Started</span>
+								<span style="color: var(--fg-muted);">{new Date(run.started_at).toLocaleString()}</span>
+							</div>
+						)}
+						{run.finished_at && (
+							<div class="row row-sm">
+								<span class="text-sm text-faint" style="min-width: 120px;">Finished</span>
+								<span style="color: var(--fg-muted);">{new Date(run.finished_at).toLocaleString()}</span>
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		</div>
+	</ProjectLayout>
+</PageLayout>
