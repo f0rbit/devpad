@@ -167,6 +167,7 @@ The orchestrator deploys with `--stage production` only. The `--stage staging` p
 - **Use the Alchemy OAuth profile `default`** (configured via `bunx alchemy configure`), not the limited `CLOUDFLARE_API_TOKEN` in `devpad/.env`. That env var is commented out for this reason.
 - **Account is capped at one `default_secrets_store`.** When binding a `Secret`, use `SecretsStore("<id>", { name: "default_secrets_store", adopt: true })`. The pipelines Worker has no Secrets bound today, so this doesn't apply yet — but vault does, and any future pipelines secrets must adopt the same store. Bound secrets are scoped by name; the boundary is preserved at the secret level.
 - **`ALCHEMY_PASSWORD` (in devpad/.env) is only required when Alchemy persists Secret values in state.** Pipelines doesn't bind any secrets currently. Generate with `openssl rand -hex 32` and keep stable across deploys if a future deploy adds secrets.
+- **Tokens in test logs**: when an agent runs a test call that uses a bearer token (CF API, devpad PIPELINES_TOKEN, pulse ingest key, etc.), the full token should NEVER appear in command output that gets captured by the agent's transcript. Use parameter substitution + redact in echoed commands: e.g. `echo "TOKEN=${TOKEN:0:6}…${TOKEN: -4}"` not `echo $TOKEN`. This prevents tokens from being exposed in the orchestrator-phase outputs and permanent logs. If captured, treat as compromised and rotate.
 
 ### Cloudflare API integration gotchas (Phase 6)
 
