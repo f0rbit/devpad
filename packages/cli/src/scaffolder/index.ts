@@ -6,4 +6,4 @@
  */
 
 export { resolve_templates_root, scaffold_package, type ScaffoldOptions, SCAFFOLDER_TEMPLATES } from "./scaffold.ts";
-export type { DefaultGateKind, RolloutMode, ScaffoldedPackage, ScaffolderError, ScaffoldRequest, ScaffolderInput } from "./types.ts";
+export type { BuildShape, DefaultGateKind, RolloutMode, ScaffoldedPackage, ScaffolderError, ScaffoldRequest, ScaffolderInput } from "./types.ts";

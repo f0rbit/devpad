@@ -51,6 +51,7 @@ export {
 	validate_package_name,
 } from "./scaffolder/index.ts";
 export type {
+	BuildShape,
 	DefaultGateKind,
 	RenderError as ScaffolderRenderError,
 	RolloutMode,

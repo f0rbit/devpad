@@ -57,6 +57,7 @@ describe("derive_template_vars", () => {
 		package_name: "anthropic-search",
 		rollout: "gradual",
 		default_gate: "auto",
+		build_shape: "single-file",
 		now: new Date(Date.UTC(2026, 4, 17)),
 	};
 

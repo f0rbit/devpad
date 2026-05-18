@@ -124,7 +124,7 @@ describe("scaffold_package — golden tree", () => {
 describe("scaffold_package — typecheck", () => {
 	// `bunx tsc` startup + downloading typescript on cold cache can push past
 	// the default 5s test timeout; give it room.
-	test("generated atomic+auto package typechecks", { timeout: 60_000 }, async () => {
+	test("generated atomic+auto package typechecks", async () => {
 		const target = await make_tmp_target();
 		const result = await scaffold_package(
 			{
@@ -192,7 +192,7 @@ describe("scaffold_package — typecheck", () => {
 		}
 
 		await rm(path.dirname(target), { recursive: true, force: true });
-	});
+	}, 60_000);
 });
 
 // Silence unused-import warning when stat is dead-stripped — keep it
