@@ -6,9 +6,9 @@
  * module wraps it with filesystem + process IO.
  */
 
-import type { DefaultGateKind, RolloutMode, ScaffolderInput, ScaffolderRenderError, ScaffolderValidationError } from "@devpad/pipeline-templates";
+import type { BuildShape, DefaultGateKind, RolloutMode, ScaffolderInput, ScaffolderRenderError, ScaffolderValidationError } from "@devpad/pipeline-templates";
 
-export type { DefaultGateKind, RolloutMode, ScaffolderInput };
+export type { BuildShape, DefaultGateKind, RolloutMode, ScaffolderInput };
 
 /** What the CLI tells the orchestrator. Captured at the boundary; pure layer takes a `now: Date`. */
 export type ScaffoldRequest = {
@@ -16,6 +16,7 @@ export type ScaffoldRequest = {
 	target_dir: string;
 	rollout: RolloutMode;
 	default_gate: DefaultGateKind;
+	build_shape: BuildShape;
 	skip_install?: boolean;
 	skip_git?: boolean;
 };

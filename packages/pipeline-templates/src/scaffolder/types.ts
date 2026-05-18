@@ -13,6 +13,9 @@ export type RolloutMode = "gradual" | "atomic";
 /** Default gate the generated `pipeline.ts` applies to every transition. */
 export type DefaultGateKind = "manual" | "auto" | "analysis";
 
+/** Build output shape — determines which CLI flags the workflow uses. */
+export type BuildShape = "single-file" | "directory-bundle";
+
 /**
  * Input the CLI feeds into the scaffolder. All optional flags are
  * surfaced here at full type strength so the validator can refuse bad
@@ -22,6 +25,7 @@ export type ScaffolderInput = {
 	package_name: string;
 	rollout: RolloutMode;
 	default_gate: DefaultGateKind;
+	build_shape: BuildShape;
 	now: Date;
 };
 
@@ -37,6 +41,7 @@ export type TemplateVars = {
 	compatibility_date: string;
 	rollout: RolloutMode;
 	default_gate: DefaultGateKind;
+	build_shape: BuildShape;
 	rollout_block: string;
 	gates_block: string;
 	gate_import: string;

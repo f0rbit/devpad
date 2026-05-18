@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"lib": ["ES2022"],
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"moduleResolution": "bundler",
+		"allowSyntheticDefaultImports": true,
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noEmit": true,
+		"types": ["@cloudflare/workers-types"]
+	},
+	"include": ["src/**/*", "infra.ts", "pipeline.ts", "grants.ts", "e2e/**/*", "types/**/*"],
+	"exclude": ["node_modules", "dist", ".alchemy"]
+}

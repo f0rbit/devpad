@@ -64,6 +64,7 @@ jobs:
           DEVPAD_PIPELINES_URL: ${{ secrets.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
           DEVPAD_PIPELINES_TOKEN: ${{ secrets.DEVPAD_PIPELINES_TOKEN }}
         run: |
+
           bun "$RUNNER_TEMP/devpad/packages/cli/dist/index.js" pipelines artifacts upload \
             --package anthropic-search \
             --bundle dist/_worker.js \
@@ -72,6 +73,7 @@ jobs:
             --pipeline pipeline.ts \
             --grants grants.ts \
             --output version-set.json
+
           echo "version_set_id=$(jq -r .id version-set.json)" >> $GITHUB_OUTPUT
 
       # `wrangler versions upload` is intentionally NOT run here — as of

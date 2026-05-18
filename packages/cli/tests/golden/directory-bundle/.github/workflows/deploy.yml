@@ -36,7 +36,7 @@ jobs:
           bun run build
           # CLI expects dist/_worker.js + dist/manifest.json
           mv dist/index.js dist/_worker.js
-          jq -n --arg name {{package_name}} '{name:$name, main:"_worker.js"}' > dist/manifest.json
+          jq -n --arg name directory-bundle '{name:$name, main:"_worker.js"}' > dist/manifest.json
 
       - name: Clone and build devpad CLI
         run: |
@@ -64,18 +64,9 @@ jobs:
           DEVPAD_PIPELINES_URL: ${{ secrets.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
           DEVPAD_PIPELINES_TOKEN: ${{ secrets.DEVPAD_PIPELINES_TOKEN }}
         run: |
-{{#if (eq build_shape "single-file")}}
+
           bun "$RUNNER_TEMP/devpad/packages/cli/dist/index.js" pipelines artifacts upload \
-            --package {{package_name}} \
-            --bundle dist/_worker.js \
-            --manifest dist/manifest.json \
-            --infra-plan infra.ts \
-            --pipeline pipeline.ts \
-            --grants grants.ts \
-            --output version-set.json
-{{else}}
-          bun "$RUNNER_TEMP/devpad/packages/cli/dist/index.js" pipelines artifacts upload \
-            --package {{package_name}} \
+            --package directory-bundle \
             --bundle-dir dist/_worker.js \
             --main-module index.js \
             --assets-dir dist \
@@ -84,7 +75,7 @@ jobs:
             --pipeline pipeline.ts \
             --grants grants.ts \
             --output version-set.json
-{{/if}}
+
           echo "version_set_id=$(jq -r .id version-set.json)" >> $GITHUB_OUTPUT
 
       # `wrangler versions upload` is intentionally NOT run here — as of
@@ -102,5 +93,5 @@ jobs:
           curl -sS -X POST \
             -H "Content-Type: application/json" \
             ${DEVPAD_PIPELINES_TOKEN:+-H "Authorization: Bearer $DEVPAD_PIPELINES_TOKEN"} \
-            -d "{\"package_id\":\"{{package_name}}\",\"version_set_id\":\"${{ steps.upload.outputs.version_set_id }}\"}" \
+            -d "{\"package_id\":\"directory-bundle\",\"version_set_id\":\"${{ steps.upload.outputs.version_set_id }}\"}" \
             "$DEVPAD_PIPELINES_URL/runs"

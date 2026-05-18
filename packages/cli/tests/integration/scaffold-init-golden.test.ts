@@ -14,7 +14,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, test } from "bun:test";
-import { type DefaultGateKind, type RolloutMode, scaffold_package } from "../../src/scaffolder/index.ts";
+import { type BuildShape, type DefaultGateKind, type RolloutMode, scaffold_package } from "../../src/scaffolder/index.ts";
 
 const GOLDEN_ROOT = path.resolve(import.meta.dir, "..", "golden");
 const FIXED_NOW = new Date(Date.UTC(2026, 4, 17));
@@ -25,12 +25,14 @@ type Combo = {
 	package_name: string;
 	rollout: RolloutMode;
 	default_gate: DefaultGateKind;
+	build_shape: BuildShape;
 };
 
 const COMBOS: Combo[] = [
-	{ dir_name: "anthropic-search", package_name: "anthropic-search", rollout: "atomic", default_gate: "auto" },
-	{ dir_name: "gradual-manual", package_name: "gradual-manual", rollout: "gradual", default_gate: "manual" },
-	{ dir_name: "gradual-analysis", package_name: "gradual-analysis", rollout: "gradual", default_gate: "analysis" },
+	{ dir_name: "anthropic-search", package_name: "anthropic-search", rollout: "atomic", default_gate: "auto", build_shape: "single-file" },
+	{ dir_name: "gradual-manual", package_name: "gradual-manual", rollout: "gradual", default_gate: "manual", build_shape: "single-file" },
+	{ dir_name: "gradual-analysis", package_name: "gradual-analysis", rollout: "gradual", default_gate: "analysis", build_shape: "single-file" },
+	{ dir_name: "directory-bundle", package_name: "directory-bundle", rollout: "gradual", default_gate: "auto", build_shape: "directory-bundle" },
 ];
 
 const list_files = async (root: string): Promise<string[]> => {
@@ -83,6 +85,7 @@ describe("scaffold_package — golden tree", () => {
 					target_dir: target,
 					rollout: combo.rollout,
 					default_gate: combo.default_gate,
+					build_shape: combo.build_shape,
 					skip_install: true,
 					skip_git: true,
 				},
@@ -129,6 +132,7 @@ describe("scaffold_package — typecheck", () => {
 				target_dir: target,
 				rollout: "atomic",
 				default_gate: "auto",
+				build_shape: "single-file",
 				skip_install: true,
 				skip_git: true,
 			},

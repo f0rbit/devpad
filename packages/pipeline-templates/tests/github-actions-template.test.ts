@@ -1,6 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import * as yaml from "js-yaml";
+import { render_template } from "../src/scaffolder/domain.ts";
 
 describe("github-actions-template", () => {
 	test("template file exists", () => {
@@ -14,13 +15,19 @@ describe("github-actions-template", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		// Simple handlebars replacement
-		const rendered = template.replace(/{{package_name}}/g, "test-package");
+		// Render with build_shape="single-file" (default)
+		const render_result = render_template(template, {
+			package_name: "test-package",
+			build_shape: "single-file",
+		});
+
+		expect(render_result.ok).toBe(true);
+		if (!render_result.ok) return;
 
 		// Verify YAML is valid
-		expect(() => yaml.load(rendered)).not.toThrow();
+		expect(() => yaml.load(render_result.value)).not.toThrow();
 
-		const parsed = yaml.load(rendered) as any;
+		const parsed = yaml.load(render_result.value) as any;
 		expect(parsed).toBeDefined();
 		expect(parsed.name).toBe("deploy");
 		expect(parsed.on).toBeDefined();
@@ -30,9 +37,16 @@ describe("github-actions-template", () => {
 	test("workflow has correct job structure", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
-		const rendered = template.replace(/{{package_name}}/g, "test-package");
 
-		const parsed = yaml.load(rendered) as any;
+		const render_result = render_template(template, {
+			package_name: "test-package",
+			build_shape: "single-file",
+		});
+
+		expect(render_result.ok).toBe(true);
+		if (!render_result.ok) return;
+
+		const parsed = yaml.load(render_result.value) as any;
 
 		expect(parsed.jobs).toHaveProperty("build");
 		expect(parsed.jobs.build).toBeDefined();
@@ -42,9 +56,16 @@ describe("github-actions-template", () => {
 	test("build job includes all required steps", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
-		const rendered = template.replace(/{{package_name}}/g, "test-package");
 
-		const parsed = yaml.load(rendered) as any;
+		const render_result = render_template(template, {
+			package_name: "test-package",
+			build_shape: "single-file",
+		});
+
+		expect(render_result.ok).toBe(true);
+		if (!render_result.ok) return;
+
+		const parsed = yaml.load(render_result.value) as any;
 		const steps = parsed.jobs.build.steps;
 		const step_names = steps.map((s: any) => s.name || s.uses || s.run);
 
@@ -54,7 +75,6 @@ describe("github-actions-template", () => {
 		expect(step_names.some((n: any) => String(n).includes("test"))).toBe(true);
 		expect(step_names.some((n: any) => String(n).includes("Build worker bundle"))).toBe(true);
 		expect(step_names.some((n: any) => String(n).includes("Upload artifacts"))).toBe(true);
-		expect(step_names.some((n: any) => String(n).includes("Versions upload"))).toBe(true);
 		expect(step_names.some((n: any) => String(n).includes("Start pipeline run"))).toBe(true);
 	});
 
@@ -72,9 +92,16 @@ describe("github-actions-template", () => {
 	test("upload step outputs version_set_id", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
-		const rendered = template.replace(/{{package_name}}/g, "test-package");
 
-		const parsed = yaml.load(rendered) as any;
+		const render_result = render_template(template, {
+			package_name: "test-package",
+			build_shape: "single-file",
+		});
+
+		expect(render_result.ok).toBe(true);
+		if (!render_result.ok) return;
+
+		const parsed = yaml.load(render_result.value) as any;
 		const upload_step = parsed.jobs.build.steps.find((s: any) => s.id === "upload");
 
 		expect(upload_step).toBeDefined();
@@ -82,12 +109,12 @@ describe("github-actions-template", () => {
 		expect(upload_step.run).toContain("version_set_id");
 	});
 
-	test("versions upload step does not include deploy command", () => {
+	test("workflow does not run wrangler deploy", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		// versions-upload should only do "versions upload", not "deploy"
-		expect(template).toContain("versions upload");
+		// The orchestrator owns the CF API upload as of Phase 6; the workflow
+		// only uploads artifacts to corpus and starts a pipeline run
 		expect(template).not.toContain("wrangler deploy");
 		expect(template).not.toContain("versions deploy");
 	});
@@ -95,9 +122,16 @@ describe("github-actions-template", () => {
 	test("start-run step conditionally runs on main branch", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
-		const rendered = template.replace(/{{package_name}}/g, "test-package");
 
-		const parsed = yaml.load(rendered) as any;
+		const render_result = render_template(template, {
+			package_name: "test-package",
+			build_shape: "single-file",
+		});
+
+		expect(render_result.ok).toBe(true);
+		if (!render_result.ok) return;
+
+		const parsed = yaml.load(render_result.value) as any;
 		const start_run_step = parsed.jobs.build.steps.find((s: any) => s.name === "Start pipeline run");
 
 		expect(start_run_step).toBeDefined();
@@ -108,9 +142,11 @@ describe("github-actions-template", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		expect(template).toContain("CLOUDFLARE_API_TOKEN");
-		expect(template).toContain("CLOUDFLARE_ACCOUNT_ID");
+		// As of Phase 6, the orchestrator owns the CF API upload via service
+		// bindings, so the workflow only needs DEVPAD secrets.
 		expect(template).toContain("DEVPAD_API_KEY");
+		expect(template).toContain("DEVPAD_PIPELINES_URL");
+		expect(template).toContain("DEVPAD_PIPELINES_TOKEN");
 	});
 
 	test("template uses correct handlebars syntax", () => {
@@ -129,16 +165,24 @@ describe("github-actions-template", () => {
 
 		// The published @devpad/cli does not yet ship pipelines support, so
 		// the workflow runs the CLI from a cloned source tree. Anchor on the
-		// `pipelines artifacts upload` invocation rather than the runner.
+		// `pipelines artifacts upload` invocation. The template supports both
+		// single-file and directory-bundle build shapes via {{#if}} conditionals.
 		expect(template).toContain("pipelines artifacts upload");
-		expect(template).toContain("packages/cli/src/index.ts");
+		expect(template).toContain("packages/cli/dist/index.js");
 		expect(template).toContain("--package");
-		expect(template).toContain("--bundle");
-		expect(template).toContain("--manifest");
+		// Both build shapes use --infra-plan, --pipeline, --grants, --output
 		expect(template).toContain("--infra-plan");
 		expect(template).toContain("--pipeline");
 		expect(template).toContain("--grants");
 		expect(template).toContain("--output");
+		// Single-file uses --bundle and --manifest
+		expect(template).toContain("--bundle");
+		expect(template).toContain("--manifest");
+		// Directory-bundle uses --bundle-dir, --main-module, --assets-dir, --asset-config
+		expect(template).toContain("--bundle-dir");
+		expect(template).toContain("--main-module");
+		expect(template).toContain("--assets-dir");
+		expect(template).toContain("--asset-config");
 	});
 
 	test("runs-start uses correct invocation", () => {

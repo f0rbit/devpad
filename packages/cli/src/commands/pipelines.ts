@@ -29,9 +29,11 @@ import type { DefaultGateKind, RolloutMode } from "../scaffolder/types.ts";
 
 const ROLLOUT_MODES = ["gradual", "atomic"] as const;
 const GATE_KINDS = ["manual", "auto", "analysis"] as const;
+const BUILD_SHAPES = ["single-file", "directory-bundle"] as const;
 
 const is_rollout_mode = (s: string): s is RolloutMode => (ROLLOUT_MODES as readonly string[]).includes(s);
 const is_gate_kind = (s: string): s is DefaultGateKind => (GATE_KINDS as readonly string[]).includes(s);
+const is_build_shape = (s: string): s is typeof BUILD_SHAPES[number] => (BUILD_SHAPES as readonly string[]).includes(s);
 
 const format_scaffolder_error = (e: ScaffolderError): string => {
 	if (e.code === "render_failed") return `${e.message}\n  variable: ${e.cause.var}\n  near: ${e.cause.template_snippet}`;
@@ -53,11 +55,12 @@ const print_next_steps = (target_dir: string, package_name: string, rollout: Rol
 	);
 };
 
-export const action_init = async (name: string, options: { rollout: string; defaultGate: string; dir?: string; skipInstall?: boolean; skipGit?: boolean }): Promise<void> => {
+export const action_init = async (name: string, options: { rollout: string; defaultGate: string; buildShape: string; dir?: string; skipInstall?: boolean; skipGit?: boolean }): Promise<void> => {
 	const spinner = make_spinner(`Scaffolding ${name}...`).start();
 
 	if (!is_rollout_mode(options.rollout)) return fail_with(spinner, `--rollout must be one of ${ROLLOUT_MODES.join(", ")}; got "${options.rollout}"`);
 	if (!is_gate_kind(options.defaultGate)) return fail_with(spinner, `--default-gate must be one of ${GATE_KINDS.join(", ")}; got "${options.defaultGate}"`);
+	if (!is_build_shape(options.buildShape)) return fail_with(spinner, `--build-shape must be one of ${BUILD_SHAPES.join(", ")}; got "${options.buildShape}"`);
 
 	const target_dir = path.resolve(options.dir ?? path.join(process.cwd(), name));
 
@@ -66,6 +69,7 @@ export const action_init = async (name: string, options: { rollout: string; defa
 		target_dir,
 		rollout: options.rollout,
 		default_gate: options.defaultGate,
+		build_shape: options.buildShape as typeof BUILD_SHAPES[number],
 		skip_install: options.skipInstall === true,
 		skip_git: options.skipGit === true,
 	});
@@ -381,6 +385,7 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.description("Scaffold a new pipeline-managed Worker package")
 		.option("--rollout <mode>", "Rollout mode: gradual | atomic", "gradual")
 		.option("--default-gate <kind>", "Default gate: manual | auto | analysis", "auto")
+		.option("--build-shape <shape>", "Build output shape: single-file | directory-bundle", "single-file")
 		.option("--dir <path>", "Target directory (default: $PWD/<name>)")
 		.option("--skip-install", "Skip `bun install` after scaffolding", false)
 		.option("--skip-git", "Skip `git init` after scaffolding", false)

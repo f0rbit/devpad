@@ -142,6 +142,7 @@ export const scaffold_package = async (request: ScaffoldRequest, options: Scaffo
 		package_name: request.package_name,
 		rollout: request.rollout,
 		default_gate: request.default_gate,
+		build_shape: request.build_shape,
 		now: options.now ?? new Date(),
 	};
 	const vars = derive_template_vars(input);

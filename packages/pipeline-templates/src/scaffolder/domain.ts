@@ -103,6 +103,7 @@ export const derive_template_vars = (input: ScaffolderInput): TemplateVars => {
 		compatibility_date: compute_compatibility_date(input.now),
 		rollout: input.rollout,
 		default_gate: input.default_gate,
+		build_shape: input.build_shape,
 		rollout_block: rollout_block_for(input.rollout),
 		gates_block: gates_block_for(input.rollout, input.default_gate),
 		gate_import: gate_import_for(input.default_gate),
@@ -110,18 +111,43 @@ export const derive_template_vars = (input: ScaffolderInput): TemplateVars => {
 };
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([a-z_][a-z0-9_]*)\s*\}\}/gi;
+const IF_ELSE_BLOCK_PATTERN = /\{\{#if\s+\(eq\s+([a-z_][a-z0-9_]*)\s+"([^"]*)"\)\s*\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g;
+const IF_BLOCK_PATTERN = /\{\{#if\s+\(eq\s+([a-z_][a-z0-9_]*)\s+"([^"]*)"\)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g;
 
 /**
- * Handlebars-style `{{name}}` substitution. Returns `err(missing_var)` if
- * the template references a key absent from `vars` — fail loudly rather
+ * Handlebars-style `{{name}}` substitution with support for `{{#if (eq var "value")}}...{{/if}}` and
+ * `{{#if (eq var "value")}}...{{else}}...{{/if}}` blocks.
+ * Returns `err(missing_var)` if the template references a key absent from `vars` — fail loudly rather
  * than silently emitting `undefined`.
  */
 export const render_template = (template: string, vars: Record<string, string>): Result<string, RenderError> => {
-	const matches: Array<{ full: string; key: string; index: number }> = [];
-	for (const match of template.matchAll(PLACEHOLDER_PATTERN)) {
-		matches.push({ full: match[0], key: match[1], index: match.index ?? 0 });
+	// First, collect all variable references (both in placeholders and in conditionals)
+	const all_matches: Array<{ full: string; key: string; index: number }> = [];
+
+	// Find placeholder variables (exclude template syntax like if/else/endif)
+	const placeholder_matches = template.matchAll(PLACEHOLDER_PATTERN);
+	for (const match of placeholder_matches) {
+		const key = match[1];
+		// Skip template syntax keywords
+		if (!["if", "else", "endif"].includes(key.toLowerCase())) {
+			all_matches.push({ full: match[0], key, index: match.index ?? 0 });
+		}
 	}
-	const missing = matches.find(m => !(m.key in vars));
+
+	// Find variables in if-else conditions
+	for (const match of template.matchAll(IF_ELSE_BLOCK_PATTERN)) {
+		const key = match[1];
+		all_matches.push({ full: match[0], key, index: match.index ?? 0 });
+	}
+
+	// Find variables in if conditions (without else)
+	for (const match of template.matchAll(IF_BLOCK_PATTERN)) {
+		const key = match[1];
+		all_matches.push({ full: match[0], key, index: match.index ?? 0 });
+	}
+
+	// Check for missing variables
+	const missing = all_matches.find(m => !(m.key in vars));
 	if (missing !== undefined) {
 		const start = Math.max(0, missing.index - 20);
 		const end = Math.min(template.length, missing.index + missing.full.length + 20);
@@ -132,5 +158,21 @@ export const render_template = (template: string, vars: Record<string, string>):
 			template_snippet: template.slice(start, end),
 		});
 	}
-	return ok(template.replace(PLACEHOLDER_PATTERN, (_, key: string) => vars[key]));
+
+	// Process if-else blocks first (must come before simple if blocks)
+	let result = template.replace(IF_ELSE_BLOCK_PATTERN, (_, key: string, value: string, true_content: string, false_content: string) => {
+		const var_value = vars[key];
+		return var_value === value ? true_content : false_content;
+	});
+
+	// Process simple if blocks
+	result = result.replace(IF_BLOCK_PATTERN, (_, key: string, value: string, content: string) => {
+		const var_value = vars[key];
+		return var_value === value ? content : "";
+	});
+
+	// Process simple placeholders
+	result = result.replace(PLACEHOLDER_PATTERN, (_, key: string) => vars[key]);
+
+	return ok(result);
 };
