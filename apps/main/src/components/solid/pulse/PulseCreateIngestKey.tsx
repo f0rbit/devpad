@@ -4,6 +4,7 @@ import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
+import { track } from "@/lib/pulse";
 
 interface PulseCreateIngestKeyProps {
 	projectId: string;
@@ -29,6 +30,7 @@ export default function PulseCreateIngestKey(props: PulseCreateIngestKeyProps) {
 			return;
 		}
 		setCreatedKey(result.value.plaintext);
+		track("pulse_ingest_key_created", { project_id: props.projectId });
 		setLoading(false);
 	};
 

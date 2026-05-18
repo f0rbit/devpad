@@ -7,6 +7,7 @@ import Key from "lucide-solid/icons/key";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
+import { track } from "@/lib/pulse";
 
 interface ApiKeyManagerProps {
 	keys: ApiKey[];
@@ -56,6 +57,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 			return;
 		}
 		setCreatedKey(result.value.key.raw_key);
+		track("api_key_created", { scope: newKeyScope() });
 		const listResult = await apiClient.auth.keys.list();
 		if (listResult.ok) {
 			setKeys(listResult.value);
@@ -73,6 +75,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 		if (result.ok) {
 			setKeys(prev => prev.filter(k => k.id !== deleteTarget()!.id));
 			setDeleteTarget(null);
+			track("api_key_revoked");
 		} else {
 			setError(result.error.message ?? "Failed to delete key");
 		}
