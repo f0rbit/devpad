@@ -9,12 +9,48 @@ import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
 const user = Astro.locals.user;
 
 let projects: Project[] = [];
+let pipeline_status_map = new Map<string, any>();
 
 if (user) {
 	const client = getServerApiClient(Astro.locals);
 	const result = await client.projects.list();
 	if (!result.ok) return rethrow(result.error);
 	projects = result.value;
+
+	// Fetch pipeline status for all projects
+	const project_ids = projects.map(p => p.id);
+	const pkgs_result = await client.pipelines.packages.list();
+	if (pkgs_result.ok) {
+		// Build map of project_id -> package for quick lookup
+		const pkg_by_project_id = new Map(
+			pkgs_result.value
+				.filter(pkg => pkg.project_id !== null)
+				.map(pkg => [pkg.project_id!, pkg])
+		);
+
+		// For each project with a package, fetch its latest run and build status
+		for (const project of projects) {
+			const pkg = pkg_by_project_id.get(project.id);
+			if (!pkg) continue;
+
+			// Fetch latest run for this package
+			const runs_result = await client.pipelines.list({ package_id: pkg.id, limit: 1 });
+			const latest_run = runs_result.ok ? runs_result.value[0] : null;
+
+			// Fetch all pending approvals for this package to count them
+			const grants_result = await client.pipelines.grants.list(pkg.id);
+			const pending_count = grants_result.ok
+				? grants_result.value.filter(g => g.decision === null).length
+				: 0;
+
+			pipeline_status_map.set(project.id, {
+				package_id: pkg.id,
+				package_name: pkg.name,
+				latest_run,
+				pending_approval_count: pending_count,
+			});
+		}
+	}
 }
 
 //
@@ -62,7 +98,7 @@ const keywords = [
             <h1>projects</h1>
             <a href="/project/create">+ add</a>
           </div>
-          <ProjectCardGrid projects={projects} client:load />
+          <ProjectCardGrid projects={projects} pipeline_status_map={pipeline_status_map} client:load />
         </section>
       </main>
     )
