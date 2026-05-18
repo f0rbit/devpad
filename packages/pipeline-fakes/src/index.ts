@@ -6,10 +6,14 @@ export type {
 	CreateMessagesOutput,
 } from "./anthropic-provider.ts";
 export type {
+	AssetConfig,
+	AssetUpload,
 	CloudflareError,
 	CloudflareProvider,
 	CreateDeploymentInput,
 	DeploymentStrategy,
+	ModuleMimeType,
+	ModuleUpload,
 	UploadVersionInput,
 	VersionBinding,
 	WorkerDeployment,

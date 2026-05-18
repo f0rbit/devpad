@@ -56,7 +56,7 @@ describe("pipeline runs — full gradual happy path", () => {
 		// on the non-staging script — that's where onebox/wave1/wave2/full
 		// land. The staging stage deploys to its own `${name}-staging` script.
 		const main_script = script_name_for();
-		const seed_version = await deps.cf.versions.upload({ script_name: main_script, annotations: { "workers/tag": "vs_v0" } });
+		const seed_version = await deps.cf.versions.upload({ kind: "single_file", script_name: main_script, annotations: { "workers/tag": "vs_v0" } });
 		if (!seed_version.ok) throw new Error("seed upload failed");
 		await deps.cf.deployments.create({
 			script_name: main_script,

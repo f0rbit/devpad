@@ -73,6 +73,7 @@ describe("pipeline runs — caller-identity injection", () => {
 		// (different) identity trio so we can tell it apart from the run's
 		// uploads.
 		const seed = await deps.cf.versions.upload({
+			kind: "single_file",
 			script_name: prod_script(),
 			annotations: { "workers/tag": "vs_v0" },
 			vars: [

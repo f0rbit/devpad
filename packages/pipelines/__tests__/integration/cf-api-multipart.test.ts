@@ -78,6 +78,7 @@ describe("cf-api-provider — multipart wire format", () => {
 
 		const bundle = new TextEncoder().encode("export default { fetch: () => new Response('hi') };");
 		const result = await provider.versions.upload({
+			kind: "single_file",
 			script_name: "demo-worker",
 			bundle,
 			annotations: { version_set_id: "vs_42" },
@@ -114,6 +115,7 @@ describe("cf-api-provider — multipart wire format", () => {
 
 		const bundle = new TextEncoder().encode("export default {}");
 		await provider.versions.upload({
+			kind: "single_file",
 			script_name: "demo",
 			bundle,
 			main_module: "worker.mjs",

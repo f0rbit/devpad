@@ -182,6 +182,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 		const bundle = new TextEncoder().encode("export default { fetch() { return new Response('ok'); } }");
 
 		const result = await provider.versions.upload({
+			kind: "single_file",
 			script_name: "anthropic-search",
 			annotations: { version_set_id: "vs_v1" },
 			vars,
@@ -228,6 +229,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 
 		const bundle = new TextEncoder().encode("export default {}");
 		const result = await provider.versions.upload({
+			kind: "single_file",
 			script_name: "anthropic-search",
 			bundle,
 			bindings: [
@@ -255,7 +257,7 @@ describe("cf-api-provider — caller-identity vars", () => {
 		recorder.next_response(() => ({ success: true, errors: [], messages: [], result: {} }));
 		const provider = make_test_provider(recorder);
 
-		const result = await provider.versions.upload({ script_name: "test-pkg" });
+		const result = await provider.versions.upload({ kind: "single_file", script_name: "test-pkg" });
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
 		expect(result.error.code).toBe("validation");

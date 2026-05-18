@@ -1,5 +1,16 @@
 import { err, ok, type Result } from "@f0rbit/corpus";
-import type { CloudflareError, CloudflareProvider, CreateDeploymentInput, DeploymentStrategy, UploadVersionInput, WorkerDeployment, WorkerMeta, WorkerVersion } from "./cloudflare-provider.ts";
+import type {
+	AssetUpload,
+	CloudflareError,
+	CloudflareProvider,
+	CreateDeploymentInput,
+	DeploymentStrategy,
+	ModuleUpload,
+	UploadVersionInput,
+	WorkerDeployment,
+	WorkerMeta,
+	WorkerVersion,
+} from "./cloudflare-provider.ts";
 
 type ScriptState = {
 	versions: WorkerVersion[];
@@ -88,6 +99,55 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 	}
 
 	/**
+	 * Look up a version recorded by this fake by `script_name` + `version_id`.
+	 * Used by directory-bundle assertions below; returns undefined if the
+	 * script or version is unknown.
+	 */
+	private find_version(script_name: string, version_id: string): WorkerVersion | undefined {
+		return this.scripts.get(script_name)?.versions.find(v => v.id === version_id);
+	}
+
+	/**
+	 * Test assertion: the named version recorded a `directory_bundle`
+	 * upload whose module set matches `expected_module_names` exactly
+	 * (order-insensitive). Throws (test-only) on any mismatch.
+	 */
+	assertVersionHasModules(script_name: string, version_id: string, expected_module_names: string[]): void {
+		const version = this.find_version(script_name, version_id);
+		if (!version) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} not found`);
+		}
+		if (!version.modules) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} has no modules (not a directory_bundle upload?)`);
+		}
+		const got = version.modules.map(m => m.name).sort();
+		const expected = [...expected_module_names].sort();
+		if (got.length !== expected.length || got.some((name, i) => name !== expected[i])) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasModules: script="${script_name}" version="${version_id}" expected modules ${JSON.stringify(expected)} got ${JSON.stringify(got)}`);
+		}
+	}
+
+	/**
+	 * Test assertion: the named version recorded a `directory_bundle`
+	 * upload with an `assets` bundle whose paths match `expected_asset_paths`
+	 * exactly (order-insensitive). Throws (test-only) on any mismatch.
+	 */
+	assertVersionHasAssets(script_name: string, version_id: string, expected_asset_paths: string[]): void {
+		const version = this.find_version(script_name, version_id);
+		if (!version) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} not found`);
+		}
+		if (!version.assets) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} has no assets recorded`);
+		}
+		const got = version.assets.map(a => a.path).sort();
+		const expected = [...expected_asset_paths].sort();
+		if (got.length !== expected.length || got.some((path, i) => path !== expected[i])) {
+			throw new Error(`InMemoryCloudflareProvider.assertVersionHasAssets: script="${script_name}" version="${version_id}" expected assets ${JSON.stringify(expected)} got ${JSON.stringify(got)}`);
+		}
+	}
+
+	/**
 	 * Invariant: every deployment's percentage strategy must sum to exactly 100.
 	 * Throws (in test context only) when violated.
 	 */
@@ -104,19 +164,10 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 
 	readonly versions = {
 		upload: async (input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>> => {
-			const state = ensure_script(this.scripts, input.script_name);
-			this.version_counter += 1;
-			const version: WorkerVersion = {
-				id: make_id("version"),
-				script_name: input.script_name,
-				number: this.version_counter,
-				created_on: new Date().toISOString(),
-				annotations: input.annotations,
-				vars: input.vars,
-				bundle: input.bundle,
-			};
-			state.versions.push(version);
-			return ok(version);
+			if (input.kind === "directory_bundle") {
+				return this.record_directory_bundle(input);
+			}
+			return this.record_single_file(input);
 		},
 		list: async (script_name: string): Promise<Result<WorkerVersion[], CloudflareError>> => {
 			const state = this.scripts.get(script_name);
@@ -124,6 +175,71 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			return ok([...state.versions]);
 		},
 	};
+
+	private async record_single_file(input: Extract<UploadVersionInput, { kind: "single_file" }>): Promise<Result<WorkerVersion, CloudflareError>> {
+		const state = ensure_script(this.scripts, input.script_name);
+		this.version_counter += 1;
+		const version: WorkerVersion = {
+			id: make_id("version"),
+			script_name: input.script_name,
+			number: this.version_counter,
+			created_on: new Date().toISOString(),
+			annotations: input.annotations,
+			vars: input.vars,
+			bundle: input.bundle,
+		};
+		state.versions.push(version);
+		return ok(version);
+	}
+
+	private async record_directory_bundle(input: Extract<UploadVersionInput, { kind: "directory_bundle" }>): Promise<Result<WorkerVersion, CloudflareError>> {
+		const module_names = new Set(input.modules.map(m => m.name));
+		if (!module_names.has(input.main_module)) {
+			return err({
+				code: "validation",
+				message: `directory_bundle upload references main_module="${input.main_module}" but no module with that name is present (have: ${[...module_names].join(", ")})`,
+			});
+		}
+		if (input.assets !== undefined) {
+			for (const asset of input.assets.assets) {
+				if (asset.hash.length !== 32) {
+					return err({
+						code: "validation",
+						message: `directory_bundle asset hash must be 32 hex chars, got length ${asset.hash.length} for ${asset.path}`,
+					});
+				}
+			}
+		}
+
+		const state = ensure_script(this.scripts, input.script_name);
+		this.version_counter += 1;
+		const modules: ModuleUpload[] = input.modules.map(m => ({
+			name: m.name,
+			mime_type: m.mime_type,
+			content: m.content,
+		}));
+		const assets: AssetUpload[] | undefined = input.assets
+			? input.assets.assets.map(a => ({
+				path: a.path,
+				hash: a.hash,
+				size_bytes: a.size_bytes,
+				mime_type: a.mime_type,
+				content: a.content,
+			}))
+			: undefined;
+		const version: WorkerVersion = {
+			id: make_id("version"),
+			script_name: input.script_name,
+			number: this.version_counter,
+			created_on: new Date().toISOString(),
+			annotations: input.annotations,
+			vars: input.vars,
+			modules,
+			assets,
+		};
+		state.versions.push(version);
+		return ok(version);
+	}
 
 	readonly deployments = {
 		create: async (input: CreateDeploymentInput): Promise<Result<WorkerDeployment, CloudflareError>> => {

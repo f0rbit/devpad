@@ -144,6 +144,7 @@ const upload_version = async (
 	bundle: BundlePayload,
 ): Promise<Result<WorkerVersion, CloudflareError>> => {
 	return cf.versions.upload({
+		kind: "single_file",
 		script_name,
 		annotations: { [VERSION_KEY]: version_set_id },
 		vars,

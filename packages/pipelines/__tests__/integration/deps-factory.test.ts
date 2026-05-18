@@ -200,7 +200,7 @@ describe("deps factory — production wiring shape", () => {
 
 		const cf = new InMemoryCloudflareProvider();
 		const script = `pipeline_${pkg_id}`;
-		const v0 = await cf.versions.upload({ script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const v0 = await cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
 		if (!v0.ok) throw new Error("v0 upload failed");
 		await cf.deployments.create({ script_name: script, strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] } });
 
@@ -289,7 +289,7 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 
 		const cf = new InMemoryCloudflareProvider();
 		const script = `pipeline_${pkg_id}`;
-		const v0 = await cf.versions.upload({ script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const v0 = await cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
 		if (!v0.ok) throw new Error("v0 upload failed");
 		await cf.deployments.create({ script_name: script, strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] } });
 

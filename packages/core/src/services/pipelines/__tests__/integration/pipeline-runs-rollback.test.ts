@@ -39,7 +39,7 @@ describe("pipeline runs — rollback", () => {
 		// Pre-seed a v0 version + deployment so we have something to roll back to.
 		// Rollback redeploys on the non-staging script (where onebox/wave* land).
 		const script = script_name_for();
-		const v0 = await deps.cf.versions.upload({ script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const v0 = await deps.cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
 		if (!v0.ok) throw new Error("v0 upload failed");
 		v0_version_id = v0.value.id;
 		await deps.cf.deployments.create({

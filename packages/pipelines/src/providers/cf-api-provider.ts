@@ -16,6 +16,8 @@
  *   POST   /accounts/:account_id/workers/scripts/:script/deployments
  *   GET    /accounts/:account_id/workers/scripts/:script/deployments
  *   GET    /accounts/:account_id/workers/scripts/:script
+ *   POST   /accounts/:account_id/workers/scripts/:script/assets-upload-session
+ *   POST   /accounts/:account_id/workers/assets/upload?base64=true
  *
  * `assert_version_key_header_routed` is a Transform-Rule simulation in the
  * fake. The real production check is "does the configured Transform Rule
@@ -24,13 +26,21 @@
  * head-of-line check via `versions.list` and matches the
  * `version_set_id` annotation. Returns `not_found` if no matching
  * version exists.
+ *
+ * Phase 2.A: extended with `directory_bundle` upload support — multiple
+ * module parts in one multipart POST, with optional `ASSETS`-binding
+ * upload session that ties a freshly-uploaded asset set to the new worker
+ * version via `metadata.assets = { jwt, config }`.
  */
 
 import { err, ok, type Result } from "@f0rbit/corpus";
 import type {
+	AssetConfig,
+	AssetUpload,
 	CloudflareError,
 	CloudflareProvider,
 	CreateDeploymentInput,
+	ModuleUpload,
 	UploadVersionInput,
 	VersionBinding,
 	WorkerDeployment,
@@ -105,11 +115,14 @@ const cf_call = async <T>(
 
 /**
  * Multipart `POST /workers/scripts/:script/versions` upload — the only
- * shape the CF Workers API accepts for new versions. The body has two
- * parts: a JSON `metadata` part describing main module / bindings /
- * compatibility, and a binary script part whose form-field name MUST
- * equal `metadata.main_module` and whose `Content-Type` distinguishes
- * an ES module (`application/javascript+module`) from a service-worker
+ * shape the CF Workers API accepts for new versions. The body has at
+ * least two parts: a JSON `metadata` part describing main module /
+ * bindings / compatibility, and one or more binary module parts whose
+ * form-field names match the module paths declared in the bundle.
+ *
+ * For single-file uploads, the script part's form-field name MUST equal
+ * `metadata.main_module` and its `Content-Type` distinguishes an ES
+ * module (`application/javascript+module`) from a service-worker
  * (`application/javascript`).
  *
  * `fetch` derives the boundary from the supplied `FormData` — we leave
@@ -173,33 +186,204 @@ const to_worker_deployment = (script_name: string, raw: CfDeploymentResponse): W
 });
 
 /**
+ * Build the metadata JSON for a `versions.upload` call. Pure — extracted
+ * so the directory-bundle path and the single-file path produce identical
+ * shapes from a unified input.
+ */
+const build_version_metadata = (input: {
+	main_module: string;
+	bindings: VersionBinding[];
+	vars: WorkerVar[];
+	compatibility_date: string;
+	compatibility_flags: string[];
+	annotations: Record<string, string>;
+	assets?: { jwt: string; config: AssetConfig };
+}): Record<string, unknown> => {
+	const vars_as_bindings: VersionBinding[] = input.vars.map(v => ({ type: v.type, name: v.name, text: v.text }));
+	const metadata: Record<string, unknown> = {
+		main_module: input.main_module,
+		bindings: [...input.bindings, ...vars_as_bindings],
+		compatibility_date: input.compatibility_date,
+		compatibility_flags: input.compatibility_flags,
+		annotations: input.annotations,
+	};
+	if (input.assets !== undefined) {
+		metadata.assets = { jwt: input.assets.jwt, config: input.assets.config };
+	}
+	return metadata;
+};
+
+type AssetSessionResponse = {
+	jwt: string;
+	buckets: string[][];
+};
+
+/**
+ * Encode a byte array as a base64 string. CF's assets/upload endpoint
+ * expects raw base64 (no data URI prefix) when called with `?base64=true`.
+ */
+const to_base64 = (bytes: Uint8Array): string => {
+	// Bun provides `btoa` natively, but it operates on binary strings;
+	// avoid the intermediate string allocation for large blobs by using
+	// Buffer when available (Bun/Node), falling back to a chunked btoa.
+	if (typeof Buffer !== "undefined") {
+		return Buffer.from(bytes).toString("base64");
+	}
+	let binary = "";
+	for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+	return btoa(binary);
+};
+
+/**
+ * Open an assets-upload session for `script_name` and push every bucket
+ * via the per-bucket multipart endpoint. Returns the session jwt so the
+ * caller can stamp it on the version's `metadata.assets`.
+ */
+const upload_asset_session = async (
+	config: CfApiConfig,
+	script_name: string,
+	assets: AssetUpload[],
+): Promise<Result<{ jwt: string }, CloudflareError>> => {
+	const manifest: Record<string, { hash: string; size: number }> = {};
+	for (const asset of assets) {
+		if (asset.hash.length !== 32) {
+			return err({ code: "validation", message: `asset hash must be 32 hex chars, got length ${asset.hash.length} for ${asset.path}` });
+		}
+		manifest[asset.path] = { hash: asset.hash, size: asset.size_bytes };
+	}
+
+	const session_path = `/workers/scripts/${encodeURIComponent(script_name)}/assets-upload-session`;
+	const session = await cf_call<AssetSessionResponse>(config, session_path, {
+		method: "POST",
+		body: JSON.stringify({ manifest }),
+	});
+	if (!session.ok) return session;
+
+	if (assets.length === 0) {
+		return ok({ jwt: session.value.jwt });
+	}
+
+	const by_hash = new Map(assets.map(a => [a.hash, a]));
+	const upload_url = cf_url(config, "/workers/assets/upload?base64=true");
+
+	for (const bucket of session.value.buckets) {
+		if (bucket.length === 0) continue;
+		const form = new FormData();
+		for (const hash of bucket) {
+			const asset = by_hash.get(hash);
+			if (!asset) {
+				return err({
+					code: "assets_upload_failed",
+					message: `assets-upload-session returned bucket with unknown hash ${hash}`,
+				});
+			}
+			form.append(
+				hash,
+				new Blob([to_base64(asset.content)], { type: asset.mime_type || "application/null" }),
+				hash,
+			);
+		}
+		let response: Response;
+		try {
+			response = await fetch(upload_url, {
+				method: "POST",
+				body: form,
+				headers: { authorization: `Bearer ${session.value.jwt}` },
+			});
+		} catch (e) {
+			return err({ code: "assets_upload_failed", message: `assets/upload fetch failed: ${String(e)}` });
+		}
+		if (response.status >= 400) {
+			const body_text = await response.text().catch(() => "");
+			return err({
+				code: "assets_upload_failed",
+				message: `assets/upload returned ${response.status}: ${body_text || "<no body>"}`,
+			});
+		}
+	}
+
+	return ok({ jwt: session.value.jwt });
+};
+
+const upload_single_file = async (
+	config: CfApiConfig,
+	input: Extract<UploadVersionInput, { kind: "single_file" }>,
+): Promise<Result<WorkerVersion, CloudflareError>> => {
+	if (input.bundle === undefined) {
+		return err({ code: "validation", message: "cf-api-provider.versions.upload requires `bundle` bytes for multipart upload" });
+	}
+	const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/versions`;
+	const main_module = input.main_module ?? "index.js";
+	const metadata = build_version_metadata({
+		main_module,
+		bindings: input.bindings ?? [],
+		vars: input.vars ?? [],
+		compatibility_date: input.compatibility_date ?? "2024-04-03",
+		compatibility_flags: input.compatibility_flags ?? [],
+		annotations: input.annotations ?? {},
+	});
+
+	const form = new FormData();
+	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+	form.append(main_module, new Blob([input.bundle as BlobPart], { type: "application/javascript+module" }), main_module);
+
+	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
+	if (!result.ok) return result;
+	return ok(to_worker_version(input.script_name, result.value));
+};
+
+const upload_directory_bundle = async (
+	config: CfApiConfig,
+	input: Extract<UploadVersionInput, { kind: "directory_bundle" }>,
+): Promise<Result<WorkerVersion, CloudflareError>> => {
+	const module_names = new Set(input.modules.map(m => m.name));
+	if (!module_names.has(input.main_module)) {
+		return err({
+			code: "validation",
+			message: `directory_bundle upload references main_module="${input.main_module}" but no module with that name is present (have: ${[...module_names].join(", ")})`,
+		});
+	}
+
+	let assets_meta: { jwt: string; config: AssetConfig } | undefined;
+	if (input.assets !== undefined) {
+		const session = await upload_asset_session(config, input.script_name, input.assets.assets);
+		if (!session.ok) return session;
+		assets_meta = { jwt: session.value.jwt, config: input.assets.config ?? {} };
+	}
+
+	const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/versions`;
+	const metadata = build_version_metadata({
+		main_module: input.main_module,
+		bindings: input.bindings ?? [],
+		vars: input.vars ?? [],
+		compatibility_date: input.compatibility_date,
+		compatibility_flags: input.compatibility_flags ?? [],
+		annotations: input.annotations ?? {},
+		assets: assets_meta,
+	});
+
+	const form = new FormData();
+	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+	for (const module of input.modules) {
+		form.append(module.name, new Blob([module.content as BlobPart], { type: module.mime_type }), module.name);
+	}
+
+	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
+	if (!result.ok) return result;
+	return ok(to_worker_version(input.script_name, result.value));
+};
+
+/**
  * Build a production {@link CloudflareProvider} that calls the public
  * CF REST API. Pure constructor — no IO at build time.
  */
 export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider => {
 	const versions = {
 		upload: async (input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>> => {
-			if (input.bundle === undefined) {
-				return err({ code: "validation", message: "cf-api-provider.versions.upload requires `bundle` bytes for multipart upload" });
+			if (input.kind === "directory_bundle") {
+				return upload_directory_bundle(config, input);
 			}
-			const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/versions`;
-			const main_module = input.main_module ?? "index.js";
-			const vars_as_bindings: VersionBinding[] = (input.vars ?? []).map(v => ({ type: v.type, name: v.name, text: v.text }));
-			const metadata: Record<string, unknown> = {
-				main_module,
-				bindings: [...(input.bindings ?? []), ...vars_as_bindings],
-				compatibility_date: input.compatibility_date ?? "2024-04-03",
-				compatibility_flags: input.compatibility_flags ?? [],
-				annotations: input.annotations ?? {},
-			};
-
-			const form = new FormData();
-			form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-			form.append(main_module, new Blob([input.bundle as BlobPart], { type: "application/javascript+module" }), main_module);
-
-			const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
-			if (!result.ok) return result;
-			return ok(to_worker_version(input.script_name, result.value));
+			return upload_single_file(config, input);
 		},
 		list: async (script_name: string): Promise<Result<WorkerVersion[], CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}/versions`;
@@ -255,4 +439,15 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 	};
 
 	return { versions, deployments, workers, assert_version_key_header_routed };
+};
+
+/**
+ * Exposed for direct testing. Pure helper that turns a list of assets
+ * into the `{ "<path>": { hash, size } }` manifest body expected by the
+ * `assets-upload-session` POST.
+ */
+export const build_assets_manifest = (assets: AssetUpload[]): Record<string, { hash: string; size: number }> => {
+	const out: Record<string, { hash: string; size: number }> = {};
+	for (const asset of assets) out[asset.path] = { hash: asset.hash, size: asset.size_bytes };
+	return out;
 };
