@@ -25,7 +25,7 @@ app.post("/scan", requireAuth, async c => {
 	if (!project_id) return c.json({ error: "project_id parameter required" }, 400);
 
 	const log = c.get("log");
-	const span = log.span("github_scan");
+	const span = log?.span("github_scan") ?? { end: () => {} };
 	return stream(c, async s => {
 		try {
 			for await (const chunk of scanning.initiateScan(db, project_id, auth_user.id, session.access_token!)) {
