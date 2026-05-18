@@ -10,6 +10,7 @@ export {
 } from "./deploy.js";
 export * from "./grants.js";
 export * from "./grants-domain.js";
+export { get_package, list_packages, type ListPackagesFilter } from "./packages.js";
 export {
 	find_rollback_target,
 	type RollbackError,

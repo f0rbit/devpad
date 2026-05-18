@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { extendTemplate } from "@devpad/pipeline-templates";
-import { pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
+import { pipeline_package, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
 import { approve, build_harness, type Envelope, get_json, post_json, SCRIPT_NAME_FOR, type TestHarness } from "./helpers.ts";
@@ -376,6 +376,57 @@ describe("orchestrator routes — GET /runs list", () => {
 		expect(res.status).toBe(200);
 		const rows = expect_ok<unknown[]>(res.body);
 		expect(rows).toEqual([]);
+	});
+});
+
+describe("orchestrator routes — GET /packages", () => {
+	test("returns all packages", async () => {
+		const h = await build_harness();
+		const res = await get_json(h.app, "/packages");
+		expect(res.status).toBe(200);
+		const packages = expect_ok<Array<{ id: string; name: string; project_id: string | null }>>(res.body);
+		expect(packages.length).toBe(1);
+		expect(packages[0].id).toBe(h.pkg.id);
+		expect(packages[0].name).toBe("test-pkg");
+		expect(packages[0].project_id).toBeNull();
+	});
+
+	test("filters by project_id query param", async () => {
+		const h = await build_harness();
+		// Link the seeded package to a project id. The FK is nullable; the row
+		// need not exist in `project` because bun:sqlite has FK enforcement off
+		// by default (matches D1's behaviour for the read path under test).
+		await h.db.update(pipeline_package).set({ project_id: "project_alpha" }).where(eq(pipeline_package.id, h.pkg.id));
+
+		const alpha = await get_json(h.app, "/packages?project_id=project_alpha");
+		expect(alpha.status).toBe(200);
+		const alpha_rows = expect_ok<Array<{ id: string; project_id: string | null }>>(alpha.body);
+		expect(alpha_rows.length).toBe(1);
+		expect(alpha_rows[0].project_id).toBe("project_alpha");
+
+		const beta = await get_json(h.app, "/packages?project_id=project_beta");
+		expect(beta.status).toBe(200);
+		expect(expect_ok<unknown[]>(beta.body)).toEqual([]);
+	});
+
+	test("GET /packages/:id returns the package", async () => {
+		const h = await build_harness();
+		const res = await get_json(h.app, `/packages/${h.pkg.id}`);
+		expect(res.status).toBe(200);
+		const pkg = expect_ok<{ id: string; name: string }>(res.body);
+		expect(pkg.id).toBe(h.pkg.id);
+		expect(pkg.name).toBe("test-pkg");
+	});
+
+	test("GET /packages/:id returns 404 for unknown id", async () => {
+		const h = await build_harness();
+		const res = await get_json(h.app, "/packages/pipeline-package_does_not_exist");
+		expect(res.status).toBe(404);
+		expect(res.body.ok).toBe(false);
+		const error = res.body.error as { code: string; resource: string; id: string };
+		expect(error.code).toBe("not_found");
+		expect(error.resource).toBe("pipeline_package");
+		expect(error.id).toBe("pipeline-package_does_not_exist");
 	});
 });
 

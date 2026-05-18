@@ -16,6 +16,7 @@
 import type { ResolvedPlan } from "@devpad/core/services/pipelines";
 import { create_run, get_run, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
+import { get_package, list_packages } from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -363,6 +364,21 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const result = await deny_grant(deps.db, grant_id, parsed.data.user_id, parsed.data.reason);
 		if (!result.ok) return wire_err(result.error);
 		return json_ok({ success: true });
+	});
+
+	app.get("/packages", async c => {
+		const deps = c.get("deps");
+		const project_id = c.req.query("project_id");
+		const result = await list_packages(deps.db, project_id !== undefined ? { project_id } : {});
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.get("/packages/:id", async c => {
+		const deps = c.get("deps");
+		const result = await get_package(deps.db, c.req.param("id"));
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
 	});
 
 	// ─── Artifact upload routes ─────────────────────────────────────
