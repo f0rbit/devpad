@@ -340,6 +340,7 @@ export const pipeline_package = sqliteTable("pipeline_package", {
 	repo_url: text("repo_url"),
 	default_template_ref: text("default_template_ref"),
 	script_name_overrides: text("script_name_overrides", { mode: "json" }),
+	project_id: text("project_id").references(() => project.id),
 });
 
 export const pipeline_run = sqliteTable("pipeline_run", {
