@@ -40,7 +40,7 @@ if (user) {
 			// Fetch all pending approvals for this package to count them
 			const grants_result = await client.pipelines.grants.list(pkg.id);
 			const pending_count = grants_result.ok
-				? grants_result.value.filter(g => g.decision === null).length
+				? grants_result.value.filter(g => g.granted_by === null).length
 				: 0;
 
 			pipeline_status_map.set(project.id, {
