@@ -5,16 +5,23 @@
  * All I/O (reading files, uploading to corpus) happens in the command handler.
  */
 
-import { createHash } from "crypto";
 import path from "node:path";
-import { err, ok, type Result } from "@f0rbit/corpus";
+import { AssetManifest, type AssetPart, BundleManifest, type ModulePart } from "@devpad/pipeline-fakes/manifests";
+import { type PipelineTemplate, PipelineTemplateSchema } from "@devpad/pipeline-templates";
 import type { VersionSetManifest } from "@f0rbit/corpus";
-import { PipelineTemplateSchema, type PipelineTemplate } from "@devpad/pipeline-templates";
+import { err, ok, type Result } from "@f0rbit/corpus";
+import { createHash } from "crypto";
+import type { WalkedAssets } from "./asset-walker.ts";
+import type { WalkedBundle } from "./bundle-walker.ts";
 
 export interface ArtifactInputs {
 	package_name: string;
-	bundle_path: string;
-	manifest_path: string;
+	/** Path to the single-file Worker bundle. Mutually exclusive with `bundle_dir_path`. */
+	bundle_path?: string;
+	/** Path to the directory-bundle Worker (`dist/_worker.js/`). Mutually exclusive with `bundle_path`. */
+	bundle_dir_path?: string;
+	/** Path to env manifest JSON (`dist/manifest.json`). Optional — defaults to empty object when absent. */
+	manifest_path?: string;
 	infra_plan_path: string;
 	pipeline_path: string;
 	grants_path: string;
@@ -39,9 +46,16 @@ export function validate_artifact_paths(input: ArtifactInputs): Result<void, Art
 		});
 	}
 
+	const has_bundle = input.bundle_path !== undefined && input.bundle_path.trim() !== "";
+	const has_bundle_dir = input.bundle_dir_path !== undefined && input.bundle_dir_path.trim() !== "";
+	if (has_bundle && has_bundle_dir) {
+		return err({ kind: "validation_error", message: "--bundle and --bundle-dir are mutually exclusive" });
+	}
+	if (!has_bundle && !has_bundle_dir) {
+		return err({ kind: "validation_error", message: "either --bundle or --bundle-dir is required" });
+	}
+
 	const paths = [
-		{ name: "bundle_path", path: input.bundle_path },
-		{ name: "manifest_path", path: input.manifest_path },
 		{ name: "infra_plan_path", path: input.infra_plan_path },
 		{ name: "pipeline_path", path: input.pipeline_path },
 		{ name: "grants_path", path: input.grants_path },
@@ -59,28 +73,55 @@ export function validate_artifact_paths(input: ArtifactInputs): Result<void, Art
 	return ok(undefined);
 }
 
-export function build_manifest(
-	inputs: ArtifactInputs,
-	artifacts: {
-		bundle: Buffer;
-		bundle_ref: string;
-		manifest: object;
-		manifest_ref: string;
-		infra_plan: Buffer;
-		infra_plan_ref: string;
-		pipeline: Buffer;
-		pipeline_ref: string;
-		grants: Buffer;
-		grants_ref: string;
-		template_ref?: string;
-	},
-): Result<VersionSetManifest, ArtifactUploadError> {
+/**
+ * Extended {@link VersionSetManifest} that surfaces the directory-bundle
+ * + assets refs the upstream `@f0rbit/corpus` schema doesn't carry yet.
+ *
+ * TODO(corpus 0.7.0): once `VersionSetManifestSchema` learns
+ * `builds.worker.bundle_manifest_ref?` and `builds.assets.manifest_ref?`
+ * natively, drop this local extension and stamp the fields onto the
+ * upstream type directly. Mirrors the Phase 2.B local extension in
+ * `packages/pipelines/src/providers/corpus-providers.ts`.
+ */
+export type VersionSetManifestWithBundle = VersionSetManifest & {
+	builds: VersionSetManifest["builds"] & {
+		worker: VersionSetManifest["builds"]["worker"] & {
+			bundle_manifest_ref?: string;
+		};
+		assets?: NonNullable<VersionSetManifest["builds"]["assets"]> & {
+			manifest_ref?: string;
+		};
+	};
+};
+
+export interface BuildManifestArtifacts {
+	/** Single-file bundle bytes. Set when `bundle_ref` is set. */
+	bundle?: Buffer;
+	/** Corpus ref for the single-file Worker bundle. Mutually exclusive with `bundle_manifest_ref`. */
+	bundle_ref?: string;
+	/** Corpus ref for the directory-bundle's `BundleManifest` blob. */
+	bundle_manifest_ref?: string;
+	/** Total bytes across all modules in the directory bundle. Required when `bundle_manifest_ref` is set. */
+	bundle_total_size_bytes?: number;
+	manifest: object;
+	manifest_ref: string;
+	infra_plan: Buffer;
+	infra_plan_ref: string;
+	pipeline: Buffer;
+	pipeline_ref: string;
+	grants: Buffer;
+	grants_ref: string;
+	template_ref?: string;
+	/** Corpus ref for the {@link AssetManifest} blob — emitted when `--assets-dir` was supplied. */
+	asset_manifest_ref?: string;
+}
+
+export function build_manifest(inputs: ArtifactInputs, artifacts: BuildManifestArtifacts): Result<VersionSetManifestWithBundle, ArtifactUploadError> {
 	try {
 		const now = new Date().toISOString();
 		const git_sha = inputs.git_sha || "0000000000000000000000000000000000000000";
 		const compatibility_date = inputs.compatibility_date || "2025-05-01";
 
-		// Ensure manifest is an object with the expected structure
 		let manifest_data = artifacts.manifest;
 		if (typeof manifest_data === "string") {
 			try {
@@ -93,16 +134,49 @@ export function build_manifest(
 			}
 		}
 
-		const version_set: VersionSetManifest = {
+		const has_single_file = artifacts.bundle_ref !== undefined;
+		const has_directory = artifacts.bundle_manifest_ref !== undefined;
+		if (has_single_file === has_directory) {
+			return err({
+				kind: "schema_error",
+				message: "exactly one of bundle_ref or bundle_manifest_ref must be set",
+			});
+		}
+
+		const worker_base = has_single_file
+			? {
+					artifact_ref: artifacts.bundle_ref!,
+					size_bytes: artifacts.bundle?.length ?? 0,
+					compatibility_date,
+				}
+			: {
+					// Phase 2.B keeps `artifact_ref` required at the corpus type
+					// level — the orchestrator's local extended schema treats it
+					// as optional. For the directory path we stamp an empty
+					// `artifact_ref` so old strict consumers don't reject the
+					// manifest, while the new `bundle_manifest_ref` is the
+					// authoritative reference.
+					artifact_ref: "",
+					bundle_manifest_ref: artifacts.bundle_manifest_ref!,
+					size_bytes: artifacts.bundle_total_size_bytes ?? 0,
+					compatibility_date,
+				};
+
+		const assets_block =
+			artifacts.asset_manifest_ref !== undefined
+				? {
+						manifest_ref: artifacts.asset_manifest_ref,
+						version_affinity: "pinned" as const,
+					}
+				: undefined;
+
+		const version_set: VersionSetManifestWithBundle = {
 			package: inputs.package_name,
 			git_sha,
 			created_at: now,
 			builds: {
-				worker: {
-					artifact_ref: artifacts.bundle_ref,
-					size_bytes: artifacts.bundle.length,
-					compatibility_date,
-				},
+				worker: worker_base,
+				...(assets_block !== undefined ? { assets: assets_block } : {}),
 			},
 			migrations: {
 				d1_plan_ref: artifacts.infra_plan_ref,
@@ -122,6 +196,69 @@ export function build_manifest(
 			message: `Failed to build manifest: ${message}`,
 		});
 	}
+}
+
+/**
+ * Build a {@link BundleManifest} from a walked directory-bundle plus per-module
+ * corpus refs assigned by `POST /artifacts/blob`. Pure.
+ *
+ * The caller is responsible for ensuring `module_refs` has exactly one entry
+ * per `walked.parts[i].name` — order matches the walker's deterministic sort.
+ * `main_module` must match one of the part names; we don't enforce it here
+ * (corpus accepts the manifest verbatim) but the CF API rejects mismatches at
+ * deploy time.
+ */
+export function build_bundle_manifest_from_walk(walked: WalkedBundle, module_refs: string[], main_module: string, compatibility_date: string, compatibility_flags: string[]): Result<BundleManifest, ArtifactUploadError> {
+	if (module_refs.length !== walked.parts.length) {
+		return err({
+			kind: "schema_error",
+			message: `module_refs length (${module_refs.length}) doesn't match walked parts (${walked.parts.length})`,
+		});
+	}
+	const modules: ModulePart[] = walked.parts.map((part, idx) => ({
+		name: part.name,
+		mime_type: part.mime_type,
+		content_artifact_ref: module_refs[idx]!,
+		size_bytes: part.size_bytes,
+	}));
+	const candidate: unknown = {
+		main_module,
+		modules,
+		compatibility_date,
+		compatibility_flags,
+	};
+	const parsed = BundleManifest.safeParse(candidate);
+	if (!parsed.success) {
+		return err({ kind: "schema_error", message: `BundleManifest validation failed: ${parsed.error.message}` });
+	}
+	return ok(parsed.data);
+}
+
+/**
+ * Build an {@link AssetManifest} from a walked asset directory plus per-file
+ * corpus refs. Pure. Same length-pairing contract as
+ * {@link build_bundle_manifest_from_walk}.
+ */
+export function build_asset_manifest_from_walk(walked: WalkedAssets, asset_refs: string[], config: object = {}): Result<AssetManifest, ArtifactUploadError> {
+	if (asset_refs.length !== walked.parts.length) {
+		return err({
+			kind: "schema_error",
+			message: `asset_refs length (${asset_refs.length}) doesn't match walked parts (${walked.parts.length})`,
+		});
+	}
+	const assets: AssetPart[] = walked.parts.map((part, idx) => ({
+		path: part.path,
+		hash: part.hash,
+		size_bytes: part.size_bytes,
+		mime_type: part.mime_type,
+		content_artifact_ref: asset_refs[idx]!,
+	}));
+	const candidate: unknown = { assets, config };
+	const parsed = AssetManifest.safeParse(candidate);
+	if (!parsed.success) {
+		return err({ kind: "schema_error", message: `AssetManifest validation failed: ${parsed.error.message}` });
+	}
+	return ok(parsed.data);
 }
 
 export interface VersionSetOutput {
@@ -144,11 +281,7 @@ export interface VersionSetOutput {
 // - `compile_pipeline_ts`: side-effectful dynamic-import that produces
 //   the typed template. Used by the CLI upload command.
 
-export type CompileError =
-	| { kind: "build_failed"; message: string }
-	| { kind: "import_failed"; message: string }
-	| { kind: "not_a_template"; message: string }
-	| { kind: "dsl_error"; cause: unknown };
+export type CompileError = { kind: "build_failed"; message: string } | { kind: "import_failed"; message: string } | { kind: "not_a_template"; message: string } | { kind: "dsl_error"; cause: unknown };
 
 /**
  * Serialise a {@link PipelineTemplate} to a deterministic JSON string.

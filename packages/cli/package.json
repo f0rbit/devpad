@@ -44,10 +44,14 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"dependencies": {
-		"@f0rbit/corpus": "^0.6.0"
+		"@f0rbit/corpus": "^0.6.0",
+		"blake3-wasm": "^2.1.5",
+		"ignore": "^5.3.2",
+		"mime": "^3.0.0"
 	},
 	"devDependencies": {
 		"@devpad/api": "workspace:*",
+		"@devpad/pipeline-fakes": "workspace:*",
 		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@types/node": "^20.11.24",
