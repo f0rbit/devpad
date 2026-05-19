@@ -92,6 +92,13 @@
       "when": 1779095712834,
       "tag": "0012_pipeline_package_project_id",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1779184375050,
+      "tag": "0013_pipeline_oidc_trust",
+      "breakpoints": true
     }
   ]
 }

@@ -406,6 +406,25 @@ export const pipeline_analysis_template = sqliteTable("pipeline_analysis_templat
 	window_ms: integer("window_ms").notNull().default(600_000),
 });
 
+export const PIPELINE_OIDC_PROVIDERS = ["github"] as const;
+export type PipelineOidcProvider = (typeof PIPELINE_OIDC_PROVIDERS)[number];
+
+export const pipeline_oidc_trust = sqliteTable("pipeline_oidc_trust", {
+	...entity("pipeline-oidc-trust"),
+	owner_id: text("owner_id")
+		.notNull()
+		.references(() => user.id),
+	provider: text("provider", { enum: PIPELINE_OIDC_PROVIDERS }).notNull().default("github"),
+	github_owner: text("github_owner").notNull(),
+	repo_pattern: text("repo_pattern").notNull().default("*"),
+	allowed_refs: text("allowed_refs", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+	allowed_environments: text("allowed_environments", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+	expected_audience: text("expected_audience").notNull(),
+	allowed_actions: text("allowed_actions", { mode: "json" }).$type<string[]>().notNull().default(sql`'["artifacts:upload","runs:start"]'`),
+	session_ttl_seconds: integer("session_ttl_seconds").notNull().default(900),
+	last_used_at: text("last_used_at"),
+});
+
 // relations
 
 export const user_relations = relations(user, ({ many }) => ({
@@ -507,4 +526,8 @@ export const pipeline_approval_relations = relations(pipeline_approval, ({ one }
 
 export const pipeline_analysis_template_relations = relations(pipeline_analysis_template, ({ one }) => ({
 	owner: one(user, { fields: [pipeline_analysis_template.owner_id], references: [user.id] }),
+}));
+
+export const pipeline_oidc_trust_relations = relations(pipeline_oidc_trust, ({ one }) => ({
+	owner: one(user, { fields: [pipeline_oidc_trust.owner_id], references: [user.id] }),
 }));

@@ -230,3 +230,19 @@ export const upsert_pipeline_analysis_template = z.object({
 	query_dsl: z.unknown(),
 	threshold_dsl: z.unknown(),
 });
+
+export const pipeline_oidc_provider = z.literal("github");
+
+export const upsert_pipeline_oidc_trust = z.object({
+	id: z.string().optional().nullable(),
+	owner_id: z.string(),
+	provider: pipeline_oidc_provider.optional(),
+	github_owner: z.string().min(1).max(200),
+	repo_pattern: z.string().min(1).max(200).optional(),
+	allowed_refs: z.array(z.string()).optional(),
+	allowed_environments: z.array(z.string()).optional(),
+	expected_audience: z.string().min(1),
+	allowed_actions: z.array(z.string()).optional(),
+	session_ttl_seconds: z.number().int().positive().optional(),
+	last_used_at: z.string().nullable().optional(),
+});

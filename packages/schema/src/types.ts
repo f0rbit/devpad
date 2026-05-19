@@ -11,6 +11,7 @@ import type {
 	pipeline_analysis_template,
 	pipeline_approval,
 	pipeline_grant,
+	pipeline_oidc_trust,
 	pipeline_package,
 	pipeline_run,
 	pipeline_stage_event,
@@ -36,6 +37,7 @@ import type {
 	upsert_pipeline_analysis_template,
 	upsert_pipeline_approval,
 	upsert_pipeline_grant,
+	upsert_pipeline_oidc_trust,
 	upsert_pipeline_package,
 	upsert_pipeline_run,
 	upsert_project,
@@ -43,7 +45,7 @@ import type {
 	upsert_todo,
 } from "./validation.js";
 
-export type { ApprovalDecision, ForcedAtomicReason, RolloutShape, RunStatus, StageEventKind } from "./database/schema.js";
+export type { ApprovalDecision, ForcedAtomicReason, PipelineOidcProvider, RolloutShape, RunStatus, StageEventKind } from "./database/schema.js";
 
 // Database table select types (inferred from Drizzle schema)
 export type User = InferSelectModel<typeof user>;
@@ -69,6 +71,7 @@ export type PipelineStageEvent = InferSelectModel<typeof pipeline_stage_event>;
 export type PipelineGrant = InferSelectModel<typeof pipeline_grant>;
 export type PipelineApproval = InferSelectModel<typeof pipeline_approval>;
 export type PipelineAnalysisTemplate = InferSelectModel<typeof pipeline_analysis_template>;
+export type PipelineOidcTrust = InferSelectModel<typeof pipeline_oidc_trust>;
 
 export type UpsertPipelinePackage = z.infer<typeof upsert_pipeline_package>;
 export type UpsertPipelineRun = z.infer<typeof upsert_pipeline_run>;
@@ -76,6 +79,7 @@ export type InsertPipelineStageEvent = z.infer<typeof insert_pipeline_stage_even
 export type UpsertPipelineGrant = z.infer<typeof upsert_pipeline_grant>;
 export type UpsertPipelineApproval = z.infer<typeof upsert_pipeline_approval>;
 export type UpsertPipelineAnalysisTemplate = z.infer<typeof upsert_pipeline_analysis_template>;
+export type UpsertPipelineOidcTrust = z.infer<typeof upsert_pipeline_oidc_trust>;
 
 // Validation schema types (inferred from Zod schemas)
 export type UpsertProject = z.infer<typeof upsert_project>;

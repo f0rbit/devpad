@@ -1,7 +1,7 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import path from "node:path";
-import { pipeline_analysis_template, pipeline_approval, pipeline_grant, pipeline_package, pipeline_run, pipeline_stage_event, user } from "@devpad/schema";
+import { pipeline_analysis_template, pipeline_approval, pipeline_grant, pipeline_oidc_trust, pipeline_package, pipeline_run, pipeline_stage_event, user } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
@@ -131,6 +131,57 @@ describe("pipeline schema round-trips", () => {
 		const fetched = await db.select().from(pipeline_approval).where(eq(pipeline_approval.run_id, run_id)).all();
 		expect(fetched).toHaveLength(1);
 		expect(fetched[0].reason).toBe("looks good");
+	});
+
+	test("inserts and reads a pipeline_oidc_trust row with defaults", async () => {
+		const [policy] = await db
+			.insert(pipeline_oidc_trust)
+			.values({
+				owner_id,
+				github_owner: "f0rbit",
+				expected_audience: "https://devpad-pipelines.dev-818.workers.dev",
+			})
+			.returning();
+
+		expect(policy.id).toMatch(/^pipeline-oidc-trust_/);
+		expect(policy.provider).toBe("github");
+		expect(policy.github_owner).toBe("f0rbit");
+		expect(policy.repo_pattern).toBe("*");
+		expect(policy.allowed_refs).toEqual([]);
+		expect(policy.allowed_environments).toEqual([]);
+		expect(policy.allowed_actions).toEqual(["artifacts:upload", "runs:start"]);
+		expect(policy.session_ttl_seconds).toBe(900);
+		expect(policy.last_used_at).toBeNull();
+
+		const fetched = await db.select().from(pipeline_oidc_trust).where(eq(pipeline_oidc_trust.id, policy.id)).all();
+		expect(fetched).toHaveLength(1);
+		expect(fetched[0].expected_audience).toBe("https://devpad-pipelines.dev-818.workers.dev");
+	});
+
+	test("inserts a pipeline_oidc_trust row with explicit ref/environment/action lists", async () => {
+		const allowed_refs = ["refs/heads/main", "refs/heads/release/*"];
+		const allowed_environments = ["production"];
+		const allowed_actions = ["artifacts:upload"];
+
+		const [policy] = await db
+			.insert(pipeline_oidc_trust)
+			.values({
+				owner_id,
+				github_owner: "f0rbit",
+				repo_pattern: "forbit-*",
+				allowed_refs,
+				allowed_environments,
+				expected_audience: "https://devpad-pipelines.dev-818.workers.dev",
+				allowed_actions,
+				session_ttl_seconds: 300,
+			})
+			.returning();
+
+		expect(policy.repo_pattern).toBe("forbit-*");
+		expect(policy.allowed_refs).toEqual(allowed_refs);
+		expect(policy.allowed_environments).toEqual(allowed_environments);
+		expect(policy.allowed_actions).toEqual(allowed_actions);
+		expect(policy.session_ttl_seconds).toBe(300);
 	});
 
 	test("inserts and reads a pipeline_analysis_template row", async () => {
