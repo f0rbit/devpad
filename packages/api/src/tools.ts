@@ -802,6 +802,61 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.packages.delete(input.id)),
 	},
+
+	devpad_pipelines_oidc_trust_list: {
+		name: "devpad_pipelines_oidc_trust_list",
+		description: "List GitHub Actions OIDC trust policies for an owner. Returned ordered by created_at DESC, id ASC to match the orchestrator's trust-matcher resolution order.",
+		inputSchema: z.object({
+			owner_id: z.string().describe("User ID whose trust policies to list"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.list(input)),
+	},
+
+	devpad_pipelines_oidc_trust_create: {
+		name: "devpad_pipelines_oidc_trust_create",
+		description: "Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern=\"*\", allowed_actions=[\"artifacts:upload\",\"runs:start\"], session_ttl_seconds=900.",
+		inputSchema: z.object({
+			owner_id: z.string().describe("Devpad user ID who owns this policy"),
+			github_owner: z.string().describe("GitHub `repository_owner` claim to trust (e.g. \"f0rbit\")"),
+			expected_audience: z.string().describe("Required `aud` claim on the OIDC token — typically the orchestrator URL"),
+			repo_pattern: z.string().optional().describe("Glob matched against the repo name (\"*\" matches all). Default: \"*\""),
+			allowed_refs: z.array(z.string()).optional().describe("Allowed Git refs (e.g. [\"refs/heads/main\"]). Empty/omitted = any ref"),
+			allowed_environments: z.array(z.string()).optional().describe("Allowed GitHub environments. Empty/omitted = any"),
+			allowed_actions: z.array(z.string()).optional().describe("Scope strings granted to session tokens. Default: [\"artifacts:upload\",\"runs:start\"]"),
+			session_ttl_seconds: z.number().int().positive().optional().describe("Session token TTL. Default: 900 (15 min)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.create(input)),
+	},
+
+	devpad_pipelines_oidc_trust_update: {
+		name: "devpad_pipelines_oidc_trust_update",
+		description: "Partially update a GitHub Actions OIDC trust policy. Only the supplied fields are touched; validation runs server-side against the merged record.",
+		inputSchema: z.object({
+			id: z.string().describe("Trust policy ID"),
+			owner_id: z.string().describe("Owner ID (must match the policy's owner)"),
+			github_owner: z.string().optional(),
+			expected_audience: z.string().optional(),
+			repo_pattern: z.string().optional(),
+			allowed_refs: z.array(z.string()).optional(),
+			allowed_environments: z.array(z.string()).optional(),
+			allowed_actions: z.array(z.string()).optional(),
+			session_ttl_seconds: z.number().int().positive().optional(),
+		}),
+		execute: async (client, input) => {
+			const { id, ...patch } = input;
+			return unwrap(await client.pipelines.oidc_trust.update(id, patch));
+		},
+	},
+
+	devpad_pipelines_oidc_trust_delete: {
+		name: "devpad_pipelines_oidc_trust_delete",
+		description: "Soft-delete a GitHub Actions OIDC trust policy. The row is preserved for audit; the matcher and list operations skip soft-deleted rows.",
+		inputSchema: z.object({
+			id: z.string().describe("Trust policy ID"),
+			owner_id: z.string().describe("Owner ID (must match the policy's owner)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.delete(input.id, { owner_id: input.owner_id })),
+	},
 };
 
 // Get all tool names

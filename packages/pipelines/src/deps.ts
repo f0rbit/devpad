@@ -26,15 +26,18 @@ import type { BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
 import type { CloudflareProvider, VersionBinding } from "@devpad/pipeline-fakes";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Backend } from "@f0rbit/corpus";
+import { err, ok } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
-import { require_bearer_token } from "./auth.ts";
+import { authenticate_request, type AuthIdentity, type SessionVerifier } from "./auth.ts";
 import type { PipelineEnv } from "./bindings.ts";
 import { make_cf_router } from "./do-router.ts";
 import { make_d1_approval_store } from "./providers/approval-store.ts";
 import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
 import { make_corpus_bundle_provider, make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "./providers/corpus-providers.ts";
+import { make_github_oidc_verifier, type OidcVerifier } from "./providers/oidc-verifier.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
-import type { AuthGate, PulseEmitterLite, RoutesDeps } from "./routes.ts";
+import { make_session_signer, type SessionSigner } from "./providers/session-signer.ts";
+import type { AuthGate, OidcDeps, PulseEmitterLite, RoutesDeps } from "./routes.ts";
 
 /**
  * Wraps `env.CF_API_TOKEN.get()` so the provider can pull the secret on
@@ -171,11 +174,35 @@ export const build_run_deps_from_env = (env: PipelineEnv): RunDeps => {
  * + corpus, dispatch into the DO, and accept artifact uploads on the
  * write-side (`POST /artifacts/*`). `cf` and `approvals` are not on
  * this shape (they're consumed by the DO via its own `RunDeps`).
+ *
+ * Phase 15: The session signer (15.A) doubles as the `SessionVerifier`
+ * consumed by `authenticate_request`. A single `make_session_signer(env)`
+ * instance is shared between the OIDC exchange route (which signs new
+ * tokens) and the auth middleware (which verifies them) so the
+ * Secrets-Store-cached key bytes are reused. Tests may override
+ * `verify_session` to inject an in-memory fake.
  */
-export const build_routes_deps_from_env = (env: PipelineEnv): RoutesDeps => {
+export const build_routes_deps_from_env = (env: PipelineEnv, verify_session?: SessionVerifier): RoutesDeps => {
 	const core = build_core(env);
-	const auth: AuthGate = { check: request => require_bearer_token(env, request) };
+	const signer: SessionSigner = make_session_signer(env);
+	const session_verifier_from_signer: SessionVerifier = {
+		verify: async token => {
+			const result = await signer.verify(token);
+			if (!result.ok) return err({ code: "invalid_session", message: result.error.reason });
+			return ok(result.value);
+		},
+	};
+	const verifier = verify_session ?? session_verifier_from_signer;
+	const auth: AuthGate<AuthIdentity> = {
+		check: request => authenticate_request(env, request, { verify_session: verifier }),
+	};
 	const pulse_lite: PulseEmitterLite = { emit: async event => core.pulse.emit(event as never) };
+	const verifier_oidc: OidcVerifier = make_github_oidc_verifier({ expected_audience: env.OIDC_EXPECTED_AUDIENCE ?? "" });
+	const oidc_deps: OidcDeps = {
+		verify_oidc: jwt => verifier_oidc.verify(jwt),
+		sign_session: claims => signer.sign(claims),
+		verify_session: token => signer.verify(token),
+	};
 	return {
 		db: core.db,
 		do_router: make_cf_router(env.PIPELINE_RUNS as unknown as { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } }),
@@ -185,5 +212,28 @@ export const build_routes_deps_from_env = (env: PipelineEnv): RoutesDeps => {
 		backend: core.backend,
 		auth,
 		pulse: pulse_lite,
+		oidc: oidc_deps,
+	};
+};
+
+/**
+ * Wire the OIDC exchange dependencies in isolation. Used by `build_routes_deps_from_env`
+ * implicitly; also re-exported for tests or alternate wirings that want
+ * to swap one piece independently. Lazily resolves the signing key from
+ * Secrets Store on first sign; the JWKS verifier caches the remote set
+ * at module scope (see `oidc-verifier.ts`).
+ *
+ * When `OIDC_EXPECTED_AUDIENCE` is unbound we still construct a
+ * verifier, but with `expected_audience: ""` which will guarantee
+ * `aud`-claim rejection. The route layer surfaces this via the standard
+ * `invalid_oidc_token` mapping.
+ */
+export const build_oidc_deps_from_env = (env: PipelineEnv): OidcDeps => {
+	const verifier: OidcVerifier = make_github_oidc_verifier({ expected_audience: env.OIDC_EXPECTED_AUDIENCE ?? "" });
+	const signer: SessionSigner = make_session_signer(env);
+	return {
+		verify_oidc: jwt => verifier.verify(jwt),
+		sign_session: claims => signer.sign(claims),
+		verify_session: token => signer.verify(token),
 	};
 };

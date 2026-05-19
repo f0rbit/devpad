@@ -15,15 +15,10 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import {
-	type Backend,
-	create_memory_backend,
-	type VersionSetManifest,
-	version_set_store,
-} from "@f0rbit/corpus";
-import type { AuthError } from "../../src/auth.ts";
+import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
+import type { AuthError, AuthIdentity } from "../../src/auth.ts";
 import { is_bearer_valid, parse_bearer_header } from "../../src/auth.ts";
-import { make_routes, type AuthGate, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
+import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
 
 const valid_manifest: VersionSetManifest = {
 	package: "test-pkg",
@@ -39,11 +34,11 @@ const PIPELINES_TOKEN = "test-token-AAAAAAAAAA";
 
 const build_routes_deps = (overrides: Partial<RoutesDeps> = {}): { app: ReturnType<typeof make_routes>; backend: Backend; emitted: Array<Record<string, unknown>> } => {
 	const backend = overrides.backend ?? create_memory_backend();
-	const auth: AuthGate = overrides.auth ?? {
+	const auth: AuthGate<AuthIdentity> = overrides.auth ?? {
 		check: async request => {
 			const header = request.headers.get("authorization");
 			if (!is_bearer_valid(header, PIPELINES_TOKEN)) return { ok: false as const, error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError };
-			return { ok: true as const, value: undefined };
+			return { ok: true as const, value: { kind: "admin" as const, reason: "pipelines_token" as const } };
 		},
 	};
 	const emitted: Array<Record<string, unknown>> = [];
@@ -75,7 +70,7 @@ const post_blob = (app: ReturnType<typeof make_routes>, body: Uint8Array | strin
 			method: "POST",
 			headers: { "content-type": "application/octet-stream", ...headers },
 			body,
-		}),
+		})
 	);
 
 const post_manifest = (app: ReturnType<typeof make_routes>, body: unknown, headers: Record<string, string>) =>
@@ -84,7 +79,7 @@ const post_manifest = (app: ReturnType<typeof make_routes>, body: unknown, heade
 			method: "POST",
 			headers: { "content-type": "application/json", ...headers },
 			body: typeof body === "string" ? body : JSON.stringify(body),
-		}),
+		})
 	);
 
 describe("auth helpers", () => {
@@ -177,7 +172,7 @@ describe("POST /artifacts/blob", () => {
 					"content-length": String(30 * 1024 * 1024),
 				},
 				body: new Uint8Array([0]),
-			}),
+			})
 		);
 		expect(res.status).toBe(413);
 	});

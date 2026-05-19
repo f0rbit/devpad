@@ -142,11 +142,12 @@ describe("github-actions-template", () => {
 		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
 		const template = readFileSync(template_path, "utf8");
 
-		// As of Phase 6, the orchestrator owns the CF API upload via service
-		// bindings, so the workflow only needs DEVPAD secrets.
+		// As of Phase 15, the workflow uses OIDC for orchestrator auth instead of a static token secret.
+		// DEVPAD_API_KEY is still needed for devpad-tools API access (orthogonal to pipelines).
 		expect(template).toContain("DEVPAD_API_KEY");
 		expect(template).toContain("DEVPAD_PIPELINES_URL");
-		expect(template).toContain("DEVPAD_PIPELINES_TOKEN");
+		// No more secrets.DEVPAD_PIPELINES_TOKEN — replaced by OIDC session token from steps.auth.outputs.session
+		expect(template).not.toContain("secrets.DEVPAD_PIPELINES_TOKEN");
 	});
 
 	test("template uses correct handlebars syntax", () => {
@@ -157,6 +158,18 @@ describe("github-actions-template", () => {
 		const placeholders = template.match(hbs_pattern);
 
 		expect(placeholders).toContain("{{package_name}}");
+	});
+
+	test("workflow uses GitHub OIDC for orchestrator auth", () => {
+		const template_path = new URL("../src/scaffolder/templates/.github/workflows/deploy.yml.hbs", import.meta.url);
+		const template = readFileSync(template_path, "utf8");
+
+		// Phase 15: OIDC token exchange replaces static secret
+		expect(template).toContain("id-token: write");
+		expect(template).toContain("/auth/github-oidc");
+		expect(template).toContain("ACTIONS_ID_TOKEN_REQUEST_TOKEN");
+		expect(template).toContain("ACTIONS_ID_TOKEN_REQUEST_URL");
+		expect(template).toContain("steps.auth.outputs.session");
 	});
 
 	test("artifact upload uses correct CLI syntax", () => {

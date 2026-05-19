@@ -24,6 +24,7 @@
 		"./services/pipelines": "./src/services/pipelines/index.ts",
 		"./services/pipelines/gates": "./src/services/pipelines/gates/index.ts",
 		"./services/pipelines/grants": "./src/services/pipelines/grants.ts",
+		"./services/pipelines/oidc-trust": "./src/services/pipelines/oidc-trust.ts",
 		"./services/pipelines/packages": "./src/services/pipelines/packages.ts",
 		"./services/pipelines/state-machine": "./src/services/pipelines/state-machine.ts",
 		"./services/pipelines/runs": "./src/services/pipelines/runs.ts",

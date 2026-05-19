@@ -10,6 +10,7 @@ import type {
 	HistoryAction,
 	Milestone,
 	PipelineGrant,
+	PipelineOidcTrust,
 	PipelinePackage,
 	PipelineRun,
 	Project,
@@ -1104,6 +1105,70 @@ export class ApiClient {
 			 * reference the package — clean up runs first.
 			 */
 			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
+		},
+
+		/**
+		 * OIDC trust-policy namespace — admin-gated CRUD for the
+		 * `pipeline_oidc_trust` table. Phase 15.D surface; each call requires
+		 * the orchestrator's bearer token (literal `PIPELINES_TOKEN`).
+		 * `owner_id` is required on every operation — single-tenant today,
+		 * but the column is in place so multi-user ACLs slot in later.
+		 */
+		oidc_trust: {
+			/**
+			 * List policies for an owner, ordered created_at DESC, id ASC —
+			 * matches the trust-matcher resolution order so the management UI
+			 * shows the policy that would be picked first.
+			 */
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust[]>> => wrap(() => this.clients.pipelines.get<PipelineOidcTrust[]>("/oidc-trust", { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Get a single policy by id, scoped to its owner. 404 when
+			 * unknown, soft-deleted, or owned by a different user.
+			 */
+			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.get<PipelineOidcTrust>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Create a new policy. Defaults per plan §I.5: `repo_pattern: "*"`,
+			 * `allowed_actions: ["artifacts:upload","runs:start"]`,
+			 * `session_ttl_seconds: 900`.
+			 */
+			create: (input: {
+				owner_id: string;
+				github_owner: string;
+				expected_audience: string;
+				provider?: "github";
+				repo_pattern?: string;
+				allowed_refs?: string[];
+				allowed_environments?: string[];
+				allowed_actions?: string[];
+				session_ttl_seconds?: number;
+			}): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.post<PipelineOidcTrust>("/oidc-trust", { body: input })),
+
+			/**
+			 * Partial patch — only the supplied fields are touched. Validation
+			 * runs against the merged record server-side.
+			 */
+			update: (
+				id: string,
+				input: {
+					owner_id: string;
+					github_owner?: string;
+					expected_audience?: string;
+					repo_pattern?: string;
+					allowed_refs?: string[];
+					allowed_environments?: string[];
+					allowed_actions?: string[];
+					session_ttl_seconds?: number;
+				}
+			): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.patch<PipelineOidcTrust>(`/oidc-trust/${id}`, { body: input })),
+
+			/**
+			 * Soft-delete a policy (sets `deleted = true`; row preserved for
+			 * audit). The matcher and management list both skip soft-deleted
+			 * rows.
+			 */
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } })),
 		},
 	};
 

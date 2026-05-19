@@ -17,7 +17,7 @@ import { pipeline_package, pipeline_run, project } from "@devpad/schema/database
 import type { Database } from "@devpad/schema/database/types";
 import type { Backend } from "@f0rbit/corpus";
 import { create_memory_backend } from "@f0rbit/corpus";
-import type { AuthError } from "../../src/auth.ts";
+import type { AuthError, AuthIdentity } from "../../src/auth.ts";
 import { is_bearer_valid } from "../../src/auth.ts";
 import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
 import { create_test_db, seed_package, seed_user } from "./helpers.ts";
@@ -35,13 +35,13 @@ const build_setup = async (): Promise<RouteSetup> => {
 	const db = create_test_db();
 	await seed_user(db);
 	const backend = create_memory_backend();
-	const auth: AuthGate = {
+	const auth: AuthGate<AuthIdentity> = {
 		check: async request => {
 			const header = request.headers.get("authorization");
 			if (!is_bearer_valid(header, PIPELINES_TOKEN)) {
 				return { ok: false as const, error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError };
 			}
-			return { ok: true as const, value: undefined };
+			return { ok: true as const, value: { kind: "admin" as const, reason: "pipelines_token" as const } };
 		},
 	};
 	const pulse: PulseEmitterLite = { emit: async () => undefined };

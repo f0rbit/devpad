@@ -51,12 +51,12 @@
 			"import": "./dist/bindings.js"
 		},
 		"./validation": {
-			"types": "./dist/validation/index.d.ts",
-			"import": "./dist/validation/index.js"
+			"types": "./dist/validation.d.ts",
+			"import": "./dist/validation.js"
 		},
 		"./types": {
-			"types": "./dist/types/index.d.ts",
-			"import": "./dist/types/index.js"
+			"types": "./dist/types.d.ts",
+			"import": "./dist/types.js"
 		},
 		"./errors": {
 			"types": "./dist/errors.d.ts",

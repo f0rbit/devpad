@@ -13,9 +13,10 @@
  * scheduling/scratch only.
  */
 
-import type { ResolvedPlan } from "@devpad/core/services/pipelines";
-import { create_run, get_run, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
+import type { OidcSessionClaims, OidcSessionScope, ResolvedPlan, VerifiedOidcClaims } from "@devpad/core/services/pipelines";
+import { create_run, exchange_oidc_for_session, get_run, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
+import { create_trust_policy, delete_trust_policy, get_trust_policy, list_trust_policies, update_trust_policy } from "@devpad/core/services/pipelines/oidc-trust";
 import { create_package, delete_package, get_package, list_packages, update_package } from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
@@ -25,7 +26,7 @@ import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/co
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import type { AuthError } from "./auth.ts";
+import type { AuthError, AuthIdentity } from "./auth.ts";
 import type { DoRouter } from "./do-router.ts";
 
 export const create_run_body = z.object({
@@ -65,6 +66,40 @@ export const update_package_body = z.object({
 	script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
 });
 
+export const oidc_exchange_body = z.object({
+	jwt: z.string().min(1),
+	package_id: z.string().min(1).optional(),
+	requested_scope: z.array(z.string().min(1)).optional(),
+});
+
+export const create_oidc_trust_body = z.object({
+	owner_id: z.string().min(1),
+	github_owner: z.string().min(1).max(200),
+	provider: z.literal("github").optional(),
+	repo_pattern: z.string().min(1).max(200).optional(),
+	allowed_refs: z.array(z.string()).optional(),
+	allowed_environments: z.array(z.string()).optional(),
+	expected_audience: z.string().min(1),
+	allowed_actions: z.array(z.string()).optional(),
+	session_ttl_seconds: z.number().int().positive().optional(),
+});
+
+export const update_oidc_trust_body = z.object({
+	owner_id: z.string().min(1),
+	github_owner: z.string().min(1).max(200).optional(),
+	provider: z.literal("github").optional(),
+	repo_pattern: z.string().min(1).max(200).optional(),
+	allowed_refs: z.array(z.string()).optional(),
+	allowed_environments: z.array(z.string()).optional(),
+	expected_audience: z.string().min(1).optional(),
+	allowed_actions: z.array(z.string()).optional(),
+	session_ttl_seconds: z.number().int().positive().optional(),
+});
+
+export const list_oidc_trust_query = z.object({
+	owner_id: z.string().min(1),
+});
+
 /**
  * Query-param parser for `GET /runs`. `limit` defaults to 50, capped at
  * 200. Unknown statuses fail with a typed error so the catalog UI can
@@ -100,12 +135,23 @@ export interface LineageProvider {
 	previous(package_id: string, version_set_id: string): Promise<string | null>;
 }
 
-export interface AuthGate {
-	check(request: Request): Promise<Result<void, AuthError>>;
+export interface AuthGate<T = void> {
+	check(request: Request): Promise<Result<T, AuthError>>;
 }
 
 export interface PulseEmitterLite {
 	emit(event: { event: string } & Record<string, unknown>): Promise<unknown>;
+}
+
+/**
+ * Dependency bundle for `POST /auth/github-oidc`. Pulled out so tests can
+ * substitute in-memory verifier + signer (`@devpad/core` only describes
+ * the contract; production wires through `jose` in `providers/`).
+ */
+export interface OidcDeps {
+	verify_oidc(jwt: string): Promise<Result<VerifiedOidcClaims, { reason: string }>>;
+	sign_session(claims: OidcSessionClaims): Promise<Result<string, { reason: string }>>;
+	verify_session(token: string): Promise<Result<OidcSessionClaims, { reason: string }>>;
 }
 
 export type RoutesDeps = {
@@ -118,8 +164,12 @@ export type RoutesDeps = {
 	// uploads. Old tests that only exercise `/runs` continue to pass a
 	// minimal `RoutesDeps` without these.
 	backend?: Backend;
-	auth?: AuthGate;
+	auth?: AuthGate<AuthIdentity>;
 	pulse?: PulseEmitterLite;
+	// Optional: present when the orchestrator is configured to mint OIDC
+	// session tokens. Absent on minimal test setups; the route returns
+	// 503 `auth_unavailable` in that case.
+	oidc?: OidcDeps;
 };
 
 type AppCtx = { Variables: { deps: RoutesDeps } };
@@ -148,7 +198,10 @@ const STATUS_BY_CODE: Record<string, number> = {
 	no_previous_version: 409,
 	no_previous_version_set: 400,
 	unauthorized: 401,
+	forbidden: 403,
 	auth_unavailable: 503,
+	insufficient_scope: 403,
+	package_scope_mismatch: 403,
 	backend_unavailable: 503,
 	storage_error: 500,
 	store_error: 500,
@@ -156,6 +209,11 @@ const STATUS_BY_CODE: Record<string, number> = {
 	network_error: 502,
 	assets_upload_failed: 502,
 	missing_gate: 500,
+	// Phase 15 — OIDC exchange wire codes
+	invalid_oidc_token: 401,
+	trust_policy_failed: 403,
+	package_not_found: 404,
+	invalid_request: 400,
 };
 
 const status_for_code = (code: string): number => STATUS_BY_CODE[code] ?? 500;
@@ -224,6 +282,27 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const parsed = create_run_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const deps = c.get("deps");
+
+		// Phase 15: Enforce auth + scoping for session identities starting a run.
+		// When `deps.auth` is unset (legacy tests / Workers not configured for
+		// auth), skip the gate entirely — `POST /runs` historically didn't
+		// require auth and the auth-modes test exercises the gated path.
+		if (deps.auth !== undefined) {
+			const auth_result = await apply_auth(deps, c.req.raw);
+			if (auth_result instanceof Response) return auth_result;
+			const identity = auth_result.identity;
+
+			// Session identity must have runs:start scope and the package must be in their allowed list
+			if (identity.kind === "session") {
+				if (!identity.scope.includes("runs:start")) {
+					return wire_err({ code: "insufficient_scope", required: "runs:start", granted: identity.scope }, 403);
+				}
+				if (!identity.package_ids.includes(parsed.data.package_id)) {
+					return wire_err({ code: "package_scope_mismatch", package_id: parsed.data.package_id, allowed_package_ids: identity.package_ids }, 403);
+				}
+			}
+		}
+
 		const package_row = (await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, parsed.data.package_id)))[0];
 		if (package_row === undefined) return wire_err({ code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
 
@@ -408,8 +487,8 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 	app.post("/packages", async c => {
 		const deps = c.get("deps");
-		const auth_fail = await apply_auth(deps, c.req.raw);
-		if (auth_fail !== null) return auth_fail;
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
 
 		const body = await c.req.json().catch(() => null);
 		const parsed = create_package_body.safeParse(body);
@@ -422,8 +501,8 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 	app.patch("/packages/:id", async c => {
 		const deps = c.get("deps");
-		const auth_fail = await apply_auth(deps, c.req.raw);
-		if (auth_fail !== null) return auth_fail;
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
 
 		const body = await c.req.json().catch(() => null);
 		const parsed = update_package_body.safeParse(body);
@@ -436,10 +515,102 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 	app.delete("/packages/:id", async c => {
 		const deps = c.get("deps");
-		const auth_fail = await apply_auth(deps, c.req.raw);
-		if (auth_fail !== null) return auth_fail;
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
 
 		const result = await delete_package(deps.db, c.req.param("id"));
+		if (!result.ok) return wire_err(result.error);
+		return json_ok({ deleted: true });
+	});
+
+	// ─── OIDC exchange route ────────────────────────────────────────
+	//
+	// `POST /auth/github-oidc` — accepts a GitHub Actions OIDC JWT,
+	// verifies it against the GitHub JWKS, matches against a
+	// `pipeline_oidc_trust` policy, and mints an orchestrator-signed
+	// session JWT scoped to a specific `package_id`.
+	//
+	// Intentionally UNAUTHENTICATED at the bearer layer — the OIDC JWT
+	// in the body IS the auth. See plan §E.2.
+
+	app.post("/auth/github-oidc", async c => apply_oidc_exchange(c.req.raw, c.get("deps")));
+
+	// ─── OIDC trust-policy routes (admin-only) ──────────────────────
+	//
+	// Managing trust policies via a session token would be circular —
+	// a holder of a session could mint themselves broader scopes. These
+	// routes require admin identity (literal `PIPELINES_TOKEN`); session
+	// JWTs are explicitly rejected even when they pass `apply_auth`.
+
+	app.get("/oidc-trust", async c => {
+		const deps = c.get("deps");
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+
+		const parsed = list_oidc_trust_query.safeParse(c.req.query());
+		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
+
+		const result = await list_trust_policies(deps.db, { owner_id: parsed.data.owner_id });
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.get("/oidc-trust/:id", async c => {
+		const deps = c.get("deps");
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+
+		const parsed = list_oidc_trust_query.safeParse(c.req.query());
+		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
+
+		const result = await get_trust_policy(deps.db, { id: c.req.param("id"), owner_id: parsed.data.owner_id });
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.post("/oidc-trust", async c => {
+		const deps = c.get("deps");
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+
+		const body = await c.req.json().catch(() => null);
+		const parsed = create_oidc_trust_body.safeParse(body);
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
+
+		const result = await create_trust_policy(deps.db, parsed.data);
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.patch("/oidc-trust/:id", async c => {
+		const deps = c.get("deps");
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+
+		const body = await c.req.json().catch(() => null);
+		const parsed = update_oidc_trust_body.safeParse(body);
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
+
+		const { owner_id, ...patch } = parsed.data;
+		const result = await update_trust_policy(deps.db, { id: c.req.param("id"), owner_id, ...patch });
+		if (!result.ok) return wire_err(result.error);
+		return json_ok(result.value);
+	});
+
+	app.delete("/oidc-trust/:id", async c => {
+		const deps = c.get("deps");
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+
+		const parsed = list_oidc_trust_query.safeParse(c.req.query());
+		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
+
+		const result = await delete_trust_policy(deps.db, { id: c.req.param("id"), owner_id: parsed.data.owner_id });
 		if (!result.ok) return wire_err(result.error);
 		return json_ok({ deleted: true });
 	});
@@ -470,7 +641,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 const MAX_BLOB_SIZE_BYTES = 25 * 1024 * 1024; // 25 MiB — generous for worker bundles + assets
 const BLOB_STORE_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 
-const apply_auth = async (deps: RoutesDeps, request: Request): Promise<Response | null> => {
+const apply_auth = async (deps: RoutesDeps, request: Request): Promise<{ identity: AuthIdentity } | Response> => {
 	if (deps.auth === undefined) {
 		return wire_err({ code: "auth_unavailable", message: "artifact upload not configured on this Worker" }, 503);
 	}
@@ -479,17 +650,65 @@ const apply_auth = async (deps: RoutesDeps, request: Request): Promise<Response 
 		const status = check.error.code === "auth_unavailable" ? 503 : 401;
 		return wire_err(check.error, status);
 	}
-	return null;
+	return { identity: check.value };
+};
+
+const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<Response> => {
+	if (deps.oidc === undefined) {
+		return wire_err({ code: "auth_unavailable", message: "OIDC exchange not configured on this Worker" }, 503);
+	}
+	const body = await request.json().catch(() => null);
+	const parsed = oidc_exchange_body.safeParse(body);
+	if (!parsed.success) return wire_err({ code: "invalid_request", issues: parsed.error.issues }, 400);
+
+	const result = await exchange_oidc_for_session(
+		{
+			db: deps.db,
+			verify_oidc: deps.oidc.verify_oidc,
+			sign_session: deps.oidc.sign_session,
+			now: () => new Date(),
+			new_jti: () => crypto.randomUUID(),
+		},
+		parsed.data
+	);
+	if (!result.ok) return wire_err(result.error);
+
+	if (deps.pulse !== undefined) {
+		await deps.pulse
+			.emit({
+				event: "oidc_exchange",
+				trust_policy_id: result.value.trust_policy_id,
+				package_id: result.value.package_ids[0] ?? null,
+				scope: result.value.scope as readonly OidcSessionScope[],
+				status: "ok",
+			})
+			.catch(() => undefined);
+	}
+
+	return json_ok({
+		session_token: result.value.session_token,
+		expires_at: result.value.expires_at.toISOString(),
+		scope: result.value.scope,
+		package_ids: result.value.package_ids,
+		trust_policy_id: result.value.trust_policy_id,
+	});
 };
 
 const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<Response> => {
-	const auth_fail = await apply_auth(deps, request);
-	if (auth_fail !== null) return auth_fail;
+	const auth_result = await apply_auth(deps, request);
+	if (auth_result instanceof Response) return auth_result;
+	const identity = auth_result.identity;
+
 	if (deps.backend === undefined) return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
 	const store_id = request.headers.get("x-store-id");
 	if (store_id === null || !BLOB_STORE_ID_PATTERN.test(store_id)) {
 		return wire_err({ code: "invalid_store_id", message: "x-store-id header required: [a-z0-9-]{1,64}" }, 400);
+	}
+
+	// Phase 15: When session identity, require artifacts:upload scope
+	if (identity.kind === "session" && !identity.scope.includes("artifacts:upload")) {
+		return wire_err({ code: "insufficient_scope", required: "artifacts:upload", granted: identity.scope }, 403);
 	}
 
 	const content_length = Number(request.headers.get("content-length") ?? "0");
@@ -559,8 +778,10 @@ const latest_version_for_package = async (backend: Backend, package_name: string
 };
 
 const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): Promise<Response> => {
-	const auth_fail = await apply_auth(deps, request);
-	if (auth_fail !== null) return auth_fail;
+	const auth_result = await apply_auth(deps, request);
+	if (auth_result instanceof Response) return auth_result;
+	const identity = auth_result.identity;
+
 	if (deps.backend === undefined) return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
 	const body = await request.json().catch(() => null);
@@ -570,6 +791,17 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	if (!parsed.success) return wire_err({ code: "invalid_manifest", issues: parsed.error.issues }, 400);
 
 	const manifest = parsed.data as VersionSetManifest;
+
+	// Phase 15: When session identity, require artifacts:upload scope and package membership
+	if (identity.kind === "session") {
+		if (!identity.scope.includes("artifacts:upload")) {
+			return wire_err({ code: "insufficient_scope", required: "artifacts:upload", granted: identity.scope }, 403);
+		}
+		if (!identity.package_ids.includes(manifest.package)) {
+			return wire_err({ code: "package_scope_mismatch", package_id: manifest.package, allowed_package_ids: identity.package_ids }, 403);
+		}
+	}
+
 	const store = version_set_store(deps.backend);
 
 	// Look up the most recent existing version-set for this package so we

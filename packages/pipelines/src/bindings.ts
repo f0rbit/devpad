@@ -47,4 +47,16 @@ export type PipelineEnv = {
 	// still serves the read-only routes; artifact uploads return
 	// `auth_unavailable` until the secret is provisioned.
 	PIPELINES_TOKEN?: SecretsStoreSecret;
+	// HS256 signing key for orchestrator-minted session JWTs. Required
+	// when `POST /auth/github-oidc` is wired; absence makes that route
+	// return 503 `auth_unavailable`. 64 random bytes recommended,
+	// base64-encoded for storage.
+	OIDC_SESSION_SIGNING_KEY?: SecretsStoreSecret;
+	// Expected `aud` claim value on GitHub Actions OIDC tokens. The
+	// orchestrator's public URL by convention; per-policy override lives
+	// in `pipeline_oidc_trust.expected_audience` for multi-aud setups.
+	OIDC_EXPECTED_AUDIENCE?: string;
+	// Override for the OIDC issuer (defaults to the GitHub Actions
+	// issuer URL). Plain var; never sensitive.
+	GITHUB_OIDC_ISSUER?: string;
 };

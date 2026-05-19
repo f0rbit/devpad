@@ -10,6 +10,20 @@ export {
 } from "./deploy.js";
 export * from "./grants.js";
 export * from "./grants-domain.js";
+export {
+	type CreateTrustPolicyInput,
+	create_trust_policy,
+	type DeleteTrustPolicyInput,
+	delete_trust_policy,
+	type GetTrustPolicyInput,
+	get_trust_policy,
+	type ListTrustPoliciesFilter,
+	list_trust_policies,
+	type TouchTrustPolicyInput,
+	touch_trust_policy_last_used,
+	type UpdateTrustPolicyInput,
+	update_trust_policy,
+} from "./oidc-trust.js";
 export { type CreatePackageInput, create_package, delete_package, get_package, type ListPackagesFilter, list_packages, type UpdatePackageInput, update_package } from "./packages.js";
 export {
 	find_rollback_target,
@@ -35,5 +49,30 @@ export {
 	resolve_run_plan,
 	tick_bake_complete,
 } from "./runs.js";
+export {
+	compile_glob,
+	OIDC_SESSION_SCOPES,
+	type OidcAudit,
+	type OidcExchangeError,
+	type OidcExchangeInput,
+	type OidcExchangeOutput,
+	type OidcSessionClaims,
+	type OidcSessionScope,
+	type OidcSubject,
+	type SubjectParseError,
+	parse_oidc_subject,
+	type VerifiedOidcClaims,
+	verified_oidc_claims_schema,
+} from "./oidc-types.js";
+export {
+	exchange_oidc_for_session,
+	extract_repo_from_url,
+	match_trust_policy,
+	type MatchedPolicy,
+	type OidcExchangeDeps,
+	type PackageBindingError,
+	type TrustMatchError,
+	validate_package_binding,
+} from "./oidc.js";
 export { resolve_script_name, type ScriptNameInput } from "./script-name.js";
 export * from "./state-machine.js";

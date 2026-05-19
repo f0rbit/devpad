@@ -6,9 +6,11 @@
  * the others wrap `client.pipelines.*` so we never re-implement HTTP plumbing.
  */
 
-import { readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { createInterface } from "node:readline/promises";
 import { type ApiClient, ApiClient as ApiClientCtor } from "@devpad/api";
+import { derive_template_vars, render_template as render_pkg_template, SCAFFOLDER_TEMPLATES } from "@devpad/pipeline-templates";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import chalk from "chalk";
 import type { Command } from "commander";
@@ -740,6 +742,276 @@ export const action_packages_delete =
 		spinner.succeed(`deleted ${id}`);
 	};
 
+// ─── oidc-trust subcommand actions ─────────────────────────────────
+//
+// `oidc-trust list / add / remove / show` manage the
+// `pipeline_oidc_trust` policies that gate the GitHub Actions OIDC
+// exchange (Phase 15). `add` prompts interactively when stdin is a
+// TTY, otherwise falls back to flags. Required flag in scripted mode:
+// `--owner <gh-owner>`. Sensible defaults are documented in the help
+// strings and in plan §I.5.
+
+const split_csv = (value: string | undefined): string[] | undefined => {
+	if (value === undefined || value === "") return undefined;
+	return value
+		.split(",")
+		.map(s => s.trim())
+		.filter(s => s.length > 0);
+};
+
+const prompt_if_tty = async (question: string, fallback?: string): Promise<string> => {
+	if (!process.stdin.isTTY) return fallback ?? "";
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	const suffix = fallback !== undefined && fallback !== "" ? ` [${fallback}]: ` : ": ";
+	const answer = (await rl.question(`${question}${suffix}`)).trim();
+	rl.close();
+	if (answer === "" && fallback !== undefined) return fallback;
+	return answer;
+};
+
+const confirm_if_tty = async (question: string): Promise<boolean> => {
+	if (!process.stdin.isTTY) return true;
+	const rl = createInterface({ input: process.stdin, output: process.stdout });
+	const answer = (await rl.question(`${question} (y/N): `)).trim().toLowerCase();
+	rl.close();
+	return answer === "y" || answer === "yes";
+};
+
+export interface OidcTrustListOptions {
+	ownerId?: string;
+}
+
+export const action_oidc_trust_list =
+	(client_factory: ClientFactory) =>
+	async (options: OidcTrustListOptions): Promise<void> => {
+		const spinner = make_spinner("Listing OIDC trust policies...").start();
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const result = await client.pipelines.oidc_trust.list({ owner_id });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+
+		spinner.succeed(`${result.value.length} policy(ies)`);
+		if (result.value.length === 0) {
+			console.log(chalk.dim("  no policies — run `pipelines oidc-trust add` to create one"));
+			return;
+		}
+		for (const p of result.value) {
+			const refs_label = p.allowed_refs && p.allowed_refs.length > 0 ? p.allowed_refs.join(",") : chalk.dim("any");
+			const envs_label = p.allowed_environments && p.allowed_environments.length > 0 ? p.allowed_environments.join(",") : chalk.dim("any");
+			const last_used = p.last_used_at ?? chalk.dim("(never)");
+			console.log(`  ${chalk.bold(p.id)}`);
+			console.log(`    owner:        ${chalk.cyan(p.github_owner)}/${p.repo_pattern}`);
+			console.log(`    aud:          ${p.expected_audience}`);
+			console.log(`    actions:      ${(p.allowed_actions ?? []).join(",")}`);
+			console.log(`    refs:         ${refs_label}`);
+			console.log(`    environments: ${envs_label}`);
+			console.log(`    ttl:          ${p.session_ttl_seconds}s`);
+			console.log(`    last_used:    ${last_used}`);
+		}
+	};
+
+export interface OidcTrustShowOptions {
+	ownerId?: string;
+}
+
+export const action_oidc_trust_show =
+	(client_factory: ClientFactory) =>
+	async (id: string, options: OidcTrustShowOptions): Promise<void> => {
+		const spinner = make_spinner(`Fetching ${id}...`).start();
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const result = await client.pipelines.oidc_trust.get(id, { owner_id });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(result.value.id);
+		console.log(JSON.stringify(result.value, null, 2));
+	};
+
+export interface OidcTrustAddOptions {
+	owner?: string;
+	ownerId?: string;
+	repoPattern?: string;
+	aud?: string;
+	actions?: string;
+	refs?: string;
+	environments?: string;
+	ttl?: string;
+}
+
+export const action_oidc_trust_add =
+	(client_factory: ClientFactory) =>
+	async (options: OidcTrustAddOptions): Promise<void> => {
+		const client = client_factory();
+
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) {
+			console.error(chalk.red("error: could not resolve owner_id from session; set $DEVPAD_USER_ID or pass --owner-id"));
+			process.exit(1);
+		}
+
+		const github_owner = options.owner ?? (await prompt_if_tty("GitHub owner (e.g. f0rbit)"));
+		if (github_owner === "") {
+			console.error(chalk.red("error: --owner <gh-owner> is required"));
+			process.exit(1);
+		}
+
+		const default_aud = "https://devpad-pipelines.dev-818.workers.dev";
+		const expected_audience = options.aud ?? (await prompt_if_tty("Expected audience", default_aud));
+		if (expected_audience === "") {
+			console.error(chalk.red("error: --aud <orchestrator-url> is required"));
+			process.exit(1);
+		}
+
+		const repo_pattern = options.repoPattern ?? (process.stdin.isTTY ? await prompt_if_tty("Repo pattern", "*") : "*");
+		const actions = split_csv(options.actions) ?? (process.stdin.isTTY ? split_csv(await prompt_if_tty("Allowed actions (comma-sep)", "artifacts:upload,runs:start")) : ["artifacts:upload", "runs:start"]);
+		const refs = split_csv(options.refs);
+		const environments = split_csv(options.environments);
+		const ttl = options.ttl !== undefined ? Number.parseInt(options.ttl, 10) : undefined;
+		if (options.ttl !== undefined && (!Number.isInteger(ttl) || (ttl ?? -1) <= 0)) {
+			console.error(chalk.red(`error: --ttl must be a positive integer, got "${options.ttl}"`));
+			process.exit(1);
+		}
+
+		const spinner = make_spinner(`Registering trust policy for ${github_owner}...`).start();
+		const result = await client.pipelines.oidc_trust.create({
+			owner_id,
+			github_owner,
+			expected_audience,
+			repo_pattern,
+			allowed_actions: actions ?? undefined,
+			allowed_refs: refs,
+			allowed_environments: environments,
+			session_ttl_seconds: ttl,
+		});
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`created ${result.value.id}`);
+		console.log(chalk.green(`  id:           ${result.value.id}`));
+		console.log(`  github_owner: ${result.value.github_owner}`);
+		console.log(`  repo_pattern: ${result.value.repo_pattern}`);
+		console.log(`  aud:          ${result.value.expected_audience}`);
+		console.log(`  actions:      ${(result.value.allowed_actions ?? []).join(",")}`);
+		console.log(`  ttl:          ${result.value.session_ttl_seconds}s`);
+	};
+
+export interface OidcTrustRemoveOptions {
+	ownerId?: string;
+	yes?: boolean;
+}
+
+export const action_oidc_trust_remove =
+	(client_factory: ClientFactory) =>
+	async (id: string, options: OidcTrustRemoveOptions): Promise<void> => {
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) {
+			console.error(chalk.red("error: could not resolve owner_id from session; set $DEVPAD_USER_ID or pass --owner-id"));
+			process.exit(1);
+		}
+
+		if (options.yes !== true) {
+			const confirmed = await confirm_if_tty(`Remove trust policy ${id}?`);
+			if (!confirmed) {
+				console.log(chalk.dim("aborted"));
+				return;
+			}
+		}
+
+		const spinner = make_spinner(`Removing ${id}...`).start();
+		const result = await client.pipelines.oidc_trust.delete(id, { owner_id });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`removed ${id}`);
+	};
+
+// ─── workflow migrate subcommand action ────────────────────────────
+//
+// `pipelines workflow migrate <package>` re-renders `.github/workflows/
+// deploy.yml` from the current scaffolder template. Convenience for
+// Phase 15 soft-cutover — owners of pre-Phase-15 repos can run this
+// once to drop their `DEVPAD_PIPELINES_TOKEN` reliance.
+//
+// Path discovery:
+//   1. `--cwd <path>` overrides everything.
+//   2. Otherwise, current working directory is assumed to be the repo
+//      root (no orchestrator round-trip — we don't need the repo_url to
+//      render a workflow file, only to identify what the user named the
+//      package, which they pass explicitly).
+
+export interface WorkflowMigrateOptions {
+	cwd?: string;
+	rollout?: string;
+	defaultGate?: string;
+	buildShape?: string;
+	dryRun?: boolean;
+}
+
+export const action_workflow_migrate =
+	(_client_factory: ClientFactory) =>
+	async (package_name: string, options: WorkflowMigrateOptions): Promise<void> => {
+		const spinner = make_spinner(`Migrating workflow for ${package_name}...`).start();
+
+		const cwd = options.cwd ?? process.cwd();
+		const workflow_path = path.join(cwd, ".github", "workflows", "deploy.yml");
+
+		const rollout = options.rollout ?? "gradual";
+		const default_gate = options.defaultGate ?? "auto";
+		const build_shape = options.buildShape ?? "single-file";
+
+		if (!is_rollout_mode(rollout)) return fail_with(spinner, `--rollout must be one of ${ROLLOUT_MODES.join(", ")}; got "${rollout}"`);
+		if (!is_gate_kind(default_gate)) return fail_with(spinner, `--default-gate must be one of ${GATE_KINDS.join(", ")}; got "${default_gate}"`);
+		if (!is_build_shape(build_shape)) return fail_with(spinner, `--build-shape must be one of ${BUILD_SHAPES.join(", ")}; got "${build_shape}"`);
+
+		const entry = SCAFFOLDER_TEMPLATES.find(e => e.relative_path === ".github/workflows/deploy.yml");
+		if (entry === undefined) return fail_with(spinner, "scaffolder template manifest missing .github/workflows/deploy.yml — check @devpad/pipeline-templates");
+
+		// Locate the templates root the same way scaffold_package does — by
+		// resolving against the pipeline-templates package's source tree.
+		// `import.meta.dir` here is `packages/cli/src/commands/`; same depth
+		// as `packages/cli/src/scaffolder/` so 3x `..` lands on `packages/`.
+		const templates_root = path.resolve(import.meta.dir, "..", "..", "..", "pipeline-templates", "src", "scaffolder", "templates");
+		const source_path = path.join(templates_root, entry.template_path);
+		if (!existsSync(source_path)) return fail_with(spinner, `scaffolder template not found on disk: ${source_path}`);
+
+		const source = readFileSync(source_path, "utf8");
+		const vars = derive_template_vars({ package_name, rollout, default_gate, build_shape, now: new Date() });
+		const rendered = render_pkg_template(source, vars as unknown as Record<string, string>);
+		if (!rendered.ok) return fail_with(spinner, `failed to render workflow template: ${rendered.error.message}`);
+
+		const existed_before = existsSync(workflow_path);
+		const previous = existed_before ? readFileSync(workflow_path, "utf8") : "";
+		const changed = previous !== rendered.value;
+
+		if (options.dryRun === true) {
+			const summary = changed ? `would update ${workflow_path}` : `${workflow_path} already up-to-date`;
+			spinner.succeed(summary);
+			// `spinner.succeed` no-ops in non-TTY; emit a parallel log so CI
+			// (and the integration tests that stub console.log) see the result.
+			console.log(summary);
+			if (changed) {
+				const old_lines = previous.split("\n").length;
+				const new_lines = rendered.value.split("\n").length;
+				console.log(`  before: ${old_lines} lines`);
+				console.log(`  after:  ${new_lines} lines`);
+				console.log(chalk.dim(`  omit --dry-run to write`));
+			}
+			return;
+		}
+
+		mkdirSync(path.dirname(workflow_path), { recursive: true });
+		writeFileSync(workflow_path, rendered.value, "utf8");
+		const write_summary = changed ? `wrote ${workflow_path}` : `${workflow_path} unchanged`;
+		spinner.succeed(write_summary);
+		console.log(write_summary);
+		if (changed) {
+			const old_lines = previous.split("\n").length;
+			const new_lines = rendered.value.split("\n").length;
+			console.log(`  before: ${old_lines} lines${existed_before ? "" : " (new file)"}`);
+			console.log(`  after:  ${new_lines} lines`);
+		}
+	};
+
 const resolve_owner_id = async (client: ApiClient): Promise<string | null> => {
 	if (process.env.DEVPAD_USER_ID !== undefined && process.env.DEVPAD_USER_ID !== "") return process.env.DEVPAD_USER_ID;
 	const session = await client.auth.session();
@@ -869,6 +1141,48 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.description("Delete a pipeline package. Refuses if active pipeline_run rows reference it.")
 		.option("--force", "Confirmation flag (orchestrator still 409s on active runs; you must clean those up first)")
 		.action(action_packages_delete(client_factory));
+
+	const oidc_trust = pipelines.command("oidc-trust").description("Manage GitHub Actions OIDC trust policies (Phase 15)");
+
+	oidc_trust.command("list").description("List trust policies for the current owner").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_oidc_trust_list(client_factory));
+
+	oidc_trust
+		.command("show <id>")
+		.description("Show a single trust policy")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_oidc_trust_show(client_factory));
+
+	oidc_trust
+		.command("add")
+		.description("Create a new trust policy. Prompts interactively in a TTY; flags-only when scripted.")
+		.option("--owner <gh-owner>", "GitHub repository_owner to trust (e.g. f0rbit)")
+		.option("--owner-id <id>", "Devpad owner user id (defaults to current session)")
+		.option("--repo-pattern <glob>", "Glob matched against the repo name (default: *)")
+		.option("--aud <url>", "Expected OIDC `aud` claim (default: orchestrator URL)")
+		.option("--actions <list>", "Comma-separated allowed actions (default: artifacts:upload,runs:start)")
+		.option("--refs <list>", "Comma-separated allowed refs (default: any)")
+		.option("--environments <list>", "Comma-separated allowed environments (default: any)")
+		.option("--ttl <seconds>", "Session token TTL in seconds (default: 900)")
+		.action(action_oidc_trust_add(client_factory));
+
+	oidc_trust
+		.command("remove <id>")
+		.description("Soft-delete a trust policy (row preserved for audit)")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.option("--yes", "Skip confirmation prompt")
+		.action(action_oidc_trust_remove(client_factory));
+
+	const workflow = pipelines.command("workflow").description("Workflow-file maintenance for pipeline-managed repos");
+
+	workflow
+		.command("migrate <package>")
+		.description("Re-render .github/workflows/deploy.yml from the current scaffolder template (Phase 15 OIDC migration aid)")
+		.option("--cwd <path>", "Repository root (default: current working directory)")
+		.option("--rollout <mode>", "Rollout mode used in the template: gradual | atomic", "gradual")
+		.option("--default-gate <kind>", "Default gate kind: manual | auto | analysis", "auto")
+		.option("--build-shape <shape>", "Build shape: single-file | directory-bundle", "single-file")
+		.option("--dry-run", "Print the diff summary instead of writing")
+		.action(action_workflow_migrate(client_factory));
 
 	return pipelines;
 };
