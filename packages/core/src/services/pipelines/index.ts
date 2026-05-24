@@ -1,4 +1,16 @@
 export {
+	type CreateAnalysisTemplateInput,
+	create_analysis_template,
+	type DeleteAnalysisTemplateInput,
+	delete_analysis_template,
+	type GetAnalysisTemplateInput,
+	get_analysis_template,
+	type ListAnalysisTemplatesFilter,
+	list_analysis_templates,
+	type UpdateAnalysisTemplateInput,
+	update_analysis_template,
+} from "./analysis-templates.js";
+export {
 	type BundleFetchError,
 	type BundlePayload,
 	type BundleProvider,

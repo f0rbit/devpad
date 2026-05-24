@@ -18,11 +18,13 @@ export type BadRequestError = BaseError & { kind: "bad_request"; details?: unkno
 export type UnauthorizedError = BaseError & { kind: "unauthorized" };
 export type ScanError = BaseError & { kind: "scan_error" };
 export type GithubError = BaseError & { kind: "github_error" };
+export type ValidationFieldError = BaseError & { kind: "validation_error"; field: string };
 
 export type ServiceError =
 	| NotFoundError
 	| ForbiddenError
 	| ValidationError
+	| ValidationFieldError
 	| RateLimitedError
 	| StoreError
 	| NetworkError
@@ -82,10 +84,12 @@ export const isBadRequestError = (e: unknown): e is BadRequestError => hasKind(e
 export const isUnauthorizedError = (e: unknown): e is UnauthorizedError => hasKind(e, "unauthorized");
 export const isScanError = (e: unknown): e is ScanError => hasKind(e, "scan_error");
 export const isGithubError = (e: unknown): e is GithubError => hasKind(e, "github_error");
+export const isValidationFieldError = (e: unknown): e is ValidationFieldError => hasKind(e, "validation_error");
 export const isServiceError = (e: unknown): e is ServiceError =>
 	isNotFoundError(e) ||
 	isForbiddenError(e) ||
 	isValidationError(e) ||
+	isValidationFieldError(e) ||
 	isRateLimitedError(e) ||
 	isStoreError(e) ||
 	isNetworkError(e) ||
@@ -121,6 +125,8 @@ export const badRequest = (message?: string, details?: unknown, ctx?: Record<str
 export const unauthorized = (message?: string, ctx?: Record<string, unknown>): Result<never, UnauthorizedError> => logAndReturn({ kind: "unauthorized", ...(message && { message }) }, ctx);
 export const scanError = (message?: string, ctx?: Record<string, unknown>): Result<never, ScanError> => logAndReturn({ kind: "scan_error", ...(message && { message }) }, ctx);
 export const githubError = (message?: string, ctx?: Record<string, unknown>): Result<never, GithubError> => logAndReturn({ kind: "github_error", ...(message && { message }) }, ctx);
+export const validationFieldError = (field: string, message?: string, ctx?: Record<string, unknown>): Result<never, ValidationFieldError> =>
+	logAndReturn({ kind: "validation_error", field, ...(message && { message }) }, ctx);
 
 export const errors = {
 	notFound,
@@ -140,10 +146,12 @@ export const errors = {
 	unauthorized,
 	scanError,
 	githubError,
+	validationFieldError,
 	is: {
 		notFound: isNotFoundError,
 		forbidden: isForbiddenError,
 		validation: isValidationError,
+		validationField: isValidationFieldError,
 		rateLimited: isRateLimitedError,
 		storeError: isStoreError,
 		networkError: isNetworkError,

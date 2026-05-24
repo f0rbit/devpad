@@ -925,6 +925,158 @@ export const action_oidc_trust_remove =
 		spinner.succeed(`removed ${id}`);
 	};
 
+// ─── analysis-templates subcommand actions ─────────────────────────
+//
+// `analysis-templates list / get / create / update / delete` wrap the
+// API client methods added in Phase 2.A. `--threshold-file` reads UTF-8
+// from disk and sends the contents as the `threshold_dsl` body field —
+// the orchestrator validates server-side and surfaces parse failure as
+// `validation_error`.
+
+const read_threshold_file = (path_: string): { ok: true; value: string } | { ok: false; error: string } => {
+	try {
+		const text = readFileSync(path_, "utf8");
+		if (text.trim().length === 0) return { ok: false, error: `threshold file is empty: ${path_}` };
+		return { ok: true, value: text };
+	} catch (e) {
+		return { ok: false, error: `failed to read threshold file ${path_}: ${String(e)}` };
+	}
+};
+
+export interface AnalysisTemplatesListOptions {
+	ownerId?: string;
+}
+
+export const action_analysis_templates_list =
+	(client_factory: ClientFactory) =>
+	async (options: AnalysisTemplatesListOptions): Promise<void> => {
+		const spinner = make_spinner("Listing analysis templates...").start();
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const result = await client.pipelines.analysis_templates.list({ owner_id });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`${result.value.length} template(s)`);
+		if (result.value.length === 0) {
+			console.log(chalk.dim("  no templates — run `pipelines analysis-templates create` to add one"));
+			return;
+		}
+		for (const t of result.value) {
+			const dsl_text = typeof t.threshold_dsl === "string" ? t.threshold_dsl : String(t.threshold_dsl ?? "");
+			const dsl_lines = dsl_text.split("\n").filter((l: string) => l.trim().length > 0).length;
+			console.log(`  ${chalk.bold(t.id)}  ${chalk.cyan(t.name)}  ${dsl_lines} threshold(s)  ${t.window_ms}ms`);
+		}
+	};
+
+export interface AnalysisTemplatesGetOptions {
+	ownerId?: string;
+}
+
+export const action_analysis_templates_get =
+	(client_factory: ClientFactory) =>
+	async (id: string, options: AnalysisTemplatesGetOptions): Promise<void> => {
+		const spinner = make_spinner(`Fetching ${id}...`).start();
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const result = await client.pipelines.analysis_templates.get(id, { owner_id });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(result.value.id);
+		console.log(JSON.stringify(result.value, null, 2));
+	};
+
+export interface AnalysisTemplatesCreateOptions {
+	name?: string;
+	ownerId?: string;
+	thresholdFile?: string;
+	windowMs?: string;
+}
+
+export const action_analysis_templates_create =
+	(client_factory: ClientFactory) =>
+	async (options: AnalysisTemplatesCreateOptions): Promise<void> => {
+		const spinner = make_spinner("Creating analysis template...").start();
+		const client = client_factory();
+
+		const name = options.name;
+		if (name === undefined || name === "") return fail_with(spinner, "--name <name> is required");
+
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const threshold_file = options.thresholdFile;
+		if (threshold_file === undefined || threshold_file === "") return fail_with(spinner, "--threshold-file <path> is required");
+		const threshold = read_threshold_file(threshold_file);
+		if (!threshold.ok) return fail_with(spinner, threshold.error);
+
+		const window_ms = options.windowMs !== undefined ? Number.parseInt(options.windowMs, 10) : undefined;
+		if (options.windowMs !== undefined && (!Number.isInteger(window_ms) || (window_ms ?? -1) <= 0)) {
+			return fail_with(spinner, `--window-ms must be a positive integer, got "${options.windowMs}"`);
+		}
+
+		const result = await client.pipelines.analysis_templates.create({ owner_id, name, threshold_dsl: threshold.value, window_ms });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`created ${result.value.id}`);
+		console.log(chalk.green(`  id:         ${result.value.id}`));
+		console.log(`  name:       ${result.value.name}`);
+		console.log(`  window_ms:  ${result.value.window_ms}`);
+	};
+
+export interface AnalysisTemplatesUpdateOptions {
+	ownerId?: string;
+	name?: string;
+	thresholdFile?: string;
+	windowMs?: string;
+}
+
+export const action_analysis_templates_update =
+	(client_factory: ClientFactory) =>
+	async (id: string, options: AnalysisTemplatesUpdateOptions): Promise<void> => {
+		const spinner = make_spinner(`Updating ${id}...`).start();
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const patch: { owner_id: string; name?: string; threshold_dsl?: string; window_ms?: number } = { owner_id };
+		if (options.name !== undefined) patch.name = options.name;
+		if (options.thresholdFile !== undefined) {
+			const threshold = read_threshold_file(options.thresholdFile);
+			if (!threshold.ok) return fail_with(spinner, threshold.error);
+			patch.threshold_dsl = threshold.value;
+		}
+		if (options.windowMs !== undefined) {
+			const window_ms = Number.parseInt(options.windowMs, 10);
+			if (!Number.isInteger(window_ms) || window_ms <= 0) return fail_with(spinner, `--window-ms must be a positive integer, got "${options.windowMs}"`);
+			patch.window_ms = window_ms;
+		}
+		if (patch.name === undefined && patch.threshold_dsl === undefined && patch.window_ms === undefined) {
+			return fail_with(spinner, "no updates supplied (pass --name, --threshold-file, or --window-ms)");
+		}
+
+		const result = await client.pipelines.analysis_templates.update(id, patch);
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`updated ${result.value.id}`);
+	};
+
+export interface AnalysisTemplatesDeleteOptions {
+	ownerId?: string;
+}
+
+export const action_analysis_templates_delete =
+	(client_factory: ClientFactory) =>
+	async (id: string, options: AnalysisTemplatesDeleteOptions): Promise<void> => {
+		const spinner = make_spinner(`Deleting ${id}...`).start();
+		const client = client_factory();
+		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
+		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
+
+		const result = await client.pipelines.analysis_templates.delete(id, { owner_id });
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`deleted ${id}`);
+	};
+
 // ─── workflow migrate subcommand action ────────────────────────────
 //
 // `pipelines workflow migrate <package>` re-renders `.github/workflows/
@@ -1171,6 +1323,44 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--owner-id <id>", "Owner user id (defaults to current session)")
 		.option("--yes", "Skip confirmation prompt")
 		.action(action_oidc_trust_remove(client_factory));
+
+	const analysis_templates = pipelines.command("analysis-templates").description("Manage pipeline_analysis_template rows (threshold DSL + window for analysis gates)");
+
+	analysis_templates
+		.command("list")
+		.description("List analysis templates for the current owner")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_analysis_templates_list(client_factory));
+
+	analysis_templates
+		.command("get <id>")
+		.description("Get a single analysis template")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_analysis_templates_get(client_factory));
+
+	analysis_templates
+		.command("create")
+		.description("Create a new analysis template. `--threshold-file` is a UTF-8 file whose contents are the threshold DSL.")
+		.requiredOption("--name <name>", "Template name (e.g. default-analysis)")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.requiredOption("--threshold-file <path>", "Path to a UTF-8 file containing the threshold DSL")
+		.option("--window-ms <ms>", "Analysis window in milliseconds (default: 600000)")
+		.action(action_analysis_templates_create(client_factory));
+
+	analysis_templates
+		.command("update <id>")
+		.description("Partially update an analysis template")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.option("--name <name>", "New template name")
+		.option("--threshold-file <path>", "Path to a UTF-8 file containing the new threshold DSL")
+		.option("--window-ms <ms>", "New analysis window in milliseconds")
+		.action(action_analysis_templates_update(client_factory));
+
+	analysis_templates
+		.command("delete <id>")
+		.description("Delete an analysis template. Does not consult pipeline_run.resolved_gates — runs snapshot the template at resolve-time.")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_analysis_templates_delete(client_factory));
 
 	const workflow = pipelines.command("workflow").description("Workflow-file maintenance for pipeline-managed repos");
 

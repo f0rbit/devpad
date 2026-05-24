@@ -9,6 +9,7 @@ import type {
 	Goal,
 	HistoryAction,
 	Milestone,
+	PipelineAnalysisTemplate,
 	PipelineGrant,
 	PipelineOidcTrust,
 	PipelinePackage,
@@ -1107,6 +1108,68 @@ export class ApiClient {
 			 * reference the package — clean up runs first.
 			 */
 			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
+		},
+
+		/**
+		 * Analysis-template namespace — admin-gated CRUD for the
+		 * `pipeline_analysis_template` table. Phase 2.A surface; each
+		 * call requires the orchestrator's bearer token (literal
+		 * `PIPELINES_TOKEN`). `owner_id` is required on every operation
+		 * — single-tenant today, but the column is in place so multi-user
+		 * ACLs slot in later.
+		 */
+		analysis_templates: {
+			/**
+			 * List templates for an owner.
+			 */
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> =>
+				wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Get a single template by id, scoped to its owner. 404 when
+			 * unknown or owned by a different user.
+			 */
+			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
+				wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Create a new analysis template. `threshold_dsl` is parsed
+			 * server-side; parse failure returns 400 `validation_error`
+			 * with `field: "threshold_dsl"` and a descriptive message.
+			 * `window_ms` defaults to 600_000 (10 min) when omitted.
+			 */
+			create: (input: {
+				owner_id: string;
+				name: string;
+				threshold_dsl: string;
+				query_dsl?: unknown;
+				window_ms?: number;
+			}): Promise<ApiResult<PipelineAnalysisTemplate>> => wrap(() => this.clients.pipelines.post<PipelineAnalysisTemplate>("/analysis-templates", { body: input })),
+
+			/**
+			 * Partial patch — only the supplied fields are touched.
+			 * Re-validates `threshold_dsl` when supplied; same
+			 * `validation_error` shape as create on parse failure.
+			 */
+			update: (
+				id: string,
+				input: {
+					owner_id: string;
+					name?: string;
+					threshold_dsl?: string;
+					query_dsl?: unknown;
+					window_ms?: number;
+				}
+			): Promise<ApiResult<PipelineAnalysisTemplate>> => wrap(() => this.clients.pipelines.patch<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { body: input })),
+
+			/**
+			 * Hard-delete the template. Does NOT consult
+			 * `pipeline_run.resolved_gates` — runs snapshot their gate
+			 * template at resolve-time, so deletion never orphans
+			 * in-flight runs.
+			 */
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> =>
+				wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
 		},
 
 		/**

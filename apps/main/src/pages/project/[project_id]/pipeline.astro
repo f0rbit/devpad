@@ -1,9 +1,10 @@
 ---
+import AnalysisTemplateList from "@/components/solid/pipelines/AnalysisTemplateList";
 import GrantsList from "@/components/solid/pipelines/GrantsList";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject, rethrow } from "@/utils/api-client";
-import type { PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
+import type { PipelineAnalysisTemplate, PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
 
 // @ts-ignore rethrow is used in conditional return path
 void rethrow;
@@ -14,7 +15,7 @@ const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
 const { client, project, user } = guard;
 
-const VALID_TABS = ["runs", "grants"] as const;
+const VALID_TABS = ["runs", "grants", "templates"] as const;
 type TabName = (typeof VALID_TABS)[number];
 const tab_param = Astro.url.searchParams.get("tab") ?? "runs";
 const active_tab: TabName = (VALID_TABS as readonly string[]).includes(tab_param) ? (tab_param as TabName) : "runs";
@@ -22,6 +23,7 @@ const active_tab: TabName = (VALID_TABS as readonly string[]).includes(tab_param
 const tabs: Array<{ name: TabName; label: string }> = [
 	{ name: "runs", label: "runs" },
 	{ name: "grants", label: "grants" },
+	{ name: "templates", label: "templates" },
 ];
 
 // Find the project's pipeline package (if any). Empty state for projects without one.
@@ -33,6 +35,8 @@ let runs: PipelineRun[] = [];
 let runs_error: string | null = null;
 let grants: PipelineGrant[] = [];
 let grants_error: string | null = null;
+let templates: PipelineAnalysisTemplate[] = [];
+let templates_error: string | null = null;
 
 if (pkg) {
 	if (active_tab === "runs") {
@@ -44,6 +48,11 @@ if (pkg) {
 		const grants_result = await client.pipelines.grants.list(pkg.id);
 		if (grants_result.ok) grants = grants_result.value;
 		else grants_error = grants_result.error?.message ?? "Failed to load grants";
+	}
+	if (active_tab === "templates") {
+		const templates_result = await client.pipelines.analysis_templates.list({ owner_id: user.id });
+		if (templates_result.ok) templates = templates_result.value;
+		else templates_error = templates_result.error?.message ?? "Failed to load analysis templates";
 	}
 }
 
@@ -185,6 +194,15 @@ const status_color = (status: string) => {
 								<p class="text-sm" style="color: var(--error); margin: 0;">{grants_error}</p>
 							)}
 							<GrantsList client:load grants={grants} user_id={user.id} />
+						</div>
+					)}
+
+					{active_tab === "templates" && (
+						<div class="stack stack-md">
+							{templates_error && (
+								<p class="text-sm" style="color: var(--error); margin: 0;">{templates_error}</p>
+							)}
+							<AnalysisTemplateList client:load templates={templates} owner_id={user.id} />
 						</div>
 					)}
 				</>
