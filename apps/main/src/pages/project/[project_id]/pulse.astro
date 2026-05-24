@@ -1,4 +1,5 @@
 ---
+import PulseCreateIngestKey from "@/components/solid/pulse/PulseCreateIngestKey";
 import PulseErrors from "@/components/solid/pulse/PulseErrors";
 import PulseLogs from "@/components/solid/pulse/PulseLogs";
 import PulseOverview from "@/components/solid/pulse/PulseOverview";
@@ -139,16 +140,10 @@ const pulse = createPulse({
 pulse.event("signup", { plan: "pro" });`}</code></pre>
 					{has_ingest_key ? (
 						<p class="text-sm text-faint" style="margin: 0;">
-							This project already has an ingest key (<code>{ingest_key_id}</code>). Re-display it via the API or create a new one.
+							This project already has an ingest key (<code>{ingest_key_id}</code>). Create another one below if you've lost it.
 						</p>
-					) : (
-						<form method="POST" action={`/project/${project_id}/pulse/keys/create`} style="margin: 0;">
-							<button type="submit" class="button" data-testid="pulse-create-key" disabled>
-								Create ingest key (coming soon)
-							</button>
-							<p class="text-sm text-faint" style="margin: 0.25rem 0 0 0;">Use <code>client.pulse.keys.create()</code> from a script for now.</p>
-						</form>
-					)}
+					) : null}
+					<PulseCreateIngestKey projectId={project.id} client:load />
 				</div>
 			)}
 

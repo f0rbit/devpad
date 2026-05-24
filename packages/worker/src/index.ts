@@ -8,6 +8,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { createPulse } from "@f0rbit/pulse-client";
 import { pulseTracing } from "@f0rbit/pulse-client/hono";
+import { make_log, noop_log } from "./lib/log.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppConfig, AppContext, OAuthSecrets } from "./bindings.js";
@@ -87,9 +88,13 @@ export const createApi = (options?: ApiOptions) => {
 		app.use("*", configMiddleware);
 	}
 
+	// Pulse instrumentation. Created per request because Workers isolates are
+	// short-lived; we extend with waitUntil so the debounced flush completes
+	// before the worker terminates (otherwise queued events are lost).
 	app.use("*", async (c, next) => {
 		const config = c.get("config");
 		if (!config.pulse_api_base || !config.pulse_devpad_ingest_key || !config.devpad_project_id) {
+			c.set("log", noop_log);
 			await next();
 			return;
 		}
@@ -99,7 +104,32 @@ export const createApi = (options?: ApiOptions) => {
 			endpoint: config.pulse_api_base,
 			release: config.git_sha,
 		});
-		return pulseTracing({ pulse })(c, next);
+		c.set("pulse", pulse);
+		c.set("log", make_log(pulse));
+		await pulseTracing({ pulse })(c, next);
+		try {
+			c.executionCtx?.waitUntil(pulse.flush());
+		} catch {
+			// executionCtx unavailable in some local/test contexts — skip waitUntil.
+		}
+	});
+
+	// Capture uncaught errors from route handlers via pulse + structured response.
+	app.onError((err, c) => {
+		const pulse = c.get("pulse");
+		if (pulse) {
+			pulse.captureError(err, {
+				method: c.req.method,
+				path: c.req.path,
+			});
+			try {
+				c.executionCtx?.waitUntil(pulse.flush());
+			} catch {
+				// no-op
+			}
+		}
+		console.error("[worker] unhandled error", err);
+		return c.json({ error: "Internal server error" }, 500);
 	});
 
 	app.use("*", authMiddleware);

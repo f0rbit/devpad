@@ -92,7 +92,7 @@ export class ApiClient {
 			tags: new HttpClient({ ...clientOptions, category: "tags" }),
 			blog: new HttpClient({ ...clientOptions, category: "blog" }),
 			media: new HttpClient({ ...clientOptions, category: "media" }),
-			pulse: new HttpClient({ ...clientOptions, category: "pulse" }),
+			pulse: new HttpClient({ ...clientOptions, base_url: `${base_url}/pulse`, category: "pulse" }),
 			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
 		} as const;
 	}
@@ -114,12 +114,14 @@ export class ApiClient {
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (name?: string): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> =>
-				wrap(() =>
-					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", {
-						body: name ? { name } : {},
-					})
-				),
+			create: (
+				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
+			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
+				const body = typeof input === "string" ? { name: input } : (input ?? {});
+				return wrap(() =>
+					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }),
+				);
+			},
 
 			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
 
@@ -959,9 +961,9 @@ export class ApiClient {
 			/**
 			 * Create a new ingest key (returns plaintext only once)
 			 */
-			create: (input: { project_id: string; name?: string; rate_limit_per_min?: number }): Promise<ApiResult<{ id: string; key: string }>> =>
+			create: (input: { project_id: string; name?: string; rate_limit_per_min?: number }): Promise<ApiResult<{ id: string; plaintext: string; project_id: string }>> =>
 				wrap(() =>
-					this.clients.pulse.post<{ id: string; key: string }>("/admin/keys", {
+					this.clients.pulse.post<{ id: string; plaintext: string; project_id: string }>("/admin/keys", {
 						body: {
 							project_id: input.project_id,
 							name: input.name,

@@ -7,6 +7,7 @@ import Key from "lucide-solid/icons/key";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
+import { track } from "@/lib/pulse";
 
 interface ApiKeyManagerProps {
 	keys: ApiKey[];
@@ -21,10 +22,21 @@ const formatDate = (dateString?: string | null) => {
 	});
 };
 
+type ApiKeyScope = "devpad" | "blog" | "media" | "pulse" | "all";
+
+const SCOPE_OPTIONS: { value: ApiKeyScope; label: string }[] = [
+	{ value: "all", label: "all — full access (default)" },
+	{ value: "devpad", label: "devpad — projects, tasks, milestones, goals" },
+	{ value: "pulse", label: "pulse — analytics proxy + admin" },
+	{ value: "blog", label: "blog — blog content + drafts" },
+	{ value: "media", label: "media — timeline + platform connections" },
+];
+
 export default function ApiKeyManager(props: ApiKeyManagerProps) {
 	const [keys, setKeys] = createSignal<ApiKey[]>(props.keys);
 	const [showCreate, setShowCreate] = createSignal(false);
 	const [newKeyName, setNewKeyName] = createSignal("");
+	const [newKeyScope, setNewKeyScope] = createSignal<ApiKeyScope>("all");
 	const [createdKey, setCreatedKey] = createSignal<string | null>(null);
 	const [deleteTarget, setDeleteTarget] = createSignal<ApiKey | null>(null);
 	const [loading, setLoading] = createSignal(false);
@@ -35,18 +47,23 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 		setLoading(true);
 		setError(null);
 		const apiClient = getBrowserClient();
-		const result = await apiClient.auth.keys.create(newKeyName() || undefined);
+		const result = await apiClient.auth.keys.create({
+			name: newKeyName() || undefined,
+			scope: newKeyScope(),
+		});
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to create key");
 			setLoading(false);
 			return;
 		}
 		setCreatedKey(result.value.key.raw_key);
+		track("api_key_created", { scope: newKeyScope() });
 		const listResult = await apiClient.auth.keys.list();
 		if (listResult.ok) {
 			setKeys(listResult.value);
 		}
 		setNewKeyName("");
+		setNewKeyScope("all");
 		setLoading(false);
 	};
 
@@ -58,6 +75,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 		if (result.ok) {
 			setKeys(prev => prev.filter(k => k.id !== deleteTarget()!.id));
 			setDeleteTarget(null);
+			track("api_key_revoked");
 		} else {
 			setError(result.error.message ?? "Failed to delete key");
 		}
@@ -146,9 +164,28 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 					<ModalTitle>Create API Key</ModalTitle>
 				</ModalHeader>
 				<ModalBody>
-					<FormField label="Name (optional)">
-						<Input placeholder="e.g. CI pipeline, local dev" value={newKeyName()} onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setNewKeyName(e.currentTarget.value)} />
-					</FormField>
+					<div class="stack stack-sm">
+						<FormField label="Name (optional)">
+							<Input placeholder="e.g. CI pipeline, local dev" value={newKeyName()} onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setNewKeyName(e.currentTarget.value)} />
+						</FormField>
+						<FormField label="Scope" description="What this key can do. Defaults to 'all'.">
+							<select
+								value={newKeyScope()}
+								onChange={(e: Event & { currentTarget: HTMLSelectElement }) => setNewKeyScope(e.currentTarget.value as ApiKeyScope)}
+								style={{
+									width: "100%",
+									padding: "0.5rem 0.625rem",
+									"font-size": "var(--text-sm)",
+									background: "var(--bg-alt)",
+									color: "var(--fg)",
+									border: "1px solid var(--border)",
+									"border-radius": "var(--radius, 4px)",
+								}}
+							>
+								<For each={SCOPE_OPTIONS}>{opt => <option value={opt.value}>{opt.label}</option>}</For>
+							</select>
+						</FormField>
+					</div>
 				</ModalBody>
 				<ModalFooter>
 					<Button

@@ -1,6 +1,8 @@
 import type { SessionData } from "@devpad/core/auth";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
+import type { Pulse } from "@f0rbit/pulse-client";
+import type { PulseLog } from "./lib/log.js";
 import type { AuthUser, Bindings } from "@devpad/schema/bindings";
 import type { Database } from "@devpad/schema/database/types";
 
@@ -40,6 +42,8 @@ export type AppVariables = {
 	mediaContext: MediaAppContext;
 	config: AppConfig;
 	oauth_secrets: OAuthSecrets;
+	pulse?: Pulse;
+	log: PulseLog;
 };
 
 export type AppContext = {
