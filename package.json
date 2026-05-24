@@ -51,6 +51,7 @@
 		"@playwright/test": "^1.55.0",
 		"@types/node": "^24.3.0",
 		"concurrently": "^9.2.1",
+		"drizzle-orm": "^0.44.7",
 		"playwright": "^1.55.0",
 		"typescript": "^6.0.3"
 	},
