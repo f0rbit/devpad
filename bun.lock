@@ -28,6 +28,7 @@
         "@astrojs/sitemap": "^3.2.1",
         "@astrojs/solid-js": "^5.0.0",
         "@devpad/api": "workspace:*",
+        "@devpad/core": "workspace:*",
         "@devpad/schema": "workspace:*",
         "@f0rbit/ui": "0.1.9",
         "astro": "^5.1.1",
@@ -71,6 +72,7 @@
         "@astrojs/cloudflare": "^12.6.12",
         "@astrojs/solid-js": "^5.1.3",
         "@devpad/api": "workspace:*",
+        "@devpad/core": "workspace:*",
         "@devpad/schema": "workspace:*",
         "@f0rbit/corpus": "^0.6.0",
         "@f0rbit/ui": "^0.1.9",
@@ -136,6 +138,7 @@
         "@devpad/pipeline-templates": "workspace:*",
         "@devpad/schema": "workspace:*",
         "@f0rbit/corpus": "^0.6.0",
+        "@f0rbit/ui": "^0.1.9",
         "@octokit/auth-oauth-app": "^9.0.1",
         "@octokit/rest": "^22.0.0",
         "@octokit/types": "^14.1.0",
@@ -2061,6 +2064,8 @@
     "@devpad/app/@astrojs/check": ["@astrojs/check@0.9.4", "", { "dependencies": { "@astrojs/language-server": "^2.15.0", "chokidar": "^4.0.1", "kleur": "^4.1.5", "yargs": "^17.7.2" }, "peerDependencies": { "typescript": "^5.0.0" }, "bin": { "astro-check": "dist/bin.js" } }, "sha512-IOheHwCtpUfvogHHsvu0AbeRZEnjJg3MopdLddkJE70mULItS/Vh37BHcI00mcOJcH1vhD3odbpvWokpxam7xA=="],
 
     "@devpad/app/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "@devpad/blog-app/@astrojs/solid-js": ["@astrojs/solid-js@5.1.3", "", { "dependencies": { "vite": "^6.4.1", "vite-plugin-solid": "^2.11.8" }, "peerDependencies": { "solid-devtools": "^0.30.1", "solid-js": "^1.8.5" }, "optionalPeers": ["solid-devtools"] }, "sha512-KxfYt4y1d7BuSw6EsN1EaPoGYsIES7bEI6AtTbncuabRUUMZs+mOWOeOdmgnwVLj+jbNbhBjUZsqr77eUviZdw=="],
 
     "@devpad/cli/@types/node": ["@types/node@20.19.41", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-ECymXOukMnOoVkC2bb1Vc/w/836DXncOg5m8Xj1RH7xSHZJWNYY6Zh7EH477vcnD5egKNNfy2RpNOmuChhFPgQ=="],
 

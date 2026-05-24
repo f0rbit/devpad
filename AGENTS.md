@@ -271,6 +271,12 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - When writing new CSS, use `@f0rbit/ui` token names (`--fg`, `--bg`, `--accent`, `--border`, `--bg-alt`, `--fg-muted`, `--fg-subtle`, `--fg-faint`, etc.)
 - NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they have been fully removed from the codebase
 
+### Workspace dep declarations under bun's isolated linker (CRITICAL)
+Bun 1.3+ installs with an isolated linker by default: a package can only resolve dependencies it explicitly declares in its own `package.json`. Transitive resolution through the workspace root does NOT happen at build time for bare specifiers.
+- `packages/core/src/ui/styles/globals.css` does `@import "@f0rbit/ui/styles"`, so `packages/core/package.json` MUST declare `@f0rbit/ui` as a dependency. Without it, `node_modules/.bun/.../packages/core/node_modules/@f0rbit/ui` is not created and Vite/PostCSS fails with `ENOENT: ... open '@f0rbit/ui/styles'`.
+- `apps/blog/src/middleware.ts` and `apps/media/src/middleware.ts` import `@devpad/core/ui/middleware`, so both apps' `package.json` MUST declare `@devpad/core` as a workspace dep. Without it, Rollup fails with `failed to resolve import "@devpad/core/ui/middleware"`.
+- Rule of thumb: if a file uses a bare specifier (`@scope/pkg/path`), the package owning that file must declare the dep — even when the dep is already available transitively elsewhere in the workspace.
+
 ### @f0rbit/ui Utility Class Composition (CRITICAL)
 Layout utilities use a **base + modifier** pattern. Modifiers only set CSS variables — they do NOT include `display: flex`. You MUST always include the base class:
 - `.stack` = `display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-md))`
