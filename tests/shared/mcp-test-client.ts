@@ -3,8 +3,8 @@
  * Uses in-memory interface for fast, reliable testing
  */
 
-import { log } from "./test-utils";
 import { DevpadMCPServer } from "@devpad/mcp/src/index";
+import { log } from "./test-utils";
 
 export class MCPTestClient {
 	private server: DevpadMCPServer | null = null;

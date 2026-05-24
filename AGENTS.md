@@ -130,8 +130,101 @@ devpad/
   - `createD1Database` in `d1.ts` -- `as unknown as Database`
   - `createBunDatabase` in `bun.ts` -- `as unknown as Database` (sync-to-async bridge)
 - All service functions in `packages/core/src/services/` take `db: Database`
-- `drizzle-orm` is deduplicated via root `package.json` overrides (needed because `@f0rbit/corpus` has it as direct dep)
+- `drizzle-orm` is deduplicated via root `package.json` overrides
 - Blog's `DrizzleDB` and Media's `Database` are both re-exports of the unified `Database` type
+
+## Pipelines module
+
+The `packages/pipelines/` Worker is a separate Cloudflare Worker (not part of `devpad-unified`), exporting a `PipelineRunDO` Durable Object and a Hono REST API. The Worker holds **no upstream API keys** — all third-party traffic crosses the security boundary into `~/dev/vault` (separate repo, **same Cloudflare account** — the boundary is logical, enforced by the service-binding RPC contract and the secrets-store secret name `ANTHROPIC_API_KEY`). The orchestrator hosts the grants registry (`pipeline_grant` table) and exposes a `grants.check(caller, scope)` RPC that vault calls.
+
+### Platform singleton model (Phase 12)
+
+Platform services (`pulse`, `vault`, `devpad-pipelines`) are deployed ONCE — they're control plane (observability backplane, secret broker, orchestrator), not workloads-under-test. Their staging Workers were decommissioned in Phase 12. Stage scoping is enforced at:
+
+- **vault**: `caller.environment` on the RPC identity arg (Phase 7) — `grants.check(...)` matches against this literal.
+- **pulse**: `environment` tag on each event body — events from staging and production callers all land in `pulse-db-production` but are queryable by tag.
+
+Workload Workers (scaffolded packages such as `anthropic-search`, `anthropic-summarize`) **do** keep the staging+production split. Only the upstream platform service bindings collapse to singletons (`vault`, `pulse-api` — renamed from `vault-production` / `pulse-api-production` in Phase 13.C).
+
+### Deployed Workers (Cloudflare)
+
+| Service | Worker name | URL | Singleton |
+|---------|-------------|-----|-----------|
+| Orchestrator | `devpad-pipelines` | `https://devpad-pipelines.dev-818.workers.dev` | yes |
+| Vault | `vault` | (RPC-only, no public URL) | yes |
+| Pulse | `pulse-api` | `https://pulse-api.dev-818.workers.dev` (custom `pulse.devpad.tools`) | yes |
+
+Deploy via Alchemy from the **devpad repo root**:
+```
+ALCHEMY_CI_STATE_STORE_CHECK=false bunx alchemy deploy ./packages/pipelines/infra.ts --stage production --env-file ./.env --profile default
+```
+
+The orchestrator deploys with `--stage production` only. The `--stage staging` path was removed in Phase 13.C — `infra.ts` no longer branches on the stage; it always binds the production D1 + R2. The deploy adopts (never creates) the existing `devpad-unified-db` D1 and `devpad-corpus` R2 bucket shared with the main `devpad-unified` Worker.
+
+### Deploy gotchas (carry-over from vault)
+
+- **Drop `"rpc"` from `compatibilityFlags`.** It became a default 2024-04-03 and Cloudflare rejects the deploy if specified explicitly.
+- **Use the Alchemy OAuth profile `default`** (configured via `bunx alchemy configure`), not the limited `CLOUDFLARE_API_TOKEN` in `devpad/.env`. That env var is commented out for this reason.
+- **Account is capped at one `default_secrets_store`.** When binding a `Secret`, use `SecretsStore("<id>", { name: "default_secrets_store", adopt: true })`. The pipelines Worker has no Secrets bound today, so this doesn't apply yet — but vault does, and any future pipelines secrets must adopt the same store. Bound secrets are scoped by name; the boundary is preserved at the secret level.
+- **`ALCHEMY_PASSWORD` (in devpad/.env) is only required when Alchemy persists Secret values in state.** Pipelines doesn't bind any secrets currently. Generate with `openssl rand -hex 32` and keep stable across deploys if a future deploy adds secrets.
+- **Tokens in test logs**: when an agent runs a test call that uses a bearer token (CF API, devpad PIPELINES_TOKEN, pulse ingest key, etc.), the full token should NEVER appear in command output that gets captured by the agent's transcript. Use parameter substitution + redact in echoed commands: e.g. `echo "TOKEN=${TOKEN:0:6}…${TOKEN: -4}"` not `echo $TOKEN`. This prevents tokens from being exposed in the orchestrator-phase outputs and permanent logs. If captured, treat as compromised and rotate.
+
+### Cloudflare API integration gotchas (Phase 6)
+
+The `CloudflareProvider` lives in `packages/pipeline-fakes/src/cloudflare/` with an HTTP-backed implementation (`http.ts`) hitting the Cloudflare REST API directly. Subtleties surfaced during the Phase 6 conversion to the live account:
+
+- **Workers Versions API uses `multipart/form-data`, not JSON.** A version upload is a multipart body with a `metadata` part (`Content-Type: application/json` for the script metadata) plus one or more file parts for the script + any modules. Posting JSON returns a 400 immediately. The provider builds the body via `FormData` + a `Blob` for the script contents — see `cf-api-multipart.test.ts` for the exact wire shape.
+- **Only `workers/message`, `workers/tag`, and `workers/alias` are valid annotation keys** when uploading a version. Other keys (e.g. `version_set_id`, `git_sha`) return Cloudflare error 10021 ("annotation key not recognised") and the version doesn't upload. If you need to thread a custom identifier through, encode it into `workers/tag` (it's free-form) and parse client-side.
+- **Service binding `entrypoint` only resolves named class exports.** When binding to a `WorkerEntrypoint` subclass (e.g. `PipelinesGrantsEndpoint`, `AnthropicVault`), you MUST set `entrypoint: "ClassName"` in the binding spec — without it, Cloudflare binds to the default export and any RPC method call returns "The RPC receiver does not implement the method '...'". Alchemy's `WorkerRef` factory drops the `entrypoint` field; pass `{ type: "service", service: "...", __entrypoint__: "ClassName" }` directly until the public API exposes it.
+- **Use `--external cloudflare:*` when bundling without wrangler.** The `cloudflare:workers` and `cloudflare:sockets` imports are resolved by the Workers runtime, not by your bundler. Bun/esbuild treat them as missing modules unless explicitly externalised. `--packages=external` is the wrong knob here — it excludes node_modules, not virtual imports.
+- **`DurableObjectId.toString()` returns hex, not the original name.** If you constructed the id via `namespace.idFromName("run_abc")` and need the original `"run_abc"` back, read `id.name` (only set when the id originated from `idFromName`). Round-tripping through `toString()` loses it. The DO router relies on this for the `/runs/:id` route.
+- **CLI spinners are silent in non-TTY environments (CI logs).** `ora` and similar libraries detect `process.stdout.isTTY` and degrade to no-ops. Always emit a parallel `console.error(message)` so CI logs surface the same status updates.
+- **Pin Node 22 in CI for wrangler v4.** Wrangler v4 requires Node ≥ 22.16; older runners install Node 18 by default and the deploy fails on a `module not found` for `node:worker_threads`. The pipelines workflow sets `actions/setup-node@v4` with `node-version: 22.16.0` explicitly.
+
+### Cross-repo service-binding wiring (two-pass deploy)
+
+Vault and pipelines bind to each other:
+- vault → pipelines: `GRANTS` (RPC entrypoint `PipelinesGrantsEndpoint`), `PULSE` service binding
+- pipelines → vault: `ANTHROPIC` (RPC entrypoint `AnthropicVault`), `PULSE` service binding
+
+Post-Phase 12/13.C there is only one pulse Worker on this account, `pulse-api` (renamed from `pulse-api-production` in Phase 13.C; the `pulse-api-staging` variant was decommissioned in Phase 12). All callers — workloads at either stage and platform services — bind to `pulse-api` and tag events with their own `environment`.
+
+First-time setup uses a two-pass deploy to break the circular dependency: deploy vault without the bindings (vault's `infra.ts` gates `GRANTS` + `PULSE` behind `WIRE_GRANTS_BINDING=true`), deploy pipelines normally (its bindings to vault resolve at upload time since vault already exists), then re-deploy vault with `WIRE_GRANTS_BINDING=true`. Subsequent deploys of either repo don't need the gate — both Workers exist.
+
+### Cross-repo invariants (Phase 7)
+
+- **CF service bindings do NOT propagate `vars` from caller to callee.** When Worker A (with `CALLER_PACKAGE=foo`, `CALLER_ENV=staging` in its env) calls Worker B via a service binding, Worker B's `env` contains its OWN vars, not A's. Identity must travel as an explicit RPC argument on every method — never via shared env. The vault repo enforces this via `messages_create(input, identity)` where `identity` is the caller's `{ package, environment, version_set_id }` resolved client-side from the caller's own env.
+- **Alchemy's public `WorkerRef` factory drops the entrypoint field.** Workaround: construct the binding object directly with the internal `__entrypoint__` key — `bindings.GRANTS = { type: "service", service: pipelines_service, __entrypoint__: "PipelinesGrantsEndpoint" } as ReturnType<typeof WorkerRef>`. This is a known limitation of alchemy as of 0.93.x; when it ships the field publicly, swap back to the typed factory.
+- **`CALLER_ENV` is the canonical key, NOT `CALLER_ENVIRONMENT`.** Each caller Worker reads its own stage from `env.CALLER_ENV` (defined per stage in its own infra/wrangler config). `caller-identity.ts:62` in pipelines maps stage values to two literals only: `staging` or `production`. The grants registry keys against these exact strings; anything else (e.g. `prod`, `live`, `preview`) won't match a grant and the call denies.
+
+### Architecture rules
+- **DO holds no business logic.** If you're writing transition logic inside `make_run_handler`, push it down into `@devpad/core/services/pipelines/runs.ts`.
+- **State machine is pure.** `state-machine.ts` is deterministic — no clock, no random, no IO. Side effects belong in `runs.ts`.
+- **Resolved rollout/gates JSON in `pipeline_run`** is the source of truth for in-flight runs, not the template files. Template edits don't affect running pipelines.
+- **Forced-atomic gates fallback.** When the discriminator rewrites a declared `gradual` to `atomic` (DO migrations or unaffinitised assets), `resolve_run_plan` falls back to `defaultAtomicGates` since the declared gate map's transition keys no longer apply.
+
+### Database
+The pipelines module reuses the unified `Database` type — pipeline tables (`pipeline_*`) sit in the same D1 instance. Migrations land under `packages/schema/src/database/drizzle/` like everything else. The vault repo (`~/dev/vault`) does NOT bind to this D1; vault reaches grants exclusively through the pipelines `grants.check` RPC.
+
+### Drizzle / D1 invariants (Phase 8)
+
+- **RPC entrypoints that bind `env.DB` must wrap via `createD1Database(env.DB)` before passing to drizzle-typed services.** Raw `D1Database` bindings produce `db_error` at the first query because drizzle's typed accessor (`db.select()....`) expects the wrapped shape. The cached-wrap pattern lives in `grants-rpc-entrypoint.ts:35` — instantiate the wrapper once per entrypoint instance and reuse for subsequent calls.
+- **Post-Phase 12/13.C the orchestrator is a singleton (`devpad-pipelines`) bound to `devpad-unified-db`.** Grants rows + run history live in production-only. The orchestrator's `--stage staging` path was removed in Phase 13.C — `packages/pipelines/infra.ts` hardcodes `devpad-unified-db` + `devpad-corpus` + `ENVIRONMENT: "production"`. A future canary deploy of the orchestrator would need re-introducing a stage discriminator.
+- **Pipeline grants must exist BEFORE vault calls succeed.** Vault's grant check is fail-closed: if no `pipeline_grant` row matches `(package, environment, scope)`, the call denies with no escalation. Default seed for a new demo package is one row per stage: `(package, "staging", "anthropic:messages")` + `(package, "production", "anthropic:messages")`. The `environment` column only ever holds those two literals (matching `CALLER_ENV`'s two values) — `dev`, `preview`, etc. simply won't match.
+
+### Testing
+- Pipeline tests use the `@devpad/pipeline-fakes` package for in-memory Cloudflare / GitHub / Anthropic / DurableObject substitutes.
+- Test DB harness pattern: `packages/core/src/services/pipelines/__tests__/integration/helpers.ts` uses `createBunDatabase` + migration replay. New core service tests should follow this pattern.
+
+### Known transient hacks (remove when applicable)
+
+### Drizzle-kit + manual migrations
+If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a manual migration not in `meta/_journal.json`, rename the generated SQL + snapshot to the next available index and add a matching journal entry. The journal advances monotonically; drizzle-kit's filename numbering is advisory. (We hit this with `0007_add_pulse_scope.sql` already on disk when generating `0008_pipelines.sql`.)
+
+**Hand-written ALTER migrations don't generate paired snapshots.** When you add a column via a hand-written SQL migration (e.g. adding `window_ms` to `pipeline_analysis_template`), drizzle-kit doesn't auto-produce a paired entry in `meta/<n>_snapshot.json`. The migration still applies correctly at runtime since `_journal.json` is the source of truth — but the next time someone runs `drizzle-kit generate`, the snapshot may drift. Run `bunx drizzle-kit generate` after the next schema change to reconcile.
+
+### Biome style for status enums
+`packages/schema/src/database/schema.ts` uses single-line const arrays for status enums (e.g. `RUN_STATUSES`, `STAGE_EVENT_KINDS`). Don't break this style — biome's format rule enforces it.
 
 ## Worker Architecture
 - Routes NEVER read `c.env` -- all config comes from `c.get("config")` and `c.get("oauth_secrets")`
@@ -178,6 +271,12 @@ devpad/
 - When writing new CSS, use `@f0rbit/ui` token names (`--fg`, `--bg`, `--accent`, `--border`, `--bg-alt`, `--fg-muted`, `--fg-subtle`, `--fg-faint`, etc.)
 - NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they have been fully removed from the codebase
 
+### Workspace dep declarations under bun's isolated linker (CRITICAL)
+Bun 1.3+ installs with an isolated linker by default: a package can only resolve dependencies it explicitly declares in its own `package.json`. Transitive resolution through the workspace root does NOT happen at build time for bare specifiers.
+- `packages/core/src/ui/styles/globals.css` does `@import "@f0rbit/ui/styles"`, so `packages/core/package.json` MUST declare `@f0rbit/ui` as a dependency. Without it, `node_modules/.bun/.../packages/core/node_modules/@f0rbit/ui` is not created and Vite/PostCSS fails with `ENOENT: ... open '@f0rbit/ui/styles'`.
+- `apps/blog/src/middleware.ts` and `apps/media/src/middleware.ts` import `@devpad/core/ui/middleware`, so both apps' `package.json` MUST declare `@devpad/core` as a workspace dep. Without it, Rollup fails with `failed to resolve import "@devpad/core/ui/middleware"`.
+- Rule of thumb: if a file uses a bare specifier (`@scope/pkg/path`), the package owning that file must declare the dep — even when the dep is already available transitively elsewhere in the workspace.
+
 ### @f0rbit/ui Utility Class Composition (CRITICAL)
 Layout utilities use a **base + modifier** pattern. Modifiers only set CSS variables — they do NOT include `display: flex`. You MUST always include the base class:
 - `.stack` = `display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-md))`
@@ -207,7 +306,6 @@ WRONG: `class="row-sm"`, `class="stack-lg"`, `class="row-between"` (no flex layo
 These type errors exist and should be ignored:
 - `CategoryServiceError`/`PostServiceError` type mismatches in blog routes
 - `packages/worker/src/index.ts` fetch type signature
-- `packages/schema/src/validation.ts` regex pattern
 - `showSuccessToast` in `OptimisticTaskProgress.tsx`
 - Astro check false positives: `rethrow` and `getProject` sometimes reported as unused despite being used
 

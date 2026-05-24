@@ -1,0 +1,38 @@
+{
+	"name": "@devpad/pipelines",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Pipeline orchestrator Cloudflare Worker — Durable Object run host + Hono REST routes over the @devpad/core pipelines service",
+	"type": "module",
+	"main": "src/index.ts",
+	"types": "src/index.ts",
+	"exports": {
+		".": "./src/index.ts",
+		"./bindings": "./src/bindings.ts",
+		"./routes": "./src/routes.ts",
+		"./run-do": "./src/run-do.ts"
+	},
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"clean": "rm -rf dist"
+	},
+	"dependencies": {
+		"@devpad/core": "workspace:*",
+		"@devpad/pipeline-templates": "workspace:*",
+		"@devpad/schema": "workspace:*",
+		"@f0rbit/corpus": "^0.6.0",
+		"alchemy": "^0.93.7",
+		"drizzle-orm": "^0.44.7",
+		"hono": "^4.6.0",
+		"jose": "^6.0.0",
+		"zod": "^3.22.4"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20241205.0",
+		"@devpad/pipeline-fakes": "workspace:*",
+		"@types/node": "^24.3.0",
+		"typescript": "^5.3.3",
+		"wrangler": "^3.99.0"
+	}
+}

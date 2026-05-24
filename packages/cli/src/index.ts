@@ -4,18 +4,8 @@ import { ApiClient, getTool } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
-import ora from "ora";
-
-const isTTY = process.stdout.isTTY;
-
-function createSpinner(text: string) {
-	if (isTTY) {
-		return ora(text);
-	}
-	const noop = () => noopSpinner;
-	const noopSpinner = { start: noop, succeed: noop, fail: noop, stop: noop };
-	return noopSpinner;
-}
+import { register_pipelines_commands } from "./commands/pipelines.ts";
+import { make_spinner as createSpinner } from "./printer.ts";
 
 // Helper to get API client
 function getApiClient(): ApiClient {
@@ -556,5 +546,10 @@ user.command("preferences")
 			handleError(error);
 		}
 	});
+
+// Pipelines subcommand group — `init` is fully local (no API key);
+// `artifacts upload` runs locally against the corpus backend;
+// `run` / `approve` / `cancel` / `rollback` use the default API client.
+register_pipelines_commands(program, () => getApiClient());
 
 await program.parseAsync(process.argv);

@@ -21,6 +21,15 @@
 		"./services/media/cron": "./src/services/media/cron/index.ts",
 		"./services/media/storage": "./src/services/media/storage.ts",
 		"./services/media/sync": "./src/services/media/sync.ts",
+		"./services/pipelines": "./src/services/pipelines/index.ts",
+		"./services/pipelines/gates": "./src/services/pipelines/gates/index.ts",
+		"./services/pipelines/grants": "./src/services/pipelines/grants.ts",
+		"./services/pipelines/oidc-trust": "./src/services/pipelines/oidc-trust.ts",
+		"./services/pipelines/packages": "./src/services/pipelines/packages.ts",
+		"./services/pipelines/state-machine": "./src/services/pipelines/state-machine.ts",
+		"./services/pipelines/runs": "./src/services/pipelines/runs.ts",
+		"./services/pipelines/deploy": "./src/services/pipelines/deploy.ts",
+		"./services/pipelines/rollback": "./src/services/pipelines/rollback.ts",
 		"./ui": "./src/ui/index.ts",
 		"./ui/styles": "./src/ui/styles/globals.css",
 		"./ui/api-client": "./src/ui/api-client.ts",
@@ -28,11 +37,15 @@
 		"./ui/middleware": "./src/ui/middleware.ts"
 	},
 	"scripts": {
-		"test": "bun test"
+		"test": "bun test",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@devpad/pipeline-fakes": "workspace:*",
+		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",
-		"@f0rbit/corpus": "^0.3.5",
+		"@f0rbit/corpus": "^0.6.0",
+		"@f0rbit/ui": "^0.1.9",
 		"@octokit/auth-oauth-app": "^9.0.1",
 		"@octokit/rest": "^22.0.0",
 		"@octokit/types": "^14.1.0",

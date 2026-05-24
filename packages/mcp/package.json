@@ -19,6 +19,7 @@
 		"zod-to-json-schema": "^3.24.6"
 	},
 	"devDependencies": {
+		"@devpad/api": "workspace:*",
 		"@types/node": "^24.3.0",
 		"typescript": "^5.0.0"
 	},

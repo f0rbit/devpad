@@ -28,7 +28,7 @@ const inject_test_user = async (context: any) => {
 					"X-Test-User": "true",
 				},
 			});
-		},
+		}
 	);
 };
 

@@ -3,7 +3,25 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
-import type { ApiKey, GetConfigResult, Goal, HistoryAction, Milestone, Project, ProjectConfig, SaveConfigRequest, TagWithTypedColor, TaskWithDetails, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema/types";
+import type {
+	ApiKey,
+	GetConfigResult,
+	Goal,
+	HistoryAction,
+	Milestone,
+	PipelineGrant,
+	PipelineOidcTrust,
+	PipelinePackage,
+	PipelineRun,
+	Project,
+	ProjectConfig,
+	SaveConfigRequest,
+	TagWithTypedColor,
+	TaskWithDetails,
+	UpsertProject,
+	UpsertTag,
+	UpsertTodo,
+} from "@devpad/schema/types";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -75,6 +93,7 @@ export class ApiClient {
 			blog: new HttpClient({ ...clientOptions, category: "blog" }),
 			media: new HttpClient({ ...clientOptions, category: "media" }),
 			pulse: new HttpClient({ ...clientOptions, base_url: `${base_url}/pulse`, category: "pulse" }),
+			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
 		} as const;
 	}
 
@@ -896,8 +915,7 @@ export class ApiClient {
 			/**
 			 * List subscriptions for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
-				wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> => wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a subscription
@@ -923,8 +941,7 @@ export class ApiClient {
 			/**
 			 * Update a subscription
 			 */
-			update: (id: string, patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>): Promise<ApiResult<any>> =>
-				wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
+			update: (id: string, patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
 
 			/**
 			 * Delete a subscription
@@ -939,8 +956,7 @@ export class ApiClient {
 			/**
 			 * List ingest keys for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
-				wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> => wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a new ingest key (returns plaintext only once)
@@ -959,8 +975,202 @@ export class ApiClient {
 			/**
 			 * Delete an ingest key
 			 */
-			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> =>
-				wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
+			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
+		},
+	};
+
+	/**
+	 * Pipelines namespace with Result-wrapped operations
+	 */
+	public readonly pipelines = {
+		/**
+		 * List pipeline runs ordered by `created_at` DESC. Optional filters
+		 * narrow by package and/or status; `limit` defaults to 50 server-side
+		 * and is capped at 200.
+		 */
+		list: (filter?: { package_id?: string; status?: string; limit?: number }): Promise<ApiResult<PipelineRun[]>> => {
+			const query: Record<string, string> = {};
+			if (filter?.package_id !== undefined) query.package_id = filter.package_id;
+			if (filter?.status !== undefined) query.status = filter.status;
+			if (filter?.limit !== undefined) query.limit = String(filter.limit);
+			return wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs", Object.keys(query).length > 0 ? { query } : undefined));
+		},
+
+		/**
+		 * Get a pipeline run by ID
+		 */
+		get: (run_id: string): Promise<ApiResult<PipelineRun>> => wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
+
+		/**
+		 * Create a new pipeline run
+		 */
+		create: (input: { package_id: string; version_set_id: string }): Promise<ApiResult<{ run_id: string; status: string }>> =>
+			wrap(() =>
+				this.clients.pipelines.post<{ run_id: string; status: string }>("/runs", {
+					body: input,
+				})
+			),
+
+		/**
+		 * Approve a stage in a pipeline run
+		 */
+		approve: (run_id: string, input: { stage_name: string; decision: "approved" | "denied"; user_id: string; reason?: string }): Promise<ApiResult<void>> =>
+			wrap(() =>
+				this.clients.pipelines.post<void>(`/runs/${run_id}/approve`, {
+					body: input,
+				})
+			),
+
+		/**
+		 * Cancel a pipeline run
+		 */
+		cancel: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
+
+		/**
+		 * Rollback a pipeline run
+		 */
+		rollback: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+
+		/**
+		 * Grants namespace
+		 */
+		grants: {
+			/**
+			 * List grants for a package
+			 */
+			list: (package_id?: string): Promise<ApiResult<PipelineGrant[]>> =>
+				wrap(() =>
+					this.clients.pipelines.get<PipelineGrant[]>("/grants", {
+						query: package_id ? { package_id } : {},
+					})
+				),
+
+			/**
+			 * Approve a grant
+			 */
+			approve: (grant_id: string, user_id: string): Promise<ApiResult<PipelineGrant>> =>
+				wrap(() =>
+					this.clients.pipelines.post<PipelineGrant>(`/grants/${grant_id}/approve`, {
+						body: { user_id },
+					})
+				),
+
+			/**
+			 * Deny a grant
+			 */
+			deny: (grant_id: string, user_id: string, reason?: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() =>
+					this.clients.pipelines.post<{ success: boolean }>(`/grants/${grant_id}/deny`, {
+						body: { user_id, reason },
+					})
+				),
+		},
+
+		/**
+		 * Packages namespace — full CRUD over pipeline_package rows. Writes
+		 * (create/update/delete) require the orchestrator bearer token; the
+		 * HttpClient picks it up via the standard auth header injection.
+		 */
+		packages: {
+			/**
+			 * List packages, optionally filtered by linked devpad project.
+			 * Packages with `project_id = null` are not yet linked.
+			 */
+			list: (filter?: { project_id?: string }): Promise<ApiResult<PipelinePackage[]>> => {
+				const query: Record<string, string> = {};
+				if (filter?.project_id !== undefined) query.project_id = filter.project_id;
+				return wrap(() => this.clients.pipelines.get<PipelinePackage[]>("/packages", Object.keys(query).length > 0 ? { query } : undefined));
+			},
+
+			/**
+			 * Get a single package by id
+			 */
+			get: (package_id: string): Promise<ApiResult<PipelinePackage>> => wrap(() => this.clients.pipelines.get<PipelinePackage>(`/packages/${package_id}`)),
+
+			/**
+			 * Register a new pipeline package. `id` is canonically the same as
+			 * `name` per existing convention but is supplied explicitly so the
+			 * orchestrator can disambiguate renames without conflicts.
+			 */
+			create: (input: { id: string; name: string; owner_id: string; repo_url?: string | null; project_id?: string | null; default_template_ref?: string | null }): Promise<ApiResult<PipelinePackage>> =>
+				wrap(() => this.clients.pipelines.post<PipelinePackage>("/packages", { body: input })),
+
+			/**
+			 * Partially update a package row. Missing keys preserve existing
+			 * values; explicit `null` clears the field.
+			 */
+			update: (package_id: string, input: { repo_url?: string | null; project_id?: string | null; default_template_ref?: string | null; script_name_overrides?: Record<string, string> | null }): Promise<ApiResult<PipelinePackage>> =>
+				wrap(() => this.clients.pipelines.patch<PipelinePackage>(`/packages/${package_id}`, { body: input })),
+
+			/**
+			 * Remove a package. Refuses (409) if pipeline_run rows still
+			 * reference the package — clean up runs first.
+			 */
+			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
+		},
+
+		/**
+		 * OIDC trust-policy namespace — admin-gated CRUD for the
+		 * `pipeline_oidc_trust` table. Phase 15.D surface; each call requires
+		 * the orchestrator's bearer token (literal `PIPELINES_TOKEN`).
+		 * `owner_id` is required on every operation — single-tenant today,
+		 * but the column is in place so multi-user ACLs slot in later.
+		 */
+		oidc_trust: {
+			/**
+			 * List policies for an owner, ordered created_at DESC, id ASC —
+			 * matches the trust-matcher resolution order so the management UI
+			 * shows the policy that would be picked first.
+			 */
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust[]>> => wrap(() => this.clients.pipelines.get<PipelineOidcTrust[]>("/oidc-trust", { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Get a single policy by id, scoped to its owner. 404 when
+			 * unknown, soft-deleted, or owned by a different user.
+			 */
+			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.get<PipelineOidcTrust>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Create a new policy. Defaults per plan §I.5: `repo_pattern: "*"`,
+			 * `allowed_actions: ["artifacts:upload","runs:start"]`,
+			 * `session_ttl_seconds: 900`.
+			 */
+			create: (input: {
+				owner_id: string;
+				github_owner: string;
+				expected_audience: string;
+				provider?: "github";
+				repo_pattern?: string;
+				allowed_refs?: string[];
+				allowed_environments?: string[];
+				allowed_actions?: string[];
+				session_ttl_seconds?: number;
+			}): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.post<PipelineOidcTrust>("/oidc-trust", { body: input })),
+
+			/**
+			 * Partial patch — only the supplied fields are touched. Validation
+			 * runs against the merged record server-side.
+			 */
+			update: (
+				id: string,
+				input: {
+					owner_id: string;
+					github_owner?: string;
+					expected_audience?: string;
+					repo_pattern?: string;
+					allowed_refs?: string[];
+					allowed_environments?: string[];
+					allowed_actions?: string[];
+					session_ttl_seconds?: number;
+				}
+			): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.patch<PipelineOidcTrust>(`/oidc-trust/${id}`, { body: input })),
+
+			/**
+			 * Soft-delete a policy (sets `deleted = true`; row preserved for
+			 * audit). The matcher and management list both skip soft-deleted
+			 * rows.
+			 */
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } })),
 		},
 	};
 

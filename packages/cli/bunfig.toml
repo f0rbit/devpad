@@ -1,0 +1,6 @@
+# Note: bun 1.3 does not support a bunfig key for test file exclusion.
+# Golden Playwright specs under tests/golden/** match bun test's auto-discovery
+# glob (**/*.spec.ts) and will fail-load if `bun test` is run with no args.
+# The package `test` script in package.json scopes discovery to tests/unit and
+# tests/integration; prefer `bun run test` over bare `bun test` in this package.
+# For ad-hoc runs, use `bun test --path-ignore-patterns="tests/golden/**"`.

@@ -13,7 +13,8 @@
 	],
 	"scripts": {
 		"build": "bun build src/index.ts --outdir dist --target node --packages=bundle",
-		"test": "bun test",
+		"test": "bun test tests/unit tests/integration",
+		"typecheck": "tsc --noEmit",
 		"prepublishOnly": "bun run build"
 	},
 	"keywords": [
@@ -42,15 +43,23 @@
 		"access": "public",
 		"registry": "https://registry.npmjs.org/"
 	},
-	"dependencies": {},
+	"dependencies": {
+		"@f0rbit/corpus": "^0.6.0",
+		"blake3-wasm": "^2.1.5",
+		"ignore": "^5.3.2",
+		"mime": "^3.0.0"
+	},
 	"devDependencies": {
 		"@devpad/api": "workspace:*",
+		"@devpad/pipeline-fakes": "workspace:*",
+		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@types/node": "^20.11.24",
 		"bun-types": "latest",
 		"chalk": "^5.3.0",
 		"commander": "^12.0.0",
 		"console-table-printer": "^2.12.1",
+		"js-yaml": "^4.1.0",
 		"ora": "^8.0.1",
 		"typescript": "^5.9.2",
 		"zod": "^3.22.4"

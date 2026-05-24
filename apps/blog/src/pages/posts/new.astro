@@ -1,7 +1,7 @@
 ---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
 import PostEditor from "@/components/post/post-editor";
 import AppLayout from "@/layouts/app-layout.astro";
-import { getServerApiClient } from "@devpad/core/ui/api-client";
 
 interface CategoryNode {
 	name: string;
@@ -30,10 +30,7 @@ const projectParam = Astro.url.searchParams.get("project");
 const initialProjectIds = projectParam ? [projectParam] : undefined;
 
 const client = getServerApiClient(Astro.locals);
-const [catResult, projResult] = await Promise.all([
-	client.blog.categories.tree(),
-	client.projects.list(),
-]);
+const [catResult, projResult] = await Promise.all([client.blog.categories.tree(), client.projects.list()]);
 
 if (catResult.ok) {
 	categories = flattenTree(catResult.value.categories ?? []);

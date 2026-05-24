@@ -1,0 +1,20 @@
+CREATE TABLE `pipeline_oidc_trust` (
+	`id` text PRIMARY KEY NOT NULL,
+	`created_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`updated_at` text DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+	`deleted` integer DEFAULT false NOT NULL,
+	`created_by` text DEFAULT 'user' NOT NULL,
+	`modified_by` text DEFAULT 'user' NOT NULL,
+	`protected` integer DEFAULT false NOT NULL,
+	`owner_id` text NOT NULL,
+	`provider` text DEFAULT 'github' NOT NULL,
+	`github_owner` text NOT NULL,
+	`repo_pattern` text DEFAULT '*' NOT NULL,
+	`allowed_refs` text DEFAULT '[]' NOT NULL,
+	`allowed_environments` text DEFAULT '[]' NOT NULL,
+	`expected_audience` text NOT NULL,
+	`allowed_actions` text DEFAULT '["artifacts:upload","runs:start"]' NOT NULL,
+	`session_ttl_seconds` integer DEFAULT 900 NOT NULL,
+	`last_used_at` text,
+	FOREIGN KEY (`owner_id`) REFERENCES `user`(`id`) ON UPDATE no action ON DELETE no action
+);

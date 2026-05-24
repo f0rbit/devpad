@@ -1,0 +1,130 @@
+name: deploy
+
+# The published `@devpad/cli` (npm) does not yet include the pipelines
+# subcommands. Until that lands, this workflow clones the devpad repo at
+# `DEVPAD_REF` (default `main`) and invokes the CLI from source. Pin to a
+# tagged release once `@devpad/cli` ships pipelines support.
+
+permissions:
+  contents: read
+  id-token: write
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DEVPAD_REF: ${{ vars.DEVPAD_REF || 'main' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version_set_id: ${{ steps.upload.outputs.version_set_id }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - uses: oven-sh/setup-bun@v2
+
+      - run: bun install --frozen-lockfile
+
+      - run: bun run test
+
+      - name: Build worker bundle
+        run: |
+          bun run build
+          # CLI expects dist/_worker.js + dist/manifest.json
+          mv dist/index.js dist/_worker.js
+          jq -n --arg name gradual-manual '{name:$name, main:"_worker.js"}' > dist/manifest.json
+
+      - name: Clone and build devpad CLI
+        run: |
+          git clone --depth=1 --branch "$DEVPAD_REF" https://github.com/f0rbit/devpad.git "$RUNNER_TEMP/devpad"
+          cd "$RUNNER_TEMP/devpad"
+          bun install --frozen-lockfile
+          # build @devpad/schema then @devpad/api so the CLI can import from dist/
+          bun run build:api
+          # Bundle the CLI into a single file so transitive deps (drizzle-orm,
+          # zod, etc.) are inlined. Without this, bun's resolver fails to find
+          # transitive workspace deps when the CLI runs from outside the
+          # devpad workspace root.
+          cd packages/cli && bun run build
+          # link @devpad/pipeline-templates into this repo's node_modules so
+          # the CLI can dynamic-import pipeline.ts (which imports the package
+          # at runtime — the user's pipeline.ts is loaded outside the bundle)
+          mkdir -p "$GITHUB_WORKSPACE/node_modules/@devpad"
+          ln -sfn "$RUNNER_TEMP/devpad/packages/pipeline-templates" "$GITHUB_WORKSPACE/node_modules/@devpad/pipeline-templates"
+
+      - name: Exchange GitHub OIDC token for orchestrator session
+        id: auth
+        env:
+          ORCHESTRATOR_URL: ${{ vars.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
+        run: |
+          OIDC_JWT=$(curl -sS \
+            -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$ORCHESTRATOR_URL" \
+            | jq -r '.value')
+          if [ -z "$OIDC_JWT" ] || [ "$OIDC_JWT" = "null" ]; then
+            echo "::error::failed to mint GitHub OIDC token (check permissions.id-token: write)"
+            exit 1
+          fi
+
+          RESPONSE=$(curl -sS -X POST \
+            -H 'Content-Type: application/json' \
+            -d "$(jq -nc --arg jwt "$OIDC_JWT" --arg pkg "gradual-manual" \
+                  '{jwt:$jwt, package_id:$pkg, requested_scope:["artifacts:upload","runs:start"]}')" \
+            "$ORCHESTRATOR_URL/auth/github-oidc")
+
+          OK=$(echo "$RESPONSE" | jq -r '.ok')
+          if [ "$OK" != "true" ]; then
+            CODE=$(echo "$RESPONSE" | jq -r '.error.code // "unknown"')
+            echo "::error::OIDC exchange failed: $CODE"
+            echo "$RESPONSE" | jq .
+            exit 1
+          fi
+          SESSION=$(echo "$RESPONSE" | jq -r '.value.session_token')
+          echo "::add-mask::$SESSION"
+          echo "session=$SESSION" >> "$GITHUB_OUTPUT"
+
+      - id: upload
+        name: Upload artifacts to corpus
+        env:
+          DEVPAD_API_KEY: ${{ secrets.DEVPAD_API_KEY }}
+          DEVPAD_BASE_URL: ${{ secrets.DEVPAD_BASE_URL || 'https://devpad.tools/api/v1' }}
+          DEVPAD_PIPELINES_URL: ${{ vars.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
+          DEVPAD_PIPELINES_TOKEN: ${{ steps.auth.outputs.session }}
+        run: |
+
+          bun "$RUNNER_TEMP/devpad/packages/cli/dist/index.js" pipelines artifacts upload \
+            --package gradual-manual \
+            --bundle dist/_worker.js \
+            --manifest dist/manifest.json \
+            --infra-plan infra.ts \
+            --pipeline pipeline.ts \
+            --grants grants.ts \
+            --output version-set.json
+
+          echo "version_set_id=$(jq -r .id version-set.json)" >> $GITHUB_OUTPUT
+
+      # `wrangler versions upload` is intentionally NOT run here — as of
+      # Phase 6 the orchestrator owns the CF API upload (multipart with
+      # the CALLER_* identity trio baked into metadata.bindings). The
+      # corpus upload above carries the bundle bytes; the orchestrator
+      # streams them straight into CF when it advances the run.
+
+      - if: github.ref == 'refs/heads/main'
+        name: Start pipeline run
+        env:
+          DEVPAD_PIPELINES_URL: ${{ vars.DEVPAD_PIPELINES_URL || 'https://devpad-pipelines.dev-818.workers.dev' }}
+          DEVPAD_PIPELINES_TOKEN: ${{ steps.auth.outputs.session }}
+        run: |
+          curl -sS -X POST \
+            -H "Content-Type: application/json" \
+            ${DEVPAD_PIPELINES_TOKEN:+-H "Authorization: Bearer $DEVPAD_PIPELINES_TOKEN"} \
+            -d "{\"package_id\":\"gradual-manual\",\"version_set_id\":\"${{ steps.upload.outputs.version_set_id }}\"}" \
+            "$DEVPAD_PIPELINES_URL/runs"

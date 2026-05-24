@@ -11,6 +11,7 @@
 		"@astrojs/sitemap": "^3.2.1",
 		"@astrojs/solid-js": "^5.0.0",
 		"@devpad/api": "workspace:*",
+		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@f0rbit/ui": "0.1.9",
 		"astro": "^5.1.1",

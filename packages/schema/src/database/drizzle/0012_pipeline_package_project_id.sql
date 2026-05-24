@@ -1,0 +1,1 @@
+ALTER TABLE `pipeline_package` ADD `project_id` text REFERENCES project(id);

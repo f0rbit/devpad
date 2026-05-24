@@ -1,20 +1,41 @@
 ---
+import { getServerApiClient } from "@devpad/core/ui/api-client";
+
 interface Props {
 	project_id: string;
 }
 
 const { project_id } = Astro.props;
 
-// get the active page
+// Best-effort lookup of pending pipeline approvals for the badge on the Pipeline tab.
+// Failures degrade gracefully: no badge, tab still renders (empty-state landing handles the rest).
+let pending_approval_count = 0;
+if (Astro.locals.user) {
+	const client = getServerApiClient(Astro.locals);
+	const project_result = await client.projects.getByName(project_id);
+	if (project_result.ok && project_result.value) {
+		const pkg_result = await client.pipelines.packages.list({ project_id: project_result.value.id });
+		if (pkg_result.ok && pkg_result.value.length > 0) {
+			const pkg_id = pkg_result.value[0]!.id;
+			const runs_result = await client.pipelines.list({ package_id: pkg_id, status: "awaiting_approval" });
+			if (runs_result.ok) pending_approval_count = runs_result.value.length;
+		}
+	}
+}
+
+const pipeline_label = pending_approval_count > 0 ? `pipeline (${pending_approval_count} awaiting)` : "pipeline";
+
+// Tab order — pipeline slots after pulse, before blog (operational sibling of pulse).
 const pages = [
-	{ name: "overview", href: `/project/${project_id}` },
-	{ name: "goals", href: `/project/${project_id}/goals` },
-	{ name: "tasks", href: `/project/${project_id}/tasks` },
-	{ name: "pulse", href: `/project/${project_id}/pulse` },
-	{ name: "blog", href: `/project/${project_id}/blog` },
-	{ name: "settings", href: `/project/${project_id}/settings` },
-	{ name: "specification", href: `/project/${project_id}/specification` },
-	{ name: "history", href: `/project/${project_id}/history` },
+	{ name: "overview", label: "overview", href: `/project/${project_id}` },
+	{ name: "goals", label: "goals", href: `/project/${project_id}/goals` },
+	{ name: "tasks", label: "tasks", href: `/project/${project_id}/tasks` },
+	{ name: "pulse", label: "pulse", href: `/project/${project_id}/pulse` },
+	{ name: "pipeline", label: pipeline_label, href: `/project/${project_id}/pipeline` },
+	{ name: "blog", label: "blog", href: `/project/${project_id}/blog` },
+	{ name: "settings", label: "settings", href: `/project/${project_id}/settings` },
+	{ name: "specification", label: "specification", href: `/project/${project_id}/specification` },
+	{ name: "history", label: "history", href: `/project/${project_id}/history` },
 ];
 
 const search_pages = pages.filter(p => p.name !== "overview");
@@ -27,7 +48,7 @@ const active = search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.na
 		{
 			pages.map((p) => (
 				<a href={p.href} class={active == p.name ? "active" : ""}>
-					{p.name}
+					{p.label}
 				</a>
 			))
 		}

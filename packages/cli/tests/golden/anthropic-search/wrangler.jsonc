@@ -1,0 +1,52 @@
+{
+	"$schema": "../../../../../node_modules/wrangler/config-schema.json",
+	"name": "anthropic-search",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-05-17",
+	// rpc is default since 2024-04-03 and rejected by CF when set explicitly
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true
+	},
+	// PULSE_PROJECT_ID is provisioned out-of-band (per-package devpad project
+	// id). The infra.ts deploy reads it from $PULSE_PROJECT_ID at apply time;
+	// this var is here so `wrangler dev` against this file picks it up from
+	// a local .dev.vars or via `wrangler secret put`.
+	"vars": {
+		"PULSE_PROJECT_ID": "$PULSE_PROJECT_ID"
+	},
+	// PULSE_INGEST_KEY (pk_*) is the X-Pulse-Key header on every /e POST.
+	// Stored in Secrets Store rather than env vars so it isn't visible in
+	// plain build logs. Provision via:
+	//     bunx wrangler secrets-store secret create default_secrets_store \
+	//         --name PULSE_INGEST_KEY --value <pk_*> --scopes workers
+	"secrets_store_secrets": [
+		{
+			"binding": "PULSE_INGEST_KEY",
+			"store_id": "$VAULT_SECRETS_STORE_ID",
+			"secret_name": "PULSE_INGEST_KEY"
+		}
+	],
+	"env": {
+		"staging": {
+			"name": "anthropic-search-staging"
+		},
+		"production": {
+			"name": "anthropic-search"
+		}
+	},
+	// Platform services (vault, pulse) are singletons — one Worker each
+	// across both staging and production. Stage scoping is enforced via
+	// `caller.environment` on RPC identity (vault) and event tags (pulse).
+	"services": [
+		{
+			"binding": "ANTHROPIC",
+			"service": "vault",
+			"entrypoint": "AnthropicVault"
+		},
+		{
+			"binding": "PULSE",
+			"service": "pulse-api"
+		}
+	]
+}

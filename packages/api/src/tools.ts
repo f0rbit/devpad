@@ -1,3 +1,4 @@
+import { RUN_STATUSES } from "@devpad/schema/database/schema";
 import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo } from "@devpad/schema/validation";
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
@@ -643,6 +644,218 @@ export const tools: Record<string, ToolDefinition> = {
 			rate_limit_per_min: z.number().optional().describe("Rate limit in requests per minute (default 600)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.keys.create(input)),
+	},
+
+	devpad_pipelines_list: {
+		name: "devpad_pipelines_list",
+		description: "List pipeline runs (newest first). Optionally filter by package and/or status; cap limit at 200.",
+		inputSchema: z.object({
+			package_id: z.string().optional().describe("Filter runs to a specific package"),
+			status: z.enum(RUN_STATUSES).optional().describe("Filter by run status"),
+			limit: z.number().int().positive().max(200).optional().describe("Max rows to return (default 50, cap 200)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.list(input)),
+	},
+
+	devpad_pipelines_get: {
+		name: "devpad_pipelines_get",
+		description: "Get a pipeline run by ID",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.get(input.run_id)),
+	},
+
+	devpad_pipelines_create: {
+		name: "devpad_pipelines_create",
+		description: "Create a new pipeline run",
+		inputSchema: z.object({
+			package_id: z.string().describe("Package ID"),
+			version_set_id: z.string().describe("Version set ID to deploy"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.create(input)),
+	},
+
+	devpad_pipelines_approve: {
+		name: "devpad_pipelines_approve",
+		description: "Approve or deny a stage in a pipeline run",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+			stage_name: z.string().describe("Stage name to approve"),
+			decision: z.enum(["approved", "denied"]).describe("Approval decision"),
+			user_id: z.string().describe("User ID making the decision"),
+			reason: z.string().optional().describe("Optional reason for the decision"),
+		}),
+		execute: async (client, input) => {
+			unwrap(await client.pipelines.approve(input.run_id, input));
+			return { success: true };
+		},
+	},
+
+	devpad_pipelines_cancel: {
+		name: "devpad_pipelines_cancel",
+		description: "Cancel a pipeline run",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => {
+			unwrap(await client.pipelines.cancel(input.run_id));
+			return { success: true };
+		},
+	},
+
+	devpad_pipelines_rollback: {
+		name: "devpad_pipelines_rollback",
+		description: "Rollback a completed or failed pipeline run",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => {
+			unwrap(await client.pipelines.rollback(input.run_id));
+			return { success: true };
+		},
+	},
+
+	devpad_pipelines_grants_list: {
+		name: "devpad_pipelines_grants_list",
+		description: "List vault grants for a pipeline package",
+		inputSchema: z.object({
+			package_id: z.string().describe("Package ID to filter grants by"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.list(input.package_id)),
+	},
+
+	devpad_pipelines_grants_approve: {
+		name: "devpad_pipelines_grants_approve",
+		description: "Approve a pending vault grant request for a pipeline package",
+		inputSchema: z.object({
+			grant_id: z.string().describe("Grant ID to approve"),
+			user_id: z.string().describe("User ID making the approval decision"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.approve(input.grant_id, input.user_id)),
+	},
+
+	devpad_pipelines_grants_deny: {
+		name: "devpad_pipelines_grants_deny",
+		description: "Deny a pending vault grant request for a pipeline package",
+		inputSchema: z.object({
+			grant_id: z.string().describe("Grant ID to deny"),
+			user_id: z.string().describe("User ID making the denial decision"),
+			reason: z.string().optional().describe("Optional reason for the denial"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.deny(input.grant_id, input.user_id, input.reason)),
+	},
+
+	devpad_pipelines_packages_list: {
+		name: "devpad_pipelines_packages_list",
+		description: "List pipeline packages. Optionally filter by linked devpad project_id; unlinked packages have project_id = null.",
+		inputSchema: z.object({
+			project_id: z.string().optional().describe("Filter packages by linked devpad project"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.list(input)),
+	},
+
+	devpad_pipelines_packages_get: {
+		name: "devpad_pipelines_packages_get",
+		description: "Get a pipeline package by ID",
+		inputSchema: z.object({
+			package_id: z.string().describe("Pipeline package ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.get(input.package_id)),
+	},
+
+	devpad_pipelines_packages_create: {
+		name: "devpad_pipelines_packages_create",
+		description: "Register a new pipeline-managed package. By convention `id` equals the package `name`. `project_id` optionally links the package to a devpad project.",
+		inputSchema: z.object({
+			id: z.string().describe("Canonical package ID (typically the same as name)"),
+			name: z.string().describe("Package name"),
+			owner_id: z.string().describe("User ID of the owner"),
+			repo_url: z.string().optional().describe("Optional git repo URL"),
+			project_id: z.string().optional().describe("Optional devpad project ID to link"),
+			default_template_ref: z.string().optional().describe("Optional default pipeline template ref"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.create(input)),
+	},
+
+	devpad_pipelines_packages_update: {
+		name: "devpad_pipelines_packages_update",
+		description: "Partially update a pipeline package. Only the provided fields are touched.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline package ID"),
+			repo_url: z.string().nullable().optional(),
+			project_id: z.string().nullable().optional(),
+			default_template_ref: z.string().nullable().optional(),
+			script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
+		}),
+		execute: async (client, input) => {
+			const { id, ...patch } = input;
+			return unwrap(await client.pipelines.packages.update(id, patch));
+		},
+	},
+
+	devpad_pipelines_packages_delete: {
+		name: "devpad_pipelines_packages_delete",
+		description: "Delete a pipeline package. Refuses with conflict if existing pipeline_run rows still reference the package.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline package ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.packages.delete(input.id)),
+	},
+
+	devpad_pipelines_oidc_trust_list: {
+		name: "devpad_pipelines_oidc_trust_list",
+		description: "List GitHub Actions OIDC trust policies for an owner. Returned ordered by created_at DESC, id ASC to match the orchestrator's trust-matcher resolution order.",
+		inputSchema: z.object({
+			owner_id: z.string().describe("User ID whose trust policies to list"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.list(input)),
+	},
+
+	devpad_pipelines_oidc_trust_create: {
+		name: "devpad_pipelines_oidc_trust_create",
+		description: "Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern=\"*\", allowed_actions=[\"artifacts:upload\",\"runs:start\"], session_ttl_seconds=900.",
+		inputSchema: z.object({
+			owner_id: z.string().describe("Devpad user ID who owns this policy"),
+			github_owner: z.string().describe("GitHub `repository_owner` claim to trust (e.g. \"f0rbit\")"),
+			expected_audience: z.string().describe("Required `aud` claim on the OIDC token — typically the orchestrator URL"),
+			repo_pattern: z.string().optional().describe("Glob matched against the repo name (\"*\" matches all). Default: \"*\""),
+			allowed_refs: z.array(z.string()).optional().describe("Allowed Git refs (e.g. [\"refs/heads/main\"]). Empty/omitted = any ref"),
+			allowed_environments: z.array(z.string()).optional().describe("Allowed GitHub environments. Empty/omitted = any"),
+			allowed_actions: z.array(z.string()).optional().describe("Scope strings granted to session tokens. Default: [\"artifacts:upload\",\"runs:start\"]"),
+			session_ttl_seconds: z.number().int().positive().optional().describe("Session token TTL. Default: 900 (15 min)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.create(input)),
+	},
+
+	devpad_pipelines_oidc_trust_update: {
+		name: "devpad_pipelines_oidc_trust_update",
+		description: "Partially update a GitHub Actions OIDC trust policy. Only the supplied fields are touched; validation runs server-side against the merged record.",
+		inputSchema: z.object({
+			id: z.string().describe("Trust policy ID"),
+			owner_id: z.string().describe("Owner ID (must match the policy's owner)"),
+			github_owner: z.string().optional(),
+			expected_audience: z.string().optional(),
+			repo_pattern: z.string().optional(),
+			allowed_refs: z.array(z.string()).optional(),
+			allowed_environments: z.array(z.string()).optional(),
+			allowed_actions: z.array(z.string()).optional(),
+			session_ttl_seconds: z.number().int().positive().optional(),
+		}),
+		execute: async (client, input) => {
+			const { id, ...patch } = input;
+			return unwrap(await client.pipelines.oidc_trust.update(id, patch));
+		},
+	},
+
+	devpad_pipelines_oidc_trust_delete: {
+		name: "devpad_pipelines_oidc_trust_delete",
+		description: "Soft-delete a GitHub Actions OIDC trust policy. The row is preserved for audit; the matcher and list operations skip soft-deleted rows.",
+		inputSchema: z.object({
+			id: z.string().describe("Trust policy ID"),
+			owner_id: z.string().describe("Owner ID (must match the policy's owner)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.delete(input.id, { owner_id: input.owner_id })),
 	},
 };
 

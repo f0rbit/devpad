@@ -1,8 +1,8 @@
 ---
 import "../utils/error-logger";
-import ProfileSelector from "../components/solid/ProfileSelector.tsx";
-import { DevpadHeader, DevpadFooter } from "@devpad/core/ui";
+import { DevpadFooter, DevpadHeader } from "@devpad/core/ui";
 import { getServerApiClient } from "@devpad/core/ui/api-client";
+import ProfileSelector from "../components/solid/ProfileSelector.tsx";
 import Layout from "./Layout.astro";
 
 interface Props {
@@ -33,8 +33,7 @@ if (isAuthenticated) {
 		if (profilesResult.ok) {
 			initialProfiles = profilesResult.value;
 		}
-	} catch {
-	}
+	} catch {}
 }
 ---
 

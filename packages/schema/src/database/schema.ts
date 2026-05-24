@@ -309,6 +309,122 @@ export const ignore_path = sqliteTable("ignore_path", {
 	...timestamps(),
 });
 
+// ---------------------------------------------------------------------------
+// devpad/pipelines — deployment-pipeline data model (Phase 0)
+// ---------------------------------------------------------------------------
+
+export const ROLLOUT_SHAPES = ["gradual", "atomic"] as const;
+export type RolloutShape = (typeof ROLLOUT_SHAPES)[number];
+
+export const RUN_KINDS = ["deploy", "rollback"] as const;
+export type RunKind = (typeof RUN_KINDS)[number];
+
+export const RUN_STATUSES = ["queued", "deploying", "baking", "awaiting_approval", "rolling_back", "completed", "rolled_back", "failed", "cancelled"] as const;
+export type RunStatus = (typeof RUN_STATUSES)[number];
+
+export const FORCED_ATOMIC_REASONS = ["do_migrations", "asset_affinity_none"] as const;
+export type ForcedAtomicReason = (typeof FORCED_ATOMIC_REASONS)[number];
+
+export const STAGE_EVENT_KINDS = ["deploy_started", "deploy_completed", "bake_started", "bake_completed", "gate_verdict", "approval_requested", "rollback_started", "rollback_completed", "warning", "error"] as const;
+export type StageEventKind = (typeof STAGE_EVENT_KINDS)[number];
+
+export const APPROVAL_DECISIONS = ["approved", "denied"] as const;
+export type ApprovalDecision = (typeof APPROVAL_DECISIONS)[number];
+
+export const pipeline_package = sqliteTable("pipeline_package", {
+	...entity("pipeline-package"),
+	owner_id: text("owner_id")
+		.notNull()
+		.references(() => user.id),
+	name: text("name").notNull(),
+	repo_url: text("repo_url"),
+	default_template_ref: text("default_template_ref"),
+	script_name_overrides: text("script_name_overrides", { mode: "json" }),
+	project_id: text("project_id").references(() => project.id),
+});
+
+export const pipeline_run = sqliteTable("pipeline_run", {
+	...entity("pipeline-run"),
+	package_id: text("package_id")
+		.notNull()
+		.references(() => pipeline_package.id),
+	version_set_id: text("version_set_id").notNull(),
+	shape: text("shape", { enum: ROLLOUT_SHAPES }).notNull(),
+	kind: text("kind", { enum: RUN_KINDS }).notNull().default("deploy"),
+	status: text("status", { enum: RUN_STATUSES }).notNull().default("queued"),
+	current_stage: text("current_stage"),
+	resolved_rollout: text("resolved_rollout", { mode: "json" }).notNull(),
+	resolved_gates: text("resolved_gates", { mode: "json" }).notNull(),
+	forced_atomic_reason: text("forced_atomic_reason", { enum: FORCED_ATOMIC_REASONS }),
+	started_at: text("started_at"),
+	finished_at: text("finished_at"),
+});
+
+export const pipeline_stage_event = sqliteTable("pipeline_stage_event", {
+	...id("pipeline-stage-event"),
+	run_id: text("run_id")
+		.notNull()
+		.references(() => pipeline_run.id),
+	stage_name: text("stage_name").notNull(),
+	kind: text("kind", { enum: STAGE_EVENT_KINDS }).notNull(),
+	payload: text("payload", { mode: "json" }),
+	ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export const pipeline_grant = sqliteTable("pipeline_grant", {
+	...entity("pipeline-grant"),
+	package_id: text("package_id")
+		.notNull()
+		.references(() => pipeline_package.id),
+	stage_name: text("stage_name").notNull(),
+	scope: text("scope").notNull(),
+	granted_by: text("granted_by").references(() => user.id),
+	granted_at: text("granted_at"),
+});
+
+export const pipeline_approval = sqliteTable("pipeline_approval", {
+	...id("pipeline-approval"),
+	run_id: text("run_id")
+		.notNull()
+		.references(() => pipeline_run.id),
+	stage_name: text("stage_name").notNull(),
+	decision: text("decision", { enum: APPROVAL_DECISIONS }),
+	reason: text("reason"),
+	decided_by: text("decided_by").references(() => user.id),
+	decided_at: text("decided_at"),
+	...timestamps(),
+});
+
+export const pipeline_analysis_template = sqliteTable("pipeline_analysis_template", {
+	...entity("pipeline-analysis-template"),
+	owner_id: text("owner_id")
+		.notNull()
+		.references(() => user.id),
+	name: text("name").notNull(),
+	query_dsl: text("query_dsl", { mode: "json" }).notNull(),
+	threshold_dsl: text("threshold_dsl", { mode: "json" }).notNull(),
+	window_ms: integer("window_ms").notNull().default(600_000),
+});
+
+export const PIPELINE_OIDC_PROVIDERS = ["github"] as const;
+export type PipelineOidcProvider = (typeof PIPELINE_OIDC_PROVIDERS)[number];
+
+export const pipeline_oidc_trust = sqliteTable("pipeline_oidc_trust", {
+	...entity("pipeline-oidc-trust"),
+	owner_id: text("owner_id")
+		.notNull()
+		.references(() => user.id),
+	provider: text("provider", { enum: PIPELINE_OIDC_PROVIDERS }).notNull().default("github"),
+	github_owner: text("github_owner").notNull(),
+	repo_pattern: text("repo_pattern").notNull().default("*"),
+	allowed_refs: text("allowed_refs", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+	allowed_environments: text("allowed_environments", { mode: "json" }).$type<string[]>().notNull().default(sql`'[]'`),
+	expected_audience: text("expected_audience").notNull(),
+	allowed_actions: text("allowed_actions", { mode: "json" }).$type<string[]>().notNull().default(sql`'["artifacts:upload","runs:start"]'`),
+	session_ttl_seconds: integer("session_ttl_seconds").notNull().default(900),
+	last_used_at: text("last_used_at"),
+});
+
 // relations
 
 export const user_relations = relations(user, ({ many }) => ({
@@ -380,4 +496,38 @@ export const tag_relations = relations(tag, ({ one }) => ({
 export const task_tag_relations = relations(task_tag, ({ one }) => ({
 	task: one(task, { fields: [task_tag.task_id], references: [task.id] }),
 	tag: one(tag, { fields: [task_tag.tag_id], references: [tag.id] }),
+}));
+
+export const pipeline_package_relations = relations(pipeline_package, ({ one, many }) => ({
+	owner: one(user, { fields: [pipeline_package.owner_id], references: [user.id] }),
+	runs: many(pipeline_run),
+	grants: many(pipeline_grant),
+}));
+
+export const pipeline_run_relations = relations(pipeline_run, ({ one, many }) => ({
+	package: one(pipeline_package, { fields: [pipeline_run.package_id], references: [pipeline_package.id] }),
+	events: many(pipeline_stage_event),
+	approvals: many(pipeline_approval),
+}));
+
+export const pipeline_stage_event_relations = relations(pipeline_stage_event, ({ one }) => ({
+	run: one(pipeline_run, { fields: [pipeline_stage_event.run_id], references: [pipeline_run.id] }),
+}));
+
+export const pipeline_grant_relations = relations(pipeline_grant, ({ one }) => ({
+	package: one(pipeline_package, { fields: [pipeline_grant.package_id], references: [pipeline_package.id] }),
+	granted_by_user: one(user, { fields: [pipeline_grant.granted_by], references: [user.id] }),
+}));
+
+export const pipeline_approval_relations = relations(pipeline_approval, ({ one }) => ({
+	run: one(pipeline_run, { fields: [pipeline_approval.run_id], references: [pipeline_run.id] }),
+	decided_by_user: one(user, { fields: [pipeline_approval.decided_by], references: [user.id] }),
+}));
+
+export const pipeline_analysis_template_relations = relations(pipeline_analysis_template, ({ one }) => ({
+	owner: one(user, { fields: [pipeline_analysis_template.owner_id], references: [user.id] }),
+}));
+
+export const pipeline_oidc_trust_relations = relations(pipeline_oidc_trust, ({ one }) => ({
+	owner: one(user, { fields: [pipeline_oidc_trust.owner_id], references: [user.id] }),
 }));
