@@ -11,6 +11,15 @@ export {
 	update_analysis_template,
 } from "./analysis-templates.js";
 export {
+	compute_percentile,
+	count_rollbacks,
+	type DashboardDeps,
+	type DashboardSnapshot,
+	get_dashboard,
+	type GetDashboardInput,
+	group_verdicts,
+} from "./dashboard.js";
+export {
 	type BundleFetchError,
 	type BundlePayload,
 	type BundleProvider,

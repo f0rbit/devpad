@@ -3,6 +3,7 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
+import type { DashboardResponse } from "@devpad/schema/validation";
 import type {
 	ApiKey,
 	GetConfigResult,
@@ -986,6 +987,25 @@ export class ApiClient {
 	 * Pipelines namespace with Result-wrapped operations
 	 */
 	public readonly pipelines = {
+		/**
+		 * Dashboard namespace — Phase 2.D observability slice. Aggregates
+		 * `pipeline_run`, `pipeline_stage_event`, and `pipeline_approval`
+		 * for the project's pipeline_package(s) over `window_ms` and
+		 * enriches the response with pulse `/summary` when configured.
+		 *
+		 * Lives at `GET /v1/pipelines/dashboard?project_id=...&window_ms=...`
+		 * on the main worker (unified D1 binding — no orchestrator hop).
+		 * Auth: session cookie + ownership check on the project_id.
+		 * Cache: `public, max-age=30`.
+		 */
+		dashboard: {
+			get: (input: { project_id: string; window_ms?: number }): Promise<ApiResult<DashboardResponse & { pulse: Record<string, unknown> | null }>> => {
+				const query: Record<string, string> = { project_id: input.project_id };
+				if (input.window_ms !== undefined) query.window_ms = String(input.window_ms);
+				return wrap(() => this.clients.pipelines.get<DashboardResponse & { pulse: Record<string, unknown> | null }>("/pipelines/dashboard", { query }));
+			},
+		},
+
 		/**
 		 * List pipeline runs ordered by `created_at` DESC. Optional filters
 		 * narrow by package and/or status; `limit` defaults to 50 server-side
