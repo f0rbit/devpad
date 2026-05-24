@@ -10,6 +10,9 @@
       "devDependencies": {
         "@astrojs/check": "^0.9.9",
         "@biomejs/biome": "^2.2.2",
+        "@devpad/api": "workspace:*",
+        "@devpad/mcp": "workspace:*",
+        "@devpad/schema": "workspace:*",
         "@playwright/test": "^1.55.0",
         "@types/node": "^24.3.0",
         "concurrently": "^9.2.1",
