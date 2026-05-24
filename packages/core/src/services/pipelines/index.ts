@@ -20,6 +20,15 @@ export {
 	type DeployRequest,
 	deploy_stage,
 } from "./deploy.js";
+export {
+	type EventDeps,
+	type EventDoRouter,
+	type EventPulseEmitter,
+	type EventValidationError,
+	ingest_event,
+	type IngestEventInput,
+	type IngestEventOutput,
+} from "./events.js";
 export * from "./grants.js";
 export * from "./grants-domain.js";
 export {

@@ -14,9 +14,11 @@ import type {
 	PipelineOidcTrust,
 	PipelinePackage,
 	PipelineRun,
+	PipelineStageEvent,
 	Project,
 	ProjectConfig,
 	SaveConfigRequest,
+	StageEventKind,
 	TagWithTypedColor,
 	TaskWithDetails,
 	UpsertProject,
@@ -1031,6 +1033,30 @@ export class ApiClient {
 		 * Rollback a pipeline run
 		 */
 		rollback: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+
+		/**
+		 * Stage-event namespace — Phase 2.C webhook ingestion + read-back.
+		 *
+		 * `ingest` posts a webhook event against an in-flight run; auth
+		 * mode is the standard bearer/session header (admin bypass; session
+		 * must carry `runs:events` and matching `package_id`). Server-side
+		 * stamps `payload.source = "external"`. Idempotency: same
+		 * `idempotency_key` + same payload returns `{ duplicated: true }`;
+		 * same key + different payload returns a 400 validation_error.
+		 *
+		 * `list` is read-only and returns the run's events newest-first.
+		 */
+		events: {
+			ingest: (
+				run_id: string,
+				input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string }
+			): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
+				wrap(() =>
+					this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, { body: input })
+				),
+
+			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> => wrap(() => this.clients.pipelines.get<PipelineStageEvent[]>(`/runs/${run_id}/events`)),
+		},
 
 		/**
 		 * Grants namespace

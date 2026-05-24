@@ -13,18 +13,19 @@
  * scheduling/scratch only.
  */
 
-import type { OidcSessionClaims, OidcSessionScope, ResolvedPlan, VerifiedOidcClaims } from "@devpad/core/services/pipelines";
-import { create_run, exchange_oidc_for_session, get_run, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
+import type { EventDoRouter, EventPulseEmitter, OidcSessionClaims, OidcSessionScope, ResolvedPlan, VerifiedOidcClaims } from "@devpad/core/services/pipelines";
+import { create_run, exchange_oidc_for_session, get_run, ingest_event, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
 import { create_analysis_template, delete_analysis_template, get_analysis_template, list_analysis_templates, update_analysis_template } from "@devpad/core/services/pipelines/analysis-templates";
 import { create_trust_policy, delete_trust_policy, get_trust_policy, list_trust_policies, update_trust_policy } from "@devpad/core/services/pipelines/oidc-trust";
 import { create_package, delete_package, get_package, list_packages, update_package } from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
-import { pipeline_package, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
+import { pipeline_package, pipeline_stage_event, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
+import { webhook_event_body } from "@devpad/schema/validation";
 import type { Database } from "@devpad/schema/database/types";
 import type { Backend, Result, SnapshotMeta, VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AuthError, AuthIdentity } from "./auth.ts";
@@ -279,6 +280,30 @@ const json_ok = <T>(value: T) =>
 		headers: { "content-type": "application/json" },
 	});
 
+/**
+ * Build the `EventDeps` bundle the `ingest_event` service expects.
+ * Wires the route layer's `do_router` (per-run stub) into the simpler
+ * `(run_id, path, body) → Response` shape the service uses, and
+ * promotes the optional pulse emitter to a no-op when absent so the
+ * service can always call it.
+ */
+const make_event_deps = (deps: RoutesDeps): { db: Database; pulse: EventPulseEmitter; do: EventDoRouter } => {
+	const pulse: EventPulseEmitter = deps.pulse ?? { emit: async () => undefined };
+	const do_adapter: EventDoRouter = {
+		fetch: async (run_id, path, body) => {
+			const stub = deps.do_router.get(run_id);
+			return stub.fetch(
+				new Request(`https://run.local${path}`, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(body),
+				})
+			);
+		},
+	};
+	return { db: deps.db, pulse, do: do_adapter };
+};
+
 const do_call = async (deps: RoutesDeps, run_id: string, action: string, body: unknown): Promise<Response> => {
 	const stub = deps.do_router.get(run_id);
 	const req = new Request(`https://run.local/${action}`, {
@@ -367,6 +392,87 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const run = await get_run(deps.db, c.req.param("id"));
 		if (!run.ok) return wire_err(run.error);
 		return json_ok(run.value);
+	});
+
+	// ─── Phase 2.C — webhook event ingestion ────────────────────────
+	//
+	// `POST /runs/:id/events`
+	//   Idempotently record an external webhook event against an in-flight
+	//   run. Admin bearer bypasses scope checks; session JWT must carry
+	//   `runs:events` scope AND the run's `package_id` must be in the
+	//   session's allowed `package_ids`. Body parsed via
+	//   `webhook_event_body` Zod schema from `@devpad/schema/validation`;
+	//   `idempotency_key` may also be supplied via header
+	//   `X-Idempotency-Key` (header takes precedence).
+	//
+	// `GET /runs/:id/events`
+	//   Read-only listing of stored events for a run, newest-first. Auth
+	//   inherits from the route group — no extra scope demanded; if you
+	//   can read the run you can read its events.
+
+	app.post("/runs/:id/events", async c => {
+		const deps = c.get("deps");
+		const run_id = c.req.param("id");
+
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		const identity = auth_result.identity;
+
+		const body = await c.req.json().catch(() => null);
+		const parsed = webhook_event_body.safeParse(body);
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
+
+		// Load the run early — we need its `package_id` for the session
+		// scope check + for the service-layer caller check.
+		const run = await get_run(deps.db, run_id);
+		if (!run.ok) return wire_err(run.error);
+
+		if (identity.kind === "session") {
+			if (!identity.scope.includes("runs:events")) {
+				return wire_err({ code: "insufficient_scope", required: "runs:events", granted: identity.scope }, 403);
+			}
+			if (!identity.package_ids.includes(run.value.package_id)) {
+				return wire_err({ code: "package_scope_mismatch", package_id: run.value.package_id, allowed_package_ids: identity.package_ids }, 403);
+			}
+		}
+
+		// Header `X-Idempotency-Key` takes precedence over the body field.
+		const header_key = c.req.header("x-idempotency-key");
+		const idempotency_key = header_key !== undefined && header_key !== "" ? header_key : parsed.data.idempotency_key;
+
+		const event_deps = make_event_deps(deps);
+		const result = await ingest_event(event_deps, {
+			run_id,
+			package_id: run.value.package_id,
+			stage_name: parsed.data.stage_name,
+			kind: parsed.data.kind,
+			payload: parsed.data.payload,
+			idempotency_key,
+		});
+		if (!result.ok) return wire_err(result.error);
+
+		const status = result.value.duplicated ? 200 : 201;
+		return new Response(JSON.stringify({ ok: true, value: result.value }), {
+			status,
+			headers: { "content-type": "application/json" },
+		});
+	});
+
+	app.get("/runs/:id/events", async c => {
+		const deps = c.get("deps");
+		const run_id = c.req.param("id");
+
+		// Confirm the run exists so `404` propagates correctly regardless
+		// of whether the events table is empty.
+		const run = await get_run(deps.db, run_id);
+		if (!run.ok) return wire_err(run.error);
+
+		try {
+			const rows = await deps.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id)).orderBy(desc(pipeline_stage_event.ts));
+			return json_ok(rows);
+		} catch (e) {
+			return wire_err({ code: "db_error", message: `failed to list pipeline_stage_event: ${String(e)}` }, 500);
+		}
 	});
 
 	app.post("/runs/:id/approve", async c => {

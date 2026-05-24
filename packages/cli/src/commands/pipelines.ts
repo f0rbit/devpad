@@ -609,6 +609,75 @@ const action_runs_start =
 		console.log(chalk.green(`Run ID: ${result.value.run_id}`));
 	};
 
+// ─── runs events subcommand actions (Phase 2.C) ────────────────────
+//
+// `events ingest` posts a webhook event for a run; `events list` reads
+// them back. CLI uses the admin bearer (literal PIPELINES_TOKEN via the
+// HttpClient's auth header injection) — external CI uses session JWTs
+// via direct HTTP, not the CLI.
+
+interface EventsIngestOptions {
+	stage: string;
+	kind: string;
+	payloadFile?: string;
+	idempotencyKey?: string;
+}
+
+const STAGE_EVENT_KINDS = ["deploy_started", "deploy_completed", "bake_started", "bake_completed", "gate_verdict", "approval_requested", "rollback_started", "rollback_completed", "warning", "error"] as const;
+type StageEventKindLocal = (typeof STAGE_EVENT_KINDS)[number];
+const is_stage_event_kind = (s: string): s is StageEventKindLocal => (STAGE_EVENT_KINDS as readonly string[]).includes(s);
+
+const action_runs_events_ingest =
+	(client_factory: ClientFactory) =>
+	async (run_id: string, options: EventsIngestOptions): Promise<void> => {
+		const spinner = make_spinner(`Ingesting event into ${run_id}...`).start();
+
+		if (!is_stage_event_kind(options.kind)) {
+			return fail_with(spinner, `--kind must be one of ${STAGE_EVENT_KINDS.join(", ")}; got "${options.kind}"`);
+		}
+
+		let payload: unknown;
+		if (options.payloadFile !== undefined) {
+			if (!existsSync(options.payloadFile)) return fail_with(spinner, `--payload-file not found: ${options.payloadFile}`);
+			const text = readFileSync(options.payloadFile, "utf8");
+			try {
+				payload = JSON.parse(text);
+			} catch (e) {
+				return fail_with(spinner, `--payload-file is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
+			}
+		}
+
+		let idempotency_key = options.idempotencyKey;
+		if (idempotency_key === undefined || idempotency_key === "") {
+			idempotency_key = crypto.randomUUID();
+			console.error(chalk.yellow(`warning: no --idempotency-key supplied; generated ${idempotency_key} (non-replayable across CLI invocations)`));
+		}
+
+		const client = client_factory();
+		const result = await client.pipelines.events.ingest(run_id, {
+			stage_name: options.stage,
+			kind: options.kind,
+			payload,
+			idempotency_key,
+		});
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		const label = result.value.duplicated ? "replayed (existing)" : "inserted";
+		spinner.succeed(`${label} event ${result.value.event_id}`);
+	};
+
+const action_runs_events_list =
+	(client_factory: ClientFactory) =>
+	async (run_id: string): Promise<void> => {
+		const spinner = make_spinner(`Listing events for ${run_id}...`).start();
+		const client = client_factory();
+		const result = await client.pipelines.events.list(run_id);
+		if (!result.ok) return fail_with(spinner, result.error.message);
+		spinner.succeed(`${result.value.length} event(s)`);
+		for (const ev of result.value) {
+			console.log(`  ${chalk.dim(ev.ts)}  ${chalk.cyan(ev.kind)}  ${ev.stage_name}  ${chalk.dim(ev.id)}`);
+		}
+	};
+
 // ─── packages subcommand actions ───────────────────────────────────
 //
 // `packages list / get / create / update / delete` wrap the API client
@@ -1247,6 +1316,25 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.requiredOption("--package <name>", "Package name")
 		.requiredOption("--version-set-id <id>", "Version set ID from corpus")
 		.action(action_runs_start(client_factory));
+
+	const events = runs
+		.command("events")
+		.description(
+			"Manage stage events on a pipeline run (Phase 2.C webhook ingestion).\n" +
+				"CLI uses the admin bearer (PIPELINES_TOKEN via DEVPAD_API_KEY).\n" +
+				"External CI should call POST /runs/:id/events directly with an OIDC session JWT, not via this CLI."
+		);
+
+	events
+		.command("ingest <run-id>")
+		.description("Ingest an external webhook event against a run. Server-side stamps payload.source = \"external\".")
+		.requiredOption("--stage <name>", "Stage the event is associated with")
+		.requiredOption(`--kind <kind>`, `Event kind — one of ${STAGE_EVENT_KINDS.join(", ")}`)
+		.option("--payload-file <path>", "Path to a JSON file used as the event payload")
+		.option("--idempotency-key <uuid>", "UUID idempotency key (defaults to a fresh randomUUID — non-replayable)")
+		.action(action_runs_events_ingest(client_factory));
+
+	events.command("list <run-id>").description("List stored events for a run (newest-first)").action(action_runs_events_list(client_factory));
 
 	const grants = pipelines.command("grants").description("Manage vault grants");
 

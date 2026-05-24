@@ -1,4 +1,4 @@
-import { RUN_STATUSES } from "@devpad/schema/database/schema";
+import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo } from "@devpad/schema/validation";
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
@@ -714,6 +714,36 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.pipelines.rollback(input.run_id));
 			return { success: true };
 		},
+	},
+
+	devpad_pipelines_runs_events_ingest: {
+		name: "devpad_pipelines_runs_events_ingest",
+		description: "Ingest an external webhook event against an in-flight pipeline run. Idempotent on (idempotency_key, payload). Server-side stamps payload.source = \"external\".",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+			stage_name: z.string().min(1).describe("Stage the event is associated with"),
+			kind: z.enum(STAGE_EVENT_KINDS).describe("Event kind from STAGE_EVENT_KINDS"),
+			payload: z.unknown().optional().describe("Arbitrary JSON payload — server-side stamps source = external"),
+			idempotency_key: z.string().uuid().describe("UUID idempotency key; reuse with the same payload returns duplicated:true"),
+		}),
+		execute: async (client, input) =>
+			unwrap(
+				await client.pipelines.events.ingest(input.run_id, {
+					stage_name: input.stage_name,
+					kind: input.kind,
+					payload: input.payload,
+					idempotency_key: input.idempotency_key,
+				})
+			),
+	},
+
+	devpad_pipelines_runs_events_list: {
+		name: "devpad_pipelines_runs_events_list",
+		description: "List stored stage events for a pipeline run, newest-first",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.events.list(input.run_id)),
 	},
 
 	devpad_pipelines_grants_list: {
