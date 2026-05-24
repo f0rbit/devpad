@@ -15,7 +15,7 @@ const run_id = Astro.params.run_id!;
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
-const { client, project } = guard;
+const { client, project, user } = guard;
 
 const run_result = await client.pipelines.get(run_id);
 if (!run_result.ok) return rethrow(run_result.error);
@@ -49,7 +49,7 @@ if (!owns_run) return new Response(null, { status: 404, statusText: "Run not fou
 				{run.current_stage && (
 					<div class="stack stack-md">
 						<h2>current stage gate</h2>
-						<StageGate client:load run={run} />
+						<StageGate client:load run={run} user_id={user.id} />
 					</div>
 				)}
 
