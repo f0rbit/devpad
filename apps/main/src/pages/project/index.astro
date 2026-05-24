@@ -1,6 +1,7 @@
 ---
 import GithubLogin from "@/components/solid/GithubLogin";
 import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
+import { WelcomeBanner } from "@/components/solid/WelcomeBanner";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { getServerApiClient } from "@devpad/core/ui/api-client";
 import { rethrow } from "@/utils/api-client";
@@ -62,6 +63,7 @@ const keywords = [
             <h1>projects</h1>
             <a href="/project/create">+ add</a>
           </div>
+          <WelcomeBanner project_count={projects.length} client:load />
           <ProjectCardGrid projects={projects} client:load />
         </section>
       </main>
