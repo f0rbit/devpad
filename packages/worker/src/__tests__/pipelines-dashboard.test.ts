@@ -74,8 +74,9 @@ const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): 
 	} as never);
 
 	if (opts.with_runs) {
-		const start = new Date(Date.now() - 10 * 60_000).toISOString();
-		const finish = new Date(Date.now() - 5 * 60_000).toISOString();
+		const base = Date.now();
+		const start = new Date(base - 10 * 60_000).toISOString();
+		const finish = new Date(base - 5 * 60_000).toISOString();
 		await db.insert(pipeline_run).values({
 			id: "pipeline-run_1",
 			package_id: PKG_ID,
