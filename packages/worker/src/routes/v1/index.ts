@@ -4,6 +4,7 @@ import activity from "./activity.js";
 import goals from "./goals.js";
 import keys from "./keys.js";
 import milestones from "./milestones.js";
+import pipelines_dashboard from "./pipelines-dashboard.js";
 import projects from "./projects.js";
 import pulse from "./pulse.js";
 import scanning from "./scanning.js";
@@ -24,6 +25,7 @@ app.route("/user", user);
 app.route("/tags", tags);
 app.route("/activity", activity);
 app.route("/pulse", pulse);
+app.route("/pipelines", pipelines_dashboard);
 
 app.route("/projects", scanning);
 

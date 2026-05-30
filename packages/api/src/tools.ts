@@ -1,4 +1,4 @@
-import { RUN_STATUSES } from "@devpad/schema/database/schema";
+import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import { save_config_request, save_tags_request, upsert_goal, upsert_milestone, upsert_project, upsert_todo } from "@devpad/schema/validation";
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
@@ -716,6 +716,36 @@ export const tools: Record<string, ToolDefinition> = {
 		},
 	},
 
+	devpad_pipelines_runs_events_ingest: {
+		name: "devpad_pipelines_runs_events_ingest",
+		description: 'Ingest an external webhook event against an in-flight pipeline run. Idempotent on (idempotency_key, payload). Server-side stamps payload.source = "external".',
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+			stage_name: z.string().min(1).describe("Stage the event is associated with"),
+			kind: z.enum(STAGE_EVENT_KINDS).describe("Event kind from STAGE_EVENT_KINDS"),
+			payload: z.unknown().optional().describe("Arbitrary JSON payload — server-side stamps source = external"),
+			idempotency_key: z.string().uuid().describe("UUID idempotency key; reuse with the same payload returns duplicated:true"),
+		}),
+		execute: async (client, input) =>
+			unwrap(
+				await client.pipelines.events.ingest(input.run_id, {
+					stage_name: input.stage_name,
+					kind: input.kind,
+					payload: input.payload,
+					idempotency_key: input.idempotency_key,
+				})
+			),
+	},
+
+	devpad_pipelines_runs_events_list: {
+		name: "devpad_pipelines_runs_events_list",
+		description: "List stored stage events for a pipeline run, newest-first",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.events.list(input.run_id)),
+	},
+
 	devpad_pipelines_grants_list: {
 		name: "devpad_pipelines_grants_list",
 		description: "List vault grants for a pipeline package",
@@ -803,6 +833,66 @@ export const tools: Record<string, ToolDefinition> = {
 		execute: async (client, input) => unwrap(await client.pipelines.packages.delete(input.id)),
 	},
 
+	devpad_pipelines_analysis_templates_list: {
+		name: "devpad_pipelines_analysis_templates_list",
+		description: "List pipeline analysis templates for an owner. Each row encodes the threshold DSL + window referenced by analysis-gate evaluations.",
+		inputSchema: z.object({
+			owner_id: z.string().describe("Devpad user ID whose templates to list"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.analysis_templates.list(input)),
+	},
+
+	devpad_pipelines_analysis_templates_get: {
+		name: "devpad_pipelines_analysis_templates_get",
+		description: "Get a single pipeline analysis template by id, scoped to its owner.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline analysis template ID"),
+			owner_id: z.string().describe("Owner ID (must match the template's owner)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.analysis_templates.get(input.id, { owner_id: input.owner_id })),
+	},
+
+	devpad_pipelines_analysis_templates_create: {
+		name: "devpad_pipelines_analysis_templates_create",
+		description:
+			'Create a new pipeline analysis template. `threshold_dsl` is a multi-line DSL: `metric_name OP value [: pending]` (OPs: > < >= <= =). Trailing ": pending" marks a breach as Pending rather than Fail. Server-side parse failure surfaces as `validation_error` with field=threshold_dsl. `window_ms` defaults to 600000 (10 min).',
+		inputSchema: z.object({
+			owner_id: z.string().describe("Devpad user ID who owns this template"),
+			name: z.string().describe('Human-readable name (e.g. "default-analysis")'),
+			threshold_dsl: z.string().describe("Multi-line threshold DSL"),
+			query_dsl: z.unknown().optional().describe("Optional structured query DSL stored alongside thresholds"),
+			window_ms: z.number().int().positive().optional().describe("Analysis window in milliseconds. Default: 600000"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.analysis_templates.create(input)),
+	},
+
+	devpad_pipelines_analysis_templates_update: {
+		name: "devpad_pipelines_analysis_templates_update",
+		description: "Partially update a pipeline analysis template. Only the supplied fields are touched. Re-validates threshold_dsl when present.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline analysis template ID"),
+			owner_id: z.string().describe("Owner ID (must match the template's owner)"),
+			name: z.string().optional(),
+			threshold_dsl: z.string().optional(),
+			query_dsl: z.unknown().optional(),
+			window_ms: z.number().int().positive().optional(),
+		}),
+		execute: async (client, input) => {
+			const { id, ...patch } = input;
+			return unwrap(await client.pipelines.analysis_templates.update(id, patch));
+		},
+	},
+
+	devpad_pipelines_analysis_templates_delete: {
+		name: "devpad_pipelines_analysis_templates_delete",
+		description: "Hard-delete a pipeline analysis template. Does NOT consult pipeline_run.resolved_gates — runs snapshot their gate template at resolve-time, so deletion never orphans in-flight runs.",
+		inputSchema: z.object({
+			id: z.string().describe("Pipeline analysis template ID"),
+			owner_id: z.string().describe("Owner ID (must match the template's owner)"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.analysis_templates.delete(input.id, { owner_id: input.owner_id })),
+	},
+
 	devpad_pipelines_oidc_trust_list: {
 		name: "devpad_pipelines_oidc_trust_list",
 		description: "List GitHub Actions OIDC trust policies for an owner. Returned ordered by created_at DESC, id ASC to match the orchestrator's trust-matcher resolution order.",
@@ -814,15 +904,16 @@ export const tools: Record<string, ToolDefinition> = {
 
 	devpad_pipelines_oidc_trust_create: {
 		name: "devpad_pipelines_oidc_trust_create",
-		description: "Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern=\"*\", allowed_actions=[\"artifacts:upload\",\"runs:start\"], session_ttl_seconds=900.",
+		description:
+			'Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern="*", allowed_actions=["artifacts:upload","runs:start"], session_ttl_seconds=900.',
 		inputSchema: z.object({
 			owner_id: z.string().describe("Devpad user ID who owns this policy"),
-			github_owner: z.string().describe("GitHub `repository_owner` claim to trust (e.g. \"f0rbit\")"),
+			github_owner: z.string().describe('GitHub `repository_owner` claim to trust (e.g. "f0rbit")'),
 			expected_audience: z.string().describe("Required `aud` claim on the OIDC token — typically the orchestrator URL"),
-			repo_pattern: z.string().optional().describe("Glob matched against the repo name (\"*\" matches all). Default: \"*\""),
-			allowed_refs: z.array(z.string()).optional().describe("Allowed Git refs (e.g. [\"refs/heads/main\"]). Empty/omitted = any ref"),
+			repo_pattern: z.string().optional().describe('Glob matched against the repo name ("*" matches all). Default: "*"'),
+			allowed_refs: z.array(z.string()).optional().describe('Allowed Git refs (e.g. ["refs/heads/main"]). Empty/omitted = any ref'),
 			allowed_environments: z.array(z.string()).optional().describe("Allowed GitHub environments. Empty/omitted = any"),
-			allowed_actions: z.array(z.string()).optional().describe("Scope strings granted to session tokens. Default: [\"artifacts:upload\",\"runs:start\"]"),
+			allowed_actions: z.array(z.string()).optional().describe('Scope strings granted to session tokens. Default: ["artifacts:upload","runs:start"]'),
 			session_ttl_seconds: z.number().int().positive().optional().describe("Session token TTL. Default: 900 (15 min)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.create(input)),

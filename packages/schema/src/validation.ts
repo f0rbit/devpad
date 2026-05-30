@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { STAGE_EVENT_KINDS } from "./database/schema.js";
 
 export const upsert_project = z.object({
 	id: z.string().optional().nullable(),
@@ -224,11 +225,12 @@ export const upsert_pipeline_approval = z.object({
 });
 
 export const upsert_pipeline_analysis_template = z.object({
-	id: z.string().optional().nullable(),
-	owner_id: z.string(),
+	id: z.string().optional(),
+	owner_id: z.string().min(1),
 	name: z.string().min(1).max(200),
 	query_dsl: z.unknown(),
-	threshold_dsl: z.unknown(),
+	threshold_dsl: z.string().min(1),
+	window_ms: z.number().int().positive(),
 });
 
 export const pipeline_oidc_provider = z.literal("github");
@@ -246,3 +248,52 @@ export const upsert_pipeline_oidc_trust = z.object({
 	session_ttl_seconds: z.number().int().positive().optional(),
 	last_used_at: z.string().nullable().optional(),
 });
+
+// ---------------------------------------------------------------------------
+// devpad/pipelines — Phase 2 schemas (webhook events, dashboard)
+// ---------------------------------------------------------------------------
+
+export const webhook_event_body = z.object({
+	stage_name: z.string().min(1),
+	kind: z.enum(STAGE_EVENT_KINDS),
+	payload: z.unknown().optional(),
+	idempotency_key: z.string().uuid(),
+});
+export type WebhookEventBody = z.infer<typeof webhook_event_body>;
+
+export const dashboard_window_query = z.object({
+	package_id: z.string().min(1),
+	window_ms: z
+		.number()
+		.int()
+		.positive()
+		.default(24 * 60 * 60 * 1000),
+});
+export type DashboardWindowQuery = z.infer<typeof dashboard_window_query>;
+
+const verdict_breakdown = z.object({
+	pass: z.number().int().nonnegative(),
+	fail: z.number().int().nonnegative(),
+	pending: z.number().int().nonnegative(),
+});
+
+export const dashboard_response = z.object({
+	run_counts: z.object({
+		total: z.number().int().nonnegative(),
+		completed: z.number().int().nonnegative(),
+		failed: z.number().int().nonnegative(),
+		cancelled: z.number().int().nonnegative(),
+		rolled_back: z.number().int().nonnegative(),
+		in_flight: z.number().int().nonnegative(),
+	}),
+	verdict_counts: z.object({
+		manual: verdict_breakdown,
+		auto: verdict_breakdown,
+		analysis: verdict_breakdown,
+	}),
+	latency_p50_ms: z.number().nonnegative().nullable(),
+	latency_p95_ms: z.number().nonnegative().nullable(),
+	approval_turnaround_p50_ms: z.number().nonnegative().nullable(),
+	rollback_rate: z.number().min(0).max(1).nullable(),
+});
+export type DashboardResponse = z.infer<typeof dashboard_response>;

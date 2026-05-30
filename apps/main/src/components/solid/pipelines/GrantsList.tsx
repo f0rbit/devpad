@@ -34,7 +34,7 @@ export default function GrantsList(props: GrantsListProps) {
 		setLoading(grant.id);
 		setError(null);
 		const client = getBrowserClient();
-		const result = await (client.pipelines as any).grants.approve(grant.id, props.user_id);
+		const result = await client.pipelines.grants.approve(grant.id, props.user_id);
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to approve grant");
 		} else {
@@ -47,7 +47,7 @@ export default function GrantsList(props: GrantsListProps) {
 		setLoading(grant.id);
 		setError(null);
 		const client = getBrowserClient();
-		const result = await (client.pipelines as any).grants.deny(grant.id, props.user_id);
+		const result = await client.pipelines.grants.deny(grant.id, props.user_id);
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to deny grant");
 		} else {

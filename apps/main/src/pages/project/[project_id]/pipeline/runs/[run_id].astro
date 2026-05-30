@@ -1,13 +1,14 @@
 ---
+import type { PipelinePackage } from "@devpad/schema";
 import RollbackButton from "@/components/solid/pipelines/RollbackButton";
 import RunProgress from "@/components/solid/pipelines/RunProgress";
+import StageEventTimeline from "@/components/solid/pipelines/StageEventTimeline";
 import StageGate from "@/components/solid/pipelines/StageGate";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject, rethrow } from "@/utils/api-client";
-import type { PipelinePackage } from "@devpad/schema";
 
-// @ts-ignore rethrow is used in conditional return path
+// @ts-expect-error rethrow is used in conditional return path
 void rethrow;
 
 const project_id = Astro.params.project_id!;
@@ -15,7 +16,7 @@ const run_id = Astro.params.run_id!;
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
-const { client, project } = guard;
+const { client, project, user } = guard;
 
 const run_result = await client.pipelines.get(run_id);
 if (!run_result.ok) return rethrow(run_result.error);
@@ -49,9 +50,14 @@ if (!owns_run) return new Response(null, { status: 404, statusText: "Run not fou
 				{run.current_stage && (
 					<div class="stack stack-md">
 						<h2>current stage gate</h2>
-						<StageGate client:load run={run} />
+						<StageGate client:load run={run} user_id={user.id} />
 					</div>
 				)}
+
+				<div class="stack stack-md">
+					<h2>stage events</h2>
+					<StageEventTimeline client:visible run_id={run.id} />
+				</div>
 
 				<div class="stack stack-md">
 					<div class="row row-between">

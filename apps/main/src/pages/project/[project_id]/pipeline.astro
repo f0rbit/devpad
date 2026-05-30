@@ -1,11 +1,13 @@
 ---
+import type { PipelineAnalysisTemplate, PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
+import AnalysisTemplateList from "@/components/solid/pipelines/AnalysisTemplateList";
 import GrantsList from "@/components/solid/pipelines/GrantsList";
+import PipelineDashboard, { type PipelineDashboardData } from "@/components/solid/pipelines/PipelineDashboard";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject, rethrow } from "@/utils/api-client";
-import type { PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
 
-// @ts-ignore rethrow is used in conditional return path
+// @ts-expect-error rethrow is used in conditional return path
 void rethrow;
 
 const project_id = Astro.params.project_id!;
@@ -14,14 +16,21 @@ const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
 const { client, project, user } = guard;
 
-const VALID_TABS = ["runs", "grants"] as const;
+const VALID_TABS = ["runs", "grants", "templates", "dashboard"] as const;
 type TabName = (typeof VALID_TABS)[number];
 const tab_param = Astro.url.searchParams.get("tab") ?? "runs";
 const active_tab: TabName = (VALID_TABS as readonly string[]).includes(tab_param) ? (tab_param as TabName) : "runs";
 
+const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const window_raw = Astro.url.searchParams.get("window_ms");
+const parsed_window = window_raw === null ? Number.NaN : Number.parseInt(window_raw, 10);
+const window_ms = Number.isFinite(parsed_window) && parsed_window > 0 ? parsed_window : DEFAULT_WINDOW_MS;
+
 const tabs: Array<{ name: TabName; label: string }> = [
 	{ name: "runs", label: "runs" },
+	{ name: "dashboard", label: "dashboard" },
 	{ name: "grants", label: "grants" },
+	{ name: "templates", label: "templates" },
 ];
 
 // Find the project's pipeline package (if any). Empty state for projects without one.
@@ -33,6 +42,10 @@ let runs: PipelineRun[] = [];
 let runs_error: string | null = null;
 let grants: PipelineGrant[] = [];
 let grants_error: string | null = null;
+let templates: PipelineAnalysisTemplate[] = [];
+let templates_error: string | null = null;
+let dashboard_data: PipelineDashboardData | null = null;
+let dashboard_error: string | null = null;
 
 if (pkg) {
 	if (active_tab === "runs") {
@@ -44,6 +57,16 @@ if (pkg) {
 		const grants_result = await client.pipelines.grants.list(pkg.id);
 		if (grants_result.ok) grants = grants_result.value;
 		else grants_error = grants_result.error?.message ?? "Failed to load grants";
+	}
+	if (active_tab === "templates") {
+		const templates_result = await client.pipelines.analysis_templates.list({ owner_id: user.id });
+		if (templates_result.ok) templates = templates_result.value;
+		else templates_error = templates_result.error?.message ?? "Failed to load analysis templates";
+	}
+	if (active_tab === "dashboard") {
+		const dash_result = await client.pipelines.dashboard.get({ project_id: project.id, window_ms });
+		if (dash_result.ok) dashboard_data = dash_result.value;
+		else dashboard_error = dash_result.error?.message ?? "Failed to load dashboard";
 	}
 }
 
@@ -185,6 +208,26 @@ const status_color = (status: string) => {
 								<p class="text-sm" style="color: var(--error); margin: 0;">{grants_error}</p>
 							)}
 							<GrantsList client:load grants={grants} user_id={user.id} />
+						</div>
+					)}
+
+					{active_tab === "templates" && (
+						<div class="stack stack-md">
+							{templates_error && (
+								<p class="text-sm" style="color: var(--error); margin: 0;">{templates_error}</p>
+							)}
+							<AnalysisTemplateList client:load templates={templates} owner_id={user.id} />
+						</div>
+					)}
+
+					{active_tab === "dashboard" && (
+						<div class="stack stack-md">
+							{dashboard_error && (
+								<p class="text-sm" style="color: var(--error); margin: 0;">{dashboard_error}</p>
+							)}
+							{dashboard_data && (
+								<PipelineDashboard client:load data={dashboard_data} project_id={project.id} window_ms={window_ms} />
+							)}
 						</div>
 					)}
 				</>

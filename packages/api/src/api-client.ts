@@ -9,19 +9,23 @@ import type {
 	Goal,
 	HistoryAction,
 	Milestone,
+	PipelineAnalysisTemplate,
 	PipelineGrant,
 	PipelineOidcTrust,
 	PipelinePackage,
 	PipelineRun,
+	PipelineStageEvent,
 	Project,
 	ProjectConfig,
 	SaveConfigRequest,
+	StageEventKind,
 	TagWithTypedColor,
 	TaskWithDetails,
 	UpsertProject,
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema/types";
+import type { DashboardResponse } from "@devpad/schema/validation";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -114,13 +118,9 @@ export class ApiClient {
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (
-				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
-			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
+			create: (input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" }): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
 				const body = typeof input === "string" ? { name: input } : (input ?? {});
-				return wrap(() =>
-					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }),
-				);
+				return wrap(() => this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }));
 			},
 
 			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
@@ -984,6 +984,25 @@ export class ApiClient {
 	 */
 	public readonly pipelines = {
 		/**
+		 * Dashboard namespace — Phase 2.D observability slice. Aggregates
+		 * `pipeline_run`, `pipeline_stage_event`, and `pipeline_approval`
+		 * for the project's pipeline_package(s) over `window_ms` and
+		 * enriches the response with pulse `/summary` when configured.
+		 *
+		 * Lives at `GET /v1/pipelines/dashboard?project_id=...&window_ms=...`
+		 * on the main worker (unified D1 binding — no orchestrator hop).
+		 * Auth: session cookie + ownership check on the project_id.
+		 * Cache: `public, max-age=30`.
+		 */
+		dashboard: {
+			get: (input: { project_id: string; window_ms?: number }): Promise<ApiResult<DashboardResponse & { pulse: Record<string, unknown> | null }>> => {
+				const query: Record<string, string> = { project_id: input.project_id };
+				if (input.window_ms !== undefined) query.window_ms = String(input.window_ms);
+				return wrap(() => this.clients.pipelines.get<DashboardResponse & { pulse: Record<string, unknown> | null }>("/pipelines/dashboard", { query }));
+			},
+		},
+
+		/**
 		 * List pipeline runs ordered by `created_at` DESC. Optional filters
 		 * narrow by package and/or status; `limit` defaults to 50 server-side
 		 * and is capped at 200.
@@ -1030,6 +1049,25 @@ export class ApiClient {
 		 * Rollback a pipeline run
 		 */
 		rollback: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+
+		/**
+		 * Stage-event namespace — Phase 2.C webhook ingestion + read-back.
+		 *
+		 * `ingest` posts a webhook event against an in-flight run; auth
+		 * mode is the standard bearer/session header (admin bypass; session
+		 * must carry `runs:events` and matching `package_id`). Server-side
+		 * stamps `payload.source = "external"`. Idempotency: same
+		 * `idempotency_key` + same payload returns `{ duplicated: true }`;
+		 * same key + different payload returns a 400 validation_error.
+		 *
+		 * `list` is read-only and returns the run's events newest-first.
+		 */
+		events: {
+			ingest: (run_id: string, input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string }): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
+				wrap(() => this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, { body: input })),
+
+			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> => wrap(() => this.clients.pipelines.get<PipelineStageEvent[]>(`/runs/${run_id}/events`)),
+		},
 
 		/**
 		 * Grants namespace
@@ -1107,6 +1145,61 @@ export class ApiClient {
 			 * reference the package — clean up runs first.
 			 */
 			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
+		},
+
+		/**
+		 * Analysis-template namespace — admin-gated CRUD for the
+		 * `pipeline_analysis_template` table. Phase 2.A surface; each
+		 * call requires the orchestrator's bearer token (literal
+		 * `PIPELINES_TOKEN`). `owner_id` is required on every operation
+		 * — single-tenant today, but the column is in place so multi-user
+		 * ACLs slot in later.
+		 */
+		analysis_templates: {
+			/**
+			 * List templates for an owner.
+			 */
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> => wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Get a single template by id, scoped to its owner. 404 when
+			 * unknown or owned by a different user.
+			 */
+			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
+				wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
+
+			/**
+			 * Create a new analysis template. `threshold_dsl` is parsed
+			 * server-side; parse failure returns 400 `validation_error`
+			 * with `field: "threshold_dsl"` and a descriptive message.
+			 * `window_ms` defaults to 600_000 (10 min) when omitted.
+			 */
+			create: (input: { owner_id: string; name: string; threshold_dsl: string; query_dsl?: unknown; window_ms?: number }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
+				wrap(() => this.clients.pipelines.post<PipelineAnalysisTemplate>("/analysis-templates", { body: input })),
+
+			/**
+			 * Partial patch — only the supplied fields are touched.
+			 * Re-validates `threshold_dsl` when supplied; same
+			 * `validation_error` shape as create on parse failure.
+			 */
+			update: (
+				id: string,
+				input: {
+					owner_id: string;
+					name?: string;
+					threshold_dsl?: string;
+					query_dsl?: unknown;
+					window_ms?: number;
+				}
+			): Promise<ApiResult<PipelineAnalysisTemplate>> => wrap(() => this.clients.pipelines.patch<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { body: input })),
+
+			/**
+			 * Hard-delete the template. Does NOT consult
+			 * `pipeline_run.resolved_gates` — runs snapshot their gate
+			 * template at resolve-time, so deletion never orphans
+			 * in-flight runs.
+			 */
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
 		},
 
 		/**

@@ -369,6 +369,7 @@ export const pipeline_stage_event = sqliteTable("pipeline_stage_event", {
 	kind: text("kind", { enum: STAGE_EVENT_KINDS }).notNull(),
 	payload: text("payload", { mode: "json" }),
 	ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	idempotency_hash: text("idempotency_hash"),
 });
 
 export const pipeline_grant = sqliteTable("pipeline_grant", {
