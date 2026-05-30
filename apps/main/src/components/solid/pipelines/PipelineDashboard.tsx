@@ -101,13 +101,12 @@ const VerdictBar = (props: { label: string; verdicts: Verdicts }) => {
 				<span class="text-sm text-faint">{props.label}</span>
 				<span class="text-sm text-faint">{total()}</span>
 			</div>
-			<Show
-				when={total() > 0}
-				fallback={
-					<div style={{ height: "8px", background: "var(--bg-alt, #1a1a1a)", "border-radius": "4px" }} aria-label={`${props.label}: no verdicts`} />
-				}
-			>
-				<div style={{ display: "flex", height: "8px", "border-radius": "4px", overflow: "hidden", background: "var(--bg-alt, #1a1a1a)" }} aria-label={`${props.label}: ${props.verdicts.pass} pass, ${props.verdicts.fail} fail, ${props.verdicts.pending} pending`}>
+			<Show when={total() > 0} fallback={<div role="img" style={{ height: "8px", background: "var(--bg-alt, #1a1a1a)", "border-radius": "4px" }} aria-label={`${props.label}: no verdicts`} />}>
+				<div
+					role="img"
+					style={{ display: "flex", height: "8px", "border-radius": "4px", overflow: "hidden", background: "var(--bg-alt, #1a1a1a)" }}
+					aria-label={`${props.label}: ${props.verdicts.pass} pass, ${props.verdicts.fail} fail, ${props.verdicts.pending} pending`}
+				>
 					<div style={{ width: pct(props.verdicts.pass), background: VERDICT_COLORS.pass }} title={`pass: ${props.verdicts.pass}`} />
 					<div style={{ width: pct(props.verdicts.fail), background: VERDICT_COLORS.fail }} title={`fail: ${props.verdicts.fail}`} />
 					<div style={{ width: pct(props.verdicts.pending), background: VERDICT_COLORS.pending }} title={`pending: ${props.verdicts.pending}`} />
@@ -165,15 +164,12 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 				<WindowSelector project_id={props.project_id} current_ms={props.window_ms} />
 			</div>
 
-			<Show
-				when={!is_empty(data())}
-				fallback={
-					<Empty title="No runs in this window" description="No pipeline activity has been recorded over the selected window. Trigger a run or expand the window to see metrics." />
-				}
-			>
+			<Show when={!is_empty(data())} fallback={<Empty title="No runs in this window" description="No pipeline activity has been recorded over the selected window. Trigger a run or expand the window to see metrics." />}>
 				{/* Panel 1 — Run counts */}
 				<section class="stack stack-sm" aria-labelledby="dashboard-runs-heading">
-					<h3 id="dashboard-runs-heading" style={{ margin: 0 }}>run counts</h3>
+					<h3 id="dashboard-runs-heading" style={{ margin: 0 }}>
+						run counts
+					</h3>
 					<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
 						<Stat value={format_int(counts().total)} label="total" />
 						<Stat value={format_int(counts().completed)} label="completed" />
@@ -186,7 +182,9 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 
 				{/* Panel 2 — Verdict rates */}
 				<section class="stack stack-sm" aria-labelledby="dashboard-verdicts-heading">
-					<h3 id="dashboard-verdicts-heading" style={{ margin: 0 }}>verdict rates</h3>
+					<h3 id="dashboard-verdicts-heading" style={{ margin: 0 }}>
+						verdict rates
+					</h3>
 					<div class="row" style={{ gap: "1.5rem", "flex-wrap": "wrap" }}>
 						<VerdictBar label="manual" verdicts={verdicts().manual} />
 						<VerdictBar label="auto" verdicts={verdicts().auto} />
@@ -196,7 +194,9 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 
 				{/* Panel 3 — Latency */}
 				<section class="stack stack-sm" aria-labelledby="dashboard-latency-heading">
-					<h3 id="dashboard-latency-heading" style={{ margin: 0 }}>latency (run duration)</h3>
+					<h3 id="dashboard-latency-heading" style={{ margin: 0 }}>
+						latency (run duration)
+					</h3>
 					<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
 						<Stat value={format_ms(data().latency_p50_ms)} label="p50" />
 						<Stat value={format_ms(data().latency_p95_ms)} label="p95" />
@@ -206,7 +206,9 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 
 				{/* Panel 4 — Approval turnaround */}
 				<section class="stack stack-sm" aria-labelledby="dashboard-approvals-heading">
-					<h3 id="dashboard-approvals-heading" style={{ margin: 0 }}>approval turnaround</h3>
+					<h3 id="dashboard-approvals-heading" style={{ margin: 0 }}>
+						approval turnaround
+					</h3>
 					<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
 						<Stat value={format_ms(data().approval_turnaround_p50_ms)} label="p50" />
 					</div>

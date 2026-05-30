@@ -17,9 +17,9 @@
  * stats-textbook precision.
  */
 
-import type { DashboardResponse } from "@devpad/schema/validation";
 import { pipeline_approval, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
+import type { DashboardResponse } from "@devpad/schema/validation";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, gte } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
@@ -93,10 +93,7 @@ export const compute_percentile = (values: readonly number[], p: number): number
  * doesn't appear in resolved_gates — shouldn't happen in production but
  * we don't want the dashboard to crash).
  */
-export const group_verdicts = (
-	events: ReadonlyArray<{ run_id: string; stage_name: string; payload: unknown }>,
-	resolved_gates_by_run: ReadonlyMap<string, Record<string, unknown>>
-): DashboardResponse["verdict_counts"] => {
+export const group_verdicts = (events: ReadonlyArray<{ run_id: string; stage_name: string; payload: unknown }>, resolved_gates_by_run: ReadonlyMap<string, Record<string, unknown>>): DashboardResponse["verdict_counts"] => {
 	const buckets: DashboardResponse["verdict_counts"] = {
 		manual: { pass: 0, fail: 0, pending: 0 },
 		auto: { pass: 0, fail: 0, pending: 0 },
@@ -266,9 +263,7 @@ export const get_dashboard = async (deps: DashboardDeps, input: GetDashboardInpu
 	}
 
 	const run_ids = runs.map(r => r.id);
-	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(
-		runs.map(r => [r.id, (r.resolved_gates as Record<string, unknown> | null) ?? {}])
-	);
+	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(runs.map(r => [r.id, (r.resolved_gates as Record<string, unknown> | null) ?? {}]));
 
 	// (2) gate_verdict events for those runs.
 	let verdict_events: Array<{ run_id: string; stage_name: string; payload: unknown }> = [];

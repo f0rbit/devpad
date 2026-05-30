@@ -1,13 +1,13 @@
 ---
+import type { PipelineAnalysisTemplate, PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
 import AnalysisTemplateList from "@/components/solid/pipelines/AnalysisTemplateList";
 import GrantsList from "@/components/solid/pipelines/GrantsList";
 import PipelineDashboard, { type PipelineDashboardData } from "@/components/solid/pipelines/PipelineDashboard";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject, rethrow } from "@/utils/api-client";
-import type { PipelineAnalysisTemplate, PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
 
-// @ts-ignore rethrow is used in conditional return path
+// @ts-expect-error rethrow is used in conditional return path
 void rethrow;
 
 const project_id = Astro.params.project_id!;

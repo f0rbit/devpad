@@ -3,7 +3,6 @@ import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
-import type { DashboardResponse } from "@devpad/schema/validation";
 import type {
 	ApiKey,
 	GetConfigResult,
@@ -26,6 +25,7 @@ import type {
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema/types";
+import type { DashboardResponse } from "@devpad/schema/validation";
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -118,13 +118,9 @@ export class ApiClient {
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (
-				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
-			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
+			create: (input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" }): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
 				const body = typeof input === "string" ? { name: input } : (input ?? {});
-				return wrap(() =>
-					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }),
-				);
+				return wrap(() => this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }));
 			},
 
 			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
@@ -1067,13 +1063,8 @@ export class ApiClient {
 		 * `list` is read-only and returns the run's events newest-first.
 		 */
 		events: {
-			ingest: (
-				run_id: string,
-				input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string }
-			): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
-				wrap(() =>
-					this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, { body: input })
-				),
+			ingest: (run_id: string, input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string }): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
+				wrap(() => this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, { body: input })),
 
 			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> => wrap(() => this.clients.pipelines.get<PipelineStageEvent[]>(`/runs/${run_id}/events`)),
 		},
@@ -1168,8 +1159,7 @@ export class ApiClient {
 			/**
 			 * List templates for an owner.
 			 */
-			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> =>
-				wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", { query: { owner_id: input.owner_id } })),
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> => wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", { query: { owner_id: input.owner_id } })),
 
 			/**
 			 * Get a single template by id, scoped to its owner. 404 when
@@ -1184,13 +1174,8 @@ export class ApiClient {
 			 * with `field: "threshold_dsl"` and a descriptive message.
 			 * `window_ms` defaults to 600_000 (10 min) when omitted.
 			 */
-			create: (input: {
-				owner_id: string;
-				name: string;
-				threshold_dsl: string;
-				query_dsl?: unknown;
-				window_ms?: number;
-			}): Promise<ApiResult<PipelineAnalysisTemplate>> => wrap(() => this.clients.pipelines.post<PipelineAnalysisTemplate>("/analysis-templates", { body: input })),
+			create: (input: { owner_id: string; name: string; threshold_dsl: string; query_dsl?: unknown; window_ms?: number }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
+				wrap(() => this.clients.pipelines.post<PipelineAnalysisTemplate>("/analysis-templates", { body: input })),
 
 			/**
 			 * Partial patch — only the supplied fields are touched.
@@ -1214,8 +1199,7 @@ export class ApiClient {
 			 * template at resolve-time, so deletion never orphans
 			 * in-flight runs.
 			 */
-			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> =>
-				wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
 		},
 
 		/**

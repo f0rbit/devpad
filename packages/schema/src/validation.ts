@@ -263,7 +263,11 @@ export type WebhookEventBody = z.infer<typeof webhook_event_body>;
 
 export const dashboard_window_query = z.object({
 	package_id: z.string().min(1),
-	window_ms: z.number().int().positive().default(24 * 60 * 60 * 1000),
+	window_ms: z
+		.number()
+		.int()
+		.positive()
+		.default(24 * 60 * 60 * 1000),
 });
 export type DashboardWindowQuery = z.infer<typeof dashboard_window_query>;
 

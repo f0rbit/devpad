@@ -11,9 +11,9 @@
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
-import { ok, type Result } from "@f0rbit/corpus";
 import { pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
+import { ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { EventDeps, EventDoRouter, EventPulseEmitter, IngestEventInput } from "../../events.js";
 import { ingest_event } from "../../events.js";
@@ -122,9 +122,7 @@ describe("ingest_event — happy path", () => {
 	});
 
 	test("server-side stamps payload.source even when caller provides one", async () => {
-		const out = expect_ok(
-			await ingest_event(h.deps, base_input({ payload: { source: "attacker-claimed", note: "x" } }))
-		);
+		const out = expect_ok(await ingest_event(h.deps, base_input({ payload: { source: "attacker-claimed", note: "x" } })));
 		const row = (await h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.id, out.event_id)))[0]!;
 		expect((row.payload as Record<string, unknown>).source).toBe("external");
 		expect((row.payload as Record<string, unknown>).note).toBe("x");

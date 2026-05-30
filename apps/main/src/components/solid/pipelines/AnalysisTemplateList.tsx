@@ -81,10 +81,7 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 				</p>
 			</Show>
 
-			<Show
-				when={templates().length > 0}
-				fallback={<Empty title="No analysis templates" description="Analysis gates need a template to evaluate metrics. Create one to gate stage transitions on pulse-driven verdicts." />}
-			>
+			<Show when={templates().length > 0} fallback={<Empty title="No analysis templates" description="Analysis gates need a template to evaluate metrics. Create one to gate stage transitions on pulse-driven verdicts." />}>
 				<div class="stack stack-sm" data-testid="analysis-template-table">
 					<div
 						class="row"
@@ -136,14 +133,7 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 				</div>
 			</Show>
 
-			<AnalysisTemplateEditor
-				open={editorOpen()}
-				mode={editorMode()}
-				template={editTarget()}
-				owner_id={props.owner_id}
-				onClose={() => setEditorOpen(false)}
-				onSaved={handleSaved}
-			/>
+			<AnalysisTemplateEditor open={editorOpen()} mode={editorMode()} template={editTarget()} owner_id={props.owner_id} onClose={() => setEditorOpen(false)} onSaved={handleSaved} />
 		</div>
 	);
 }

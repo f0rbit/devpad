@@ -1327,7 +1327,7 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 
 	events
 		.command("ingest <run-id>")
-		.description("Ingest an external webhook event against a run. Server-side stamps payload.source = \"external\".")
+		.description('Ingest an external webhook event against a run. Server-side stamps payload.source = "external".')
 		.requiredOption("--stage <name>", "Stage the event is associated with")
 		.requiredOption(`--kind <kind>`, `Event kind — one of ${STAGE_EVENT_KINDS.join(", ")}`)
 		.option("--payload-file <path>", "Path to a JSON file used as the event payload")
@@ -1386,11 +1386,7 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 
 	oidc_trust.command("list").description("List trust policies for the current owner").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_oidc_trust_list(client_factory));
 
-	oidc_trust
-		.command("show <id>")
-		.description("Show a single trust policy")
-		.option("--owner-id <id>", "Owner user id (defaults to current session)")
-		.action(action_oidc_trust_show(client_factory));
+	oidc_trust.command("show <id>").description("Show a single trust policy").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_oidc_trust_show(client_factory));
 
 	oidc_trust
 		.command("add")
@@ -1414,17 +1410,9 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 
 	const analysis_templates = pipelines.command("analysis-templates").description("Manage pipeline_analysis_template rows (threshold DSL + window for analysis gates)");
 
-	analysis_templates
-		.command("list")
-		.description("List analysis templates for the current owner")
-		.option("--owner-id <id>", "Owner user id (defaults to current session)")
-		.action(action_analysis_templates_list(client_factory));
+	analysis_templates.command("list").description("List analysis templates for the current owner").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_analysis_templates_list(client_factory));
 
-	analysis_templates
-		.command("get <id>")
-		.description("Get a single analysis template")
-		.option("--owner-id <id>", "Owner user id (defaults to current session)")
-		.action(action_analysis_templates_get(client_factory));
+	analysis_templates.command("get <id>").description("Get a single analysis template").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_analysis_templates_get(client_factory));
 
 	analysis_templates
 		.command("create")

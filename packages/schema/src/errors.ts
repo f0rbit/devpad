@@ -125,8 +125,7 @@ export const badRequest = (message?: string, details?: unknown, ctx?: Record<str
 export const unauthorized = (message?: string, ctx?: Record<string, unknown>): Result<never, UnauthorizedError> => logAndReturn({ kind: "unauthorized", ...(message && { message }) }, ctx);
 export const scanError = (message?: string, ctx?: Record<string, unknown>): Result<never, ScanError> => logAndReturn({ kind: "scan_error", ...(message && { message }) }, ctx);
 export const githubError = (message?: string, ctx?: Record<string, unknown>): Result<never, GithubError> => logAndReturn({ kind: "github_error", ...(message && { message }) }, ctx);
-export const validationFieldError = (field: string, message?: string, ctx?: Record<string, unknown>): Result<never, ValidationFieldError> =>
-	logAndReturn({ kind: "validation_error", field, ...(message && { message }) }, ctx);
+export const validationFieldError = (field: string, message?: string, ctx?: Record<string, unknown>): Result<never, ValidationFieldError> => logAndReturn({ kind: "validation_error", field, ...(message && { message }) }, ctx);
 
 export const errors = {
 	notFound,

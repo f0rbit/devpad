@@ -133,13 +133,7 @@ async function build_setup(): Promise<Setup> {
 	return { app: make_routes(() => deps), db, do_calls };
 }
 
-const post_event = async (
-	app: ReturnType<typeof make_routes>,
-	run_id: string,
-	body: unknown,
-	auth: string | null,
-	extra_headers: Record<string, string> = {}
-) => {
+const post_event = async (app: ReturnType<typeof make_routes>, run_id: string, body: unknown, auth: string | null, extra_headers: Record<string, string> = {}) => {
 	const headers: Record<string, string> = { "content-type": "application/json", ...extra_headers };
 	if (auth !== null) headers["authorization"] = auth;
 	const res = await app.fetch(
@@ -197,13 +191,7 @@ describe("POST /runs/:id/events — admin bearer", () => {
 		const first = await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ idempotency_key: VALID_UUID }), auth, { "x-idempotency-key": header_key });
 		expect(first.status).toBe(201);
 
-		const second = await post_event(
-			setup.app,
-			SEEDED_RUN_ID,
-			make_valid_body({ idempotency_key: "77777777-7777-4777-8777-777777777777" }),
-			auth,
-			{ "x-idempotency-key": header_key }
-		);
+		const second = await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ idempotency_key: "77777777-7777-4777-8777-777777777777" }), auth, { "x-idempotency-key": header_key });
 		expect(second.status).toBe(200);
 		expect(second.body.value?.event_id).toBe(first.body.value?.event_id);
 	});

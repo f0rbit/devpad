@@ -82,11 +82,7 @@ export type EventDeps = {
  * other kinds are informational (deploy_started, bake_*, warning, error,
  * approval_requested) and don't advance the run's state machine.
  */
-const TRANSITION_KINDS: ReadonlySet<StageEventKind> = new Set<StageEventKind>([
-	"deploy_completed",
-	"gate_verdict",
-	"rollback_completed",
-]);
+const TRANSITION_KINDS: ReadonlySet<StageEventKind> = new Set<StageEventKind>(["deploy_completed", "gate_verdict", "rollback_completed"]);
 
 const make_event_id = (): string => `pipeline-stage-event_${crypto.randomUUID()}`;
 
@@ -138,7 +134,7 @@ const idempotency_hash = async (idempotency_key: string, payload: unknown): Prom
  */
 export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Promise<Result<IngestEventOutput, ServiceError | EventValidationError>> => {
 	// (1) Load run + caller scope check.
-	let run_row;
+	let run_row: typeof pipeline_run.$inferSelect | undefined;
 	try {
 		const rows = await deps.db.select().from(pipeline_run).where(eq(pipeline_run.id, input.run_id));
 		run_row = rows[0];
@@ -236,9 +232,7 @@ export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Pr
 
 	// (5b) DO tick for transition-relevant kinds only.
 	if (TRANSITION_KINDS.has(input.kind)) {
-		void deps.do
-			.fetch(input.run_id, "/advance", { kind: "external_event", event_kind: input.kind })
-			.catch(() => undefined);
+		void deps.do.fetch(input.run_id, "/advance", { kind: "external_event", event_kind: input.kind }).catch(() => undefined);
 	}
 
 	return ok({ event_id: id, duplicated: false });
@@ -270,12 +264,7 @@ const stamp_external_source = (payload: unknown, idempotency_key: string): Recor
  * LIKE probe on the raw text column instead so the query is portable to
  * bun:sqlite without the JSON1 extension wired in.
  */
-const find_key_collision = async (
-	db: Database,
-	run_id: string,
-	idempotency_key: string,
-	current_hash: string
-): Promise<Result<PipelineStageEvent | null, ServiceError>> => {
+const find_key_collision = async (db: Database, run_id: string, idempotency_key: string, current_hash: string): Promise<Result<PipelineStageEvent | null, ServiceError>> => {
 	try {
 		const rows = await db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
 		for (const row of rows) {

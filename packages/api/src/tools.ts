@@ -718,7 +718,7 @@ export const tools: Record<string, ToolDefinition> = {
 
 	devpad_pipelines_runs_events_ingest: {
 		name: "devpad_pipelines_runs_events_ingest",
-		description: "Ingest an external webhook event against an in-flight pipeline run. Idempotent on (idempotency_key, payload). Server-side stamps payload.source = \"external\".",
+		description: 'Ingest an external webhook event against an in-flight pipeline run. Idempotent on (idempotency_key, payload). Server-side stamps payload.source = "external".',
 		inputSchema: z.object({
 			run_id: z.string().describe("Pipeline run ID"),
 			stage_name: z.string().min(1).describe("Stage the event is associated with"),
@@ -858,7 +858,7 @@ export const tools: Record<string, ToolDefinition> = {
 			'Create a new pipeline analysis template. `threshold_dsl` is a multi-line DSL: `metric_name OP value [: pending]` (OPs: > < >= <= =). Trailing ": pending" marks a breach as Pending rather than Fail. Server-side parse failure surfaces as `validation_error` with field=threshold_dsl. `window_ms` defaults to 600000 (10 min).',
 		inputSchema: z.object({
 			owner_id: z.string().describe("Devpad user ID who owns this template"),
-			name: z.string().describe("Human-readable name (e.g. \"default-analysis\")"),
+			name: z.string().describe('Human-readable name (e.g. "default-analysis")'),
 			threshold_dsl: z.string().describe("Multi-line threshold DSL"),
 			query_dsl: z.unknown().optional().describe("Optional structured query DSL stored alongside thresholds"),
 			window_ms: z.number().int().positive().optional().describe("Analysis window in milliseconds. Default: 600000"),
@@ -904,15 +904,16 @@ export const tools: Record<string, ToolDefinition> = {
 
 	devpad_pipelines_oidc_trust_create: {
 		name: "devpad_pipelines_oidc_trust_create",
-		description: "Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern=\"*\", allowed_actions=[\"artifacts:upload\",\"runs:start\"], session_ttl_seconds=900.",
+		description:
+			'Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern="*", allowed_actions=["artifacts:upload","runs:start"], session_ttl_seconds=900.',
 		inputSchema: z.object({
 			owner_id: z.string().describe("Devpad user ID who owns this policy"),
-			github_owner: z.string().describe("GitHub `repository_owner` claim to trust (e.g. \"f0rbit\")"),
+			github_owner: z.string().describe('GitHub `repository_owner` claim to trust (e.g. "f0rbit")'),
 			expected_audience: z.string().describe("Required `aud` claim on the OIDC token — typically the orchestrator URL"),
-			repo_pattern: z.string().optional().describe("Glob matched against the repo name (\"*\" matches all). Default: \"*\""),
-			allowed_refs: z.array(z.string()).optional().describe("Allowed Git refs (e.g. [\"refs/heads/main\"]). Empty/omitted = any ref"),
+			repo_pattern: z.string().optional().describe('Glob matched against the repo name ("*" matches all). Default: "*"'),
+			allowed_refs: z.array(z.string()).optional().describe('Allowed Git refs (e.g. ["refs/heads/main"]). Empty/omitted = any ref'),
 			allowed_environments: z.array(z.string()).optional().describe("Allowed GitHub environments. Empty/omitted = any"),
-			allowed_actions: z.array(z.string()).optional().describe("Scope strings granted to session tokens. Default: [\"artifacts:upload\",\"runs:start\"]"),
+			allowed_actions: z.array(z.string()).optional().describe('Scope strings granted to session tokens. Default: ["artifacts:upload","runs:start"]'),
 			session_ttl_seconds: z.number().int().positive().optional().describe("Session token TTL. Default: 900 (15 min)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.create(input)),

@@ -245,6 +245,6 @@ describe("analysis-templates routes — list shape", () => {
 
 		const list = await get_req(app, "/analysis-templates?owner_id=user_test", auth);
 		expect(Array.isArray(list.body.value)).toBe(true);
-		expect((list.body.value as Array<unknown>)).toHaveLength(2);
+		expect(list.body.value as Array<unknown>).toHaveLength(2);
 	});
 });
