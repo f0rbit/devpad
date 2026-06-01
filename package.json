@@ -22,7 +22,7 @@
 		"test:all": "bun run test:unit && bun run test:integration",
 		"e2e": "playwright test",
 		"e2e:ui": "playwright test --ui",
-		"e2e:local": "TEST_ENV=local playwright test",
+		"e2e:local": "TEST_ENV=local bun run tests/e2e/seed.ts && TEST_ENV=local playwright test",
 		"e2e:local:ui": "TEST_ENV=local playwright test --ui",
 		"coverage": "./scripts/test-coverage.sh",
 		"coverage:report": "./scripts/coverage-report.sh",

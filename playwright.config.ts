@@ -59,8 +59,6 @@ if (!config) {
 
 export default defineConfig({
 	testDir: "./tests/e2e",
-	/* Seed the pipelines E2E fixture into database/test.db once before any spec. */
-	globalSetup: "./tests/e2e/global-setup.ts",
 	/* Run tests in files in parallel */
 	fullyParallel: true,
 	/* Fail the build on CI if you accidentally left test.only in the source code. */
