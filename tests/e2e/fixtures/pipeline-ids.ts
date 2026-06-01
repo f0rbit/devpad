@@ -24,6 +24,15 @@ export const E2E_USER_ID = "test-user-e2e" as const;
  */
 export const E2E_SESSION_ID = "test-session" as const;
 export const E2E_PROJECT_ID = "e2e-pipe-project" as const;
+/**
+ * A second project owned by the same fake user that has a project row but NO
+ * `pipeline_package`. Used by the degradation spec for the no-package case.
+ * NOTE (local scope): the page's `packages.list()` is an orchestrator route that
+ * 404s locally for EVERY project, so this project degrades to the `pipeline-degraded`
+ * banner rather than the true `pipeline-empty` state — the local 404 cannot
+ * distinguish "no package" from "service down". See `pipelines-degraded.spec.ts`.
+ */
+export const E2E_PROJECT_NO_PKG = "e2e-pipe-no-pkg" as const;
 export const E2E_PKG_ID = "pipeline-package_e2e" as const;
 export const E2E_RUN_COMPLETED = "pipeline-run_e2e-completed" as const;
 export const E2E_RUN_AWAITING = "pipeline-run_e2e-awaiting" as const;

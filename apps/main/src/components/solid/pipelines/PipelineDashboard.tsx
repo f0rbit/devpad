@@ -158,7 +158,7 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 	const verdicts = () => data().verdict_counts;
 
 	return (
-		<div class="stack stack-md">
+		<div class="stack stack-md" data-testid="pipeline-dashboard">
 			<div class="row row-between" style={{ "align-items": "center" }}>
 				<h2 style={{ margin: 0 }}>dashboard</h2>
 				<WindowSelector project_id={props.project_id} current_ms={props.window_ms} />
@@ -171,8 +171,12 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 						run counts
 					</h3>
 					<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
-						<Stat value={format_int(counts().total)} label="total" />
-						<Stat value={format_int(counts().completed)} label="completed" />
+						<span data-testid="dashboard-run-total" data-run-total={counts().total}>
+							<Stat value={format_int(counts().total)} label="total" />
+						</span>
+						<span data-testid="dashboard-run-completed" data-run-completed={counts().completed}>
+							<Stat value={format_int(counts().completed)} label="completed" />
+						</span>
 						<Stat value={format_int(counts().in_flight)} label="in flight" />
 						<Stat value={format_int(counts().failed)} label="failed" />
 						<Stat value={format_int(counts().cancelled)} label="cancelled" />

@@ -28,22 +28,33 @@ import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/b
 import { pipeline_analysis_template, pipeline_package, pipeline_run, project, session, user } from "@devpad/schema/database/schema";
 import type { Database as DrizzleDatabase } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
-import { E2E_AWAITING_STAGE, E2E_PKG_ID, E2E_PROJECT_ID, E2E_RUN_AWAITING, E2E_RUN_COMPLETED, E2E_SESSION_ID, E2E_TEMPLATE_ID, E2E_USER_ID } from "./pipeline-ids.ts";
+import { E2E_AWAITING_STAGE, E2E_PKG_ID, E2E_PROJECT_ID, E2E_PROJECT_NO_PKG, E2E_RUN_AWAITING, E2E_RUN_COMPLETED, E2E_SESSION_ID, E2E_TEMPLATE_ID, E2E_USER_ID } from "./pipeline-ids.ts";
 
 /**
  * Re-export the fixture ids from the node-safe `./pipeline-ids` module (single
  * source of truth). Specs import ids from `./pipeline-ids` directly to avoid
  * pulling `bun:sqlite` into Playwright's node loader; the seed imports them here.
  */
-export { E2E_AWAITING_STAGE, E2E_PKG_ID, E2E_PROJECT_ID, E2E_RUN_AWAITING, E2E_RUN_COMPLETED, E2E_SESSION_ID, E2E_TEMPLATE_ID, E2E_USER_ID };
+export { E2E_AWAITING_STAGE, E2E_PKG_ID, E2E_PROJECT_ID, E2E_PROJECT_NO_PKG, E2E_RUN_AWAITING, E2E_RUN_COMPLETED, E2E_SESSION_ID, E2E_TEMPLATE_ID, E2E_USER_ID };
 
 /** Far-future session expiry (unix seconds, fixed): 2099-01-01T00:00:00Z. */
 const SESSION_EXPIRES_AT = 4_070_908_800;
 
-/** Fixed timestamps — deterministic latency for the dashboard aggregator. */
-const SEED_NOW = "2026-05-16T00:00:00.000Z";
-const RUN_STARTED = "2026-05-16T00:00:00.000Z";
-const RUN_FINISHED = "2026-05-16T00:05:00.000Z";
+/**
+ * Timestamps are WINDOW-RELATIVE, computed at seed time, NOT fixed calendar
+ * dates. The dashboard aggregator filters runs by `started_at >= now - window_ms`
+ * (see `packages/core/src/services/pipelines/dashboard.ts`); the smallest UI
+ * window is 24h. A fixed past date would fall outside every selectable window so
+ * the dashboard would report 0 runs and the count assertions would be hollow.
+ * Anchoring the runs ~2h before "now" keeps both inside the default 24h window
+ * on every run, so `run_counts.total` is deterministically 2. The exact instant
+ * varies run-to-run but the COUNTS (total=2, completed=1) do not, which is all
+ * the dashboard spec asserts.
+ */
+const SEED_AT = Date.now();
+const SEED_NOW = new Date(SEED_AT).toISOString();
+const RUN_STARTED = new Date(SEED_AT - 2 * 60 * 60 * 1000).toISOString();
+const RUN_FINISHED = new Date(SEED_AT - 2 * 60 * 60 * 1000 + 5 * 60 * 1000).toISOString();
 
 /**
  * Open `file` with the shipped bun drizzle helpers, creating + migrating it if
@@ -88,6 +99,23 @@ export async function seed_pipeline_fixtures(db: DrizzleDatabase): Promise<void>
 		owner_id: E2E_USER_ID,
 		name: "e2e-pipeline-project",
 		project_id: E2E_PROJECT_ID,
+		visibility: "PRIVATE",
+		status: "DEVELOPMENT",
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	// A second project owned by the same fake user with NO pipeline_package, for
+	// the degradation spec's no-package case.
+	await db.insert(project).values({
+		id: E2E_PROJECT_NO_PKG,
+		owner_id: E2E_USER_ID,
+		name: "e2e-pipeline-no-pkg",
+		project_id: E2E_PROJECT_NO_PKG,
 		visibility: "PRIVATE",
 		status: "DEVELOPMENT",
 		created_at: SEED_NOW,
@@ -176,6 +204,7 @@ async function delete_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(pipeline_run).where(eq(pipeline_run.id, E2E_RUN_COMPLETED));
 	await db.delete(pipeline_analysis_template).where(eq(pipeline_analysis_template.id, E2E_TEMPLATE_ID));
 	await db.delete(pipeline_package).where(eq(pipeline_package.id, E2E_PKG_ID));
+	await db.delete(project).where(eq(project.id, E2E_PROJECT_NO_PKG));
 	await db.delete(project).where(eq(project.id, E2E_PROJECT_ID));
 	await db.delete(session).where(eq(session.id, E2E_SESSION_ID));
 	await db.delete(user).where(eq(user.id, E2E_USER_ID));
