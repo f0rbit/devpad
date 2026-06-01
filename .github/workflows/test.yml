@@ -119,6 +119,13 @@ jobs:
       - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium
 
+      - name: Build packages
+        run: |
+          cd packages/schema && bun run build && cd ../..
+          cd packages/api && bun run build && cd ../..
+          cd packages/cli && bun run build && cd ../..
+          cd packages/mcp && bun run build && cd ../..
+
       # `e2e:ci` seeds database/test.db under bun, then Playwright's webServer array
       # boots both dev servers. NODE_ENV=test (fake auth) is set in playwright.config
       # webServer env, not relied on from the shell. DATABASE_FILE for the worker is
