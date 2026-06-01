@@ -5,10 +5,7 @@ import GrantsList from "@/components/solid/pipelines/GrantsList";
 import PipelineDashboard, { type PipelineDashboardData } from "@/components/solid/pipelines/PipelineDashboard";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { getProject, rethrow } from "@/utils/api-client";
-
-// @ts-expect-error rethrow is used in conditional return path
-void rethrow;
+import { getProject } from "@/utils/api-client";
 
 const project_id = Astro.params.project_id!;
 
@@ -34,9 +31,16 @@ const tabs: Array<{ name: TabName; label: string }> = [
 ];
 
 // Find the project's pipeline package (if any). Empty state for projects without one.
+//
+// Graceful degradation: the package list comes from the pipelines orchestrator. If
+// that upstream is unreachable (transient outage, or simply not mounted in a given
+// environment), do NOT 404 the whole page. Render the tabbed shell with a degraded
+// banner instead — the dashboard tab reads from a separate aggregator and stays
+// functional, and the other tabs surface their own empty/error states.
 const packages_result = await client.pipelines.packages.list({ project_id: project.id });
-if (!packages_result.ok) return rethrow(packages_result.error);
-const pkg: PipelinePackage | null = packages_result.value[0] ?? null;
+const degraded = !packages_result.ok;
+const pkg: PipelinePackage | null = packages_result.ok ? (packages_result.value[0] ?? null) : null;
+const has_shell = degraded || pkg !== null;
 
 let runs: PipelineRun[] = [];
 let runs_error: string | null = null;
@@ -63,11 +67,14 @@ if (pkg) {
 		if (templates_result.ok) templates = templates_result.value;
 		else templates_error = templates_result.error?.message ?? "Failed to load analysis templates";
 	}
-	if (active_tab === "dashboard") {
-		const dash_result = await client.pipelines.dashboard.get({ project_id: project.id, window_ms });
-		if (dash_result.ok) dashboard_data = dash_result.value;
-		else dashboard_error = dash_result.error?.message ?? "Failed to load dashboard";
-	}
+}
+
+// The dashboard reads from the aggregator (keyed by project, not package), which is
+// independent of the package list — so it still loads when packages.list degraded.
+if (active_tab === "dashboard" && has_shell) {
+	const dash_result = await client.pipelines.dashboard.get({ project_id: project.id, window_ms });
+	if (dash_result.ok) dashboard_data = dash_result.value;
+	else dashboard_error = dash_result.error?.message ?? "Failed to load dashboard";
 }
 
 const in_flight_statuses = new Set<string>(["queued", "deploying", "baking", "awaiting_approval", "rolling_back"]);
@@ -88,7 +95,7 @@ const status_color = (status: string) => {
 		<div class="stack stack-md">
 			<h5>project pipeline</h5>
 
-			{!pkg ? (
+			{!has_shell ? (
 				<div class="stack stack-sm" data-testid="pipeline-empty" style="padding: 1.5rem; border: 1px dashed var(--border); border-radius: var(--radius, 4px);">
 					<h3 style="margin: 0;">no pipeline linked</h3>
 					<p class="text-sm text-faint" style="margin: 0;">
@@ -98,6 +105,12 @@ const status_color = (status: string) => {
 				</div>
 			) : (
 				<>
+					{degraded && (
+						<div data-testid="pipeline-degraded" role="alert" class="row row-sm" style="padding: 0.6rem 0.9rem; border: 1px solid var(--warning, var(--item-yellow)); background: var(--warning-bg, var(--bg-alt)); border-radius: var(--radius, 4px);">
+							<span class="status-badge" style="padding: 0.15rem 0.6rem; border-radius: 0.25rem; font-size: 0.75rem; background: var(--warning-bg, var(--bg-alt)); color: var(--warning, var(--item-yellow)); border: 1px solid var(--warning, var(--item-yellow));">degraded</span>
+							<span class="text-sm">Pipeline service unavailable — package, run, grant and template data may be missing. The dashboard below still reflects recorded activity.</span>
+						</div>
+					)}
 					<nav aria-label="pipeline tabs" data-testid="pipeline-tabs">
 						{tabs.map(t => (
 							<a
@@ -118,27 +131,29 @@ const status_color = (status: string) => {
 								<p class="text-sm" style="color: var(--error); margin: 0;">{runs_error}</p>
 							)}
 
-							<div class="stack stack-md">
-								<h2>package</h2>
-								<div class="card card-flat stack stack-sm">
-									<div class="row row-sm">
-										<span class="text-sm text-faint" style="min-width: 120px;">Name</span>
-										<span>{pkg.name}</span>
+							{pkg && (
+								<div class="stack stack-md">
+									<h2>package</h2>
+									<div class="card card-flat stack stack-sm">
+										<div class="row row-sm">
+											<span class="text-sm text-faint" style="min-width: 120px;">Name</span>
+											<span>{pkg.name}</span>
+										</div>
+										{pkg.repo_url && (
+											<div class="row row-sm">
+												<span class="text-sm text-faint" style="min-width: 120px;">Repo</span>
+												<a href={pkg.repo_url} style="color: var(--text-link);">{pkg.repo_url}</a>
+											</div>
+										)}
+										{pkg.default_template_ref && (
+											<div class="row row-sm">
+												<span class="text-sm text-faint" style="min-width: 120px;">Template</span>
+												<code style="font-family: monospace; color: var(--fg-muted);">{pkg.default_template_ref}</code>
+											</div>
+										)}
 									</div>
-									{pkg.repo_url && (
-										<div class="row row-sm">
-											<span class="text-sm text-faint" style="min-width: 120px;">Repo</span>
-											<a href={pkg.repo_url} style="color: var(--text-link);">{pkg.repo_url}</a>
-										</div>
-									)}
-									{pkg.default_template_ref && (
-										<div class="row row-sm">
-											<span class="text-sm text-faint" style="min-width: 120px;">Template</span>
-											<code style="font-family: monospace; color: var(--fg-muted);">{pkg.default_template_ref}</code>
-										</div>
-									)}
 								</div>
-							</div>
+							)}
 
 							{in_flight_runs.length > 0 && (
 								<div class="stack stack-md">

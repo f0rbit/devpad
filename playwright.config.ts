@@ -11,17 +11,39 @@ import { defineConfig } from "@playwright/test";
 const TEST_ENV = process.env.TEST_ENV || "local";
 
 // Environment-specific configurations
+//
+// Local dev is TWO servers: the Astro frontend serves PAGES on :3000 and proxies
+// /api + /health to the worker on :3001 (apps/main/astro.config.mjs). The worker
+// serves ONLY /api/v1 + /health and 404s page routes. Both must boot for the page
+// suite to render, so `webServer` is an array. NODE_ENV=test on the Astro process
+// enables the fake-auth middleware (apps/main/src/middleware.ts) which resolves the
+// fake user to id "test-user-e2e".
 const environments = {
 	local: {
-		baseURL: "http://localhost:3001",
-		webServer: {
-			command: "cd packages/worker && DATABASE_FILE=../../database/test.db bun run dev",
-			url: "http://localhost:3001",
-			reuseExistingServer: !process.env.CI,
-			timeout: 60 * 1000,
-			stdout: "pipe" as const,
-			stderr: "pipe" as const,
-		},
+		baseURL: "http://localhost:3000",
+		webServer: [
+			{
+				command: "bun run --filter=@devpad/app dev",
+				url: "http://localhost:3000",
+				env: {
+					NODE_ENV: "test",
+					PORT: "3000",
+					PUBLIC_API_SERVER_URL: "http://localhost:3001/api/v1",
+				},
+				reuseExistingServer: !process.env.CI,
+				timeout: 120 * 1000,
+				stdout: "pipe" as const,
+				stderr: "pipe" as const,
+			},
+			{
+				command: "cd packages/worker && DATABASE_FILE=../../database/test.db bun run dev",
+				url: "http://localhost:3001/health",
+				reuseExistingServer: !process.env.CI,
+				timeout: 120 * 1000,
+				stdout: "pipe" as const,
+				stderr: "pipe" as const,
+			},
+		],
 	},
 	staging: {
 		baseURL: process.env.STAGING_URL || "https://staging.devpad.tools",

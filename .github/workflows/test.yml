@@ -75,3 +75,68 @@ jobs:
         env:
           NODE_ENV: production
           PUBLIC_API_SERVER_URL: https://devpad.tools/api/v1
+
+  # Pipelines E2E (Playwright). Runs the two-server harness (Astro :3000 + worker :3001)
+  # and the green, meaningful pipeline specs only.
+  #
+  # INTENTIONALLY NON-BLOCKING: this job is NOT in the repo's required status checks /
+  # branch protection, so a red `e2e` does NOT gate merges. Browser + dual-server boot
+  # has a different flakiness profile than the unit/integration lane, and we want the
+  # signal in CI without coupling it to the fast feedback gate. The `test` job above
+  # remains the sole required gate.
+  # TODO: Promote `e2e` to a required check (add it to branch protection) once it has
+  # been observed stable across several runs.
+  #
+  # Spec selection: `e2e:ci` runs only the green pipeline specs + pages.spec. It EXCLUDES
+  # happy-path.spec.ts and pulse.spec.ts, which are pre-existing failures unrelated to
+  # pipelines (the /project/create flow renders no #project_id field under local fake
+  # auth — separate rot, tracked as a follow-up). Including them would make this job
+  # perpetually red and destroy its value as a signal.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build packages
+        run: |
+          cd packages/schema && bun run build && cd ../..
+          cd packages/api && bun run build && cd ../..
+          cd packages/cli && bun run build && cd ../..
+          cd packages/mcp && bun run build && cd ../..
+
+      # `e2e:ci` seeds database/test.db under bun, then Playwright's webServer array
+      # boots both dev servers. NODE_ENV=test (fake auth) is set in playwright.config
+      # webServer env, not relied on from the shell. DATABASE_FILE for the worker is
+      # the relative ../../database/test.db wired into the worker webServer command.
+      - name: Run pipelines E2E
+        run: bun run e2e:ci
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: .playwright/playwright-report
+          retention-days: 7
