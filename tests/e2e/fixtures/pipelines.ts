@@ -24,6 +24,8 @@
  */
 
 import { Database } from "bun:sqlite";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { pipeline_analysis_template, pipeline_package, pipeline_run, project, session, user } from "@devpad/schema/database/schema";
 import type { Database as DrizzleDatabase } from "@devpad/schema/database/types";
@@ -60,8 +62,13 @@ const RUN_FINISHED = new Date(SEED_AT - 2 * 60 * 60 * 1000 + 5 * 60 * 1000).toIS
  * Open `file` with the shipped bun drizzle helpers, creating + migrating it if
  * absent (`migrateBunDatabase` is idempotent). Returns the raw `sqlite` handle
  * so the caller can `sqlite.close()` after seeding.
+ *
+ * Ensures the parent directory exists first: bun:sqlite cannot create a db file
+ * inside a non-existent directory, and `database/` is gitignored so it is absent
+ * on a clean CI checkout. `mkdirSync(..., { recursive: true })` is idempotent.
  */
 export function open_test_db(file: string): { sqlite: Database; db: DrizzleDatabase } {
+	mkdirSync(dirname(file), { recursive: true });
 	const sqlite = new Database(file);
 	migrateBunDatabase(sqlite);
 	const db = createBunDatabase(sqlite);
