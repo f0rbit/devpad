@@ -16,8 +16,8 @@ bun run e2e:staging    # Test against staging environment
 ## Test Environments
 
 ### 1. Local Development (`TEST_ENV=local`)
-- **URL**: http://localhost:3001
-- **Setup**: Automatically starts server via `bun run dev` in packages/worker
+- **URL**: http://localhost:3000 (Astro pages; proxies `/api` + `/health` to the worker on :3001)
+- **Setup**: `webServer` boots BOTH dev servers — Astro frontend (`@devpad/app`) on :3000 with `NODE_ENV=test` for fake auth, and the worker API on :3001 (readiness probed via `/health`). This two-server harness also un-rots the previously-broken `happy-path.spec.ts` / `pulse.spec.ts` page suites.
 - **Database**: Uses test database at `database/test.db`
 - **Use Case**: Quick testing during development
 
