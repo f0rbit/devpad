@@ -1,0 +1,26 @@
+{
+	// This is NOT a build project -- devpad has no root-level src/. It exists as
+	// (a) the extends-target for packages/mcp/tsconfig.json (previously dangling --
+	// see AGENTS.md lint/format section), (b) the base compilerOptions for
+	// typescript-eslint's projectService default project, which lints root files
+	// like eslint.config.ts (excluded below, same reason as corpus's tsconfig.json),
+	// and (c) the governing project for the handful of loose root-level .ts files
+	// (scripts/, playwright configs) that don't belong to any package.
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"types": ["bun"]
+	},
+	"include": ["scripts/**/*.ts", "playwright.config.ts", "playwright.staging.config.ts"],
+	"exclude": ["node_modules", "eslint.config.ts", "**/dist/**", "packages/cli/tests/golden/**"]
+}

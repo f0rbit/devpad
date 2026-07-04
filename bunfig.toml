@@ -1,3 +1,9 @@
+# @f0rbit/lint's umbrella model relies on transitive bins (oxlint, oxfmt,
+# eslint) surfacing in node_modules/.bin -- bun's isolated linker doesn't
+# hoist them. See ~/dev/lint AGENTS.md.
+[install]
+linker = "hoisted"
+
 [test]
 # Global setup for integration tests - starts single shared server
 preload = ["./tests/integration/setup.ts"]

@@ -17,6 +17,6 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false
 	},
-	"include": ["src/**/*", "__tests__/**/*"],
+	"include": ["src/**/*", "__tests__/**/*", "infra.ts"],
 	"exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,28 @@
+node_modules/
+dist/
+coverage/
+.wrangler/
+.alchemy/
+.alchemy-quarantine/
+artifacts/
+test-results/
+.playwright/
+database/
+.plans/
+# Golden fixtures are scaffolder OUTPUT snapshots asserted byte-for-byte -- each
+# ships its own oxfmt wiring. Reformatting them from the root would corrupt the
+# fixture comparison. See AGENTS.md lint/format section.
+packages/cli/tests/golden/
+# Handlebars template stubs (*.hbs) for `devpad pipelines init` -- reformatting
+# would alter scaffold output fidelity. oxfmt only matches real extensions so
+# this is a no-op in practice; listed explicitly as a documented boundary.
+packages/pipeline-templates/src/scaffolder/templates/
+# oxfmt has no Astro support -- apps/{main,blog,media} pages stay on biome's
+# formatter until upstream Astro support exists. Known scope boundary.
+**/*.astro
+# oxfmt also reaches .toml/.jsonc Cloudflare deploy configs -- these carry
+# hand-placed comments and exact key ordering that matter for deploy semantics.
+# Same precedent as the pulse rollout's wrangler.jsonc care note. Excluded until
+# each is verified JSONC/TOML-comment-safe under the pinned oxfmt version.
+wrangler.toml
+packages/pipelines/wrangler.jsonc
