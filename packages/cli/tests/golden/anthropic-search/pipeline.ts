@@ -21,8 +21,8 @@
 import { auto, extendTemplate } from "@devpad/pipeline-templates";
 
 export default extendTemplate({
-		rollout: { type: "atomic" },
-		gates: {
-			"staging→atomic-prod": auto(),
-		},
+	rollout: { type: "atomic" },
+	gates: {
+		"staging→atomic-prod": auto(),
+	},
 });

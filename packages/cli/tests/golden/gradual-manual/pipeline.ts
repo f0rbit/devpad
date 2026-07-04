@@ -21,16 +21,16 @@
 import { manual, extendTemplate } from "@devpad/pipeline-templates";
 
 export default extendTemplate({
-		rollout: {
-			type: "gradual",
-			// Override stages here, e.g. { name: "onebox", traffic: 5, bake: "1h" }.
-			// Omitted stages keep their defaultGradual values.
-			stages: [],
-		},
-		gates: {
-			"staging→onebox": manual(),
-			"onebox→wave1": manual(),
-			"wave1→wave2": manual(),
-			"wave2→full": manual(),
-		},
+	rollout: {
+		type: "gradual",
+		// Override stages here, e.g. { name: "onebox", traffic: 5, bake: "1h" }.
+		// Omitted stages keep their defaultGradual values.
+		stages: [],
+	},
+	gates: {
+		"staging→onebox": manual(),
+		"onebox→wave1": manual(),
+		"wave1→wave2": manual(),
+		"wave2→full": manual(),
+	},
 });

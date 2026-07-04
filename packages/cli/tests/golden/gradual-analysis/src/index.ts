@@ -7,13 +7,13 @@
  * `api.anthropic.com` directly from here. All observability flows to
  * `env.PULSE`.
  *
- * When you call vault, pass `read_caller_identity(env)` as the second
+ * When you call vault, pass `readCallerIdentity(env)` as the second
  * arg — CF service bindings don't propagate the caller's env vars to
  * the callee, so identity must travel as an explicit RPC argument:
  *
  *     const result = await env.ANTHROPIC.messages.create(
  *         { model: "...", messages: [...] },
- *         read_caller_identity(env),
+ *         readCallerIdentity(env),
  *     );
  *
  * Pulse contract (see ~/dev/pulse/packages/schema/src/validation.ts):
@@ -29,6 +29,7 @@
  */
 
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { format_error, try_catch_async } from "@f0rbit/corpus";
 import type { CallerIdentity, Env } from "./env.ts";
 
 /**
@@ -36,7 +37,7 @@ import type { CallerIdentity, Env } from "./env.ts";
  * Falls back to "unknown" so a misconfigured deploy surfaces as a
  * vault-side `grant_denied`, not a runtime crash here.
  */
-export const read_caller_identity = (env: Env): CallerIdentity => ({
+export const readCallerIdentity = (env: Env): CallerIdentity => ({
 	package_id: env.CALLER_PACKAGE ?? "unknown",
 	environment: env.CALLER_ENV ?? "unknown",
 	version_set_id: env.CALLER_VERSION_SET_ID ?? "unknown",
@@ -45,45 +46,50 @@ export const read_caller_identity = (env: Env): CallerIdentity => ({
 /**
  * Fire-and-forget pulse emit. Skips when project id / ingest key are
  * unconfigured (deploy may legitimately not have pulse wired). Any error
- * during ingest is swallowed — the caller's request must not block on
- * observability.
+ * during ingest is captured via `try_catch_async` (never thrown) — the
+ * caller's request must not block on observability.
  *
  * `event_name` is the package-specific event label (lands in
  * `properties.name`). `properties` carries any caller-specific fields.
  */
-export const emit_pulse = async (
-	env: Env,
-	event_name: string,
-	properties: Record<string, unknown>,
-): Promise<void> => {
-	if (env.PULSE_PROJECT_ID === undefined || env.PULSE_INGEST_KEY === undefined) return;
-	const identity = read_caller_identity(env);
-	try {
-		const ingest_key = await env.PULSE_INGEST_KEY.get();
-		const body = JSON.stringify({
-			project_id: env.PULSE_PROJECT_ID,
-			events: [{
-				name: "event",
-				// Pulse's wire-side dimension keeps the legacy `package` name
-				// (matches pulse's events table schema). Vault's identity arg
-				// uses `package_id` — translate here at the wire boundary.
-				package: identity.package_id,
-				environment: identity.environment,
-				version_id: identity.version_set_id,
-				properties: { name: event_name, ...properties },
-			}],
-		});
-		const response = await env.PULSE.fetch(new Request("https://pulse/e", {
-			method: "POST",
-			headers: { "content-type": "application/json", "X-Pulse-Key": ingest_key },
-			body,
-		}));
-		if (response.status >= 400) {
-			console.error(`pulse ingest returned ${response.status}`);
-		}
-	} catch (cause) {
-		console.error("pulse emit failed:", cause);
+export const emitPulse = async (env: Env, event_name: string, properties: Record<string, unknown>): Promise<void> => {
+	const project_id = env.PULSE_PROJECT_ID;
+	const ingest_key_secret = env.PULSE_INGEST_KEY;
+	if (project_id === undefined || ingest_key_secret === undefined) return;
+	const identity = readCallerIdentity(env);
+	const result = await try_catch_async(
+		async () => {
+			const ingest_key = await ingest_key_secret.get();
+			const body = JSON.stringify({
+				project_id,
+				events: [
+					{
+						name: "event",
+						// Pulse's wire-side dimension keeps the legacy `package` name
+						// (matches pulse's events table schema). Vault's identity arg
+						// uses `package_id` — translate here at the wire boundary.
+						package: identity.package_id,
+						environment: identity.environment,
+						version_id: identity.version_set_id,
+						properties: { name: event_name, ...properties },
+					},
+				],
+			});
+			return env.PULSE.fetch(
+				new Request("https://pulse/e", {
+					method: "POST",
+					headers: { "content-type": "application/json", "X-Pulse-Key": ingest_key },
+					body,
+				}),
+			);
+		},
+		(cause) => ({ message: format_error(cause) }),
+	);
+	if (!result.ok) {
+		console.error("pulse emit failed:", result.error.message);
+		return;
 	}
+	if (result.value.status >= 400) console.error(`pulse ingest returned ${String(result.value.status)}`);
 };
 
 export class GradualAnalysisWorker extends WorkerEntrypoint<Env> {

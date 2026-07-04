@@ -1,0 +1,19 @@
+import { define_lint_config } from "@f0rbit/lint";
+
+export default define_lint_config({
+	naming: "camelCase",
+	package_name: "gradual-analysis",
+	tsconfig_root_dir: import.meta.dirname,
+	overrides: [
+		{
+			// WorkerEntrypoint is Cloudflare's mandated base class for a Worker
+			// entrypoint — there is no functional-style escape hatch for it, and
+			// a real implementation needs `this.env` to reach its bindings.
+			files: ["src/index.ts"],
+			rules: {
+				"functional/no-classes": "off",
+				"functional/no-this-expressions": "off",
+			},
+		},
+	],
+});
