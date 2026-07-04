@@ -409,6 +409,10 @@ devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloud
 - Corpus version-set lineage: orchestrator's `POST /artifacts/version-set` stamps `parents: [{ store_id: "version-sets", version: <latest>, role: "predecessor" }]` from latest uploaded version-set for the package. `version_sets.lineage(version)` walks the chain. Required for rollback semantics.
 - Demo repos vs scaffolder: the scaffolder template (`packages/pipeline-templates/src/scaffolder/templates/`) is the source-of-truth. Existing demos in separate repos must be hand-synced when the template changes — no automated drift detection.
 
+### Lint/format wiring (scaffolder, `~/dev/lint` linting-strategy Phase 4)
+
+Every package `devpad pipelines init` scaffolds now ships `@f0rbit/lint` from birth: `.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.ts` (`camelCase` naming preset — scaffolded packages use camelCase functions, unlike corpus's snake_case), and `bunfig.toml` (hoisted linker) are template entries in `SCAFFOLDER_TEMPLATES`; `package.json.hbs` pins `@f0rbit/lint` exact; `deploy.yml.hbs` runs `bun run lint && bun run fmt:check` before tests. Same hand-sync rule as above: this only affects packages scaffolded *after* the change landed — pre-existing scaffolded packages need `f0rbit-lint init` run manually to adopt it. `src/index.ts`'s `WorkerEntrypoint` subclass needs a scoped `eslint.config.ts` override (`functional/no-classes` + `functional/no-this-expressions` off) since Cloudflare's Worker API is class-based with no functional-style escape hatch — the scaffolder template already carries this override, so hand-adopting packages should copy it rather than rediscovering it.
+
 ## Singleton Platform Model (Phase 12)
 
 - Platform services (pulse, vault, devpad-pipelines) are deployed ONCE — observability and control plane don't need staging/production splits. Workload Workers (scaffolded packages) DO have staging/production splits. `caller.environment` (from RPC identity arg) is the canonical marker; vault grants honor it; pulse events tag with it.
