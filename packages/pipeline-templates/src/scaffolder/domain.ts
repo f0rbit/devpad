@@ -70,18 +70,18 @@ const to_constant_case = (name: string): string => {
 };
 
 const rollout_block_for = (mode: RolloutMode): string => {
-	if (mode === "atomic") return `\t\trollout: { type: "atomic" },`;
-	return `\t\trollout: {\n\t\t\ttype: "gradual",\n\t\t\t// Override stages here, e.g. { name: "onebox", traffic: 5, bake: "1h" }.\n\t\t\t// Omitted stages keep their defaultGradual values.\n\t\t\tstages: [],\n\t\t},`;
+	if (mode === "atomic") return `\trollout: { type: "atomic" },`;
+	return `\trollout: {\n\t\ttype: "gradual",\n\t\t// Override stages here, e.g. { name: "onebox", traffic: 5, bake: "1h" }.\n\t\t// Omitted stages keep their defaultGradual values.\n\t\tstages: [],\n\t},`;
 };
 
 const gates_block_for = (mode: RolloutMode, gate: DefaultGateKind): string => {
 	if (mode === "atomic") {
-		if (gate === "manual") return `\t\tgates: {\n\t\t\t"staging→atomic-prod": manual(),\n\t\t},`;
-		if (gate === "auto") return `\t\tgates: {\n\t\t\t"staging→atomic-prod": auto(),\n\t\t},`;
-		return `\t\tgates: {\n\t\t\t"staging→atomic-prod": analysis({ template_id: "default" }),\n\t\t},`;
+		if (gate === "manual") return `\tgates: {\n\t\t"staging→atomic-prod": manual(),\n\t},`;
+		if (gate === "auto") return `\tgates: {\n\t\t"staging→atomic-prod": auto(),\n\t},`;
+		return `\tgates: {\n\t\t"staging→atomic-prod": analysis({ template_id: "default" }),\n\t},`;
 	}
 	const gate_call = gate === "manual" ? "manual()" : gate === "auto" ? "auto({ afterBake: true })" : `analysis({ template_id: "default" })`;
-	return `\t\tgates: {\n\t\t\t"staging→onebox": ${gate_call},\n\t\t\t"onebox→wave1": ${gate_call},\n\t\t\t"wave1→wave2": ${gate_call},\n\t\t\t"wave2→full": ${gate_call},\n\t\t},`;
+	return `\tgates: {\n\t\t"staging→onebox": ${gate_call},\n\t\t"onebox→wave1": ${gate_call},\n\t\t"wave1→wave2": ${gate_call},\n\t\t"wave2→full": ${gate_call},\n\t},`;
 };
 
 const gate_import_for = (gate: DefaultGateKind): string => {

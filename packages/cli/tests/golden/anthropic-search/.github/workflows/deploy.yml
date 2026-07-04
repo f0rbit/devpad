@@ -33,6 +33,8 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      - run: bun run lint && bun run fmt:check
+
       - run: bun run test
 
       - name: Build worker bundle

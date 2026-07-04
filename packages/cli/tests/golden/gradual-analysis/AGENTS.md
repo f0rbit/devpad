@@ -6,11 +6,11 @@ how runs roll out, but **does not deploy directly**.
 
 ## Hard rules
 
-- **Don't deploy manually.** No `wrangler deploy`, no `wrangler versions
-  deploy`. The orchestrator promotes between stages based on
-  `pipeline.ts`. Use `devpad pipelines run gradual-analysis` to trigger
-  a run; use `devpad pipelines approve <run-id> <stage>` if a transition
-  needs human gating.
+- **Don't deploy manually.** No `wrangler deploy`, no
+  `wrangler versions deploy`. The orchestrator promotes between stages
+  based on `pipeline.ts`. Use `devpad pipelines run gradual-analysis` to
+  trigger a run; use `devpad pipelines approve <run-id> <stage>` if a
+  transition needs human gating.
 - **All Anthropic calls go through `env.ANTHROPIC`.** This Worker holds
   no Anthropic API key. The vault Worker (separate Cloudflare account,
   separate repo at `~/dev/vault`) is the only system that does. Direct
@@ -46,6 +46,30 @@ bun dev               # wrangler dev on :8787
 bun test              # bun test
 bun e2e               # playwright against http://127.0.0.1:8787
 ```
+
+## Lint & format
+
+This package ships `@f0rbit/lint` — the same two-layer toolchain every
+f0rbit repo uses: oxlint is the fast syntactic gate, a thin typed ESLint
+layer (`eslint.config.ts`) catches the rest, and oxfmt owns all
+formatting.
+
+```sh
+bun run lint       # oxlint . && eslint .
+bun run lint:fix   # oxlint --fix . && eslint --fix .
+bun run fmt        # oxfmt .
+bun run fmt:check  # oxfmt --check . (CI gate)
+```
+
+- **oxfmt owns formatting.** Don't hand-format — run `bun run fmt`
+  before committing.
+- **Repo-specific exceptions go in `eslint.config.ts`'s `overrides`
+  array**, scoped by `files`, with a comment explaining why — never an
+  inline `eslint-disable` without one.
+- `.oxlintrc.json` and `.oxfmtrc.json` are byte-copies of the canonical
+  `@f0rbit/oxlint-config` / `@f0rbit/oxfmt-config` shapes. Don't hand-edit
+  `.oxfmtrc.json` — oxfmt has no `extends`, so drift is only fixable by
+  re-copying the canonical file.
 
 ## CI flow (set up by `.github/workflows/deploy.yml`)
 

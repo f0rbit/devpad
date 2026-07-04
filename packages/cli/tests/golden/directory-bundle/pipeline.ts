@@ -21,16 +21,16 @@
 import { auto, extendTemplate } from "@devpad/pipeline-templates";
 
 export default extendTemplate({
-		rollout: {
-			type: "gradual",
-			// Override stages here, e.g. { name: "onebox", traffic: 5, bake: "1h" }.
-			// Omitted stages keep their defaultGradual values.
-			stages: [],
-		},
-		gates: {
-			"staging→onebox": auto({ afterBake: true }),
-			"onebox→wave1": auto({ afterBake: true }),
-			"wave1→wave2": auto({ afterBake: true }),
-			"wave2→full": auto({ afterBake: true }),
-		},
+	rollout: {
+		type: "gradual",
+		// Override stages here, e.g. { name: "onebox", traffic: 5, bake: "1h" }.
+		// Omitted stages keep their defaultGradual values.
+		stages: [],
+	},
+	gates: {
+		"staging→onebox": auto({ afterBake: true }),
+		"onebox→wave1": auto({ afterBake: true }),
+		"wave1→wave2": auto({ afterBake: true }),
+		"wave2→full": auto({ afterBake: true }),
+	},
 });

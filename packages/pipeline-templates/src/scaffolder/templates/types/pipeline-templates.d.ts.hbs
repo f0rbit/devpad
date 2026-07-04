@@ -13,5 +13,9 @@ declare module "@devpad/pipeline-templates" {
 	export const manual: (opts?: { reason?: string }) => unknown;
 	export const auto: (opts?: { afterBake?: boolean }) => unknown;
 	export const analysis: (ref: { template_id: string }) => unknown;
-	export const extendTemplate: (overrides: ExtendTemplateOverrides) => { ok: boolean; value?: unknown; error?: DslError };
+	export const extendTemplate: (overrides: ExtendTemplateOverrides) => {
+		ok: boolean;
+		value?: unknown;
+		error?: DslError;
+	};
 }
