@@ -1,0 +1,30 @@
+{
+	"extends": ["./node_modules/@f0rbit/oxlint-config/oxlintrc.json"],
+	"ignorePatterns": [
+		"**/node_modules/**",
+		"**/dist/**",
+		"**/coverage/**",
+		".wrangler/**",
+		".alchemy/**",
+		".alchemy-quarantine/**",
+		"artifacts/**",
+		"test-results/**",
+		".playwright/**",
+		"database/**",
+		".plans/**",
+		// Golden fixtures are scaffolder OUTPUT snapshots asserted byte-for-byte by
+		// packages/cli's tests -- each one ships its own full lint toolchain wiring
+		// (own .oxlintrc.json/eslint.config.ts/tsconfig.json). Linting them from the
+		// root would double-lint against the wrong project graph and is meaningless
+		// for fixture data. See AGENTS.md lint/format section.
+		"packages/cli/tests/golden/**",
+		// Handlebars template stubs (*.hbs) for `devpad pipelines init` scaffolding --
+		// oxlint only matches real ts/js extensions so this is a no-op in practice,
+		// listed explicitly so the scope boundary is documented, not silent.
+		"packages/pipeline-templates/src/scaffolder/templates/**",
+		// oxlint/typescript-eslint don't parse Astro -- apps/{main,blog,media} pages
+		// are out of scope for this toolchain until Astro support exists upstream.
+		// Known scope boundary, not silent exclusion. Tracked in AGENTS.md.
+		"**/*.astro"
+	]
+}
