@@ -8,6 +8,7 @@ import Plus from "lucide-solid/icons/plus";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For, Index } from "solid-js";
 import { createStore } from "solid-js/store";
+import { log } from "@/lib/pulse";
 
 // Default configurations for helper tags
 const DEFAULT_CONFIGS = {
@@ -169,13 +170,13 @@ const TodoScannerConfig = ({
 				id,
 			});
 			if (!result.ok) {
-				console.error("Error saving config:", result.error);
+				log.error("Error saving config", undefined, { error: result.error });
 				setErrors("tags", "An error occurred while saving.");
 				return;
 			}
 			window.location.reload();
 		} catch (error) {
-			console.error("Error saving config:", error);
+			log.error("Error saving config", error);
 			setErrors("tags", "An error occurred while saving.");
 		}
 	};

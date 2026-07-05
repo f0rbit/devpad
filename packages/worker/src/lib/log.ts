@@ -21,7 +21,7 @@ type LogLevel = "raw" | "debug" | "info" | "notice" | "warning" | "error" | "cri
 const isError = (x: unknown): x is Error =>
 	x instanceof Error || (typeof x === "object" && x !== null && "stack" in (x as Record<string, unknown>));
 
-export interface PulseLog {
+export type PulseLog = {
 	raw(msg: string, attrs?: Record<string, unknown>): void;
 	debug(msg: string, attrs?: Record<string, unknown>): void;
 	info(msg: string, attrs?: Record<string, unknown>): void;
@@ -34,7 +34,7 @@ export interface PulseLog {
 	span(name: string): Span;
 	trace(name: string, attrs?: Record<string, unknown>): void;
 	flush(): Promise<void>;
-}
+};
 
 const NOOP_SPAN: Span = { end: () => {} };
 

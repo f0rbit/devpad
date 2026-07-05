@@ -11,11 +11,11 @@ import { createEffect, createSignal } from "solid-js";
 import GithubIcon from "@/components/solid/github-icon";
 import { LoadingIndicator, type LoadingState } from "@/components/solid/loading-indicator";
 
-interface Props {
+type Props = {
 	project_id: string;
 	initial: string;
 	has_github: boolean;
-}
+};
 
 const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 	const [current, setCurrent] = createSignal(initial);

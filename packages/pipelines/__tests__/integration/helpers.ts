@@ -249,7 +249,8 @@ export const post_json = async <T = unknown>(
 		body: JSON.stringify(body),
 	});
 	const res = await app.fetch(req);
-	return { status: res.status, body: (await res.json()) as Envelope<T> };
+	const raw: unknown = await res.json();
+	return { status: res.status, body: raw as Envelope<T> };
 };
 
 export const get_json = async <T = unknown>(
@@ -258,7 +259,8 @@ export const get_json = async <T = unknown>(
 ): Promise<{ status: number; body: Envelope<T> }> => {
 	const req = new Request(`http://run.local${path}`, { method: "GET" });
 	const res = await app.fetch(req);
-	return { status: res.status, body: (await res.json()) as Envelope<T> };
+	const raw: unknown = await res.json();
+	return { status: res.status, body: raw as Envelope<T> };
 };
 
 export const approve = async (

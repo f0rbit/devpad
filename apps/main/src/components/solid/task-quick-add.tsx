@@ -5,11 +5,11 @@ import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
 import { track } from "@/lib/pulse";
 
-interface Props {
+type Props = {
 	project_id: string;
 	user_id: string;
 	onCreated: (task: TaskWithDetails) => void;
-}
+};
 
 export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 	const [title, setTitle] = createSignal("");

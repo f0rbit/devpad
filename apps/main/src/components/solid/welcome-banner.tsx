@@ -9,16 +9,16 @@ import GithubIcon from "@/components/solid/github-icon";
 
 const DISMISS_KEY = "devpad_welcome_dismissed";
 
-interface Props {
+type Props = {
 	project_count: number;
-}
+};
 
-interface Step {
+type Step = {
 	icon: typeof FolderPlus;
 	title: string;
 	description: string;
 	href: string | null;
-}
+};
 
 const STEPS: Step[] = [
 	{

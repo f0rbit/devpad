@@ -36,7 +36,8 @@ describe("compile_template_to_json", () => {
 		const result = compile_template_to_json(atomic_template);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		const decoded = JSON.parse(result.value);
+		const decoded_raw: unknown = JSON.parse(result.value);
+		const decoded = decoded_raw as any;
 		expect(decoded.rollout.type).toBe("atomic");
 		expect(decoded.gates["staging→atomic-prod"]).toEqual({ type: "auto" });
 	});
@@ -45,7 +46,8 @@ describe("compile_template_to_json", () => {
 		const result = compile_template_to_json(gradual_template);
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
-		const decoded = JSON.parse(result.value);
+		const decoded_raw: unknown = JSON.parse(result.value);
+		const decoded = decoded_raw as any;
 		expect(decoded.rollout.type).toBe("gradual");
 		expect(decoded.rollout.stages).toHaveLength(3);
 		expect(decoded.gates["wave1→full"].type).toBe("analysis");

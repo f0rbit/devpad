@@ -54,11 +54,11 @@ export type VaultError =
 	| { kind: "grant_check_failed"; message: string }
 	| { kind: "upstream_error"; cause: { kind: string; message: string } };
 
-export interface AnthropicVaultBinding {
+export type AnthropicVaultBinding = {
 	messages: {
 		create(input: AnthropicMessageInput, identity: CallerIdentity): Promise<Result<AnthropicMessage, VaultError>>;
 	};
-}
+};
 
 export type PulseBinding = Fetcher;
 

@@ -1,6 +1,7 @@
 import type { ApiResultError } from "@devpad/api";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { TaskWithDetails } from "@devpad/schema";
+import { log } from "@/lib/pulse";
 
 export type Progress = TaskWithDetails["task"]["progress"];
 export type Priority = TaskWithDetails["task"]["priority"];
@@ -84,7 +85,7 @@ export async function updateTaskProgress(
 		owner_id: ownerId,
 	});
 	if (!result.ok) {
-		console.error("Error updating task progress:", result.error);
+		log.error("Error updating task progress", undefined, { error: result.error });
 		onError?.(result.error);
 		return;
 	}
@@ -103,7 +104,7 @@ export async function advanceTaskProgress(
 ): Promise<void> {
 	const nextProgress = getNextProgress(currentProgress);
 	if (!nextProgress) {
-		console.warn("Cannot advance task progress: already at final state");
+		log.warning("Cannot advance task progress: already at final state");
 		return;
 	}
 

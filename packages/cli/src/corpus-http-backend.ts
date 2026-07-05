@@ -79,7 +79,14 @@ const post_envelope = async <T>(input: PostInput): Promise<Result<T, CorpusHttpU
 	if (!response.ok) {
 		return err<CorpusHttpUploadError>({ kind: "http", status: response.status, status_text: response.statusText });
 	}
-	const body = (await response.json().catch(() => null)) as { ok?: boolean; value?: T; error?: unknown } | null;
+	let raw_body: unknown = null;
+	try {
+		const parsed: unknown = await response.json();
+		raw_body = parsed;
+	} catch {
+		raw_body = null;
+	}
+	const body = raw_body as { ok?: boolean; value?: T; error?: unknown } | null;
 	if (body === null || body.ok !== true || body.value === undefined) {
 		return err<CorpusHttpUploadError>({ kind: "decode", message: "unexpected response envelope" });
 	}

@@ -14,15 +14,15 @@ export type StoreError = {
 
 export type GateError = EmitError | StoreError;
 
-export interface PulseEmitter {
+export type PulseEmitter = {
 	emit(event: PulseEvent): Promise<Result<void, EmitError>>;
-}
+};
 
-export interface ApprovalStore {
+export type ApprovalStore = {
 	write_pending(run_id: string, stage: string, scope?: string): Promise<Result<void, StoreError>>;
 	read_decision(run_id: string, stage: string): Promise<Result<Decision | null, StoreError>>;
 	write_decision(run_id: string, stage: string, decision: Decision): Promise<Result<void, StoreError>>;
-}
+};
 
 export type PulseEvent =
 	| {
@@ -48,6 +48,6 @@ export type PulseEvent =
 
 export type Decision = "approved" | "denied";
 
-export interface GateEvaluator {
+export type GateEvaluator = {
 	evaluate(ctx: StageContext): Promise<Result<GateVerdict, GateError>>;
-}
+};

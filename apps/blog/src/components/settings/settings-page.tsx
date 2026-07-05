@@ -21,17 +21,17 @@ type Token = {
 	created_at: string;
 };
 
-interface IntegrationDisplay {
+type IntegrationDisplay = {
 	id: string;
 	name: string;
 	connected: boolean;
 	username?: string;
-}
+};
 
-interface SettingsPageProps {
+type SettingsPageProps = {
 	initialUser?: User | null;
 	initialTokens?: Token[];
-}
+};
 
 const integrations: IntegrationDisplay[] = [
 	{ id: "devto", name: "DEV.to", connected: false },

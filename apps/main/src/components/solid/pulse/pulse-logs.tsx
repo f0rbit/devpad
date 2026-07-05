@@ -1,7 +1,7 @@
 import { Badge, Empty, Input, Select } from "@f0rbit/ui";
 import { createMemo, createSignal, For, Show } from "solid-js";
 
-interface LogEntry {
+type LogEntry = {
 	id?: string;
 	ts?: number | string;
 	level?: string;
@@ -9,14 +9,14 @@ interface LogEntry {
 	name?: string;
 	route?: string;
 	metadata?: Record<string, unknown>;
-}
+};
 
-interface PulseLogsProps {
+type PulseLogsProps = {
 	projectId: string;
 	projectSlug: string;
 	logs: LogEntry[] | null;
 	error?: string | null;
-}
+};
 
 const LEVELS = ["all", "fatal", "error", "warn", "info", "debug", "trace"] as const;
 

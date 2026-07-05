@@ -14,6 +14,7 @@ import SquareDot from "lucide-solid/icons/square-dot";
 import Target from "lucide-solid/icons/target";
 import { createSignal, For, onMount } from "solid-js";
 import { TagBadge } from "@/components/solid/tag-editor";
+import { log } from "@/lib/pulse";
 import {
 	advanceTaskProgress,
 	formatDueDate,
@@ -23,7 +24,7 @@ import {
 	isProgressClickable,
 } from "@/utils/task-status";
 
-interface Props {
+type Props = {
 	task: TaskWithDetails;
 	project: Project | null;
 	user_tags: UpsertTag[];
@@ -31,7 +32,7 @@ interface Props {
 	class?: string;
 	update?: (id: string, updates: Partial<Task>) => void;
 	draw_project?: boolean;
-}
+};
 
 const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	const [goalName, setGoalName] = createSignal<string | null>(null);
@@ -44,7 +45,7 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 				setGoalName(result.value.name);
 			}
 		} catch (error) {
-			console.error("Failed to fetch goal:", error);
+			log.error("Failed to fetch goal", error);
 		}
 	};
 

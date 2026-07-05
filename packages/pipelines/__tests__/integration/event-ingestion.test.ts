@@ -162,9 +162,10 @@ const post_event = async (
 			body: typeof body === "string" ? body : JSON.stringify(body),
 		}),
 	);
+	const raw_body: unknown = await res.json();
 	return {
 		status: res.status,
-		body: (await res.json()) as {
+		body: raw_body as {
 			ok: boolean;
 			value?: { event_id: string; duplicated: boolean };
 			error?: { code: string } & Record<string, unknown>;
@@ -320,7 +321,8 @@ describe("GET /runs/:id/events", () => {
 
 		const res = await setup.app.fetch(new Request(`http://run.local/runs/${SEEDED_RUN_ID}/events`));
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { ok: boolean; value: Array<{ kind: string; stage_name: string }> };
+		const raw_body: unknown = await res.json();
+		const body = raw_body as { ok: boolean; value: Array<{ kind: string; stage_name: string }> };
 		expect(body.ok).toBe(true);
 		expect(body.value.length).toBe(2);
 

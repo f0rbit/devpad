@@ -15,21 +15,21 @@ import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
 
-interface Subscription {
+type Subscription = {
 	id: string;
 	name?: string;
 	channel?: { kind?: string; webhook_url?: string } | null;
 	filter?: Record<string, unknown> | null;
 	cooldown_seconds?: number | null;
 	created_at?: number | string;
-}
+};
 
-interface PulseSubscriptionsProps {
+type PulseSubscriptionsProps = {
 	projectId: string;
 	projectSlug: string;
 	subscriptions: Subscription[];
 	error?: string | null;
-}
+};
 
 const LEVELS = ["any", "fatal", "error", "warn", "info"] as const;
 

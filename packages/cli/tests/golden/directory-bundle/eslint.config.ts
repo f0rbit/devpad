@@ -9,10 +9,17 @@ export default define_lint_config({
 			// WorkerEntrypoint is Cloudflare's mandated base class for a Worker
 			// entrypoint — there is no functional-style escape hatch for it, and
 			// a real implementation needs `this.env` to reach its bindings.
+			// `no-console` is also off here: `emit_pulse`'s two console.error
+			// calls are the fire-and-forget fallback for when pulse itself (the
+			// only observability channel — see this file's own docstring "All
+			// observability flows to env.PULSE") is unreachable or errors. There
+			// is no other channel to report to at that point, so this is a
+			// permanent, deliberate exception, not general app logging debt.
 			files: ["src/index.ts"],
 			rules: {
 				"functional/no-classes": "off",
 				"functional/no-this-expressions": "off",
+				"no-console": "off",
 			},
 		},
 	],

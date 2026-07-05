@@ -3,14 +3,14 @@ import type { PipelineAnalysisTemplate } from "@devpad/schema";
 import { Button, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
 import { createEffect, createSignal, Show } from "solid-js";
 
-interface AnalysisTemplateEditorProps {
+type AnalysisTemplateEditorProps = {
 	open: boolean;
 	mode: "create" | "edit";
 	template: PipelineAnalysisTemplate | null;
 	owner_id: string;
 	onClose: () => void;
 	onSaved: (saved: PipelineAnalysisTemplate) => void;
-}
+};
 
 const threshold_dsl_string = (raw: unknown): string => {
 	if (typeof raw === "string") return raw;

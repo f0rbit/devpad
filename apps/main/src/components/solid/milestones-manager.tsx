@@ -6,13 +6,13 @@ import Edit from "lucide-solid/icons/edit";
 import Plus from "lucide-solid/icons/plus";
 import { For, Show } from "solid-js";
 
-interface Props {
+type Props = {
 	projectId: string;
 	projectSlug: string;
 	initialMilestones?: Milestone[];
 	initialGoalsMap?: Record<string, Goal[]>;
 	goalTaskCounts?: Record<string, { total: number; completed: number }>;
-}
+};
 
 const formatDate = (dateString?: string | null) => {
 	if (!dateString) return null;

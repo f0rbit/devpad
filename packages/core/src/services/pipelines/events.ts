@@ -57,17 +57,17 @@ export type IngestEventOutput = {
  * but defined locally so the core service has no dependency on the
  * orchestrator Worker package.
  */
-export interface EventDoRouter {
+export type EventDoRouter = {
 	fetch(run_id: string, path: string, body: unknown): Promise<Response>;
-}
+};
 
 /**
  * Pulse emitter accepting arbitrary `{ event, ... }` payloads —
  * fire-and-forget, so the return type intentionally loose.
  */
-export interface EventPulseEmitter {
+export type EventPulseEmitter = {
 	emit(event: { event: string } & Record<string, unknown>): Promise<unknown>;
-}
+};
 
 export type EventDeps = {
 	db: Database;

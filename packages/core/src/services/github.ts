@@ -10,7 +10,7 @@ type GitHubBranchFromAPI = Endpoints["GET /repos/{owner}/{repo}/branches"]["resp
 type GitHubRepoListItem = Endpoints["GET /user/repos"]["response"]["data"][0];
 type GitHubRepoMetadata = Endpoints["GET /repos/{owner}/{repo}"]["response"]["data"];
 
-export interface GitHubBranch extends GitHubBranchFromAPI {
+export type GitHubBranch = {
 	commit: GitHubBranchFromAPI["commit"] & {
 		message: string;
 		author_name: string;
@@ -19,7 +19,7 @@ export interface GitHubBranch extends GitHubBranchFromAPI {
 		avatar_url: string | null;
 		author_user: string;
 	};
-}
+} & GitHubBranchFromAPI;
 
 function createOctokit(access_token: string): Octokit {
 	return new Octokit({ auth: access_token });

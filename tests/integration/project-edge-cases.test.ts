@@ -111,7 +111,8 @@ describe("Project Edge Cases Integration", () => {
 				});
 
 				if (response.ok) {
-					const publicProjects: any[] = await response.json();
+					const raw: unknown = await response.json();
+					const publicProjects = raw as any[];
 					expect(Array.isArray(publicProjects)).toBe(true);
 					for (const proj of publicProjects) {
 						expect(proj.visibility).toBe("PUBLIC");
@@ -283,7 +284,8 @@ describe("Project Edge Cases Integration", () => {
 				});
 
 				expect(response.status).toBe(400);
-				const errorData = (await response.json()) as any;
+				const raw: unknown = await response.json();
+				const errorData = raw as any;
 				expect(errorData.error).toContain("repo_url");
 			} catch {
 				console.warn("Specification fetch endpoint not available");

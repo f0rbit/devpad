@@ -35,18 +35,19 @@ async function createTestMilestone(projectId: string, milestoneData?: Partial<Up
 		throw new Error(`Failed to create milestone: ${String(response.status)}`);
 	}
 
-	const milestone = await response.json();
+	const milestoneRaw: unknown = await response.json();
+	const milestone = milestoneRaw as Milestone;
 	t.cleanup.registerCleanup("milestones", async () => {
 		try {
-			const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${String(milestone.id)}`, {
+			const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}`, {
 				method: "DELETE",
 				headers: { Authorization: `Bearer ${t.client["api_key_field"]}` },
 			});
 			if (deleteResponse.ok) {
-				console.log(`Cleaned up milestone: ${String(milestone.name)} (${String(milestone.id)})`);
+				console.log(`Cleaned up milestone: ${milestone.name} (${milestone.id})`);
 			}
 		} catch (error) {
-			console.log(`Failed to cleanup milestone ${String(milestone.id)}:`, error);
+			console.log(`Failed to cleanup milestone ${milestone.id}:`, error);
 		}
 	});
 	return milestone;
@@ -74,18 +75,19 @@ async function createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal
 		throw new Error(`Failed to create goal: ${String(response.status)}`);
 	}
 
-	const goal = await response.json();
+	const goalRaw: unknown = await response.json();
+	const goal = goalRaw as Goal;
 	t.cleanup.registerCleanup("goals", async () => {
 		try {
-			const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${String(goal.id)}`, {
+			const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${goal.id}`, {
 				method: "DELETE",
 				headers: { Authorization: `Bearer ${t.client["api_key_field"]}` },
 			});
 			if (deleteResponse.ok) {
-				console.log(`Cleaned up goal: ${String(goal.name)} (${String(goal.id)})`);
+				console.log(`Cleaned up goal: ${goal.name} (${goal.id})`);
 			}
 		} catch (error) {
-			console.log(`Failed to cleanup goal ${String(goal.id)}:`, error);
+			console.log(`Failed to cleanup goal ${goal.id}:`, error);
 		}
 	});
 	return goal;
@@ -150,7 +152,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(response.ok).toBe(true);
-			const milestones = await response.json();
+			const milestonesRaw: unknown = await response.json();
+			const milestones = milestonesRaw as Milestone[];
 			expectValidArray(milestones, (milestone: Milestone) => {
 				expect(milestone.id).toMatch(/^milestone_/);
 				expect(milestone.name).toBeDefined();
@@ -168,7 +171,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(response.ok).toBe(true);
-			const milestone = await response.json();
+			const milestoneRaw: unknown = await response.json();
+			const milestone = milestoneRaw as Milestone;
 			expect(milestone.id).toBe(createdMilestone.id);
 			expect(milestone.name).toBe(createdMilestone.name);
 		});
@@ -215,7 +219,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(response.ok).toBe(true);
-			const milestones = await response.json();
+			const milestonesRaw: unknown = await response.json();
+			const milestones = milestonesRaw as Milestone[];
 			expect(Array.isArray(milestones)).toBe(true);
 			expect(milestones.length).toBeGreaterThanOrEqual(2);
 
@@ -266,7 +271,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(response.ok).toBe(true);
-			const goals = await response.json();
+			const goalsRaw: unknown = await response.json();
+			const goals = goalsRaw as Goal[];
 			expectValidArray(goals, (goal: Goal) => {
 				expect(goal.id).toMatch(/^goal_/);
 				expect(goal.name).toBeDefined();
@@ -285,7 +291,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(response.ok).toBe(true);
-			const goal = await response.json();
+			const goalRaw: unknown = await response.json();
+			const goal = goalRaw as Goal;
 			expect(goal.id).toBe(createdGoal.id);
 			expect(goal.name).toBe(createdGoal.name);
 			expect(goal.milestone_id).toBe(testMilestone.id);
@@ -334,7 +341,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(response.ok).toBe(true);
-			const goals = await response.json();
+			const goalsRaw: unknown = await response.json();
+			const goals = goalsRaw as Goal[];
 			expect(Array.isArray(goals)).toBe(true);
 			expect(goals.length).toBeGreaterThanOrEqual(2);
 
@@ -437,7 +445,8 @@ describe("Milestones & Goals Integration Tests", () => {
 			});
 
 			expect(milestoneGoalsResponse.ok).toBe(true);
-			const milestoneGoals = await milestoneGoalsResponse.json();
+			const milestoneGoalsRaw: unknown = await milestoneGoalsResponse.json();
+			const milestoneGoals = milestoneGoalsRaw as Goal[];
 			expect(milestoneGoals.some((g: Goal) => g.id === goal.id)).toBe(true);
 		});
 

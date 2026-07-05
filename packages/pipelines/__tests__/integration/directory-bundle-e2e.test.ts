@@ -153,7 +153,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 					const buf = await read_body(req);
 					let parsed: unknown;
 					try {
-						parsed = JSON.parse(buf.toString("utf8"));
+						const raw_parsed: unknown = JSON.parse(buf.toString("utf8"));
+						parsed = raw_parsed;
 					} catch {
 						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 						return;
@@ -218,7 +219,7 @@ const stop_test_server = async (h: ServerHandle): Promise<void> =>
 // shape.
 // ---------------------------------------------------------------------------
 
-interface Fixtures {
+type Fixtures = {
 	dir: string;
 	bundle_dir: string;
 	assets_dir: string;
@@ -232,7 +233,7 @@ interface Fixtures {
 	main_module_bytes: Uint8Array;
 	chunk_bytes: Uint8Array;
 	wasm_bytes: Uint8Array;
-}
+};
 
 const setup_fixtures = (): Fixtures => {
 	const dir = mkdtempSync(join(tmpdir(), "e2e-dirbundle-"));
@@ -345,7 +346,8 @@ const read_blob_text = async (backend: Backend, ref: string): Promise<string> =>
 const read_version_set_manifest = async (backend: Backend, version: string): Promise<Record<string, unknown>> => {
 	const meta = await backend.metadata.get("version-sets", version);
 	if (!meta.ok) throw new Error("version-set metadata missing");
-	return JSON.parse(await read_blob_text(backend, meta.value.data_key)) as Record<string, unknown>;
+	const raw: unknown = JSON.parse(await read_blob_text(backend, meta.value.data_key));
+	return raw as Record<string, unknown>;
 };
 
 const find_version_for_package = async (backend: Backend, package_name: string): Promise<string> => {

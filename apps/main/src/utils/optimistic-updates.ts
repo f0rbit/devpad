@@ -11,7 +11,7 @@ function getUserFriendlyErrorMessage(error: unknown): string {
 
 export type UpdateState = "idle" | "loading" | "success" | "error";
 
-export interface OptimisticUpdateOptions<T> {
+export type OptimisticUpdateOptions<T> = {
 	/** The initial data */
 	initialData: T;
 	/** Function to call to persist the update to the server */
@@ -24,9 +24,9 @@ export interface OptimisticUpdateOptions<T> {
 	onSuccess?: (data: T) => void;
 	/** Callback when update fails */
 	onError?: (error: unknown, originalData: T) => void;
-}
+};
 
-export interface OptimisticUpdateResult<T> {
+export type OptimisticUpdateResult<T> = {
 	/** Current data (optimistically updated) */
 	data: () => T;
 	/** Current update state */
@@ -45,7 +45,7 @@ export interface OptimisticUpdateResult<T> {
 	isSuccess: () => boolean;
 	/** Whether in error state */
 	isError: () => boolean;
-}
+};
 
 /**
  * Hook for optimistic updates with automatic state management

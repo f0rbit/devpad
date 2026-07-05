@@ -53,12 +53,12 @@ export const decodeOAuthStateData = <T extends Record<string, unknown>>(
 	if (!base64Result.ok) return base64Result;
 
 	const jsonResult = try_catch(
-		() => JSON.parse(base64Result.value) as OAuthState<T>,
+		() => JSON.parse(base64Result.value) as unknown,
 		(): ParseError => ({ kind: "parse_error", message: "Invalid JSON in OAuth state" }),
 	);
 	if (!jsonResult.ok) return jsonResult;
 
-	const stateData = jsonResult.value;
+	const stateData = jsonResult.value as OAuthState<T>;
 
 	if (!stateData.user_id) return errors.badRequest("Missing user_id in OAuth state");
 	if (!stateData.profile_id) return errors.badRequest("Missing profile_id in OAuth state");

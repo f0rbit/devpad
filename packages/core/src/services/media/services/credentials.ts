@@ -94,6 +94,12 @@ const get = async (
 		return errors.encryptionError("decrypt", "Failed to decrypt client secret");
 	}
 
+	let metadata: Record<string, unknown> | null = null;
+	if (row.metadata) {
+		const raw_metadata: unknown = JSON.parse(row.metadata);
+		metadata = raw_metadata as Record<string, unknown>;
+	}
+
 	return ok({
 		id: row.id,
 		profileId: row.profile_id,
@@ -101,7 +107,7 @@ const get = async (
 		clientId: row.client_id,
 		clientSecret: decryptResult.value,
 		redirectUri: row.redirect_uri,
-		metadata: row.metadata ? JSON.parse(row.metadata) : null,
+		metadata,
 		isVerified: row.is_verified ?? false,
 	});
 };

@@ -2,32 +2,32 @@ import { Empty, Stat } from "@f0rbit/ui";
 import { For, Show } from "solid-js";
 import PulseChart from "./pulse-chart";
 
-interface RoutePerf {
+type RoutePerf = {
 	route?: string;
 	count?: number;
 	p50?: number;
 	p95?: number;
 	p99?: number;
 	avg?: number;
-}
+};
 
-interface SeriesPoint {
+type SeriesPoint = {
 	t: number;
 	value: number;
-}
+};
 
-export interface LatencyData {
+export type LatencyData = {
 	overall?: { p50?: number; p95?: number; p99?: number; avg?: number; count?: number };
 	series?: { p50?: SeriesPoint[]; p95?: SeriesPoint[]; p99?: SeriesPoint[] };
 	routes?: RoutePerf[];
-}
+};
 
-interface PulseRequestsProps {
+type PulseRequestsProps = {
 	projectId: string;
 	projectSlug: string;
 	latency: LatencyData | null;
 	error?: string | null;
-}
+};
 
 const fmtMs = (n: number | undefined): string => (typeof n === "number" ? `${String(Math.round(n))} ms` : "—");
 

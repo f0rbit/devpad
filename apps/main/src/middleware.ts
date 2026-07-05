@@ -31,7 +31,10 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 		let history: string[] = [];
 
 		try {
-			history = historyCookie ? JSON.parse(decodeURIComponent(historyCookie)) : [];
+			if (historyCookie) {
+				const raw_history: unknown = JSON.parse(decodeURIComponent(historyCookie));
+				history = raw_history as string[];
+			}
 		} catch {
 			history = [];
 		}

@@ -190,6 +190,7 @@ describe("scaffold_package — typecheck", () => {
 					"@playwright/test": ["./types-stub.d.ts"],
 					alchemy: ["./types-stub.d.ts"],
 					"alchemy/cloudflare": ["./types-stub.d.ts"],
+					zod: ["./types-stub.d.ts"],
 				},
 			},
 			include: ["src/**/*.ts", "infra.ts", "pipeline.ts", "grants.ts", "e2e/**/*.ts", "types-stub.d.ts"],
@@ -206,6 +207,7 @@ describe("scaffold_package — typecheck", () => {
 			"declare module 'alchemy' { type Alchemy = { stage: string; finalize(): Promise<void>; secret: { env: Record<string, string | undefined> } }; type AlchemyFn = ((name: string) => Promise<Alchemy>) & { secret: { env: Record<string, string | undefined> } }; const fn: AlchemyFn; export default fn; }",
 			"declare module 'alchemy/cloudflare' { export type Bindings = Record<string, unknown>; export const Worker: (name: string, opts: any) => Promise<any>; export const WorkerRef: (opts: { service: string }) => any; export const Secret: (name: string, opts: any) => Promise<any>; export const SecretsStore: (name: string, opts: any) => Promise<any>; }",
 			"declare module '@f0rbit/corpus' { export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E }; export const format_error: (e: unknown) => string; export const try_catch_async: <T, E>(fn: () => Promise<T>, on_error: (e: unknown) => E) => Promise<Result<T, E>>; }",
+			"declare module 'zod' { type ZodType<T = any> = { parse: (v: unknown) => T; safeParse: (v: unknown) => { success: true; data: T } | { success: false; error: any }; optional: () => ZodType<T | undefined>; nullable: () => ZodType<T | null>; }; export const z: { object: <T extends Record<string, any>>(shape: T) => ZodType<{ [K in keyof T]: any }>; string: () => ZodType<string>; number: () => ZodType<number>; boolean: () => ZodType<boolean>; unknown: () => ZodType<unknown>; }; }",
 			"export {};",
 		].join("\n");
 		await writeFile(path.join(target, "types-stub.d.ts"), stub);

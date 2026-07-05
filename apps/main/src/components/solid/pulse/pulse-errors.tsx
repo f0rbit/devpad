@@ -2,7 +2,7 @@ import { Badge, Empty } from "@f0rbit/ui";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createSignal, For, Show } from "solid-js";
 
-interface ErrorIssue {
+type ErrorIssue = {
 	id?: string;
 	fingerprint?: string;
 	message?: string;
@@ -13,14 +13,14 @@ interface ErrorIssue {
 	level?: string;
 	route?: string;
 	sample?: { stack?: string; metadata?: Record<string, unknown>; ts?: number };
-}
+};
 
-interface PulseErrorsProps {
+type PulseErrorsProps = {
 	projectId: string;
 	projectSlug: string;
 	issues: ErrorIssue[] | null;
 	error?: string | null;
-}
+};
 
 const fmtTime = (v: number | string | undefined): string => {
 	if (v == null) return "—";

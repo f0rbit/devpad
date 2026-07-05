@@ -129,7 +129,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				const buf = await read_body(req);
 				let parsed_body: unknown = null;
 				try {
-					parsed_body = JSON.parse(buf.toString("utf8"));
+					const raw_body: unknown = JSON.parse(buf.toString("utf8"));
+					parsed_body = raw_body;
 				} catch {
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
@@ -196,10 +197,11 @@ const read_blob_text = async (backend: Backend, ref: string): Promise<string> =>
 const read_version_set_manifest = async (backend: Backend, version: string): Promise<Record<string, unknown>> => {
 	const meta = await backend.metadata.get("version-sets", version);
 	if (!meta.ok) throw new Error("version-set metadata missing");
-	return JSON.parse(await read_blob_text(backend, meta.value.data_key)) as Record<string, unknown>;
+	const raw: unknown = JSON.parse(await read_blob_text(backend, meta.value.data_key));
+	return raw as Record<string, unknown>;
 };
 
-interface Fixtures {
+type Fixtures = {
 	dir: string;
 	bundle_dir: string;
 	assets_dir: string;
@@ -207,7 +209,7 @@ interface Fixtures {
 	pipeline: string;
 	grants: string;
 	output: string;
-}
+};
 
 const setup_fixtures = (): Fixtures => {
 	const dir = mkdtempSync(join(tmpdir(), "cli-3a-"));

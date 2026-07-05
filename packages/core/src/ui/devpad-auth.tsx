@@ -1,10 +1,10 @@
 import type { AuthUser } from "@devpad/schema/bindings";
 import { createSignal } from "solid-js";
 
-export interface DevpadAuthProps {
+export type DevpadAuthProps = {
 	user: AuthUser;
 	variant?: "main" | "sub";
-}
+};
 
 export function DevpadAuth(props: DevpadAuthProps) {
 	const [loading, setLoading] = createSignal(false);

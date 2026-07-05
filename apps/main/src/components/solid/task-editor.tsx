@@ -11,6 +11,7 @@ import { GoalSelector } from "@/components/solid/goal-selector";
 import HistoryTimeline from "@/components/solid/history-timeline";
 import { ProjectSelector } from "@/components/solid/project-selector";
 import { TagPicker } from "@/components/solid/tag-picker";
+import { log } from "@/lib/pulse";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { getProjectContext } from "@/utils/project-context";
 import {
@@ -22,7 +23,7 @@ import {
 	type Visibility,
 } from "@/utils/task-status";
 
-interface Props {
+type Props = {
 	task: TaskWithDetails | null;
 	user_tags: TagWithTypedColor[];
 	current_tags: UpsertTag[];
@@ -31,7 +32,7 @@ interface Props {
 	project_map: Record<string, Project>;
 	default_project_id?: string | null;
 	default_goal_id?: string | null;
-}
+};
 
 const TaskEditor = ({
 	task,
@@ -88,11 +89,11 @@ const TaskEditor = ({
 				if (new_id) {
 					window.location.href = `/todo/${new_id}`;
 				} else {
-					console.error("Failed to get new task ID from result:", result);
+					log.error("Failed to get new task ID from result", undefined, { result });
 				}
 			}
 		} catch (error) {
-			console.error("Error saving task:", error);
+			log.error("Error saving task", error);
 			setRequestState("error");
 		}
 

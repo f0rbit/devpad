@@ -6,6 +6,21 @@ import { omit } from "../shared/test-utils";
 import { TestDataFactory } from "./factories";
 import { getSharedApiClient, TEST_BASE_URL, TEST_USER_ID } from "./setup";
 
+// Helper function to extract response from MCP result
+function extractMCPResponse(result: any): any {
+	// Handle in-memory mode response format
+	if (result?.result?.content?.[0]?.text) {
+		const response_text = result.result.content[0].text;
+		if (response_text.startsWith("Error:")) {
+			throw new Error(`MCP call failed: ${String(response_text)}`);
+		}
+		const raw: unknown = JSON.parse(response_text);
+		return raw as any;
+	}
+
+	throw new Error(`Invalid MCP response format: ${JSON.stringify(result)}`);
+}
+
 describe("MCP Server Integration", () => {
 	let mcpClient: MCPTestClient;
 	let apiClient: ApiClient;
@@ -67,7 +82,7 @@ describe("MCP Server Integration", () => {
 		expect(createResponse.result).toBeDefined();
 		expect(createResponse.result.content[0].text).toContain(testProjectId);
 
-		const createdProject = JSON.parse(createResponse.result.content[0].text);
+		const createdProject = extractMCPResponse(createResponse);
 		expect(createdProject.name).toBe("MCP Test Project");
 		expect(createdProject.visibility).toBe("PRIVATE");
 
@@ -88,7 +103,7 @@ describe("MCP Server Integration", () => {
 		);
 
 		expect(updateResponse.result).toBeDefined();
-		const updatedProject = JSON.parse(updateResponse.result.content[0].text);
+		const updatedProject = extractMCPResponse(updateResponse);
 		expect(updatedProject.name).toBe("MCP Test Project Updated");
 		expect(updatedProject.visibility).toBe("PUBLIC");
 		expect(updatedProject.status).toBe("LIVE");
@@ -107,7 +122,7 @@ describe("MCP Server Integration", () => {
 
 		const projectResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
-		const project = JSON.parse(projectResponse.result.content[0].text);
+		const project = extractMCPResponse(projectResponse);
 		cleanupManager.registerProject(project);
 
 		// Create tasks with different statuses using TestDataFactory for better structure
@@ -152,7 +167,7 @@ describe("MCP Server Integration", () => {
 			expect(response.result).toBeDefined();
 			expect(response.result.isError).toBeUndefined();
 
-			const createdTask = JSON.parse(response.result.content[0].text);
+			const createdTask = extractMCPResponse(response);
 			expect(createdTask.task.title).toBe(task.title);
 			expect(createdTask.task.progress).toBe(task.progress);
 			expect(createdTask.task.priority).toBe(task.priority);
@@ -173,7 +188,7 @@ describe("MCP Server Integration", () => {
 		});
 
 		expect(listResponse.result).toBeDefined();
-		const tasks = JSON.parse(listResponse.result.content[0].text);
+		const tasks = extractMCPResponse(listResponse);
 
 		// Should have the 3 tasks we created
 		expect(tasks).toBeArray();
@@ -199,7 +214,7 @@ describe("MCP Server Integration", () => {
 
 		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
-		const createdProject = JSON.parse(createResponse.result.content[0].text);
+		const createdProject = extractMCPResponse(createResponse);
 		cleanupManager.registerProject(createdProject);
 
 		// Use the created project's ID for lookup instead of name since name lookups seem to have timing issues
@@ -210,7 +225,7 @@ describe("MCP Server Integration", () => {
 		expect(getResponse.result).toBeDefined();
 		expect(getResponse.result.isError).toBeUndefined();
 
-		const project = JSON.parse(getResponse.result.content[0].text);
+		const project = extractMCPResponse(getResponse);
 		expect(project.project_id).toBe(testProjectId);
 		expect(project.name).toBe("MCP Test Project");
 		expect(project.id).toBe(createdProject.id);
@@ -249,14 +264,14 @@ describe("MCP Server Integration", () => {
 
 		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
-		const createdProject = JSON.parse(createResponse.result.content[0].text);
+		const createdProject = extractMCPResponse(createResponse);
 		cleanupManager.registerProject(createdProject);
 
 		// Get project via MCP by ID (more reliable than by name)
 		const mcpResponse = await mcpClient.callTool("devpad_projects_get", {
 			id: createdProject.id,
 		});
-		const mcpProject = JSON.parse(mcpResponse.result.content[0].text);
+		const mcpProject = extractMCPResponse(mcpResponse);
 
 		// Get same project via API client by ID
 		const apiResult = await apiClient.projects.getById(createdProject.id);

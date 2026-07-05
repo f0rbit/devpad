@@ -14,7 +14,7 @@ import { createHash } from "crypto";
 import type { WalkedAssets } from "./asset-walker";
 import type { WalkedBundle } from "./bundle-walker";
 
-export interface ArtifactInputs {
+export type ArtifactInputs = {
 	package_name: string;
 	/** Path to the single-file Worker bundle. Mutually exclusive with `bundle_dir_path`. */
 	bundle_path?: string;
@@ -27,12 +27,12 @@ export interface ArtifactInputs {
 	grants_path: string;
 	git_sha?: string;
 	compatibility_date?: string;
-}
+};
 
-export interface ArtifactUploadError {
+export type ArtifactUploadError = {
 	kind: "file_error" | "validation_error" | "schema_error";
 	message: string;
-}
+};
 
 export function compute_hash(content: Buffer): string {
 	return createHash("sha256").update(content).digest("hex");
@@ -94,7 +94,7 @@ export type VersionSetManifestWithBundle = VersionSetManifest & {
 	};
 };
 
-export interface BuildManifestArtifacts {
+export type BuildManifestArtifacts = {
 	/** Single-file bundle bytes. Set when `bundle_ref` is set. */
 	bundle?: Buffer;
 	/** Corpus ref for the single-file Worker bundle. Mutually exclusive with `bundle_manifest_ref`. */
@@ -114,7 +114,7 @@ export interface BuildManifestArtifacts {
 	template_ref?: string;
 	/** Corpus ref for the {@link AssetManifest} blob — emitted when `--assets-dir` was supplied. */
 	asset_manifest_ref?: string;
-}
+};
 
 export function build_manifest(
 	inputs: ArtifactInputs,
@@ -128,7 +128,8 @@ export function build_manifest(
 		let manifest_data = artifacts.manifest;
 		if (typeof manifest_data === "string") {
 			try {
-				manifest_data = JSON.parse(manifest_data);
+				const parsed: unknown = JSON.parse(manifest_data);
+				manifest_data = parsed as typeof artifacts.manifest;
 			} catch {
 				return err({
 					kind: "schema_error",
@@ -278,11 +279,11 @@ export function build_asset_manifest_from_walk(
 	return ok(parsed.data);
 }
 
-export interface VersionSetOutput {
+export type VersionSetOutput = {
 	id: string;
 	version: string;
 	package: string;
-}
+};
 
 // ─── Pipeline template compilation ──────────────────────────────────────
 //
@@ -334,7 +335,8 @@ export function compile_template_to_json(template: PipelineTemplate): Result<str
 export function parse_template_from_json(json: string): Result<PipelineTemplate, CompileError> {
 	let decoded: unknown;
 	try {
-		decoded = JSON.parse(json);
+		const parsed_json: unknown = JSON.parse(json);
+		decoded = parsed_json;
 	} catch (e) {
 		return err({ kind: "not_a_template", message: `invalid JSON: ${e instanceof Error ? e.message : String(e)}` });
 	}

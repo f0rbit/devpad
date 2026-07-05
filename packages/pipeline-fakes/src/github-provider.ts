@@ -37,7 +37,7 @@ export type WorkflowRun = {
  * Mirrors `octokit.rest.{repos, actions}` shapes so the production provider is a
  * thin Octokit wrapper.
  */
-export interface GithubProvider {
+export type GithubProvider = {
 	repo: {
 		get(input: { owner: string; repo: string }): Promise<Result<GithubRepo, GithubError>>;
 	};
@@ -49,4 +49,4 @@ export interface GithubProvider {
 			list(input: { owner: string; repo: string; workflow_id?: string }): Promise<Result<WorkflowRun[], GithubError>>;
 		};
 	};
-}
+};

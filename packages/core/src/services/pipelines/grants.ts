@@ -4,12 +4,15 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, match, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
+import { createLogger } from "../../utils/logger.js";
 import { evaluate_grant_check, is_auto_approvable } from "./grants-domain.js";
 
 export type { GrantVerdict } from "./grants-domain.js";
 export { evaluate_grant_check, is_auto_approvable, is_grant_match } from "./grants-domain.js";
 
 export const AUTO_APPROVE_USER = "system:auto-approve";
+
+const log = createLogger("pipelines:grants");
 
 /**
  * List all grants for a package.
@@ -174,7 +177,7 @@ export async function deny_grant(
 		// schema change, out of scope here) -- log the audit context so the
 		// denying user + reason aren't silently dropped until the schema
 		// catches up to record them on the row itself.
-		console.info(`pipeline grant ${grant_id} denied by ${user_id}${reason ? `: ${reason}` : ""}`);
+		log.info(`pipeline grant ${grant_id} denied by ${user_id}${reason ? `: ${reason}` : ""}`);
 
 		return ok(undefined);
 	} catch (e) {

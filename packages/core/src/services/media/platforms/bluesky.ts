@@ -20,8 +20,7 @@ const mapBlueskyError = (e: FetchError): ProviderError =>
 		? mapHttpError(e.status, e.status_text)
 		: { kind: "network_error", cause: e.cause instanceof Error ? e.cause : new Error(String(e.cause)) };
 
-const parseBlueskyResponse = async (response: Response): Promise<Record<string, unknown>> =>
-	(await response.json()) as Record<string, unknown>;
+const parseBlueskyResponse = async (response: Response): Promise<unknown> => await response.json();
 
 export class BlueskyProvider implements Provider<BlueskyRaw> {
 	readonly platform = "bluesky";
@@ -36,7 +35,7 @@ export class BlueskyProvider implements Provider<BlueskyRaw> {
 		const url = `https://bsky.social/xrpc/app.bsky.feed.getAuthorFeed?${params.toString()}`;
 
 		return pipe
-			.fetch<Record<string, unknown>, ProviderError>(
+			.fetch<unknown, ProviderError>(
 				url,
 				{
 					headers: {
@@ -48,7 +47,8 @@ export class BlueskyProvider implements Provider<BlueskyRaw> {
 				parseBlueskyResponse,
 			)
 			.flat_map((json) => {
-				const result = BlueskyRawSchema.safeParse({ ...json, fetched_at: new Date().toISOString() });
+				const record = json as Record<string, unknown>;
+				const result = BlueskyRawSchema.safeParse({ ...record, fetched_at: new Date().toISOString() });
 				return result.success ? ok(result.data) : err({ kind: "parse_error", message: result.error.message });
 			})
 			.result();

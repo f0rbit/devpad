@@ -4,12 +4,12 @@ import { DevpadLogo } from "./devpad-logo";
 
 export type AppId = "projects" | "tasks" | "blog" | "media" | "docs";
 
-export interface DevpadHeaderProps {
+export type DevpadHeaderProps = {
 	currentApp?: AppId;
 	currentPath?: string;
 	user: AuthUser;
 	authVariant?: "main" | "sub";
-}
+};
 
 type Domain = "main" | "blog" | "media";
 

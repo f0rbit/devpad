@@ -23,9 +23,9 @@ import { createRemoteJWKSet, errors as jose_errors, type JWTPayload, jwtVerify }
 
 export type OidcVerifyError = { reason: string };
 
-export interface OidcVerifier {
+export type OidcVerifier = {
 	verify(jwt: string): Promise<Result<VerifiedOidcClaims, OidcVerifyError>>;
-}
+};
 
 const GITHUB_ISSUER = "https://token.actions.githubusercontent.com";
 const GITHUB_JWKS_URL = new URL(`${GITHUB_ISSUER}/.well-known/jwks`);

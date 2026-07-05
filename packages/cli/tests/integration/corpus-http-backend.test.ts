@@ -122,7 +122,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				const buf = await read_body(req);
 				let parsed_body: unknown = null;
 				try {
-					parsed_body = JSON.parse(buf.toString("utf8"));
+					const raw_body: unknown = JSON.parse(buf.toString("utf8"));
+					parsed_body = raw_body;
 				} catch {
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;

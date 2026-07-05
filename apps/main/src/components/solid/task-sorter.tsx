@@ -16,6 +16,7 @@ import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
 import { ProjectSelector } from "@/components/solid/project-selector";
 import { TagSelect } from "@/components/solid/tag-picker";
+import { log } from "@/lib/pulse";
 import { getProjectContext } from "@/utils/project-context";
 import { TaskCard } from "./task-card";
 import { TaskQuickAdd } from "./task-quick-add";
@@ -151,10 +152,10 @@ export function TaskSorter({
 				task_view: next_view,
 			});
 			if (!result.ok) {
-				console.error("Failed to update user view", result.error);
+				log.error("Failed to update user view", undefined, { error: result.error });
 			}
 		} catch (error) {
-			console.error("Failed to update user view", error);
+			log.error("Failed to update user view", error);
 		}
 	}
 

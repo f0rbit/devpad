@@ -7,10 +7,10 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
 import AnalysisTemplateEditor from "./analysis-template-editor";
 
-interface AnalysisTemplateListProps {
+type AnalysisTemplateListProps = {
 	templates: PipelineAnalysisTemplate[];
 	owner_id: string;
-}
+};
 
 const to_display_string = (raw: unknown): string => {
 	if (typeof raw === "string") return raw;

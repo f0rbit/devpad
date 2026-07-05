@@ -50,7 +50,7 @@ const HEADERS_FILENAME = "_headers";
 /** 25 MiB — CF Workers Static Assets per-file hard limit. */
 export const MAX_ASSET_SIZE = 25 * 1024 * 1024;
 
-export interface WalkedAssetPart {
+export type WalkedAssetPart = {
 	/** Posix path with leading "/" — the key CF's manifest expects. */
 	path: string;
 	/** BLAKE3 hash truncated to first 32 hex chars — the key CF dedups on. */
@@ -59,26 +59,26 @@ export interface WalkedAssetPart {
 	size_bytes: number;
 	/** Resolved MIME type, defaults to `application/octet-stream`. */
 	mime_type: string;
-}
+};
 
-export interface WalkedAssets {
+export type WalkedAssets = {
 	parts: WalkedAssetPart[];
 	total_size_bytes: number;
-}
+};
 
 export type AssetWalkError =
 	| { kind: "not_a_directory"; path: string }
 	| { kind: "io_error"; path: string; reason: string }
 	| { kind: "asset_too_large"; path: string; size_bytes: number; limit_bytes: number };
 
-export interface WalkAssetsOptions {
+export type WalkAssetsOptions = {
 	/**
 	 * Extra ignore patterns appended to the rules read from
 	 * `.assetsignore`. Used by the CLI to skip the Worker bundle dir when
 	 * it lives inside the assets dir (e.g. `dist/_worker.js/`).
 	 */
 	extra_ignore_patterns?: string[];
-}
+};
 
 /**
  * Compute the CF asset hash for a given file's bytes + extension. Pure.

@@ -21,9 +21,9 @@ import type { PipelineStageEvent, StageEventKind } from "@devpad/schema";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
 
-interface StageEventTimelineProps {
+type StageEventTimelineProps = {
 	run_id: string;
-}
+};
 
 type BadgeVariant = "success" | "error" | "warning" | "info" | "accent" | "default";
 

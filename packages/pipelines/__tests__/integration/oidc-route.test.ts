@@ -133,9 +133,10 @@ const post_oidc = async (app: ReturnType<typeof make_routes>, body: unknown) => 
 			body: JSON.stringify(body),
 		}),
 	);
+	const raw_body: unknown = await res.json();
 	return {
 		status: res.status,
-		body: (await res.json()) as {
+		body: raw_body as {
 			ok: boolean;
 			value?: Record<string, unknown>;
 			error?: { code: string } & Record<string, unknown>;
@@ -228,7 +229,8 @@ describe("POST /auth/github-oidc — error mapping", () => {
 			}),
 		);
 		expect(res.status).toBe(400);
-		const json = (await res.json()) as { ok: boolean; error?: { code: string } };
+		const raw_json: unknown = await res.json();
+		const json = raw_json as { ok: boolean; error?: { code: string } };
 		expect(json.error?.code).toBe("invalid_request");
 	});
 

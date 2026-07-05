@@ -289,8 +289,11 @@ export async function processScanResults(
 
 	if (!approved) return ok({ success: true });
 
-	const raw_items = typeof update_data.data === "string" ? JSON.parse(update_data.data) : update_data.data;
-	const update_items = raw_items as DiffResult[];
+	const update_items = ((): DiffResult[] => {
+		if (typeof update_data.data !== "string") return update_data.data as DiffResult[];
+		const raw: unknown = JSON.parse(update_data.data);
+		return raw as DiffResult[];
+	})();
 
 	for (const update_item of update_items) {
 		await processScanItem(db, update_item, actions_map, titles, user_id, project_id, new_id);

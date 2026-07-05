@@ -76,10 +76,10 @@ export const mapHttpError = (
 	return { kind: "api_error", status, message: statusText };
 };
 
-export interface Provider<TRaw> {
+export type Provider<TRaw> = {
 	readonly platform: string;
 	fetch(token: string): Promise<FetchResult<TRaw>>;
-}
+};
 
 export type ProviderFactory = {
 	create(platform: string, platformUserId: string | null, token: string): Promise<FetchResult<Record<string, unknown>>>;

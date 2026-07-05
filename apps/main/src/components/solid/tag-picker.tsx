@@ -27,12 +27,12 @@ export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag
 	);
 }
 
-interface Props {
+type Props = {
 	currentTags: UpsertTag[];
 	availableTags: Tag[];
 	owner_id: string;
 	onChange: (tags: UpsertTag[]) => void;
-}
+};
 
 export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Props) {
 	const [tags, setTags] = createSignal(currentTags);
@@ -67,7 +67,6 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 		}
 		// if we haven't check to see if we have one with the same name
 		const existing = availableTags.find((t) => t.title === value);
-		console.log("existing", existing);
 		if (existing) {
 			// if we do, add it to the list
 			addTag(existing);

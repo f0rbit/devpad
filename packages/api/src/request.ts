@@ -1,13 +1,13 @@
 import { HTTP_STATUS, handleHttpResponse, handleNetworkError, handleResponseError } from "./error-handlers";
 import { ApiError, AuthenticationError } from "./errors";
 
-export interface BufferedQueue<T> {
+export type BufferedQueue<T> = {
 	latest(): T | null;
 	list(): T[];
 	add(item: T): void;
 	size(): number;
 	clear(): void;
-}
+};
 
 export class ArrayBufferedQueue<T> implements BufferedQueue<T> {
 	private entries: T[] = [];
@@ -219,7 +219,8 @@ export class ApiClient {
 					result = undefined as T;
 				} else {
 					try {
-						result = JSON.parse(text) as T;
+						const raw: unknown = JSON.parse(text);
+						result = raw as T;
 					} catch {
 						result = text as T;
 					}

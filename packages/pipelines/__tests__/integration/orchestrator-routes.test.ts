@@ -309,7 +309,8 @@ describe("orchestrator routes — DO state surface", () => {
 		// Hit the DO's debug `/state` directly via the namespace stub.
 		const stub = h.namespace.get(h.namespace.idFromName(run_id));
 		const res = await stub.fetch(new Request(`http://run.local/state`, { method: "GET" }));
-		const body = (await res.json()) as Envelope<{ run_id: string; last_alarm_ms: number | null }>;
+		const raw: unknown = await res.json();
+		const body = raw as Envelope<{ run_id: string; last_alarm_ms: number | null }>;
 		expect(body.ok).toBe(true);
 		expect(body.value!.run_id).toBe(run_id);
 		expect(body.value!.last_alarm_ms).not.toBeNull();

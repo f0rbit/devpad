@@ -1,8 +1,24 @@
 import { user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { err, ok, type Result } from "@f0rbit/corpus";
+import { err, ok, type Result, try_catch_async } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { createSession } from "./session.js";
+
+const GitHubTokenResponseSchema = z.object({
+	access_token: z.string().optional(),
+	error: z.string().optional(),
+});
+
+const GitHubUserResponseSchema = z.object({
+	id: z.number(),
+	login: z.string(),
+	name: z.string().nullable(),
+	email: z.string().nullable(),
+	avatar_url: z.string(),
+});
+
+const GitHubEmailsResponseSchema = z.array(z.object({ email: z.string(), primary: z.boolean() }));
 
 export type OAuthError =
 	| { kind: "invalid_state" }
@@ -14,29 +30,30 @@ export type OAuthEnv = {
 	GITHUB_CLIENT_SECRET: string;
 };
 
-export interface GitHubUser {
+export type GitHubUser = {
 	id: number;
 	login: string;
 	name: string | null;
 	email: string | null;
 	avatar_url: string;
-}
+};
 
-export interface OAuthState {
+export type OAuthState = {
 	url: string;
 	state: string;
-}
+};
 
-export interface OAuthParams {
+export type OAuthParams = {
 	return_to?: string;
-}
+};
 
-export interface DecodedOAuthState {
-	csrf: string;
-	return_to?: string;
-}
+const DecodedOAuthStateSchema = z.object({
+	csrf: z.string(),
+	return_to: z.string().optional(),
+});
+export type DecodedOAuthState = z.infer<typeof DecodedOAuthStateSchema>;
 
-export interface OAuthCallbackResult {
+export type OAuthCallbackResult = {
 	user: {
 		id: string;
 		github_id: number | null;
@@ -48,7 +65,7 @@ export interface OAuthCallbackResult {
 	};
 	accessToken: string;
 	sessionId: string;
-}
+};
 
 export function createGitHubAuthUrl(env: OAuthEnv, params?: OAuthParams): Result<OAuthState, OAuthError> {
 	const csrf_state = crypto.randomUUID();
@@ -98,7 +115,16 @@ export async function handleGitHubCallback(
 	if (!token_response.ok)
 		return err({ kind: "github_error", message: `Token exchange failed: ${String(token_response.status)}` });
 
-	const token_data = (await token_response.json()) as { access_token?: string; error?: string };
+	const token_parse_result = await try_catch_async(
+		async () => GitHubTokenResponseSchema.safeParse(await token_response.json()),
+		(e: unknown) => (e instanceof Error ? e : new Error(String(e))),
+	);
+	if (!token_parse_result.ok) return err({ kind: "github_error", message: token_parse_result.error.message });
+
+	const token_parsed = token_parse_result.value;
+	if (!token_parsed.success)
+		return err({ kind: "github_error", message: `Malformed token response: ${token_parsed.error.message}` });
+	const token_data = token_parsed.data;
 
 	if (token_data.error || !token_data.access_token)
 		return err({ kind: "github_error", message: token_data.error ?? "No access token" });
@@ -129,7 +155,7 @@ export function decodeOAuthState(encoded_state: string): Result<DecodedOAuthStat
 		try {
 			const padded = encoded_state.replace(/-/g, "+").replace(/_/g, "/");
 			const pad_length = (4 - (padded.length % 4)) % 4;
-			return JSON.parse(atob(padded + "=".repeat(pad_length)));
+			return DecodedOAuthStateSchema.parse(JSON.parse(atob(padded + "=".repeat(pad_length))));
 		} catch {
 			return null;
 		}
@@ -137,7 +163,7 @@ export function decodeOAuthState(encoded_state: string): Result<DecodedOAuthStat
 
 	if (!decoded) return err({ kind: "invalid_state" });
 
-	return ok(decoded as DecodedOAuthState);
+	return ok(decoded);
 }
 
 async function fetchGitHubUser(access_token: string): Promise<Result<GitHubUser, OAuthError>> {
@@ -153,7 +179,16 @@ async function fetchGitHubUser(access_token: string): Promise<Result<GitHubUser,
 	if (!response.ok)
 		return err({ kind: "github_error", message: `GitHub API: ${String(response.status)} ${response.statusText}` });
 
-	const user_data = (await response.json()) as GitHubUser;
+	const user_parse_result = await try_catch_async(
+		async () => GitHubUserResponseSchema.safeParse(await response.json()),
+		(e: unknown) => (e instanceof Error ? e : new Error(String(e))),
+	);
+	if (!user_parse_result.ok) return err({ kind: "github_error", message: user_parse_result.error.message });
+
+	const user_parsed = user_parse_result.value;
+	if (!user_parsed.success)
+		return err({ kind: "github_error", message: `Malformed user response: ${user_parsed.error.message}` });
+	const user_data = user_parsed.data;
 
 	if (!user_data.email) {
 		const email_result = await fetchGitHubEmail(access_token);
@@ -180,8 +215,14 @@ async function fetchGitHubEmail(access_token: string): Promise<Result<string | n
 	if (response instanceof Error) return ok(null);
 	if (!response.ok) return ok(null);
 
-	const emails = (await response.json()) as Array<{ email: string; primary: boolean }>;
-	const primary = emails.find((e) => e.primary);
+	const emails_parse_result = await try_catch_async(
+		async () => GitHubEmailsResponseSchema.safeParse(await response.json()),
+		() => null,
+	);
+	if (!emails_parse_result.ok || !emails_parse_result.value.success) return ok(null);
+	const emails_parsed = emails_parse_result.value;
+
+	const primary = emails_parsed.data.find((e) => e.primary);
 	return ok(primary?.email ?? null);
 }
 

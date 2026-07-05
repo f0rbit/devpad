@@ -12,7 +12,8 @@ function extractMCPResponse(result: any): any {
 		if (response_text.startsWith("Error:")) {
 			throw new Error(`MCP call failed: ${String(response_text)}`);
 		}
-		return JSON.parse(response_text);
+		const raw: unknown = JSON.parse(response_text);
+		return raw as any;
 	}
 
 	throw new Error(`Invalid MCP response format: ${JSON.stringify(result)}`);

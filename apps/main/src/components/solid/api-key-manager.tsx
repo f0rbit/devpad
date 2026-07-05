@@ -20,9 +20,9 @@ import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
 import { track } from "@/lib/pulse";
 
-interface ApiKeyManagerProps {
+type ApiKeyManagerProps = {
 	keys: ApiKey[];
-}
+};
 
 const formatDate = (dateString?: string | null) => {
 	if (!dateString) return null;

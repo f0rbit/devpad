@@ -1,13 +1,13 @@
 import { Show } from "solid-js";
 
-interface PulseChartProps {
+type PulseChartProps = {
 	data: number[];
 	width?: number;
 	height?: number;
 	color?: string;
 	fill?: boolean;
 	"aria-label"?: string;
-}
+};
 
 const DEFAULT_WIDTH = 240;
 const DEFAULT_HEIGHT = 48;

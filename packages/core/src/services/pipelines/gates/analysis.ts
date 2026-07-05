@@ -10,6 +10,7 @@ import type { Database } from "@devpad/schema/database/types";
 import type { Result } from "@f0rbit/corpus";
 import { err, ok } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
+import { createLogger } from "../../../utils/logger.js";
 import {
 	build_summary_query,
 	evaluate_metrics_against_thresholds,
@@ -18,6 +19,8 @@ import {
 	parse_threshold_dsl,
 	type Threshold,
 } from "./analysis-domain.js";
+
+const log = createLogger("pipelines:gates:analysis");
 import type { GateError, GateEvaluator, PulseEmitter, PulseEvent } from "./evaluator.js";
 
 type AnalysisTemplate = {
@@ -152,7 +155,7 @@ const fetch_snapshot = async (
 const emit_pulse = async (pulse: PulseEmitter, event: PulseEvent): Promise<void> => {
 	const result = await pulse.emit(event);
 	if (!result.ok)
-		console.warn(`analysis gate pulse emit failed (${event.event}): ${result.error.message ?? result.error.kind}`);
+		log.warn(`analysis gate pulse emit failed (${event.event}): ${result.error.message ?? result.error.kind}`);
 };
 
 const parse_thresholds_or_fail = (dsl: string): Result<Threshold[], GateError> => {

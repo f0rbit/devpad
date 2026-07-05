@@ -134,7 +134,7 @@ export const createApi = (options?: ApiOptions) => {
 				// no-op
 			}
 		}
-		console.error("[worker] unhandled error", err);
+		c.get("log")?.error("unhandled error", err);
 		return c.json({ error: "Internal server error" }, 500);
 	});
 
@@ -176,18 +176,14 @@ function parseCookie(request: Request, name: string): string | undefined {
 }
 
 async function resolveAuth(request: Request, env: Bindings): Promise<{ request: Request; session_cookie?: string }> {
-	console.log(`[resolveAuth] starting, has DB: ${String(!!env.DB)}`);
 	if (!env.DB) return { request };
 
 	const session_id = parseCookie(request, getSessionCookieName());
-	console.log(`[resolveAuth] session_id from cookie: ${session_id ? session_id.substring(0, 8) + "..." : "none"}`);
 	if (!session_id) return { request };
 
 	const db = createD1Database(env.DB);
 	const result = await validateSession(db, session_id);
-	console.log(`[resolveAuth] validation result ok: ${String(result.ok)}`);
 	if (!result.ok) {
-		console.log(`[resolveAuth] validation error: ${JSON.stringify(result.error)}`);
 		return { request };
 	}
 
@@ -208,7 +204,6 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 		? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT))
 		: undefined;
 
-	console.log(`[resolveAuth] injecting X-Auth-User for user: ${result.value.user.id}`);
 	return { request: authed, session_cookie };
 }
 
@@ -219,7 +214,6 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 		async fetch(request: Request, env: Bindings, ctx: ExecutionContext): Promise<Response> {
 			const hostname = hostnameFor(request);
 			const path = new URL(request.url).pathname;
-			console.log(`[worker] ${request.method} ${hostname}${path}`);
 
 			const enriched_env = { ...env, internal_api: api };
 
@@ -228,7 +222,6 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			}
 
 			const auth = await resolveAuth(request, env);
-			console.log(`[worker] auth resolved, has X-Auth-User: ${String(auth.request.headers.has("X-Auth-User"))}`);
 
 			const handler = hostname.startsWith("blog.")
 				? handlers.blog

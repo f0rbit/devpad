@@ -2,9 +2,9 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
 
-interface RollbackButtonProps {
+type RollbackButtonProps = {
 	run_id: string;
-}
+};
 
 export default function RollbackButton(props: RollbackButtonProps) {
 	const [loading, setLoading] = createSignal(false);

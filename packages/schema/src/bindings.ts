@@ -1,9 +1,15 @@
-export type AuthUser = {
-	id: string;
-	github_id: number;
-	name: string;
-	task_view: "list" | "grid";
-} | null;
+import { z } from "zod";
+
+export const AuthUserSchema = z
+	.object({
+		id: z.string(),
+		github_id: z.number(),
+		name: z.string(),
+		task_view: z.union([z.literal("list"), z.literal("grid")]),
+	})
+	.nullable();
+
+export type AuthUser = z.infer<typeof AuthUserSchema>;
 
 export type Bindings = {
 	DB?: D1Database;

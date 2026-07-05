@@ -68,12 +68,13 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 			});
 
 			if (!res.ok) {
-				const data = (await res.json()) as { error?: string; message?: string };
+				const raw_error: unknown = await res.json();
+				const data = raw_error as { error?: string; message?: string };
 				throw new Error(data.error || data.message || "Failed to save");
 			}
 
-			const saved = (await res.json()) as Profile;
-			props.onSave(saved);
+			const raw_saved: unknown = await res.json();
+			props.onSave(raw_saved as Profile);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "An error occurred");
 		} finally {

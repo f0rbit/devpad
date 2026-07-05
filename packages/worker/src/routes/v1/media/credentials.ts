@@ -45,12 +45,12 @@ const validateRedditCredentialsFormat = (
 	return { valid: true };
 };
 
-type RedditTokenResponse = {
-	access_token: string;
-	token_type: string;
-	expires_in: number;
-	scope: string;
-};
+const RedditTokenResponseSchema = z.object({
+	access_token: z.string().optional(),
+	token_type: z.string().optional(),
+	expires_in: z.number().optional(),
+	scope: z.string().optional(),
+});
 
 type RedditUserResponse = {
 	id: string;
@@ -85,7 +85,12 @@ const authenticateWithReddit = async (
 		return { ok: false, error: "Invalid Reddit credentials. Please check your Client ID and Secret." };
 	}
 
-	const tokenData: RedditTokenResponse = await tokenResponse.json();
+	let tokenData: z.infer<typeof RedditTokenResponseSchema>;
+	try {
+		tokenData = RedditTokenResponseSchema.parse(await tokenResponse.json());
+	} catch {
+		return { ok: false, error: "Malformed response from Reddit" };
+	}
 
 	if (!tokenData.access_token) {
 		return { ok: false, error: "Failed to get access token from Reddit" };

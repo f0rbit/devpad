@@ -24,17 +24,17 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 
 export type WorkerModuleMimeType = "application/javascript+module" | "application/javascript" | "application/wasm";
 
-export interface WalkedModulePart {
+export type WalkedModulePart = {
 	name: string;
 	mime_type: WorkerModuleMimeType;
 	bytes: Uint8Array;
 	size_bytes: number;
-}
+};
 
-export interface WalkedBundle {
+export type WalkedBundle = {
 	parts: WalkedModulePart[];
 	total_size_bytes: number;
-}
+};
 
 export type BundleWalkError =
 	| { kind: "not_a_directory"; path: string }

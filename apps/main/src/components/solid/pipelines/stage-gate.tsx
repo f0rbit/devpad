@@ -3,15 +3,15 @@ import type { PipelineRun } from "@devpad/schema";
 import { Button } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
 
-interface StageGateProps {
+type StageGateProps = {
 	run: PipelineRun;
 	user_id: string;
-}
+};
 
-interface RunGate {
+type RunGate = {
 	type?: string;
 	verdict?: string | null;
-}
+};
 
 export default function StageGate(props: StageGateProps) {
 	const [loading, setLoading] = createSignal<"approve" | "deny" | null>(null);
@@ -21,7 +21,8 @@ export default function StageGate(props: StageGateProps) {
 
 	const gate_config = (() => {
 		try {
-			const gates = JSON.parse(props.run.resolved_gates as string) as Record<string, RunGate> | null;
+			const raw: unknown = JSON.parse(props.run.resolved_gates as string);
+			const gates = raw as Record<string, RunGate> | null;
 			if (!props.run.current_stage || !gates) return null;
 
 			for (const [key, gate] of Object.entries(gates)) {

@@ -114,7 +114,8 @@ describe("POST /artifacts/blob", () => {
 		const { app } = build_routes_deps();
 		const res = await post_blob(app, new Uint8Array([1, 2, 3]), { "x-store-id": "worker-bundles" });
 		expect(res.status).toBe(401);
-		const body = (await res.json()) as { ok: boolean; error: { code: string } };
+		const raw: unknown = await res.json();
+		const body = raw as { ok: boolean; error: { code: string } };
 		expect(body.ok).toBe(false);
 		expect(body.error.code).toBe("unauthorized");
 	});
@@ -132,7 +133,8 @@ describe("POST /artifacts/blob", () => {
 		const { app } = build_routes_deps();
 		const res = await post_blob(app, new Uint8Array([1, 2, 3]), { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res.status).toBe(400);
-		const body = (await res.json()) as { error: { code: string } };
+		const raw: unknown = await res.json();
+		const body = raw as { error: { code: string } };
 		expect(body.error.code).toBe("invalid_store_id");
 	});
 
@@ -153,7 +155,8 @@ describe("POST /artifacts/blob", () => {
 			"x-store-id": "worker-bundles",
 		});
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as {
+		const raw: unknown = await res.json();
+		const body = raw as {
 			ok: boolean;
 			value: { version: string; content_hash: string; store_id: string; ref: string };
 		};
@@ -215,7 +218,8 @@ describe("POST /artifacts/version-set", () => {
 		const bad = { ...valid_manifest, git_sha: "too-short" };
 		const res = await post_manifest(app, bad, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res.status).toBe(400);
-		const body = (await res.json()) as { error: { code: string } };
+		const raw: unknown = await res.json();
+		const body = raw as { error: { code: string } };
 		expect(body.error.code).toBe("invalid_manifest");
 	});
 
@@ -223,7 +227,8 @@ describe("POST /artifacts/version-set", () => {
 		const { app, backend, emitted } = build_routes_deps();
 		const res = await post_manifest(app, valid_manifest, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as {
+		const raw: unknown = await res.json();
+		const body = raw as {
 			ok: boolean;
 			value: { version_set_id: string; content_hash: string; package: string };
 		};
@@ -259,7 +264,8 @@ describe("POST /artifacts/version-set", () => {
 		// Upload A
 		const res_a = await post_manifest(app, valid_manifest, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res_a.status).toBe(200);
-		const body_a = (await res_a.json()) as { ok: true; value: { version_set_id: string } };
+		const raw_a: unknown = await res_a.json();
+		const body_a = raw_a as { ok: true; value: { version_set_id: string } };
 
 		// Upload B for the same package (different git_sha so dedup doesn't collapse).
 		// Memory backend's created_at comes from Date.now() — a 2ms delay
@@ -269,7 +275,8 @@ describe("POST /artifacts/version-set", () => {
 		const manifest_b: VersionSetManifest = { ...valid_manifest, git_sha: "fedcba9876543210fedcba9876543210fedcba98" };
 		const res_b = await post_manifest(app, manifest_b, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res_b.status).toBe(200);
-		const body_b = (await res_b.json()) as { ok: true; value: { version_set_id: string } };
+		const raw_b: unknown = await res_b.json();
+		const body_b = raw_b as { ok: true; value: { version_set_id: string } };
 
 		// Lineage from B should be [B, A]
 		const store = version_set_store(backend);
@@ -285,7 +292,8 @@ describe("POST /artifacts/version-set", () => {
 		const fresh: VersionSetManifest = { ...valid_manifest, package: "fresh-pkg" };
 		const res = await post_manifest(app, fresh, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { ok: true; value: { version_set_id: string } };
+		const raw: unknown = await res.json();
+		const body = raw as { ok: true; value: { version_set_id: string } };
 
 		const store = version_set_store(backend);
 		const chain = await store.lineage(body.value.version_set_id);
@@ -312,7 +320,8 @@ describe("POST /artifacts/version-set", () => {
 			{ authorization: auth_header(PIPELINES_TOKEN) },
 		);
 		expect(b_first.status).toBe(200);
-		const body = (await b_first.json()) as { ok: true; value: { version_set_id: string } };
+		const raw: unknown = await b_first.json();
+		const body = raw as { ok: true; value: { version_set_id: string } };
 
 		const store = version_set_store(backend);
 		const chain = await store.lineage(body.value.version_set_id);

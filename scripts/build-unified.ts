@@ -16,7 +16,7 @@ const APP_NAMES = Object.keys(APPS) as AppName[];
 
 const workerDir = (name: AppName) => `_${name}-worker`;
 
-const readRoutesJson = (app_dist: string) => {
+const readRoutesJson = (app_dist: string): unknown => {
 	const routes_path = join(app_dist, "_routes.json");
 	if (!existsSync(routes_path)) return null;
 	return JSON.parse(readFileSync(routes_path, "utf-8"));

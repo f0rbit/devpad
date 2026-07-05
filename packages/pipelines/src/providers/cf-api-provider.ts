@@ -88,7 +88,8 @@ const interpret_response = async <T>(response: Response): Promise<Result<T, Clou
 		return err({ code: "internal", message: body_text || `cf api ${String(response.status)}` });
 	let parsed: CfEnvelope<T>;
 	try {
-		parsed = JSON.parse(body_text) as CfEnvelope<T>;
+		const raw: unknown = JSON.parse(body_text);
+		parsed = raw as CfEnvelope<T>;
 	} catch (e) {
 		return err({ code: "internal", message: `cf api decode failed: ${String(e)}` });
 	}
