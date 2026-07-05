@@ -1,7 +1,7 @@
 import { define_lint_config } from "@f0rbit/lint";
 
 export default define_lint_config({
-	naming: "camelCase",
+	naming: "snake_case",
 	package_name: "anthropic-search",
 	tsconfig_root_dir: import.meta.dirname,
 	overrides: [
