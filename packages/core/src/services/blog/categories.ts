@@ -142,7 +142,7 @@ export const createCategoryService = ({ db }: Deps) => {
 				.values({
 					owner_id: userId,
 					name: input.name,
-					parent: input.parent,
+					parent: input.parent ?? "root",
 				})
 				.returning();
 
