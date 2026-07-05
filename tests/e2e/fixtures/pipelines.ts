@@ -117,6 +117,13 @@ export async function seed_pipeline_fixtures(db: DrizzleDatabase): Promise<void>
 		email_verified: SEED_NOW,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
+		// Must be non-null: authMiddleware's session path requires a real
+		// github_id/name since every real devpad user signs up via GitHub OAuth.
+		// A null github_id here silently fails fake auth with an AUTHENTICATION_ERROR
+		// on every pipelines E2E spec (same root cause as the integration suite's
+		// createTestUser fix in tests/shared/test-utils.ts — this fixture was the
+		// one spot that fix didn't reach).
+		github_id: 900_000_002,
 		created_at: SEED_NOW,
 		updated_at: SEED_NOW,
 	} as never);
