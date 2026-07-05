@@ -26,5 +26,66 @@
 		// are out of scope for this toolchain until Astro support exists upstream.
 		// Known scope boundary, not silent exclusion. Tracked in AGENTS.md.
 		"**/*.astro"
+	],
+	"overrides": [
+		{
+			// Tests assert setup invariants (a `!` after explicit fixture setup is
+			// the idiomatic bun-test pattern -- the test fails loudly either way,
+			// same precedent as corpus's own tests/** override) and mock arbitrary
+			// external API JSON payloads (pulse/CF/GitHub responses) where full
+			// static typing would add noise without real safety. Production code
+			// does NOT get this exception -- see AGENTS.md lint section for the
+			// real fixes applied there. `then` on the drizzle-chain fakes
+			// (packages/core/src/services/**/__tests__/*.test.ts) is a genuine
+			// thenable by design -- it mirrors drizzle's own query builder, which
+			// is awaitable without an explicit `.execute()`.
+			"files": ["tests/**", "**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"],
+			"rules": {
+				"typescript/no-non-null-assertion": "off",
+				"typescript/no-explicit-any": "off",
+				"unicorn/no-thenable": "off"
+			}
+		},
+		{
+			// __reset_jwks_cache_for_tests is the documented "__ prefix = test-only
+			// escape hatch" convention (see ~/dev/corpus's identical
+			// __reset_registry_for_tests precedent, AGENTS.md testing substrate
+			// section).
+			"files": ["packages/pipelines/src/providers/oidc-verifier.ts"],
+			"rules": {
+				"no-underscore-dangle": ["error", { "allow": ["__reset_jwks_cache_for_tests"] }]
+			}
+		},
+		{
+			// SolidJS ref idiom: `let el!: T` (or `T | undefined`) declared with no
+			// initializer, assigned only via JSX `ref={el}` -- Solid's compiler
+			// rewrites that into the assignment at build time, invisible to static
+			// analysis. Scoped to .tsx (Solid components) only; plain .ts keeps the
+			// rule at error for genuine never-assigned-variable bugs.
+			"files": ["**/*.tsx"],
+			"rules": {
+				"no-unassigned-vars": "off"
+			}
+		},
+		{
+			// `expect(() => { new ApiClient(...) }).toThrow(...)` -- the constructor's
+			// throw IS the thing under test; assigning the instance to a variable
+			// would be pointless (never used, and construction may throw before
+			// returning). Standard bun-test constructor-validation idiom.
+			"files": ["packages/api/tests/unit/utils/request.test.ts"],
+			"rules": {
+				"no-new": "off"
+			}
+		},
+		{
+			// Astro-generated env.d.ts scaffold -- the triple-slash reference to
+			// `.astro/types.d.ts` (content collections) or `astro/client` is Astro's
+			// own convention for this exact file, not something under app control to
+			// rewrite as an import without breaking Astro's type generation.
+			"files": ["apps/*/src/env.d.ts"],
+			"rules": {
+				"typescript/triple-slash-reference": "off"
+			}
+		}
 	]
 }
