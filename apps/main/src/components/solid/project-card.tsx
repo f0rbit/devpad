@@ -1,14 +1,14 @@
 import { AiProvenance } from "@devpad/core/ui";
-import type { Project } from "@devpad/schema";
-import Github from "lucide-solid/icons/github";
+import type { PipelineRun, Project } from "@devpad/schema";
+import GithubIcon from "@/components/solid/github-icon";
 import { formatDueDate } from "@/utils/task-status";
 import { formatRelativeTime } from "@/utils/time-utils";
 import { Show } from "solid-js";
 
-type PipelineStatus = {
+export type PipelineStatus = {
 	package_id: string;
 	package_name: string;
-	latest_run: any | null;
+	latest_run: PipelineRun | null;
 	pending_approval_count: number;
 };
 
@@ -65,9 +65,9 @@ const PIPELINE_STATUS_COLORS: Record<string, string> = {
 	idle: "var(--fg-faint)",
 };
 
-const get_pipeline_status_label = (run: any): string => {
+const get_pipeline_status_label = (run: PipelineRun | null): string => {
 	if (!run) return "idle";
-	return run.status || "idle";
+	return run.status;
 };
 
 export const ProjectCard = (props: Props) => {
@@ -99,7 +99,7 @@ export const ProjectCard = (props: Props) => {
 					</span>
 					{project.repo_url && (
 						<span class="row row-sm" style={{ color: "var(--fg-faint)" }} title="GitHub repository">
-							<Github size={16} />
+							<GithubIcon size={16} />
 						</span>
 					)}
 				</span>

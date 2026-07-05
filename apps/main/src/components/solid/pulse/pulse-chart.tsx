@@ -23,7 +23,7 @@ export default function PulseChart(props: PulseChartProps) {
 	const color = () => props.color ?? "var(--accent)";
 
 	const points = () => {
-		const data = props.data ?? [];
+		const data = props.data;
 		if (data.length === 0) return [] as Array<[number, number]>;
 		const w = width();
 		const h = height();
@@ -48,9 +48,9 @@ export default function PulseChart(props: PulseChartProps) {
 		const pts = points();
 		if (pts.length === 0) return "";
 		const h = height();
-		const head = `M ${pts[0][0].toFixed(2)} ${h}`;
+		const head = `M ${pts[0][0].toFixed(2)} ${String(h)}`;
 		const body = pts.map(([x, y]) => `L ${x.toFixed(2)} ${y.toFixed(2)}`).join(" ");
-		const tail = `L ${pts[pts.length - 1][0].toFixed(2)} ${h} Z`;
+		const tail = `L ${pts[pts.length - 1][0].toFixed(2)} ${String(h)} Z`;
 		return `${head} ${body} ${tail}`;
 	};
 
@@ -58,7 +58,7 @@ export default function PulseChart(props: PulseChartProps) {
 		<svg
 			width={width()}
 			height={height()}
-			viewBox={`0 0 ${width()} ${height()}`}
+			viewBox={`0 0 ${String(width())} ${String(height())}`}
 			role="img"
 			aria-label={props["aria-label"] ?? "sparkline"}
 			preserveAspectRatio="none"

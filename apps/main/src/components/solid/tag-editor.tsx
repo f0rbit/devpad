@@ -72,7 +72,14 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 				<Plus size={16} />
 				add
 			</a>
-			<a role="button" onClick={save} class="row row-sm" style="margin-top: 10px">
+			<a
+				role="button"
+				onClick={() => {
+					void save();
+				}}
+				class="row row-sm"
+				style="margin-top: 10px"
+			>
 				<Save size={16} />
 				save
 			</a>
@@ -140,7 +147,14 @@ function TagLine({
 				<input type="checkbox" checked={render()} onInput={(e) => setRender(e.currentTarget.checked)} onChange={save} />
 			</div>
 			{tag?.id && (
-				<a role="button" onClick={() => remove(tag?.id)} title="Remove Tag" style={{ cursor: "pointer" }}>
+				<a
+					role="button"
+					onClick={() => {
+						remove(tag.id);
+					}}
+					title="Remove Tag"
+					style={{ cursor: "pointer" }}
+				>
 					<Trash size={16} />
 				</a>
 			)}
@@ -188,7 +202,7 @@ function TagColourPicker({
 					width: "100%",
 				}}
 				onClick={togglePopup}
-				disabled={enabled() === false}
+				disabled={!enabled()}
 			>
 				{value() ? (
 					<TagBadge colour={value} name={() => value() ?? "None"} />
@@ -220,7 +234,9 @@ function TagColourPicker({
 					<For each={Object.keys(TAG_COLOURS) as TagColor[]}>
 						{(name) => (
 							<button
-								onClick={() => onChange(name)}
+								onClick={() => {
+									onChange(name);
+								}}
 								style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}
 							>
 								<TagBadge name={() => name} colour={() => name} />
@@ -228,7 +244,9 @@ function TagColourPicker({
 						)}
 					</For>
 					<button
-						onClick={() => onChange(null)}
+						onClick={() => {
+							onChange(null);
+						}}
 						style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}
 					>
 						<TagBadge name={() => "None"} colour={() => null} />
@@ -248,12 +266,17 @@ export function TagBadge({
 	colour: Accessor<TagColor | null>;
 	onRemove?: () => void;
 }) {
+	const config = () => {
+		const c = colour();
+		return c ? TAG_COLOURS[c] : null;
+	};
+
 	return (
 		<div
 			style={{
-				background: colour() ? TAG_COLOURS[colour()!].colour : "none",
-				color: colour() ? TAG_COLOURS[colour()!].text : "var(--fg-muted)",
-				border: `1px solid ${colour() ? TAG_COLOURS[colour()!].border : "var(--border)"}`,
+				background: config()?.colour ?? "none",
+				color: config()?.text ?? "var(--fg-muted)",
+				border: `1px solid ${config()?.border ?? "var(--border)"}`,
 			}}
 			class="tag-badge"
 		>

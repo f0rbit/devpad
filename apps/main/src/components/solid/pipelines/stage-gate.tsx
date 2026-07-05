@@ -8,6 +8,11 @@ interface StageGateProps {
 	user_id: string;
 }
 
+interface RunGate {
+	type?: string;
+	verdict?: string | null;
+}
+
 export default function StageGate(props: StageGateProps) {
 	const [loading, setLoading] = createSignal<"approve" | "deny" | null>(null);
 	const [error, setError] = createSignal<string | null>(null);
@@ -16,7 +21,7 @@ export default function StageGate(props: StageGateProps) {
 
 	const gate_config = (() => {
 		try {
-			const gates = JSON.parse(props.run.resolved_gates as any);
+			const gates = JSON.parse(props.run.resolved_gates as string) as Record<string, RunGate> | null;
 			if (!props.run.current_stage || !gates) return null;
 
 			for (const [key, gate] of Object.entries(gates)) {
@@ -32,14 +37,12 @@ export default function StageGate(props: StageGateProps) {
 
 	const gate_type = (() => {
 		if (!gate_config) return null;
-		const gate: any = gate_config.gate;
-		return gate?.type || "unknown";
+		return gate_config.gate.type || "unknown";
 	})();
 
 	const gate_verdict = (() => {
 		if (!gate_config) return null;
-		const gate: any = gate_config.gate;
-		return gate?.verdict || null;
+		return gate_config.gate.verdict || null;
 	})();
 
 	const show_actions = () =>
@@ -71,7 +74,7 @@ export default function StageGate(props: StageGateProps) {
 		});
 
 		if (!result.ok) {
-			setError(result.error.message ?? `Failed to ${decision === "approved" ? "approve" : "deny"} stage`);
+			setError(result.error.message);
 			setLoading(null);
 			return;
 		}
@@ -159,7 +162,9 @@ export default function StageGate(props: StageGateProps) {
 							size="sm"
 							variant="primary"
 							disabled={loading() !== null}
-							onClick={() => submit_decision("approved")}
+							onClick={() => {
+								void submit_decision("approved");
+							}}
 							data-testid="stage-gate-approve"
 						>
 							{loading() === "approve" ? "Approving..." : "Approve"}
@@ -168,7 +173,9 @@ export default function StageGate(props: StageGateProps) {
 							size="sm"
 							variant="danger"
 							disabled={loading() !== null}
-							onClick={() => submit_decision("denied")}
+							onClick={() => {
+								void submit_decision("denied");
+							}}
 							data-testid="stage-gate-deny"
 						>
 							{loading() === "deny" ? "Denying..." : "Deny"}

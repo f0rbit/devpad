@@ -38,8 +38,13 @@ function ProgressCircle(props: { percentage: number; size?: number }) {
 	const offset = () => circumference() - (props.percentage / 100) * circumference();
 
 	return (
-		<svg width={size()} height={size()} viewBox={`0 0 ${size()} ${size()}`} style={{ "flex-shrink": "0" }}>
-			<title>{`${Math.round(props.percentage)}% complete`}</title>
+		<svg
+			width={size()}
+			height={size()}
+			viewBox={`0 0 ${String(size())} ${String(size())}`}
+			style={{ "flex-shrink": "0" }}
+		>
+			<title>{`${String(Math.round(props.percentage))}% complete`}</title>
 			<circle
 				cx={size() / 2}
 				cy={size() / 2}
@@ -56,10 +61,10 @@ function ProgressCircle(props: { percentage: number; size?: number }) {
 					fill="none"
 					stroke="var(--accent)"
 					stroke-width={strokeWidth}
-					stroke-dasharray={`${circumference()}`}
+					stroke-dasharray={String(circumference())}
 					stroke-dashoffset={offset()}
 					stroke-linecap="round"
-					transform={`rotate(-90 ${size() / 2} ${size() / 2})`}
+					transform={`rotate(-90 ${String(size() / 2)} ${String(size() / 2)})`}
 				/>
 			</Show>
 		</svg>
@@ -77,7 +82,7 @@ export default function MilestonesManager(props: Props) {
 		});
 	};
 
-	const goalsFor = (milestoneId: string): Goal[] => (props.initialGoalsMap || {})[milestoneId] || [];
+	const goalsFor = (milestoneId: string): Goal[] => (props.initialGoalsMap || {})[milestoneId];
 
 	return (
 		<div>
@@ -130,7 +135,7 @@ export default function MilestonesManager(props: Props) {
 													const counts = () => (props.goalTaskCounts || {})[goal.id];
 													const pct = () => {
 														const c = counts();
-														return c && c.total > 0 ? Math.round((c.completed / c.total) * 100) : 0;
+														return c.total > 0 ? Math.round((c.completed / c.total) * 100) : 0;
 													};
 													return (
 														<a
@@ -144,16 +149,16 @@ export default function MilestonesManager(props: Props) {
 															}}
 														>
 															<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
-																<Show when={counts() && counts()!.total > 0}>
+																<Show when={counts().total > 0}>
 																	<ProgressCircle percentage={pct()} />
 																</Show>
 																<span class="text-sm">{goal.name}</span>
 																<AiProvenance created_by={goal.created_by} modified_by={goal.modified_by} />
 															</div>
 															<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
-																<Show when={counts() && counts()!.total > 0}>
+																<Show when={counts().total > 0}>
 																	<span class="text-xs text-faint">
-																		{counts()!.completed}/{counts()!.total}
+																		{counts().completed}/{counts().total}
 																	</span>
 																</Show>
 																<Show when={goal.target_time}>

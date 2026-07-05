@@ -1,13 +1,13 @@
 interface VersionSetDiffProps {
-	current: Record<string, any>;
-	previous?: Record<string, any>;
+	current: Record<string, unknown>;
+	previous?: Record<string, unknown>;
 }
 
-export default function VersionSetDiff(props: VersionSetDiffProps) {
-	const format_json = (obj: Record<string, any>): string => {
-		return JSON.stringify(obj, null, 2);
-	};
+const format_json = (obj: Record<string, unknown>): string => {
+	return JSON.stringify(obj, null, 2);
+};
 
+export default function VersionSetDiff(props: VersionSetDiffProps) {
 	const current_json = format_json(props.current);
 	const previous_json = props.previous ? format_json(props.previous) : null;
 

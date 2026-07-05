@@ -1,11 +1,11 @@
 import { Badge, Button } from "@f0rbit/ui";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import FolderPlus from "lucide-solid/icons/folder-plus";
-import Github from "lucide-solid/icons/github";
 import ListChecks from "lucide-solid/icons/list-checks";
 import ScanText from "lucide-solid/icons/scan-text";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, onMount, Show } from "solid-js";
+import GithubIcon from "@/components/solid/github-icon";
 
 const DISMISS_KEY = "devpad_welcome_dismissed";
 
@@ -28,7 +28,7 @@ const STEPS: Step[] = [
 		href: "/project/create",
 	},
 	{
-		icon: Github,
+		icon: GithubIcon,
 		title: "link a github repo",
 		description: "connect a repository to enable code scanning",
 		href: "/project/create",
@@ -98,7 +98,7 @@ export function WelcomeBanner(props: Props) {
 										</strong>
 										<Show when={step.href}>
 											<a
-												href={step.href!}
+												href={step.href ?? undefined}
 												class="row row-sm"
 												style={{ "font-size": "smaller", color: "var(--accent)", "text-decoration": "none" }}
 												aria-label={`go to ${step.title}`}

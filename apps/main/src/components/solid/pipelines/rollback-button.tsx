@@ -19,7 +19,7 @@ export default function RollbackButton(props: RollbackButtonProps) {
 		const result = await client.pipelines.rollback(props.run_id);
 
 		if (!result.ok) {
-			setError(result.error.message ?? "Rollback failed");
+			setError(result.error.message);
 		} else {
 			// Refresh page or update UI
 			window.location.reload();
@@ -46,7 +46,14 @@ export default function RollbackButton(props: RollbackButtonProps) {
 							Are you sure you want to roll back this deployment? This will revert to the previous version.
 						</p>
 						<div class="row" style={{ gap: "var(--space-sm)" }}>
-							<Button variant="danger" onClick={handle_rollback} disabled={loading()} style={{ "font-size": "0.9rem" }}>
+							<Button
+								variant="danger"
+								onClick={() => {
+									void handle_rollback();
+								}}
+								disabled={loading()}
+								style={{ "font-size": "0.9rem" }}
+							>
 								{loading() ? "Rolling back..." : "Confirm rollback"}
 							</Button>
 							<Button

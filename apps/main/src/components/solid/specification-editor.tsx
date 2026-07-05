@@ -1,7 +1,6 @@
 // SpecificationEditor.jsx
 
 import { getBrowserClient } from "@devpad/core/ui/client";
-import Github from "lucide-solid/icons/github";
 import Pencil from "lucide-solid/icons/pencil";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Save from "lucide-solid/icons/save";
@@ -9,6 +8,7 @@ import X from "lucide-solid/icons/x";
 import { remark } from "remark";
 import remarkHtml from "remark-html";
 import { createEffect, createSignal } from "solid-js";
+import GithubIcon from "@/components/solid/github-icon";
 import { LoadingIndicator, type LoadingState } from "@/components/solid/loading-indicator";
 
 interface Props {
@@ -34,7 +34,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 			const apiClient = getBrowserClient();
 			const result = await apiClient.projects.specification(project_id);
 			if (!result.ok) throw new Error(result.error.message);
-			setMarkdown(result.value ?? "");
+			setMarkdown(result.value);
 			setFetching("success");
 			setTimeout(() => {
 				setFetching("idle");
@@ -51,9 +51,14 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 		setFetching("idle");
 		try {
 			const apiClient = getBrowserClient();
-			await apiClient.projects.update(project_id, {
+			const result = await apiClient.projects.update(project_id, {
 				specification: markdown(),
 			});
+			if (!result.ok) {
+				setError(result.error.message);
+				setSaving("error");
+				return;
+			}
 			setSaving("success");
 			setCurrent(markdown());
 			setTimeout(() => {
@@ -90,7 +95,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 	// Parse markdown when editing is turned off
 	createEffect(() => {
 		if (!isEditing()) {
-			parseMarkdown(markdown());
+			void parseMarkdown(markdown());
 		}
 	}, isEditing);
 
@@ -99,13 +104,23 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 			{isEditing() ? (
 				<>
 					<div class="controls">
-						<a role="button" onClick={save}>
+						<a
+							role="button"
+							onClick={() => {
+								void save();
+							}}
+						>
 							<LoadingIndicator state={saving} idle={<Save size={16} />} />
 							save
 						</a>
 						{has_github && (
-							<a role="button" onClick={fetchSpecification}>
-								<LoadingIndicator state={fetching} idle={<Github size={16} />} />
+							<a
+								role="button"
+								onClick={() => {
+									void fetchSpecification();
+								}}
+							>
+								<LoadingIndicator state={fetching} idle={<GithubIcon size={16} />} />
 								fetch
 							</a>
 						)}

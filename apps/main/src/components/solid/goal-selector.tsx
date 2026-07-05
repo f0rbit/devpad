@@ -27,7 +27,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 	// Load milestones and goals when project changes
 	createEffect(() => {
 		if (project_id) {
-			loadMilestonesAndGoals();
+			void loadMilestonesAndGoals();
 		} else {
 			setMilestones([]);
 			setSelected("");
@@ -54,9 +54,9 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 		}
 		const with_goals = await Promise.all(
 			result.value.map(async (m) => {
-				const result = await api_client.milestones.goals(m.id);
-				if (!result.ok) return { ...m, goals: [] };
-				return { ...m, goals: result.value };
+				const goals_result = await api_client.milestones.goals(m.id);
+				if (!goals_result.ok) return { ...m, goals: [] };
+				return { ...m, goals: goals_result.value };
 			}),
 		);
 		setLoading(false);
@@ -86,7 +86,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 
 	const handleQuickFormSuccess = (goal: Goal) => {
 		setShowQuickForm(false);
-		loadMilestonesAndGoals(); // Refresh data
+		void loadMilestonesAndGoals(); // Refresh data
 		setSelected(goal.id);
 		onChange(goal.id);
 	};
@@ -116,7 +116,9 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 					id="goal-selector"
 					value={selected()}
 					disabled={disabled || loading() || !project_id}
-					onChange={(e) => handleSelectionChange(e.target.value)}
+					onChange={(e) => {
+						handleSelectionChange(e.target.value);
+					}}
 					style={{ "flex-grow": "1" }}
 				>
 					<option value="" selected={selected() === ""}>
@@ -149,7 +151,10 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 						type="button"
 						class="btn btn-icon btn-sm"
 						title="Edit goal"
-						onClick={() => handleEditGoal(selectedGoal()!)}
+						onClick={() => {
+							const goal = selectedGoal();
+							if (goal) handleEditGoal(goal);
+						}}
 						disabled={disabled}
 					>
 						<Edit size={16} />

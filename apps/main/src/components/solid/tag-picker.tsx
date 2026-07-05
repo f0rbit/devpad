@@ -13,7 +13,12 @@ export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag
 	}
 
 	return (
-		<select onChange={(e) => select(e.target.value)} style="min-width: 6rem">
+		<select
+			onChange={(e) => {
+				select(e.target.value);
+			}}
+			style="min-width: 6rem"
+		>
 			<option value="">-</option>
 			{tags.map((tag) => (
 				<option value={tag.id}>{tag.title}</option>
@@ -55,7 +60,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 				// if we have, add it to the list
 				const found = availableTags.find((t) => t.id === sel_id);
 				if (found) {
-					addTag(found as UpsertTag);
+					addTag(found);
 					return;
 				}
 			}
@@ -65,7 +70,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 		console.log("existing", existing);
 		if (existing) {
 			// if we do, add it to the list
-			addTag(existing as UpsertTag);
+			addTag(existing);
 		} else {
 			// if we don't, add a new tag
 			addTag({ title: input.value, id: undefined, color: null, deleted: false, owner_id, render: true });
@@ -112,7 +117,13 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 			<div class="cluster">
 				<For each={tags()}>
 					{(tag) => (
-						<TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />
+						<TagBadge
+							name={() => tag.title}
+							colour={() => tag.color ?? null}
+							onRemove={() => {
+								removeTag(tag);
+							}}
+						/>
 					)}
 				</For>
 			</div>

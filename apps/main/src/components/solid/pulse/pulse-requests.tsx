@@ -29,7 +29,7 @@ interface PulseRequestsProps {
 	error?: string | null;
 }
 
-const fmtMs = (n: number | undefined): string => (typeof n === "number" ? `${Math.round(n)} ms` : "—");
+const fmtMs = (n: number | undefined): string => (typeof n === "number" ? `${String(Math.round(n))} ms` : "—");
 
 export default function PulseRequests(props: PulseRequestsProps) {
 	const overall = () => props.latency?.overall ?? {};

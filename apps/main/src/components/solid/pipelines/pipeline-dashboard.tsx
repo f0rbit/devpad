@@ -57,9 +57,9 @@ const WINDOW_OPTIONS: ReadonlyArray<{ label: string; ms: number }> = [
  */
 const format_ms = (ms: number | null): string => {
 	if (ms === null || !Number.isFinite(ms)) return "—";
-	if (ms < 1000) return `${Math.round(ms)}ms`;
+	if (ms < 1000) return `${String(Math.round(ms))}ms`;
 	if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-	if (ms < 60 * 60_000) return `${Math.round(ms / 60_000)}m`;
+	if (ms < 60 * 60_000) return `${String(Math.round(ms / 60_000))}m`;
 	if (ms < 24 * 60 * 60_000) return `${(ms / (60 * 60_000)).toFixed(1)}h`;
 	return `${(ms / (24 * 60 * 60_000)).toFixed(1)}d`;
 };
@@ -92,7 +92,7 @@ const VerdictBar = (props: { label: string; verdicts: Verdicts }) => {
 	const pct = (n: number): string => {
 		const t = total();
 		if (t === 0) return "0%";
-		return `${(n / t) * 100}%`;
+		return `${String((n / t) * 100)}%`;
 	};
 
 	return (
@@ -120,26 +120,26 @@ const VerdictBar = (props: { label: string; verdicts: Verdicts }) => {
 						overflow: "hidden",
 						background: "var(--bg-alt, #1a1a1a)",
 					}}
-					aria-label={`${props.label}: ${props.verdicts.pass} pass, ${props.verdicts.fail} fail, ${props.verdicts.pending} pending`}
+					aria-label={`${props.label}: ${String(props.verdicts.pass)} pass, ${String(props.verdicts.fail)} fail, ${String(props.verdicts.pending)} pending`}
 				>
 					<div
 						style={{ width: pct(props.verdicts.pass), background: VERDICT_COLORS.pass }}
-						title={`pass: ${props.verdicts.pass}`}
+						title={`pass: ${String(props.verdicts.pass)}`}
 					/>
 					<div
 						style={{ width: pct(props.verdicts.fail), background: VERDICT_COLORS.fail }}
-						title={`fail: ${props.verdicts.fail}`}
+						title={`fail: ${String(props.verdicts.fail)}`}
 					/>
 					<div
 						style={{ width: pct(props.verdicts.pending), background: VERDICT_COLORS.pending }}
-						title={`pending: ${props.verdicts.pending}`}
+						title={`pending: ${String(props.verdicts.pending)}`}
 					/>
 				</div>
 			</Show>
 			<div class="row" style={{ gap: "0.75rem" }}>
-				<span class="text-xs" style={{ color: VERDICT_COLORS.pass }}>{`pass ${props.verdicts.pass}`}</span>
-				<span class="text-xs" style={{ color: VERDICT_COLORS.fail }}>{`fail ${props.verdicts.fail}`}</span>
-				<span class="text-xs" style={{ color: VERDICT_COLORS.pending }}>{`pending ${props.verdicts.pending}`}</span>
+				<span class="text-xs" style={{ color: VERDICT_COLORS.pass }}>{`pass ${String(props.verdicts.pass)}`}</span>
+				<span class="text-xs" style={{ color: VERDICT_COLORS.fail }}>{`fail ${String(props.verdicts.fail)}`}</span>
+				<span class="text-xs" style={{ color: VERDICT_COLORS.pending }}>{`pending ${String(props.verdicts.pending)}`}</span>
 			</div>
 		</div>
 	);
@@ -148,7 +148,7 @@ const VerdictBar = (props: { label: string; verdicts: Verdicts }) => {
 // ─── Window selector ────────────────────────────────────────────────
 
 const WindowSelector = (props: { project_id: string; current_ms: number }) => {
-	const href = (ms: number): string => `/project/${props.project_id}/pipeline?tab=dashboard&window_ms=${ms}`;
+	const href = (ms: number): string => `/project/${props.project_id}/pipeline?tab=dashboard&window_ms=${String(ms)}`;
 	return (
 		<nav aria-label="dashboard window" class="row" style={{ gap: "0.5rem" }}>
 			<For each={WINDOW_OPTIONS}>

@@ -1,6 +1,7 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type {
 	Project,
+	Task,
 	TaskWithDetails as TaskType,
 	TaskView,
 	UpsertTag,
@@ -39,24 +40,24 @@ type Props = {
 // task sorting functions
 
 const last_updated = (a: TaskType, b: TaskType) => {
-	return new Date(b.task?.updated_at ?? 0).getTime() - new Date(a.task?.updated_at ?? 0).getTime();
+	return new Date(b.task.updated_at).getTime() - new Date(a.task.updated_at).getTime();
 };
 
 const by_priority = (a: TaskType, b: TaskType) => {
 	const priority_map = { LOW: 0, MEDIUM: 1, HIGH: 2 };
-	return priority_map[b.task?.priority ?? 0] - priority_map[a.task?.priority ?? 0];
+	return priority_map[b.task.priority] - priority_map[a.task.priority];
 };
 
 const by_progress = (a: TaskType, b: TaskType) => {
 	const progress_map = { UNSTARTED: 0, IN_PROGRESS: 1, COMPLETED: 2 };
-	return progress_map[b.task?.progress] - progress_map[a.task?.progress];
+	return progress_map[b.task.progress] - progress_map[a.task.progress];
 };
 
 const by_due_date = (a: TaskType, b: TaskType) => {
-	if (a.task?.end_time == null && b.task?.end_time == null) return 0;
-	if (a.task?.end_time == null) return 1;
-	if (b.task?.end_time == null) return -1;
-	return new Date(a.task?.end_time).getTime() - new Date(b.task?.end_time).getTime();
+	if (a.task.end_time == null && b.task.end_time == null) return 0;
+	if (a.task.end_time == null) return 1;
+	if (b.task.end_time == null) return -1;
+	return new Date(a.task.end_time).getTime() - new Date(b.task.end_time).getTime();
 };
 
 // SolidJS component to render <Task />
@@ -83,7 +84,6 @@ export function TaskSorter({
 	createEffect(() => {
 		// filter out 'archived' and 'deleted' tasks
 		let filtered = tasks().filter((task) => {
-			if (task.task == null) return false;
 			return (
 				task.task.visibility !== "ARCHIVED" && task.task.visibility !== "DELETED" && task.task.visibility !== "HIDDEN"
 			);
@@ -116,13 +116,6 @@ export function TaskSorter({
 		}
 
 		const sorted = filtered.toSorted((a, b) => {
-			if (a == null && b == null) return 0;
-			if (a == null) return 1;
-			if (b == null) return -1;
-			if (a.task == null && b.task == null) return 0;
-			if (a.task == null) return 1;
-			if (b.task == null) return -1;
-
 			if (selectedOption() === "recent") {
 				return last_updated(a, b);
 			} else if (selectedOption() === "priority") {
@@ -148,21 +141,24 @@ export function TaskSorter({
 		setSortedTasks(sorted);
 	}, [tasks]);
 
-	async function selectView(view: TaskView) {
-		setView(view);
+	async function selectView(next_view: TaskView) {
+		setView(next_view);
 
 		try {
 			const apiClient = getBrowserClient();
-			await apiClient.user.preferences({
+			const result = await apiClient.user.preferences({
 				id: user_id,
-				task_view: view,
+				task_view: next_view,
 			});
+			if (!result.ok) {
+				console.error("Failed to update user view", result.error);
+			}
 		} catch (error) {
 			console.error("Failed to update user view", error);
 		}
 	}
 
-	const update = (task_id: string, data: any) => {
+	const update = (task_id: string, data: Partial<Task>) => {
 		// replace the task with the updated task
 		const new_tasks = tasks().map((t) => {
 			if (t.task.id === task_id) {
@@ -205,14 +201,14 @@ export function TaskSorter({
 					</>
 				)}
 				<Tag size={16} />
-				<TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
+				<TagSelect tags={tags} onSelect={(selected_tag) => setTag(selected_tag?.id ?? null)} />
 
 				<div class="row row-sm" style={{ gap: "9px", "margin-left": "auto", "grid-column": "span 2" }}>
 					<a
 						role="button"
 						onClick={(e) => {
 							e.preventDefault();
-							selectView("list");
+							void selectView("list");
 						}}
 					>
 						<LayoutList size={16} />
@@ -221,7 +217,7 @@ export function TaskSorter({
 						role="button"
 						onClick={(e) => {
 							e.preventDefault();
-							selectView("grid");
+							void selectView("grid");
 						}}
 					>
 						<LayoutGrid size={16} />
@@ -229,9 +225,9 @@ export function TaskSorter({
 				</div>
 			</div>
 			{view() === "list" ? (
-				<ListView tasks={sortedTasks} project_map={project_map} user_tags={tags as UpsertTag[]} update={update} />
+				<ListView tasks={sortedTasks} project_map={project_map} user_tags={tags} update={update} />
 			) : (
-				<GridView tasks={sortedTasks} project_map={project_map} user_tags={tags as UpsertTag[]} update={update} />
+				<GridView tasks={sortedTasks} project_map={project_map} user_tags={tags} update={update} />
 			)}
 		</div>
 	);
@@ -241,7 +237,7 @@ type ListProps = {
 	tasks: Accessor<Props["tasks"]>;
 	project_map: Props["project_map"];
 	user_tags: UpsertTag[];
-	update: (task_id: string, data: any) => void;
+	update: (task_id: string, data: Partial<Task>) => void;
 };
 
 function ListView({ tasks, project_map, user_tags, update }: ListProps) {

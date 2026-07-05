@@ -27,18 +27,18 @@ const fmtTime = (v: number | string | undefined): string => {
 	return new Date(n).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };
 
-const levelVariant = (level?: string): "danger" | "warning" | "info" | "neutral" => {
+const levelVariant = (level?: string): "error" | "warning" | "info" | "default" => {
 	switch ((level ?? "").toLowerCase()) {
 		case "fatal":
 		case "error":
-			return "danger";
+			return "error";
 		case "warn":
 		case "warning":
 			return "warning";
 		case "info":
 			return "info";
 		default:
-			return "neutral";
+			return "default";
 	}
 };
 
@@ -74,7 +74,7 @@ export default function PulseLogs(props: PulseLogsProps) {
 					style={{ "min-width": "220px", flex: 1 }}
 				/>
 				<Select value={level()} onChange={(e: Event) => setLevel((e.currentTarget as HTMLSelectElement).value)}>
-					<For each={LEVELS as readonly string[]}>{(lv) => <option value={lv}>{lv}</option>}</For>
+					<For each={LEVELS}>{(lv) => <option value={lv}>{lv}</option>}</For>
 				</Select>
 			</div>
 
@@ -110,9 +110,9 @@ export default function PulseLogs(props: PulseLogsProps) {
 								<span class="text-faint" style={{ "min-width": "70px" }}>
 									{fmtTime(log.ts)}
 								</span>
-								<Badge variant={levelVariant(log.level) as any}>{log.level ?? "info"}</Badge>
+								<Badge variant={levelVariant(log.level)}>{log.level ?? "info"}</Badge>
 								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>
-									{log.message ?? log.name ?? `log #${idx() + 1}`}
+									{log.message ?? log.name ?? `log #${String(idx() + 1)}`}
 								</span>
 								<Show when={log.route}>
 									<span class="text-faint">{log.route}</span>

@@ -29,20 +29,22 @@ const fmtTime = (v: number | string | undefined): string => {
 	return new Date(n).toLocaleString();
 };
 
-const levelVariant = (level?: string): "danger" | "warning" | "info" | "neutral" => {
+const levelVariant = (level?: string): "error" | "warning" | "info" | "default" => {
 	switch ((level ?? "").toLowerCase()) {
 		case "fatal":
 		case "error":
-			return "danger";
+			return "error";
 		case "warn":
 		case "warning":
 			return "warning";
 		case "info":
 			return "info";
 		default:
-			return "neutral";
+			return "default";
 	}
 };
+
+const keyFor = (issue: ErrorIssue, idx: number) => issue.id ?? issue.fingerprint ?? `issue-${String(idx)}`;
 
 export default function PulseErrors(props: PulseErrorsProps) {
 	const [expanded, setExpanded] = createSignal<string | null>(null);
@@ -50,8 +52,6 @@ export default function PulseErrors(props: PulseErrorsProps) {
 	const issues = () => props.issues ?? [];
 
 	const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
-
-	const keyFor = (issue: ErrorIssue, idx: number) => issue.id ?? issue.fingerprint ?? `issue-${idx}`;
 
 	return (
 		<div class="stack stack-md">
@@ -91,7 +91,7 @@ export default function PulseErrors(props: PulseErrorsProps) {
 								>
 									<div class="row row-between" style={{ "align-items": "center", gap: "0.5rem" }}>
 										<div class="row" style={{ "align-items": "center", gap: "0.5rem", "min-width": 0, flex: 1 }}>
-											<Badge variant={levelVariant(issue.level) as any}>{issue.level ?? "error"}</Badge>
+											<Badge variant={levelVariant(issue.level)}>{issue.level ?? "error"}</Badge>
 											<span
 												class="text-sm"
 												style={{
@@ -133,7 +133,7 @@ export default function PulseErrors(props: PulseErrorsProps) {
 														"max-height": "240px",
 													}}
 												>
-													{issue.sample!.stack}
+													{issue.sample?.stack}
 												</pre>
 											</Show>
 										</div>

@@ -4,7 +4,7 @@ import { getServerApiClient } from "@devpad/core/ui/api-client";
 import type { Project } from "@devpad/schema";
 
 export function rethrow(error: ApiResultError) {
-	return new Response(error?.code, { status: error?.status_code, statusText: error?.code });
+	return new Response(error.code, { status: error.status_code, statusText: error.code });
 }
 
 type ProjectGuardOk = {
@@ -28,7 +28,6 @@ export async function getProject(astro: {
 	if (!result.ok) return rethrow(result.error);
 
 	const project = result.value;
-	if (!project) return new Response(null, { status: 404, statusText: "Project not found" });
 	if (project.owner_id !== user.id) return new Response(null, { status: 403, statusText: "Access denied" });
 
 	return { client, project, user };

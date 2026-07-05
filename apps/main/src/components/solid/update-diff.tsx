@@ -26,7 +26,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const deep_copied_items = JSON.parse(JSON.stringify(items)) as UpdateData[];
 	const mapped_items = deep_copied_items.map((item) => {
 		const task = tasks[item.id];
-		return task ? { ...item, task } : item;
+		return { ...item, task };
 	});
 
 	const { same = [], others = [] } = Object.groupBy(mapped_items, (u) =>
@@ -37,7 +37,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const defaultActions = Object.fromEntries(
 		mapped_items.map((item) => [
 			item.id,
-			ACTIONS[item.type as keyof typeof ACTIONS][0], // Default to the 0th action
+			ACTIONS[item.type][0], // Default to the 0th action
 		]),
 	);
 	const [actionsState, setActionsState] = createSignal<Record<string, UpdateAction>>(defaultActions);
@@ -57,26 +57,28 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const saveActions = async () => {
 		const actions = actionsState();
 		// Make the API request here
-		const grouped = Object.entries(actions).reduce(
-			(acc, [id, action]) => {
-				if (acc[action]) {
-					acc[action].push(id);
-				} else {
-					acc[action] = [id];
-				}
-				return acc;
-			},
-			{} as Record<UpdateAction, string[]>,
-		);
+		const grouped = Object.entries(actions).reduce<Partial<Record<UpdateAction, string[]>>>((acc, [id, action]) => {
+			const existing = acc[action];
+			if (existing) {
+				existing.push(id);
+			} else {
+				acc[action] = [id];
+			}
+			return acc;
+		}, {});
 
 		try {
 			const apiClient = getBrowserClient();
-			await apiClient.projects.scan.update(project_id, {
+			const result = await apiClient.projects.scan.update(project_id, {
 				id: update_id,
 				actions: grouped,
 				titles: titles(),
 				approved: true,
 			});
+			if (!result.ok) {
+				console.error("Failed to save actions", result.error);
+				return;
+			}
 			location.reload();
 		} catch (error) {
 			console.error("Failed to save actions");
@@ -87,12 +89,16 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const ignoreUpdate = async () => {
 		try {
 			const apiClient = getBrowserClient();
-			await apiClient.projects.scan.update(project_id, {
+			const result = await apiClient.projects.scan.update(project_id, {
 				id: update_id,
 				actions: {},
 				titles: {},
 				approved: true,
 			});
+			if (!result.ok) {
+				console.error("Failed to save actions", result.error);
+				return;
+			}
 			location.reload();
 		} catch (error) {
 			console.error("Failed to save actions");
@@ -133,10 +139,22 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				))}
 			<hr />
 			<div class="row row-sm" style="gap: 20px; justify-content: center;">
-				<a role="button" onClick={saveActions} class="row row-sm">
+				<a
+					role="button"
+					onClick={() => {
+						void saveActions();
+					}}
+					class="row row-sm"
+				>
 					<Save size={16} /> save actions
 				</a>
-				<a role="button" onClick={ignoreUpdate} class="row row-sm">
+				<a
+					role="button"
+					onClick={() => {
+						void ignoreUpdate();
+					}}
+					class="row row-sm"
+				>
 					<Trash size={16} /> ignore updates
 				</a>
 			</div>
@@ -155,18 +173,18 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	const available_actions = ACTIONS[update.type];
 	const { data } = update;
 
-	const title: string | null = update?.task?.task?.title ?? null;
+	const title: string | null = update.task?.task.title ?? null;
 
 	// Determine the path based on new or old data
-	const path = data.new?.file
+	const path = data.new.file
 		? formatCodeLocation(data.new.file, data.new.line)
-		: data.old?.file
+		: data.old.file
 			? formatCodeLocation(data.old.file, data.old.line)
 			: "unknown:?";
 
 	// Build contexts for old and new code
-	const old_context = data.old?.context ? buildCodeContext(data.old.context) : null;
-	const new_context = data.new?.context ? buildCodeContext(data.new.context) : null;
+	const old_context = data.old.context ? buildCodeContext(data.old.context) : null;
+	const new_context = data.new.context ? buildCodeContext(data.new.context) : null;
 
 	return (
 		<div class="stack stack-sm" style="gap: 2px;">
@@ -181,7 +199,9 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 						type="text"
 						placeholder="Enter title"
 						style="width: 50ch"
-						onInput={(e) => onTitleChange(update.id, e.currentTarget.value)}
+						onInput={(e) => {
+							onTitleChange(update.id, e.currentTarget.value);
+						}}
 					/>
 				)}
 			</h5>
@@ -189,16 +209,12 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 				<span>{update.tag}</span> - <code>{path}</code>
 			</div>
 			<div style="padding-left: 0ch; gap: 3px;" class="stack stack-sm">
-				{data.old && (
-					<div class="item old">
-						<code>{data.old.text}</code>
-					</div>
-				)}
-				{data.new && (
-					<div class="item new">
-						<code>{data.new.text}</code>
-					</div>
-				)}
+				<div class="item old">
+					<code>{data.old.text}</code>
+				</div>
+				<div class="item new">
+					<code>{data.new.text}</code>
+				</div>
 			</div>
 			<div style="position: relative; padding-top: 2px">
 				<Context old_context={old_context} new_context={new_context} />
@@ -212,7 +228,9 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 									id={`${update.id}-${label}`}
 									style="display: none"
 									checked={label === action}
-									onChange={() => onActionChange(update.id, label)}
+									onChange={() => {
+										onActionChange(update.id, label);
+									}}
 								/>
 								<label class="label-modal" for={`${update.id}-${label}`}>
 									{label.toLowerCase()}

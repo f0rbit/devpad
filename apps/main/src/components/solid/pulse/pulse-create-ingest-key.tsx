@@ -25,7 +25,7 @@ export default function PulseCreateIngestKey(props: PulseCreateIngestKeyProps) {
 			name: "default",
 		});
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to create ingest key");
+			setError(result.error.message);
 			setLoading(false);
 			return;
 		}
@@ -35,14 +35,22 @@ export default function PulseCreateIngestKey(props: PulseCreateIngestKeyProps) {
 	};
 
 	const handleCopy = () => {
-		navigator.clipboard.writeText(createdKey()!);
+		const key = createdKey();
+		if (!key) return;
+		void navigator.clipboard.writeText(key);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
 	};
 
 	return (
 		<div class="stack stack-sm">
-			<Button onClick={handleCreate} disabled={loading()} data-testid="pulse-create-key">
+			<Button
+				onClick={() => {
+					void handleCreate();
+				}}
+				disabled={loading()}
+				data-testid="pulse-create-key"
+			>
 				<Plus size={16} /> {loading() ? "creating..." : "Create ingest key"}
 			</Button>
 			<Show when={error()}>

@@ -100,11 +100,21 @@ const error_or_critical =
 
 /** Opinionated namespaced log surface — see file header for the severity ladder. */
 export const log = {
-	raw: (msg: string, attrs?: Record<string, unknown>) => emit("raw", msg, attrs),
-	debug: (msg: string, attrs?: Record<string, unknown>) => emit("debug", msg, attrs),
-	info: (msg: string, attrs?: Record<string, unknown>) => emit("info", msg, attrs),
-	notice: (msg: string, attrs?: Record<string, unknown>) => emit("notice", msg, attrs),
-	warning: (msg: string, attrs?: Record<string, unknown>) => emit("warning", msg, attrs),
+	raw: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("raw", msg, attrs);
+	},
+	debug: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("debug", msg, attrs);
+	},
+	info: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("info", msg, attrs);
+	},
+	notice: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("notice", msg, attrs);
+	},
+	warning: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("warning", msg, attrs);
+	},
 	/** `log.error(msg, err?, attrs?)` — when an Error is passed it's captured as an exception. */
 	error: error_or_critical("error"),
 	/** `log.critical(msg, err?, attrs?)` — same shape as error, higher severity. */
@@ -112,7 +122,10 @@ export const log = {
 
 	span(name: string): Span {
 		const p = ensureInitialized();
-		if (!p) return { end: () => {} } as Span;
+		if (!p) {
+			const noop: Span = { end: () => {} };
+			return noop;
+		}
 		return startSpan({ pulse: p, name });
 	},
 

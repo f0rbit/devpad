@@ -1,6 +1,7 @@
 import Check from "lucide-solid/icons/check";
 import Loader2 from "lucide-solid/icons/loader-2";
 import X from "lucide-solid/icons/x";
+import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import type { UpdateState } from "@/utils/optimistic-updates";
 
@@ -22,6 +23,7 @@ export function OptimisticStatus(props: OptimisticStatusProps) {
 				return "w-3 h-3";
 			case "lg":
 				return "w-6 h-6";
+			case "md":
 			default:
 				return "w-4 h-4";
 		}
@@ -46,7 +48,7 @@ export function OptimisticStatus(props: OptimisticStatusProps) {
 
 interface OptimisticButtonProps {
 	state: UpdateState;
-	children?: any;
+	children?: JSX.Element;
 	onClick?: () => void;
 	disabled?: boolean;
 	variant?: "primary" | "secondary" | "ghost";
@@ -70,6 +72,7 @@ export function OptimisticButton(props: OptimisticButtonProps) {
 				return "bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500";
 			case "ghost":
 				return "text-gray-700 hover:bg-gray-100 focus:ring-gray-500";
+			case "primary":
 			default:
 				return "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500";
 		}
@@ -81,6 +84,7 @@ export function OptimisticButton(props: OptimisticButtonProps) {
 				return "px-2 py-1 text-sm";
 			case "lg":
 				return "px-6 py-3 text-lg";
+			case "md":
 			default:
 				return "px-4 py-2";
 		}
@@ -112,7 +116,7 @@ export function OptimisticButton(props: OptimisticButtonProps) {
 interface OptimisticFieldProps {
 	state: UpdateState;
 	error?: string | null;
-	children: any;
+	children: JSX.Element;
 	className?: string;
 }
 

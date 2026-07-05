@@ -5,23 +5,31 @@ interface RunProgressProps {
 	run: PipelineRun;
 }
 
+interface RolloutStage {
+	name: string;
+}
+
+interface ResolvedRollout {
+	stages?: RolloutStage[];
+}
+
 export default function RunProgress(props: RunProgressProps) {
 	const stages = (() => {
 		try {
-			const rollout = JSON.parse(props.run.resolved_rollout as any);
-			return rollout.stages || [];
+			const rollout = JSON.parse(props.run.resolved_rollout as string) as ResolvedRollout;
+			return rollout.stages ?? [];
 		} catch {
 			return [];
 		}
 	})();
 
-	const current_stage_idx = stages.findIndex((s: any) => s.name === props.run.current_stage);
+	const current_stage_idx = stages.findIndex((s) => s.name === props.run.current_stage);
 
 	return (
 		<div class="stack stack-md">
 			<div class="row" style="gap: var(--space-xs); overflow-x: auto; padding-bottom: var(--space-xs);">
 				<For each={stages}>
-					{(stage: any, idx) => (
+					{(stage, idx) => (
 						<div
 							style={{
 								display: "flex",

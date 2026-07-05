@@ -49,13 +49,13 @@ const format_relative = (iso: string): string => {
 	const diff_ms = Math.max(0, now - then);
 	const seconds = Math.floor(diff_ms / 1000);
 	if (seconds < 5) return "just now";
-	if (seconds < 60) return `${seconds}s ago`;
+	if (seconds < 60) return `${String(seconds)}s ago`;
 	const minutes = Math.floor(seconds / 60);
-	if (minutes < 60) return `${minutes}m ago`;
+	if (minutes < 60) return `${String(minutes)}m ago`;
 	const hours = Math.floor(minutes / 60);
-	if (hours < 24) return `${hours}h ago`;
+	if (hours < 24) return `${String(hours)}h ago`;
 	const days = Math.floor(hours / 24);
-	if (days < 30) return `${days}d ago`;
+	if (days < 30) return `${String(days)}d ago`;
 	return new Date(iso).toLocaleDateString();
 };
 
@@ -64,7 +64,7 @@ const stringify_payload = (payload: unknown): string => {
 	try {
 		return JSON.stringify(payload, null, 2);
 	} catch {
-		return String(payload);
+		return "[unserializable payload]";
 	}
 };
 
@@ -83,16 +83,20 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 		});
 	};
 
-	onMount(async () => {
+	const load = async () => {
 		const client = getBrowserClient();
 		const result = await client.pipelines.events.list(props.run_id);
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to load events");
+			setError(result.error.message);
 			setLoading(false);
 			return;
 		}
 		setEvents(result.value);
 		setLoading(false);
+	};
+
+	onMount(() => {
+		void load();
 	});
 
 	return (
@@ -151,7 +155,9 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 							<div class="stack stack-xs">
 								<button
 									type="button"
-									onClick={() => toggle(ev.id)}
+									onClick={() => {
+										toggle(ev.id);
+									}}
 									style={{
 										"align-self": "flex-start",
 										background: "none",

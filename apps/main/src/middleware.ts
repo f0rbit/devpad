@@ -1,7 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
 import { resolveAuth } from "@devpad/core/ui/middleware";
-import type { AuthUser } from "@devpad/schema/bindings";
-import type { MiddlewareHandler } from "astro";
+import type { AstroCookieSetOptions, MiddlewareHandler } from "astro";
 
 function verifyRequestOrigin(origin: string, allowed_hosts: string[]): boolean {
 	if (!origin) return false;
@@ -20,7 +19,7 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 		const rawHostHeader = context.request.headers.get("Host");
 		const hostHeader = rawHostHeader?.split(",")[0]?.trim();
 
-		const checks = [!originHeader, !hostHeader, !verifyRequestOrigin(originHeader!, [hostHeader!])];
+		const checks = [!originHeader, !hostHeader, !verifyRequestOrigin(originHeader ?? "", [hostHeader ?? ""])];
 		const ignore = origin_ignore.find((p) => context.url.pathname.startsWith(p));
 		if (checks.some((c) => c) && !ignore) {
 			return new Response("Invalid origin", { status: 403 });
@@ -69,17 +68,19 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 	if (is_test_env && has_test_header) {
 		context.locals.user = {
 			id: "test-user-e2e",
-			github_id: null,
+			github_id: 0,
 			name: "Test User",
-			task_view: "list" as const,
-		} as unknown as NonNullable<AuthUser>;
+			task_view: "list",
+		};
 		context.locals.session = { id: "test-session" };
 		return next();
 	}
 
 	const cookies = {
 		get: (name: string) => context.cookies.get(name)?.value,
-		set: (name: string, value: string, opts: any) => context.cookies.set(name, value, opts),
+		set: (name: string, value: string, opts: AstroCookieSetOptions) => {
+			context.cookies.set(name, value, opts);
+		},
 	};
 	const result = await resolveAuth(context.request, cookies, API_SERVER_BASE);
 	context.locals.user = result.user;

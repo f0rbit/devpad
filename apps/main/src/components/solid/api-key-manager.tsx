@@ -63,7 +63,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 			scope: newKeyScope(),
 		});
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to create key");
+			setError(result.error.message);
 			setLoading(false);
 			return;
 		}
@@ -79,22 +79,26 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 	};
 
 	const handleDelete = async () => {
+		const target = deleteTarget();
+		if (!target) return;
 		setLoading(true);
 		setError(null);
 		const apiClient = getBrowserClient();
-		const result = await apiClient.auth.keys.revoke(deleteTarget()!.id);
+		const result = await apiClient.auth.keys.revoke(target.id);
 		if (result.ok) {
-			setKeys((prev) => prev.filter((k) => k.id !== deleteTarget()!.id));
+			setKeys((prev) => prev.filter((k) => k.id !== target.id));
 			setDeleteTarget(null);
 			track("api_key_revoked");
 		} else {
-			setError(result.error.message ?? "Failed to delete key");
+			setError(result.error.message);
 		}
 		setLoading(false);
 	};
 
 	const handleCopy = () => {
-		navigator.clipboard.writeText(createdKey()!);
+		const key = createdKey();
+		if (!key) return;
+		void navigator.clipboard.writeText(key);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
 	};
@@ -218,7 +222,12 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 					>
 						cancel
 					</Button>
-					<Button onClick={handleCreate} disabled={loading()}>
+					<Button
+						onClick={() => {
+							void handleCreate();
+						}}
+						disabled={loading()}
+					>
 						{loading() ? "creating..." : "create"}
 					</Button>
 				</ModalFooter>
@@ -276,7 +285,13 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 					<Button variant="ghost" onClick={() => setDeleteTarget(null)}>
 						cancel
 					</Button>
-					<Button variant="danger" onClick={handleDelete} disabled={loading()}>
+					<Button
+						variant="danger"
+						onClick={() => {
+							void handleDelete();
+						}}
+						disabled={loading()}
+					>
 						{loading() ? "deleting..." : "delete"}
 					</Button>
 				</ModalFooter>

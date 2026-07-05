@@ -1,13 +1,6 @@
 import type { Project } from "@devpad/schema";
 import { For } from "solid-js";
-import { ProjectCard } from "./project-card";
-
-type PipelineStatus = {
-	package_id: string;
-	package_name: string;
-	latest_run: any | null;
-	pending_approval_count: number;
-};
+import { ProjectCard, type PipelineStatus } from "./project-card";
 
 type Props = {
 	projects: Project[];

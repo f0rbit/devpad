@@ -36,7 +36,7 @@ export default function GrantsList(props: GrantsListProps) {
 		const client = getBrowserClient();
 		const result = await client.pipelines.grants.approve(grant.id, props.user_id);
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to approve grant");
+			setError(result.error.message);
 		} else {
 			setGrants((prev) =>
 				prev.map((g) =>
@@ -53,25 +53,29 @@ export default function GrantsList(props: GrantsListProps) {
 		const client = getBrowserClient();
 		const result = await client.pipelines.grants.deny(grant.id, props.user_id);
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to deny grant");
+			setError(result.error.message);
 		} else {
 			setGrants((prev) => prev.filter((g) => g.id !== grant.id));
 		}
 		setLoading(null);
 	};
 
-	const group_grants = () => {
-		const by_package: Record<string, Record<string, PipelineGrant[]>> = {};
-		grants().forEach((grant) => {
-			if (!by_package[grant.package_id]) {
-				by_package[grant.package_id] = {};
+	const group_grants = (): { package_id: string; stages: { stage_name: string; grants: PipelineGrant[] }[] }[] => {
+		const packages: { package_id: string; stages: { stage_name: string; grants: PipelineGrant[] }[] }[] = [];
+		for (const grant of grants()) {
+			let pkg = packages.find((p) => p.package_id === grant.package_id);
+			if (!pkg) {
+				pkg = { package_id: grant.package_id, stages: [] };
+				packages.push(pkg);
 			}
-			if (!by_package[grant.package_id][grant.stage_name]) {
-				by_package[grant.package_id][grant.stage_name] = [];
+			let stage = pkg.stages.find((s) => s.stage_name === grant.stage_name);
+			if (!stage) {
+				stage = { stage_name: grant.stage_name, grants: [] };
+				pkg.stages.push(stage);
 			}
-			by_package[grant.package_id][grant.stage_name].push(grant);
-		});
-		return by_package;
+			stage.grants.push(grant);
+		}
+		return packages;
 	};
 
 	return (
@@ -86,15 +90,17 @@ export default function GrantsList(props: GrantsListProps) {
 				<Empty title="No grants" description="No grants have been requested yet." />
 			</Show>
 
-			<For each={Object.entries(group_grants())}>
-				{([package_id, stages]) => (
+			<For each={group_grants()}>
+				{(pkg) => (
 					<div class="stack stack-md" style={{ "border-bottom": "1px solid var(--border)", "padding-bottom": "1rem" }}>
-						<h3 style={{ margin: "0 0 0.5rem 0", opacity: 0.8 }}>{package_id}</h3>
-						<For each={Object.entries(stages)}>
-							{([stage_name, stage_grants]) => (
+						<h3 style={{ margin: "0 0 0.5rem 0", opacity: 0.8 }}>{pkg.package_id}</h3>
+						<For each={pkg.stages}>
+							{(stage) => (
 								<div class="stack stack-sm">
-									<h4 style={{ margin: "0 0 0.5rem 0", opacity: 0.7, "font-size": "0.9rem" }}>Stage: {stage_name}</h4>
-									<For each={stage_grants}>
+									<h4 style={{ margin: "0 0 0.5rem 0", opacity: 0.7, "font-size": "0.9rem" }}>
+										Stage: {stage.stage_name}
+									</h4>
+									<For each={stage.grants}>
 										{(grant) => (
 											<div
 												class="interactive-row"
@@ -146,7 +152,9 @@ export default function GrantsList(props: GrantsListProps) {
 																size="sm"
 																variant="primary"
 																disabled={loading() === grant.id}
-																onClick={() => handleApprove(grant)}
+																onClick={() => {
+																	void handleApprove(grant);
+																}}
 															>
 																<Check size={14} />
 																Approve
@@ -155,7 +163,9 @@ export default function GrantsList(props: GrantsListProps) {
 																size="sm"
 																variant="secondary"
 																disabled={loading() === grant.id}
-																onClick={() => handleDeny(grant)}
+																onClick={() => {
+																	void handleDeny(grant);
+																}}
 															>
 																<X size={14} />
 																Deny

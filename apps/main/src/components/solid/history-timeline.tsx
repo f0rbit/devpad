@@ -96,10 +96,43 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 	);
 }
 
+function ActionIcon({ type }: { type: HistoryAction["type"] }) {
+	switch (type) {
+		case "SCAN":
+			return <ScanText size={16} />;
+		case "UPDATE_PROJECT":
+			return <FolderPen size={16} />;
+		case "CREATE_PROJECT":
+			return <FolderPlus size={16} />;
+		case "DELETE_PROJECT":
+			return <FolderMinus size={16} />;
+		case "CREATE_TASK":
+			return <FilePlus2 size={16} />;
+		case "UPDATE_TASK":
+			return <FilePen size={16} />;
+		case "DELETE_TASK":
+			return <FileMinus2 size={16} />;
+		case "CREATE_TAG":
+		case "UPDATE_TAG":
+		case "DELETE_TAG":
+		case "CREATE_GOAL":
+		case "UPDATE_GOAL":
+		case "DELETE_GOAL":
+		case "CREATE_MILESTONE":
+		case "UPDATE_MILESTONE":
+		case "DELETE_MILESTONE":
+		case "CREATE_CHECKLIST":
+		case "UPDATE_CHECKLIST":
+		case "DELETE_CHECKLIST":
+		default:
+			return <span>?</span>;
+	}
+}
+
 function TimelineItem({ action, view }: { action: HistoryAction; view: "project" | "task" | "account" }) {
 	const ActionDate = () => {
 		// Ensure 'action' is passed as a prop
-		if (!action || !action.created_at) {
+		if (!action.created_at) {
 			return null; // Handle the case where action or created_at is undefined
 		}
 
@@ -131,27 +164,6 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 		);
 	};
 
-	const ActionIcon = ({ type }: { type: HistoryAction["type"] }) => {
-		switch (type) {
-			case "SCAN":
-				return <ScanText size={16} />;
-			case "UPDATE_PROJECT":
-				return <FolderPen size={16} />;
-			case "CREATE_PROJECT":
-				return <FolderPlus size={16} />;
-			case "DELETE_PROJECT":
-				return <FolderMinus size={16} />;
-			case "CREATE_TASK":
-				return <FilePlus2 size={16} />;
-			case "UPDATE_TASK":
-				return <FilePen size={16} />;
-			case "DELETE_TASK":
-				return <FileMinus2 size={16} />;
-			default:
-				return <span>?</span>;
-		}
-	};
-
 	const Data = () => {
 		switch (action.type) {
 			case "SCAN": {
@@ -179,7 +191,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 			case "CREATE_PROJECT":
 			case "UPDATE_PROJECT":
 			case "DELETE_PROJECT": {
-				const { name = null, href = null } = action.data as { name: string | null; href: string | null };
+				const { name, href } = action.data as { name: string | null; href: string | null };
 				if (!name || !href) return null;
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
@@ -188,6 +200,21 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 					</div>
 				);
 			}
+			case "CREATE_TASK":
+			case "DELETE_TASK":
+			case "CREATE_TAG":
+			case "UPDATE_TAG":
+			case "DELETE_TAG":
+			case "CREATE_GOAL":
+			case "UPDATE_GOAL":
+			case "DELETE_GOAL":
+			case "CREATE_MILESTONE":
+			case "UPDATE_MILESTONE":
+			case "DELETE_MILESTONE":
+			case "CREATE_CHECKLIST":
+			case "UPDATE_CHECKLIST":
+			case "DELETE_CHECKLIST":
+				break;
 		}
 		return <></>;
 	};

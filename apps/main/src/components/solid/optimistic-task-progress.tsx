@@ -12,6 +12,19 @@ import { createOptimisticUpdate } from "@/utils/optimistic-updates";
 
 type Progress = Task["progress"];
 
+const nextProgress = (current: Progress): Progress => {
+	switch (current) {
+		case "UNSTARTED":
+			return "IN_PROGRESS";
+		case "IN_PROGRESS":
+			return "COMPLETED";
+		case "COMPLETED":
+			return "UNSTARTED";
+		default:
+			return "UNSTARTED";
+	}
+};
+
 interface OptimisticTaskProgressProps {
 	task: TaskWithDetails;
 	type?: "circle" | "box";
@@ -35,7 +48,7 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 				progress: updatedTask.progress,
 				owner_id: updatedTask.owner_id,
 			});
-			if (!result.ok) throw new Error(result.error?.message ?? "Failed to update task");
+			if (!result.ok) throw new Error(result.error.message);
 			return result.value.task;
 		},
 		showSuccessToast: false, // No toast for quick actions
@@ -52,23 +65,10 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 	const isLoading = () => progressUpdate.isLoading();
 	const isSuccess = () => progressUpdate.isSuccess();
 
-	const nextProgress = (current: Progress): Progress => {
-		switch (current) {
-			case "UNSTARTED":
-				return "IN_PROGRESS";
-			case "IN_PROGRESS":
-				return "COMPLETED";
-			case "COMPLETED":
-				return "UNSTARTED";
-			default:
-				return "UNSTARTED";
-		}
-	};
-
 	const handleProgressClick = () => {
 		const current = currentProgress();
 		const next = nextProgress(current);
-		progressUpdate.updateFields({ progress: next });
+		void progressUpdate.updateFields({ progress: next });
 	};
 
 	const ProgressIcon = () => {

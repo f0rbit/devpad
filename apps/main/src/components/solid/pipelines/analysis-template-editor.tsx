@@ -12,7 +12,15 @@ interface AnalysisTemplateEditorProps {
 	onSaved: (saved: PipelineAnalysisTemplate) => void;
 }
 
-const threshold_dsl_string = (raw: unknown): string => (typeof raw === "string" ? raw : String(raw ?? ""));
+const threshold_dsl_string = (raw: unknown): string => {
+	if (typeof raw === "string") return raw;
+	if (raw === null || raw === undefined) return "";
+	try {
+		return JSON.stringify(raw);
+	} catch {
+		return "";
+	}
+};
 
 export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProps) {
 	const [name, setName] = createSignal("");
@@ -159,7 +167,12 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 				<Button variant="ghost" onClick={props.onClose}>
 					cancel
 				</Button>
-				<Button onClick={handleSave} disabled={loading() || name().trim() === "" || thresholdDsl().trim() === ""}>
+				<Button
+					onClick={() => {
+						void handleSave();
+					}}
+					disabled={loading() || name().trim() === "" || thresholdDsl().trim() === ""}
+				>
 					{loading() ? "saving..." : props.mode === "create" ? "create" : "save"}
 				</Button>
 			</ModalFooter>

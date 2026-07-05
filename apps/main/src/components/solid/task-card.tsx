@@ -1,6 +1,6 @@
 import { AiProvenance } from "@devpad/core/ui";
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { Project, TaskWithDetails, UpsertTag } from "@devpad/schema";
+import type { Project, Task, TaskWithDetails, UpsertTag } from "@devpad/schema";
 import Calendar from "lucide-solid/icons/calendar";
 import CalendarClock from "lucide-solid/icons/calendar-clock";
 import CalendarX2 from "lucide-solid/icons/calendar-x-2";
@@ -29,14 +29,14 @@ interface Props {
 	user_tags: UpsertTag[];
 	view?: "list" | "grid";
 	class?: string;
-	update?: (id: string, updates: any) => void;
+	update?: (id: string, updates: Partial<Task>) => void;
 	draw_project?: boolean;
 }
 
 const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	const [goalName, setGoalName] = createSignal<string | null>(null);
 
-	onMount(async () => {
+	const load = async () => {
 		try {
 			const apiClient = getBrowserClient();
 			const result = await apiClient.goals.find(goal_id);
@@ -46,12 +46,16 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 		} catch (error) {
 			console.error("Failed to fetch goal:", error);
 		}
+	};
+
+	onMount(() => {
+		void load();
 	});
 
 	if (!goalName()) return null;
 
 	return (
-		<div style="display: flex; align-items: center; gap: 3px;" title={`Goal: ${goalName()}`}>
+		<div style="display: flex; align-items: center; gap: 3px;" title={`Goal: ${goalName() ?? ""}`}>
 			<Target size={16} />
 			<span style={{ "font-size": "small", color: "var(--fg-muted)" }}>{goalName()}</span>
 		</div>
@@ -61,10 +65,6 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 export const TaskCard = (props: Props) => {
 	const { task: fetched_task, project, user_tags } = props;
 	const { task, tags } = fetched_task;
-
-	if (!task) {
-		return <div>Task not found</div>;
-	}
 
 	const project_name = project?.name ?? null;
 	const priority_class = getPriorityClass(task.priority, !!task.end_time);
@@ -98,7 +98,13 @@ export const TaskCard = (props: Props) => {
 		<div class={containerClass} style={{ gap: "3px", height: "100%" }}>
 			<div>
 				<span class="progress-icon">
-					<TaskProgress progress={task.progress} onClick={progress} type="box" />
+					<TaskProgress
+						progress={task.progress}
+						onClick={() => {
+							void progress();
+						}}
+						type="box"
+					/>
 				</span>
 				<span>
 					<a href={`/todo/${task.id}`} class="task-title">

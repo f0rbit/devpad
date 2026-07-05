@@ -34,7 +34,7 @@ interface PulseSubscriptionsProps {
 const LEVELS = ["any", "fatal", "error", "warn", "info"] as const;
 
 export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
-	const [subs, setSubs] = createSignal<Subscription[]>(props.subscriptions ?? []);
+	const [subs, setSubs] = createSignal<Subscription[]>(props.subscriptions);
 	const [showCreate, setShowCreate] = createSignal(false);
 	const [deleteTarget, setDeleteTarget] = createSignal<Subscription | null>(null);
 	const [loading, setLoading] = createSignal(false);
@@ -78,7 +78,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 			cooldown_seconds: Number(cooldown()) || 60,
 		});
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to create subscription");
+			setError(result.error.message);
 			setLoading(false);
 			return;
 		}
@@ -96,7 +96,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 		const client = getBrowserClient();
 		const result = await client.pulse.subs.delete(target.id);
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to delete subscription");
+			setError(result.error.message);
 			setLoading(false);
 			return;
 		}
@@ -151,7 +151,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 								<div class="stack stack-xs" style={{ "min-width": 0, flex: 1 }}>
 									<div class="row" style={{ "align-items": "center", gap: "0.5rem" }}>
 										<span style={{ "font-weight": 500 }}>{sub.name ?? "(unnamed)"}</span>
-										<Badge variant={"info" as any}>{sub.channel?.kind ?? "discord"}</Badge>
+										<Badge variant="info">{sub.channel?.kind ?? "discord"}</Badge>
 									</div>
 									<Show when={sub.channel?.webhook_url}>
 										<span
@@ -163,13 +163,13 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 												"white-space": "nowrap",
 											}}
 										>
-											{sub.channel!.webhook_url}
+											{sub.channel?.webhook_url}
 										</span>
 									</Show>
 								</div>
 								<Button
 									size="sm"
-									variant={"danger" as any}
+									variant="danger"
 									onClick={() => setDeleteTarget(sub)}
 									data-testid={`pulse-sub-delete-${sub.id}`}
 								>
@@ -214,7 +214,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 									value={minLevel()}
 									onChange={(e: Event) => setMinLevel((e.currentTarget as HTMLSelectElement).value)}
 								>
-									<For each={LEVELS as readonly string[]}>{(lv) => <option value={lv}>{lv}</option>}</For>
+									<For each={LEVELS}>{(lv) => <option value={lv}>{lv}</option>}</For>
 								</select>
 							</FormField>
 							<FormField label="cooldown (seconds)">
@@ -228,7 +228,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 					</ModalBody>
 					<ModalFooter>
 						<Button
-							variant={"secondary" as any}
+							variant="secondary"
 							onClick={() => {
 								setShowCreate(false);
 								resetForm();
@@ -237,7 +237,13 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 						>
 							cancel
 						</Button>
-						<Button onClick={handleCreate} disabled={loading()} data-testid="pulse-sub-submit">
+						<Button
+							onClick={() => {
+								void handleCreate();
+							}}
+							disabled={loading()}
+							data-testid="pulse-sub-submit"
+						>
 							{loading() ? "creating…" : "create"}
 						</Button>
 					</ModalFooter>
@@ -251,15 +257,21 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 					</ModalHeader>
 					<ModalBody>
 						<p>
-							Delete <strong>{deleteTarget()!.name ?? "this subscription"}</strong>? Notifications will stop
+							Delete <strong>{deleteTarget()?.name ?? "this subscription"}</strong>? Notifications will stop
 							immediately.
 						</p>
 					</ModalBody>
 					<ModalFooter>
-						<Button variant={"secondary" as any} onClick={() => setDeleteTarget(null)} disabled={loading()}>
+						<Button variant="secondary" onClick={() => setDeleteTarget(null)} disabled={loading()}>
 							cancel
 						</Button>
-						<Button variant={"danger" as any} onClick={handleDelete} disabled={loading()}>
+						<Button
+							variant="danger"
+							onClick={() => {
+								void handleDelete();
+							}}
+							disabled={loading()}
+						>
 							{loading() ? "deleting…" : "delete"}
 						</Button>
 					</ModalFooter>

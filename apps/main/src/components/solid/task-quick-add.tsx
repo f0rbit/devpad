@@ -42,13 +42,13 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 		setTitle("");
 		setPriority("LOW");
 		onCreated(result.value);
-		track("task_created", { project_id, task_id: (result.value as { id?: string })?.id });
+		track("task_created", { project_id, task_id: result.value.task.id });
 	};
 
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
-			handleSubmit();
+			void handleSubmit();
 		}
 	};
 
@@ -75,7 +75,14 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 				<option value="MEDIUM">MEDIUM</option>
 				<option value="HIGH">HIGH</option>
 			</select>
-			<button type="button" class="btn btn-ghost btn-icon btn-sm" onClick={handleSubmit} disabled={loading()}>
+			<button
+				type="button"
+				class="btn btn-ghost btn-icon btn-sm"
+				onClick={() => {
+					void handleSubmit();
+				}}
+				disabled={loading()}
+			>
 				<Show when={loading()} fallback={<Plus style={{ width: "1.1rem", height: "1.1rem" }} />}>
 					<Loader class="animate-spin" style={{ width: "1.1rem", height: "1.1rem" }} />
 				</Show>

@@ -35,8 +35,8 @@ const TodoScannerConfig = ({
 	user_tags: TagWithTypedColor[];
 }) => {
 	const [config, setConfig] = createStore({
-		tags: initial_config.tags ?? [],
-		ignore: initial_config?.ignore ?? [],
+		tags: initial_config.tags,
+		ignore: initial_config.ignore,
 		branch: scan_branch ?? branches?.[0]?.name ?? null,
 	});
 	const [errors, setErrors] = createStore({
@@ -160,7 +160,7 @@ const TodoScannerConfig = ({
 
 		try {
 			const apiClient = getBrowserClient();
-			await apiClient.projects.config.save({
+			const result = await apiClient.projects.config.save({
 				config: {
 					tags: config.tags.filter((tag) => tag.name && tag.match.length > 0),
 					ignore: config.ignore.filter((path) => path.trim()),
@@ -168,6 +168,11 @@ const TodoScannerConfig = ({
 				scan_branch: config.branch ?? undefined,
 				id,
 			});
+			if (!result.ok) {
+				console.error("Error saving config:", result.error);
+				setErrors("tags", "An error occurred while saving.");
+				return;
+			}
 			window.location.reload();
 		} catch (error) {
 			console.error("Error saving config:", error);
@@ -195,7 +200,12 @@ const TodoScannerConfig = ({
 					</div>
 					<div class="row">
 						<GitBranch size={16} />
-						<select value={config.branch ?? ""} onChange={(e) => selectBranch(e.target.value)}>
+						<select
+							value={config.branch ?? ""}
+							onChange={(e) => {
+								selectBranch(e.target.value);
+							}}
+						>
 							<For each={branches}>
 								{(branch) => (
 									<option value={branch.name} selected={branch.name === config.branch}>
@@ -233,9 +243,18 @@ const TodoScannerConfig = ({
 									placeholder="Tag Name"
 									list="tags"
 									value={tag().name}
-									onInput={(e) => updateTagName(index, e.target.value)}
+									onInput={(e) => {
+										updateTagName(index, e.target.value);
+									}}
 								/>
-								<a role="button" onClick={() => removeTag(index)} title="Remove Tag" class="row row-sm">
+								<a
+									role="button"
+									onClick={() => {
+										removeTag(index);
+									}}
+									title="Remove Tag"
+									class="row row-sm"
+								>
 									<X size={16} />
 								</a>
 							</div>
@@ -247,11 +266,15 @@ const TodoScannerConfig = ({
 												type="text"
 												placeholder="Match Pattern"
 												value={match}
-												onInput={(e) => updateMatch(index, matchIndex(), e.target.value)}
+												onInput={(e) => {
+													updateMatch(index, matchIndex(), e.target.value);
+												}}
 											/>
 											<a
 												role="button"
-												onClick={() => removeMatch(index, matchIndex())}
+												onClick={() => {
+													removeMatch(index, matchIndex());
+												}}
 												title="Remove Match"
 												class="row row-sm"
 											>
@@ -262,12 +285,19 @@ const TodoScannerConfig = ({
 								</For>
 								<a
 									role="button"
-									onClick={() => addMatch(index)}
+									onClick={() => {
+										addMatch(index);
+									}}
 									title="Add Match"
 									class="row row-sm"
 									style="font-size: small"
 								>
-									<Plus size={16} onClick={() => addMatch(index)} />
+									<Plus
+										size={16}
+										onClick={() => {
+											addMatch(index);
+										}}
+									/>
 									add match
 								</a>
 							</div>
@@ -293,9 +323,18 @@ const TodoScannerConfig = ({
 								type="text"
 								placeholder="Ignore Path"
 								value={path}
-								onChange={(e) => updateIgnorePath(index(), e.target.value)}
+								onChange={(e) => {
+									updateIgnorePath(index(), e.target.value);
+								}}
 							/>
-							<a role="button" onClick={() => removeIgnorePath(index())} title="Remove Path" class="row row-sm">
+							<a
+								role="button"
+								onClick={() => {
+									removeIgnorePath(index());
+								}}
+								title="Remove Path"
+								class="row row-sm"
+							>
 								<Minus size={16} />
 							</a>
 						</div>
@@ -306,7 +345,14 @@ const TodoScannerConfig = ({
 
 			<br />
 			<div class="row" style="gap: 20px">
-				<a role="button" onClick={save} title="Export Config" class="row row-sm">
+				<a
+					role="button"
+					onClick={() => {
+						void save();
+					}}
+					title="Export Config"
+					class="row row-sm"
+				>
 					save
 				</a>
 			</div>
@@ -327,10 +373,10 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 
 	createEffect(() => {
 		// go through default configs, and find the ones that aren't in the tags
-		const available = Object.keys(DEFAULT_CONFIGS).filter((tagName) => {
+		const remaining = Object.keys(DEFAULT_CONFIGS).filter((tagName) => {
 			return !tags().some((tag) => tag.name === tagName);
 		}) as DefaultConfig[];
-		setAvailable(available);
+		setAvailable(remaining);
 	});
 
 	// have a little > icon that opens the list
@@ -346,7 +392,9 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 					<For each={available()}>
 						{(name) => (
 							<button
-								onClick={() => add(name)}
+								onClick={() => {
+									add(name);
+								}}
 								style={{
 									background: "none",
 									font: "inherit",

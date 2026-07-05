@@ -12,8 +12,18 @@ interface AnalysisTemplateListProps {
 	owner_id: string;
 }
 
+const to_display_string = (raw: unknown): string => {
+	if (typeof raw === "string") return raw;
+	if (raw === null || raw === undefined) return "";
+	try {
+		return JSON.stringify(raw);
+	} catch {
+		return "";
+	}
+};
+
 const threshold_line_count = (raw: unknown): number => {
-	const text = typeof raw === "string" ? raw : String(raw ?? "");
+	const text = to_display_string(raw);
 	return text
 		.split("\n")
 		.map((l) => l.trim())
@@ -59,7 +69,7 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 		const client = getBrowserClient();
 		const result = await client.pipelines.analysis_templates.delete(t.id, { owner_id: props.owner_id });
 		if (!result.ok) {
-			setError(result.error.message ?? "Failed to delete template");
+			setError(result.error.message);
 		} else {
 			setTemplates((prev) => prev.filter((x) => x.id !== t.id));
 		}
@@ -128,14 +138,23 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 								<span class="text-sm text-faint">{t.window_ms}ms</span>
 								<span class="text-sm text-faint">{threshold_line_count(t.threshold_dsl)} rule(s)</span>
 								<div style={{ display: "flex", gap: "0.5rem" }}>
-									<Button size="sm" variant="ghost" onClick={() => openEdit(t)} data-testid="analysis-template-edit">
+									<Button
+										size="sm"
+										variant="ghost"
+										onClick={() => {
+											openEdit(t);
+										}}
+										data-testid="analysis-template-edit"
+									>
 										<Pencil size={14} /> edit
 									</Button>
 									<Button
 										size="sm"
 										variant="ghost"
 										disabled={deletingId() === t.id}
-										onClick={() => handleDelete(t)}
+										onClick={() => {
+											void handleDelete(t);
+										}}
 										data-testid="analysis-template-delete"
 									>
 										<Trash2 size={14} /> {deletingId() === t.id ? "deleting..." : "delete"}

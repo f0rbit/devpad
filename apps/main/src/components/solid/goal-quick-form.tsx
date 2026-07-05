@@ -18,7 +18,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 	const [state, setState] = createStore({
 		name: goal?.name ?? "",
 		description: goal?.description ?? "",
-		milestone_id: goal?.milestone_id ?? milestones[0]?.id ?? "",
+		milestone_id: goal?.milestone_id ?? milestones[0]?.id,
 		target_time: goal?.target_time ?? "",
 	});
 
@@ -55,7 +55,12 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 				if (!createResult.ok) throw new Error(createResult.error.message);
 				result = createResult.value;
 			} else {
-				const updateResult = await apiClient.goals.update(goal!.id, {
+				if (!goal) {
+					setErrorMessage("Cannot edit: goal not found");
+					setRequestState("error");
+					return;
+				}
+				const updateResult = await apiClient.goals.update(goal.id, {
 					name: state.name.trim(),
 					description: state.description.trim() || undefined,
 					target_time: state.target_time || undefined,
@@ -65,7 +70,9 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 			}
 
 			setRequestState("success");
-			setTimeout(() => onSuccess(result), 500);
+			setTimeout(() => {
+				onSuccess(result);
+			}, 500);
 		} catch (error) {
 			console.error(`Error ${mode}ing goal:`, error);
 			setErrorMessage(`Failed to ${mode} goal. Please try again.`);
@@ -81,7 +88,12 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 		<div class="card card-flat" style={{ "margin-top": "8px" }}>
 			<h4>{mode === "create" ? "Create New Goal" : "Edit Goal"}</h4>
 
-			<form onSubmit={handleSubmit} class="stack stack-sm">
+			<form
+				onSubmit={(e) => {
+					void handleSubmit(e);
+				}}
+				class="stack stack-sm"
+			>
 				<div class="form-field">
 					<label for="goal-name" class="form-field-label">
 						Goal Name *
@@ -90,7 +102,9 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 						type="text"
 						id="goal-name"
 						value={state.name}
-						onInput={(e) => setState({ name: e.target.value })}
+						onInput={(e) => {
+							setState({ name: e.target.value });
+						}}
 						placeholder="Enter goal name..."
 						disabled={requestState() === "loading"}
 						required
@@ -104,7 +118,9 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 					<select
 						id="goal-milestone"
 						value={state.milestone_id}
-						onChange={(e) => setState({ milestone_id: e.target.value })}
+						onChange={(e) => {
+							setState({ milestone_id: e.target.value });
+						}}
 						disabled={requestState() === "loading" || mode === "edit"}
 						required
 					>
@@ -129,7 +145,9 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 					<textarea
 						id="goal-description"
 						value={state.description}
-						onInput={(e) => setState({ description: e.target.value })}
+						onInput={(e) => {
+							setState({ description: e.target.value });
+						}}
 						placeholder="Optional description..."
 						disabled={requestState() === "loading"}
 						rows={3}
@@ -144,7 +162,9 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 						type="date"
 						id="goal-target-time"
 						value={state.target_time ? state.target_time.split("T")[0] : ""}
-						onInput={(e) => setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" })}
+						onInput={(e) => {
+							setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" });
+						}}
 						disabled={requestState() === "loading"}
 					/>
 				</div>

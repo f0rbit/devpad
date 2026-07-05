@@ -44,21 +44,21 @@ const TaskEditor = ({
 	default_goal_id,
 }: Props) => {
 	const [state, setState] = createStore({
-		title: task?.task?.title ?? "",
-		summary: task?.task?.summary ?? null,
-		description: task?.task?.description ?? null,
-		progress: (task?.task?.progress ?? "UNSTARTED") as Progress,
-		visibility: (task?.task?.visibility ?? "PRIVATE") as Visibility,
-		start_time: task?.task?.start_time ?? null,
-		end_time: task?.task?.end_time ?? null,
-		priority: (task?.task?.priority ?? "LOW") as Priority,
-		project_id: default_project_id ?? task?.task?.project_id ?? getProjectContext()?.id ?? null,
-		goal_id: default_goal_id ?? task?.task?.goal_id ?? null,
+		title: task?.task.title ?? "",
+		summary: task?.task.summary ?? null,
+		description: task?.task.description ?? null,
+		progress: task?.task.progress ?? "UNSTARTED",
+		visibility: task?.task.visibility ?? "PRIVATE",
+		start_time: task?.task.start_time ?? null,
+		end_time: task?.task.end_time ?? null,
+		priority: task?.task.priority ?? "LOW",
+		project_id: default_project_id ?? task?.task.project_id ?? getProjectContext()?.id ?? null,
+		goal_id: default_goal_id ?? task?.task.goal_id ?? null,
 	});
 	const [currentTags, setCurrentTags] = createSignal(current_tags);
 	const [requestState, setRequestState] = createSignal<"idle" | "loading" | "success" | "error">("idle");
 
-	const project_disabled = () => !!(task?.task?.project_id && task?.codebase_tasks) || !!default_project_id;
+	const project_disabled = () => !!(task?.task.project_id && task.codebase_tasks) || !!default_project_id;
 
 	const saveTask = async () => {
 		setRequestState("loading");
@@ -66,7 +66,7 @@ const TaskEditor = ({
 		try {
 			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.upsert({
-				id: task?.task?.id ?? null,
+				id: task?.task.id ?? null,
 				title: state.title,
 				summary: state.summary === "" ? null : state.summary,
 				description: state.description === "" ? null : state.description,
@@ -79,11 +79,11 @@ const TaskEditor = ({
 				project_id: state.project_id,
 				goal_id: state.goal_id,
 				tags: currentTags(),
-			} as any);
+			});
 
 			setRequestState("success");
-			if (task?.task?.id == null) {
-				const new_id = result.ok ? result.value?.task?.id : undefined;
+			if (task?.task.id == null) {
+				const new_id = result.ok ? result.value.task.id : undefined;
 				// redirect to new task page
 				if (new_id) {
 					window.location.href = `/todo/${new_id}`;
@@ -105,14 +105,16 @@ const TaskEditor = ({
 		<div>
 			<h4>{task?.task ? "edit task" : "new task"}</h4>
 			<br />
-			<div class="editor" data-todo-id={task?.task?.id ?? null} data-user-id={user_id}>
+			<div class="editor" data-todo-id={task?.task.id ?? null} data-user-id={user_id}>
 				<label for="title">Title</label>
 				<input
 					type="text"
 					id="title"
 					name="title"
 					value={state.title}
-					onInput={(e) => setState({ title: e.target.value })}
+					onInput={(e) => {
+						setState({ title: e.target.value });
+					}}
 				/>
 				<label for="summary">Summary</label>
 				<input
@@ -120,10 +122,18 @@ const TaskEditor = ({
 					id="summary"
 					name="summary"
 					value={state.summary ?? ""}
-					onInput={(e) => setState({ summary: e.target.value })}
+					onInput={(e) => {
+						setState({ summary: e.target.value });
+					}}
 				/>
 				<label for="description">Description</label>
-				<textarea id="description" name="description" onInput={(e) => setState({ description: e.target.value })}>
+				<textarea
+					id="description"
+					name="description"
+					onInput={(e) => {
+						setState({ description: e.target.value });
+					}}
+				>
 					{state.description ?? ""}
 				</textarea>
 
@@ -133,7 +143,9 @@ const TaskEditor = ({
 						id="progress"
 						name="progress"
 						value={state.progress}
-						onChange={(e) => setState({ progress: e.target.value as Progress })}
+						onChange={(e) => {
+							setState({ progress: e.target.value as Progress });
+						}}
 					>
 						<For each={PROGRESS_OPTIONS}>
 							{(option) => (
@@ -149,7 +161,9 @@ const TaskEditor = ({
 					<ProjectSelector
 						project_map={project_map}
 						default_id={state.project_id}
-						callback={(p) => setState({ project_id: p })}
+						callback={(p) => {
+							setState({ project_id: p });
+						}}
 						disabled={project_disabled()}
 					/>
 				</div>
@@ -157,7 +171,9 @@ const TaskEditor = ({
 				<GoalSelector
 					project_id={state.project_id}
 					goal_id={state.goal_id}
-					onChange={(goal_id) => setState({ goal_id })}
+					onChange={(goal_id) => {
+						setState({ goal_id });
+					}}
 					disabled={project_disabled()}
 				/>
 				<label for="end_time">End Time</label>
@@ -166,7 +182,9 @@ const TaskEditor = ({
 					id="end_time"
 					name="end_time"
 					value={state.end_time ?? ""}
-					onInput={(e) => setState({ end_time: e.target.value })}
+					onInput={(e) => {
+						setState({ end_time: e.target.value });
+					}}
 				/>
 			</div>
 			<details class="boxed">
@@ -182,14 +200,18 @@ const TaskEditor = ({
 						id="start_time"
 						name="start_time"
 						value={state.start_time ?? ""}
-						onInput={(e) => setState({ start_time: e.target.value })}
+						onInput={(e) => {
+							setState({ start_time: e.target.value });
+						}}
 					/>
 					<label for="visibility">Visibility</label>
 					<select
 						id="visibility"
 						name="visibility"
 						value={state.visibility}
-						onChange={(e) => setState({ visibility: e.target.value as Visibility })}
+						onChange={(e) => {
+							setState({ visibility: e.target.value as Visibility });
+						}}
 					>
 						<For each={VISIBILITY_OPTIONS}>
 							{(option) => (
@@ -204,7 +226,9 @@ const TaskEditor = ({
 						id="priority"
 						name="priority"
 						value={state.priority}
-						onChange={(e) => setState({ priority: e.target.value as Priority })}
+						onChange={(e) => {
+							setState({ priority: e.target.value as Priority });
+						}}
 					>
 						<For each={PRIORITY_OPTIONS}>
 							{(option) => (
@@ -227,7 +251,14 @@ const TaskEditor = ({
 				/>
 			</div>
 			<br />
-			<a role="button" id="save-button" onClick={saveTask}>
+			<a
+				role="button"
+				id="save-button"
+				onClick={() => {
+					// fire-and-forget: saveTask handles its own errors via requestState
+					void saveTask();
+				}}
+			>
 				save
 			</a>
 			<Loader size={16} class="icon animate-spin" classList={{ hidden: requestState() !== "loading" }} />
@@ -253,7 +284,7 @@ const TaskEditor = ({
 					<LinkedCode code={task.codebase_tasks} />
 				</>
 			)}
-			{history?.length > 0 && (
+			{history.length > 0 && (
 				<>
 					<br />
 					<h5 style="margin-bottom: 10px">task history</h5>

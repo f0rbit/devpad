@@ -1,3 +1,4 @@
+import type { ApiResultError } from "@devpad/api";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { TaskWithDetails } from "@devpad/schema";
 
@@ -74,20 +75,20 @@ export async function updateTaskProgress(
 	ownerId: string,
 	newProgress: Progress,
 	onSuccess?: (progress: Progress) => void,
-	onError?: (error: any) => void,
+	onError?: (error: ApiResultError) => void,
 ): Promise<void> {
-	try {
-		const apiClient = getBrowserClient();
-		await apiClient.tasks.upsert({
-			id: taskId,
-			progress: newProgress,
-			owner_id: ownerId,
-		});
-		onSuccess?.(newProgress);
-	} catch (error) {
-		console.error("Error updating task progress:", error);
-		onError?.(error);
+	const apiClient = getBrowserClient();
+	const result = await apiClient.tasks.upsert({
+		id: taskId,
+		progress: newProgress,
+		owner_id: ownerId,
+	});
+	if (!result.ok) {
+		console.error("Error updating task progress:", result.error);
+		onError?.(result.error);
+		return;
 	}
+	onSuccess?.(newProgress);
 }
 
 /**
@@ -98,7 +99,7 @@ export async function advanceTaskProgress(
 	ownerId: string,
 	currentProgress: Progress,
 	onSuccess?: (progress: Progress) => void,
-	onError?: (error: any) => void,
+	onError?: (error: ApiResultError) => void,
 ): Promise<void> {
 	const nextProgress = getNextProgress(currentProgress);
 	if (!nextProgress) {
@@ -127,11 +128,11 @@ export function formatDueDate(date: string | null): string {
 	// Determine the appropriate span
 	let span: string | null = null;
 	if (diffMinutes < 60) {
-		span = `${Math.round(diffMinutes)} minutes`;
+		span = `${String(Math.round(diffMinutes))} minutes`;
 	} else if (diffHours < 48) {
-		span = `${Math.round(diffHours)} hours`;
+		span = `${String(Math.round(diffHours))} hours`;
 	} else if (diffDays < 14) {
-		span = `${Math.round(diffDays)} days`;
+		span = `${String(Math.round(diffDays))} days`;
 	}
 
 	if (span) {
