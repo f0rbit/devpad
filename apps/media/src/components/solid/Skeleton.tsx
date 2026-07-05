@@ -31,7 +31,9 @@ export function SkeletonText(props: SkeletonTextProps) {
 
 	return (
 		<div class={`skeleton-text ${props.class ?? ""}`}>
-			<For each={Array.from({ length: lines() })}>{(_, i) => <Skeleton height="0.875rem" width={widths[i() % widths.length]} />}</For>
+			<For each={Array.from({ length: lines() })}>
+				{(_, i) => <Skeleton height="0.875rem" width={widths[i() % widths.length]} />}
+			</For>
 		</div>
 	);
 }

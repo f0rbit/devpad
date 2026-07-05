@@ -46,7 +46,8 @@ const fetchFilters = async (profileId: string): Promise<Filter[]> => {
 	return result.value as Filter[];
 };
 
-const getPlatformForAccount = (accounts: Account[], accountId: string): string | undefined => accounts.find(a => a.id === accountId)?.platform;
+const getPlatformForAccount = (accounts: Account[], accountId: string): string | undefined =>
+	accounts.find((a) => a.id === accountId)?.platform;
 
 const getFilterKeysForPlatform = (platform: string): string[] => FILTER_KEYS_BY_PLATFORM[platform] ?? ["keyword"];
 
@@ -146,7 +147,11 @@ export default function FilterEditor(props: FilterEditorProps) {
 							<Empty title="No filters configured" description="Add filters to include or exclude specific content." />
 						</Show>
 
-						<For each={filters()}>{filter => <FilterItem filter={filter} accounts={props.accounts} onRemove={() => removeFilter(filter.id)} />}</For>
+						<For each={filters()}>
+							{(filter) => (
+								<FilterItem filter={filter} accounts={props.accounts} onRemove={() => removeFilter(filter.id)} />
+							)}
+						</For>
 					</div>
 				</Show>
 
@@ -154,11 +159,15 @@ export default function FilterEditor(props: FilterEditorProps) {
 					<h6 class="text-muted font-medium">Add Filter</h6>
 
 					<FormField label="Account">
-						<Select value={accountId()} onChange={e => handleAccountChange(e.currentTarget.value)}>
+						<Select value={accountId()} onChange={(e) => handleAccountChange(e.currentTarget.value)}>
 							<For each={[...groupedAccounts().entries()]}>
 								{([platform, accounts]) => (
 									<optgroup label={formatPlatformLabel(platform)}>
-										<For each={accounts}>{account => <option value={account.id}>{account.platform_username ?? account.id.slice(0, 8)}</option>}</For>
+										<For each={accounts}>
+											{(account) => (
+												<option value={account.id}>{account.platform_username ?? account.id.slice(0, 8)}</option>
+											)}
+										</For>
 									</optgroup>
 								)}
 							</For>
@@ -167,23 +176,39 @@ export default function FilterEditor(props: FilterEditorProps) {
 
 					<FormField label="Filter Type">
 						<div class="filter-type-toggle">
-							<button type="button" class={`filter-type-btn ${filterType() === "include" ? "filter-type-include active" : ""}`} onClick={() => setFilterType("include")}>
+							<button
+								type="button"
+								class={`filter-type-btn ${filterType() === "include" ? "filter-type-include active" : ""}`}
+								onClick={() => setFilterType("include")}
+							>
 								Include
 							</button>
-							<button type="button" class={`filter-type-btn ${filterType() === "exclude" ? "filter-type-exclude active" : ""}`} onClick={() => setFilterType("exclude")}>
+							<button
+								type="button"
+								class={`filter-type-btn ${filterType() === "exclude" ? "filter-type-exclude active" : ""}`}
+								onClick={() => setFilterType("exclude")}
+							>
 								Exclude
 							</button>
 						</div>
 					</FormField>
 
 					<FormField label="Filter Key">
-						<Select value={filterKey()} onChange={e => setFilterKey(e.currentTarget.value)}>
-							<For each={availableFilterKeys()}>{key => <option value={key}>{FILTER_KEY_LABELS[key] ?? key}</option>}</For>
+						<Select value={filterKey()} onChange={(e) => setFilterKey(e.currentTarget.value)}>
+							<For each={availableFilterKeys()}>
+								{(key) => <option value={key}>{FILTER_KEY_LABELS[key] ?? key}</option>}
+							</For>
 						</Select>
 					</FormField>
 
 					<FormField label="Value" error={error() ?? undefined}>
-						<Input type="text" value={filterValue()} onInput={e => setFilterValue(e.currentTarget.value)} placeholder={getPlaceholder(filterKey())} error={!!error()} />
+						<Input
+							type="text"
+							value={filterValue()}
+							onInput={(e) => setFilterValue(e.currentTarget.value)}
+							placeholder={getPlaceholder(filterKey())}
+							error={!!error()}
+						/>
 					</FormField>
 
 					<div class="filter-form-actions">
@@ -204,7 +229,7 @@ type FilterItemProps = {
 };
 
 function FilterItem(props: FilterItemProps) {
-	const account = () => props.accounts.find(a => a.id === props.filter.account_id);
+	const account = () => props.accounts.find((a) => a.id === props.filter.account_id);
 	const isInclude = () => props.filter.filter_type === "include";
 
 	return (
@@ -213,7 +238,9 @@ function FilterItem(props: FilterItemProps) {
 				<PlatformIcon platform={props.filter.platform} size={16} />
 			</div>
 			<div class="filter-item-content">
-				<span class={`filter-item-type ${isInclude() ? "filter-type-include" : "filter-type-exclude"}`}>{isInclude() ? "Include" : "Exclude"}</span>
+				<span class={`filter-item-type ${isInclude() ? "filter-type-include" : "filter-type-exclude"}`}>
+					{isInclude() ? "Include" : "Exclude"}
+				</span>
 				<span class="filter-item-description">{formatFilterDescription(props.filter)}</span>
 				<Show when={account()?.platform_username}>
 					<span class="filter-item-account muted text-xs">({account()?.platform_username})</span>

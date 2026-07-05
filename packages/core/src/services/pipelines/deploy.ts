@@ -15,7 +15,17 @@
  * same `version_set_id` instead of uploading twice.
  */
 
-import type { AssetConfig, AssetUpload, CloudflareError, CloudflareProvider, CreateDeploymentInput, ModuleUpload, VersionBinding, WorkerVar, WorkerVersion } from "@devpad/pipeline-fakes";
+import type {
+	AssetConfig,
+	AssetUpload,
+	CloudflareError,
+	CloudflareProvider,
+	CreateDeploymentInput,
+	ModuleUpload,
+	VersionBinding,
+	WorkerVar,
+	WorkerVersion,
+} from "@devpad/pipeline-fakes";
 import type { Stage } from "@devpad/pipeline-templates";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { compute_caller_identity_vars } from "./caller-identity.js";
@@ -61,7 +71,11 @@ export type BundlePayload =
 	  };
 
 export interface BundleProvider {
-	get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>>;
+	get(input: {
+		version_set_id: string;
+		package_name: string;
+		environment: "staging" | "production";
+	}): Promise<Result<BundlePayload, BundleFetchError>>;
 }
 
 export type DeploymentResult = {
@@ -147,17 +161,27 @@ export const build_deployment_request = (req: DeployRequest): Result<CreateDeplo
  * don't upload twice. The fake (and the real CF API) tags versions with
  * an annotation; we treat that annotation as the dedup key.
  */
-const find_existing_version = async (cf: CloudflareProvider, script_name: string, version_set_id: string): Promise<Result<WorkerVersion | null, CloudflareError>> => {
+const find_existing_version = async (
+	cf: CloudflareProvider,
+	script_name: string,
+	version_set_id: string,
+): Promise<Result<WorkerVersion | null, CloudflareError>> => {
 	const list_result = await cf.versions.list(script_name);
 	if (!list_result.ok) {
 		if (list_result.error.code === "not_found") return ok(null);
 		return list_result;
 	}
-	const match = list_result.value.find(v => v.annotations?.[VERSION_KEY] === version_set_id);
+	const match = list_result.value.find((v) => v.annotations?.[VERSION_KEY] === version_set_id);
 	return ok(match ?? null);
 };
 
-const upload_version = async (cf: CloudflareProvider, script_name: string, version_set_id: string, vars: WorkerVar[], bundle: BundlePayload): Promise<Result<WorkerVersion, CloudflareError>> => {
+const upload_version = async (
+	cf: CloudflareProvider,
+	script_name: string,
+	version_set_id: string,
+	vars: WorkerVar[],
+	bundle: BundlePayload,
+): Promise<Result<WorkerVersion, CloudflareError>> => {
 	const annotations = { [VERSION_KEY]: version_set_id };
 	if (bundle.kind === "directory_bundle") {
 		return cf.versions.upload({
@@ -193,15 +217,21 @@ const upload_version = async (cf: CloudflareProvider, script_name: string, versi
  * we're about to deploy. Returns `null` when the script has no prior
  * deployments (first deploy of a brand-new package).
  */
-const lookup_previous_active_version = async (cf: CloudflareProvider, script_name: string, exclude_version_id: string | null): Promise<Result<string | null, CloudflareError>> => {
+const lookup_previous_active_version = async (
+	cf: CloudflareProvider,
+	script_name: string,
+	exclude_version_id: string | null,
+): Promise<Result<string | null, CloudflareError>> => {
 	const list = await cf.deployments.list(script_name);
 	if (!list.ok) {
 		if (list.error.code === "not_found") return ok(null);
 		return list;
 	}
-	const sorted = list.value.slice().sort((a, b) => (a.created_on < b.created_on ? 1 : a.created_on > b.created_on ? -1 : 0));
+	const sorted = list.value
+		.slice()
+		.sort((a, b) => (a.created_on < b.created_on ? 1 : a.created_on > b.created_on ? -1 : 0));
 	for (const deployment of sorted) {
-		const candidates = deployment.strategy.versions.filter(v => v.version_id !== exclude_version_id);
+		const candidates = deployment.strategy.versions.filter((v) => v.version_id !== exclude_version_id);
 		if (candidates.length === 0) continue;
 		const best = candidates.slice().sort((a, b) => b.percentage - a.percentage)[0];
 		return ok(best.version_id);
@@ -232,7 +262,7 @@ export const deploy_stage = async (
 		version_set_id: string;
 		package_name: string;
 		environment: "staging" | "production";
-	}
+	},
 ): Promise<Result<DeploymentResult, DeployError>> => {
 	const { script_name, stage, version_set_id, package_name, environment } = input;
 

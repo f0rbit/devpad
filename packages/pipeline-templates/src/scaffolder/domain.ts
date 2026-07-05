@@ -15,7 +15,14 @@
  */
 
 import { err, ok, type Result } from "@f0rbit/corpus";
-import type { DefaultGateKind, RenderError, RolloutMode, ScaffolderInput, TemplateVars, ValidationError } from "./types.ts";
+import type {
+	DefaultGateKind,
+	RenderError,
+	RolloutMode,
+	ScaffolderInput,
+	TemplateVars,
+	ValidationError,
+} from "./types.ts";
 
 const MAX_PACKAGE_NAME_LENGTH = 40;
 const PACKAGE_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
@@ -60,8 +67,8 @@ export const compute_compatibility_date = (now: Date): string => {
 const to_pascal_case = (name: string): string => {
 	return name
 		.split("-")
-		.filter(part => part.length > 0)
-		.map(part => part[0].toUpperCase() + part.slice(1))
+		.filter((part) => part.length > 0)
+		.map((part) => part[0].toUpperCase() + part.slice(1))
 		.join("");
 };
 
@@ -80,7 +87,12 @@ const gates_block_for = (mode: RolloutMode, gate: DefaultGateKind): string => {
 		if (gate === "auto") return `\tgates: {\n\t\t"staging→atomic-prod": auto(),\n\t},`;
 		return `\tgates: {\n\t\t"staging→atomic-prod": analysis({ template_id: "default" }),\n\t},`;
 	}
-	const gate_call = gate === "manual" ? "manual()" : gate === "auto" ? "auto({ afterBake: true })" : `analysis({ template_id: "default" })`;
+	const gate_call =
+		gate === "manual"
+			? "manual()"
+			: gate === "auto"
+				? "auto({ afterBake: true })"
+				: `analysis({ template_id: "default" })`;
 	return `\tgates: {\n\t\t"staging→onebox": ${gate_call},\n\t\t"onebox→wave1": ${gate_call},\n\t\t"wave1→wave2": ${gate_call},\n\t\t"wave2→full": ${gate_call},\n\t},`;
 };
 
@@ -111,7 +123,8 @@ export const derive_template_vars = (input: ScaffolderInput): TemplateVars => {
 };
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([a-z_][a-z0-9_]*)\s*\}\}/gi;
-const IF_ELSE_BLOCK_PATTERN = /\{\{#if\s+\(eq\s+([a-z_][a-z0-9_]*)\s+"([^"]*)"\)\s*\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g;
+const IF_ELSE_BLOCK_PATTERN =
+	/\{\{#if\s+\(eq\s+([a-z_][a-z0-9_]*)\s+"([^"]*)"\)\s*\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g;
 const IF_BLOCK_PATTERN = /\{\{#if\s+\(eq\s+([a-z_][a-z0-9_]*)\s+"([^"]*)"\)\s*\}\}([\s\S]*?)\{\{\/if\}\}/g;
 
 /**
@@ -147,7 +160,7 @@ export const render_template = (template: string, vars: Record<string, string>):
 	}
 
 	// Check for missing variables
-	const missing = all_matches.find(m => !(m.key in vars));
+	const missing = all_matches.find((m) => !(m.key in vars));
 	if (missing !== undefined) {
 		const start = Math.max(0, missing.index - 20);
 		const end = Math.min(template.length, missing.index + missing.full.length + 20);
@@ -160,10 +173,13 @@ export const render_template = (template: string, vars: Record<string, string>):
 	}
 
 	// Process if-else blocks first (must come before simple if blocks)
-	let result = template.replace(IF_ELSE_BLOCK_PATTERN, (_, key: string, value: string, true_content: string, false_content: string) => {
-		const var_value = vars[key];
-		return var_value === value ? true_content : false_content;
-	});
+	let result = template.replace(
+		IF_ELSE_BLOCK_PATTERN,
+		(_, key: string, value: string, true_content: string, false_content: string) => {
+			const var_value = vars[key];
+			return var_value === value ? true_content : false_content;
+		},
+	);
 
 	// Process simple if blocks
 	result = result.replace(IF_BLOCK_PATTERN, (_, key: string, value: string, content: string) => {

@@ -46,7 +46,7 @@ function assertObjectRootSchema(tools: any[]) {
 }
 
 // Convert shared tools to MCP format
-const tools = Object.values(sharedTools).map(tool => ({
+const tools = Object.values(sharedTools).map((tool) => ({
 	name: tool.name,
 	description: tool.description,
 	inputSchema: zodToMCPSchema(tool.inputSchema),
@@ -66,7 +66,7 @@ class DevpadMCPServer {
 				capabilities: {
 					tools: {},
 				},
-			}
+			},
 		);
 
 		// Use provided parameters or fall back to environment variables
@@ -90,7 +90,7 @@ class DevpadMCPServer {
 			return { tools };
 		});
 
-		this.server.setRequestHandler(CallToolRequestSchema, async request => {
+		this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
 			const { name, arguments: args } = request.params;
 
 			try {
@@ -205,7 +205,7 @@ export { DevpadMCPServer };
 
 // Check if this file is being run directly
 if (process.argv[1] === new URL(import.meta.url).pathname) {
-	main().catch(error => {
+	main().catch((error) => {
 		console.error("Server error:", error);
 		process.exit(1);
 	});

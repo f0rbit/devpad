@@ -47,7 +47,7 @@ export const createTagService = ({ db }: Deps) => {
 				.groupBy(tags.tag)
 				.orderBy(tags.tag);
 
-			return tagCounts.map(row => ({
+			return tagCounts.map((row) => ({
 				tag: row.tag,
 				count: Number(row.count),
 			}));
@@ -57,7 +57,7 @@ export const createTagService = ({ db }: Deps) => {
 		try_catch_async(async () => {
 			const rows = await db.select({ tag: tags.tag }).from(tags).where(eq(tags.post_id, postId));
 
-			return rows.map(t => t.tag);
+			return rows.map((t) => t.tag);
 		}, toDbError);
 
 	const setPostTags = async (postId: number, newTags: string[]): Promise<Result<string[], TagServiceError>> =>
@@ -67,7 +67,7 @@ export const createTagService = ({ db }: Deps) => {
 			const uniqueTags = [...new Set(newTags)];
 
 			if (uniqueTags.length > 0) {
-				await db.insert(tags).values(uniqueTags.map(tag => ({ post_id: postId, tag })));
+				await db.insert(tags).values(uniqueTags.map((tag) => ({ post_id: postId, tag })));
 			}
 
 			return uniqueTags;
@@ -79,10 +79,10 @@ export const createTagService = ({ db }: Deps) => {
 
 		return try_catch_async(async () => {
 			const existingSet = new Set(existingResult.value);
-			const newTags = tagsToAdd.filter(tag => !existingSet.has(tag));
+			const newTags = tagsToAdd.filter((tag) => !existingSet.has(tag));
 
 			if (newTags.length > 0) {
-				await db.insert(tags).values(newTags.map(tag => ({ post_id: postId, tag })));
+				await db.insert(tags).values(newTags.map((tag) => ({ post_id: postId, tag })));
 			}
 
 			return [...existingResult.value, ...newTags];

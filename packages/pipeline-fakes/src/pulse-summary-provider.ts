@@ -20,7 +20,11 @@ export type PulseSummaryQuery = {
 	window_ms: number;
 };
 
-export type PulseError = { code: "network"; message: string } | { code: "validation"; message: string } | { code: "unauthorized"; message: string } | { code: "internal"; message: string };
+export type PulseError =
+	| { code: "network"; message: string }
+	| { code: "validation"; message: string }
+	| { code: "unauthorized"; message: string }
+	| { code: "internal"; message: string };
 
 /**
  * Provider port for pulse's per-version summary endpoint. Production wraps the

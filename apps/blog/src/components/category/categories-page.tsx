@@ -17,7 +17,11 @@ interface Props {
 	initialCategories?: Category[];
 }
 
-const flattenTree = (nodes: CategoryNode[], id = 1): Category[] => nodes.flatMap((n, i) => [{ id: id + i, name: n.name, parent: n.parent }, ...flattenTree(n.children ?? [], id + i + 100)]);
+const flattenTree = (nodes: CategoryNode[], id = 1): Category[] =>
+	nodes.flatMap((n, i) => [
+		{ id: id + i, name: n.name, parent: n.parent },
+		...flattenTree(n.children ?? [], id + i + 100),
+	]);
 
 const fetchCategories = async (): Promise<Category[]> => {
 	if (typeof window === "undefined") {
@@ -28,19 +32,39 @@ const fetchCategories = async (): Promise<Category[]> => {
 };
 
 const IconPlus = () => (
-	<svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		width={16}
+		height={16}
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	>
 		<path d="M5 12h14" />
 		<path d="M12 5v14" />
 	</svg>
 );
 
 const IconMinus = () => (
-	<svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<svg
+		xmlns="http://www.w3.org/2000/svg"
+		width={16}
+		height={16}
+		viewBox="0 0 24 24"
+		fill="none"
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-linecap="round"
+		stroke-linejoin="round"
+	>
 		<path d="M5 12h14" />
 	</svg>
 );
 
-const CategoriesPage: Component<Props> = props => {
+const CategoriesPage: Component<Props> = (props) => {
 	const [fetchTrigger, setFetchTrigger] = createSignal(0);
 	const [categories, { refetch }] = createResource(
 		() => {
@@ -52,13 +76,13 @@ const CategoriesPage: Component<Props> = props => {
 			return trigger;
 		},
 		fetchCategories,
-		{ initialValue: props.initialCategories ?? [] }
+		{ initialValue: props.initialCategories ?? [] },
 	);
 	const [error, setError] = createSignal<string | null>(null);
 	const [defaultParent, setDefaultParent] = createSignal("root");
 	const [formHighlighted, setFormHighlighted] = createSignal(false);
 
-	const refreshCategories = () => setFetchTrigger(n => n + 1);
+	const refreshCategories = () => setFetchTrigger((n) => n + 1);
 
 	const handleDelete = async (name: string) => {
 		if (!confirm(`Delete category "${name}"? This cannot be undone.`)) return;
@@ -74,7 +98,7 @@ const CategoriesPage: Component<Props> = props => {
 	const treeNodes = createMemo(() => {
 		const cats = categories();
 		if (!cats) return [];
-		const items = cats.map(c => ({
+		const items = cats.map((c) => ({
 			id: c.name,
 			label: c.name,
 			parentId: c.parent === "root" ? null : c.parent,
@@ -101,7 +125,14 @@ const CategoriesPage: Component<Props> = props => {
 	return (
 		<div class="stack" style={{ gap: "24px" }}>
 			<Show when={error()}>
-				<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
+				<div
+					style={{
+						padding: "0.5rem 0.75rem",
+						background: "var(--item-red)",
+						border: "1px solid var(--item-red-border)",
+						"border-radius": "4px",
+					}}
+				>
 					<p class="text-sm">{error()}</p>
 				</div>
 			</Show>
@@ -111,13 +142,20 @@ const CategoriesPage: Component<Props> = props => {
 			</Show>
 
 			<Show when={categories.error}>
-				<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
+				<div
+					style={{
+						padding: "0.5rem 0.75rem",
+						background: "var(--item-red)",
+						border: "1px solid var(--item-red-border)",
+						"border-radius": "4px",
+					}}
+				>
 					<p class="text-sm">Failed to load categories</p>
 				</div>
 			</Show>
 
 			<Show when={categories()} keyed>
-				{cats => (
+				{(cats) => (
 					<>
 						<section>
 							<h2 class="text-sm text-muted" style={{ "margin-bottom": "8px" }}>
@@ -127,13 +165,25 @@ const CategoriesPage: Component<Props> = props => {
 								nodes={treeNodes()}
 								showGuides
 								defaultExpanded
-								renderActions={node => (
+								renderActions={(node) => (
 									<>
-										<Button variant="ghost" icon size="sm" onClick={() => selectParentForAdd(node.id)} label={`Add child to ${node.label}`}>
+										<Button
+											variant="ghost"
+											icon
+											size="sm"
+											onClick={() => selectParentForAdd(node.id)}
+											label={`Add child to ${node.label}`}
+										>
 											<IconPlus />
 										</Button>
 										{node.id !== "root" && (
-											<Button variant="ghost" icon size="sm" onClick={() => handleDelete(node.id)} label={`Delete ${node.label}`}>
+											<Button
+												variant="ghost"
+												icon
+												size="sm"
+												onClick={() => handleDelete(node.id)}
+												label={`Delete ${node.label}`}
+											>
 												<IconMinus />
 											</Button>
 										)}
@@ -143,7 +193,12 @@ const CategoriesPage: Component<Props> = props => {
 							/>
 						</section>
 
-						<CategoryForm categories={cats} onSubmit={handleCreate} defaultParent={defaultParent()} highlighted={formHighlighted()} />
+						<CategoryForm
+							categories={cats}
+							onSubmit={handleCreate}
+							defaultParent={defaultParent()}
+							highlighted={formHighlighted()}
+						/>
 					</>
 				)}
 			</Show>

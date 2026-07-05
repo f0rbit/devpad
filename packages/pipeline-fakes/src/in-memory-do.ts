@@ -26,7 +26,7 @@ export type DurableObjectIdFake = {
 
 const make_id = (name: string): DurableObjectIdFake => ({
 	toString: () => name,
-	equals: other => other.toString() === name,
+	equals: (other) => other.toString() === name,
 });
 
 export type StorageFake = {
@@ -56,7 +56,7 @@ export class InMemoryDurableObjectState {
 			delete: async (key: string): Promise<boolean> => this._kv.delete(key),
 			list: async <T = unknown>(): Promise<Map<string, T>> => new Map(this._kv) as Map<string, T>,
 			getAlarm: async () => this._alarm_ms,
-			setAlarm: async ms => {
+			setAlarm: async (ms) => {
 				this._alarm_ms = ms;
 			},
 			deleteAlarm: async () => {
@@ -96,7 +96,10 @@ export class InMemoryDurableObjectNamespace<TEnv> {
 
 	constructor(
 		private readonly env: TEnv,
-		private readonly factory: (ctx: InMemoryDurableObjectState, env: TEnv) => { fetch: (req: Request) => Promise<Response>; alarm: () => Promise<void> }
+		private readonly factory: (
+			ctx: InMemoryDurableObjectState,
+			env: TEnv,
+		) => { fetch: (req: Request) => Promise<Response>; alarm: () => Promise<void> },
 	) {}
 
 	idFromName(name: string): DurableObjectIdFake {
@@ -115,7 +118,7 @@ export class InMemoryDurableObjectNamespace<TEnv> {
 		const instance = this.factory(ctx, this.env);
 		ctx.registerAlarmHandler(() => instance.alarm());
 		const fetcher: DurableObjectFetcher = {
-			fetch: req => instance.fetch(req),
+			fetch: (req) => instance.fetch(req),
 			manualFireAlarm: () => ctx.manualFireAlarm(),
 			id,
 		};

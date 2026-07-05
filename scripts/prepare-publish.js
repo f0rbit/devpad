@@ -26,7 +26,7 @@ const rootDir = path.resolve(__dirname, "..");
  */
 function validatePackageJson(pkg) {
 	const required = ["name", "version", "description", "main"];
-	const missing = required.filter(field => !pkg[field]);
+	const missing = required.filter((field) => !pkg[field]);
 
 	if (missing.length > 0) {
 		throw new Error(`Missing required fields: ${missing.join(", ")}`);
@@ -34,7 +34,7 @@ function validatePackageJson(pkg) {
 
 	// Warn about recommended fields
 	const recommended = ["keywords", "author", "license", "repository", "homepage"];
-	const missingRecommended = recommended.filter(field => !pkg[field]);
+	const missingRecommended = recommended.filter((field) => !pkg[field]);
 
 	if (missingRecommended.length > 0) {
 		console.warn(`⚠️  Missing recommended fields: ${missingRecommended.join(", ")}`);

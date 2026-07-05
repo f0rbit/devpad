@@ -36,13 +36,21 @@ export type ListPackagesFilter = {
  * List pipeline packages, optionally filtered by linked devpad project.
  * Returns an empty array when no rows match — never a `not_found` error.
  */
-export const list_packages = async (db: Database, filter: ListPackagesFilter = {}): Promise<Result<PipelinePackage[], ServiceError>> => {
+export const list_packages = async (
+	db: Database,
+	filter: ListPackagesFilter = {},
+): Promise<Result<PipelinePackage[], ServiceError>> => {
 	try {
 		const conditions = [];
 		if (filter.project_id !== undefined) conditions.push(eq(pipeline_package.project_id, filter.project_id));
 
 		const base = db.select().from(pipeline_package);
-		const where = conditions.length === 0 ? base : conditions.length === 1 ? base.where(conditions[0]) : base.where(and(...conditions));
+		const where =
+			conditions.length === 0
+				? base
+				: conditions.length === 1
+					? base.where(conditions[0])
+					: base.where(and(...conditions));
 		const rows = await where;
 		return ok(rows);
 	} catch (e) {
@@ -61,7 +69,10 @@ export const get_package = async (db: Database, package_id: string): Promise<Res
 		if (!row) return err({ kind: "not_found", resource: "pipeline_package", id: package_id } as ServiceError);
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to read pipeline_package ${package_id}: ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to read pipeline_package ${package_id}: ${String(e)}`,
+		} as ServiceError);
 	}
 };
 
@@ -79,11 +90,19 @@ export type CreatePackageInput = {
  * convention: id == name). Returns conflict on duplicate; not_found on
  * a project_id that doesn't exist in the project table.
  */
-export const create_package = async (db: Database, input: CreatePackageInput): Promise<Result<PipelinePackage, ServiceError>> => {
+export const create_package = async (
+	db: Database,
+	input: CreatePackageInput,
+): Promise<Result<PipelinePackage, ServiceError>> => {
 	try {
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, input.id));
 		if (existing[0]) {
-			return err({ kind: "conflict", resource: "pipeline_package", id: input.id, message: `pipeline_package "${input.id}" already exists` } as ServiceError);
+			return err({
+				kind: "conflict",
+				resource: "pipeline_package",
+				id: input.id,
+				message: `pipeline_package "${input.id}" already exists`,
+			} as ServiceError);
 		}
 
 		if (input.project_id !== undefined && input.project_id !== null) {
@@ -114,10 +133,18 @@ export const create_package = async (db: Database, input: CreatePackageInput): P
 			.returning();
 
 		const row = inserted[0];
-		if (!row) return err({ kind: "store_error", operation: "insert_pipeline_package", message: "insert returned no row" } as ServiceError);
+		if (!row)
+			return err({
+				kind: "store_error",
+				operation: "insert_pipeline_package",
+				message: "insert returned no row",
+			} as ServiceError);
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to create pipeline_package "${input.id}": ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to create pipeline_package "${input.id}": ${String(e)}`,
+		} as ServiceError);
 	}
 };
 
@@ -133,7 +160,11 @@ export type UpdatePackageInput = Partial<{
  * touched; missing keys preserve existing values. Returns `not_found`
  * when the id doesn't exist.
  */
-export const update_package = async (db: Database, package_id: string, input: UpdatePackageInput): Promise<Result<PipelinePackage, ServiceError>> => {
+export const update_package = async (
+	db: Database,
+	package_id: string,
+	input: UpdatePackageInput,
+): Promise<Result<PipelinePackage, ServiceError>> => {
 	try {
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
 		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_package", id: package_id } as ServiceError);
@@ -155,10 +186,18 @@ export const update_package = async (db: Database, package_id: string, input: Up
 			.where(eq(pipeline_package.id, package_id))
 			.returning();
 		const row = updated[0];
-		if (!row) return err({ kind: "store_error", operation: "update_pipeline_package", message: "update returned no row" } as ServiceError);
+		if (!row)
+			return err({
+				kind: "store_error",
+				operation: "update_pipeline_package",
+				message: "update returned no row",
+			} as ServiceError);
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to update pipeline_package "${package_id}": ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to update pipeline_package "${package_id}": ${String(e)}`,
+		} as ServiceError);
 	}
 };
 
@@ -172,7 +211,10 @@ export const delete_package = async (db: Database, package_id: string): Promise<
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
 		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_package", id: package_id } as ServiceError);
 
-		const runs = await db.select({ id: pipeline_run.id }).from(pipeline_run).where(eq(pipeline_run.package_id, package_id));
+		const runs = await db
+			.select({ id: pipeline_run.id })
+			.from(pipeline_run)
+			.where(eq(pipeline_run.package_id, package_id));
 		if (runs.length > 0) {
 			return err({
 				kind: "conflict",
@@ -187,6 +229,9 @@ export const delete_package = async (db: Database, package_id: string): Promise<
 		await db.delete(pipeline_package).where(eq(pipeline_package.id, package_id));
 		return ok(undefined);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to delete pipeline_package "${package_id}": ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to delete pipeline_package "${package_id}": ${String(e)}`,
+		} as ServiceError);
 	}
 };

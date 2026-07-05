@@ -7,12 +7,17 @@ import { cookieConfig } from "../utils/cookies.js";
 import { githubOAuthConfig } from "./v1/media/auth.js";
 import { oauth as mediaOAuth } from "./v1/media/oauth-helpers.js";
 
-const ALLOWED_REDIRECT_PATTERNS = [/^https:\/\/[a-z0-9.-]+\.pages\.dev$/, /^https:\/\/[a-z0-9.-]+\.workers\.dev$/, /^https:\/\/([a-z0-9-]+\.)?devpad\.tools$/, /^http:\/\/localhost:\d+$/];
+const ALLOWED_REDIRECT_PATTERNS = [
+	/^https:\/\/[a-z0-9.-]+\.pages\.dev$/,
+	/^https:\/\/[a-z0-9.-]+\.workers\.dev$/,
+	/^https:\/\/([a-z0-9-]+\.)?devpad\.tools$/,
+	/^http:\/\/localhost:\d+$/,
+];
 
 const isAllowedRedirectUrl = (url: string): boolean => {
 	try {
 		const parsed = new URL(url);
-		return ALLOWED_REDIRECT_PATTERNS.some(pattern => pattern.test(parsed.origin));
+		return ALLOWED_REDIRECT_PATTERNS.some((pattern) => pattern.test(parsed.origin));
 	} catch {
 		return false;
 	}
@@ -20,7 +25,7 @@ const isAllowedRedirectUrl = (url: string): boolean => {
 
 const app = new Hono<AppContext>();
 
-app.get("/login", async c => {
+app.get("/login", async (c) => {
 	const config = c.get("config");
 	const oauth_secrets = c.get("oauth_secrets");
 	let return_to = c.req.query("return_to");
@@ -57,7 +62,7 @@ app.get("/login", async c => {
 	return c.redirect(url);
 });
 
-app.get("/callback/github", async c => {
+app.get("/callback/github", async (c) => {
 	const code = c.req.query("code");
 	const state = c.req.query("state");
 
@@ -127,7 +132,7 @@ app.get("/callback/github", async c => {
 	return c.redirect(`${frontend_url}/project`);
 });
 
-app.get("/logout", async c => {
+app.get("/logout", async (c) => {
 	const db = c.get("db");
 	const config = c.get("config");
 	const session = c.get("session");
@@ -149,7 +154,7 @@ app.get("/logout", async c => {
 	return c.redirect(frontend_url);
 });
 
-app.get("/session", async c => {
+app.get("/session", async (c) => {
 	const db = c.get("db");
 	const user = c.get("user");
 	const session = c.get("session");

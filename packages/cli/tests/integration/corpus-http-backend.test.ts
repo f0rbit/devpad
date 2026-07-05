@@ -44,14 +44,16 @@ const sha256_hex = async (bytes: Uint8Array): Promise<string> => {
 
 const generate_version = (): string => {
 	const ts = Date.now().toString(36).padStart(9, "0");
-	const rand = Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, "0");
+	const rand = Math.floor(Math.random() * 0xffffff)
+		.toString(16)
+		.padStart(6, "0");
 	return `v_${ts}_${rand}`;
 };
 
 const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
-		req.on("data", c => chunks.push(c));
+		req.on("data", (c) => chunks.push(c));
 		req.on("end", () => resolve(Buffer.concat(chunks)));
 		req.on("error", reject);
 	});
@@ -132,7 +134,10 @@ const start_test_server = async (): Promise<ServerHandle> => {
 					send_json(res, 500, { ok: false, error: { code: "storage_error" } });
 					return;
 				}
-				send_json(res, 200, { ok: true, value: { version_set_id: put.value.version, content_hash: put.value.content_hash, package: manifest.package } });
+				send_json(res, 200, {
+					ok: true,
+					value: { version_set_id: put.value.version, content_hash: put.value.content_hash, package: manifest.package },
+				});
 				return;
 			}
 			send_json(res, 404, { ok: false, error: { code: "not_found" } });
@@ -140,13 +145,14 @@ const start_test_server = async (): Promise<ServerHandle> => {
 			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 		}
 	});
-	await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
 	if (address === null || typeof address === "string") throw new Error("listen failed");
 	return { server, url: `http://127.0.0.1:${address.port}`, backend };
 };
 
-const stop_test_server = async (h: ServerHandle): Promise<void> => new Promise(resolve => h.server.close(() => resolve()));
+const stop_test_server = async (h: ServerHandle): Promise<void> =>
+	new Promise((resolve) => h.server.close(() => resolve()));
 
 const valid_manifest = (overrides: Partial<VersionSetManifest> = {}): VersionSetManifest => ({
 	package: "test-pkg",
@@ -221,7 +227,11 @@ describe("HTTP corpus backend end-to-end", () => {
 
 	test("upload_blob_to_store stores arbitrary bytes (5.D hook)", async () => {
 		const bytes = new TextEncoder().encode("compiled template body");
-		const upload = await upload_blob_to_store({ pipelines_url: h.url, pipelines_token: VALID_TOKEN }, "pipeline-templates", bytes);
+		const upload = await upload_blob_to_store(
+			{ pipelines_url: h.url, pipelines_token: VALID_TOKEN },
+			"pipeline-templates",
+			bytes,
+		);
 		expect(upload.ok).toBe(true);
 		if (!upload.ok) return;
 		expect(upload.value.store_id).toBe("pipeline-templates");
@@ -245,7 +255,11 @@ describe("HTTP corpus backend end-to-end", () => {
 		// reports the local-generated version (it has no protocol to learn
 		// the server's), so consumers that need the remote version_set_id
 		// should use `upload_version_set` directly.
-		const backend = await selectCorpusBackend({ mode: "cloudflare-http", pipelines_url: h.url, pipelines_token: VALID_TOKEN });
+		const backend = await selectCorpusBackend({
+			mode: "cloudflare-http",
+			pipelines_url: h.url,
+			pipelines_token: VALID_TOKEN,
+		});
 		const store = version_set_store(backend);
 		const put = await store.put(valid_manifest({ package: "selector-pkg" }));
 		expect(put.ok).toBe(true);
@@ -256,7 +270,7 @@ describe("HTTP corpus backend end-to-end", () => {
 		const server_store = version_set_store(h.backend);
 		const found_packages: string[] = [];
 		for await (const meta of server_store.store.list()) {
-			const pkg_tag = meta.tags?.find(t => t.startsWith("pkg:"))?.slice(4);
+			const pkg_tag = meta.tags?.find((t) => t.startsWith("pkg:"))?.slice(4);
 			if (pkg_tag !== undefined) found_packages.push(pkg_tag);
 		}
 		expect(found_packages).toContain("selector-pkg");

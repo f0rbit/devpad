@@ -62,7 +62,7 @@ const generate_version = (): string => {
 const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
-		req.on("data", c => chunks.push(c));
+		req.on("data", (c) => chunks.push(c));
 		req.on("end", () => resolve(Buffer.concat(chunks)));
 		req.on("error", reject);
 	});
@@ -162,13 +162,14 @@ const start_test_server = async (): Promise<ServerHandle> => {
 			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 		}
 	});
-	await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
 	if (address === null || typeof address === "string") throw new Error("listen failed");
 	return { server, url: `http://127.0.0.1:${address.port}`, backend, puts_by_hash, puts_by_store };
 };
 
-const stop_test_server = async (h: ServerHandle): Promise<void> => new Promise(resolve => h.server.close(() => resolve()));
+const stop_test_server = async (h: ServerHandle): Promise<void> =>
+	new Promise((resolve) => h.server.close(() => resolve()));
 
 const read_blob_text = async (backend: Backend, ref: string): Promise<string> => {
 	const get = await backend.data.get(ref);
@@ -291,12 +292,12 @@ describe("artifacts upload — directory bundles", () => {
 		const found_packages: string[] = [];
 		const sets = version_set_store(h.backend);
 		for await (const meta of sets.store.list()) {
-			const pkg = meta.tags?.find(t => t.startsWith("pkg:"))?.slice(4);
+			const pkg = meta.tags?.find((t) => t.startsWith("pkg:"))?.slice(4);
 			if (pkg !== undefined) found_packages.push(pkg);
 		}
 		expect(found_packages).toContain("single-module-pkg");
 
-		const version = found_packages.map(p => p).length;
+		const version = found_packages.map((p) => p).length;
 		expect(version).toBeGreaterThan(0);
 		// Walk the metadata index to find the snapshot version
 		let target_version: string | undefined;
@@ -329,7 +330,10 @@ describe("artifacts upload — directory bundles", () => {
 		writeFileSync(join(fx.bundle_dir, "index.js"), "import './chunks/foo.mjs'\n");
 		mkdirSync(join(fx.bundle_dir, "chunks"), { recursive: true });
 		writeFileSync(join(fx.bundle_dir, "chunks", "foo.mjs"), "export const foo = 1\n");
-		writeFileSync(join(fx.bundle_dir, "chunks", "bar.wasm"), Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]));
+		writeFileSync(
+			join(fx.bundle_dir, "chunks", "bar.wasm"),
+			Buffer.from([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]),
+		);
 
 		const exit = await expect_exit(async () => {
 			await action_artifacts_upload({
@@ -361,13 +365,13 @@ describe("artifacts upload — directory bundles", () => {
 		const parsed = BundleManifest.parse(JSON.parse(bundle_text));
 
 		expect(parsed.modules).toHaveLength(3);
-		const by_name = new Map(parsed.modules.map(m => [m.name, m]));
+		const by_name = new Map(parsed.modules.map((m) => [m.name, m]));
 		expect(by_name.get("index.js")?.mime_type).toBe("application/javascript+module");
 		expect(by_name.get("chunks/foo.mjs")?.mime_type).toBe("application/javascript+module");
 		expect(by_name.get("chunks/bar.wasm")?.mime_type).toBe("application/wasm");
 
 		// Every part references a unique corpus blob.
-		const refs = new Set(parsed.modules.map(m => m.content_artifact_ref));
+		const refs = new Set(parsed.modules.map((m) => m.content_artifact_ref));
 		expect(refs.size).toBe(3);
 	});
 
@@ -416,7 +420,7 @@ describe("artifacts upload — directory bundles", () => {
 		const asset_text = await read_blob_text(h.backend, builds.assets!.manifest_ref!);
 		const parsed = AssetManifest.parse(JSON.parse(asset_text));
 		expect(parsed.assets).toHaveLength(2);
-		const paths = parsed.assets.map(a => a.path).sort();
+		const paths = parsed.assets.map((a) => a.path).sort();
 		expect(paths).toEqual(["/logo.png", "/style.css"]);
 		// Hashes must match wrangler's 32-char BLAKE3 form.
 		for (const a of parsed.assets) {
@@ -533,7 +537,7 @@ describe("artifacts upload — directory bundles", () => {
 		const walk = walk_assets_dir(fx.assets_dir);
 		expect(walk.ok).toBe(true);
 		if (!walk.ok) return;
-		const paths = walk.value.parts.map(p => p.path).sort();
+		const paths = walk.value.parts.map((p) => p.path).sort();
 		expect(paths).toEqual(["/page.html"]);
 	});
 });

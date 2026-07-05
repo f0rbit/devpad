@@ -18,7 +18,11 @@ export type SimulationConfig = {
 	rate_limit_retry_after?: number;
 };
 
-export const simulateErrors = <T>(state: MemoryProviderState, getData: () => T, config: SimulationConfig = {}): FetchResult<T> => {
+export const simulateErrors = <T>(
+	state: MemoryProviderState,
+	getData: () => T,
+	config: SimulationConfig = {},
+): FetchResult<T> => {
 	state.call_count++;
 
 	if (state.simulate_rate_limit) {

@@ -10,15 +10,20 @@ type PRItem = TimelineItem & { payload: PullRequestPayload };
 
 // === HELPERS ===
 
-const compareTimestampDesc = (a: TimelineEntry, b: TimelineEntry): number => new Date(getTimestamp(b)).getTime() - new Date(getTimestamp(a)).getTime();
+const compareTimestampDesc = (a: TimelineEntry, b: TimelineEntry): number =>
+	new Date(getTimestamp(b)).getTime() - new Date(getTimestamp(a)).getTime();
 
-const getTimestamp = (entry: TimelineEntry): string => (entry.type === "commit_group" ? (entry.commits[0]?.timestamp ?? entry.date) : entry.timestamp);
+const getTimestamp = (entry: TimelineEntry): string =>
+	entry.type === "commit_group" ? (entry.commits[0]?.timestamp ?? entry.date) : entry.timestamp;
 
-const getDateKey = (entry: TimelineEntry): string => (entry.type === "commit_group" ? entry.date : date.key(entry.timestamp));
+const getDateKey = (entry: TimelineEntry): string =>
+	entry.type === "commit_group" ? entry.date : date.key(entry.timestamp);
 
-const isCommitItem = (item: TimelineItem): item is CommitItem => item.type === "commit" && item.payload.type === "commit";
+const isCommitItem = (item: TimelineItem): item is CommitItem =>
+	item.type === "commit" && item.payload.type === "commit";
 
-const isPRItem = (item: TimelineItem): item is PRItem => item.type === "pull_request" && item.payload.type === "pull_request";
+const isPRItem = (item: TimelineItem): item is PRItem =>
+	item.type === "pull_request" && item.payload.type === "pull_request";
 
 const makeGroupKey = (repo: string, branch: string, date: string): string => `${repo}:${branch}:${date}`;
 
@@ -31,7 +36,7 @@ const buildCommitGroup = (repo: string, branch: string, date: string, commits: C
 			deletions: acc.deletions + (c.payload.deletions ?? 0),
 			files: acc.files + (c.payload.files_changed ?? 0),
 		}),
-		{ additions: 0, deletions: 0, files: 0 }
+		{ additions: 0, deletions: 0, files: 0 },
 	);
 
 	return {
@@ -63,7 +68,7 @@ type DeduplicationResult = {
 const deduplicateCommitsFromPRs = (items: TimelineItem[]): DeduplicationResult => {
 	const commits = items.filter(isCommitItem);
 	const prs = items.filter(isPRItem);
-	const otherItems = items.filter(i => !isCommitItem(i) && !isPRItem(i));
+	const otherItems = items.filter((i) => !isCommitItem(i) && !isPRItem(i));
 
 	const commitBySha = new Map<string, CommitItem>();
 	for (const commit of commits) {
@@ -91,7 +96,7 @@ const deduplicateCommitsFromPRs = (items: TimelineItem[]): DeduplicationResult =
 		}
 	}
 
-	const enrichedPRs = prs.map(pr => {
+	const enrichedPRs = prs.map((pr) => {
 		const shas = prToCommitShas.get(pr.id) ?? [];
 		const prCommits: PRCommitInfo[] = [];
 
@@ -120,7 +125,8 @@ const deduplicateCommitsFromPRs = (items: TimelineItem[]): DeduplicationResult =
 
 // === PUBLIC API ===
 
-export const combineTimelines = (items: TimelineItem[]): TimelineItem[] => [...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+export const combineTimelines = (items: TimelineItem[]): TimelineItem[] =>
+	[...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 export const groupCommits = (items: TimelineItem[]): TimelineEntry[] => {
 	log.debug("Grouping commits", { total_items: items.length });

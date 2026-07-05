@@ -12,8 +12,10 @@ export const extractDiffInfo = (task: ParsedTask): DiffInfo => ({
 export const generateDiff = (old_tasks: ParsedTask[], new_tasks: ParsedTask[]): DiffResult[] => {
 	const used_old_ids = new Set<string>();
 
-	const new_diffs = new_tasks.map<DiffResult>(new_task => {
-		const text_match = old_tasks.find(old_task => !used_old_ids.has(old_task.id) && sameText(old_task.text, new_task.text));
+	const new_diffs = new_tasks.map<DiffResult>((new_task) => {
+		const text_match = old_tasks.find(
+			(old_task) => !used_old_ids.has(old_task.id) && sameText(old_task.text, new_task.text),
+		);
 
 		if (text_match) {
 			used_old_ids.add(text_match.id);
@@ -29,7 +31,13 @@ export const generateDiff = (old_tasks: ParsedTask[], new_tasks: ParsedTask[]): 
 			};
 		}
 
-		const line_tag_match = old_tasks.find(old_task => !used_old_ids.has(old_task.id) && old_task.line === new_task.line && old_task.tag === new_task.tag && !sameText(old_task.text, new_task.text));
+		const line_tag_match = old_tasks.find(
+			(old_task) =>
+				!used_old_ids.has(old_task.id) &&
+				old_task.line === new_task.line &&
+				old_task.tag === new_task.tag &&
+				!sameText(old_task.text, new_task.text),
+		);
 
 		if (line_tag_match) {
 			used_old_ids.add(line_tag_match.id);
@@ -56,8 +64,8 @@ export const generateDiff = (old_tasks: ParsedTask[], new_tasks: ParsedTask[]): 
 	});
 
 	const delete_diffs = old_tasks
-		.filter(old_task => !used_old_ids.has(old_task.id))
-		.map<DiffResult>(old_task => ({
+		.filter((old_task) => !used_old_ids.has(old_task.id))
+		.map<DiffResult>((old_task) => ({
 			id: old_task.id,
 			tag: old_task.tag,
 			type: "DELETE",

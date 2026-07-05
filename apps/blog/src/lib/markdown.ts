@@ -7,7 +7,13 @@ import { unified } from "unified";
 
 export const markdown = {
 	async render(content: string): Promise<string> {
-		const result = await unified().use(remarkParse).use(remarkGfm).use(remarkRehype).use(rehypeHighlight).use(rehypeStringify).process(content);
+		const result = await unified()
+			.use(remarkParse)
+			.use(remarkGfm)
+			.use(remarkRehype)
+			.use(rehypeHighlight)
+			.use(rehypeStringify)
+			.process(content);
 
 		return String(result);
 	},

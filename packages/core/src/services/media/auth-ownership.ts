@@ -1,4 +1,16 @@
-import { type AccountId, accountId, accounts, errors, type ForbiddenError, type NotFoundError, type ProfileId, profileId, profiles, type UserId, userId } from "@devpad/schema/media";
+import {
+	type AccountId,
+	accountId,
+	accounts,
+	errors,
+	type ForbiddenError,
+	type NotFoundError,
+	type ProfileId,
+	profileId,
+	profiles,
+	type UserId,
+	userId,
+} from "@devpad/schema/media";
 import { ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { Database } from "./db";
@@ -16,8 +28,16 @@ export type ProfileOwnership = {
 	user_id: UserId;
 };
 
-export const requireProfileOwnership = async (db: Database, uid: UserId, profId: ProfileId): Promise<Result<ProfileOwnership, OwnershipError>> => {
-	const profile = await db.select({ id: profiles.id, user_id: profiles.user_id }).from(profiles).where(eq(profiles.id, profId)).get();
+export const requireProfileOwnership = async (
+	db: Database,
+	uid: UserId,
+	profId: ProfileId,
+): Promise<Result<ProfileOwnership, OwnershipError>> => {
+	const profile = await db
+		.select({ id: profiles.id, user_id: profiles.user_id })
+		.from(profiles)
+		.where(eq(profiles.id, profId))
+		.get();
 
 	if (!profile) {
 		return errors.notFound("profile", profId);
@@ -33,7 +53,11 @@ export const requireProfileOwnership = async (db: Database, uid: UserId, profId:
 	});
 };
 
-export const requireAccountOwnership = async (db: Database, uid: UserId, accId: AccountId): Promise<Result<AccountOwnership, OwnershipError>> => {
+export const requireAccountOwnership = async (
+	db: Database,
+	uid: UserId,
+	accId: AccountId,
+): Promise<Result<AccountOwnership, OwnershipError>> => {
 	const result = await db
 		.select({
 			account_id: accounts.id,

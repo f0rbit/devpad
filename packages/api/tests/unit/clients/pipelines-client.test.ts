@@ -155,7 +155,10 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET" });
-			return new Response(JSON.stringify({ id: "pipeline-package_x" }), { status: 200, headers: { "content-type": "application/json" } });
+			return new Response(JSON.stringify({ id: "pipeline-package_x" }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
 		};
 		const client = new ApiClient({
 			base_url: "http://test.localhost/api/v1",
@@ -185,7 +188,10 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
-			return new Response(JSON.stringify({ id: "pipeline-package_new", name: "new-pkg" }), { status: 200, headers: { "content-type": "application/json" } });
+			return new Response(JSON.stringify({ id: "pipeline-package_new", name: "new-pkg" }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
 		};
 		const client = new ApiClient({
 			base_url: "http://test.localhost/api/v1",
@@ -193,7 +199,12 @@ describe("Pipelines API Client", () => {
 			custom_fetch: fake_fetch as unknown as typeof fetch,
 		});
 
-		await client.pipelines.packages.create({ id: "pipeline-package_new", name: "new-pkg", owner_id: "user_1", repo_url: "https://github.com/x/y" });
+		await client.pipelines.packages.create({
+			id: "pipeline-package_new",
+			name: "new-pkg",
+			owner_id: "user_1",
+			repo_url: "https://github.com/x/y",
+		});
 		expect(recorded.length).toBe(1);
 		expect(recorded[0].method).toBe("POST");
 		expect(recorded[0].url).toContain("/packages");
@@ -205,7 +216,10 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
-			return new Response(JSON.stringify({ id: "pipeline-package_x", repo_url: "https://new.example/x" }), { status: 200, headers: { "content-type": "application/json" } });
+			return new Response(JSON.stringify({ id: "pipeline-package_x", repo_url: "https://new.example/x" }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
 		};
 		const client = new ApiClient({
 			base_url: "http://test.localhost/api/v1",
@@ -225,7 +239,10 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET" });
-			return new Response(JSON.stringify({ deleted: true }), { status: 200, headers: { "content-type": "application/json" } });
+			return new Response(JSON.stringify({ deleted: true }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
 		};
 		const client = new ApiClient({
 			base_url: "http://test.localhost/api/v1",
@@ -241,7 +258,14 @@ describe("Pipelines API Client", () => {
 });
 
 describe("Pipelines MCP tool schemas", () => {
-	const expected_tools = ["devpad_pipelines_list", "devpad_pipelines_get", "devpad_pipelines_create", "devpad_pipelines_approve", "devpad_pipelines_cancel", "devpad_pipelines_rollback"];
+	const expected_tools = [
+		"devpad_pipelines_list",
+		"devpad_pipelines_get",
+		"devpad_pipelines_create",
+		"devpad_pipelines_approve",
+		"devpad_pipelines_cancel",
+		"devpad_pipelines_rollback",
+	];
 
 	it("registers every expected pipelines tool", () => {
 		for (const name of expected_tools) {
@@ -269,7 +293,7 @@ describe("Pipelines MCP tool schemas", () => {
 			tool.inputSchema.safeParse({
 				package_id: "pkg_123",
 				version_set_id: "vs_456",
-			}).success
+			}).success,
 		).toBe(true);
 		expect(tool.inputSchema.safeParse({ package_id: "pkg_123" }).success).toBe(false);
 		expect(tool.inputSchema.safeParse({ version_set_id: "vs_456" }).success).toBe(false);
@@ -346,7 +370,9 @@ describe("Pipelines MCP tool schemas", () => {
 		const tool = tools.devpad_pipelines_packages_update!;
 		expect(tool).toBeDefined();
 		expect(tool.inputSchema.safeParse({ id: "pipeline-package_x" }).success).toBe(true);
-		expect(tool.inputSchema.safeParse({ id: "pipeline-package_x", repo_url: "https://new.example/x" }).success).toBe(true);
+		expect(tool.inputSchema.safeParse({ id: "pipeline-package_x", repo_url: "https://new.example/x" }).success).toBe(
+			true,
+		);
 		expect(tool.inputSchema.safeParse({}).success).toBe(false);
 	});
 

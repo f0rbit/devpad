@@ -133,7 +133,9 @@ async function getChangedPackages(lastTag) {
 
 	try {
 		// Get list of changed files since last tag
-		const changed = execSync(`git diff ${lastTag}...HEAD --name-only`, { encoding: "utf8" }).split("\n").filter(Boolean);
+		const changed = execSync(`git diff ${lastTag}...HEAD --name-only`, { encoding: "utf8" })
+			.split("\n")
+			.filter(Boolean);
 
 		const changedPackages = new Set();
 
@@ -203,7 +205,7 @@ async function main() {
 
 	// Update internal packages (keep workspace:* but ensure consistency)
 	console.log("\n📚 Checking internal packages...");
-	const internalPackages = ALL_PACKAGES.filter(p => !PUBLISHABLE_PACKAGES.includes(p));
+	const internalPackages = ALL_PACKAGES.filter((p) => !PUBLISHABLE_PACKAGES.includes(p));
 	for (const pkg of internalPackages) {
 		const packagePath = path.join(rootDir, "packages", pkg, "package.json");
 		if (fs.existsSync(packagePath)) {
@@ -235,7 +237,7 @@ async function main() {
 	console.log("Summary:");
 	console.log(`  Version: ${targetVersion}`);
 	console.log(`  Updated: ${packagesToUpdate.length} publishable packages`);
-	console.log(`  Packages: ${packagesToUpdate.map(p => `@devpad/${p}`).join(", ")}`);
+	console.log(`  Packages: ${packagesToUpdate.map((p) => `@devpad/${p}`).join(", ")}`);
 
 	// Remind about committing changes
 	console.log("\n💡 Don't forget to commit these changes:");
@@ -244,7 +246,7 @@ async function main() {
 }
 
 // Run the script
-main().catch(error => {
+main().catch((error) => {
 	console.error("❌ Error:", error.message);
 	process.exit(1);
 });

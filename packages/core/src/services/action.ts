@@ -20,7 +20,11 @@ type ActionData = {
 
 type ActionWithData = Omit<Action, "data"> & { data: ActionData };
 
-export async function getActions(db: Database, user_id: string, action_filter: ActionType[] | null): Promise<Result<ActionWithData[], ServiceError>> {
+export async function getActions(
+	db: Database,
+	user_id: string,
+	action_filter: ActionType[] | null,
+): Promise<Result<ActionWithData[], ServiceError>> {
 	const filter = action_filter && action_filter.length > 0 ? action_filter : null;
 
 	const raw_data = filter
@@ -34,7 +38,7 @@ export async function getActions(db: Database, user_id: string, action_filter: A
 	if (!project_map_result.ok) return project_map_result;
 	const project_map = project_map_result.value;
 
-	const data: ActionWithData[] = raw_data.map(a => {
+	const data: ActionWithData[] = raw_data.map((a) => {
 		const action_data = (a.data ?? {}) as ActionData;
 		const p = action_data.project_id ? project_map[action_data.project_id] : undefined;
 		if (p) {
@@ -48,7 +52,11 @@ export async function getActions(db: Database, user_id: string, action_filter: A
 }
 
 export async function getProjectScanHistory(db: Database, project_id: string): Promise<Result<any[], ServiceError>> {
-	const result = await db.select().from(todo_updates).where(eq(todo_updates.project_id, project_id)).orderBy(desc(todo_updates.created_at));
+	const result = await db
+		.select()
+		.from(todo_updates)
+		.where(eq(todo_updates.project_id, project_id))
+		.orderBy(desc(todo_updates.created_at));
 	return ok(result);
 }
 
@@ -56,7 +64,10 @@ function sortByDate(a: HistoryAction, b: HistoryAction) {
 	return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 }
 
-export async function getProjectHistory(db: Database, project_id: string): Promise<Result<HistoryAction[], ServiceError>> {
+export async function getProjectHistory(
+	db: Database,
+	project_id: string,
+): Promise<Result<HistoryAction[], ServiceError>> {
 	const project_filter: ActionType[] = [
 		"CREATE_PROJECT",
 		"UPDATE_PROJECT",
@@ -79,7 +90,7 @@ export async function getProjectHistory(db: Database, project_id: string): Promi
 	const actions_result = await getActions(db, user_id, project_filter);
 	if (!actions_result.ok) return actions_result;
 
-	const filtered: HistoryAction[] = actions_result.value.filter(a => a.data.project_id === project_id);
+	const filtered: HistoryAction[] = actions_result.value.filter((a) => a.data.project_id === project_id);
 
 	const scan_result = await getProjectScanHistory(db, project_id);
 	if (!scan_result.ok) return scan_result;
@@ -112,7 +123,7 @@ export async function getTaskHistory(db: Database, task_id: string): Promise<Res
 	const actions_result = await getActions(db, user_id, task_filter);
 	if (!actions_result.ok) return actions_result;
 
-	const filtered: HistoryAction[] = actions_result.value.filter(a => a.data.task_id === task_id);
+	const filtered: HistoryAction[] = actions_result.value.filter((a) => a.data.task_id === task_id);
 
 	return ok(filtered.sort(sortByDate));
 }
@@ -135,7 +146,11 @@ export type AISession = {
 	summary: string;
 };
 
-export async function getAIActivity(db: Database, user_id: string, options?: { limit?: number; since?: string }): Promise<Result<AISession[], ServiceError>> {
+export async function getAIActivity(
+	db: Database,
+	user_id: string,
+	options?: { limit?: number; since?: string },
+): Promise<Result<AISession[], ServiceError>> {
 	const conditions = [eq(action.owner_id, user_id), eq(action.channel, "api")];
 	if (options?.since) {
 		conditions.push(gt(action.created_at, options.since));
@@ -151,7 +166,7 @@ export async function getAIActivity(db: Database, user_id: string, options?: { l
 	if (!project_map_result.ok) return project_map_result;
 	const project_map = project_map_result.value;
 
-	const actions: ActionWithData[] = raw_data.map(a => {
+	const actions: ActionWithData[] = raw_data.map((a) => {
 		const action_data = (a.data ?? {}) as ActionData;
 		const p = action_data.project_id ? project_map[action_data.project_id] : undefined;
 		if (p) {

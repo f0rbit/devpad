@@ -51,7 +51,10 @@ export async function upsertTag(db: Database, data: UpsertTag): Promise<Result<s
 	return ok(result[0].id);
 }
 
-export async function getActiveUserTagsMap(db: Database, user_id: string): Promise<Result<Map<string, Tag>, ServiceError>> {
+export async function getActiveUserTagsMap(
+	db: Database,
+	user_id: string,
+): Promise<Result<Map<string, Tag>, ServiceError>> {
 	const tags_result = await getActiveUserTags(db, user_id);
 	if (!tags_result.ok) return tags_result;
 
@@ -62,7 +65,10 @@ export async function getActiveUserTagsMap(db: Database, user_id: string): Promi
 	return ok(map);
 }
 
-export async function getActiveUserTagsMapByName(db: Database, user_id: string): Promise<Result<Map<string, Tag>, ServiceError>> {
+export async function getActiveUserTagsMapByName(
+	db: Database,
+	user_id: string,
+): Promise<Result<Map<string, Tag>, ServiceError>> {
 	const tags_result = await getActiveUserTags(db, user_id);
 	if (!tags_result.ok) return tags_result;
 
@@ -73,7 +79,11 @@ export async function getActiveUserTagsMapByName(db: Database, user_id: string):
 	return ok(map);
 }
 
-export async function linkTaskToTag(db: Database, task_id: string, tag_id: string): Promise<Result<boolean, ServiceError>> {
+export async function linkTaskToTag(
+	db: Database,
+	task_id: string,
+	tag_id: string,
+): Promise<Result<boolean, ServiceError>> {
 	await db.insert(task_tag).values({ task_id, tag_id });
 	return ok(true);
 }

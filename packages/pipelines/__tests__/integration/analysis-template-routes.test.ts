@@ -39,10 +39,13 @@ const build_setup = async (): Promise<RouteSetup> => {
 	await seed_user(db);
 	const backend = create_memory_backend();
 	const auth: AuthGate<AuthIdentity> = {
-		check: async request => {
+		check: async (request) => {
 			const header = request.headers.get("authorization");
 			if (!is_bearer_valid(header, PIPELINES_TOKEN)) {
-				return { ok: false as const, error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError };
+				return {
+					ok: false as const,
+					error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError,
+				};
 			}
 			return { ok: true as const, value: { kind: "admin" as const, reason: "pipelines_token" as const } };
 		},
@@ -68,24 +71,34 @@ const get_req = async (app: ReturnType<typeof make_routes>, path: string, header
 	return { status: res.status, body: (await res.json()) as Envelope };
 };
 
-const post_json = async (app: ReturnType<typeof make_routes>, path: string, body: unknown, headers: Record<string, string> = {}) => {
+const post_json = async (
+	app: ReturnType<typeof make_routes>,
+	path: string,
+	body: unknown,
+	headers: Record<string, string> = {},
+) => {
 	const res = await app.fetch(
 		new Request(`http://run.local${path}`, {
 			method: "POST",
 			headers: { "content-type": "application/json", ...headers },
 			body: JSON.stringify(body),
-		})
+		}),
 	);
 	return { status: res.status, body: (await res.json()) as Envelope };
 };
 
-const patch_json = async (app: ReturnType<typeof make_routes>, path: string, body: unknown, headers: Record<string, string> = {}) => {
+const patch_json = async (
+	app: ReturnType<typeof make_routes>,
+	path: string,
+	body: unknown,
+	headers: Record<string, string> = {},
+) => {
 	const res = await app.fetch(
 		new Request(`http://run.local${path}`, {
 			method: "PATCH",
 			headers: { "content-type": "application/json", ...headers },
 			body: JSON.stringify(body),
-		})
+		}),
 	);
 	return { status: res.status, body: (await res.json()) as Envelope };
 };
@@ -124,7 +137,7 @@ describe("analysis-templates routes — happy-path lifecycle", () => {
 
 		// Verify the row landed in D1
 		const rows = await db.select().from(pipeline_analysis_template);
-		expect(rows.some(r => r.id === created_id)).toBe(true);
+		expect(rows.some((r) => r.id === created_id)).toBe(true);
 
 		// 3. list returns [1]
 		const list_after = await get_req(app, "/analysis-templates?owner_id=user_test", auth);
@@ -140,7 +153,12 @@ describe("analysis-templates routes — happy-path lifecycle", () => {
 		expect((got.body.value as { id: string }).id).toBe(created_id);
 
 		// 5. update
-		const updated = await patch_json(app, `/analysis-templates/${created_id}`, { owner_id: "user_test", name: "renamed" }, auth);
+		const updated = await patch_json(
+			app,
+			`/analysis-templates/${created_id}`,
+			{ owner_id: "user_test", name: "renamed" },
+			auth,
+		);
 		expect(updated.status).toBe(200);
 		expect((updated.body.value as { name: string }).name).toBe("renamed");
 
@@ -194,7 +212,12 @@ describe("analysis-templates routes — validation", () => {
 	test("POST returns 400 validation_error when threshold_dsl is unparseable", async () => {
 		const { app } = await build_setup();
 		const auth = { authorization: auth_header(PIPELINES_TOKEN) };
-		const res = await post_json(app, "/analysis-templates", valid_create_body({ threshold_dsl: "garbage no op" }), auth);
+		const res = await post_json(
+			app,
+			"/analysis-templates",
+			valid_create_body({ threshold_dsl: "garbage no op" }),
+			auth,
+		);
 		expect(res.status).toBe(400);
 		expect(res.body.error?.code).toBe("validation_error");
 		expect(res.body.error?.field).toBe("threshold_dsl");
@@ -221,7 +244,12 @@ describe("analysis-templates routes — not_found semantics", () => {
 	test("PATCH /analysis-templates/:id returns 404 for unknown id", async () => {
 		const { app } = await build_setup();
 		const auth = { authorization: auth_header(PIPELINES_TOKEN) };
-		const res = await patch_json(app, "/analysis-templates/pipeline-analysis-template_missing", { owner_id: "user_test", name: "x" }, auth);
+		const res = await patch_json(
+			app,
+			"/analysis-templates/pipeline-analysis-template_missing",
+			{ owner_id: "user_test", name: "x" },
+			auth,
+		);
 		expect(res.status).toBe(404);
 		expect(res.body.error?.code).toBe("not_found");
 	});
@@ -229,7 +257,11 @@ describe("analysis-templates routes — not_found semantics", () => {
 	test("DELETE /analysis-templates/:id returns 404 for unknown id", async () => {
 		const { app } = await build_setup();
 		const auth = { authorization: auth_header(PIPELINES_TOKEN) };
-		const res = await delete_req(app, "/analysis-templates/pipeline-analysis-template_missing?owner_id=user_test", auth);
+		const res = await delete_req(
+			app,
+			"/analysis-templates/pipeline-analysis-template_missing?owner_id=user_test",
+			auth,
+		);
 		expect(res.status).toBe(404);
 		expect(res.body.error?.code).toBe("not_found");
 	});

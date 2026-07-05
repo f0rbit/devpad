@@ -58,16 +58,21 @@ const repo_basename = (repository: string): string => {
 	return slash === -1 ? repository : repository.slice(slash + 1);
 };
 
-const has_wildcard = (list: string[] | null | undefined): boolean => list === null || list === undefined || list.length === 0;
+const has_wildcard = (list: string[] | null | undefined): boolean =>
+	list === null || list === undefined || list.length === 0;
 
-const list_includes_ci = (list: string[], value: string): boolean => list.some(item => item.toLowerCase() === value.toLowerCase());
+const list_includes_ci = (list: string[], value: string): boolean =>
+	list.some((item) => item.toLowerCase() === value.toLowerCase());
 
 /**
  * First-match-wins. The caller should pre-sort `policies` by
  * `created_at DESC` then `id ASC` for determinism — the DB query in
  * `load_trust_policies` does this.
  */
-export const match_trust_policy = (claims: VerifiedOidcClaims, policies: PipelineOidcTrust[]): Result<MatchedPolicy, TrustMatchError> => {
+export const match_trust_policy = (
+	claims: VerifiedOidcClaims,
+	policies: PipelineOidcTrust[],
+): Result<MatchedPolicy, TrustMatchError> => {
 	if (policies.length === 0) return err({ kind: "no_matching_policy", reason: "no trust policies configured" });
 
 	const owner = claims.repository_owner.toLowerCase();
@@ -126,7 +131,10 @@ export const extract_repo_from_url = (repo_url: string): string | null => {
 	return `${owner}/${repo}`;
 };
 
-export const validate_package_binding = (pkg: PipelinePackage, claims: VerifiedOidcClaims): Result<void, PackageBindingError> => {
+export const validate_package_binding = (
+	pkg: PipelinePackage,
+	claims: VerifiedOidcClaims,
+): Result<void, PackageBindingError> => {
 	if (pkg.repo_url === null || pkg.repo_url === "") {
 		return err({ kind: "repo_url_missing", package_id: pkg.id });
 	}
@@ -159,14 +167,14 @@ const load_trust_policies = async (db: Database, owner: string): Promise<Pipelin
 	// Filter to policies owned by anyone with a matching `github_owner` — the
 	// trust matcher then narrows further. Owner-scoping (per-user-id) is a
 	// future ACL extension; for now any policy can match.
-	return rows.filter(p => p.github_owner.toLowerCase() === owner.toLowerCase());
+	return rows.filter((p) => p.github_owner.toLowerCase() === owner.toLowerCase());
 };
 
 const intersect_scope = (granted: OidcSessionScope[], requested: string[] | undefined): OidcSessionScope[] => {
 	const known: ReadonlySet<OidcSessionScope> = new Set(OIDC_SESSION_SCOPES);
 	if (requested === undefined || requested.length === 0) return granted;
 	const requested_set = new Set(requested.filter((s): s is OidcSessionScope => known.has(s as OidcSessionScope)));
-	return granted.filter(s => requested_set.has(s));
+	return granted.filter((s) => requested_set.has(s));
 };
 
 const build_audit = (claims: VerifiedOidcClaims): OidcAudit => ({
@@ -180,7 +188,10 @@ const build_audit = (claims: VerifiedOidcClaims): OidcAudit => ({
 
 const touch_last_used = async (db: Database, policy_id: string, when: Date): Promise<void> => {
 	try {
-		await db.update(pipeline_oidc_trust).set({ last_used_at: when.toISOString() }).where(eq(pipeline_oidc_trust.id, policy_id));
+		await db
+			.update(pipeline_oidc_trust)
+			.set({ last_used_at: when.toISOString() })
+			.where(eq(pipeline_oidc_trust.id, policy_id));
 	} catch {
 		// Audit field — never block the exchange if this fails.
 	}
@@ -193,7 +204,10 @@ const touch_last_used = async (db: Database, policy_id: string, when: Date): Pro
  * from a single concrete code path so the route layer can map them
  * directly into wire codes.
  */
-export const exchange_oidc_for_session = async (deps: OidcExchangeDeps, input: OidcExchangeInput): Promise<Result<OidcExchangeOutput, OidcExchangeError>> => {
+export const exchange_oidc_for_session = async (
+	deps: OidcExchangeDeps,
+	input: OidcExchangeInput,
+): Promise<Result<OidcExchangeOutput, OidcExchangeError>> => {
 	if (typeof input.jwt !== "string" || input.jwt === "") {
 		return err({ kind: "invalid_request", message: "jwt is required" });
 	}
@@ -210,7 +224,10 @@ export const exchange_oidc_for_session = async (deps: OidcExchangeDeps, input: O
 		const subj = subject.value;
 		const subj_repo_full = `${subj.owner}/${subj.repo}`.toLowerCase();
 		if (subj_repo_full !== claims.repository.toLowerCase()) {
-			return err({ kind: "invalid_oidc_token", reason: `sub repository '${subj_repo_full}' disagrees with claim 'repository' '${claims.repository}'` });
+			return err({
+				kind: "invalid_oidc_token",
+				reason: `sub repository '${subj_repo_full}' disagrees with claim 'repository' '${claims.repository}'`,
+			});
 		}
 		if (subj.owner.toLowerCase() !== claims.repository_owner.toLowerCase()) {
 			return err({ kind: "invalid_oidc_token", reason: `sub owner disagrees with claim 'repository_owner'` });
@@ -248,7 +265,8 @@ export const exchange_oidc_for_session = async (deps: OidcExchangeDeps, input: O
 		if (!binding.ok) {
 			const e = binding.error;
 			const claimed_repo = claims.repository;
-			const declared_repo = e.kind === "repo_url_missing" ? null : e.kind === "repo_url_unparseable" ? null : e.declared_repo;
+			const declared_repo =
+				e.kind === "repo_url_missing" ? null : e.kind === "repo_url_unparseable" ? null : e.declared_repo;
 			return err({ kind: "package_scope_mismatch", package_id: input.package_id, claimed_repo, declared_repo });
 		}
 		package_ids = [pkg.id];

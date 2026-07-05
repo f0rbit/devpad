@@ -70,9 +70,10 @@ const formatDateForInput = (date: Date | null): string => {
 
 type CategoryNode = Category & { children?: CategoryNode[] };
 
-const flattenCategoryTree = (nodes: CategoryNode[]): Category[] => nodes.flatMap(n => [{ name: n.name, parent: n.parent }, ...flattenCategoryTree(n.children ?? [])]);
+const flattenCategoryTree = (nodes: CategoryNode[]): Category[] =>
+	nodes.flatMap((n) => [{ name: n.name, parent: n.parent }, ...flattenCategoryTree(n.children ?? [])]);
 
-const PostEditor: Component<PostEditorProps> = props => {
+const PostEditor: Component<PostEditorProps> = (props) => {
 	const [title, setTitle] = createSignal(props.post?.title ?? "");
 	const [slug, setSlug] = createSignal(props.post?.slug ?? "");
 	const [content, setContent] = createSignal(props.post?.content ?? "");
@@ -81,7 +82,9 @@ const PostEditor: Component<PostEditorProps> = props => {
 	const [category, setCategory] = createSignal(props.post?.category ?? "root");
 	const [tags, setTags] = createSignal<string[]>(props.post?.tags ?? []);
 	const [projectIds, setProjectIds] = createSignal<string[]>(props.post?.project_ids ?? props.initialProjectIds ?? []);
-	const [publishAt, setPublishAt] = createSignal<Date | null>(props.post?.publish_at ? new Date(props.post.publish_at) : null);
+	const [publishAt, setPublishAt] = createSignal<Date | null>(
+		props.post?.publish_at ? new Date(props.post.publish_at) : null,
+	);
 	const [categories, setCategories] = createSignal<Category[]>(props.categories ?? []);
 
 	const formState = form.create();
@@ -151,7 +154,7 @@ const PostEditor: Component<PostEditorProps> = props => {
 				tags: data.tags,
 				project_ids: data.project_ids,
 				publish_at: data.publish_at ?? undefined,
-			})
+			}),
 		);
 
 		window.location.href = `/posts/${post.slug}`;
@@ -181,31 +184,53 @@ const PostEditor: Component<PostEditorProps> = props => {
 	return (
 		<div class="post-editor">
 			<Show when={formState.error()}>
-				<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>{formState.error()}</div>
+				<div
+					style={{
+						padding: "0.5rem 0.75rem",
+						background: "var(--item-red)",
+						border: "1px solid var(--item-red-border)",
+						"border-radius": "4px",
+					}}
+				>
+					{formState.error()}
+				</div>
 			</Show>
 
 			{/* Title + Metadata section with border */}
 			<div class="post-editor__header">
-				<input type="text" class="post-editor__title-input" placeholder="Post title..." prop:value={title()} onInput={e => handleTitleChange(e.currentTarget.value)} />
+				<input
+					type="text"
+					class="post-editor__title-input"
+					placeholder="Post title..."
+					prop:value={title()}
+					onInput={(e) => handleTitleChange(e.currentTarget.value)}
+				/>
 
 				{/* Metadata grid */}
 				<div class="post-editor__metadata">
 					<div class="post-editor__field">
 						<label>Slug</label>
-						<input type="text" prop:value={slug()} onInput={e => setSlug(e.currentTarget.value)} placeholder="post-slug" />
+						<input
+							type="text"
+							prop:value={slug()}
+							onInput={(e) => setSlug(e.currentTarget.value)}
+							placeholder="post-slug"
+						/>
 					</div>
 
 					<div class="post-editor__field">
 						<label>Category</label>
-						<select prop:value={category()} onChange={e => setCategory(e.currentTarget.value)}>
+						<select prop:value={category()} onChange={(e) => setCategory(e.currentTarget.value)}>
 							<option value="root">root</option>
-							<For each={categories().filter(c => c.name !== "root")}>{c => <option value={c.name}>{c.parent ? `${c.parent}/${c.name}` : c.name}</option>}</For>
+							<For each={categories().filter((c) => c.name !== "root")}>
+								{(c) => <option value={c.name}>{c.parent ? `${c.parent}/${c.name}` : c.name}</option>}
+							</For>
 						</select>
 					</div>
 
 					<div class="post-editor__field">
 						<label>Format</label>
-						<select prop:value={format()} onChange={e => setFormat(e.currentTarget.value as "md" | "adoc")}>
+						<select prop:value={format()} onChange={(e) => setFormat(e.currentTarget.value as "md" | "adoc")}>
 							<option value="md">Markdown</option>
 							<option value="adoc">AsciiDoc</option>
 						</select>
@@ -213,17 +238,32 @@ const PostEditor: Component<PostEditorProps> = props => {
 
 					<div class="post-editor__field">
 						<label>Publish at</label>
-						<input type="datetime-local" prop:value={formatDateForInput(publishAt())} onInput={e => handlePublishAtChange(e.currentTarget.value)} />
+						<input
+							type="datetime-local"
+							prop:value={formatDateForInput(publishAt())}
+							onInput={(e) => handlePublishAtChange(e.currentTarget.value)}
+						/>
 					</div>
 
 					<div class="post-editor__field post-editor__field--wide">
 						<label>Description</label>
-						<input type="text" prop:value={description()} onInput={e => setDescription(e.currentTarget.value)} placeholder="Brief description..." />
+						<input
+							type="text"
+							prop:value={description()}
+							onInput={(e) => setDescription(e.currentTarget.value)}
+							placeholder="Brief description..."
+						/>
 					</div>
 
 					<div class="post-editor__field post-editor__field--wide">
 						<label>Tags</label>
-						<ChipInput value={tags()} onChange={setTags} transform={s => s.trim().toLowerCase()} placeholder="Add tag..." layout="below" />
+						<ChipInput
+							value={tags()}
+							onChange={setTags}
+							transform={(s) => s.trim().toLowerCase()}
+							placeholder="Add tag..."
+							layout="below"
+						/>
 					</div>
 
 					<div class="post-editor__field post-editor__field--wide">
@@ -234,7 +274,7 @@ const PostEditor: Component<PostEditorProps> = props => {
 
 				{/* Version info - only show when editing existing post */}
 				<Show when={isEditing() && props.post?.updated_at} keyed>
-					{updatedAt => (
+					{(updatedAt) => (
 						<div class="post-editor__version-info">
 							<span class="post-editor__last-saved">Last saved {date.relative(updatedAt)}</span>
 							<a href={`/posts/${props.post?.uuid}/versions`} class="post-editor__history-link">
@@ -247,7 +287,12 @@ const PostEditor: Component<PostEditorProps> = props => {
 				{/* Actions - show for new posts or when onSave is provided */}
 				<Show when={props.onSave || !props.post}>
 					<div class="post-editor__actions">
-						<Button variant="primary" onClick={handleSave} disabled={formState.submitting()} loading={formState.submitting()}>
+						<Button
+							variant="primary"
+							onClick={handleSave}
+							disabled={formState.submitting()}
+							loading={formState.submitting()}
+						>
 							{isEditing() ? "Update" : "Create"}
 						</Button>
 					</div>
@@ -257,16 +302,29 @@ const PostEditor: Component<PostEditorProps> = props => {
 			{/* Content editor with tabs - could migrate to @f0rbit/ui Tabs, but keeping custom implementation
 			   to preserve SolidJS Show-based conditional rendering and ensure textarea state is maintained */}
 			<div class="editor-tabs">
-				<button type="button" class={`tab ${activeTab() === "write" ? "active" : ""}`} onClick={() => setActiveTab("write")}>
+				<button
+					type="button"
+					class={`tab ${activeTab() === "write" ? "active" : ""}`}
+					onClick={() => setActiveTab("write")}
+				>
 					Write
 				</button>
-				<button type="button" class={`tab ${activeTab() === "preview" ? "active" : ""}`} onClick={() => setActiveTab("preview")}>
+				<button
+					type="button"
+					class={`tab ${activeTab() === "preview" ? "active" : ""}`}
+					onClick={() => setActiveTab("preview")}
+				>
 					Preview
 				</button>
 			</div>
 
 			<Show when={activeTab() === "write"}>
-				<textarea class="post-editor__content" placeholder="Write your content..." prop:value={content()} onInput={e => setContent(e.currentTarget.value)} />
+				<textarea
+					class="post-editor__content"
+					placeholder="Write your content..."
+					prop:value={content()}
+					onInput={(e) => setContent(e.currentTarget.value)}
+				/>
 			</Show>
 
 			<Show when={activeTab() === "preview"}>

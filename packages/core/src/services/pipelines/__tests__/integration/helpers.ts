@@ -21,7 +21,11 @@ export class InMemoryBundleProvider implements BundleProvider {
 	bytes: Uint8Array = new TextEncoder().encode("export default { fetch: () => new Response('test') };");
 	calls: Array<{ version_set_id: string; package_name: string; environment: "staging" | "production" }> = [];
 
-	async get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>> {
+	async get(input: {
+		version_set_id: string;
+		package_name: string;
+		environment: "staging" | "production";
+	}): Promise<Result<BundlePayload, BundleFetchError>> {
 		this.calls.push(input);
 		return ok({ kind: "single_file", bytes: this.bytes });
 	}
@@ -49,7 +53,11 @@ export async function seed_user(db: Database, id = "user_test"): Promise<User> {
 	return rows[0]!;
 }
 
-export async function seed_package(db: Database, owner_id: string, overrides: Partial<PipelinePackage> = {}): Promise<PipelinePackage> {
+export async function seed_package(
+	db: Database,
+	owner_id: string,
+	overrides: Partial<PipelinePackage> = {},
+): Promise<PipelinePackage> {
 	const now = new Date().toISOString();
 	const id = overrides.id ?? "pipeline-package_test";
 	await db.insert(pipeline_package).values({
@@ -106,7 +114,11 @@ export const script_name_for = (opts: { name?: string; stage_name?: string } = {
  * Seed a `pipeline_analysis_template` row with the given threshold DSL.
  * Defaults to a forgiving template (window=600_000 ms, error_rate<0.01).
  */
-export async function seed_analysis_template(db: Database, owner_id: string, overrides: { id?: string; name?: string; threshold_dsl?: string; query_dsl?: unknown; window_ms?: number } = {}): Promise<{ id: string }> {
+export async function seed_analysis_template(
+	db: Database,
+	owner_id: string,
+	overrides: { id?: string; name?: string; threshold_dsl?: string; query_dsl?: unknown; window_ms?: number } = {},
+): Promise<{ id: string }> {
 	const now = new Date().toISOString();
 	const id = overrides.id ?? "pipeline-analysis-template_default";
 	await db.insert(pipeline_analysis_template).values({

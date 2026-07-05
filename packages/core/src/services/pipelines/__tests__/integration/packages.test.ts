@@ -70,7 +70,7 @@ describe("packages service — list_packages", () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value).toHaveLength(2);
-			expect(result.value.map(p => p.id).sort()).toEqual(["pipeline-package_a", "pipeline-package_b"]);
+			expect(result.value.map((p) => p.id).sort()).toEqual(["pipeline-package_a", "pipeline-package_b"]);
 		}
 	});
 
@@ -157,7 +157,7 @@ describe("packages service — create_package", () => {
 
 		const listed = await list_packages(db);
 		expect(listed.ok).toBe(true);
-		if (listed.ok) expect(listed.value.map(p => p.id)).toContain("pipeline-package_new");
+		if (listed.ok) expect(listed.value.map((p) => p.id)).toContain("pipeline-package_new");
 	});
 
 	test("returns conflict when id already exists", async () => {
@@ -203,7 +203,11 @@ describe("packages service — update_package", () => {
 
 	test("updates only specified fields and preserves the rest", async () => {
 		const u = await seed_user(db);
-		const seeded = await seed_package(db, u.id, { id: "pipeline-package_u", name: "u", repo_url: "https://old.example/repo" });
+		const seeded = await seed_package(db, u.id, {
+			id: "pipeline-package_u",
+			name: "u",
+			repo_url: "https://old.example/repo",
+		});
 
 		const updated = await update_package(db, seeded.id, { repo_url: "https://new.example/repo" });
 		expect(updated.ok).toBe(true);

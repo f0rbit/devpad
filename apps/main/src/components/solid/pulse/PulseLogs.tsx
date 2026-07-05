@@ -50,7 +50,7 @@ export default function PulseLogs(props: PulseLogsProps) {
 		const all = props.logs ?? [];
 		const q = search().toLowerCase().trim();
 		const lv = level();
-		return all.filter(log => {
+		return all.filter((log) => {
 			if (lv !== "all" && (log.level ?? "").toLowerCase() !== lv) return false;
 			if (!q) return true;
 			const hay = `${log.message ?? ""} ${log.name ?? ""} ${log.route ?? ""}`.toLowerCase();
@@ -67,22 +67,53 @@ export default function PulseLogs(props: PulseLogsProps) {
 			</Show>
 
 			<div class="row" style={{ gap: "0.5rem", "flex-wrap": "wrap" }}>
-				<Input placeholder="search logs…" value={search()} onInput={(e: Event) => setSearch((e.currentTarget as HTMLInputElement).value)} style={{ "min-width": "220px", flex: 1 }} />
+				<Input
+					placeholder="search logs…"
+					value={search()}
+					onInput={(e: Event) => setSearch((e.currentTarget as HTMLInputElement).value)}
+					style={{ "min-width": "220px", flex: 1 }}
+				/>
 				<Select value={level()} onChange={(e: Event) => setLevel((e.currentTarget as HTMLSelectElement).value)}>
-					<For each={LEVELS as readonly string[]}>{lv => <option value={lv}>{lv}</option>}</For>
+					<For each={LEVELS as readonly string[]}>{(lv) => <option value={lv}>{lv}</option>}</For>
 				</Select>
 			</div>
 
-			<Show when={filtered().length > 0} fallback={<Empty title="No logs" description={(props.logs ?? []).length === 0 ? "No log events recorded for this range." : "No logs match the current filter."} />}>
-				<div class="stack stack-xs" data-testid="pulse-logs-list" style={{ "font-family": "var(--font-mono, monospace)", "font-size": "0.8rem" }}>
+			<Show
+				when={filtered().length > 0}
+				fallback={
+					<Empty
+						title="No logs"
+						description={
+							(props.logs ?? []).length === 0
+								? "No log events recorded for this range."
+								: "No logs match the current filter."
+						}
+					/>
+				}
+			>
+				<div
+					class="stack stack-xs"
+					data-testid="pulse-logs-list"
+					style={{ "font-family": "var(--font-mono, monospace)", "font-size": "0.8rem" }}
+				>
 					<For each={filtered()}>
 						{(log, idx) => (
-							<div class="row" style={{ "align-items": "baseline", gap: "0.5rem", padding: "0.25rem 0", "border-bottom": "1px solid var(--border)" }}>
+							<div
+								class="row"
+								style={{
+									"align-items": "baseline",
+									gap: "0.5rem",
+									padding: "0.25rem 0",
+									"border-bottom": "1px solid var(--border)",
+								}}
+							>
 								<span class="text-faint" style={{ "min-width": "70px" }}>
 									{fmtTime(log.ts)}
 								</span>
 								<Badge variant={levelVariant(log.level) as any}>{log.level ?? "info"}</Badge>
-								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>{log.message ?? log.name ?? `log #${idx() + 1}`}</span>
+								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>
+									{log.message ?? log.name ?? `log #${idx() + 1}`}
+								</span>
 								<Show when={log.route}>
 									<span class="text-faint">{log.route}</span>
 								</Show>

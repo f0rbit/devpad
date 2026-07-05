@@ -21,7 +21,10 @@
 import { describe, expect, test } from "bun:test";
 import type { AssetManifest, BundleManifest } from "@devpad/pipeline-fakes";
 import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
-import { type BundleProviderError, make_corpus_directory_bundle_provider } from "../../src/providers/corpus-providers.ts";
+import {
+	type BundleProviderError,
+	make_corpus_directory_bundle_provider,
+} from "../../src/providers/corpus-providers.ts";
 
 // VersionSetManifest is "strict" in the corpus types; the directory provider
 // reads the extra Phase 2.B fields from the JSON-serialised manifest. We cast
@@ -50,7 +53,10 @@ const single_file_manifest = (): ManifestWithExtras => ({
 	infra_plan_ref: "infra-plans/v1",
 });
 
-const directory_manifest = (overrides?: { with_assets?: boolean; with_legacy_artifact?: boolean }): ManifestWithExtras => ({
+const directory_manifest = (overrides?: {
+	with_assets?: boolean;
+	with_legacy_artifact?: boolean;
+}): ManifestWithExtras => ({
 	package: "test-pkg",
 	git_sha: "feedfacefeedfacefeedfacefeedfacefeedface",
 	created_at: "2026-05-17T00:00:00.000Z",
@@ -61,7 +67,10 @@ const directory_manifest = (overrides?: { with_assets?: boolean; with_legacy_art
 			compatibility_date: "2025-05-01",
 			bundle_manifest_ref: "bundle-manifests/dir-bundle-001",
 		},
-		assets: overrides?.with_assets === true ? { version_affinity: "pinned", manifest_ref: "asset-manifests/assets-001" } : undefined,
+		assets:
+			overrides?.with_assets === true
+				? { version_affinity: "pinned", manifest_ref: "asset-manifests/assets-001" }
+				: undefined,
 	},
 	migrations: { do_migrations: [] },
 	env_manifest_ref: "env-manifests/v1",
@@ -124,7 +133,11 @@ const sample_asset_manifest = (): AssetManifest => ({
 	config: { html_handling: "auto-trailing-slash", run_worker_first: false },
 });
 
-const seed_bundle = async (backend: Backend, manifest: BundleManifest, refs: { ref: string; contents: Record<string, Uint8Array> }) => {
+const seed_bundle = async (
+	backend: Backend,
+	manifest: BundleManifest,
+	refs: { ref: string; contents: Record<string, Uint8Array> },
+) => {
 	await seed_json_blob(backend, refs.ref, manifest);
 	for (const m of manifest.modules) {
 		const bytes = refs.contents[m.name];
@@ -133,7 +146,11 @@ const seed_bundle = async (backend: Backend, manifest: BundleManifest, refs: { r
 	}
 };
 
-const seed_assets = async (backend: Backend, manifest: AssetManifest, refs: { ref: string; contents: Record<string, Uint8Array> }) => {
+const seed_assets = async (
+	backend: Backend,
+	manifest: AssetManifest,
+	refs: { ref: string; contents: Record<string, Uint8Array> },
+) => {
 	await seed_json_blob(backend, refs.ref, manifest);
 	for (const a of manifest.assets) {
 		const bytes = refs.contents[a.path];

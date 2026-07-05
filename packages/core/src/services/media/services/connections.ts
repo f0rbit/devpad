@@ -1,5 +1,15 @@
 import type { AccountWithUser, ApiError, BadRequestError, EncryptionError, NotFoundError } from "@devpad/schema/media";
-import { type AccountId, accountSettings, accounts, errors, type Platform, type ProfileId, profileId, profiles, type UserId } from "@devpad/schema/media";
+import {
+	type AccountId,
+	accountSettings,
+	accounts,
+	errors,
+	type Platform,
+	type ProfileId,
+	profileId,
+	profiles,
+	type UserId,
+} from "@devpad/schema/media";
 import { match, ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import { createLogger } from "../../../utils/logger";
@@ -35,7 +45,10 @@ export type RefreshAttempt = {
 	error?: string;
 };
 
-type RefreshSuccess = { status: "processing"; message: string; platform: "github" | "reddit" } | { status: "refreshed"; account_id: string } | { status: "skipped"; message: string };
+type RefreshSuccess =
+	| { status: "processing"; message: string; platform: "github" | "reddit" }
+	| { status: "refreshed"; account_id: string }
+	| { status: "skipped"; message: string };
 
 type RefreshAllSuccess = {
 	status: "processing" | "completed";
@@ -72,10 +85,10 @@ type RedditCredentials = { clientId: string; clientSecret: string };
 const log = createLogger("refresh");
 
 const categorizeAccountsByPlatform = <T extends { platform: string }>(accts: T[]): CategorizedAccounts<T> => ({
-	github: accts.filter(a => a.platform === "github"),
-	reddit: accts.filter(a => a.platform === "reddit"),
-	twitter: accts.filter(a => a.platform === "twitter"),
-	other: accts.filter(a => !["github", "reddit", "twitter"].includes(a.platform)),
+	github: accts.filter((a) => a.platform === "github"),
+	reddit: accts.filter((a) => a.platform === "reddit"),
+	twitter: accts.filter((a) => a.platform === "twitter"),
+	other: accts.filter((a) => !["github", "reddit", "twitter"].includes(a.platform)),
 });
 
 const determineRefreshStrategy = (platform: string): RefreshStrategy => {
@@ -98,7 +111,7 @@ const aggregateRefreshResults = (attempts: RefreshAttempt[]): { succeeded: numbe
 			failed: acc.failed + (a.success ? 0 : 1),
 			errors: a.error ? [...acc.errors, a.error] : acc.errors,
 		}),
-		{ succeeded: 0, failed: 0, errors: [] as string[] }
+		{ succeeded: 0, failed: 0, errors: [] as string[] },
 	);
 
 const shouldRegenerateTimeline = (succeeded: number): boolean => succeeded > 0;
@@ -127,7 +140,11 @@ const fetchActiveAccountsForUser = async (db: Database, userId: string): Promise
 
 export type AccountWithUserAndStatus = AccountWithUser & { is_active: boolean | null };
 
-const fetchAccountByIdWithStatus = async (db: Database, accountId: string, userId: string): Promise<AccountWithUserAndStatus | undefined> =>
+const fetchAccountByIdWithStatus = async (
+	db: Database,
+	accountId: string,
+	userId: string,
+): Promise<AccountWithUserAndStatus | undefined> =>
 	db
 		.select({ ...accountWithUserFields, is_active: accounts.is_active })
 		.from(accounts)
@@ -135,7 +152,12 @@ const fetchAccountByIdWithStatus = async (db: Database, accountId: string, userI
 		.where(and(eq(profiles.user_id, userId), eq(accounts.id, accountId)))
 		.get();
 
-const fetchAllActiveAccounts = async (db: Database): Promise<AccountWithUser[]> => db.select(accountWithUserFieldsWithFetchedAt).from(accounts).innerJoin(profiles, eq(accounts.profile_id, profiles.id)).where(eq(accounts.is_active, true));
+const fetchAllActiveAccounts = async (db: Database): Promise<AccountWithUser[]> =>
+	db
+		.select(accountWithUserFieldsWithFetchedAt)
+		.from(accounts)
+		.innerJoin(profiles, eq(accounts.profile_id, profiles.id))
+		.where(eq(accounts.is_active, true));
 
 type ConnectionInput = {
 	profile_id: string;
@@ -161,7 +183,12 @@ type ConnectionWithSettings = ConnectionRow & {
 	settings: Record<string, unknown>;
 };
 
-const listConnections = async (ctx: AppContext, uid: UserId, profId: ProfileId, includeSettings: boolean): Promise<Result<{ accounts: ConnectionRow[] | ConnectionWithSettings[] }, ServiceError>> => {
+const listConnections = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+	includeSettings: boolean,
+): Promise<Result<{ accounts: ConnectionRow[] | ConnectionWithSettings[] }, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 
@@ -183,17 +210,24 @@ const listConnections = async (ctx: AppContext, uid: UserId, profId: ProfileId, 
 	}
 
 	const accountsWithSettings = await Promise.all(
-		results.map(async account => {
-			const settings = await ctx.db.select().from(accountSettings).where(eq(accountSettings.account_id, account.account_id));
+		results.map(async (account) => {
+			const settings = await ctx.db
+				.select()
+				.from(accountSettings)
+				.where(eq(accountSettings.account_id, account.account_id));
 			const settingsMap = parseSettingsMap(settings);
 			return { ...account, settings: settingsMap };
-		})
+		}),
 	);
 
 	return ok({ accounts: accountsWithSettings });
 };
 
-const createConnection = async (ctx: AppContext, uid: UserId, input: ConnectionInput): Promise<Result<{ account_id: string; profile_id: string }, ServiceError>> => {
+const createConnection = async (
+	ctx: AppContext,
+	uid: UserId,
+	input: ConnectionInput,
+): Promise<Result<{ account_id: string; profile_id: string }, ServiceError>> => {
 	const profId = profileId(input.profile_id);
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
@@ -240,7 +274,11 @@ type DeleteResult = {
 	affected_users: number;
 };
 
-const removeConnection = async (ctx: AppContext, uid: UserId, accId: AccountId): Promise<Result<DeleteResult, ServiceError>> => {
+const removeConnection = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+): Promise<Result<DeleteResult, ServiceError>> => {
 	const ownershipResult = await requireAccountOwnership(ctx.db, uid, accId);
 	if (!ownershipResult.ok) {
 		const { kind, message } = ownershipResult.error;
@@ -254,7 +292,9 @@ const removeConnection = async (ctx: AppContext, uid: UserId, accId: AccountId):
 		const error = result.error;
 		if (error.kind === "not_found") return errors.notFound("account");
 		if (error.kind === "forbidden") return errors.forbidden("message" in error ? error.message : "Access denied");
-		return errors.dbError("message" in error ? error.message : "Failed to delete connection", { operation: "delete_connection" });
+		return errors.dbError("message" in error ? error.message : "Failed to delete connection", {
+			operation: "delete_connection",
+		});
 	}
 
 	return ok({
@@ -279,7 +319,11 @@ const createTimelineRegenTask = (ctx: AppContext, uid: UserId): (() => Promise<v
 	};
 };
 
-const deleteConnectionWithTimelineRegen = async (ctx: AppContext, uid: UserId, accId: AccountId): Promise<DeleteWithRegenResult> => {
+const deleteConnectionWithTimelineRegen = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+): Promise<DeleteWithRegenResult> => {
 	const result = await removeConnection(ctx, uid, accId);
 
 	if (!result.ok) {
@@ -289,7 +333,12 @@ const deleteConnectionWithTimelineRegen = async (ctx: AppContext, uid: UserId, a
 	return { result, backgroundTask: createTimelineRegenTask(ctx, uid) };
 };
 
-const updateConnectionStatus = async (ctx: AppContext, uid: UserId, accId: AccountId, isActive: boolean): Promise<Result<{ success: boolean; connection: unknown }, ServiceError>> => {
+const updateConnectionStatus = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+	isActive: boolean,
+): Promise<Result<{ success: boolean; connection: unknown }, ServiceError>> => {
 	const ownershipResult = await requireAccountOwnership(ctx.db, uid, accId);
 	if (!ownershipResult.ok) {
 		const { kind } = ownershipResult.error;
@@ -305,7 +354,11 @@ const updateConnectionStatus = async (ctx: AppContext, uid: UserId, accId: Accou
 	return ok({ success: true, connection: updated });
 };
 
-const getConnectionSettings = async (ctx: AppContext, uid: UserId, accId: AccountId): Promise<Result<{ settings: Record<string, unknown> }, ServiceError>> => {
+const getConnectionSettings = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+): Promise<Result<{ settings: Record<string, unknown> }, ServiceError>> => {
 	const ownershipResult = await requireAccountOwnership(ctx.db, uid, accId);
 	if (!ownershipResult.ok) {
 		const { kind } = ownershipResult.error;
@@ -319,7 +372,12 @@ const getConnectionSettings = async (ctx: AppContext, uid: UserId, accId: Accoun
 	return ok({ settings: settingsMap });
 };
 
-const updateConnectionSettings = async (ctx: AppContext, uid: UserId, accId: AccountId, newSettings: Record<string, unknown>): Promise<Result<{ updated: boolean }, ServiceError>> => {
+const updateConnectionSettings = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+	newSettings: Record<string, unknown>,
+): Promise<Result<{ updated: boolean }, ServiceError>> => {
 	const ownershipResult = await requireAccountOwnership(ctx.db, uid, accId);
 	if (!ownershipResult.ok) {
 		const { kind } = ownershipResult.error;
@@ -365,7 +423,11 @@ type GitHubRepoInfo = {
 	pushed_at: string | null;
 };
 
-const getGitHubRepos = async (ctx: AppContext, uid: UserId, accId: AccountId): Promise<Result<{ repos: GitHubRepoInfo[] }, ServiceError>> => {
+const getGitHubRepos = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+): Promise<Result<{ repos: GitHubRepoInfo[] }, ServiceError>> => {
 	const ownershipResult = await requireAccountOwnership(ctx.db, uid, accId);
 	if (!ownershipResult.ok) {
 		const { kind } = ownershipResult.error;
@@ -373,7 +435,11 @@ const getGitHubRepos = async (ctx: AppContext, uid: UserId, accId: AccountId): P
 		return errors.forbidden("You do not own this account");
 	}
 
-	const account = await ctx.db.select({ id: accounts.id, platform: accounts.platform }).from(accounts).where(eq(accounts.id, accId)).get();
+	const account = await ctx.db
+		.select({ id: accounts.id, platform: accounts.platform })
+		.from(accounts)
+		.where(eq(accounts.id, accId))
+		.get();
 
 	if (!account) {
 		return errors.notFound("account");
@@ -393,14 +459,23 @@ const getGitHubRepos = async (ctx: AppContext, uid: UserId, accId: AccountId): P
 		return ok({ repos: [] });
 	}
 
-	const repos: GitHubRepoInfo[] = latest.value.data.repositories.map((repo: { full_name: string; name: string; owner: string; is_private: boolean; default_branch: string; pushed_at: string | null }) => ({
-		full_name: repo.full_name,
-		name: repo.name,
-		owner: repo.owner,
-		is_private: repo.is_private,
-		default_branch: repo.default_branch,
-		pushed_at: repo.pushed_at,
-	}));
+	const repos: GitHubRepoInfo[] = latest.value.data.repositories.map(
+		(repo: {
+			full_name: string;
+			name: string;
+			owner: string;
+			is_private: boolean;
+			default_branch: string;
+			pushed_at: string | null;
+		}) => ({
+			full_name: repo.full_name,
+			name: repo.name,
+			owner: repo.owner,
+			is_private: repo.is_private,
+			default_branch: repo.default_branch,
+			pushed_at: repo.pushed_at,
+		}),
+	);
 
 	return ok({ repos });
 };
@@ -410,7 +485,11 @@ type SubredditResult = {
 	username: string;
 };
 
-const getRedditSubreddits = async (ctx: AppContext, uid: UserId, accId: AccountId): Promise<Result<SubredditResult, ServiceError>> => {
+const getRedditSubreddits = async (
+	ctx: AppContext,
+	uid: UserId,
+	accId: AccountId,
+): Promise<Result<SubredditResult, ServiceError>> => {
 	const ownershipResult = await requireAccountOwnership(ctx.db, uid, accId);
 	if (!ownershipResult.ok) {
 		const { kind } = ownershipResult.error;
@@ -418,7 +497,11 @@ const getRedditSubreddits = async (ctx: AppContext, uid: UserId, accId: AccountI
 		return errors.forbidden("You do not own this account");
 	}
 
-	const account = await ctx.db.select({ id: accounts.id, platform: accounts.platform }).from(accounts).where(eq(accounts.id, accId)).get();
+	const account = await ctx.db
+		.select({ id: accounts.id, platform: accounts.platform })
+		.from(accounts)
+		.where(eq(accounts.id, accId))
+		.get();
 
 	if (!account) {
 		return errors.notFound("account");
@@ -458,7 +541,10 @@ const getRedditCredentials = async (ctx: AppContext, profileIdStr: string): Prom
 	return { clientId, clientSecret };
 };
 
-const attemptRedditTokenRefresh = async (ctx: AppContext, account: RefreshableAccount): Promise<Result<string, RefreshError>> => {
+const attemptRedditTokenRefresh = async (
+	ctx: AppContext,
+	account: RefreshableAccount,
+): Promise<Result<string, RefreshError>> => {
 	if (!account.refresh_token_encrypted) {
 		return errors.badRequest("No refresh token available");
 	}
@@ -476,7 +562,11 @@ const attemptRedditTokenRefresh = async (ctx: AppContext, account: RefreshableAc
 
 	log.info("Attempting Reddit token refresh", { account_id: account.id });
 
-	const refreshResult = await token.reddit.refresh(refreshTokenResult.value, credentials.clientId, credentials.clientSecret);
+	const refreshResult = await token.reddit.refresh(
+		refreshTokenResult.value,
+		credentials.clientId,
+		credentials.clientSecret,
+	);
 	if (!refreshResult.ok) {
 		log.error("Reddit token refresh failed", { account_id: account.id, error: refreshResult.error });
 		return errors.apiError(401, "Token refresh failed");
@@ -503,7 +593,11 @@ const attemptRedditTokenRefresh = async (ctx: AppContext, account: RefreshableAc
 	return ok(newAccessToken);
 };
 
-const lookupAccount = async (ctx: AppContext, accountId: string, userId: string): Promise<Result<RefreshableAccountWithUser, RefreshError>> => {
+const lookupAccount = async (
+	ctx: AppContext,
+	accountId: string,
+	userId: string,
+): Promise<Result<RefreshableAccountWithUser, RefreshError>> => {
 	const row = await fetchAccountByIdWithStatus(ctx.db, accountId, userId);
 
 	if (!row) {
@@ -522,7 +616,11 @@ const regenerateTimeline = async (ctx: AppContext, userId: string, userAccounts:
 	await combineUserTimeline(ctx.backend, userId, snapshots);
 };
 
-const processGitHubRefresh = async (ctx: AppContext, account: AccountWithUser, userId: string): Promise<RefreshSingleResult> => {
+const processGitHubRefresh = async (
+	ctx: AppContext,
+	account: AccountWithUser,
+	userId: string,
+): Promise<RefreshSingleResult> => {
 	const backgroundTask: BackgroundTask = async () => {
 		try {
 			const snapshot = await processAccount(ctx, account);
@@ -541,9 +639,19 @@ const processGitHubRefresh = async (ctx: AppContext, account: AccountWithUser, u
 	};
 };
 
-const processRedditRefresh = async (ctx: AppContext, account: AccountWithUser, userId: string): Promise<RefreshSingleResult> => {
+const processRedditRefresh = async (
+	ctx: AppContext,
+	account: AccountWithUser,
+	userId: string,
+): Promise<RefreshSingleResult> => {
 	const tokenResult = await pipe(secrets.decrypt(account.access_token_encrypted, ctx.encryptionKey))
-		.map_err((): RefreshError => ({ kind: "encryption_error", operation: "decrypt", message: "Failed to decrypt Reddit token" }))
+		.map_err(
+			(): RefreshError => ({
+				kind: "encryption_error",
+				operation: "decrypt",
+				message: "Failed to decrypt Reddit token",
+			}),
+		)
 		.result();
 
 	if (!tokenResult.ok) {
@@ -585,7 +693,11 @@ const processRedditRefresh = async (ctx: AppContext, account: AccountWithUser, u
 	};
 };
 
-const processGenericRefresh = async (ctx: AppContext, account: AccountWithUser, userId: string): Promise<RefreshSingleResult> => {
+const processGenericRefresh = async (
+	ctx: AppContext,
+	account: AccountWithUser,
+	userId: string,
+): Promise<RefreshSingleResult> => {
 	const snapshot = await processAccount(ctx, account);
 
 	if (snapshot) {
@@ -598,14 +710,18 @@ const processGenericRefresh = async (ctx: AppContext, account: AccountWithUser, 
 	return { result: ok({ status: "skipped", message: "Rate limited or no changes" }) };
 };
 
-const refreshSingleAccount = async (ctx: AppContext, accountId: string, userId: string): Promise<RefreshSingleResult> => {
+const refreshSingleAccount = async (
+	ctx: AppContext,
+	accountId: string,
+	userId: string,
+): Promise<RefreshSingleResult> => {
 	log.info("Refreshing account", { account_id: accountId, user_id: userId });
 
 	const accountResult = await pipe(lookupAccount(ctx, accountId, userId)).result();
 
 	return match(
 		accountResult,
-		account => {
+		(account) => {
 			const strategy = determineRefreshStrategy(account.platform);
 			switch (strategy) {
 				case "github":
@@ -617,7 +733,7 @@ const refreshSingleAccount = async (ctx: AppContext, accountId: string, userId: 
 					return processGenericRefresh(ctx, account, userId);
 			}
 		},
-		error => Promise.resolve({ result: { ok: false as const, error } })
+		(error) => Promise.resolve({ result: { ok: false as const, error } }),
 	);
 };
 
@@ -665,7 +781,13 @@ const refreshAllAccounts = async (ctx: AppContext, userId: string): Promise<Refr
 			for (const account of redditAccounts) {
 				try {
 					const tokenResult = await pipe(secrets.decrypt(account.access_token_encrypted, ctx.encryptionKey))
-						.map_err((): RefreshError => ({ kind: "encryption_error", operation: "decrypt", message: "Failed to decrypt Reddit token" }))
+						.map_err(
+							(): RefreshError => ({
+								kind: "encryption_error",
+								operation: "decrypt",
+								message: "Failed to decrypt Reddit token",
+							}),
+						)
 						.result();
 
 					if (!tokenResult.ok) {
@@ -708,10 +830,10 @@ const refreshAllAccounts = async (ctx: AppContext, userId: string): Promise<Refr
 	for (const account of otherAccounts) {
 		const result = await try_catch_async(
 			() => processAccount(ctx, account),
-			e => {
+			(e) => {
 				log.error("Account refresh failed", { account_id: account.id, error: String(e) });
 				return e;
-			}
+			},
 		);
 		if (result.ok && result.value) {
 			succeeded++;

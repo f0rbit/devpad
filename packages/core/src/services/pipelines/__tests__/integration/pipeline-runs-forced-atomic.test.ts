@@ -64,21 +64,25 @@ describe("pipeline runs — forced atomic", () => {
 		const { run, plan } = created.value;
 
 		expect(plan.forced_reason).toBe("do_migrations");
-		expect(plan.stages.map(s => s.name)).toEqual(["staging", "atomic-prod"]);
+		expect(plan.stages.map((s) => s.name)).toEqual(["staging", "atomic-prod"]);
 
 		const row = (await db.select().from(pipeline_run).where(eq(pipeline_run.id, run.id)))[0]!;
 		expect(row.shape).toBe("atomic");
 		expect(row.forced_atomic_reason).toBe("do_migrations");
 
 		const warnings = await db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run.id));
-		const warning = warnings.find(w => w.kind === "warning");
+		const warning = warnings.find((w) => w.kind === "warning");
 		expect(warning).toBeDefined();
 		expect((warning?.payload as { reason: string } | null)?.reason).toBe("do_migrations");
 
 		// Run completes via the atomic path.
 		const start = await advance_run(deps, run.id, { kind: "start" }, plan);
 		if (!start.ok) throw new Error(`start failed: ${JSON.stringify(start.error)}`);
-		const approve = await approve_stage(deps, { run_id: run.id, stage_name: "atomic-prod", decision: "approved", user_id: "user_test" }, plan);
+		const approve = await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "atomic-prod", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		if (!approve.ok) throw new Error(`approve failed: ${JSON.stringify(approve.error)}`);
 		const final = (await db.select().from(pipeline_run).where(eq(pipeline_run.id, run.id)))[0]!;
 		expect(final.status).toBe("completed");

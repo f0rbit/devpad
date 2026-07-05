@@ -24,8 +24,11 @@ export type GitHubProcessResult = {
 	};
 };
 
-const mergeCommits = (existing: GitHubRepoCommitsStore | null, incoming: GitHubRepoCommitsStore): { merged: GitHubRepoCommitsStore; newCount: number } => {
-	const { merged: commits, newCount } = mergeByKey(existing?.commits, incoming.commits, c => c.sha);
+const mergeCommits = (
+	existing: GitHubRepoCommitsStore | null,
+	incoming: GitHubRepoCommitsStore,
+): { merged: GitHubRepoCommitsStore; newCount: number } => {
+	const { merged: commits, newCount } = mergeByKey(existing?.commits, incoming.commits, (c) => c.sha);
 	return {
 		merged: {
 			owner: incoming.owner,
@@ -39,10 +42,21 @@ const mergeCommits = (existing: GitHubRepoCommitsStore | null, incoming: GitHubR
 	};
 };
 
-const mergePRs = (existing: GitHubRepoPRsStore | null, incoming: GitHubRepoPRsStore): { merged: GitHubRepoPRsStore; newCount: number } => {
-	const { merged: pull_requests, newCount } = mergeByKey(existing?.pull_requests, incoming.pull_requests, pr => String(pr.number));
+const mergePRs = (
+	existing: GitHubRepoPRsStore | null,
+	incoming: GitHubRepoPRsStore,
+): { merged: GitHubRepoPRsStore; newCount: number } => {
+	const { merged: pull_requests, newCount } = mergeByKey(existing?.pull_requests, incoming.pull_requests, (pr) =>
+		String(pr.number),
+	);
 	return {
-		merged: { owner: incoming.owner, repo: incoming.repo, pull_requests, total_prs: pull_requests.length, fetched_at: incoming.fetched_at },
+		merged: {
+			owner: incoming.owner,
+			repo: incoming.repo,
+			pull_requests,
+			total_prs: pull_requests.length,
+			fetched_at: incoming.fetched_at,
+		},
 		newCount,
 	};
 };
@@ -52,11 +66,24 @@ type GitHubProvider = {
 };
 
 type RepoStoreStats = { owner: string; repo: string; version: string; newCount: number; total: number };
-const defaultRepoStats = (owner: string, repo: string): RepoStoreStats => ({ owner, repo, version: "", newCount: 0, total: 0 });
+const defaultRepoStats = (owner: string, repo: string): RepoStoreStats => ({
+	owner,
+	repo,
+	version: "",
+	newCount: 0,
+	total: 0,
+});
 
-const storeMeta = (backend: Backend, accountId: string, meta: GitHubMetaStore): Promise<string> => genericStoreMeta(backend, accountId, store.github.meta, meta);
+const storeMeta = (backend: Backend, accountId: string, meta: GitHubMetaStore): Promise<string> =>
+	genericStoreMeta(backend, accountId, store.github.meta, meta);
 
-const storeCommits = async (backend: Backend, accountId: string, owner: string, repo: string, incoming: GitHubRepoCommitsStore): Promise<RepoStoreStats> => {
+const storeCommits = async (
+	backend: Backend,
+	accountId: string,
+	owner: string,
+	repo: string,
+	incoming: GitHubRepoCommitsStore,
+): Promise<RepoStoreStats> => {
 	const storeResult = store.github.commits(backend, accountId, owner, repo);
 	if (!storeResult.ok) return defaultRepoStats(owner, repo);
 
@@ -67,11 +94,19 @@ const storeCommits = async (backend: Backend, accountId: string, owner: string, 
 
 	return pipe(putResult)
 		.map(({ version }: { version: string }) => ({ owner, repo, version, newCount, total: merged.total_commits }))
-		.tap(({ newCount: n, total }: { newCount: number; total: number }) => log.debug("Stored commits", { owner, repo, new: n, total }))
+		.tap(({ newCount: n, total }: { newCount: number; total: number }) =>
+			log.debug("Stored commits", { owner, repo, new: n, total }),
+		)
 		.unwrap_or(defaultRepoStats(owner, repo));
 };
 
-const storePRs = async (backend: Backend, accountId: string, owner: string, repo: string, incoming: GitHubRepoPRsStore): Promise<RepoStoreStats> => {
+const storePRs = async (
+	backend: Backend,
+	accountId: string,
+	owner: string,
+	repo: string,
+	incoming: GitHubRepoPRsStore,
+): Promise<RepoStoreStats> => {
 	const storeResult = store.github.prs(backend, accountId, owner, repo);
 	if (!storeResult.ok) return defaultRepoStats(owner, repo);
 
@@ -82,11 +117,18 @@ const storePRs = async (backend: Backend, accountId: string, owner: string, repo
 
 	return pipe(putResult)
 		.map(({ version }: { version: string }) => ({ owner, repo, version, newCount, total: merged.total_prs }))
-		.tap(({ newCount: n, total }: { newCount: number; total: number }) => log.debug("Stored PRs", { owner, repo, new: n, total }))
+		.tap(({ newCount: n, total }: { newCount: number; total: number }) =>
+			log.debug("Stored PRs", { owner, repo, new: n, total }),
+		)
 		.unwrap_or(defaultRepoStats(owner, repo));
 };
 
-export async function processGitHubAccount(backend: Backend, accountId: string, token: string, provider: GitHubProvider): Promise<Result<GitHubProcessResult, ProcessError>> {
+export async function processGitHubAccount(
+	backend: Backend,
+	accountId: string,
+	token: string,
+	provider: GitHubProvider,
+): Promise<Result<GitHubProcessResult, ProcessError>> {
 	log.info("Processing account", { account_id: accountId });
 
 	const fetchResult = await provider.fetch(token);
@@ -123,13 +165,26 @@ export async function processGitHubAccount(backend: Backend, accountId: string, 
 		}
 	}
 
-	log.info("Processing complete", { account_id: accountId, repos: repos.size, total_commits: totalCommits, new_commits: newCommits, total_prs: totalPRs, new_prs: newPRs });
+	log.info("Processing complete", {
+		account_id: accountId,
+		repos: repos.size,
+		total_commits: totalCommits,
+		new_commits: newCommits,
+		total_prs: totalPRs,
+		new_prs: newPRs,
+	});
 
 	return ok({
 		account_id: accountId,
 		meta_version: metaVersion,
 		commit_stores: commitStores,
 		pr_stores: prStores,
-		stats: { repos_processed: repos.size, total_commits: totalCommits, total_prs: totalPRs, new_commits: newCommits, new_prs: newPRs },
+		stats: {
+			repos_processed: repos.size,
+			total_commits: totalCommits,
+			total_prs: totalPRs,
+			new_commits: newCommits,
+			new_prs: newPRs,
+		},
 	});
 }

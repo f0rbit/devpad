@@ -18,7 +18,7 @@ const GithubUsernamesContext = createContext<string[]>([]);
 const stripOwnerPrefix = (repo: string, usernames: string[]): string => {
 	const [owner, name] = repo.split("/");
 	if (!owner || !name) return repo;
-	if (usernames.some(u => u.toLowerCase() === owner.toLowerCase())) return name;
+	if (usernames.some((u) => u.toLowerCase() === owner.toLowerCase())) return name;
 	return repo;
 };
 
@@ -62,7 +62,7 @@ export default function TimelineList(props: TimelineListProps) {
 		},
 		{
 			initialValue: hasSSRData ? { groups: props.initialGroups ?? [], githubUsernames: [] } : undefined,
-		}
+		},
 	);
 
 	const profileSlug = () => props.profileSlug;
@@ -71,7 +71,7 @@ export default function TimelineList(props: TimelineListProps) {
 		<Show when={profileSlug()} fallback={<NoProfileSelected />}>
 			<div class="timeline">
 				<ResourceState resource={data} loadingMessage="Loading timeline..." errorPrefix="Failed to load timeline">
-					{response => (
+					{(response) => (
 						<GithubUsernamesContext.Provider value={response.githubUsernames}>
 							<TimelineGroups groups={response.groups} />
 						</GithubUsernamesContext.Provider>
@@ -114,7 +114,7 @@ function TimelineGroups(props: TimelineGroupsProps) {
 	return (
 		<Show when={allItems().length > 0} fallback={<EmptyTimeline />}>
 			<div class="timeline-flat">
-				<For each={allItems()}>{item => <TimelineEntry item={item} />}</For>
+				<For each={allItems()}>{(item) => <TimelineEntry item={item} />}</For>
 			</div>
 		</Show>
 	);
@@ -122,7 +122,10 @@ function TimelineGroups(props: TimelineGroupsProps) {
 
 function EmptyTimeline() {
 	return (
-		<Empty title="No timeline data yet" description="Your timeline will populate once you connect platforms and run a sync.">
+		<Empty
+			title="No timeline data yet"
+			description="Your timeline will populate once you connect platforms and run a sync."
+		>
 			<a href="/connections" class="btn">
 				Connect Platforms
 			</a>
@@ -190,11 +193,22 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 					when={shouldCollapse()}
 					fallback={
 						<div class="timeline-nested-list">
-							<For each={props.group.commits}>{commit => <NestedCommitRow commit={commit} />}</For>
+							<For each={props.group.commits}>{(commit) => <NestedCommitRow commit={commit} />}</For>
 						</div>
 					}
 				>
-					<button class="inline-flex text-xs muted" style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", gap: "0.25rem" }} onClick={() => setExpanded(!expanded())}>
+					<button
+						class="inline-flex text-xs muted"
+						style={{
+							background: "none",
+							border: "none",
+							padding: "0",
+							font: "inherit",
+							cursor: "pointer",
+							gap: "0.25rem",
+						}}
+						onClick={() => setExpanded(!expanded())}
+					>
 						<Show when={expanded()} fallback={<ChevronRight size={16} />}>
 							<ChevronDown size={16} />
 						</Show>
@@ -202,7 +216,7 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 					</button>
 					<Show when={expanded()}>
 						<div class="timeline-nested-list">
-							<For each={props.group.commits}>{commit => <NestedCommitRow commit={commit} />}</For>
+							<For each={props.group.commits}>{(commit) => <NestedCommitRow commit={commit} />}</For>
 						</div>
 					</Show>
 				</Show>
@@ -283,11 +297,22 @@ function PullRequestRow(props: { item: TimelineItem }) {
 						when={commits().length > 8}
 						fallback={
 							<div class="timeline-nested-list">
-								<For each={commits()}>{commit => <PRCommitRow commit={commit} />}</For>
+								<For each={commits()}>{(commit) => <PRCommitRow commit={commit} />}</For>
 							</div>
 						}
 					>
-						<button class="inline-flex text-xs muted" style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", gap: "0.25rem" }} onClick={() => setExpanded(!expanded())}>
+						<button
+							class="inline-flex text-xs muted"
+							style={{
+								background: "none",
+								border: "none",
+								padding: "0",
+								font: "inherit",
+								cursor: "pointer",
+								gap: "0.25rem",
+							}}
+							onClick={() => setExpanded(!expanded())}
+						>
 							<Show when={expanded()} fallback={<ChevronRight size={16} />}>
 								<ChevronDown size={16} />
 							</Show>
@@ -295,7 +320,7 @@ function PullRequestRow(props: { item: TimelineItem }) {
 						</button>
 						<Show when={expanded()}>
 							<div class="timeline-nested-list">
-								<For each={commits()}>{commit => <PRCommitRow commit={commit} />}</For>
+								<For each={commits()}>{(commit) => <PRCommitRow commit={commit} />}</For>
 							</div>
 						</Show>
 					</Show>
@@ -431,7 +456,12 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 
 	const ExpandLink = () => (
 		<div class="row row-sm items-center text-xs" style={{ gap: "0.375rem" }}>
-			<button type="button" class="reddit-expand-label" onClick={() => setExpanded(!expanded())} style={{ "margin-top": "-0.15rem" }}>
+			<button
+				type="button"
+				class="reddit-expand-label"
+				onClick={() => setExpanded(!expanded())}
+				style={{ "margin-top": "-0.15rem" }}
+			>
 				{expanded() ? "show less" : "show more"}
 			</button>
 			<Show when={props.item.url}>
@@ -489,7 +519,13 @@ function RedditCommentRow(props: { item: TimelineItem }) {
 					<span>·</span>
 					<span>
 						on{" "}
-						<a href={payload().parent_url} target="_blank" rel="noopener noreferrer" class="muted truncate" style={{ "max-width": "250px" }}>
+						<a
+							href={payload().parent_url}
+							target="_blank"
+							rel="noopener noreferrer"
+							class="muted truncate"
+							style={{ "max-width": "250px" }}
+						>
 							"{payload().parent_title}"
 						</a>
 					</span>

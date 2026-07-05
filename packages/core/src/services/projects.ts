@@ -1,6 +1,14 @@
 import type { Project, ProjectConfig, TodoUpdate, TrackerResult, UpsertProject } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
-import { action, ignore_path, project, tag, tag_config, todo_updates, tracker_result } from "@devpad/schema/database/schema";
+import {
+	action,
+	ignore_path,
+	project,
+	tag,
+	tag_config,
+	todo_updates,
+	tracker_result,
+} from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, not, sql } from "drizzle-orm";
@@ -14,7 +22,11 @@ export async function getUserProjects(db: Database, user_id: string): Promise<Re
 	return ok(result);
 }
 
-export async function getProject(db: Database, user_id: string, project_id: string): Promise<Result<Project, ServiceError>> {
+export async function getProject(
+	db: Database,
+	user_id: string,
+	project_id: string,
+): Promise<Result<Project, ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
@@ -32,7 +44,10 @@ export async function getProjectById(db: Database, project_id: string): Promise<
 	return ok(result[0]);
 }
 
-export async function getUserProjectMap(db: Database, user_id: string): Promise<Result<Record<string, Project>, ServiceError>> {
+export async function getUserProjectMap(
+	db: Database,
+	user_id: string,
+): Promise<Result<Record<string, Project>, ServiceError>> {
 	const projects_result = await getUserProjects(db, user_id);
 	if (!projects_result.ok) return projects_result;
 
@@ -40,7 +55,11 @@ export async function getUserProjectMap(db: Database, user_id: string): Promise<
 	return ok(project_map);
 }
 
-export async function doesUserOwnProject(db: Database, user_id: string, project_id: string): Promise<Result<boolean, ServiceError>> {
+export async function doesUserOwnProject(
+	db: Database,
+	user_id: string,
+	project_id: string,
+): Promise<Result<boolean, ServiceError>> {
 	const result = await db
 		.select()
 		.from(project)
@@ -51,7 +70,13 @@ export async function doesUserOwnProject(db: Database, user_id: string, project_
 
 export async function addProjectAction(
 	db: Database,
-	{ owner_id, project_id, type, description, channel = "user" }: { owner_id: string; project_id: string; type: ActionType; description: string; channel?: "user" | "api" }
+	{
+		owner_id,
+		project_id,
+		type,
+		description,
+		channel = "user",
+	}: { owner_id: string; project_id: string; type: ActionType; description: string; channel?: "user" | "api" },
 ): Promise<Result<boolean, ServiceError>> {
 	await db.insert(action).values({
 		owner_id,
@@ -63,7 +88,12 @@ export async function addProjectAction(
 	return ok(true);
 }
 
-export async function getRecentUpdate(db: Database, project_data: Project): Promise<Result<(TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null }) | null, ServiceError>> {
+export async function getRecentUpdate(
+	db: Database,
+	project_data: Project,
+): Promise<
+	Result<(TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null }) | null, ServiceError>
+> {
 	const { owner_id: user_id, id } = project_data;
 	if (!user_id || !id) return ok(null);
 
@@ -92,7 +122,10 @@ export async function getRecentUpdate(db: Database, project_data: Project): Prom
 	return ok(update);
 }
 
-export async function getProjectConfig(db: Database, project_id: string): Promise<Result<{ id: string; config: ProjectConfig; scan_branch: string | null }, ServiceError>> {
+export async function getProjectConfig(
+	db: Database,
+	project_id: string,
+): Promise<Result<{ id: string; config: ProjectConfig; scan_branch: string | null }, ServiceError>> {
 	const project_result = await getProjectById(db, project_id);
 	if (!project_result.ok) return project_result;
 
@@ -114,7 +147,10 @@ export async function getProjectConfig(db: Database, project_id: string): Promis
 		match: JSON.parse(row.matches || "[]") as string[],
 	}));
 
-	const ignore_result = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, project_id));
+	const ignore_result = await db
+		.select({ path: ignore_path.path })
+		.from(ignore_path)
+		.where(eq(ignore_path.project_id, project_id));
 
 	const ignore = ignore_result.map((row: any) => row.path as string);
 
@@ -130,7 +166,14 @@ export type GitHubClient = {
 	getSpecification?: (owner: string, repo: string, access_token: string) => Promise<string>;
 };
 
-export async function upsertProject(db: Database, data: UpsertProject, owner_id: string, access_token?: string, github_client?: GitHubClient, auth_channel: "user" | "api" = "user"): Promise<Result<Project, ServiceError>> {
+export async function upsertProject(
+	db: Database,
+	data: UpsertProject,
+	owner_id: string,
+	access_token?: string,
+	github_client?: GitHubClient,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<Project, ServiceError>> {
 	if (access_token && github_client) {
 		const prev_result = data.id ? await getProjectById(db, data.id) : null;
 		const previous = prev_result?.ok ? prev_result.value : null;
@@ -168,7 +211,13 @@ export async function upsertProject(db: Database, data: UpsertProject, owner_id:
 	}
 
 	if (auth_channel === "api" && previous?.protected && !data.force) {
-		return err({ kind: "protected", entity_id: previous.id, message: `Project ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+		return err({
+			kind: "protected",
+			entity_id: previous.id,
+			message: `Project ${previous.id} is protected. Pass force=true to override.`,
+			modified_by: previous.modified_by,
+			modified_at: previous.updated_at,
+		});
 	}
 
 	const final_owner_id = data.owner_id ?? previous?.owner_id ?? owner_id;
@@ -179,8 +228,16 @@ export async function upsertProject(db: Database, data: UpsertProject, owner_id:
 	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
 	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
-	const provenance_fields = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
-	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id: final_owner_id, ...provenance_fields };
+	const provenance_fields = exists
+		? { modified_by: auth_channel, ...protection }
+		: { created_by: auth_channel, modified_by: auth_channel };
+	const upsert = {
+		...fields,
+		...(id ? { id } : {}),
+		updated_at: new Date().toISOString(),
+		owner_id: final_owner_id,
+		...provenance_fields,
+	};
 
 	let result: Project | null = null;
 	if (exists && id) {
@@ -199,7 +256,11 @@ export async function upsertProject(db: Database, data: UpsertProject, owner_id:
 
 	const new_project = result;
 	const action_type: ActionType = !exists ? "CREATE_PROJECT" : "UPDATE_PROJECT";
-	const action_desc = !exists ? "Created project" : data.specification ? "Updated specification" : "Updated project settings";
+	const action_desc = !exists
+		? "Created project"
+		: data.specification
+			? "Updated specification"
+			: "Updated project settings";
 
 	await addProjectAction(db, {
 		owner_id: final_owner_id,

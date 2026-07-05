@@ -22,7 +22,7 @@ describe("InMemoryPulseSummaryProvider", () => {
 				window_start_ms: 0,
 				window_end_ms: 1000,
 				sample_count: 10,
-			}
+			},
 		);
 
 		const result = await provider.fetch({ package: "p", environment: "prod", version_id: "v1", window_ms: 1000 });
@@ -39,7 +39,7 @@ describe("InMemoryPulseSummaryProvider", () => {
 				window_start_ms: 0,
 				window_end_ms: 1000,
 				sample_count: 10,
-			}
+			},
 		);
 
 		const result = await provider.fetch({ package: "p", environment: "staging", version_id: "v1", window_ms: 1000 });
@@ -49,7 +49,10 @@ describe("InMemoryPulseSummaryProvider", () => {
 
 	test("set_next_error surfaces an error for the matching key", async () => {
 		const provider = new InMemoryPulseSummaryProvider();
-		provider.set_next_error({ package: "p", environment: "prod", version_id: "v1" }, { code: "network", message: "offline" });
+		provider.set_next_error(
+			{ package: "p", environment: "prod", version_id: "v1" },
+			{ code: "network", message: "offline" },
+		);
 
 		const result = await provider.fetch({ package: "p", environment: "prod", version_id: "v1", window_ms: 1000 });
 		expect(result.ok).toBe(false);

@@ -36,11 +36,11 @@ async function formatOutput(data: any, format: string = "json") {
 		const output = JSON.stringify(data, null, 2) + "\n";
 		const flushed = process.stdout.write(output);
 		if (!flushed) {
-			await new Promise<void>(resolve => process.stdout.once("drain", resolve));
+			await new Promise<void>((resolve) => process.stdout.once("drain", resolve));
 		}
 	} else if (format === "table" && Array.isArray(data)) {
 		const table = new Table();
-		data.forEach(item => table.addRow(item));
+		data.forEach((item) => table.addRow(item));
 		table.printTable();
 	} else {
 		console.log(data);
@@ -59,7 +59,7 @@ projects
 	.description("List all projects")
 	.option("--private", "Include private projects", true)
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching projects...").start();
 		try {
 			const tool = getTool("devpad_projects_list");
@@ -103,7 +103,7 @@ projects
 	.requiredOption("-n, --name <name>", "Project name")
 	.option("-d, --description <description>", "Project description")
 	.option("--private", "Make project private", false)
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Creating project...").start();
 		try {
 			const tool = getTool("devpad_projects_upsert");
@@ -176,7 +176,7 @@ tasks
 	.option("-p, --project <id>", "Filter by project ID")
 	.option("-t, --tag <id>", "Filter by tag ID")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching tasks...").start();
 		try {
 			const tool = getTool("devpad_tasks_list");
@@ -223,7 +223,7 @@ tasks
 	.option("-s, --summary <summary>", "Task summary")
 	.option("--priority <priority>", "Task priority (low|medium|high)", "medium")
 	.option("--status <status>", "Task status (todo|in_progress|done)", "todo")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Creating task...").start();
 		try {
 			const tool = getTool("devpad_tasks_upsert");
@@ -248,7 +248,7 @@ tasks
 tasks
 	.command("done <id>")
 	.description("Mark a task as done")
-	.action(async id => {
+	.action(async (id) => {
 		const spinner = createSpinner("Marking task as done...").start();
 		try {
 			const tool = getTool("devpad_tasks_upsert");
@@ -269,7 +269,7 @@ tasks
 tasks
 	.command("todo <id>")
 	.description("Mark a task as todo")
-	.action(async id => {
+	.action(async (id) => {
 		const spinner = createSpinner("Marking task as todo...").start();
 		try {
 			const tool = getTool("devpad_tasks_upsert");
@@ -339,7 +339,7 @@ milestones
 	.description("List milestones")
 	.option("-p, --project <id>", "Filter by project ID")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching milestones...").start();
 		try {
 			const tool = getTool("devpad_milestones_list");
@@ -365,7 +365,7 @@ milestones
 	.option("-d, --description <description>", "Milestone description")
 	.option("--target-time <time>", "Target completion time")
 	.option("--target-version <version>", "Target version")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Creating milestone...").start();
 		try {
 			const tool = getTool("devpad_milestones_upsert");
@@ -394,7 +394,7 @@ goals
 	.command("list")
 	.description("List goals")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching goals...").start();
 		try {
 			const tool = getTool("devpad_goals_list");
@@ -417,7 +417,7 @@ goals
 	.requiredOption("-m, --milestone <id>", "Milestone ID")
 	.option("-d, --description <description>", "Goal description")
 	.option("--target-time <time>", "Target completion time")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Creating goal...").start();
 		try {
 			const tool = getTool("devpad_goals_upsert");
@@ -441,10 +441,11 @@ goals
 // Tags command group
 const tags = program.command("tags").description("Manage tags");
 
-tags.command("list")
+tags
+	.command("list")
 	.description("List tags")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching tags...").start();
 		try {
 			const tool = getTool("devpad_tags_list");
@@ -467,7 +468,7 @@ github
 	.command("repos")
 	.description("List GitHub repositories")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching GitHub repositories...").start();
 		try {
 			const tool = getTool("devpad_github_repos");
@@ -506,10 +507,11 @@ github
 // User command group
 const user = program.command("user").description("User preferences and history");
 
-user.command("history")
+user
+	.command("history")
 	.description("Get user activity history")
 	.option("-f, --format <format>", "Output format (json|table)", "json")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Fetching user history...").start();
 		try {
 			const tool = getTool("devpad_user_history");
@@ -525,11 +527,12 @@ user.command("history")
 		}
 	});
 
-user.command("preferences")
+user
+	.command("preferences")
 	.description("Update user preferences")
 	.requiredOption("-u, --user-id <id>", "User ID")
 	.requiredOption("-v, --view <view>", "Task view preference (list|grid)")
-	.action(async options => {
+	.action(async (options) => {
 		const spinner = createSpinner("Updating preferences...").start();
 		try {
 			const tool = getTool("devpad_user_preferences");

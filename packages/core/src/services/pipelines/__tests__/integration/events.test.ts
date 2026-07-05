@@ -122,7 +122,9 @@ describe("ingest_event — happy path", () => {
 	});
 
 	test("server-side stamps payload.source even when caller provides one", async () => {
-		const out = expect_ok(await ingest_event(h.deps, base_input({ payload: { source: "attacker-claimed", note: "x" } })));
+		const out = expect_ok(
+			await ingest_event(h.deps, base_input({ payload: { source: "attacker-claimed", note: "x" } })),
+		);
 		const row = (await h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.id, out.event_id)))[0]!;
 		expect((row.payload as Record<string, unknown>).source).toBe("external");
 		expect((row.payload as Record<string, unknown>).note).toBe("x");
@@ -171,7 +173,9 @@ describe("ingest_event — idempotency", () => {
 		// Different DB, but the row stored its hash in column form — pull
 		// both and compare directly.
 		const a = (await h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.id, first.event_id)))[0]!;
-		const b = (await second_h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.id, replay.event_id)))[0]!;
+		const b = (
+			await second_h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.id, replay.event_id))
+		)[0]!;
 		expect(a.idempotency_hash).toBe(b.idempotency_hash);
 	});
 
@@ -220,7 +224,10 @@ describe("ingest_event — DO tick gating", () => {
 	test("informational events do NOT tick the DO", async () => {
 		await ingest_event(h.deps, base_input({ kind: "warning" }));
 		await ingest_event(h.deps, base_input({ kind: "error", idempotency_key: "33333333-3333-4333-8333-333333333333" }));
-		await ingest_event(h.deps, base_input({ kind: "deploy_started", idempotency_key: "44444444-4444-4444-8444-444444444444" }));
+		await ingest_event(
+			h.deps,
+			base_input({ kind: "deploy_started", idempotency_key: "44444444-4444-4444-8444-444444444444" }),
+		);
 		expect(h.do_router.calls).toHaveLength(0);
 	});
 

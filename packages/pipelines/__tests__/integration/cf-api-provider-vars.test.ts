@@ -24,7 +24,10 @@ type RecordedRequest = {
 	/** Parsed JSON body for non-multipart requests, else `null`. */
 	body: unknown;
 	/** Parsed multipart parts keyed by form-field name, when the body was multipart. */
-	parts: Record<string, { content_type: string | null; filename: string | null; text: string; bytes: Uint8Array }> | null;
+	parts: Record<
+		string,
+		{ content_type: string | null; filename: string | null; text: string; bytes: Uint8Array }
+	> | null;
 };
 
 type RecorderHandle = {
@@ -75,7 +78,9 @@ const parse_multipart_raw = (raw: Uint8Array, content_type: string): RecordedReq
 		if (header_end >= 0) {
 			const header_text = decode_text(part.subarray(0, header_end));
 			const body_bytes = part.subarray(header_end + 4);
-			const disposition = /Content-Disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]+)")?/i.exec(header_text);
+			const disposition = /Content-Disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]+)")?/i.exec(
+				header_text,
+			);
 			const content_type_match = /Content-Type:\s*([^\r\n]+)/i.exec(header_text);
 			const name = disposition?.[1] ?? "";
 			const filename = disposition?.[2] ?? null;
@@ -140,7 +145,7 @@ const start_recorder = (): RecorderHandle => {
 		server,
 		base_url: `http://localhost:${server.port}/client/v4`,
 		requests,
-		next_response: handler => {
+		next_response: (handler) => {
 			responder = handler;
 		},
 	};
@@ -169,7 +174,12 @@ describe("cf-api-provider — caller-identity vars", () => {
 			success: true,
 			errors: [],
 			messages: [],
-			result: { id: "ver_abc", number: 42, metadata: { created_on: "2026-05-16T00:00:00Z" }, annotations: { version_set_id: "vs_v1" } },
+			result: {
+				id: "ver_abc",
+				number: 42,
+				metadata: { created_on: "2026-05-16T00:00:00Z" },
+				annotations: { version_set_id: "vs_v1" },
+			},
 		}));
 		const provider = make_test_provider(recorder);
 
@@ -201,7 +211,13 @@ describe("cf-api-provider — caller-identity vars", () => {
 		const parts = req.parts!;
 		expect(parts.metadata).toBeDefined();
 		expect(parts.metadata.content_type ?? "").toMatch(/^application\/json/);
-		const metadata = JSON.parse(parts.metadata.text) as { main_module: string; bindings: WorkerVar[]; annotations: Record<string, string>; compatibility_date: string; compatibility_flags: string[] };
+		const metadata = JSON.parse(parts.metadata.text) as {
+			main_module: string;
+			bindings: WorkerVar[];
+			annotations: Record<string, string>;
+			compatibility_date: string;
+			compatibility_flags: string[];
+		};
 		expect(metadata.main_module).toBe("index.js");
 		expect(metadata.annotations).toEqual({ version_set_id: "vs_v1" });
 		expect(metadata.compatibility_date).toBe("2024-04-03");
@@ -243,7 +259,11 @@ describe("cf-api-provider — caller-identity vars", () => {
 		expect(result.ok).toBe(true);
 
 		const parts = recorder.requests[0].parts!;
-		const metadata = JSON.parse(parts.metadata.text) as { bindings: Array<Record<string, unknown>>; compatibility_date: string; compatibility_flags: string[] };
+		const metadata = JSON.parse(parts.metadata.text) as {
+			bindings: Array<Record<string, unknown>>;
+			compatibility_date: string;
+			compatibility_flags: string[];
+		};
 		expect(metadata.compatibility_date).toBe("2026-05-17");
 		expect(metadata.compatibility_flags).toEqual(["nodejs_compat"]);
 		expect(metadata.bindings).toEqual([

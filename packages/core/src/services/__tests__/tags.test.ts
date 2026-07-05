@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { getActiveUserTags, getActiveUserTagsMap, getActiveUserTagsMapByName, getTaskTags, getUserTags, linkTaskToTag, upsertTag } from "../tags.js";
+import {
+	getActiveUserTags,
+	getActiveUserTagsMap,
+	getActiveUserTagsMapByName,
+	getTaskTags,
+	getUserTags,
+	linkTaskToTag,
+	upsertTag,
+} from "../tags.js";
 
 const mockTag = {
 	id: "tag_1",
@@ -129,7 +137,13 @@ describe("tags", () => {
 	describe("upsertTag", () => {
 		test("returns tag id on success", async () => {
 			const db = createMockDb({ returning: [{ id: "tag_new" }] });
-			const result = await upsertTag(db, { title: "feature", owner_id: "user_abc", color: "blue", render: true, deleted: false });
+			const result = await upsertTag(db, {
+				title: "feature",
+				owner_id: "user_abc",
+				color: "blue",
+				render: true,
+				deleted: false,
+			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe("tag_new");
@@ -138,7 +152,13 @@ describe("tags", () => {
 
 		test("returns db_error when upsert returns no result", async () => {
 			const db = createMockDb({ returning: [] });
-			const result = await upsertTag(db, { title: "feature", owner_id: "user_abc", color: "blue", render: true, deleted: false });
+			const result = await upsertTag(db, {
+				title: "feature",
+				owner_id: "user_abc",
+				color: "blue",
+				render: true,
+				deleted: false,
+			});
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.kind).toBe("db_error");
@@ -147,7 +167,14 @@ describe("tags", () => {
 
 		test("handles empty id by treating as new", async () => {
 			const db = createMockDb({ returning: [{ id: "tag_gen" }] });
-			const result = await upsertTag(db, { id: "", title: "test", owner_id: "user_abc", color: null, render: true, deleted: false });
+			const result = await upsertTag(db, {
+				id: "",
+				title: "test",
+				owner_id: "user_abc",
+				color: null,
+				render: true,
+				deleted: false,
+			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toBe("tag_gen");

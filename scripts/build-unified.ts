@@ -75,9 +75,12 @@ async function build() {
 	await $`bun run --filter '@devpad/api' build`;
 
 	console.log("Building all Astro apps in parallel...");
-	await Promise.all(APP_NAMES.map(name => $`bun run --filter '${APPS[name].filter}' build`));
+	await Promise.all(APP_NAMES.map((name) => $`bun run --filter '${APPS[name].filter}' build`));
 
-	const app_dists = Object.fromEntries(APP_NAMES.map(name => [name, join(APPS[name].dir, "dist")])) as Record<AppName, string>;
+	const app_dists = Object.fromEntries(APP_NAMES.map((name) => [name, join(APPS[name].dir, "dist")])) as Record<
+		AppName,
+		string
+	>;
 
 	console.log("Copying client assets...");
 	mkdirSync(join(DIST_DIR, "_astro"), { recursive: true });
@@ -130,7 +133,7 @@ async function build() {
 	console.log("\nDeploy with: bunx wrangler deploy");
 }
 
-build().catch(error => {
+build().catch((error) => {
 	console.error("Build failed:", error);
 	process.exit(1);
 });

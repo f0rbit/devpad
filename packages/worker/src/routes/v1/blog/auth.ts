@@ -8,7 +8,11 @@ type AuthUser = {
 	task_view: "list" | "grid";
 };
 
-type AuthenticatedHandler<P extends string, I extends Input, T> = (c: Context<any, P, I>, user: AuthUser, ctx: BlogContext) => Promise<T>;
+type AuthenticatedHandler<P extends string, I extends Input, T> = (
+	c: Context<any, P, I>,
+	user: AuthUser,
+	ctx: BlogContext,
+) => Promise<T>;
 
 export const withAuth =
 	<P extends string, I extends Input, T>(handler: AuthenticatedHandler<P, I, T>) =>

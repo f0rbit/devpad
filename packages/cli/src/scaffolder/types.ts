@@ -6,7 +6,14 @@
  * module wraps it with filesystem + process IO.
  */
 
-import type { BuildShape, DefaultGateKind, RolloutMode, ScaffolderInput, ScaffolderRenderError, ScaffolderValidationError } from "@devpad/pipeline-templates";
+import type {
+	BuildShape,
+	DefaultGateKind,
+	RolloutMode,
+	ScaffolderInput,
+	ScaffolderRenderError,
+	ScaffolderValidationError,
+} from "@devpad/pipeline-templates";
 
 export type { BuildShape, DefaultGateKind, RolloutMode, ScaffolderInput };
 

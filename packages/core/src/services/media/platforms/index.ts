@@ -3,7 +3,12 @@ export { DevpadMemoryProvider, DevpadProvider, normalizeDevpad } from "./devpad"
 export { type GitHubFetchResult, GitHubProvider, type GitHubProviderConfig } from "./github";
 export { type GitHubMemoryConfig, GitHubMemoryProvider } from "./github-memory";
 export type { MemoryProviderControls, MemoryProviderState, SimulationConfig } from "./memory-base";
-export { BaseMemoryProvider, createMemoryProviderControlMethods, createMemoryProviderState, simulateErrors } from "./memory-base";
+export {
+	BaseMemoryProvider,
+	createMemoryProviderControlMethods,
+	createMemoryProviderState,
+	simulateErrors,
+} from "./memory-base";
 export * from "./reddit";
 export * from "./reddit-memory";
 export * from "./twitter";
@@ -35,7 +40,11 @@ export const defaultProviderFactory: ProviderFactory = {
 	},
 };
 
-const providerForPlatform = (platform: string, platformUserId: string | null, db?: Database): Provider<unknown> | null => {
+const providerForPlatform = (
+	platform: string,
+	platformUserId: string | null,
+	db?: Database,
+): Provider<unknown> | null => {
 	switch (platform) {
 		case "bluesky":
 			return new BlueskyProvider({ actor: platformUserId ?? "" });

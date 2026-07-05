@@ -153,7 +153,7 @@ describe("tasks API client integration", () => {
 
 		expect(Array.isArray(listResult.value)).toBe(true);
 		expect(listResult.value.length).toBeGreaterThan(0);
-		const task_ids = listResult.value.map(t => t.task.id);
+		const task_ids = listResult.value.map((t) => t.task.id);
 		expect(task_ids).toContain(taskResult.value.task.id);
 	});
 });

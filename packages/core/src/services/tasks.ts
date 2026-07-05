@@ -10,22 +10,29 @@ import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
 
-async function fetchTasksWithDetails(db: Database, where_conditions: (SQL | undefined)[]): Promise<Result<Task[], ServiceError>> {
+async function fetchTasksWithDetails(
+	db: Database,
+	where_conditions: (SQL | undefined)[],
+): Promise<Result<Task[], ServiceError>> {
 	const fetched_tasks = await db
 		.select()
 		.from(task)
 		.leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id))
 		.where(and(...where_conditions));
 
-	const tasks: Task[] = fetched_tasks.map(t => ({
+	const tasks: Task[] = fetched_tasks.map((t) => ({
 		task: t.task,
 		codebase_tasks: t.codebase_tasks,
 		tags: [],
 	}));
 
-	const task_ids = tasks.map(t => t.task.id);
+	const task_ids = tasks.map((t) => t.task.id);
 	if (task_ids.length > 0) {
-		const tags = await batchedQuery(task_ids, condition => db.select().from(task_tag).where(condition), task_tag.task_id);
+		const tags = await batchedQuery(
+			task_ids,
+			(condition) => db.select().from(task_tag).where(condition),
+			task_tag.task_id,
+		);
 
 		const mapped_tags = new Map<string, string[]>();
 		for (const t of tags) {
@@ -51,7 +58,10 @@ export async function getProjectTasks(db: Database, project_id: string): Promise
 }
 
 export async function getTasksByTag(db: Database, tag_id: string): Promise<Result<Task[], ServiceError>> {
-	const task_tag_relations = await db.select({ task_id: task_tag.task_id }).from(task_tag).where(eq(task_tag.tag_id, tag_id));
+	const task_tag_relations = await db
+		.select({ task_id: task_tag.task_id })
+		.from(task_tag)
+		.where(eq(task_tag.tag_id, tag_id));
 	const task_ids = task_tag_relations.map((rel: any) => rel.task_id as string);
 
 	if (task_ids.length === 0) return ok([]);
@@ -78,7 +88,23 @@ export async function getTask(db: Database, task_id: string): Promise<Result<Tas
 
 export async function addTaskAction(
 	db: Database,
-	{ owner_id, task_id, title, type, description, project_id, channel = "user" }: { owner_id: string; task_id: string; title: string; type: ActionType; description: string; project_id: string | null; channel?: "user" | "api" }
+	{
+		owner_id,
+		task_id,
+		title,
+		type,
+		description,
+		project_id,
+		channel = "user",
+	}: {
+		owner_id: string;
+		task_id: string;
+		title: string;
+		type: ActionType;
+		description: string;
+		project_id: string | null;
+		channel?: "user" | "api";
+	},
 ): Promise<Result<boolean, ServiceError>> {
 	await db.insert(action).values({
 		owner_id,
@@ -90,12 +116,19 @@ export async function addTaskAction(
 	return ok(true);
 }
 
-export async function getUpsertedTaskMap(db: Database, codebase_items: UpdateData[]): Promise<Result<Map<string, string>, ServiceError>> {
+export async function getUpsertedTaskMap(
+	db: Database,
+	codebase_items: UpdateData[],
+): Promise<Result<Map<string, string>, ServiceError>> {
 	const result = new Map<string, string>();
 	if (codebase_items.length === 0) return ok(result);
 
-	const item_ids = codebase_items.map(item => item.id);
-	const existing_tasks = await batchedQuery(item_ids, condition => db.select().from(task).where(condition), task.codebase_task_id);
+	const item_ids = codebase_items.map((item) => item.id);
+	const existing_tasks = await batchedQuery(
+		item_ids,
+		(condition) => db.select().from(task).where(condition),
+		task.codebase_task_id,
+	);
 
 	for (const t of existing_tasks) {
 		if (t.codebase_task_id) {
@@ -108,24 +141,33 @@ export async function getUpsertedTaskMap(db: Database, codebase_items: UpdateDat
 
 async function upsertTaskTags(db: Database, task_id: string, tags: string[]): Promise<void> {
 	const current_result = await getTaskTags(db, task_id);
-	const current = current_result.ok ? current_result.value.map(c => c.id) : [];
+	const current = current_result.ok ? current_result.value.map((c) => c.id) : [];
 
-	const create = tags.filter(tag_id => !current.includes(tag_id));
-	const delete_tags = current.filter(id => !tags.includes(id));
+	const create = tags.filter((tag_id) => !current.includes(tag_id));
+	const delete_tags = current.filter((id) => !tags.includes(id));
 
 	if (delete_tags.length > 0) {
 		await db.delete(task_tag).where(and(eq(task_tag.task_id, task_id), inArray(task_tag.tag_id, delete_tags)));
 	}
 
 	if (create.length > 0) {
-		const insert_tags = create.map(t => ({ task_id, tag_id: t }));
+		const insert_tags = create.map((t) => ({ task_id, tag_id: t }));
 		await db.insert(task_tag).values(insert_tags);
 	}
 
-	await db.update(task_tag).set({ updated_at: sql`CURRENT_TIMESTAMP` }).where(eq(task_tag.task_id, task_id));
+	await db
+		.update(task_tag)
+		.set({ updated_at: sql`CURRENT_TIMESTAMP` })
+		.where(eq(task_tag.task_id, task_id));
 }
 
-export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag[], owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Task | null, ServiceError>> {
+export async function upsertTask(
+	db: Database,
+	data: UpsertTodo,
+	tags: UpsertTag[],
+	owner_id: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<Task | null, ServiceError>> {
 	const previous_result = data.id ? await getTask(db, data.id) : null;
 	const previous = previous_result?.ok ? (previous_result.value?.task ?? null) : null;
 
@@ -138,7 +180,13 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	}
 
 	if (auth_channel === "api" && previous?.protected && !data.force) {
-		return err({ kind: "protected", entity_id: previous.id, message: `Task ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+		return err({
+			kind: "protected",
+			entity_id: previous.id,
+			message: `Task ${previous.id} is protected. Pass force=true to override.`,
+			modified_by: previous.modified_by,
+			modified_at: previous.updated_at,
+		});
 	}
 
 	if (data.goal_id) {
@@ -161,10 +209,10 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 
 	let tag_ids: string[] = [];
 	if (tags && tags.length > 0) {
-		const results = await Promise.all(tags.map(t => upsertTag(db, t)));
-		const failed = results.find(r => !r.ok);
+		const results = await Promise.all(tags.map((t) => upsertTag(db, t)));
+		const failed = results.find((r) => !r.ok);
 		if (failed && !failed.ok) return err(failed.error);
-		tag_ids = results.filter(r => r.ok).map(r => r.value);
+		tag_ids = results.filter((r) => r.ok).map((r) => r.value);
 	}
 
 	const exists = !!previous;
@@ -173,7 +221,9 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
 	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
-	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
+	const provenance = exists
+		? { modified_by: auth_channel, ...protection }
+		: { created_by: auth_channel, modified_by: auth_channel };
 	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id, ...provenance };
 
 	let result: Task["task"] | null = null;
@@ -197,7 +247,15 @@ export async function upsertTask(db: Database, data: UpsertTodo, tags: UpsertTag
 	const action_type: ActionType = !exists ? "CREATE_TASK" : "UPDATE_TASK";
 	const action_desc = !exists ? "Created task" : fresh_complete ? "Completed task" : "Updated task";
 
-	await addTaskAction(db, { owner_id, task_id: new_todo.id, title: new_todo.title, type: action_type, description: action_desc, project_id, channel: auth_channel });
+	await addTaskAction(db, {
+		owner_id,
+		task_id: new_todo.id,
+		title: new_todo.title,
+		type: action_type,
+		description: action_desc,
+		project_id,
+		channel: auth_channel,
+	});
 
 	if (tag_ids.length > 0) {
 		await upsertTaskTags(db, new_todo.id, tag_ids);

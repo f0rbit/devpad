@@ -49,12 +49,16 @@ describe("pipeline runs — user-declared atomic", () => {
 		const { run, plan } = created.value;
 
 		expect(plan.forced_reason).toBeNull();
-		expect(plan.stages.map(s => s.name)).toEqual(["staging", "atomic-prod"]);
+		expect(plan.stages.map((s) => s.name)).toEqual(["staging", "atomic-prod"]);
 		expect((await db.select().from(pipeline_run).where(eq(pipeline_run.id, run.id)))[0]!.shape).toBe("atomic");
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
 
-		const approved = await approve_stage(deps, { run_id: run.id, stage_name: "atomic-prod", decision: "approved", user_id: "user_test" }, plan);
+		const approved = await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "atomic-prod", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		expect(approved.ok).toBe(true);
 		if (!approved.ok) return;
 		// After Pass: deploys atomic-prod → bake = null → completes immediately

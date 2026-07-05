@@ -19,7 +19,15 @@ import { z } from "zod";
  * (`builds.worker.artifact_ref`) keeps working untouched.
  */
 
-export const MODULE_MIME_TYPES = ["application/javascript+module", "application/javascript", "application/wasm", "application/octet-stream", "text/plain", "text/x-python", "text/x-python-requirement"] as const;
+export const MODULE_MIME_TYPES = [
+	"application/javascript+module",
+	"application/javascript",
+	"application/wasm",
+	"application/octet-stream",
+	"text/plain",
+	"text/x-python",
+	"text/x-python-requirement",
+] as const;
 
 /**
  * One module file inside a directory-bundle Worker.

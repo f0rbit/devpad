@@ -38,7 +38,11 @@ export default function GrantsList(props: GrantsListProps) {
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to approve grant");
 		} else {
-			setGrants(prev => prev.map(g => (g.id === grant.id ? { ...g, granted_at: new Date().toISOString(), granted_by: props.user_id } : g)));
+			setGrants((prev) =>
+				prev.map((g) =>
+					g.id === grant.id ? { ...g, granted_at: new Date().toISOString(), granted_by: props.user_id } : g,
+				),
+			);
 		}
 		setLoading(null);
 	};
@@ -51,14 +55,14 @@ export default function GrantsList(props: GrantsListProps) {
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to deny grant");
 		} else {
-			setGrants(prev => prev.filter(g => g.id !== grant.id));
+			setGrants((prev) => prev.filter((g) => g.id !== grant.id));
 		}
 		setLoading(null);
 	};
 
 	const group_grants = () => {
 		const by_package: Record<string, Record<string, PipelineGrant[]>> = {};
-		grants().forEach(grant => {
+		grants().forEach((grant) => {
 			if (!by_package[grant.package_id]) {
 				by_package[grant.package_id] = {};
 			}
@@ -91,7 +95,7 @@ export default function GrantsList(props: GrantsListProps) {
 								<div class="stack stack-sm">
 									<h4 style={{ margin: "0 0 0.5rem 0", opacity: 0.7, "font-size": "0.9rem" }}>Stage: {stage_name}</h4>
 									<For each={stage_grants}>
-										{grant => (
+										{(grant) => (
 											<div
 												class="interactive-row"
 												style={{
@@ -104,10 +108,21 @@ export default function GrantsList(props: GrantsListProps) {
 													"background-color": is_pending(grant) ? "var(--bg-secondary)" : "transparent",
 												}}
 											>
-												<div style={{ display: "flex", "justify-content": "space-between", "align-items": "flex-start", gap: "0.5rem" }}>
+												<div
+													style={{
+														display: "flex",
+														"justify-content": "space-between",
+														"align-items": "flex-start",
+														gap: "0.5rem",
+													}}
+												>
 													<div class="stack stack-xs">
-														<div style={{ display: "flex", gap: "0.5rem", "align-items": "center", "flex-wrap": "wrap" }}>
-															<span style={{ "font-family": "monospace", "font-size": "0.85rem", opacity: 0.8 }}>{grant.scope}</span>
+														<div
+															style={{ display: "flex", gap: "0.5rem", "align-items": "center", "flex-wrap": "wrap" }}
+														>
+															<span style={{ "font-family": "monospace", "font-size": "0.85rem", opacity: 0.8 }}>
+																{grant.scope}
+															</span>
 															<Show when={is_pending(grant)}>
 																<Badge variant="warning">pending</Badge>
 															</Show>
@@ -119,17 +134,29 @@ export default function GrantsList(props: GrantsListProps) {
 															</Show>
 														</div>
 														<Show when={!is_pending(grant) && grant.granted_at}>
-															<span style={{ "font-size": "0.85rem", opacity: 0.6 }}>Granted {format_date(grant.granted_at)}</span>
+															<span style={{ "font-size": "0.85rem", opacity: 0.6 }}>
+																Granted {format_date(grant.granted_at)}
+															</span>
 														</Show>
 													</div>
 
 													<Show when={is_pending(grant)}>
 														<div style={{ display: "flex", gap: "0.5rem" }}>
-															<Button size="sm" variant="primary" disabled={loading() === grant.id} onClick={() => handleApprove(grant)}>
+															<Button
+																size="sm"
+																variant="primary"
+																disabled={loading() === grant.id}
+																onClick={() => handleApprove(grant)}
+															>
 																<Check size={14} />
 																Approve
 															</Button>
-															<Button size="sm" variant="secondary" disabled={loading() === grant.id} onClick={() => handleDeny(grant)}>
+															<Button
+																size="sm"
+																variant="secondary"
+																disabled={loading() === grant.id}
+																onClick={() => handleDeny(grant)}
+															>
 																<X size={14} />
 																Deny
 															</Button>

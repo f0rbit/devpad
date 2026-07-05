@@ -24,14 +24,27 @@ import {
 	TwitterTweetsStoreSchema,
 	YouTubeRawSchema,
 } from "@devpad/schema/media";
-import { type Backend, create_corpus, define_store, json_codec, ok, type Parser, type Result, type Store } from "@f0rbit/corpus";
+import {
+	type Backend,
+	create_corpus,
+	define_store,
+	json_codec,
+	ok,
+	type Parser,
+	type Result,
+	type Store,
+} from "@f0rbit/corpus";
 import { z } from "zod";
 
 const STORAGE_PREFIX = "media";
 
 export type CorpusError = StoreError | ParseError;
 
-const createTypedStore = <TData, TId extends string>(backend: Backend, id: TId, schema: Parser<TData>): Result<{ store: Store<TData>; id: TId }, CorpusError> => {
+const createTypedStore = <TData, TId extends string>(
+	backend: Backend,
+	id: TId,
+	schema: Parser<TData>,
+): Result<{ store: Store<TData>; id: TId }, CorpusError> => {
 	const corpus = create_corpus()
 		.with_backend(backend)
 		.with_store(define_store(id, json_codec(schema)))
@@ -45,8 +58,10 @@ export const STORE_PATTERNS = {
 	raw: (platform: string, accountId: string) => `${STORAGE_PREFIX}/raw/${platform}/${accountId}` as const,
 	timeline: (userId: string) => `${STORAGE_PREFIX}/timeline/${userId}` as const,
 	githubMeta: (accountId: string) => `${STORAGE_PREFIX}/github/${accountId}/meta` as const,
-	githubCommits: (accountId: string, owner: string, repo: string) => `${STORAGE_PREFIX}/github/${accountId}/commits/${owner}/${repo}` as const,
-	githubPRs: (accountId: string, owner: string, repo: string) => `${STORAGE_PREFIX}/github/${accountId}/prs/${owner}/${repo}` as const,
+	githubCommits: (accountId: string, owner: string, repo: string) =>
+		`${STORAGE_PREFIX}/github/${accountId}/commits/${owner}/${repo}` as const,
+	githubPRs: (accountId: string, owner: string, repo: string) =>
+		`${STORAGE_PREFIX}/github/${accountId}/prs/${owner}/${repo}` as const,
 	redditMeta: (accountId: string) => `${STORAGE_PREFIX}/reddit/${accountId}/meta` as const,
 	redditPosts: (accountId: string) => `${STORAGE_PREFIX}/reddit/${accountId}/posts` as const,
 	redditComments: (accountId: string) => `${STORAGE_PREFIX}/reddit/${accountId}/comments` as const,
@@ -65,7 +80,17 @@ export type RedditCommentsStoreId = ReturnType<typeof STORE_PATTERNS.redditComme
 export type TwitterMetaStoreId = ReturnType<typeof STORE_PATTERNS.twitterMeta>;
 export type TwitterTweetsStoreId = ReturnType<typeof STORE_PATTERNS.twitterTweets>;
 
-export type StoreId = RawStoreId | TimelineStoreId | GitHubMetaStoreId | GitHubCommitsStoreId | GitHubPRsStoreId | RedditMetaStoreId | RedditPostsStoreId | RedditCommentsStoreId | TwitterMetaStoreId | TwitterTweetsStoreId;
+export type StoreId =
+	| RawStoreId
+	| TimelineStoreId
+	| GitHubMetaStoreId
+	| GitHubCommitsStoreId
+	| GitHubPRsStoreId
+	| RedditMetaStoreId
+	| RedditPostsStoreId
+	| RedditCommentsStoreId
+	| TwitterMetaStoreId
+	| TwitterTweetsStoreId;
 
 export type ParsedStoreId =
 	| { type: "github_meta"; accountId: string }
@@ -85,8 +110,10 @@ export const parseStoreId = (storeId: string): Result<ParsedStoreId, ParseError>
 	const [, type, id, subtype, ...rest] = parts;
 
 	if (type === "github" && id && subtype === "meta") return ok({ type: "github_meta", accountId: id });
-	if (type === "github" && id && subtype === "commits" && rest[0] && rest[1] && rest[2]) return ok({ type: "github_commits", accountId: id, owner: rest[0], repo: rest[1], branch: rest[2] });
-	if (type === "github" && id && subtype === "prs" && rest[0] && rest[1]) return ok({ type: "github_prs", accountId: id, owner: rest[0], repo: rest[1] });
+	if (type === "github" && id && subtype === "commits" && rest[0] && rest[1] && rest[2])
+		return ok({ type: "github_commits", accountId: id, owner: rest[0], repo: rest[1], branch: rest[2] });
+	if (type === "github" && id && subtype === "prs" && rest[0] && rest[1])
+		return ok({ type: "github_prs", accountId: id, owner: rest[0], repo: rest[1] });
 	if (type === "reddit" && id && subtype === "meta") return ok({ type: "reddit_meta", accountId: id });
 	if (type === "reddit" && id && subtype === "posts") return ok({ type: "reddit_posts", accountId: id });
 	if (type === "reddit" && id && subtype === "comments") return ok({ type: "reddit_comments", accountId: id });
@@ -114,7 +141,17 @@ export type RedditCommentsStoreResult = { store: Store<RedditCommentsStore>; id:
 export type TwitterMetaStoreResult = { store: Store<TwitterMetaStore>; id: TwitterMetaStoreId };
 export type TwitterTweetsStoreResult = { store: Store<TwitterTweetsStore>; id: TwitterTweetsStoreId };
 
-export type StoreType = "raw" | "timeline" | "github_meta" | "github_commits" | "github_prs" | "reddit_meta" | "reddit_posts" | "reddit_comments" | "twitter_meta" | "twitter_tweets";
+export type StoreType =
+	| "raw"
+	| "timeline"
+	| "github_meta"
+	| "github_commits"
+	| "github_prs"
+	| "reddit_meta"
+	| "reddit_posts"
+	| "reddit_comments"
+	| "twitter_meta"
+	| "twitter_tweets";
 
 export type RepoStoreInfo = { owner: string; repo: string; storeId: string };
 
@@ -147,17 +184,31 @@ const listPRs = async (backend: Backend, accountId: string): Promise<RepoStoreIn
 };
 
 export const store = {
-	raw: (backend: Backend, platform: string, accountId: string): Result<RawStore, CorpusError> => createTypedStore(backend, STORE_PATTERNS.raw(platform, accountId), RawDataSchema),
+	raw: (backend: Backend, platform: string, accountId: string): Result<RawStore, CorpusError> =>
+		createTypedStore(backend, STORE_PATTERNS.raw(platform, accountId), RawDataSchema),
 
-	timeline: (backend: Backend, userId: string): Result<TimelineStore, CorpusError> => createTypedStore(backend, STORE_PATTERNS.timeline(userId), TimelineDataSchema),
+	timeline: (backend: Backend, userId: string): Result<TimelineStore, CorpusError> =>
+		createTypedStore(backend, STORE_PATTERNS.timeline(userId), TimelineDataSchema),
 
 	github: {
-		meta: (backend: Backend, accountId: string): Result<GitHubMetaStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.githubMeta(accountId), GitHubMetaStoreSchema),
+		meta: (backend: Backend, accountId: string): Result<GitHubMetaStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.githubMeta(accountId), GitHubMetaStoreSchema),
 
-		commits: (backend: Backend, accountId: string, owner: string, repo: string): Result<GitHubCommitsStoreResult, CorpusError> =>
+		commits: (
+			backend: Backend,
+			accountId: string,
+			owner: string,
+			repo: string,
+		): Result<GitHubCommitsStoreResult, CorpusError> =>
 			createTypedStore(backend, STORE_PATTERNS.githubCommits(accountId, owner, repo), GitHubRepoCommitsStoreSchema),
 
-		prs: (backend: Backend, accountId: string, owner: string, repo: string): Result<GitHubPRsStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.githubPRs(accountId, owner, repo), GitHubRepoPRsStoreSchema),
+		prs: (
+			backend: Backend,
+			accountId: string,
+			owner: string,
+			repo: string,
+		): Result<GitHubPRsStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.githubPRs(accountId, owner, repo), GitHubRepoPRsStoreSchema),
 
 		list: {
 			commits: listCommits,
@@ -166,21 +217,33 @@ export const store = {
 	},
 
 	reddit: {
-		meta: (backend: Backend, accountId: string): Result<RedditMetaStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.redditMeta(accountId), RedditMetaStoreSchema),
+		meta: (backend: Backend, accountId: string): Result<RedditMetaStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.redditMeta(accountId), RedditMetaStoreSchema),
 
-		posts: (backend: Backend, accountId: string): Result<RedditPostsStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.redditPosts(accountId), RedditPostsStoreSchema),
+		posts: (backend: Backend, accountId: string): Result<RedditPostsStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.redditPosts(accountId), RedditPostsStoreSchema),
 
-		comments: (backend: Backend, accountId: string): Result<RedditCommentsStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.redditComments(accountId), RedditCommentsStoreSchema),
+		comments: (backend: Backend, accountId: string): Result<RedditCommentsStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.redditComments(accountId), RedditCommentsStoreSchema),
 
-		ids: (accountId: string): string[] => [STORE_PATTERNS.redditMeta(accountId), STORE_PATTERNS.redditPosts(accountId), STORE_PATTERNS.redditComments(accountId)],
+		ids: (accountId: string): string[] => [
+			STORE_PATTERNS.redditMeta(accountId),
+			STORE_PATTERNS.redditPosts(accountId),
+			STORE_PATTERNS.redditComments(accountId),
+		],
 	},
 
 	twitter: {
-		meta: (backend: Backend, accountId: string): Result<TwitterMetaStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.twitterMeta(accountId), TwitterMetaStoreSchema),
+		meta: (backend: Backend, accountId: string): Result<TwitterMetaStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.twitterMeta(accountId), TwitterMetaStoreSchema),
 
-		tweets: (backend: Backend, accountId: string): Result<TwitterTweetsStoreResult, CorpusError> => createTypedStore(backend, STORE_PATTERNS.twitterTweets(accountId), TwitterTweetsStoreSchema),
+		tweets: (backend: Backend, accountId: string): Result<TwitterTweetsStoreResult, CorpusError> =>
+			createTypedStore(backend, STORE_PATTERNS.twitterTweets(accountId), TwitterTweetsStoreSchema),
 
-		ids: (accountId: string): string[] => [STORE_PATTERNS.twitterMeta(accountId), STORE_PATTERNS.twitterTweets(accountId)],
+		ids: (accountId: string): string[] => [
+			STORE_PATTERNS.twitterMeta(accountId),
+			STORE_PATTERNS.twitterTweets(accountId),
+		],
 	},
 
 	id: {
@@ -203,4 +266,11 @@ export const store = {
 	},
 };
 
-export { initialState, isCircuitOpen, type RateLimitState, shouldFetch, updateOnFailure, updateOnSuccess } from "./rate-limits";
+export {
+	initialState,
+	isCircuitOpen,
+	type RateLimitState,
+	shouldFetch,
+	updateOnFailure,
+	updateOnSuccess,
+} from "./rate-limits";

@@ -8,7 +8,12 @@ import type { ServiceError } from "./errors.js";
 import { getProjectConfig } from "./projects.js";
 import { type DiffResult, generateDiff, type ParsedTask, scanGitHubRepo } from "./scanner/index.js";
 
-export async function* initiateScan(db: Database, project_id: string, user_id: string, access_token: string): AsyncGenerator<string> {
+export async function* initiateScan(
+	db: Database,
+	project_id: string,
+	user_id: string,
+	access_token: string,
+): AsyncGenerator<string> {
 	yield "starting\n";
 
 	const project_query = await db
@@ -143,7 +148,14 @@ async function upsertCodebaseTask(db: Database, update_item: any, new_id: number
 		.onConflictDoUpdate({ target: [codebase_tasks.id], set: values });
 }
 
-async function handleCreateAction(db: Database, update_item: any, titles: Record<string, string>, user_id: string, project_id: string, new_id: number): Promise<void> {
+async function handleCreateAction(
+	db: Database,
+	update_item: any,
+	titles: Record<string, string>,
+	user_id: string,
+	project_id: string,
+	new_id: number,
+): Promise<void> {
 	const title = titles[update_item.id] || update_item.data?.new?.text || "Untitled Task";
 	const new_text = update_item.data?.new?.text || "";
 
@@ -164,7 +176,15 @@ async function handleCreateAction(db: Database, update_item: any, titles: Record
 	await db.update(task).set({ codebase_task_id: update_item.id }).where(eq(task.id, task_result.value.task.id));
 }
 
-async function processScanItem(db: Database, update_item: any, actions_map: Record<string, string[]>, titles: Record<string, string>, user_id: string, project_id: string, new_id: number): Promise<void> {
+async function processScanItem(
+	db: Database,
+	update_item: any,
+	actions_map: Record<string, string[]>,
+	titles: Record<string, string>,
+	user_id: string,
+	project_id: string,
+	new_id: number,
+): Promise<void> {
 	let item_action: string | null = null;
 	for (const [a, item_ids] of Object.entries(actions_map)) {
 		if (item_ids.includes(update_item.id)) {
@@ -202,7 +222,10 @@ async function processScanItem(db: Database, update_item: any, actions_map: Reco
 	if (item_action === "DELETE") {
 		const delete_tasks = await db.select().from(task).where(eq(task.codebase_task_id, update_item.id));
 		if (delete_tasks.length > 0) {
-			await db.update(task).set({ visibility: "DELETED", codebase_task_id: null }).where(eq(task.codebase_task_id, update_item.id));
+			await db
+				.update(task)
+				.set({ visibility: "DELETED", codebase_task_id: null })
+				.where(eq(task.codebase_task_id, update_item.id));
 			await db.insert(action).values({
 				owner_id: user_id,
 				type: "DELETE_TASK",
@@ -235,7 +258,7 @@ export async function processScanResults(
 	update_id: number,
 	actions_map: Record<string, string[]>,
 	titles: Record<string, string>,
-	approved: boolean
+	approved: boolean,
 ): Promise<Result<{ success: boolean }, ServiceError>> {
 	const project_query = await db
 		.select()
@@ -275,7 +298,11 @@ export async function processScanResults(
 	return ok({ success: true });
 }
 
-export async function getPendingUpdates(db: Database, project_id: string, user_id: string): Promise<Result<TodoUpdate[], ServiceError>> {
+export async function getPendingUpdates(
+	db: Database,
+	project_id: string,
+	user_id: string,
+): Promise<Result<TodoUpdate[], ServiceError>> {
 	const project_query = await db
 		.select()
 		.from(project)
@@ -294,7 +321,11 @@ export async function getPendingUpdates(db: Database, project_id: string, user_i
 	return ok(result);
 }
 
-export async function getScanHistory(db: Database, project_id: string, user_id: string): Promise<Result<TrackerResult[], ServiceError>> {
+export async function getScanHistory(
+	db: Database,
+	project_id: string,
+	user_id: string,
+): Promise<Result<TrackerResult[], ServiceError>> {
 	const project_query = await db
 		.select()
 		.from(project)
@@ -304,7 +335,11 @@ export async function getScanHistory(db: Database, project_id: string, user_id: 
 		return err({ kind: "not_found", resource: "project", id: project_id });
 	}
 
-	const result = await db.select().from(tracker_result).where(eq(tracker_result.project_id, project_id)).orderBy(desc(tracker_result.created_at));
+	const result = await db
+		.select()
+		.from(tracker_result)
+		.where(eq(tracker_result.project_id, project_id))
+		.orderBy(desc(tracker_result.created_at));
 
 	return ok(result);
 }

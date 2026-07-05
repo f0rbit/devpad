@@ -8,7 +8,7 @@ interface TokenFormProps {
 	onClose: () => void;
 }
 
-const TokenForm: Component<TokenFormProps> = props => {
+const TokenForm: Component<TokenFormProps> = (props) => {
 	const [name, setName] = createSignal("");
 	const [note, setNote] = createSignal("");
 	const [generatedKey, setGeneratedKey] = createSignal<string | null>(null);
@@ -35,7 +35,7 @@ const TokenForm: Component<TokenFormProps> = props => {
 			props.onSubmit({
 				name: trimmedName,
 				note: note().trim() || undefined,
-			})
+			}),
 		);
 		if (result) setGeneratedKey(result.key);
 	};
@@ -58,7 +58,14 @@ const TokenForm: Component<TokenFormProps> = props => {
 					<>
 						<ModalBody>
 							<div class="modal-form">
-								<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-green)", border: "1px solid var(--item-green-border)", "border-radius": "4px" }}>
+								<div
+									style={{
+										padding: "0.5rem 0.75rem",
+										background: "var(--item-green)",
+										border: "1px solid var(--item-green-border)",
+										"border-radius": "4px",
+									}}
+								>
 									<p class="text-sm font-medium">Token created successfully!</p>
 								</div>
 								<div class="form-row">
@@ -70,7 +77,9 @@ const TokenForm: Component<TokenFormProps> = props => {
 										</Button>
 									</div>
 								</div>
-								<p class="text-xs text-muted">This key will not be shown again. Please copy it now and store it securely.</p>
+								<p class="text-xs text-muted">
+									This key will not be shown again. Please copy it now and store it securely.
+								</p>
 							</div>
 						</ModalBody>
 						<ModalFooter>
@@ -84,7 +93,14 @@ const TokenForm: Component<TokenFormProps> = props => {
 				<ModalBody>
 					<form onSubmit={handleSubmit} class="modal-form">
 						<Show when={formState.error()}>
-							<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
+							<div
+								style={{
+									padding: "0.5rem 0.75rem",
+									background: "var(--item-red)",
+									border: "1px solid var(--item-red-border)",
+									"border-radius": "4px",
+								}}
+							>
 								<p class="text-sm">{formState.error()}</p>
 							</div>
 						</Show>
@@ -96,7 +112,13 @@ const TokenForm: Component<TokenFormProps> = props => {
 						</div>
 						<div class="form-row">
 							<label for="token-note">Note (optional)</label>
-							<Textarea value={note()} onInput={setNote} placeholder="What is this token for?" rows={3} disabled={formState.submitting()} />
+							<Textarea
+								value={note()}
+								onInput={setNote}
+								placeholder="What is this token for?"
+								rows={3}
+								disabled={formState.submitting()}
+							/>
 						</div>
 					</form>
 				</ModalBody>

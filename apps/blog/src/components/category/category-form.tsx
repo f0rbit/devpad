@@ -20,7 +20,7 @@ const scrollToFormAndFocus = () => {
 	nameInputRef?.focus();
 };
 
-const CategoryForm: Component<CategoryFormProps> = props => {
+const CategoryForm: Component<CategoryFormProps> = (props) => {
 	const [name, setName] = createSignal("");
 	const [parent, setParent] = createSignal(props.defaultParent);
 	const formState = form.create();
@@ -43,7 +43,11 @@ const CategoryForm: Component<CategoryFormProps> = props => {
 	};
 
 	return (
-		<section ref={formRef} class="category-form-section" classList={{ "category-form-section--highlighted": props.highlighted }}>
+		<section
+			ref={formRef}
+			class="category-form-section"
+			classList={{ "category-form-section--highlighted": props.highlighted }}
+		>
 			<h3 class="category-form-title">New Category</h3>
 			<form onSubmit={handleSubmit} class="category-form">
 				<div class="form-row">
@@ -51,11 +55,11 @@ const CategoryForm: Component<CategoryFormProps> = props => {
 						Name
 					</label>
 					<Input
-						ref={el => {
+						ref={(el) => {
 							nameInputRef = el;
 						}}
 						value={name()}
-						onInput={e => setName(e.currentTarget.value)}
+						onInput={(e) => setName(e.currentTarget.value)}
 						placeholder="Category name"
 						disabled={formState.submitting()}
 					/>
@@ -70,7 +74,7 @@ const CategoryForm: Component<CategoryFormProps> = props => {
 						</DropdownTrigger>
 						<DropdownMenu>
 							<For each={props.categories}>
-								{cat => (
+								{(cat) => (
 									<DropdownItem onClick={() => setParent(cat.name)} active={parent() === cat.name}>
 										{cat.name}
 									</DropdownItem>

@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { type CookieConfig, createBlankSessionCookie, createSessionCookie, generateSessionId, getSessionCookieName } from "../session.js";
+import {
+	type CookieConfig,
+	createBlankSessionCookie,
+	createSessionCookie,
+	generateSessionId,
+	getSessionCookieName,
+} from "../session.js";
 
 const PRODUCTION_CONFIG: CookieConfig = {
 	secure: true,

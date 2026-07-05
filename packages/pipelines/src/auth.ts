@@ -107,7 +107,11 @@ const looks_like_jwt = (token: string): boolean => {
  *   still work if it's injected via deps)
  * - `unauthorized` — header missing, no matching session, no matching bearer
  */
-export const authenticate_request = async (env: PipelineEnv, request: Request, deps: { verify_session: SessionVerifier }): Promise<Result<AuthIdentity, AuthError>> => {
+export const authenticate_request = async (
+	env: PipelineEnv,
+	request: Request,
+	deps: { verify_session: SessionVerifier },
+): Promise<Result<AuthIdentity, AuthError>> => {
 	const header = request.headers.get("authorization");
 	const token = parse_bearer_header(header);
 	if (token === null) {

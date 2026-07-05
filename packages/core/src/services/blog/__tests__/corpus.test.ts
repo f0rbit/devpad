@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { create_corpus, create_memory_backend, type PostsCorpus, postsStoreDefinition } from "@devpad/schema/blog";
 import { corpus } from "../corpus";
 
-const createTestCorpus = (): PostsCorpus => create_corpus().with_backend(create_memory_backend()).with_store(postsStoreDefinition).build();
+const createTestCorpus = (): PostsCorpus =>
+	create_corpus().with_backend(create_memory_backend()).with_store(postsStoreDefinition).build();
 
 const testContent = {
 	title: "Test Post",

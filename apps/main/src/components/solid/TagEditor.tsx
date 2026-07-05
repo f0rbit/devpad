@@ -19,7 +19,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 
 	function upsert(tag: TagProp) {
 		if (tag.id && tag.id !== "") {
-			const new_tags = currentTags().map(t => (t.id === tag.id ? tag : t));
+			const new_tags = currentTags().map((t) => (t.id === tag.id ? tag : t));
 			setCurrentTags(new_tags);
 		} else {
 			tag.id = crypto.randomUUID();
@@ -30,7 +30,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 
 	function remove(id: string | undefined) {
 		if (!id) return;
-		const new_tags = currentTags().map(t => (t.id === id ? { ...t, deleted: true } : t));
+		const new_tags = currentTags().map((t) => (t.id === id ? { ...t, deleted: true } : t));
 		setCurrentTags(new_tags);
 	}
 
@@ -41,7 +41,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 	async function save() {
 		if (creating()) return;
 		try {
-			const values = currentTags().map(t => ({ ...t, owner_id }));
+			const values = currentTags().map((t) => ({ ...t, owner_id }));
 			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.saveTags(values);
 			console.log("result", result);
@@ -62,7 +62,9 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 					<Eye size={16} />
 				</div>
 				<div></div>
-				<For each={currentTags()}>{tag => !tag.deleted && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}</For>
+				<For each={currentTags()}>
+					{(tag) => !tag.deleted && <TagLine tag={tag} upsert={upsert} remove={remove} owner_id={owner_id} />}
+				</For>
 				{creating() && <TagLine tag={null} upsert={upsert} remove={remove} owner_id={owner_id} />}
 			</div>
 
@@ -78,7 +80,17 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 	);
 }
 
-function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upsert: (tag: TagProp) => void; remove: (id: string | undefined) => void; owner_id: string }) {
+function TagLine({
+	tag,
+	upsert,
+	remove,
+	owner_id,
+}: {
+	tag: TagProp | null;
+	upsert: (tag: TagProp) => void;
+	remove: (id: string | undefined) => void;
+	owner_id: string;
+}) {
 	const is_new = !tag || tag.id == null || tag.id === "";
 	const [title, setTitle] = createSignal(tag?.title ?? "");
 	const [color, setColor] = createSignal<TagColor | null>(tag?.color ?? null);
@@ -97,7 +109,7 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upser
 			<input
 				type="text"
 				value={title()}
-				onInput={e => setTitle(e.currentTarget.value)}
+				onInput={(e) => setTitle(e.currentTarget.value)}
 				onChange={save}
 				style={{
 					background: "var(--bg-alt)",
@@ -110,7 +122,7 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upser
 			/>
 			<TagColourPicker
 				value={color}
-				onChange={col => {
+				onChange={(col) => {
 					setColor(col);
 					save();
 				}}
@@ -125,7 +137,7 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upser
 					"font-size": "small",
 				}}
 			>
-				<input type="checkbox" checked={render()} onInput={e => setRender(e.currentTarget.checked)} onChange={save} />
+				<input type="checkbox" checked={render()} onInput={(e) => setRender(e.currentTarget.checked)} onChange={save} />
 			</div>
 			{tag?.id && (
 				<a role="button" onClick={() => remove(tag?.id)} title="Remove Tag" style={{ cursor: "pointer" }}>
@@ -137,7 +149,15 @@ function TagLine({ tag, upsert, remove, owner_id }: { tag: TagProp | null; upser
 }
 // COLOUR PICKER
 
-function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColor | null>; enabled: Accessor<boolean>; onChange: (value: TagColor | null) => void }) {
+function TagColourPicker({
+	value,
+	enabled,
+	onChange,
+}: {
+	value: Accessor<TagColor | null>;
+	enabled: Accessor<boolean>;
+	onChange: (value: TagColor | null) => void;
+}) {
 	const [isOpen, setIsOpen] = createSignal(false);
 
 	createEffect(() => {
@@ -170,7 +190,11 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 				onClick={togglePopup}
 				disabled={enabled() === false}
 			>
-				{value() ? <TagBadge colour={value} name={() => value() ?? "None"} /> : <span style="color: var(--fg-muted); font-size: small; height: 21px; line-height: 21px;">Select Colour</span>}
+				{value() ? (
+					<TagBadge colour={value} name={() => value() ?? "None"} />
+				) : (
+					<span style="color: var(--fg-muted); font-size: small; height: 21px; line-height: 21px;">Select Colour</span>
+				)}
 				{isOpen() ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
 			</button>
 
@@ -194,13 +218,19 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 					}}
 				>
 					<For each={Object.keys(TAG_COLOURS) as TagColor[]}>
-						{name => (
-							<button onClick={() => onChange(name)} style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}>
+						{(name) => (
+							<button
+								onClick={() => onChange(name)}
+								style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}
+							>
 								<TagBadge name={() => name} colour={() => name} />
 							</button>
 						)}
 					</For>
-					<button onClick={() => onChange(null)} style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}>
+					<button
+						onClick={() => onChange(null)}
+						style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer" }}
+					>
 						<TagBadge name={() => "None"} colour={() => null} />
 					</button>
 				</div>
@@ -209,7 +239,15 @@ function TagColourPicker({ value, enabled, onChange }: { value: Accessor<TagColo
 	);
 }
 
-export function TagBadge({ name, colour, onRemove }: { name: Accessor<string>; colour: Accessor<TagColor | null>; onRemove?: () => void }) {
+export function TagBadge({
+	name,
+	colour,
+	onRemove,
+}: {
+	name: Accessor<string>;
+	colour: Accessor<TagColor | null>;
+	onRemove?: () => void;
+}) {
 	return (
 		<div
 			style={{

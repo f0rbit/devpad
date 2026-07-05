@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { addMilestoneAction, completeMilestone, deleteMilestone, getMilestone, getProjectMilestones, getUserMilestones, upsertMilestone } from "../milestones.js";
+import {
+	addMilestoneAction,
+	completeMilestone,
+	deleteMilestone,
+	getMilestone,
+	getProjectMilestones,
+	getUserMilestones,
+	upsertMilestone,
+} from "../milestones.js";
 
 const mockMilestone = {
 	id: "ms_1",
@@ -204,7 +212,11 @@ describe("milestones", () => {
 				],
 				update_returning: [updated],
 			});
-			const result = await upsertMilestone(db, { id: "ms_1", name: "Beta Release", project_id: "project_1" }, "user_abc");
+			const result = await upsertMilestone(
+				db,
+				{ id: "ms_1", name: "Beta Release", project_id: "project_1" },
+				"user_abc",
+			);
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.name).toBe("Beta Release");
@@ -219,7 +231,12 @@ describe("milestones", () => {
 					[mockProject], // doesUserOwnProject
 				],
 			});
-			const result = await upsertMilestone(db, { id: "ms_1", name: "Overwrite", project_id: "project_1" }, "user_abc", "api");
+			const result = await upsertMilestone(
+				db,
+				{ id: "ms_1", name: "Overwrite", project_id: "project_1" },
+				"user_abc",
+				"api",
+			);
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.kind).toBe("protected");

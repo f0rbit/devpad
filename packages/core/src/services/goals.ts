@@ -38,7 +38,12 @@ export async function getGoal(db: Database, goal_id: string): Promise<Result<Goa
 	return ok(record);
 }
 
-export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Goal, ServiceError>> {
+export async function upsertGoal(
+	db: Database,
+	data: UpsertGoal,
+	owner_id: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<Goal, ServiceError>> {
 	const previous_result = data.id ? await getGoal(db, data.id) : null;
 	const previous = previous_result?.ok ? previous_result.value : null;
 
@@ -55,14 +60,22 @@ export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: strin
 	}
 
 	if (auth_channel === "api" && previous?.protected && !data.force) {
-		return err({ kind: "protected", entity_id: previous.id, message: `Goal ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+		return err({
+			kind: "protected",
+			entity_id: previous.id,
+			message: `Goal ${previous.id} is protected. Pass force=true to override.`,
+			modified_by: previous.modified_by,
+			modified_at: previous.updated_at,
+		});
 	}
 
 	const exists = !!previous;
 	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
 	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
-	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
+	const provenance = exists
+		? { modified_by: auth_channel, ...protection }
+		: { created_by: auth_channel, modified_by: auth_channel };
 	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), ...provenance };
 
 	let result: Goal | null = null;
@@ -82,19 +95,34 @@ export async function upsertGoal(db: Database, data: UpsertGoal, owner_id: strin
 
 	const action_type: ActionType = !exists ? "CREATE_GOAL" : "UPDATE_GOAL";
 	const action_desc = !exists ? "Created goal" : "Updated goal";
-	await addGoalAction(db, { owner_id, goal_id: result.id, milestone_id: data.milestone_id, project_id: milestone_result.value.project_id, name: result.name, type: action_type, description: action_desc, channel: auth_channel });
+	await addGoalAction(db, {
+		owner_id,
+		goal_id: result.id,
+		milestone_id: data.milestone_id,
+		project_id: milestone_result.value.project_id,
+		name: result.name,
+		type: action_type,
+		description: action_desc,
+		channel: auth_channel,
+	});
 
 	return ok(result);
 }
 
-export async function deleteGoal(db: Database, goal_id: string, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<void, ServiceError>> {
+export async function deleteGoal(
+	db: Database,
+	goal_id: string,
+	owner_id: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<void, ServiceError>> {
 	const goal_result = await getGoal(db, goal_id);
 	if (!goal_result.ok) return goal_result;
 	if (!goal_result.value) return err({ kind: "not_found", resource: "goal", id: goal_id });
 
 	const milestone_result = await getMilestone(db, goal_result.value.milestone_id);
 	if (!milestone_result.ok) return milestone_result;
-	if (!milestone_result.value) return err({ kind: "not_found", resource: "milestone", id: goal_result.value.milestone_id });
+	if (!milestone_result.value)
+		return err({ kind: "not_found", resource: "milestone", id: goal_result.value.milestone_id });
 
 	const owns_result = await doesUserOwnProject(db, owner_id, milestone_result.value.project_id);
 	if (!owns_result.ok) return owns_result;
@@ -116,7 +144,12 @@ export async function deleteGoal(db: Database, goal_id: string, owner_id: string
 	return ok(undefined);
 }
 
-export async function completeGoal(db: Database, goal_id: string, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Goal, ServiceError>> {
+export async function completeGoal(
+	db: Database,
+	goal_id: string,
+	owner_id: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<Goal, ServiceError>> {
 	const data: Partial<UpsertGoal> = {
 		id: goal_id,
 		finished_at: new Date().toISOString(),
@@ -145,7 +178,7 @@ export async function addGoalAction(
 		type: ActionType;
 		description: string;
 		channel?: "user" | "api";
-	}
+	},
 ): Promise<Result<boolean, ServiceError>> {
 	await db.insert(action).values({
 		owner_id,

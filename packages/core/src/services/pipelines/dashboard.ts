@@ -53,9 +53,11 @@ type VerdictValue = (typeof VERDICT_VALUES)[number];
 const GATE_TYPES = ["manual", "auto", "analysis"] as const;
 type GateType = (typeof GATE_TYPES)[number];
 
-const is_verdict_value = (v: unknown): v is VerdictValue => typeof v === "string" && (VERDICT_VALUES as readonly string[]).includes(v);
+const is_verdict_value = (v: unknown): v is VerdictValue =>
+	typeof v === "string" && (VERDICT_VALUES as readonly string[]).includes(v);
 
-const is_gate_type = (v: unknown): v is GateType => typeof v === "string" && (GATE_TYPES as readonly string[]).includes(v);
+const is_gate_type = (v: unknown): v is GateType =>
+	typeof v === "string" && (GATE_TYPES as readonly string[]).includes(v);
 
 // ─── Pure helpers ───────────────────────────────────────────────────
 
@@ -93,7 +95,10 @@ export const compute_percentile = (values: readonly number[], p: number): number
  * doesn't appear in resolved_gates — shouldn't happen in production but
  * we don't want the dashboard to crash).
  */
-export const group_verdicts = (events: ReadonlyArray<{ run_id: string; stage_name: string; payload: unknown }>, resolved_gates_by_run: ReadonlyMap<string, Record<string, unknown>>): DashboardResponse["verdict_counts"] => {
+export const group_verdicts = (
+	events: ReadonlyArray<{ run_id: string; stage_name: string; payload: unknown }>,
+	resolved_gates_by_run: ReadonlyMap<string, Record<string, unknown>>,
+): DashboardResponse["verdict_counts"] => {
 	const buckets: DashboardResponse["verdict_counts"] = {
 		manual: { pass: 0, fail: 0, pending: 0 },
 		auto: { pass: 0, fail: 0, pending: 0 },
@@ -141,7 +146,9 @@ const lookup_gate_type = (resolved_gates: Record<string, unknown>, from_stage: s
  * A rollback run is one whose `kind === "rollback"` (created by the
  * `/rollback` endpoint; see runs.ts §rollback synthesis).
  */
-export const count_rollbacks = (runs: ReadonlyArray<{ kind: string }>): { deploys: number; rollbacks: number; rate: number | null } => {
+export const count_rollbacks = (
+	runs: ReadonlyArray<{ kind: string }>,
+): { deploys: number; rollbacks: number; rate: number | null } => {
 	let deploys = 0;
 	let rollbacks = 0;
 	for (const r of runs) {
@@ -194,7 +201,9 @@ const parse_iso = (s: string | null): number | null => {
 	return Number.isFinite(ms) ? ms : null;
 };
 
-const run_durations = (runs: ReadonlyArray<{ started_at: string | null; finished_at: string | null; status: string }>): number[] => {
+const run_durations = (
+	runs: ReadonlyArray<{ started_at: string | null; finished_at: string | null; status: string }>,
+): number[] => {
 	const out: number[] = [];
 	for (const r of runs) {
 		// Schema field is `finished_at`; the plan refers to "completed_at" — same
@@ -212,7 +221,9 @@ const run_durations = (runs: ReadonlyArray<{ started_at: string | null; finished
 	return out;
 };
 
-const approval_turnarounds = (rows: ReadonlyArray<{ created_at: string | null; decided_at: string | null }>): number[] => {
+const approval_turnarounds = (
+	rows: ReadonlyArray<{ created_at: string | null; decided_at: string | null }>,
+): number[] => {
 	const out: number[] = [];
 	for (const r of rows) {
 		const created = parse_iso(r.created_at);
@@ -240,12 +251,22 @@ const approval_turnarounds = (rows: ReadonlyArray<{ created_at: string | null; d
  * rollback_rate. The Zod schema's `nullable()` for percentiles and the
  * `.min(0).max(1).nullable()` for rollback_rate are the source of truth.
  */
-export const get_dashboard = async (deps: DashboardDeps, input: GetDashboardInput): Promise<Result<DashboardSnapshot, ServiceError>> => {
+export const get_dashboard = async (
+	deps: DashboardDeps,
+	input: GetDashboardInput,
+): Promise<Result<DashboardSnapshot, ServiceError>> => {
 	const now = input.now ?? new Date();
 	const window_start = new Date(now.getTime() - input.window_ms).toISOString();
 
 	// (1) Runs in window.
-	let runs: Array<{ id: string; kind: string; status: string; started_at: string | null; finished_at: string | null; resolved_gates: unknown }>;
+	let runs: Array<{
+		id: string;
+		kind: string;
+		status: string;
+		started_at: string | null;
+		finished_at: string | null;
+		resolved_gates: unknown;
+	}>;
 	try {
 		runs = await deps.db
 			.select({
@@ -262,8 +283,10 @@ export const get_dashboard = async (deps: DashboardDeps, input: GetDashboardInpu
 		return err({ kind: "db_error", message: `failed to read pipeline_run: ${String(e)}` } satisfies ServiceError);
 	}
 
-	const run_ids = runs.map(r => r.id);
-	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(runs.map(r => [r.id, (r.resolved_gates as Record<string, unknown> | null) ?? {}]));
+	const run_ids = runs.map((r) => r.id);
+	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(
+		runs.map((r) => [r.id, (r.resolved_gates as Record<string, unknown> | null) ?? {}]),
+	);
 
 	// (2) gate_verdict events for those runs.
 	let verdict_events: Array<{ run_id: string; stage_name: string; payload: unknown }> = [];
@@ -278,9 +301,12 @@ export const get_dashboard = async (deps: DashboardDeps, input: GetDashboardInpu
 				.from(pipeline_stage_event)
 				.where(eq(pipeline_stage_event.kind, "gate_verdict"));
 			const run_id_set = new Set(run_ids);
-			verdict_events = rows.filter(r => run_id_set.has(r.run_id));
+			verdict_events = rows.filter((r) => run_id_set.has(r.run_id));
 		} catch (e) {
-			return err({ kind: "db_error", message: `failed to read pipeline_stage_event: ${String(e)}` } satisfies ServiceError);
+			return err({
+				kind: "db_error",
+				message: `failed to read pipeline_stage_event: ${String(e)}`,
+			} satisfies ServiceError);
 		}
 	}
 
@@ -296,9 +322,12 @@ export const get_dashboard = async (deps: DashboardDeps, input: GetDashboardInpu
 				})
 				.from(pipeline_approval);
 			const run_id_set = new Set(run_ids);
-			approvals = rows.filter(r => run_id_set.has(r.run_id) && r.decided_at !== null);
+			approvals = rows.filter((r) => run_id_set.has(r.run_id) && r.decided_at !== null);
 		} catch (e) {
-			return err({ kind: "db_error", message: `failed to read pipeline_approval: ${String(e)}` } satisfies ServiceError);
+			return err({
+				kind: "db_error",
+				message: `failed to read pipeline_approval: ${String(e)}`,
+			} satisfies ServiceError);
 		}
 	}
 

@@ -120,7 +120,12 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 						</a>
 					</div>
 					{error() && <p style={{ color: "var(--error-fg)" }}>{error()}</p>}
-					<textarea value={markdown()} rows={50} onInput={e => setMarkdown(e.target.value)} style={{ width: "100%", "font-family": "monospace", "font-size": "medium" }} />
+					<textarea
+						value={markdown()}
+						rows={50}
+						onInput={(e) => setMarkdown(e.target.value)}
+						style={{ width: "100%", "font-family": "monospace", "font-size": "medium" }}
+					/>
 				</>
 			) : (
 				<>

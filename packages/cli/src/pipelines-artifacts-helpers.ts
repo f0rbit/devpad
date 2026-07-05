@@ -116,7 +116,10 @@ export interface BuildManifestArtifacts {
 	asset_manifest_ref?: string;
 }
 
-export function build_manifest(inputs: ArtifactInputs, artifacts: BuildManifestArtifacts): Result<VersionSetManifestWithBundle, ArtifactUploadError> {
+export function build_manifest(
+	inputs: ArtifactInputs,
+	artifacts: BuildManifestArtifacts,
+): Result<VersionSetManifestWithBundle, ArtifactUploadError> {
 	try {
 		const now = new Date().toISOString();
 		const git_sha = inputs.git_sha || "0000000000000000000000000000000000000000";
@@ -208,7 +211,13 @@ export function build_manifest(inputs: ArtifactInputs, artifacts: BuildManifestA
  * (corpus accepts the manifest verbatim) but the CF API rejects mismatches at
  * deploy time.
  */
-export function build_bundle_manifest_from_walk(walked: WalkedBundle, module_refs: string[], main_module: string, compatibility_date: string, compatibility_flags: string[]): Result<BundleManifest, ArtifactUploadError> {
+export function build_bundle_manifest_from_walk(
+	walked: WalkedBundle,
+	module_refs: string[],
+	main_module: string,
+	compatibility_date: string,
+	compatibility_flags: string[],
+): Result<BundleManifest, ArtifactUploadError> {
 	if (module_refs.length !== walked.parts.length) {
 		return err({
 			kind: "schema_error",
@@ -239,7 +248,11 @@ export function build_bundle_manifest_from_walk(walked: WalkedBundle, module_ref
  * corpus refs. Pure. Same length-pairing contract as
  * {@link build_bundle_manifest_from_walk}.
  */
-export function build_asset_manifest_from_walk(walked: WalkedAssets, asset_refs: string[], config: object = {}): Result<AssetManifest, ArtifactUploadError> {
+export function build_asset_manifest_from_walk(
+	walked: WalkedAssets,
+	asset_refs: string[],
+	config: object = {},
+): Result<AssetManifest, ArtifactUploadError> {
 	if (asset_refs.length !== walked.parts.length) {
 		return err({
 			kind: "schema_error",
@@ -281,7 +294,11 @@ export interface VersionSetOutput {
 // - `compile_pipeline_ts`: side-effectful dynamic-import that produces
 //   the typed template. Used by the CLI upload command.
 
-export type CompileError = { kind: "build_failed"; message: string } | { kind: "import_failed"; message: string } | { kind: "not_a_template"; message: string } | { kind: "dsl_error"; cause: unknown };
+export type CompileError =
+	| { kind: "build_failed"; message: string }
+	| { kind: "import_failed"; message: string }
+	| { kind: "not_a_template"; message: string }
+	| { kind: "dsl_error"; cause: unknown };
 
 /**
  * Serialise a {@link PipelineTemplate} to a deterministic JSON string.
@@ -296,7 +313,7 @@ export function compile_template_to_json(template: PipelineTemplate): Result<str
 	if (!parsed.success) {
 		return err({
 			kind: "not_a_template",
-			message: `template fails schema validation: ${parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
+			message: `template fails schema validation: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
 		});
 	}
 	const json = JSON.stringify(parsed.data);
@@ -321,7 +338,7 @@ export function parse_template_from_json(json: string): Result<PipelineTemplate,
 	if (!parsed.success) {
 		return err({
 			kind: "not_a_template",
-			message: `JSON does not match PipelineTemplateSchema: ${parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
+			message: `JSON does not match PipelineTemplateSchema: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
 		});
 	}
 	return ok(parsed.data);
@@ -389,7 +406,7 @@ const validate_template_shape = (candidate: unknown): Result<PipelineTemplate, C
 	if (!parsed.success) {
 		return err({
 			kind: "not_a_template",
-			message: `pipeline.ts default export is not a PipelineTemplate: ${parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
+			message: `pipeline.ts default export is not a PipelineTemplate: ${parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
 		});
 	}
 	return ok(parsed.data);

@@ -2,10 +2,7 @@
 // bypassing the barrel that re-exports drizzle table definitions
 export * from "@devpad/schema/errors";
 export * from "@devpad/schema/media/branded";
-export type {
-	MultiStorePlatform,
-	Platform,
-} from "@devpad/schema/media/platforms";
+export type { MultiStorePlatform, Platform } from "@devpad/schema/media/platforms";
 export {
 	BlueskyAuthorSchema,
 	BlueskyFeedItemSchema,

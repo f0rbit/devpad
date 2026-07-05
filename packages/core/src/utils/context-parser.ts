@@ -15,7 +15,7 @@ export function parseContextToArray(context: any): string[] {
 
 	// If already an array, return it (ensuring all elements are strings)
 	if (Array.isArray(context)) {
-		return context.filter(item => typeof item === "string" || typeof item === "number").map(item => String(item));
+		return context.filter((item) => typeof item === "string" || typeof item === "number").map((item) => String(item));
 	}
 
 	// If it's a string, try to parse as JSON

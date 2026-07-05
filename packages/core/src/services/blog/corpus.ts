@@ -1,4 +1,14 @@
-import { err, mapCorpusError, ok, type PostContent, type PostCorpusError, type PostsCorpus, postsStoreDefinition, type Result, type VersionInfo } from "@devpad/schema/blog";
+import {
+	err,
+	mapCorpusError,
+	ok,
+	type PostContent,
+	type PostCorpusError,
+	type PostsCorpus,
+	postsStoreDefinition,
+	type Result,
+	type VersionInfo,
+} from "@devpad/schema/blog";
 import { type Backend, create_store } from "@f0rbit/corpus";
 
 const corpusToBackend = (corpus: PostsCorpus): Backend => {
@@ -12,9 +22,15 @@ const corpusToBackend = (corpus: PostsCorpus): Backend => {
 	return backend;
 };
 
-const createDynamicStore = (corpus: PostsCorpus, storeId: string) => create_store(corpusToBackend(corpus), { ...postsStoreDefinition, id: storeId });
+const createDynamicStore = (corpus: PostsCorpus, storeId: string) =>
+	create_store(corpusToBackend(corpus), { ...postsStoreDefinition, id: storeId });
 
-const put = async (corpus: PostsCorpus, path: string, content: PostContent, parent?: string): Promise<Result<{ hash: string }, PostCorpusError>> => {
+const put = async (
+	corpus: PostsCorpus,
+	path: string,
+	content: PostContent,
+	parent?: string,
+): Promise<Result<{ hash: string }, PostCorpusError>> => {
 	const store = createDynamicStore(corpus, path);
 
 	const opts = parent ? { parents: [{ store_id: path, version: parent }] } : {};

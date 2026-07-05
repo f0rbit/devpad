@@ -81,7 +81,7 @@ export default function ActivityChart(props: ActivityChartProps) {
 				<div class="activity-grid-day-spacer" />
 				<div class="activity-grid-months">
 					<For each={monthLabels()}>
-						{label => (
+						{(label) => (
 							<span class="activity-month-label" style={{ left: `${label.weekIndex * WEEK_WIDTH}px` }}>
 								{label.month}
 							</span>
@@ -94,16 +94,16 @@ export default function ActivityChart(props: ActivityChartProps) {
 			<div class="activity-grid-main">
 				{/* Day labels (Mon, Wed, Fri) */}
 				<div class="activity-grid-day-labels">
-					<For each={DAY_LABELS}>{label => <span class="activity-day-label">{label}</span>}</For>
+					<For each={DAY_LABELS}>{(label) => <span class="activity-day-label">{label}</span>}</For>
 				</div>
 
 				{/* Grid of weeks */}
 				<div class="activity-grid">
 					<For each={props.activity}>
-						{week => (
+						{(week) => (
 							<div class="activity-week">
 								<For each={week.days}>
-									{day => {
+									{(day) => {
 										const intensity = () => getIntensity(day.count, props.maxCount);
 										const isSelected = () => props.selectedDate === day.date;
 
@@ -157,7 +157,7 @@ export function ActivityPreview(props: ActivityPreviewProps) {
 			<Show when={props.items.length > 0} fallback={<p class="muted text-sm">No activity on this day.</p>}>
 				<div class="activity-preview-list">
 					<For each={props.items.slice(0, 10)}>
-						{item => (
+						{(item) => (
 							<div class="activity-preview-item">
 								<div class="activity-preview-icon">
 									<PlatformIcon platform={getPlatform(item)} size={16} />

@@ -99,7 +99,7 @@ describe("mergeByKey", () => {
 			{ name: "alpha", category: "y", score: 20 },
 			{ name: "beta", category: "x", score: 30 },
 		];
-		const result = mergeByKey(items_existing, items_incoming, item => item.name);
+		const result = mergeByKey(items_existing, items_incoming, (item) => item.name);
 		expect(result.merged.length).toBe(2);
 		expect(result.newCount).toBe(1);
 		expect(result.merged[1].name).toBe("beta");

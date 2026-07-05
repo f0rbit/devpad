@@ -1,6 +1,7 @@
 {
 	"name": "@devpad/app",
 	"version": "2.0.0",
+	"type": "module",
 	"scripts": {
 		"dev": "bunx --bun astro dev",
 		"start": "bun --bun dist/_worker.js/index.js",
@@ -18,10 +19,10 @@
 		"@astrojs/sitemap": "^3.2.1",
 		"@astrojs/solid-js": "5.0.4",
 		"@devpad/api": "workspace:*",
-		"@f0rbit/ui": "^0.1.9",
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",
 		"@f0rbit/pulse-client": "^0.0.1",
+		"@f0rbit/ui": "^0.1.9",
 		"@types/bun": "^1.0.12",
 		"astro": "^5.13.7",
 		"lucide-solid": "^0.454.0",
@@ -30,6 +31,5 @@
 		"solid-js": "^1.9.3",
 		"typescript": "^5.4.3",
 		"zod": "^3.22.4"
-	},
-	"type": "module"
+	}
 }

@@ -49,7 +49,7 @@ export default function PulseErrors(props: PulseErrorsProps) {
 
 	const issues = () => props.issues ?? [];
 
-	const toggle = (id: string) => setExpanded(prev => (prev === id ? null : id));
+	const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
 
 	const keyFor = (issue: ErrorIssue, idx: number) => issue.id ?? issue.fingerprint ?? `issue-${idx}`;
 
@@ -61,7 +61,15 @@ export default function PulseErrors(props: PulseErrorsProps) {
 				</p>
 			</Show>
 
-			<Show when={issues().length > 0} fallback={<Empty title="No errors recorded" description="When errors are reported by the pulse SDK, grouped issues will appear here." />}>
+			<Show
+				when={issues().length > 0}
+				fallback={
+					<Empty
+						title="No errors recorded"
+						description="When errors are reported by the pulse SDK, grouped issues will appear here."
+					/>
+				}
+			>
 				<div class="stack stack-sm" data-testid="pulse-errors-list">
 					<For each={issues()}>
 						{(issue, idx) => {
@@ -84,13 +92,24 @@ export default function PulseErrors(props: PulseErrorsProps) {
 									<div class="row row-between" style={{ "align-items": "center", gap: "0.5rem" }}>
 										<div class="row" style={{ "align-items": "center", gap: "0.5rem", "min-width": 0, flex: 1 }}>
 											<Badge variant={levelVariant(issue.level) as any}>{issue.level ?? "error"}</Badge>
-											<span class="text-sm" style={{ "font-weight": 500, "white-space": "nowrap", overflow: "hidden", "text-overflow": "ellipsis" }}>
+											<span
+												class="text-sm"
+												style={{
+													"font-weight": 500,
+													"white-space": "nowrap",
+													overflow: "hidden",
+													"text-overflow": "ellipsis",
+												}}
+											>
 												{issue.type ?? "Error"}: {issue.message ?? "(no message)"}
 											</span>
 										</div>
 										<div class="row" style={{ "align-items": "center", gap: "0.5rem", "flex-shrink": 0 }}>
 											<span class="text-sm text-faint">{issue.count ?? 1} ×</span>
-											<ChevronRight size={14} style={{ transform: isOpen() ? "rotate(90deg)" : "none", transition: "transform 120ms" }} />
+											<ChevronRight
+												size={14}
+												style={{ transform: isOpen() ? "rotate(90deg)" : "none", transition: "transform 120ms" }}
+											/>
 										</div>
 									</div>
 									<Show when={isOpen()}>
@@ -103,7 +122,17 @@ export default function PulseErrors(props: PulseErrorsProps) {
 												</Show>
 											</div>
 											<Show when={issue.sample?.stack}>
-												<pre style={{ margin: 0, padding: "0.5rem", background: "var(--bg-subtle, #1a1a1a)", "border-radius": "var(--radius, 4px)", "font-size": "0.8rem", overflow: "auto", "max-height": "240px" }}>
+												<pre
+													style={{
+														margin: 0,
+														padding: "0.5rem",
+														background: "var(--bg-subtle, #1a1a1a)",
+														"border-radius": "var(--radius, 4px)",
+														"font-size": "0.8rem",
+														overflow: "auto",
+														"max-height": "240px",
+													}}
+												>
 													{issue.sample!.stack}
 												</pre>
 											</Show>

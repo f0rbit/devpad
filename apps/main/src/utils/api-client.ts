@@ -7,9 +7,16 @@ export function rethrow(error: ApiResultError) {
 	return new Response(error?.code, { status: error?.status_code, statusText: error?.code });
 }
 
-type ProjectGuardOk = { client: ApiClient; project: Project; user: { id: string; github_id: number; name: string; task_view: "list" | "grid" } };
+type ProjectGuardOk = {
+	client: ApiClient;
+	project: Project;
+	user: { id: string; github_id: number; name: string; task_view: "list" | "grid" };
+};
 
-export async function getProject(astro: { params: Record<string, string | undefined>; locals: App.Locals }): Promise<ProjectGuardOk | Response> {
+export async function getProject(astro: {
+	params: Record<string, string | undefined>;
+	locals: App.Locals;
+}): Promise<ProjectGuardOk | Response> {
 	const { project_id } = astro.params;
 	if (!project_id) return new Response(null, { status: 404, statusText: "Project not found" });
 

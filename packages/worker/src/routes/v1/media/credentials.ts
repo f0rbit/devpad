@@ -12,7 +12,11 @@ import { getAuth, getContext } from "./auth-context.js";
 const log = createLogger("credentials");
 
 const verifyProfileOwnership = async (ctx: MediaAppContext, profileId: string, userId: string): Promise<boolean> => {
-	const profile = await ctx.db.select({ user_id: profiles.user_id }).from(profiles).where(eq(profiles.id, profileId)).get();
+	const profile = await ctx.db
+		.select({ user_id: profiles.user_id })
+		.from(profiles)
+		.where(eq(profiles.id, profileId))
+		.get();
 
 	return profile?.user_id === userId;
 };
@@ -28,7 +32,10 @@ const SaveCredentialsBodySchema = z.object({
 const REDDIT_CLIENT_ID_PATTERN = /^[a-zA-Z0-9_-]{10,30}$/;
 const REDDIT_SECRET_MIN_LENGTH = 20;
 
-const validateRedditCredentialsFormat = (clientId: string, clientSecret: string): { valid: true } | { valid: false; error: string } => {
+const validateRedditCredentialsFormat = (
+	clientId: string,
+	clientSecret: string,
+): { valid: true } | { valid: false; error: string } => {
 	if (!REDDIT_CLIENT_ID_PATTERN.test(clientId)) {
 		return { valid: false, error: "Invalid Reddit client_id format" };
 	}
@@ -54,7 +61,12 @@ type RedditUserResponse = {
  * Reddit "script" apps use client credentials grant to get an access token,
  * then use that token to access the API on behalf of the app owner.
  */
-const authenticateWithReddit = async (clientId: string, clientSecret: string, username: string, password: string): Promise<{ ok: true; accessToken: string; user: RedditUserResponse } | { ok: false; error: string }> => {
+const authenticateWithReddit = async (
+	clientId: string,
+	clientSecret: string,
+	username: string,
+	password: string,
+): Promise<{ ok: true; accessToken: string; user: RedditUserResponse } | { ok: false; error: string }> => {
 	const auth = btoa(`${clientId}:${clientSecret}`);
 
 	const tokenResponse = await fetch("https://www.reddit.com/api/v1/access_token", {
@@ -93,7 +105,13 @@ const authenticateWithReddit = async (clientId: string, clientSecret: string, us
  * using the client credentials directly (no OAuth redirect needed).
  * The username must be provided since client_credentials grant can't access /me.
  */
-const setupRedditAccount = async (ctx: MediaAppContext, profileId: string, clientId: string, clientSecret: string, redditUsername: string): Promise<{ ok: true; accountId: string } | { ok: false; error: string }> => {
+const setupRedditAccount = async (
+	ctx: MediaAppContext,
+	profileId: string,
+	clientId: string,
+	clientSecret: string,
+	redditUsername: string,
+): Promise<{ ok: true; accountId: string } | { ok: false; error: string }> => {
 	const authResult = await authenticateWithReddit(clientId, clientSecret, "", "");
 
 	if (!authResult.ok) {
@@ -148,7 +166,7 @@ const setupRedditAccount = async (ctx: MediaAppContext, profileId: string, clien
 
 export const credentialRoutes = new Hono<AppContext>();
 
-credentialRoutes.get("/:platform", async c => {
+credentialRoutes.get("/:platform", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const platformResult = PlatformSchema.safeParse(c.req.param("platform"));
@@ -185,7 +203,7 @@ credentialRoutes.get("/:platform", async c => {
 	});
 });
 
-credentialRoutes.post("/:platform", async c => {
+credentialRoutes.post("/:platform", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const platformResult = PlatformSchema.safeParse(c.req.param("platform"));
@@ -270,7 +288,7 @@ credentialRoutes.post("/:platform", async c => {
 	});
 });
 
-credentialRoutes.delete("/:platform", async c => {
+credentialRoutes.delete("/:platform", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const platformResult = PlatformSchema.safeParse(c.req.param("platform"));

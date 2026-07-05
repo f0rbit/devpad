@@ -7,7 +7,11 @@ import { type OAuthCallbackConfig, type OAuthState, oauth, type PlatformSecrets 
 
 type RedditOAuthState = { byo?: boolean };
 
-const resolveRedditSecrets = async (ctx: MediaAppContext, state: OAuthState<RedditOAuthState>, envSecrets: PlatformSecrets): Promise<PlatformSecrets> => {
+const resolveRedditSecrets = async (
+	ctx: MediaAppContext,
+	state: OAuthState<RedditOAuthState>,
+	envSecrets: PlatformSecrets,
+): Promise<PlatformSecrets> => {
 	if (!state.byo) return envSecrets;
 	const byoResult = await credential.get(ctx, state.profile_id, "reddit");
 	if (!byoResult.ok || !byoResult.value) return { clientId: undefined, clientSecret: undefined };
@@ -42,7 +46,7 @@ const redditOAuthConfig: OAuthCallbackConfig<RedditOAuthState> = {
 		const data = (await response.json()) as { id: string; name: string };
 		return { id: data.id, username: data.name };
 	},
-	getSecrets: secrets => ({ clientId: secrets.reddit_client_id, clientSecret: secrets.reddit_client_secret }),
+	getSecrets: (secrets) => ({ clientId: secrets.reddit_client_id, clientSecret: secrets.reddit_client_secret }),
 	resolveSecrets: resolveRedditSecrets,
 	onSuccess: onRedditSuccess,
 };
@@ -66,7 +70,7 @@ const twitterOAuthConfig: OAuthCallbackConfig<{ code_verifier: string }> = {
 		const data = (await response.json()) as { data: { id: string; username: string } };
 		return { id: data.data.id, username: data.data.username };
 	},
-	getSecrets: secrets => ({ clientId: secrets.twitter_client_id, clientSecret: secrets.twitter_client_secret }),
+	getSecrets: (secrets) => ({ clientId: secrets.twitter_client_id, clientSecret: secrets.twitter_client_secret }),
 	stateKeys: ["code_verifier"],
 };
 
@@ -93,7 +97,7 @@ export const githubOAuthConfig: OAuthCallbackConfig = {
 		const data = (await response.json()) as { id: number; login: string };
 		return { id: String(data.id), username: data.login };
 	},
-	getSecrets: secrets => ({ clientId: secrets.github_client_id, clientSecret: secrets.github_client_secret }),
+	getSecrets: (secrets) => ({ clientId: secrets.github_client_id, clientSecret: secrets.github_client_secret }),
 };
 
 const base64UrlEncode = (buffer: Uint8Array): string => {
@@ -118,7 +122,7 @@ const generateCodeChallenge = async (verifier: string): Promise<string> => {
 
 export const authRoutes = new Hono<AppContext>();
 
-authRoutes.get("/reddit", async c => {
+authRoutes.get("/reddit", async (c) => {
 	const ctx = getContext(c);
 
 	const validation = await oauth.query.profile(c, ctx, "reddit");
@@ -149,7 +153,7 @@ authRoutes.get("/reddit", async c => {
 
 authRoutes.get("/reddit/callback", oauth.callback(redditOAuthConfig));
 
-authRoutes.get("/twitter", async c => {
+authRoutes.get("/twitter", async (c) => {
 	const ctx = getContext(c);
 
 	const validation = await oauth.query.profile(c, ctx, "twitter");
@@ -181,7 +185,7 @@ authRoutes.get("/twitter", async c => {
 
 authRoutes.get("/twitter/callback", oauth.callback(twitterOAuthConfig));
 
-authRoutes.get("/github", async c => {
+authRoutes.get("/github", async (c) => {
 	const ctx = getContext(c);
 
 	const validation = await oauth.query.profile(c, ctx, "github");

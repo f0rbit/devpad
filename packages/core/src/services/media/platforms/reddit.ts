@@ -1,4 +1,10 @@
-import type { RedditComment, RedditCommentsStore, RedditMetaStore, RedditPost, RedditPostsStore } from "@devpad/schema/media";
+import type {
+	RedditComment,
+	RedditCommentsStore,
+	RedditMetaStore,
+	RedditPost,
+	RedditPostsStore,
+} from "@devpad/schema/media";
 import { err, type FetchError, ok, pipe, type Result } from "@f0rbit/corpus";
 import { createLogger } from "../../../utils/logger";
 import { mapHttpError, type ProviderError } from "./types";
@@ -29,7 +35,10 @@ export type RedditProviderLike = {
 	fetchForUsername(token: string, username: string): Promise<Result<RedditFetchResult, ProviderError>>;
 };
 
-const mapRedditError = (e: FetchError): ProviderError => (e.type === "http" ? mapHttpError(e.status, e.status_text) : { kind: "network_error", cause: e.cause instanceof Error ? e.cause : new Error(String(e.cause)) });
+const mapRedditError = (e: FetchError): ProviderError =>
+	e.type === "http"
+		? mapHttpError(e.status, e.status_text)
+		: { kind: "network_error", cause: e.cause instanceof Error ? e.cause : new Error(String(e.cause)) };
 
 export class RedditProvider implements RedditProviderLike {
 	readonly platform = "reddit";
@@ -45,7 +54,10 @@ export class RedditProvider implements RedditProviderLike {
 		return pipe(this.fetchUser(token))
 			.tap(({ username }) => log.info("Authenticated as", username))
 			.flat_map(async ({ username, meta }) => {
-				const [postsResult, commentsResult] = await Promise.all([this.fetchPosts(token, username), this.fetchComments(token, username)]);
+				const [postsResult, commentsResult] = await Promise.all([
+					this.fetchPosts(token, username),
+					this.fetchComments(token, username),
+				]);
 
 				if (!postsResult.ok) return postsResult;
 				if (!commentsResult.ok) return commentsResult;
@@ -81,7 +93,7 @@ export class RedditProvider implements RedditProviderLike {
 
 				return ok(result);
 			})
-			.tap_err(e => log.error("Fetch failed", e))
+			.tap_err((e) => log.error("Fetch failed", e))
 			.result();
 	}
 
@@ -90,10 +102,17 @@ export class RedditProvider implements RedditProviderLike {
 	 * This bypasses the /me endpoint since application-only tokens can't access it.
 	 */
 	async fetchForUsername(token: string, username: string): Promise<Result<RedditFetchResult, ProviderError>> {
-		log.debug("Starting fetch for username", { username, maxPosts: this.config.maxPosts, maxComments: this.config.maxComments });
+		log.debug("Starting fetch for username", {
+			username,
+			maxPosts: this.config.maxPosts,
+			maxComments: this.config.maxComments,
+		});
 		log.info("Fetching for user", username);
 
-		const [postsResult, commentsResult] = await Promise.all([this.fetchPosts(token, username), this.fetchComments(token, username)]);
+		const [postsResult, commentsResult] = await Promise.all([
+			this.fetchPosts(token, username),
+			this.fetchComments(token, username),
+		]);
 
 		if (!postsResult.ok) {
 			log.error("Fetch failed", postsResult.error);
@@ -146,8 +165,12 @@ export class RedditProvider implements RedditProviderLike {
 
 	private fetchUser(token: string): Promise<Result<{ username: string; meta: RedditMetaStore }, ProviderError>> {
 		return pipe
-			.fetch<Record<string, unknown>, ProviderError>("https://oauth.reddit.com/api/v1/me", { headers: this.headers(token) }, mapRedditError)
-			.map(data => {
+			.fetch<Record<string, unknown>, ProviderError>(
+				"https://oauth.reddit.com/api/v1/me",
+				{ headers: this.headers(token) },
+				mapRedditError,
+			)
+			.map((data) => {
 				const username = data.name as string;
 				return {
 					username,
@@ -169,14 +192,29 @@ export class RedditProvider implements RedditProviderLike {
 	}
 
 	private async fetchPosts(token: string, username: string): Promise<Result<RedditPost[], ProviderError>> {
-		return this.fetchPaginated(token, `https://oauth.reddit.com/user/${username}/submitted`, this.config.maxPosts, this.parsePost.bind(this));
+		return this.fetchPaginated(
+			token,
+			`https://oauth.reddit.com/user/${username}/submitted`,
+			this.config.maxPosts,
+			this.parsePost.bind(this),
+		);
 	}
 
 	private async fetchComments(token: string, username: string): Promise<Result<RedditComment[], ProviderError>> {
-		return this.fetchPaginated(token, `https://oauth.reddit.com/user/${username}/comments`, this.config.maxComments, this.parseComment.bind(this));
+		return this.fetchPaginated(
+			token,
+			`https://oauth.reddit.com/user/${username}/comments`,
+			this.config.maxComments,
+			this.parseComment.bind(this),
+		);
 	}
 
-	private async fetchPaginated<T>(token: string, baseUrl: string, maxItems: number, parser: (item: Record<string, unknown>) => T): Promise<Result<T[], ProviderError>> {
+	private async fetchPaginated<T>(
+		token: string,
+		baseUrl: string,
+		maxItems: number,
+		parser: (item: Record<string, unknown>) => T,
+	): Promise<Result<T[], ProviderError>> {
 		const items: T[] = [];
 		let after: string | null = null;
 
@@ -186,7 +224,13 @@ export class RedditProvider implements RedditProviderLike {
 			url.searchParams.set("raw_json", "1");
 			if (after) url.searchParams.set("after", after);
 
-			const result = await pipe.fetch<{ data: { children: Array<{ data: Record<string, unknown> }>; after: string | null } }, ProviderError>(url.toString(), { headers: this.headers(token) }, mapRedditError).result();
+			const result = await pipe
+				.fetch<{ data: { children: Array<{ data: Record<string, unknown> }>; after: string | null } }, ProviderError>(
+					url.toString(),
+					{ headers: this.headers(token) },
+					mapRedditError,
+				)
+				.result();
 
 			if (!result.ok) return result;
 

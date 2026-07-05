@@ -3,9 +3,25 @@ import { describe, expect, mock, test } from "bun:test";
 mock.module("../scanner/index.js", () => ({
 	scanGitHubRepo: async () => ({
 		ok: true,
-		value: [{ id: "task_1", file: "src/main.ts", line: 10, tag: "todo", text: "Fix this", context: ["line 9", "line 10", "line 11"] }],
+		value: [
+			{
+				id: "task_1",
+				file: "src/main.ts",
+				line: 10,
+				tag: "todo",
+				text: "Fix this",
+				context: ["line 9", "line 10", "line 11"],
+			},
+		],
 	}),
-	generateDiff: (old_tasks: any[], new_tasks: any[]) => [{ id: "task_1", tag: "todo", type: "NEW", data: { old: null, new: { text: "Fix this", line: 10, file: "src/main.ts", context: [] } } }],
+	generateDiff: (old_tasks: any[], new_tasks: any[]) => [
+		{
+			id: "task_1",
+			tag: "todo",
+			type: "NEW",
+			data: { old: null, new: { text: "Fix this", line: 10, file: "src/main.ts", context: [] } },
+		},
+	],
 }));
 
 const { initiateScan, getPendingUpdates, getScanHistory } = await import("../scanning.js");
@@ -103,7 +119,7 @@ describe("scanning", () => {
 			}
 
 			expect(messages).toContain("starting\n");
-			expect(messages.some(m => m.includes("error: project not found"))).toBe(true);
+			expect(messages.some((m) => m.includes("error: project not found"))).toBe(true);
 		});
 
 		test("yields error for project without repo", async () => {
@@ -118,12 +134,18 @@ describe("scanning", () => {
 			}
 
 			expect(messages).toContain("starting\n");
-			expect(messages.some(m => m.includes("error: project not linked"))).toBe(true);
+			expect(messages.some((m) => m.includes("error: project not linked"))).toBe(true);
 		});
 
 		test("yields progress messages for successful scan", async () => {
 			const db = createScanMockDb({
-				select_sequence: [[mockProjectRow], [mockProjectRow], [{ id: "tag_1", title: "todo", matches: '["TODO"]' }], [], []],
+				select_sequence: [
+					[mockProjectRow],
+					[mockProjectRow],
+					[{ id: "tag_1", title: "todo", matches: '["TODO"]' }],
+					[],
+					[],
+				],
 				insert_returning: [{ id: 1 }],
 			});
 
@@ -133,7 +155,7 @@ describe("scanning", () => {
 			}
 
 			expect(messages).toContain("starting\n");
-			expect(messages.some(m => m.includes("scanning repo") || m.includes("loading config"))).toBe(true);
+			expect(messages.some((m) => m.includes("scanning repo") || m.includes("loading config"))).toBe(true);
 		});
 	});
 

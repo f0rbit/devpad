@@ -42,9 +42,12 @@ export interface PipelinesGrantsRPC {
 }
 
 const validate_caller = (caller: CallerIdentity): Result<void, GrantRpcError> => {
-	if (typeof caller.package_id !== "string" || caller.package_id.length === 0) return err({ kind: "invalid_caller", message: "caller.package_id missing" });
-	if (typeof caller.environment !== "string" || caller.environment.length === 0) return err({ kind: "invalid_caller", message: "caller.environment missing" });
-	if (typeof caller.version_set_id !== "string" || caller.version_set_id.length === 0) return err({ kind: "invalid_caller", message: "caller.version_set_id missing" });
+	if (typeof caller.package_id !== "string" || caller.package_id.length === 0)
+		return err({ kind: "invalid_caller", message: "caller.package_id missing" });
+	if (typeof caller.environment !== "string" || caller.environment.length === 0)
+		return err({ kind: "invalid_caller", message: "caller.environment missing" });
+	if (typeof caller.version_set_id !== "string" || caller.version_set_id.length === 0)
+		return err({ kind: "invalid_caller", message: "caller.version_set_id missing" });
 	return ok(undefined);
 };
 
@@ -69,6 +72,9 @@ export class PipelinesGrantsService implements PipelinesGrantsRPC {
 
 		const verdict = await check_grant(this.db, caller.package_id, caller.environment, scope);
 		if (!verdict.ok) return err({ kind: "store_error", message: verdict.error.kind });
-		return ok({ granted: verdict.value, reason: verdict.value ? undefined : `No approved grant for ${scope} at ${caller.environment}` });
+		return ok({
+			granted: verdict.value,
+			reason: verdict.value ? undefined : `No approved grant for ${scope} at ${caller.environment}`,
+		});
 	}
 }

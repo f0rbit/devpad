@@ -24,7 +24,10 @@ export const VersionInfoSchema = z.object({
 
 export type VersionInfo = z.infer<typeof VersionInfoSchema>;
 
-export type PostCorpusError = { kind: "not_found"; path: string; version?: string } | { kind: "invalid_content"; message: string } | { kind: "io_error"; message: string };
+export type PostCorpusError =
+	| { kind: "not_found"; path: string; version?: string }
+	| { kind: "invalid_content"; message: string }
+	| { kind: "io_error"; message: string };
 
 export const mapCorpusError = (e: LibCorpusError): PostCorpusError => {
 	if (e.kind === "not_found") {

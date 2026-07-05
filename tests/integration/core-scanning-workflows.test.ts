@@ -29,7 +29,7 @@ describe("Core Scanning Workflows", () => {
 		const listResult = await t.client.projects.list();
 		if (!listResult.ok) throw new Error(`Failed to list projects: ${listResult.error.message}`);
 		expect(Array.isArray(listResult.value)).toBe(true);
-		const projectIds = listResult.value.map(p => p.id);
+		const projectIds = listResult.value.map((p) => p.id);
 		expect(projectIds).toContain(project.id);
 
 		const updateResult = await t.client.projects.update({
@@ -148,7 +148,7 @@ describe("Core Scanning Workflows", () => {
 
 		const listResult = await t.client.projects.list();
 		if (!listResult.ok) throw new Error(`Failed to list projects: ${listResult.error.message}`);
-		const ownedProjectIds = listResult.value.map(p => p.id);
+		const ownedProjectIds = listResult.value.map((p) => p.id);
 		expect(ownedProjectIds).toContain(project.id);
 
 		expect(project.visibility).toBe("PRIVATE");
@@ -177,7 +177,7 @@ describe("Core Scanning Workflows", () => {
 		expect(project.updated_at).toBeDefined();
 		expect(new Date(project.created_at).getTime()).toBeLessThanOrEqual(Date.now());
 
-		await new Promise(resolve => setTimeout(resolve, 10));
+		await new Promise((resolve) => setTimeout(resolve, 10));
 
 		const updateResult = await t.client.projects.update({
 			...project,

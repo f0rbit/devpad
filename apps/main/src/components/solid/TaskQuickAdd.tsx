@@ -54,8 +54,23 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 
 	return (
 		<div class="row" style={{ padding: "6px 0", "border-bottom": "1px solid var(--border)", "margin-bottom": "9px" }}>
-			<input type="text" class="input" style={{ flex: 1 }} placeholder="Add task..." value={title()} onInput={e => setTitle(e.target.value)} onKeyDown={handleKeyDown} disabled={loading()} />
-			<select class="select" style={{ width: "auto", "min-width": "80px" }} value={priority()} onChange={e => setPriority(e.target.value as "LOW" | "MEDIUM" | "HIGH")} disabled={loading()}>
+			<input
+				type="text"
+				class="input"
+				style={{ flex: 1 }}
+				placeholder="Add task..."
+				value={title()}
+				onInput={(e) => setTitle(e.target.value)}
+				onKeyDown={handleKeyDown}
+				disabled={loading()}
+			/>
+			<select
+				class="select"
+				style={{ width: "auto", "min-width": "80px" }}
+				value={priority()}
+				onChange={(e) => setPriority(e.target.value as "LOW" | "MEDIUM" | "HIGH")}
+				disabled={loading()}
+			>
 				<option value="LOW">LOW</option>
 				<option value="MEDIUM">MEDIUM</option>
 				<option value="HIGH">HIGH</option>

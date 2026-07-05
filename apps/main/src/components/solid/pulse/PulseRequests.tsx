@@ -38,7 +38,7 @@ export default function PulseRequests(props: PulseRequestsProps) {
 
 	const seriesValues = (key: "p50" | "p95" | "p99"): number[] => {
 		const s = series()[key];
-		return Array.isArray(s) ? s.map(p => p.value) : [];
+		return Array.isArray(s) ? s.map((p) => p.value) : [];
 	};
 
 	const isEmpty = () => routes().length === 0 && !overall().count;
@@ -51,7 +51,15 @@ export default function PulseRequests(props: PulseRequestsProps) {
 				</p>
 			</Show>
 
-			<Show when={!isEmpty()} fallback={<Empty title="No request data" description="Latency stats appear once your project starts reporting request timings." />}>
+			<Show
+				when={!isEmpty()}
+				fallback={
+					<Empty
+						title="No request data"
+						description="Latency stats appear once your project starts reporting request timings."
+					/>
+				}
+			>
 				<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
 					<Stat value={(overall().count ?? 0).toLocaleString()} label="requests" />
 					<Stat value={fmtMs(overall().p50)} label="p50" />
@@ -64,15 +72,36 @@ export default function PulseRequests(props: PulseRequestsProps) {
 					<div class="row" style={{ gap: "1rem", "flex-wrap": "wrap" }}>
 						<div class="stack stack-xs">
 							<span class="text-sm text-faint">p50</span>
-							<PulseChart data={seriesValues("p50")} color="var(--item-blue, #4a90e2)" fill width={240} height={56} aria-label="p50 latency" />
+							<PulseChart
+								data={seriesValues("p50")}
+								color="var(--item-blue, #4a90e2)"
+								fill
+								width={240}
+								height={56}
+								aria-label="p50 latency"
+							/>
 						</div>
 						<div class="stack stack-xs">
 							<span class="text-sm text-faint">p95</span>
-							<PulseChart data={seriesValues("p95")} color="var(--item-yellow, #f2c94c)" fill width={240} height={56} aria-label="p95 latency" />
+							<PulseChart
+								data={seriesValues("p95")}
+								color="var(--item-yellow, #f2c94c)"
+								fill
+								width={240}
+								height={56}
+								aria-label="p95 latency"
+							/>
 						</div>
 						<div class="stack stack-xs">
 							<span class="text-sm text-faint">p99</span>
-							<PulseChart data={seriesValues("p99")} color="var(--item-red, #eb5757)" fill width={240} height={56} aria-label="p99 latency" />
+							<PulseChart
+								data={seriesValues("p99")}
+								color="var(--item-red, #eb5757)"
+								fill
+								width={240}
+								height={56}
+								aria-label="p99 latency"
+							/>
 						</div>
 					</div>
 				</div>
@@ -82,9 +111,28 @@ export default function PulseRequests(props: PulseRequestsProps) {
 						<h3 style={{ margin: 0 }}>slowest routes</h3>
 						<div class="stack stack-xs" data-testid="pulse-routes-list">
 							<For each={routes().slice(0, 10)}>
-								{route => (
-									<div class="row row-between" style={{ "align-items": "center", gap: "0.5rem", padding: "0.5rem 0.75rem", border: "1px solid var(--border)", "border-radius": "var(--radius, 4px)" }}>
-										<span class="text-sm" style={{ "font-family": "var(--font-mono, monospace)", "min-width": 0, overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", flex: 1 }}>
+								{(route) => (
+									<div
+										class="row row-between"
+										style={{
+											"align-items": "center",
+											gap: "0.5rem",
+											padding: "0.5rem 0.75rem",
+											border: "1px solid var(--border)",
+											"border-radius": "var(--radius, 4px)",
+										}}
+									>
+										<span
+											class="text-sm"
+											style={{
+												"font-family": "var(--font-mono, monospace)",
+												"min-width": 0,
+												overflow: "hidden",
+												"text-overflow": "ellipsis",
+												"white-space": "nowrap",
+												flex: 1,
+											}}
+										>
 											{route.route ?? "(unknown)"}
 										</span>
 										<div class="row" style={{ gap: "1rem", "flex-shrink": 0 }}>

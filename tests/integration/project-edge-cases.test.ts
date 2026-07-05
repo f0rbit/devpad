@@ -68,9 +68,9 @@ describe("Project Edge Cases Integration", () => {
 
 			const afterDeleteResult = await t.client.projects.list();
 			if (afterDeleteResult.ok) {
-				if (afterDeleteResult.value.some(p => p.id === project.id && p.deleted === true)) {
+				if (afterDeleteResult.value.some((p) => p.id === project.id && p.deleted === true)) {
 					expect(afterDeleteResult.value.length).toBe(initialCount + 1);
-					const deletedProject = afterDeleteResult.value.find(p => p.id === project.id);
+					const deletedProject = afterDeleteResult.value.find((p) => p.id === project.id);
 					expect(deletedProject!.deleted).toBe(true);
 				} else {
 					expect(afterDeleteResult.value.length).toBe(initialCount);
@@ -97,8 +97,8 @@ describe("Project Edge Cases Integration", () => {
 
 			const allResult = await t.client.projects.list();
 			if (allResult.ok) {
-				expect(allResult.value.some(p => p.id === publicProject.id)).toBe(true);
-				expect(allResult.value.some(p => p.id === privateProject.id)).toBe(true);
+				expect(allResult.value.some((p) => p.id === publicProject.id)).toBe(true);
+				expect(allResult.value.some((p) => p.id === privateProject.id)).toBe(true);
 			}
 
 			try {
@@ -185,7 +185,11 @@ describe("Project Edge Cases Integration", () => {
 			};
 
 			const configResult = await t.client.projects.config.save(configWithSpecialChars);
-			if (!configResult.ok && !configResult.error.message.includes("not found") && !configResult.error.message.includes("not implemented")) {
+			if (
+				!configResult.ok &&
+				!configResult.error.message.includes("not found") &&
+				!configResult.error.message.includes("not implemented")
+			) {
 				throw new Error(`Configuration save failed unexpectedly: ${configResult.error.message}`);
 			}
 		});
@@ -216,7 +220,12 @@ describe("Project Edge Cases Integration", () => {
 
 	describe("Project Query Parameter Edge Cases", () => {
 		test("should handle malformed query parameters", async () => {
-			const testCases = ["http://localhost:3001/api/v1/projects?id=", "http://localhost:3001/api/v1/projects?name=", "http://localhost:3001/api/v1/projects?id=null", "http://localhost:3001/api/v1/projects?name=undefined"];
+			const testCases = [
+				"http://localhost:3001/api/v1/projects?id=",
+				"http://localhost:3001/api/v1/projects?name=",
+				"http://localhost:3001/api/v1/projects?id=null",
+				"http://localhost:3001/api/v1/projects?name=undefined",
+			];
 
 			for (const url of testCases) {
 				const response = await fetch(url, {

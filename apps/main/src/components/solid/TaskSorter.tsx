@@ -1,5 +1,11 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { Project, TaskWithDetails as TaskType, TaskView, UpsertTag, TagWithTypedColor as UserTag } from "@devpad/schema";
+import type {
+	Project,
+	TaskWithDetails as TaskType,
+	TaskView,
+	UpsertTag,
+	TagWithTypedColor as UserTag,
+} from "@devpad/schema";
 import FolderSearch from "lucide-solid/icons/folder-search";
 import LayoutGrid from "lucide-solid/icons/layout-grid";
 import LayoutList from "lucide-solid/icons/layout-list";
@@ -55,7 +61,15 @@ const by_due_date = (a: TaskType, b: TaskType) => {
 
 // SolidJS component to render <Task />
 // takes list of Tasks, a default selected option, and project_map array as props
-export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, tags, user_id, defaultView, quick_add }: Props) {
+export function TaskSorter({
+	tasks: defaultTasks,
+	defaultOption,
+	project_map,
+	tags,
+	user_id,
+	defaultView,
+	quick_add,
+}: Props) {
 	const [tasks, setTasks] = createSignal<TaskType[]>(defaultTasks);
 	const [selectedOption, setSelectedOption] = createSignal<SortOption>(defaultOption);
 	const [sortedTasks, setSortedTasks] = createSignal<TaskType[]>([]);
@@ -68,35 +82,37 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 	// sort tasks based on selected option
 	createEffect(() => {
 		// filter out 'archived' and 'deleted' tasks
-		let filtered = tasks().filter(task => {
+		let filtered = tasks().filter((task) => {
 			if (task.task == null) return false;
-			return task.task.visibility !== "ARCHIVED" && task.task.visibility !== "DELETED" && task.task.visibility !== "HIDDEN";
+			return (
+				task.task.visibility !== "ARCHIVED" && task.task.visibility !== "DELETED" && task.task.visibility !== "HIDDEN"
+			);
 		});
 
 		const search_term = search();
 		if (search_term.length > 0) {
-			filtered = filtered.filter(task => {
+			filtered = filtered.filter((task) => {
 				return task.task.title.toLowerCase().includes(search_term.toLowerCase());
 			});
 		}
 
 		const search_project = project();
 		if (search_project != null && search_project !== "") {
-			filtered = filtered.filter(task => task.task.project_id === search_project);
+			filtered = filtered.filter((task) => task.task.project_id === search_project);
 		}
 
 		const search_tag = tag();
 		if (search_tag != null && search_tag !== "") {
-			filtered = filtered.filter(task => task.tags.some(tag_id => tag_id === search_tag));
+			filtered = filtered.filter((task) => task.tags.some((tag_id) => tag_id === search_tag));
 		}
 
 		const search_goal = goal();
 		if (search_goal != null && search_goal !== "") {
-			filtered = filtered.filter(task => task.task.goal_id === search_goal);
+			filtered = filtered.filter((task) => task.task.goal_id === search_goal);
 		}
 
 		if (selectedOption() === "upcoming") {
-			filtered = filtered.filter(task => task.task.progress !== "COMPLETED");
+			filtered = filtered.filter((task) => task.task.progress !== "COMPLETED");
 		}
 
 		const sorted = filtered.toSorted((a, b) => {
@@ -148,7 +164,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 
 	const update = (task_id: string, data: any) => {
 		// replace the task with the updated task
-		const new_tasks = tasks().map(t => {
+		const new_tasks = tasks().map((t) => {
 			if (t.task.id === task_id) {
 				return { ...t, task: { ...t.task, ...data } };
 			}
@@ -159,13 +175,19 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 
 	return (
 		<div class="stack stack-lg">
-			{quick_add && <TaskQuickAdd project_id={quick_add.project_id} user_id={quick_add.user_id} onCreated={task => setTasks(prev => [task, ...prev])} />}
+			{quick_add && (
+				<TaskQuickAdd
+					project_id={quick_add.project_id}
+					user_id={quick_add.user_id}
+					onCreated={(task) => setTasks((prev) => [task, ...prev])}
+				/>
+			)}
 			<div class="task-filters" style={{ gap: "9px" }}>
 				<Search size={16} />
-				<input type="text" placeholder="Search" value={search()} onInput={e => setSearch(e.target.value)} />
+				<input type="text" placeholder="Search" value={search()} onInput={(e) => setSearch(e.target.value)} />
 				<ArrowDownWideNarrow size={16} />
-				<select value={selectedOption()} onChange={e => setSelectedOption(e.target.value as SortOption)}>
-					{options.map(option => (
+				<select value={selectedOption()} onChange={(e) => setSelectedOption(e.target.value as SortOption)}>
+					{options.map((option) => (
 						<option value={option} selected={option === selectedOption()}>
 							{option}
 						</option>
@@ -174,16 +196,21 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 				{Object.keys(project_map).length > 1 && (
 					<>
 						<FolderSearch size={16} />
-						<ProjectSelector project_map={project_map} default_id={project()} callback={project_id => setProject(project_id)} disabled={false} />
+						<ProjectSelector
+							project_map={project_map}
+							default_id={project()}
+							callback={(project_id) => setProject(project_id)}
+							disabled={false}
+						/>
 					</>
 				)}
 				<Tag size={16} />
-				<TagSelect tags={tags} onSelect={tag => setTag(tag?.id ?? null)} />
+				<TagSelect tags={tags} onSelect={(tag) => setTag(tag?.id ?? null)} />
 
 				<div class="row row-sm" style={{ gap: "9px", "margin-left": "auto", "grid-column": "span 2" }}>
 					<a
 						role="button"
-						onClick={e => {
+						onClick={(e) => {
 							e.preventDefault();
 							selectView("list");
 						}}
@@ -192,7 +219,7 @@ export function TaskSorter({ tasks: defaultTasks, defaultOption, project_map, ta
 					</a>
 					<a
 						role="button"
-						onClick={e => {
+						onClick={(e) => {
 							e.preventDefault();
 							selectView("grid");
 						}}
@@ -221,12 +248,19 @@ function ListView({ tasks, project_map, user_tags, update }: ListProps) {
 	return (
 		<ul class="stack stack-sm" style={{ gap: "9px" }}>
 			<For each={tasks()}>
-				{task => {
+				{(task) => {
 					let project = null;
 					if (task.task.project_id) project = project_map[task.task.project_id];
 					return (
 						<li>
-							<TaskCard task={task} project={project} user_tags={user_tags} view="list" update={update} draw_project={Object.keys(project_map).length > 1} />
+							<TaskCard
+								task={task}
+								project={project}
+								user_tags={user_tags}
+								view="list"
+								update={update}
+								draw_project={Object.keys(project_map).length > 1}
+							/>
 						</li>
 					);
 				}}
@@ -239,12 +273,19 @@ function GridView({ tasks, project_map, user_tags, update }: ListProps) {
 	return (
 		<ul style={{ display: "grid", "grid-template-columns": "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
 			<For each={tasks()}>
-				{task => {
+				{(task) => {
 					let project = null;
 					if (task.task.project_id) project = project_map[task.task.project_id];
 					return (
 						<li>
-							<TaskCard task={task} project={project} user_tags={user_tags} view="grid" update={update} draw_project={Object.keys(project_map).length > 1} />
+							<TaskCard
+								task={task}
+								project={project}
+								user_tags={user_tags}
+								view="grid"
+								update={update}
+								draw_project={Object.keys(project_map).length > 1}
+							/>
 						</li>
 					);
 				}}

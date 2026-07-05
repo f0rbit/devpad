@@ -19,7 +19,7 @@ describe("InMemoryCloudflareProvider — happy paths", () => {
 
 		const list = await cf.versions.list("worker-a");
 		if (!list.ok) throw new Error("list failed");
-		expect(list.value.map(v => v.id)).toEqual([v1.id, v2.id]);
+		expect(list.value.map((v) => v.id)).toEqual([v1.id, v2.id]);
 	});
 
 	test("creates a single atomic 100% deployment", async () => {
@@ -125,13 +125,33 @@ describe("InMemoryCloudflareProvider — invariants", () => {
 });
 
 const make_modules = (): ModuleUpload[] => [
-	{ name: "index.js", mime_type: "application/javascript+module", content: new TextEncoder().encode("export default {};") },
-	{ name: "chunks/foo.mjs", mime_type: "application/javascript+module", content: new TextEncoder().encode("export {};") },
+	{
+		name: "index.js",
+		mime_type: "application/javascript+module",
+		content: new TextEncoder().encode("export default {};"),
+	},
+	{
+		name: "chunks/foo.mjs",
+		mime_type: "application/javascript+module",
+		content: new TextEncoder().encode("export {};"),
+	},
 ];
 
 const make_assets = (): AssetUpload[] => [
-	{ path: "/_astro/index.css", hash: "0123456789abcdef0123456789abcdef", size_bytes: 4, mime_type: "text/css", content: new TextEncoder().encode("body") },
-	{ path: "/index.html", hash: "fedcba9876543210fedcba9876543210", size_bytes: 5, mime_type: "text/html", content: new TextEncoder().encode("<html") },
+	{
+		path: "/_astro/index.css",
+		hash: "0123456789abcdef0123456789abcdef",
+		size_bytes: 4,
+		mime_type: "text/css",
+		content: new TextEncoder().encode("body"),
+	},
+	{
+		path: "/index.html",
+		hash: "fedcba9876543210fedcba9876543210",
+		size_bytes: 5,
+		mime_type: "text/html",
+		content: new TextEncoder().encode("<html"),
+	},
 ];
 
 describe("InMemoryCloudflareProvider — directory_bundle uploads", () => {
@@ -173,7 +193,15 @@ describe("InMemoryCloudflareProvider — directory_bundle uploads", () => {
 			main_module: "index.js",
 			compatibility_date: "2026-05-01",
 			assets: {
-				assets: [{ path: "/foo.css", hash: "shorthash", size_bytes: 3, mime_type: "text/css", content: new TextEncoder().encode("foo") }],
+				assets: [
+					{
+						path: "/foo.css",
+						hash: "shorthash",
+						size_bytes: 3,
+						mime_type: "text/css",
+						content: new TextEncoder().encode("foo"),
+					},
+				],
 			},
 		});
 		expect(result.ok).toBe(false);

@@ -22,8 +22,8 @@ categoriesRouter.get(
 	withAuth(async (c, user, ctx) => {
 		const service = createCategoryService({ db: ctx.db });
 		const result = await service.getTree(user.id);
-		return response.with(c, result, categories => ({ categories }));
-	})
+		return response.with(c, result, (categories) => ({ categories }));
+	}),
 );
 
 categoriesRouter.post(
@@ -34,7 +34,7 @@ categoriesRouter.post(
 		const service = createCategoryService({ db: ctx.db });
 		const result = await service.create(user.id, data);
 		return response.result(c, result, 201);
-	})
+	}),
 );
 
 categoriesRouter.put(
@@ -47,7 +47,7 @@ categoriesRouter.put(
 		const service = createCategoryService({ db: ctx.db });
 		const result = await service.update(user.id, name, data);
 		return response.result(c, result);
-	})
+	}),
 );
 
 categoriesRouter.delete(
@@ -58,5 +58,5 @@ categoriesRouter.delete(
 		const service = createCategoryService({ db: ctx.db });
 		const result = await service.delete(user.id, name);
 		return response.empty(c, result);
-	})
+	}),
 );

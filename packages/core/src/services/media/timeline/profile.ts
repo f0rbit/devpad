@@ -1,4 +1,17 @@
-import { accounts, type CommitGroup, type DateGroup, errors, type NotFoundError, type Platform, type Profile, type ProfileFilter, profileFilters, profiles, type StoreError, type TimelineItem } from "@devpad/schema/media";
+import {
+	accounts,
+	type CommitGroup,
+	type DateGroup,
+	errors,
+	type NotFoundError,
+	type Platform,
+	type Profile,
+	type ProfileFilter,
+	profileFilters,
+	profiles,
+	type StoreError,
+	type TimelineItem,
+} from "@devpad/schema/media";
 import type { Backend } from "@f0rbit/corpus";
 import { ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray } from "drizzle-orm";
@@ -60,7 +73,7 @@ export async function loadProfileSettings(db: Database, profileId: string): Prom
 		.from(accounts)
 		.where(and(eq(accounts.profile_id, profileId), eq(accounts.is_active, true)));
 
-	const accountIds = profileAccounts.map(a => a.id);
+	const accountIds = profileAccounts.map((a) => a.id);
 
 	const filterRows = await db.select().from(profileFilters).where(eq(profileFilters.profile_id, profileId));
 
@@ -107,7 +120,11 @@ const createFilterMatcher = (filter: ProfileFilter): FilterMatcher => {
 
 		case "keyword":
 			return (item: TimelineItem) => {
-				const searchText = [item.title, "content" in item.payload ? (item.payload as { content?: string }).content : "", "message" in item.payload ? (item.payload as { message?: string }).message : ""]
+				const searchText = [
+					item.title,
+					"content" in item.payload ? (item.payload as { content?: string }).content : "",
+					"message" in item.payload ? (item.payload as { message?: string }).message : "",
+				]
 					.filter(Boolean)
 					.join(" ")
 					.toLowerCase();
@@ -137,16 +154,19 @@ const groupFiltersByAccount = (filters: ProfileFilter[]): FiltersByAccount => {
 	return grouped;
 };
 
-const applyFiltersToItem = (item: TimelineItem, accountFilters: { include: ProfileFilter[]; exclude: ProfileFilter[] }): boolean => {
+const applyFiltersToItem = (
+	item: TimelineItem,
+	accountFilters: { include: ProfileFilter[]; exclude: ProfileFilter[] },
+): boolean => {
 	const { include, exclude } = accountFilters;
 
 	if (exclude.length > 0) {
-		const matchesAnyExclude = exclude.some(f => createFilterMatcher(f)(item));
+		const matchesAnyExclude = exclude.some((f) => createFilterMatcher(f)(item));
 		if (matchesAnyExclude) return false;
 	}
 
 	if (include.length > 0) {
-		const matchesAnyInclude = include.some(f => createFilterMatcher(f)(item));
+		const matchesAnyInclude = include.some((f) => createFilterMatcher(f)(item));
 		if (!matchesAnyInclude) return false;
 	}
 
@@ -170,7 +190,7 @@ const buildAccountIdMap = (items: TimelineItem[], accountsByPlatform: Map<Platfo
 			continue;
 		}
 
-		const matched = platformAccounts.find(acc => {
+		const matched = platformAccounts.find((acc) => {
 			if (item.platform === "twitter" && item.payload.type === "post") {
 				const payload = item.payload as { author_handle?: string };
 				return acc.platform_user_id === payload.author_handle;
@@ -217,19 +237,22 @@ type PlatformLoader = {
 const platformLoaders: Record<string, PlatformLoader> = {
 	github: {
 		load: loadGitHubData,
-		normalize: data => normalizeGitHub(data as Awaited<ReturnType<typeof loadGitHubData>>),
+		normalize: (data) => normalizeGitHub(data as Awaited<ReturnType<typeof loadGitHubData>>),
 	},
 	reddit: {
 		load: loadRedditData,
-		normalize: data => normalizeReddit(data as Awaited<ReturnType<typeof loadRedditData>>, ""),
+		normalize: (data) => normalizeReddit(data as Awaited<ReturnType<typeof loadRedditData>>, ""),
 	},
 	twitter: {
 		load: loadTwitterData,
-		normalize: data => normalizeTwitter(data as Awaited<ReturnType<typeof loadTwitterData>>),
+		normalize: (data) => normalizeTwitter(data as Awaited<ReturnType<typeof loadTwitterData>>),
 	},
 };
 
-const loadItemsForAccounts = async (backend: Backend, accountsByPlatform: Map<Platform, AccountInfo[]>): Promise<TimelineItem[]> => {
+const loadItemsForAccounts = async (
+	backend: Backend,
+	accountsByPlatform: Map<Platform, AccountInfo[]>,
+): Promise<TimelineItem[]> => {
 	const items: TimelineItem[] = [];
 
 	for (const [platform, platformAccounts] of accountsByPlatform) {
@@ -246,10 +269,14 @@ const loadItemsForAccounts = async (backend: Backend, accountsByPlatform: Map<Pl
 	return items;
 };
 
-const filterCommitGroup = (group: CommitGroup, filtersByAccount: FiltersByAccount, accountIdMap: AccountIdMap): CommitGroup | null => {
+const filterCommitGroup = (
+	group: CommitGroup,
+	filtersByAccount: FiltersByAccount,
+	accountIdMap: AccountIdMap,
+): CommitGroup | null => {
 	if (filtersByAccount.size === 0) return group;
 
-	const filteredCommits = group.commits.filter(commit => {
+	const filteredCommits = group.commits.filter((commit) => {
 		const accountId = accountIdMap.get(commit.id);
 		if (!accountId) return true;
 
@@ -270,7 +297,7 @@ const filterCommitGroup = (group: CommitGroup, filtersByAccount: FiltersByAccoun
 				files: acc.files + (payload.files_changed ?? 0),
 			};
 		},
-		{ additions: 0, deletions: 0, files: 0 }
+		{ additions: 0, deletions: 0, files: 0 },
 	);
 
 	return {
@@ -282,13 +309,17 @@ const filterCommitGroup = (group: CommitGroup, filtersByAccount: FiltersByAccoun
 	};
 };
 
-const filterTimelineEntries = (entries: TimelineEntry[], filters: ProfileFilter[], accountIdMap: AccountIdMap): TimelineEntry[] => {
+const filterTimelineEntries = (
+	entries: TimelineEntry[],
+	filters: ProfileFilter[],
+	accountIdMap: AccountIdMap,
+): TimelineEntry[] => {
 	if (filters.length === 0) return entries;
 
 	const filtersByAccount = groupFiltersByAccount(filters);
 
 	return entries
-		.map(entry => {
+		.map((entry) => {
 			if (isCommitGroup(entry)) {
 				return filterCommitGroup(entry, filtersByAccount, accountIdMap);
 			}
@@ -308,7 +339,7 @@ const applyPagination = (groups: DateGroup[], limit?: number, before?: string): 
 	let filtered = groups;
 
 	if (before) {
-		filtered = filtered.filter(g => g.date < before);
+		filtered = filtered.filter((g) => g.date < before);
 	}
 
 	if (limit && limit > 0) {
@@ -337,7 +368,9 @@ const applyPagination = (groups: DateGroup[], limit?: number, before?: string): 
 	return filtered;
 };
 
-export async function generateProfileTimeline(options: ProfileTimelineOptions): Promise<Result<ProfileTimelineResult, ProfileTimelineError>> {
+export async function generateProfileTimeline(
+	options: ProfileTimelineOptions,
+): Promise<Result<ProfileTimelineResult, ProfileTimelineError>> {
 	const { db, backend, profileId, limit, before } = options;
 
 	log.info("Generating profile timeline", { profile_id: profileId, limit, before });

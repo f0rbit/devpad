@@ -24,14 +24,14 @@ import { E2E_PROJECT_ID, E2E_RUN_AWAITING } from "./fixtures/pipeline-ids.ts";
 const inject_test_user = async (context: BrowserContext) => {
 	await context.route(
 		() => true,
-		async route => {
+		async (route) => {
 			await route.continue({
 				headers: {
 					...route.request().headers(),
 					"X-Test-User": "true",
 				},
 			});
-		}
+		},
 	);
 };
 
@@ -44,16 +44,16 @@ const is_severe = (msg: ConsoleMessage): boolean => {
 	if (msg.type() !== "error") return false;
 	const text = msg.text().toLowerCase();
 	const known_noise = ["favicon", "failed to load resource", "the server responded with a status of 4", "net::err"];
-	return !known_noise.some(n => text.includes(n));
+	return !known_noise.some((n) => text.includes(n));
 };
 
 /** Attach console-error + pageerror collectors; returns a getter for accumulated severe errors. */
 const collect_errors = (page: import("@playwright/test").Page) => {
 	const severe: string[] = [];
-	page.on("console", msg => {
+	page.on("console", (msg) => {
 		if (is_severe(msg)) severe.push(`console.error: ${msg.text()}`);
 	});
-	page.on("pageerror", err => {
+	page.on("pageerror", (err) => {
 		severe.push(`pageerror: ${err.message}`);
 	});
 	return () => severe;

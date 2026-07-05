@@ -1,6 +1,14 @@
 import { Empty } from "@f0rbit/ui";
 import { createResource, createSignal, Show } from "solid-js";
-import { calculateActivityByWeek, calculateContentTypes, calculateDashboardStats, calculatePlatformDistribution, getItemsForDate, getRecentItems, type DashboardStats as Stats } from "@/utils/analytics";
+import {
+	calculateActivityByWeek,
+	calculateContentTypes,
+	calculateDashboardStats,
+	calculatePlatformDistribution,
+	getItemsForDate,
+	getRecentItems,
+	type DashboardStats as Stats,
+} from "@/utils/analytics";
 import { getClient } from "@/utils/client";
 import type { ProfileTimelineResponse } from "@/utils/types";
 import { ResourceState } from "../ResourceState";
@@ -49,13 +57,16 @@ export default function Dashboard(props: DashboardProps) {
 		},
 		{
 			initialValue: props.initialTimeline ?? undefined,
-		}
+		},
 	);
 
 	return (
 		<div class="dashboard">
 			<Show when={!props.profileSlug}>
-				<Empty title="No profile selected" description="Select a profile from the dropdown above to view your dashboard.">
+				<Empty
+					title="No profile selected"
+					description="Select a profile from the dropdown above to view your dashboard."
+				>
 					<a href="/connections" class="btn">
 						Manage Profiles
 					</a>
@@ -64,7 +75,7 @@ export default function Dashboard(props: DashboardProps) {
 
 			<Show when={props.profileSlug}>
 				<ResourceState resource={data} loadingMessage="Loading dashboard..." errorPrefix="Failed to load dashboard">
-					{response => <DashboardContent response={response} />}
+					{(response) => <DashboardContent response={response} />}
 				</ResourceState>
 			</Show>
 		</div>
@@ -111,7 +122,10 @@ function DashboardContent(props: DashboardContentProps) {
 	return (
 		<>
 			<Show when={stats().totalEntries === 0}>
-				<Empty title="No activity data yet" description="Your dashboard will show analytics once you connect platforms and run a sync.">
+				<Empty
+					title="No activity data yet"
+					description="Your dashboard will show analytics once you connect platforms and run a sync."
+				>
 					<a href="/connections" class="btn">
 						Connect Platforms
 					</a>
@@ -129,9 +143,14 @@ function DashboardContent(props: DashboardContentProps) {
 				<Show when={activity().length > 0}>
 					<section class="dashboard-section" style={{ display: "flex", "align-items": "center" }}>
 						<h3>Activity</h3>
-						<ActivityChart activity={activity()} onSelectDate={handleDateSelect} selectedDate={selectedDate()} maxCount={maxActivityCount()} />
+						<ActivityChart
+							activity={activity()}
+							onSelectDate={handleDateSelect}
+							selectedDate={selectedDate()}
+							maxCount={maxActivityCount()}
+						/>
 						<Show when={selectedDate()} keyed>
-							{date => <ActivityPreview date={date} items={selectedDateItems()} />}
+							{(date) => <ActivityPreview date={date} items={selectedDateItems()} />}
 						</Show>
 					</section>
 				</Show>

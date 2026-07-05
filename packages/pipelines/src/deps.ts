@@ -33,7 +33,12 @@ import type { PipelineEnv } from "./bindings.ts";
 import { make_cf_router } from "./do-router.ts";
 import { make_d1_approval_store } from "./providers/approval-store.ts";
 import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
-import { make_corpus_bundle_provider, make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "./providers/corpus-providers.ts";
+import {
+	make_corpus_bundle_provider,
+	make_corpus_lineage_provider,
+	make_corpus_manifest_provider,
+	make_corpus_template_resolver,
+} from "./providers/corpus-providers.ts";
 import { make_github_oidc_verifier, type OidcVerifier } from "./providers/oidc-verifier.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
 import { make_session_signer, type SessionSigner } from "./providers/session-signer.ts";
@@ -75,15 +80,15 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
 	};
 	return {
 		versions: {
-			upload: async input => (await get_provider()).versions.upload(input),
-			list: async script_name => (await get_provider()).versions.list(script_name),
+			upload: async (input) => (await get_provider()).versions.upload(input),
+			list: async (script_name) => (await get_provider()).versions.list(script_name),
 		},
 		deployments: {
-			create: async input => (await get_provider()).deployments.create(input),
-			list: async script_name => (await get_provider()).deployments.list(script_name),
+			create: async (input) => (await get_provider()).deployments.create(input),
+			list: async (script_name) => (await get_provider()).deployments.list(script_name),
 		},
 		workers: {
-			get: async script_name => (await get_provider()).workers.get(script_name),
+			get: async (script_name) => (await get_provider()).workers.get(script_name),
 		},
 		async assert_version_key_header_routed(input) {
 			return (await get_provider()).assert_version_key_header_routed(input);
@@ -107,7 +112,10 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
  * split stays — it's only the upstream platform bindings that are
  * singletons.
  */
-const default_bindings_for = (_input: { package_name: string; environment: "staging" | "production" }): VersionBinding[] => {
+const default_bindings_for = (_input: {
+	package_name: string;
+	environment: "staging" | "production";
+}): VersionBinding[] => {
 	// vault's `AnthropicVault` is exported as the module default —
 	// service bindings that target the default export must NOT specify
 	// an `entrypoint`. (Setting `entrypoint: "AnthropicVault"` triggers
@@ -186,7 +194,7 @@ export const build_routes_deps_from_env = (env: PipelineEnv, verify_session?: Se
 	const core = build_core(env);
 	const signer: SessionSigner = make_session_signer(env);
 	const session_verifier_from_signer: SessionVerifier = {
-		verify: async token => {
+		verify: async (token) => {
 			const result = await signer.verify(token);
 			if (!result.ok) return err({ code: "invalid_session", message: result.error.reason });
 			return ok(result.value);
@@ -194,18 +202,25 @@ export const build_routes_deps_from_env = (env: PipelineEnv, verify_session?: Se
 	};
 	const verifier = verify_session ?? session_verifier_from_signer;
 	const auth: AuthGate<AuthIdentity> = {
-		check: request => authenticate_request(env, request, { verify_session: verifier }),
+		check: (request) => authenticate_request(env, request, { verify_session: verifier }),
 	};
-	const pulse_lite: PulseEmitterLite = { emit: async event => core.pulse.emit(event as never) };
-	const verifier_oidc: OidcVerifier = make_github_oidc_verifier({ expected_audience: env.OIDC_EXPECTED_AUDIENCE ?? "" });
+	const pulse_lite: PulseEmitterLite = { emit: async (event) => core.pulse.emit(event as never) };
+	const verifier_oidc: OidcVerifier = make_github_oidc_verifier({
+		expected_audience: env.OIDC_EXPECTED_AUDIENCE ?? "",
+	});
 	const oidc_deps: OidcDeps = {
-		verify_oidc: jwt => verifier_oidc.verify(jwt),
-		sign_session: claims => signer.sign(claims),
-		verify_session: token => signer.verify(token),
+		verify_oidc: (jwt) => verifier_oidc.verify(jwt),
+		sign_session: (claims) => signer.sign(claims),
+		verify_session: (token) => signer.verify(token),
 	};
 	return {
 		db: core.db,
-		do_router: make_cf_router(env.PIPELINE_RUNS as unknown as { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } }),
+		do_router: make_cf_router(
+			env.PIPELINE_RUNS as unknown as {
+				idFromName(name: string): unknown;
+				get(id: unknown): { fetch(request: Request): Promise<Response> };
+			},
+		),
 		manifests: core.manifests,
 		templates: make_corpus_template_resolver(core.backend, core.manifests),
 		lineage: make_corpus_lineage_provider(core.backend),
@@ -232,8 +247,8 @@ export const build_oidc_deps_from_env = (env: PipelineEnv): OidcDeps => {
 	const verifier: OidcVerifier = make_github_oidc_verifier({ expected_audience: env.OIDC_EXPECTED_AUDIENCE ?? "" });
 	const signer: SessionSigner = make_session_signer(env);
 	return {
-		verify_oidc: jwt => verifier.verify(jwt),
-		sign_session: claims => signer.sign(claims),
-		verify_session: token => signer.verify(token),
+		verify_oidc: (jwt) => verifier.verify(jwt),
+		sign_session: (claims) => signer.sign(claims),
+		verify_session: (token) => signer.verify(token),
 	};
 };

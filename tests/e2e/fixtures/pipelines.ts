@@ -27,17 +27,44 @@ import { Database } from "bun:sqlite";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
-import { pipeline_analysis_template, pipeline_package, pipeline_run, project, session, user } from "@devpad/schema/database/schema";
+import {
+	pipeline_analysis_template,
+	pipeline_package,
+	pipeline_run,
+	project,
+	session,
+	user,
+} from "@devpad/schema/database/schema";
 import type { Database as DrizzleDatabase } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
-import { E2E_AWAITING_STAGE, E2E_PKG_ID, E2E_PROJECT_ID, E2E_PROJECT_NO_PKG, E2E_RUN_AWAITING, E2E_RUN_COMPLETED, E2E_SESSION_ID, E2E_TEMPLATE_ID, E2E_USER_ID } from "./pipeline-ids.ts";
+import {
+	E2E_AWAITING_STAGE,
+	E2E_PKG_ID,
+	E2E_PROJECT_ID,
+	E2E_PROJECT_NO_PKG,
+	E2E_RUN_AWAITING,
+	E2E_RUN_COMPLETED,
+	E2E_SESSION_ID,
+	E2E_TEMPLATE_ID,
+	E2E_USER_ID,
+} from "./pipeline-ids.ts";
 
 /**
  * Re-export the fixture ids from the node-safe `./pipeline-ids` module (single
  * source of truth). Specs import ids from `./pipeline-ids` directly to avoid
  * pulling `bun:sqlite` into Playwright's node loader; the seed imports them here.
  */
-export { E2E_AWAITING_STAGE, E2E_PKG_ID, E2E_PROJECT_ID, E2E_PROJECT_NO_PKG, E2E_RUN_AWAITING, E2E_RUN_COMPLETED, E2E_SESSION_ID, E2E_TEMPLATE_ID, E2E_USER_ID };
+export {
+	E2E_AWAITING_STAGE,
+	E2E_PKG_ID,
+	E2E_PROJECT_ID,
+	E2E_PROJECT_NO_PKG,
+	E2E_RUN_AWAITING,
+	E2E_RUN_COMPLETED,
+	E2E_SESSION_ID,
+	E2E_TEMPLATE_ID,
+	E2E_USER_ID,
+};
 
 /** Far-future session expiry (unix seconds, fixed): 2099-01-01T00:00:00Z. */
 const SESSION_EXPIRES_AT = 4_070_908_800;

@@ -23,7 +23,12 @@ export type SessionValidationResult = {
 	session: SessionData;
 };
 
-export type AuthError = { kind: "session_not_found" } | { kind: "session_expired" } | { kind: "not_found"; resource: string; user_id: string } | { kind: "invalid_state" } | { kind: "db_error"; message: string };
+export type AuthError =
+	| { kind: "session_not_found" }
+	| { kind: "session_expired" }
+	| { kind: "not_found"; resource: string; user_id: string }
+	| { kind: "invalid_state" }
+	| { kind: "db_error"; message: string };
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_REFRESH_THRESHOLD_MS = 15 * 24 * 60 * 60 * 1000;
@@ -32,7 +37,11 @@ export function generateSessionId(): string {
 	return crypto.randomUUID();
 }
 
-export async function createSession(db: Database, user_id: string, access_token: string): Promise<Result<SessionData, AuthError>> {
+export async function createSession(
+	db: Database,
+	user_id: string,
+	access_token: string,
+): Promise<Result<SessionData, AuthError>> {
 	const session_id = generateSessionId();
 	const expires_at = Math.floor((Date.now() + SESSION_DURATION_MS) / 1000);
 
@@ -58,7 +67,10 @@ export async function createSession(db: Database, user_id: string, access_token:
 	});
 }
 
-export async function validateSession(db: Database, session_id: string): Promise<Result<SessionValidationResult, AuthError>> {
+export async function validateSession(
+	db: Database,
+	session_id: string,
+): Promise<Result<SessionValidationResult, AuthError>> {
 	const rows = await db
 		.select({
 			session_id: session.id,

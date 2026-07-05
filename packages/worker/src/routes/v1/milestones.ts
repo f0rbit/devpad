@@ -7,7 +7,7 @@ import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
 
-app.get("/", requireAuth, async c => {
+app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
@@ -16,7 +16,7 @@ app.get("/", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/:id", requireAuth, async c => {
+app.get("/:id", requireAuth, async (c) => {
 	const db = c.get("db");
 	const milestone_id = c.req.param("id");
 
@@ -31,7 +31,7 @@ app.get("/:id", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.post("/", requireAuth, zValidator("json", upsert_milestone), async c => {
+app.post("/", requireAuth, zValidator("json", upsert_milestone), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
@@ -40,14 +40,23 @@ app.post("/", requireAuth, zValidator("json", upsert_milestone), async c => {
 	const result = await milestones.upsertMilestone(db, data, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
+		if (result.error.kind === "protected")
+			return c.json(
+				{
+					error: result.error.message,
+					entity_id: result.error.entity_id,
+					modified_by: result.error.modified_by,
+					modified_at: result.error.modified_at,
+				},
+				409,
+			);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
 });
 
-app.patch("/:id", requireAuth, zValidator("json", upsert_milestone), async c => {
+app.patch("/:id", requireAuth, zValidator("json", upsert_milestone), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const milestone_id = c.req.param("id");
@@ -60,14 +69,23 @@ app.patch("/:id", requireAuth, zValidator("json", upsert_milestone), async c => 
 	const result = await milestones.upsertMilestone(db, update_data, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
+		if (result.error.kind === "protected")
+			return c.json(
+				{
+					error: result.error.message,
+					entity_id: result.error.entity_id,
+					modified_by: result.error.modified_by,
+					modified_at: result.error.modified_at,
+				},
+				409,
+			);
 		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
 });
 
-app.delete("/:id", requireAuth, async c => {
+app.delete("/:id", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const milestone_id = c.req.param("id");
@@ -84,7 +102,7 @@ app.delete("/:id", requireAuth, async c => {
 	return c.json({ success: true, message: "Milestone deleted" });
 });
 
-app.get("/:id/goals", requireAuth, async c => {
+app.get("/:id/goals", requireAuth, async (c) => {
 	const db = c.get("db");
 	const milestone_id = c.req.param("id");
 

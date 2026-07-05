@@ -32,7 +32,7 @@ export const loadGitHubData = async (backend: Backend, accountId: string): Promi
 			for (const commit of snapshotResult.value.data.commits) {
 				commits.push({ ...commit, _repo: fullName });
 			}
-		})
+		}),
 	);
 
 	const prStores = await store.github.list.prs(backend, accountId);
@@ -49,7 +49,7 @@ export const loadGitHubData = async (backend: Backend, accountId: string): Promi
 			for (const pr of snapshotResult.value.data.pull_requests) {
 				prs.push({ ...pr, _repo: fullName });
 			}
-		})
+		}),
 	);
 
 	log.info("Loaded GitHub data", { account_id: accountId, commits: commits.length, prs: prs.length });

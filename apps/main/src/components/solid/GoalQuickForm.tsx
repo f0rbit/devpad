@@ -86,17 +86,31 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 					<label for="goal-name" class="form-field-label">
 						Goal Name *
 					</label>
-					<input type="text" id="goal-name" value={state.name} onInput={e => setState({ name: e.target.value })} placeholder="Enter goal name..." disabled={requestState() === "loading"} required />
+					<input
+						type="text"
+						id="goal-name"
+						value={state.name}
+						onInput={(e) => setState({ name: e.target.value })}
+						placeholder="Enter goal name..."
+						disabled={requestState() === "loading"}
+						required
+					/>
 				</div>
 
 				<div class="form-field">
 					<label for="goal-milestone" class="form-field-label">
 						Milestone *
 					</label>
-					<select id="goal-milestone" value={state.milestone_id} onChange={e => setState({ milestone_id: e.target.value })} disabled={requestState() === "loading" || mode === "edit"} required>
+					<select
+						id="goal-milestone"
+						value={state.milestone_id}
+						onChange={(e) => setState({ milestone_id: e.target.value })}
+						disabled={requestState() === "loading" || mode === "edit"}
+						required
+					>
 						<option value="">Select milestone</option>
 						<For each={milestones}>
-							{milestone => (
+							{(milestone) => (
 								<option value={milestone.id} selected={milestone.id === state.milestone_id}>
 									{milestone.name}
 								</option>
@@ -112,7 +126,14 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 					<label for="goal-description" class="form-field-label">
 						Description
 					</label>
-					<textarea id="goal-description" value={state.description} onInput={e => setState({ description: e.target.value })} placeholder="Optional description..." disabled={requestState() === "loading"} rows={3} />
+					<textarea
+						id="goal-description"
+						value={state.description}
+						onInput={(e) => setState({ description: e.target.value })}
+						placeholder="Optional description..."
+						disabled={requestState() === "loading"}
+						rows={3}
+					/>
 				</div>
 
 				<div class="form-field">
@@ -123,7 +144,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 						type="date"
 						id="goal-target-time"
 						value={state.target_time ? state.target_time.split("T")[0] : ""}
-						onInput={e => setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" })}
+						onInput={(e) => setState({ target_time: e.target.value ? e.target.value + "T00:00:00.000Z" : "" })}
 						disabled={requestState() === "loading"}
 					/>
 				</div>

@@ -26,7 +26,10 @@ const make_fake_verifier = (claims_by_jwt: Map<string, VerifiedOidcClaims>) => (
 	},
 });
 
-const make_fake_signer = (): { sign: (c: OidcSessionClaims) => Promise<Result<string, { reason: string }>>; signed: OidcSessionClaims[] } => {
+const make_fake_signer = (): {
+	sign: (c: OidcSessionClaims) => Promise<Result<string, { reason: string }>>;
+	signed: OidcSessionClaims[];
+} => {
 	const signed: OidcSessionClaims[] = [];
 	return {
 		signed,
@@ -42,11 +45,13 @@ const make_fake_signer = (): { sign: (c: OidcSessionClaims) => Promise<Result<st
 	};
 };
 
-const make_clock = (start: Date = new Date("2026-05-19T00:00:00Z")): { now: () => Date; advance: (ms: number) => void } => {
+const make_clock = (
+	start: Date = new Date("2026-05-19T00:00:00Z"),
+): { now: () => Date; advance: (ms: number) => void } => {
 	let current = start;
 	return {
 		now: () => current,
-		advance: ms => {
+		advance: (ms) => {
 			current = new Date(current.getTime() + ms);
 		},
 	};
@@ -72,7 +77,7 @@ const seed_trust_policy = async (
 		allowed_actions: string[];
 		session_ttl_seconds: number;
 		created_at: string;
-	}> = {}
+	}> = {},
 ): Promise<{ id: string }> => {
 	const now = overrides.created_at ?? new Date().toISOString();
 	const id = overrides.id ?? `pipeline-oidc-trust_${Math.random().toString(36).slice(2, 8)}`;
@@ -125,7 +130,11 @@ describe("exchange_oidc_for_session — happy path", () => {
 		db = create_test_db();
 		const u = await seed_user(db);
 		owner_id = u.id;
-		await seed_package(db, owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 	});
 
 	test("mints a session for a matching policy + valid package", async () => {
@@ -137,7 +146,7 @@ describe("exchange_oidc_for_session — happy path", () => {
 
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: clock.now, new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 
 		expect(result.ok).toBe(true);
@@ -165,11 +174,11 @@ describe("exchange_oidc_for_session — happy path", () => {
 
 		await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: clock.now, new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 
 		const rows = await db.select().from(pipeline_oidc_trust);
-		const row = rows.find(r => r.id === policy.id);
+		const row = rows.find((r) => r.id === policy.id);
 		expect(row?.last_used_at).toBe(clock.now().toISOString());
 	});
 
@@ -181,7 +190,7 @@ describe("exchange_oidc_for_session — happy path", () => {
 
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a" }
+			{ jwt: "jwt_a" },
 		);
 
 		expect(result.ok).toBe(true);
@@ -194,8 +203,20 @@ describe("exchange_oidc_for_session — happy path", () => {
 		const t_old = "2026-01-01T00:00:00Z";
 		const t_new = "2026-05-01T00:00:00Z";
 		// Older one is permissive; newer one tightens to main
-		await seed_trust_policy(db, owner_id, { id: "policy_old", repo_pattern: "*", allowed_refs: [], created_at: t_old, allowed_actions: ["artifacts:upload"] });
-		await seed_trust_policy(db, owner_id, { id: "policy_new", repo_pattern: "*", allowed_refs: ["refs/heads/main"], created_at: t_new, allowed_actions: ["artifacts:upload", "runs:start"] });
+		await seed_trust_policy(db, owner_id, {
+			id: "policy_old",
+			repo_pattern: "*",
+			allowed_refs: [],
+			created_at: t_old,
+			allowed_actions: ["artifacts:upload"],
+		});
+		await seed_trust_policy(db, owner_id, {
+			id: "policy_new",
+			repo_pattern: "*",
+			allowed_refs: ["refs/heads/main"],
+			created_at: t_new,
+			allowed_actions: ["artifacts:upload", "runs:start"],
+		});
 
 		const claims = make_branch_claims();
 		const verifier = make_fake_verifier(new Map([["jwt_a", claims]]));
@@ -203,7 +224,7 @@ describe("exchange_oidc_for_session — happy path", () => {
 
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 
 		expect(result.ok).toBe(true);
@@ -220,7 +241,7 @@ describe("exchange_oidc_for_session — happy path", () => {
 
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg", requested_scope: ["artifacts:upload"] }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg", requested_scope: ["artifacts:upload"] },
 		);
 
 		expect(result.ok).toBe(true);
@@ -236,7 +257,7 @@ describe("exchange_oidc_for_session — happy path", () => {
 
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg", requested_scope: ["artifacts:upload", "unknown:scope"] }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg", requested_scope: ["artifacts:upload", "unknown:scope"] },
 		);
 
 		expect(result.ok).toBe(true);
@@ -252,7 +273,11 @@ describe("exchange_oidc_for_session — invalid_oidc_token", () => {
 		db = create_test_db();
 		const u = await seed_user(db);
 		owner_id = u.id;
-		await seed_package(db, owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 		await seed_trust_policy(db, owner_id);
 	});
 
@@ -261,7 +286,7 @@ describe("exchange_oidc_for_session — invalid_oidc_token", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_unknown", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_unknown", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -274,7 +299,7 @@ describe("exchange_oidc_for_session — invalid_oidc_token", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -286,7 +311,7 @@ describe("exchange_oidc_for_session — invalid_oidc_token", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "" }
+			{ jwt: "" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -301,7 +326,11 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		db = create_test_db();
 		const u = await seed_user(db);
 		owner_id = u.id;
-		await seed_package(db, owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 	});
 
 	test("no policies configured", async () => {
@@ -310,7 +339,7 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -324,7 +353,7 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -338,7 +367,7 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -352,7 +381,7 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -366,7 +395,7 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -380,7 +409,7 @@ describe("exchange_oidc_for_session — trust_policy_failed", () => {
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -395,7 +424,11 @@ describe("exchange_oidc_for_session — wildcard semantics on empty arrays", () 
 		db = create_test_db();
 		const u = await seed_user(db);
 		owner_id = u.id;
-		await seed_package(db, owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 	});
 
 	test("empty allowed_refs accepts any ref", async () => {
@@ -405,7 +438,7 @@ describe("exchange_oidc_for_session — wildcard semantics on empty arrays", () 
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(true);
 	});
@@ -417,7 +450,7 @@ describe("exchange_oidc_for_session — wildcard semantics on empty arrays", () 
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(true);
 	});
@@ -429,7 +462,7 @@ describe("exchange_oidc_for_session — wildcard semantics on empty arrays", () 
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
 		);
 		expect(result.ok).toBe(true);
 	});
@@ -451,7 +484,7 @@ describe("exchange_oidc_for_session — package_not_found / package_scope_mismat
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_does-not-exist" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_does-not-exist" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -459,13 +492,17 @@ describe("exchange_oidc_for_session — package_not_found / package_scope_mismat
 	});
 
 	test("package_scope_mismatch when repo_url disagrees with claims.repository", async () => {
-		await seed_package(db, owner_id, { id: "pipeline-package_wrong-repo", name: "wrong-repo", repo_url: "https://github.com/other-org/wrong-repo" });
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_wrong-repo",
+			name: "wrong-repo",
+			repo_url: "https://github.com/other-org/wrong-repo",
+		});
 		const claims = make_branch_claims();
 		const verifier = make_fake_verifier(new Map([["jwt_a", claims]]));
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_wrong-repo" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_wrong-repo" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
@@ -482,7 +519,7 @@ describe("exchange_oidc_for_session — package_not_found / package_scope_mismat
 		const signer = make_fake_signer();
 		const result = await exchange_oidc_for_session(
 			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
-			{ jwt: "jwt_a", package_id: "pipeline-package_unbound" }
+			{ jwt: "jwt_a", package_id: "pipeline-package_unbound" },
 		);
 		expect(result.ok).toBe(false);
 		if (result.ok) return;

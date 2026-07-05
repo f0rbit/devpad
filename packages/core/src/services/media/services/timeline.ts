@@ -31,7 +31,10 @@ const RawSnapshotSchema = z.object({
 type TimelineSnapshot = z.infer<typeof TimelineSnapshotSchema>;
 type RawSnapshot = z.infer<typeof RawSnapshotSchema>;
 
-type TimelineGetError = { kind: "store_error"; status: 500 } | { kind: "not_found"; status: 404 } | { kind: "parse_error"; status: 500 };
+type TimelineGetError =
+	| { kind: "store_error"; status: 500 }
+	| { kind: "not_found"; status: 404 }
+	| { kind: "parse_error"; status: 500 };
 
 type RawRouteError = CorpusError | LibCorpusError | { kind: "parse_error"; message: string };
 
@@ -50,7 +53,11 @@ type RawDataResult = {
 	data: z.infer<typeof RawDataSchema>;
 };
 
-const get = async (ctx: AppContext, userId: string, options: TimelineOptions): Promise<Result<TimelineResult, ServiceError>> => {
+const get = async (
+	ctx: AppContext,
+	userId: string,
+	options: TimelineOptions,
+): Promise<Result<TimelineResult, ServiceError>> => {
 	const { from, to } = options;
 
 	const githubAccounts = await ctx.db
@@ -59,7 +66,7 @@ const get = async (ctx: AppContext, userId: string, options: TimelineOptions): P
 		.innerJoin(profiles, eq(accounts.profile_id, profiles.id))
 		.where(and(eq(profiles.user_id, userId), eq(accounts.platform, "github"), eq(accounts.is_active, true)));
 
-	const githubUsernames = githubAccounts.map(a => a.platform_username).filter((u): u is string => u !== null);
+	const githubUsernames = githubAccounts.map((a) => a.platform_username).filter((u): u is string => u !== null);
 
 	const result = await pipe(store.timeline(ctx.backend, userId))
 		.map_err((): TimelineGetError => ({ kind: "store_error", status: 500 }))
@@ -67,7 +74,9 @@ const get = async (ctx: AppContext, userId: string, options: TimelineOptions): P
 		.flat_map(async (s): Promise<Result<TimelineSnapshot, TimelineGetError>> => {
 			const latest = await s.get_latest();
 			if (!latest.ok) {
-				return latest.error.kind === "not_found" ? err({ kind: "not_found" as const, status: 404 as const }) : err({ kind: "store_error" as const, status: 500 as const });
+				return latest.error.kind === "not_found"
+					? err({ kind: "not_found" as const, status: 404 as const })
+					: err({ kind: "store_error" as const, status: 500 as const });
 			}
 			return ok(latest.value as TimelineSnapshot);
 		})
@@ -75,8 +84,8 @@ const get = async (ctx: AppContext, userId: string, options: TimelineOptions): P
 			const parsed = TimelineSnapshotSchema.safeParse(raw);
 			return parsed.success ? ok(parsed.data) : err({ kind: "parse_error" as const, status: 500 as const });
 		})
-		.map(snapshot => {
-			const filteredGroups = snapshot.data.groups.filter(group => {
+		.map((snapshot) => {
+			const filteredGroups = snapshot.data.groups.filter((group) => {
 				if (from && group.date < from) return false;
 				if (to && group.date > to) return false;
 				return true;
@@ -100,7 +109,12 @@ const get = async (ctx: AppContext, userId: string, options: TimelineOptions): P
 	return ok(result.value);
 };
 
-const getRaw = async (ctx: AppContext, _userId: string, platform: string, accountId: string): Promise<Result<RawDataResult, ServiceError>> => {
+const getRaw = async (
+	ctx: AppContext,
+	_userId: string,
+	platform: string,
+	accountId: string,
+): Promise<Result<RawDataResult, ServiceError>> => {
 	const result = await pipe(store.raw(ctx.backend, platform, accountId))
 		.map_err((e): RawRouteError => e)
 		.map(({ store: s }) => s)
@@ -113,7 +127,7 @@ const getRaw = async (ctx: AppContext, _userId: string, platform: string, accoun
 			const parsed = RawSnapshotSchema.safeParse(raw);
 			return parsed.success ? ok(parsed.data) : err({ kind: "parse_error", message: parsed.error.message });
 		})
-		.map(snapshot => ({ meta: snapshot.meta, data: snapshot.data }))
+		.map((snapshot) => ({ meta: snapshot.meta, data: snapshot.data }))
 		.result();
 
 	if (!result.ok) {

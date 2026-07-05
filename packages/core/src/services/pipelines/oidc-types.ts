@@ -53,7 +53,8 @@ export const parse_oidc_subject = (sub: string): Result<OidcSubject, SubjectPars
 	}
 	const rest = sub.slice(SUB_REPO_PREFIX.length);
 	const first_colon = rest.indexOf(":");
-	if (first_colon === -1) return err({ kind: "subject_parse_failed", sub, reason: "missing context after '<owner>/<repo>'" });
+	if (first_colon === -1)
+		return err({ kind: "subject_parse_failed", sub, reason: "missing context after '<owner>/<repo>'" });
 	const repo_full = rest.slice(0, first_colon);
 	const context = rest.slice(first_colon + 1);
 	const slash = repo_full.indexOf("/");

@@ -78,10 +78,21 @@ export default function PlatformSetupForm(props: Props) {
 	return (
 		<form onSubmit={handleSubmit} class="setup-form">
 			<FormField label={config().tokenLabel} id="platform-token" required>
-				<Input id="platform-token" type="password" value={token()} onInput={e => setToken(e.currentTarget.value)} placeholder={config().tokenPlaceholder} />
+				<Input
+					id="platform-token"
+					type="password"
+					value={token()}
+					onInput={(e) => setToken(e.currentTarget.value)}
+					placeholder={config().tokenPlaceholder}
+				/>
 			</FormField>
 			<FormField label={`${config().usernameLabel} (optional)`} id="platform-username" description={config().helpText}>
-				<Input id="platform-username" value={username()} onInput={e => setUsername(e.currentTarget.value)} placeholder={config().usernamePlaceholder} />
+				<Input
+					id="platform-username"
+					value={username()}
+					onInput={(e) => setUsername(e.currentTarget.value)}
+					placeholder={config().usernamePlaceholder}
+				/>
 			</FormField>
 			<Show when={error()}>
 				<p class="text-sm" style={{ color: "var(--error-fg)" }}>

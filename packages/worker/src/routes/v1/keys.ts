@@ -11,7 +11,7 @@ const create_key_schema = z.object({
 	scope: z.enum(["devpad", "blog", "media", "pulse", "all"]).optional(),
 });
 
-app.get("/", requireAuth, async c => {
+app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
@@ -20,7 +20,7 @@ app.get("/", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.post("/", requireAuth, async c => {
+app.post("/", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
@@ -35,7 +35,7 @@ app.post("/", requireAuth, async c => {
 	return c.json({ message: "API key created successfully", key: result.value });
 });
 
-app.delete("/:key_id", requireAuth, async c => {
+app.delete("/:key_id", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const key_id = c.req.param("key_id");

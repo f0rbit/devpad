@@ -45,7 +45,7 @@ describe("InMemoryGithubProvider", () => {
 		const runs = await gh.actions.runs.list({ owner: "f0rbit", repo: "devpad" });
 		if (!runs.ok) throw new Error(runs.error.message);
 		expect(runs.value).toHaveLength(2);
-		expect(runs.value.every(r => r.status === "queued")).toBe(true);
+		expect(runs.value.every((r) => r.status === "queued")).toBe(true);
 	});
 
 	test("set_run_conclusion mutates the recorded run", async () => {

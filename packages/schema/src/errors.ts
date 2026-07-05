@@ -13,7 +13,12 @@ export type ParseError = BaseError & { kind: "parse_error" };
 export type EncryptionError = BaseError & { kind: "encryption_error"; operation: "encrypt" | "decrypt" };
 export type DatabaseError = BaseError & { kind: "db_error" };
 export type ConflictError = BaseError & { kind: "conflict"; resource?: string };
-export type ProtectedError = BaseError & { kind: "protected"; entity_id?: string; modified_by?: string; modified_at?: string };
+export type ProtectedError = BaseError & {
+	kind: "protected";
+	entity_id?: string;
+	modified_by?: string;
+	modified_at?: string;
+};
 export type BadRequestError = BaseError & { kind: "bad_request"; details?: unknown };
 export type UnauthorizedError = BaseError & { kind: "unauthorized" };
 export type ScanError = BaseError & { kind: "scan_error" };
@@ -43,29 +48,49 @@ export type ServiceError =
 export type ProviderError = RateLimitedError | AuthExpiredError | NetworkError | ApiError | ParseError;
 export type CronError = StoreError | NetworkError | AuthExpiredError | EncryptionError;
 
-export type ErrorContext = { timestamp: string; stack?: string; requestId?: string; userId?: string; operation?: string; [key: string]: unknown };
+export type ErrorContext = {
+	timestamp: string;
+	stack?: string;
+	requestId?: string;
+	userId?: string;
+	operation?: string;
+	[key: string]: unknown;
+};
 export type ErrorLogEntry = { error: ServiceError; context: ErrorContext };
 type ErrorLogFn = (entry: ErrorLogEntry) => void;
 
 const defaultLogger: ErrorLogFn = ({ error, context }) => {
-	console.error(`[${context.timestamp}] [${error.kind}]`, error.message || error.kind, { ...error, stack: context.stack?.split("\n").slice(2, 5).join("\n"), ...context });
+	console.error(`[${context.timestamp}] [${error.kind}]`, error.message || error.kind, {
+		...error,
+		stack: context.stack?.split("\n").slice(2, 5).join("\n"),
+		...context,
+	});
 };
 
 let errorLogger: ErrorLogFn = defaultLogger;
 let contextProvider: (() => Partial<ErrorContext>) | null = null;
 
-export const configureErrorLogging = (config: { logger?: ErrorLogFn; contextProvider?: () => Partial<ErrorContext> }) => {
+export const configureErrorLogging = (config: {
+	logger?: ErrorLogFn;
+	contextProvider?: () => Partial<ErrorContext>;
+}) => {
 	if (config.logger) errorLogger = config.logger;
 	if (config.contextProvider) contextProvider = config.contextProvider;
 };
 
 const logAndReturn = <E extends ServiceError>(error: E, ctx?: Record<string, unknown>): Result<never, E> => {
-	const context: ErrorContext = { timestamp: new Date().toISOString(), stack: new Error().stack, ...contextProvider?.(), ...ctx };
+	const context: ErrorContext = {
+		timestamp: new Date().toISOString(),
+		stack: new Error().stack,
+		...contextProvider?.(),
+		...ctx,
+	};
 	errorLogger({ error, context });
 	return err(error);
 };
 
-const hasKind = (e: unknown, kind: string): boolean => typeof e === "object" && e !== null && "kind" in e && (e as { kind: string }).kind === kind;
+const hasKind = (e: unknown, kind: string): boolean =>
+	typeof e === "object" && e !== null && "kind" in e && (e as { kind: string }).kind === kind;
 
 export const isNotFoundError = (e: unknown): e is NotFoundError => hasKind(e, "not_found");
 export const isForbiddenError = (e: unknown): e is ForbiddenError => hasKind(e, "forbidden");
@@ -106,26 +131,82 @@ export const isServiceError = (e: unknown): e is ServiceError =>
 	isGithubError(e);
 export const isRetryableError = (e: unknown): boolean => isRateLimitedError(e) || isNetworkError(e);
 
-export const notFound = (resource: string, id?: string, ctx?: Record<string, unknown>): Result<never, NotFoundError> => logAndReturn({ kind: "not_found", resource, ...(id && { id }) }, ctx);
-export const forbidden = (reason?: string, ctx?: Record<string, unknown>): Result<never, ForbiddenError> => logAndReturn({ kind: "forbidden", ...(reason && { reason, message: reason }) }, ctx);
-export const validation = (errors: Record<string, string[]>, ctx?: Record<string, unknown>): Result<never, ValidationError> => logAndReturn({ kind: "validation", errors }, ctx);
-export const rateLimited = (retry_after?: number, ctx?: Record<string, unknown>): Result<never, RateLimitedError> => logAndReturn({ kind: "rate_limited", ...(retry_after !== undefined && { retry_after }) }, ctx);
-export const storeError = (operation: string, message?: string, ctx?: Record<string, unknown>): Result<never, StoreError> => logAndReturn({ kind: "store_error", operation, ...(message && { message }) }, ctx);
-export const networkError = (cause?: Error, message?: string, ctx?: Record<string, unknown>): Result<never, NetworkError> => logAndReturn({ kind: "network_error", ...(cause && { cause }), ...(message && { message }) }, ctx);
-export const authExpired = (message?: string, ctx?: Record<string, unknown>): Result<never, AuthExpiredError> => logAndReturn({ kind: "auth_expired", ...(message && { message }) }, ctx);
-export const apiError = (status: number, message?: string, ctx?: Record<string, unknown>): Result<never, ApiError> => logAndReturn({ kind: "api_error", status, ...(message && { message }) }, ctx);
-export const parseError = (message?: string, ctx?: Record<string, unknown>): Result<never, ParseError> => logAndReturn({ kind: "parse_error", ...(message && { message }) }, ctx);
-export const encryptionError = (operation: "encrypt" | "decrypt", message?: string, ctx?: Record<string, unknown>): Result<never, EncryptionError> => logAndReturn({ kind: "encryption_error", operation, ...(message && { message }) }, ctx);
-export const dbError = (message?: string, ctx?: Record<string, unknown>): Result<never, DatabaseError> => logAndReturn({ kind: "db_error", ...(message && { message }) }, ctx);
-export const conflict = (resource?: string, message?: string, ctx?: Record<string, unknown>): Result<never, ConflictError> => logAndReturn({ kind: "conflict", ...(resource && { resource }), ...(message && { message }) }, ctx);
-export const protectedEntity = (entity_id?: string, message?: string, modified_by?: string, modified_at?: string, ctx?: Record<string, unknown>): Result<never, ProtectedError> =>
-	logAndReturn({ kind: "protected", ...(entity_id && { entity_id }), ...(message && { message }), ...(modified_by && { modified_by }), ...(modified_at && { modified_at }) }, ctx);
-export const badRequest = (message?: string, details?: unknown, ctx?: Record<string, unknown>): Result<never, BadRequestError> =>
+export const notFound = (resource: string, id?: string, ctx?: Record<string, unknown>): Result<never, NotFoundError> =>
+	logAndReturn({ kind: "not_found", resource, ...(id && { id }) }, ctx);
+export const forbidden = (reason?: string, ctx?: Record<string, unknown>): Result<never, ForbiddenError> =>
+	logAndReturn({ kind: "forbidden", ...(reason && { reason, message: reason }) }, ctx);
+export const validation = (
+	errors: Record<string, string[]>,
+	ctx?: Record<string, unknown>,
+): Result<never, ValidationError> => logAndReturn({ kind: "validation", errors }, ctx);
+export const rateLimited = (retry_after?: number, ctx?: Record<string, unknown>): Result<never, RateLimitedError> =>
+	logAndReturn({ kind: "rate_limited", ...(retry_after !== undefined && { retry_after }) }, ctx);
+export const storeError = (
+	operation: string,
+	message?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, StoreError> => logAndReturn({ kind: "store_error", operation, ...(message && { message }) }, ctx);
+export const networkError = (
+	cause?: Error,
+	message?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, NetworkError> =>
+	logAndReturn({ kind: "network_error", ...(cause && { cause }), ...(message && { message }) }, ctx);
+export const authExpired = (message?: string, ctx?: Record<string, unknown>): Result<never, AuthExpiredError> =>
+	logAndReturn({ kind: "auth_expired", ...(message && { message }) }, ctx);
+export const apiError = (status: number, message?: string, ctx?: Record<string, unknown>): Result<never, ApiError> =>
+	logAndReturn({ kind: "api_error", status, ...(message && { message }) }, ctx);
+export const parseError = (message?: string, ctx?: Record<string, unknown>): Result<never, ParseError> =>
+	logAndReturn({ kind: "parse_error", ...(message && { message }) }, ctx);
+export const encryptionError = (
+	operation: "encrypt" | "decrypt",
+	message?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, EncryptionError> =>
+	logAndReturn({ kind: "encryption_error", operation, ...(message && { message }) }, ctx);
+export const dbError = (message?: string, ctx?: Record<string, unknown>): Result<never, DatabaseError> =>
+	logAndReturn({ kind: "db_error", ...(message && { message }) }, ctx);
+export const conflict = (
+	resource?: string,
+	message?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, ConflictError> =>
+	logAndReturn({ kind: "conflict", ...(resource && { resource }), ...(message && { message }) }, ctx);
+export const protectedEntity = (
+	entity_id?: string,
+	message?: string,
+	modified_by?: string,
+	modified_at?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, ProtectedError> =>
+	logAndReturn(
+		{
+			kind: "protected",
+			...(entity_id && { entity_id }),
+			...(message && { message }),
+			...(modified_by && { modified_by }),
+			...(modified_at && { modified_at }),
+		},
+		ctx,
+	);
+export const badRequest = (
+	message?: string,
+	details?: unknown,
+	ctx?: Record<string, unknown>,
+): Result<never, BadRequestError> =>
 	logAndReturn({ kind: "bad_request", ...(message && { message }), ...(details !== undefined && { details }) }, ctx);
-export const unauthorized = (message?: string, ctx?: Record<string, unknown>): Result<never, UnauthorizedError> => logAndReturn({ kind: "unauthorized", ...(message && { message }) }, ctx);
-export const scanError = (message?: string, ctx?: Record<string, unknown>): Result<never, ScanError> => logAndReturn({ kind: "scan_error", ...(message && { message }) }, ctx);
-export const githubError = (message?: string, ctx?: Record<string, unknown>): Result<never, GithubError> => logAndReturn({ kind: "github_error", ...(message && { message }) }, ctx);
-export const validationFieldError = (field: string, message?: string, ctx?: Record<string, unknown>): Result<never, ValidationFieldError> => logAndReturn({ kind: "validation_error", field, ...(message && { message }) }, ctx);
+export const unauthorized = (message?: string, ctx?: Record<string, unknown>): Result<never, UnauthorizedError> =>
+	logAndReturn({ kind: "unauthorized", ...(message && { message }) }, ctx);
+export const scanError = (message?: string, ctx?: Record<string, unknown>): Result<never, ScanError> =>
+	logAndReturn({ kind: "scan_error", ...(message && { message }) }, ctx);
+export const githubError = (message?: string, ctx?: Record<string, unknown>): Result<never, GithubError> =>
+	logAndReturn({ kind: "github_error", ...(message && { message }) }, ctx);
+export const validationFieldError = (
+	field: string,
+	message?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, ValidationFieldError> =>
+	logAndReturn({ kind: "validation_error", field, ...(message && { message }) }, ctx);
 
 export const errors = {
 	notFound,

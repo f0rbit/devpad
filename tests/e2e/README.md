@@ -34,11 +34,12 @@ array** booting both, with `baseURL: http://localhost:3000`.
 
 Commit `2255cb5` ("chore: delete packages/server (consolidated into worker)") removed
 `packages/server`, which had been serving SSR pages on `:3001` via `app.use(ssrHandler)`
-+ `serveStatic`. It repointed the Playwright `webServer` at the API-only worker **without
-restoring page-serving** — silently 404ing the entire page suite. Because E2E was not in
-CI at the time, nobody noticed until the pipelines-e2e plan. The unified SSR+API server
-(`createUnifiedWorker`) does exist but is a *build artifact* (`dist/_worker.js`), not
-wired into `bun run dev` — do not assume `:3001` serves pages.
+
+- `serveStatic`. It repointed the Playwright `webServer` at the API-only worker **without
+  restoring page-serving** — silently 404ing the entire page suite. Because E2E was not in
+  CI at the time, nobody noticed until the pipelines-e2e plan. The unified SSR+API server
+  (`createUnifiedWorker`) does exist but is a _build artifact_ (`dist/_worker.js`), not
+  wired into `bun run dev` — do not assume `:3001` serves pages.
 
 The two-server `webServer` array mirrors `dev:all` exactly and un-rots the page suite
 without any source changes.
@@ -118,15 +119,15 @@ local worker; they false-green.
 
 ## Spec inventory
 
-| Spec | Status | Covers |
-|------|--------|--------|
-| `pages.spec.ts` | green | basic page render smoke (todo, etc.) |
-| `pipelines-smoke.spec.ts` | green | seeded pipeline page renders under fake auth |
-| `pipelines-dashboard.spec.ts` | green | dashboard aggregated counts match the seed |
-| `pipelines-render.spec.ts` | green | tab render smoke, invalid-tab fallback, run-detail 404 |
-| `pipelines-degraded.spec.ts` | green | degraded-shell + pulse-unreachable render |
-| `happy-path.spec.ts` | **broken** | project-create workflow (see below) |
-| `pulse.spec.ts` | **broken** | pulse page (depends on project-create) |
+| Spec                          | Status     | Covers                                                 |
+| ----------------------------- | ---------- | ------------------------------------------------------ |
+| `pages.spec.ts`               | green      | basic page render smoke (todo, etc.)                   |
+| `pipelines-smoke.spec.ts`     | green      | seeded pipeline page renders under fake auth           |
+| `pipelines-dashboard.spec.ts` | green      | dashboard aggregated counts match the seed             |
+| `pipelines-render.spec.ts`    | green      | tab render smoke, invalid-tab fallback, run-detail 404 |
+| `pipelines-degraded.spec.ts`  | green      | degraded-shell + pulse-unreachable render              |
+| `happy-path.spec.ts`          | **broken** | project-create workflow (see below)                    |
+| `pulse.spec.ts`               | **broken** | pulse page (depends on project-create)                 |
 
 ## Known-broken specs (separate follow-up)
 
@@ -152,10 +153,10 @@ observed stable across several CI runs.
 
 ## Test Environments
 
-| Env | URL | Setup |
-|-----|-----|-------|
-| `local` (`TEST_ENV=local`) | http://localhost:3000 | two-server harness (Astro :3000 + worker :3001), fake auth via `NODE_ENV=test` |
-| `staging` (`TEST_ENV=staging`) | https://staging.devpad.tools | tests against deployed Cloudflare Workers; no `webServer` |
+| Env                            | URL                          | Setup                                                                          |
+| ------------------------------ | ---------------------------- | ------------------------------------------------------------------------------ |
+| `local` (`TEST_ENV=local`)     | http://localhost:3000        | two-server harness (Astro :3000 + worker :3001), fake auth via `NODE_ENV=test` |
+| `staging` (`TEST_ENV=staging`) | https://staging.devpad.tools | tests against deployed Cloudflare Workers; no `webServer`                      |
 
 ## Debugging failed tests
 

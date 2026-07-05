@@ -40,7 +40,10 @@ const app = new Hono<AppContext>();
  * render even when pulse is unreachable — see the route handler for the
  * surrounding logic.
  */
-const try_pulse_summary = async (c: Context<AppContext>, project_id: string): Promise<Record<string, unknown> | null> => {
+const try_pulse_summary = async (
+	c: Context<AppContext>,
+	project_id: string,
+): Promise<Record<string, unknown> | null> => {
 	const config = c.get("config");
 	const pulse_api_base = config.pulse_api_base;
 	const pulse_internal_key = config.pulse_internal_key;
@@ -92,12 +95,18 @@ const try_pulse_summary = async (c: Context<AppContext>, project_id: string): Pr
  *
  * Single-package call → no aggregation, just return the snapshot as-is.
  */
-const aggregate_snapshots = (snapshots: ReadonlyArray<{ snap: DashboardResponse; deploys: number; rollbacks: number }>): DashboardResponse => {
+const aggregate_snapshots = (
+	snapshots: ReadonlyArray<{ snap: DashboardResponse; deploys: number; rollbacks: number }>,
+): DashboardResponse => {
 	if (snapshots.length === 1) return snapshots[0]!.snap;
 	if (snapshots.length === 0) {
 		return {
 			run_counts: { total: 0, completed: 0, failed: 0, cancelled: 0, rolled_back: 0, in_flight: 0 },
-			verdict_counts: { manual: { pass: 0, fail: 0, pending: 0 }, auto: { pass: 0, fail: 0, pending: 0 }, analysis: { pass: 0, fail: 0, pending: 0 } },
+			verdict_counts: {
+				manual: { pass: 0, fail: 0, pending: 0 },
+				auto: { pass: 0, fail: 0, pending: 0 },
+				analysis: { pass: 0, fail: 0, pending: 0 },
+			},
 			latency_p50_ms: null,
 			latency_p95_ms: null,
 			approval_turnaround_p50_ms: null,
@@ -107,7 +116,11 @@ const aggregate_snapshots = (snapshots: ReadonlyArray<{ snap: DashboardResponse;
 
 	const out: DashboardResponse = {
 		run_counts: { total: 0, completed: 0, failed: 0, cancelled: 0, rolled_back: 0, in_flight: 0 },
-		verdict_counts: { manual: { pass: 0, fail: 0, pending: 0 }, auto: { pass: 0, fail: 0, pending: 0 }, analysis: { pass: 0, fail: 0, pending: 0 } },
+		verdict_counts: {
+			manual: { pass: 0, fail: 0, pending: 0 },
+			auto: { pass: 0, fail: 0, pending: 0 },
+			analysis: { pass: 0, fail: 0, pending: 0 },
+		},
 		latency_p50_ms: null,
 		latency_p95_ms: null,
 		approval_turnaround_p50_ms: null,
@@ -155,7 +168,7 @@ const aggregate_snapshots = (snapshots: ReadonlyArray<{ snap: DashboardResponse;
 const DEFAULT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-app.get("/dashboard", requireAuth, async c => {
+app.get("/dashboard", requireAuth, async (c) => {
 	const db = c.get("db");
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);

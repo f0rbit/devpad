@@ -6,7 +6,14 @@ import type { RawSnapshot } from "../sync";
 import { combineTimelines, groupByDate, groupCommits, type TimelineEntry } from "./grouping";
 import { loadGitHubDataForAccount, loadRedditDataForAccount, loadTwitterDataForAccount } from "./loaders";
 import { normalizeGitHub, normalizeReddit, normalizers, normalizeTwitter } from "./normalizers";
-import { generateProfileTimeline, loadProfileSettings, type ProfileSettings, type ProfileTimelineError, type ProfileTimelineOptions, type ProfileTimelineResult } from "./profile";
+import {
+	generateProfileTimeline,
+	loadProfileSettings,
+	type ProfileSettings,
+	type ProfileTimelineError,
+	type ProfileTimelineOptions,
+	type ProfileTimelineResult,
+} from "./profile";
 
 type TimelineOptions = {
 	from?: string;

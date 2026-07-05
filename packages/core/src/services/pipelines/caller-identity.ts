@@ -45,7 +45,9 @@ export const compute_caller_identity_vars = (input: CallerIdentityInput): Worker
 		throw new Error("compute_caller_identity_vars: version_set_id is required");
 	}
 	if (input.environment !== "staging" && input.environment !== "production") {
-		throw new Error(`compute_caller_identity_vars: environment must be "staging" or "production", got ${input.environment}`);
+		throw new Error(
+			`compute_caller_identity_vars: environment must be "staging" or "production", got ${input.environment}`,
+		);
 	}
 	return [
 		{ type: "plain_text", name: CALLER_PACKAGE, text: input.package_name },

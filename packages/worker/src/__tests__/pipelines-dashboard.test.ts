@@ -107,7 +107,10 @@ type BuildOpts = {
 	pulse_upstream?: ((req: { url: string; method: string }) => Response) | null;
 };
 
-const build_app = (db: Database, opts: BuildOpts): { app: Hono<AppContext>; restore: () => void; captured: Array<{ url: string; method: string }> } => {
+const build_app = (
+	db: Database,
+	opts: BuildOpts,
+): { app: Hono<AppContext>; restore: () => void; captured: Array<{ url: string; method: string }> } => {
 	const captured: Array<{ url: string; method: string }> = [];
 	const original_fetch = globalThis.fetch;
 	if (opts.pulse_upstream !== undefined) {
@@ -169,7 +172,11 @@ describe("/v1/pipelines/dashboard", () => {
 			authed: true,
 			pulse_api_base: "https://pulse.test",
 			pulse_internal_key: "internal_secret",
-			pulse_upstream: () => new Response(JSON.stringify({ totals: { requests: 99 } }), { status: 200, headers: { "content-type": "application/json" } }),
+			pulse_upstream: () =>
+				new Response(JSON.stringify({ totals: { requests: 99 } }), {
+					status: 200,
+					headers: { "content-type": "application/json" },
+				}),
 		});
 		teardown = restore;
 
@@ -207,7 +214,13 @@ describe("/v1/pipelines/dashboard", () => {
 		const app2 = new Hono<AppContext>();
 		app2.use("*", async (c, next) => {
 			c.set("db", db as never);
-			c.set("config", { environment: "test", api_url: "x", frontend_url: "x", jwt_secret: "x", encryption_key: "x" } as never);
+			c.set("config", {
+				environment: "test",
+				api_url: "x",
+				frontend_url: "x",
+				jwt_secret: "x",
+				encryption_key: "x",
+			} as never);
 			c.set("user", { id: "user_attacker", github_id: 2, name: "stub", task_view: "list" } as never);
 			c.set("session", null);
 			c.set("auth_channel", "api");
@@ -302,7 +315,9 @@ describe("/v1/pipelines/dashboard", () => {
 		const { app, restore } = build_app(db, { authed: true });
 		teardown = restore;
 
-		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}&window_ms=-1`));
+		const res = await app.fetch(
+			new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}&window_ms=-1`),
+		);
 		expect(res.status).toBe(400);
 	});
 });

@@ -55,7 +55,15 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 				<button
 					type="button"
 					class="text-sm"
-					style={{ background: "none", border: "none", padding: "0", font: "inherit", cursor: "pointer", color: "var(--text-link)", "text-decoration": "underline" }}
+					style={{
+						background: "none",
+						border: "none",
+						padding: "0",
+						font: "inherit",
+						cursor: "pointer",
+						color: "var(--text-link)",
+						"text-decoration": "underline",
+					}}
 					onClick={() => setShowHelp(!showHelp())}
 				>
 					{showHelp() ? "Hide instructions" : "How to get credentials"}
@@ -83,15 +91,34 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 
 			<form onSubmit={handleSubmit} class="stack stack-sm" style={{ gap: "12px", "margin-top": "12px" }}>
 				<FormField label="Your Reddit Username" id="reddit-username">
-					<Input id="reddit-username" value={redditUsername()} onInput={e => setRedditUsername(e.currentTarget.value)} placeholder="e.g., spez" disabled={submitting()} />
+					<Input
+						id="reddit-username"
+						value={redditUsername()}
+						onInput={(e) => setRedditUsername(e.currentTarget.value)}
+						placeholder="e.g., spez"
+						disabled={submitting()}
+					/>
 				</FormField>
 
 				<FormField label="Client ID" id="client-id">
-					<Input id="client-id" value={clientId()} onInput={e => setClientId(e.currentTarget.value)} placeholder="e.g., AbCdEfGhIjKlMn" disabled={submitting()} />
+					<Input
+						id="client-id"
+						value={clientId()}
+						onInput={(e) => setClientId(e.currentTarget.value)}
+						placeholder="e.g., AbCdEfGhIjKlMn"
+						disabled={submitting()}
+					/>
 				</FormField>
 
 				<FormField label="Client Secret" id="client-secret">
-					<Input id="client-secret" type="password" value={clientSecret()} onInput={e => setClientSecret(e.currentTarget.value)} placeholder="Enter your client secret" disabled={submitting()} />
+					<Input
+						id="client-secret"
+						type="password"
+						value={clientSecret()}
+						onInput={(e) => setClientSecret(e.currentTarget.value)}
+						placeholder="Enter your client secret"
+						disabled={submitting()}
+					/>
 				</FormField>
 
 				<Show when={error()}>

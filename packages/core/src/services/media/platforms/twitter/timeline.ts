@@ -31,7 +31,11 @@ export const loadTwitterData = async (backend: Backend, accountId: string): Prom
 		})(),
 	]);
 
-	log.info("Loaded Twitter data", { account_id: accountId, tweets: tweetsData.tweets.length, media: tweetsData.media.length });
+	log.info("Loaded Twitter data", {
+		account_id: accountId,
+		tweets: tweetsData.tweets.length,
+		media: tweetsData.media.length,
+	});
 	return { tweets: tweetsData.tweets, media: tweetsData.media, meta };
 };
 
@@ -39,7 +43,7 @@ export const normalizeTwitter = (data: TwitterTimelineData): TimelineItem[] => {
 	const items: TimelineItem[] = [];
 
 	for (const tweet of data.tweets) {
-		const isRetweet = tweet.referenced_tweets?.some(r => r.type === "retweeted") ?? false;
+		const isRetweet = tweet.referenced_tweets?.some((r) => r.type === "retweeted") ?? false;
 		const isReply = tweet.in_reply_to_user_id !== undefined;
 
 		const tweetMediaKeys = tweet.attachments?.media_keys ?? [];

@@ -1,5 +1,5 @@
 name: Version Manager
-# 
+#
 # Versioning Strategy:
 # - MAJOR.RELEASE.PATCH format (e.g., 1.2.3)
 # - MAJOR: Major version, manually incremented for breaking changes
@@ -16,11 +16,11 @@ on:
   workflow_call:
     outputs:
       version:
-        description: 'The calculated version'
+        description: "The calculated version"
         value: ${{ jobs.manage-version.outputs.version }}
     inputs:
       custom-version:
-        description: 'Custom version override'
+        description: "Custom version override"
         required: false
         type: string
 
@@ -36,18 +36,18 @@ jobs:
           ref: versions
           fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Checkout main for commit history
         run: |
           git fetch origin main --depth=50
-          
+
       - name: Calculate version
         id: version
         run: |
           # Read version components from versions branch
           MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
           RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
-          
+
           # If custom version provided, use it
           if [ -n "${{ inputs.custom-version }}" ]; then
             VERSION="${{ inputs.custom-version }}"
@@ -78,17 +78,17 @@ jobs:
             
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
           fi
-          
+
           echo "📦 Version: ${VERSION}"
           echo "📦 Components: Major=${MAJOR}, Release=${RELEASE}, Patch=${PATCH:-custom}"
-          
+
       - name: Update version files on versions branch
         run: |
           echo "${{ steps.version.outputs.version }}" > VERSION
-          
+
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
+
           # Add all version files (they may have been updated by custom version logic)
           git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR 2>/dev/null || true
           git diff --staged --quiet || {

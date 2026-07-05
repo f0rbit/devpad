@@ -185,7 +185,9 @@ describe("media API client integration", () => {
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				const conn_value = result.value as any;
-				const connections_list = Array.isArray(conn_value) ? conn_value : (conn_value.accounts ?? conn_value.connections ?? []);
+				const connections_list = Array.isArray(conn_value)
+					? conn_value
+					: (conn_value.accounts ?? conn_value.connections ?? []);
 				expect(Array.isArray(connections_list)).toBe(true);
 			}
 

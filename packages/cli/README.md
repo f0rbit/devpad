@@ -36,10 +36,10 @@ echo 'export DEVPAD_API_KEY="your-api-key"' >> ~/.zshrc
 
 ### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DEVPAD_API_KEY` | Yes | Your API key from devpad.tools/account |
-| `DEVPAD_BASE_URL` | No | API base URL (default: https://devpad.tools/api/v1) |
+| Variable          | Required | Description                                         |
+| ----------------- | -------- | --------------------------------------------------- |
+| `DEVPAD_API_KEY`  | Yes      | Your API key from devpad.tools/account              |
+| `DEVPAD_BASE_URL` | No       | API base URL (default: https://devpad.tools/api/v1) |
 
 ## Usage
 
@@ -118,16 +118,19 @@ devpad tasks list | jq '.[] | select(.task.priority == "HIGH")'
 ## Examples
 
 List all high-priority tasks:
+
 ```bash
 devpad tasks list | jq '.[] | select(.task.priority == "HIGH") | .task.title'
 ```
 
 Get task count per project:
+
 ```bash
 devpad tasks list | jq 'group_by(.task.project_id) | map({project: .[0].task.project_id, count: length})'
 ```
 
 Create a task and get its ID:
+
 ```bash
 devpad tasks create --title "New feature" --project my-project | jq '.id'
 ```

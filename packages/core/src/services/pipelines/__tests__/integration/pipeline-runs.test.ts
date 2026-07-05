@@ -56,7 +56,11 @@ describe("pipeline runs — full gradual happy path", () => {
 		// on the non-staging script — that's where onebox/wave1/wave2/full
 		// land. The staging stage deploys to its own `${name}-staging` script.
 		const main_script = script_name_for();
-		const seed_version = await deps.cf.versions.upload({ kind: "single_file", script_name: main_script, annotations: { "workers/tag": "vs_v0" } });
+		const seed_version = await deps.cf.versions.upload({
+			kind: "single_file",
+			script_name: main_script,
+			annotations: { "workers/tag": "vs_v0" },
+		});
 		if (!seed_version.ok) throw new Error("seed upload failed");
 		await deps.cf.deployments.create({
 			script_name: main_script,
@@ -90,7 +94,11 @@ describe("pipeline runs — full gradual happy path", () => {
 		expect(after_start.current_stage).toBe("staging");
 
 		// Approve staging→onebox manually
-		const approved = await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		const approved = await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		expect(approved.ok).toBe(true);
 		if (!approved.ok) return;
 		// After Pass: deploys onebox at 1% → bake schedule
@@ -137,7 +145,11 @@ describe("pipeline runs — full gradual happy path", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
@@ -161,16 +173,16 @@ describe("pipeline runs — full gradual happy path", () => {
 
 		// onebox at 1%, with v0 at 99%
 		expect(post_seed[0].strategy.versions).toHaveLength(2);
-		const v1_id = post_seed[0].strategy.versions.find(v => v.percentage === 1)?.version_id;
+		const v1_id = post_seed[0].strategy.versions.find((v) => v.percentage === 1)?.version_id;
 		expect(v1_id).toBeDefined();
-		expect(post_seed[0].strategy.versions.find(v => v.percentage === 99)).toBeDefined();
+		expect(post_seed[0].strategy.versions.find((v) => v.percentage === 99)).toBeDefined();
 
 		// wave1 at 10%
-		expect(post_seed[1].strategy.versions.find(v => v.percentage === 10)).toBeDefined();
-		expect(post_seed[1].strategy.versions.find(v => v.percentage === 90)).toBeDefined();
+		expect(post_seed[1].strategy.versions.find((v) => v.percentage === 10)).toBeDefined();
+		expect(post_seed[1].strategy.versions.find((v) => v.percentage === 90)).toBeDefined();
 
 		// wave2 at 50%
-		expect(post_seed[2].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
+		expect(post_seed[2].strategy.versions.find((v) => v.percentage === 50)).toBeDefined();
 
 		// full at 100% (single-version)
 		expect(post_seed[3].strategy.versions[0].percentage).toBe(100);
@@ -191,17 +203,21 @@ describe("pipeline runs — full gradual happy path", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 
 		const events = await events_for(db, run.id);
-		const kinds = events.map(e => e.kind);
-		expect(kinds.filter(k => k === "deploy_started").length).toBe(5);
-		expect(kinds.filter(k => k === "deploy_completed").length).toBe(5);
-		expect(kinds.filter(k => k === "bake_started").length).toBe(3); // onebox/wave1/wave2 have positive bake
-		expect(kinds.filter(k => k === "gate_verdict").length).toBeGreaterThanOrEqual(4); // 4 transitions
+		const kinds = events.map((e) => e.kind);
+		expect(kinds.filter((k) => k === "deploy_started").length).toBe(5);
+		expect(kinds.filter((k) => k === "deploy_completed").length).toBe(5);
+		expect(kinds.filter((k) => k === "bake_started").length).toBe(3); // onebox/wave1/wave2 have positive bake
+		expect(kinds.filter((k) => k === "gate_verdict").length).toBeGreaterThanOrEqual(4); // 4 transitions
 	});
 
 	test("manual approval at staging→onebox emits a pulse pending event", async () => {
@@ -232,7 +248,11 @@ describe("pipeline runs — full gradual happy path", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		const denied = await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "denied", user_id: "user_test", reason: "looks dodgy" }, plan);
+		const denied = await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "denied", user_id: "user_test", reason: "looks dodgy" },
+			plan,
+		);
 		expect(denied.ok).toBe(true);
 
 		const final = await run_status(db, run.id);

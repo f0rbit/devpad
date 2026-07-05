@@ -69,7 +69,13 @@ export function getPriorityClass(priority: Priority, hasEndTime: boolean = true)
 /**
  * Update task progress via API
  */
-export async function updateTaskProgress(taskId: string, ownerId: string, newProgress: Progress, onSuccess?: (progress: Progress) => void, onError?: (error: any) => void): Promise<void> {
+export async function updateTaskProgress(
+	taskId: string,
+	ownerId: string,
+	newProgress: Progress,
+	onSuccess?: (progress: Progress) => void,
+	onError?: (error: any) => void,
+): Promise<void> {
 	try {
 		const apiClient = getBrowserClient();
 		await apiClient.tasks.upsert({
@@ -87,7 +93,13 @@ export async function updateTaskProgress(taskId: string, ownerId: string, newPro
 /**
  * Advance task to next progress state
  */
-export async function advanceTaskProgress(taskId: string, ownerId: string, currentProgress: Progress, onSuccess?: (progress: Progress) => void, onError?: (error: any) => void): Promise<void> {
+export async function advanceTaskProgress(
+	taskId: string,
+	ownerId: string,
+	currentProgress: Progress,
+	onSuccess?: (progress: Progress) => void,
+	onError?: (error: any) => void,
+): Promise<void> {
 	const nextProgress = getNextProgress(currentProgress);
 	if (!nextProgress) {
 		console.warn("Cannot advance task progress: already at final state");

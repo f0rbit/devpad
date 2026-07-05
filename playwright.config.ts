@@ -72,7 +72,9 @@ export default defineConfig({
 	/* Global test timeout */
 	globalTimeout: 10 * 60 * 1000, // 10 minutes
 	/* Reporter to use. See https://playwright.dev/docs/test-reporters */
-	reporter: process.env.CI ? [["html", { outputFolder: ".playwright/playwright-report", open: "never" }], ["list"], ["github"]] : [["html", { outputFolder: ".playwright/playwright-report", open: "never" }], ["list"]],
+	reporter: process.env.CI
+		? [["html", { outputFolder: ".playwright/playwright-report", open: "never" }], ["list"], ["github"]]
+		: [["html", { outputFolder: ".playwright/playwright-report", open: "never" }], ["list"]],
 
 	/* Shared settings for all projects */
 	use: {

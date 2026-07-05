@@ -6,7 +6,13 @@ import { mergeByKey } from "../../merge";
 import type { TwitterFetchResult } from "../../platforms/twitter";
 import type { ProviderError } from "../../platforms/types";
 import { store } from "../../storage";
-import { formatFetchError, storeMeta as genericStoreMeta, type ProcessError, type StoreStats, storeWithMerge } from "../platform-processor";
+import {
+	formatFetchError,
+	storeMeta as genericStoreMeta,
+	type ProcessError,
+	type StoreStats,
+	storeWithMerge,
+} from "../platform-processor";
 
 const log = createLogger("cron:twitter");
 
@@ -20,9 +26,12 @@ export type TwitterProcessResult = {
 	};
 };
 
-const mergeTweets = (existing: TwitterTweetsStore | null, incoming: TwitterTweetsStore): { merged: TwitterTweetsStore; newCount: number } => {
-	const { merged: tweets, newCount } = mergeByKey(existing?.tweets, incoming.tweets, t => t.id);
-	const { merged: media } = mergeByKey(existing?.media, incoming.media, m => m.media_key);
+const mergeTweets = (
+	existing: TwitterTweetsStore | null,
+	incoming: TwitterTweetsStore,
+): { merged: TwitterTweetsStore; newCount: number } => {
+	const { merged: tweets, newCount } = mergeByKey(existing?.tweets, incoming.tweets, (t) => t.id);
+	const { merged: media } = mergeByKey(existing?.media, incoming.media, (m) => m.media_key);
 
 	return {
 		merged: {
@@ -43,17 +52,37 @@ type TwitterProvider = {
 	fetch(token: string): Promise<Result<TwitterFetchResult, ProviderError>>;
 };
 
-const storeMeta = (backend: Backend, accountId: string, meta: TwitterMetaStore): Promise<string> => genericStoreMeta(backend, accountId, store.twitter.meta, meta);
+const storeMeta = (backend: Backend, accountId: string, meta: TwitterMetaStore): Promise<string> =>
+	genericStoreMeta(backend, accountId, store.twitter.meta, meta);
 
 const storeTweets = (backend: Backend, accountId: string, tweets: TwitterTweetsStore): Promise<StoreStats> =>
-	storeWithMerge(backend, accountId, { name: "tweets", create: store.twitter.tweets, merge: mergeTweets, getKey: () => "", getTotal: m => m.total_tweets }, tweets);
+	storeWithMerge(
+		backend,
+		accountId,
+		{
+			name: "tweets",
+			create: store.twitter.tweets,
+			merge: mergeTweets,
+			getKey: () => "",
+			getTotal: (m) => m.total_tweets,
+		},
+		tweets,
+	);
 
-export const processTwitterAccount = (backend: Backend, accountId: string, token: string, provider: TwitterProvider): Promise<Result<TwitterProcessResult, ProcessError>> =>
+export const processTwitterAccount = (
+	backend: Backend,
+	accountId: string,
+	token: string,
+	provider: TwitterProvider,
+): Promise<Result<TwitterProcessResult, ProcessError>> =>
 	pipe(provider.fetch(token))
 		.tap(() => log.info("Processing account", { account_id: accountId }))
 		.map_err((e): ProcessError => formatFetchError("Twitter", e))
 		.flat_map(async ({ meta, tweets }) => {
-			const [metaVersion, tweetsResult] = await Promise.all([storeMeta(backend, accountId, meta), storeTweets(backend, accountId, tweets)]);
+			const [metaVersion, tweetsResult] = await Promise.all([
+				storeMeta(backend, accountId, meta),
+				storeTweets(backend, accountId, tweets),
+			]);
 
 			log.info("Processing complete", {
 				account_id: accountId,

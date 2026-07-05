@@ -21,12 +21,14 @@ export const tryJsonParse = (value: string): unknown | undefined => {
 	}
 };
 
-export const parseSettingsMap = (settings: Array<{ setting_key: string; setting_value: string }>): Record<string, unknown> =>
+export const parseSettingsMap = (
+	settings: Array<{ setting_key: string; setting_value: string }>,
+): Record<string, unknown> =>
 	Object.fromEntries(
-		settings.flatMap(s => {
+		settings.flatMap((s) => {
 			const parsed = tryJsonParse(s.setting_value);
 			return parsed !== undefined ? [[s.setting_key, parsed]] : [];
-		})
+		}),
 	);
 
 // Crypto utilities - use nativeCrypto to avoid shadowing our exports
@@ -35,23 +37,27 @@ const SALT = new TextEncoder().encode("media-timeline-salt");
 const IV_LENGTH = 12;
 const ITERATIONS = 100000;
 
-export type EncryptionError = { kind: "encryption_failed"; message: string } | { kind: "decryption_failed"; message: string };
+export type EncryptionError =
+	| { kind: "encryption_failed"; message: string }
+	| { kind: "decryption_failed"; message: string };
 
 const derive_key = (password: string): Promise<CryptoKey> =>
-	nativeCrypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]).then((key_material: CryptoKey) =>
-		nativeCrypto.subtle.deriveKey(
-			{
-				name: "PBKDF2",
-				salt: SALT,
-				iterations: ITERATIONS,
-				hash: "SHA-256",
-			},
-			key_material,
-			{ name: "AES-GCM", length: 256 },
-			false,
-			["encrypt", "decrypt"]
-		)
-	);
+	nativeCrypto.subtle
+		.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"])
+		.then((key_material: CryptoKey) =>
+			nativeCrypto.subtle.deriveKey(
+				{
+					name: "PBKDF2",
+					salt: SALT,
+					iterations: ITERATIONS,
+					hash: "SHA-256",
+				},
+				key_material,
+				{ name: "AES-GCM", length: 256 },
+				false,
+				["encrypt", "decrypt"],
+			),
+		);
 
 const encrypt_impl = (plaintext: string, key: string): Promise<Result<string, EncryptionError>> =>
 	try_catch_async(
@@ -65,13 +71,13 @@ const encrypt_impl = (plaintext: string, key: string): Promise<Result<string, En
 			combined.set(new Uint8Array(ciphertext), iv.length);
 			return to_base64(combined);
 		},
-		(e): EncryptionError => ({ kind: "encryption_failed", message: String(e) })
+		(e): EncryptionError => ({ kind: "encryption_failed", message: String(e) }),
 	);
 
 const decrypt_impl = (ciphertext: string, key: string): Promise<Result<string, EncryptionError>> =>
 	pipe(from_base64(ciphertext))
 		.map_err((): EncryptionError => ({ kind: "decryption_failed", message: "Invalid base64 ciphertext" }))
-		.flat_map(combined =>
+		.flat_map((combined) =>
 			try_catch_async(
 				async () => {
 					const iv = combined.slice(0, IV_LENGTH);
@@ -80,8 +86,8 @@ const decrypt_impl = (ciphertext: string, key: string): Promise<Result<string, E
 					const decrypted = await nativeCrypto.subtle.decrypt({ name: "AES-GCM", iv }, derived_key, data);
 					return new TextDecoder().decode(decrypted);
 				},
-				(e): EncryptionError => ({ kind: "decryption_failed", message: String(e) })
-			)
+				(e): EncryptionError => ({ kind: "decryption_failed", message: String(e) }),
+			),
 		)
 		.result();
 
@@ -128,18 +134,18 @@ export type DecodeError = { kind: "invalid_base64"; input: string } | ParseError
 export const to_base64 = (bytes: Uint8Array): string => btoa(String.fromCharCode(...bytes));
 export const from_base64 = (str: string): Result<Uint8Array, DecodeError> =>
 	try_catch(
-		() => Uint8Array.from(atob(str), c => c.charCodeAt(0)),
-		(): DecodeError => ({ kind: "invalid_base64", input: str.slice(0, 50) })
+		() => Uint8Array.from(atob(str), (c) => c.charCodeAt(0)),
+		(): DecodeError => ({ kind: "invalid_base64", input: str.slice(0, 50) }),
 	);
 
-export const to_hex = (bytes: Uint8Array): string => Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
+export const to_hex = (bytes: Uint8Array): string => Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 export const from_hex = (str: string): Result<Uint8Array, ParseError> => {
 	if (str.length % 2 !== 0 || !/^[0-9a-fA-F]*$/.test(str)) {
 		return errors.parseError(`Invalid hex string: ${str.slice(0, 50)}`);
 	}
 	const matches = str.match(/.{1,2}/g);
 	if (!matches) return ok(new Uint8Array(0));
-	return ok(new Uint8Array(matches.map(byte => Number.parseInt(byte, 16))));
+	return ok(new Uint8Array(matches.map((byte) => Number.parseInt(byte, 16))));
 };
 
 // String utilities
@@ -151,15 +157,20 @@ export const truncate = (text: string, max_length = 72): string => {
 
 // Other utilities
 export const uuid = (): string => nativeCrypto.randomUUID();
-export const random_sha = (): string => Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+export const random_sha = (): string =>
+	Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
 
 // Background task utilities
-export const safeWaitUntil = (ctx: { executionCtx?: { waitUntil?: (p: Promise<unknown>) => void } }, task: () => Promise<void>, taskName: string): void => {
+export const safeWaitUntil = (
+	ctx: { executionCtx?: { waitUntil?: (p: Promise<unknown>) => void } },
+	task: () => Promise<void>,
+	taskName: string,
+): void => {
 	const log = createLogger(taskName);
 	try {
 		ctx.executionCtx?.waitUntil?.(task());
 	} catch {
-		task().catch(error => {
+		task().catch((error) => {
 			log.error("Background task failed", { error });
 		});
 	}

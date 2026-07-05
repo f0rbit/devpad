@@ -48,7 +48,10 @@ export type ListTrustPoliciesFilter = {
  * keeping the two in sync means the management UI shows the same
  * policy at the top that the matcher would resolve first.
  */
-export const list_trust_policies = async (db: Database, filter: ListTrustPoliciesFilter): Promise<Result<PipelineOidcTrust[], ServiceError>> => {
+export const list_trust_policies = async (
+	db: Database,
+	filter: ListTrustPoliciesFilter,
+): Promise<Result<PipelineOidcTrust[], ServiceError>> => {
 	try {
 		const rows = await db
 			.select()
@@ -72,17 +75,29 @@ export type GetTrustPolicyInput = {
  * different owner (no info leak via 403 vs 404 distinction at the
  * service layer; the route boundary maps both to 404).
  */
-export const get_trust_policy = async (db: Database, input: GetTrustPolicyInput): Promise<Result<PipelineOidcTrust, ServiceError>> => {
+export const get_trust_policy = async (
+	db: Database,
+	input: GetTrustPolicyInput,
+): Promise<Result<PipelineOidcTrust, ServiceError>> => {
 	try {
 		const rows = await db
 			.select()
 			.from(pipeline_oidc_trust)
-			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id), eq(pipeline_oidc_trust.deleted, false)));
+			.where(
+				and(
+					eq(pipeline_oidc_trust.id, input.id),
+					eq(pipeline_oidc_trust.owner_id, input.owner_id),
+					eq(pipeline_oidc_trust.deleted, false),
+				),
+			);
 		const row = rows[0];
 		if (!row) return err({ kind: "not_found", resource: "pipeline_oidc_trust", id: input.id } as ServiceError);
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to read pipeline_oidc_trust ${input.id}: ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to read pipeline_oidc_trust ${input.id}: ${String(e)}`,
+		} as ServiceError);
 	}
 };
 
@@ -94,7 +109,10 @@ export type CreateTrustPolicyInput = UpsertPipelineOidcTrust;
  * §I.5: `repo_pattern: "*"`, `allowed_actions: ["artifacts:upload",
  * "runs:start"]`, `provider: "github"`, `session_ttl_seconds: 900`.
  */
-export const create_trust_policy = async (db: Database, input: CreateTrustPolicyInput): Promise<Result<PipelineOidcTrust, ServiceError>> => {
+export const create_trust_policy = async (
+	db: Database,
+	input: CreateTrustPolicyInput,
+): Promise<Result<PipelineOidcTrust, ServiceError>> => {
 	const parsed = upsert_pipeline_oidc_trust.safeParse(input);
 	if (!parsed.success) {
 		const errors: Record<string, string[]> = {};
@@ -129,7 +147,12 @@ export const create_trust_policy = async (db: Database, input: CreateTrustPolicy
 			} as never)
 			.returning();
 		const row = inserted[0];
-		if (!row) return err({ kind: "store_error", operation: "insert_pipeline_oidc_trust", message: "insert returned no row" } as ServiceError);
+		if (!row)
+			return err({
+				kind: "store_error",
+				operation: "insert_pipeline_oidc_trust",
+				message: "insert returned no row",
+			} as ServiceError);
 		return ok(row);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to create pipeline_oidc_trust: ${String(e)}` } as ServiceError);
@@ -147,7 +170,10 @@ export type UpdateTrustPolicyInput = {
  * policy (`not_found` on mismatch). Validation runs on the merged
  * record so partial inputs still pass the Zod schema.
  */
-export const update_trust_policy = async (db: Database, input: UpdateTrustPolicyInput): Promise<Result<PipelineOidcTrust, ServiceError>> => {
+export const update_trust_policy = async (
+	db: Database,
+	input: UpdateTrustPolicyInput,
+): Promise<Result<PipelineOidcTrust, ServiceError>> => {
 	const existing = await get_trust_policy(db, { id: input.id, owner_id: input.owner_id });
 	if (!existing.ok) return existing;
 
@@ -193,10 +219,18 @@ export const update_trust_policy = async (db: Database, input: UpdateTrustPolicy
 			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id)))
 			.returning();
 		const row = updated[0];
-		if (!row) return err({ kind: "store_error", operation: "update_pipeline_oidc_trust", message: "update returned no row" } as ServiceError);
+		if (!row)
+			return err({
+				kind: "store_error",
+				operation: "update_pipeline_oidc_trust",
+				message: "update returned no row",
+			} as ServiceError);
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to update pipeline_oidc_trust ${input.id}: ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to update pipeline_oidc_trust ${input.id}: ${String(e)}`,
+		} as ServiceError);
 	}
 };
 
@@ -210,7 +244,10 @@ export type DeleteTrustPolicyInput = {
  * across the schema — the row is preserved for audit, just flagged
  * `deleted = true`. List + get queries filter it out automatically.
  */
-export const delete_trust_policy = async (db: Database, input: DeleteTrustPolicyInput): Promise<Result<void, ServiceError>> => {
+export const delete_trust_policy = async (
+	db: Database,
+	input: DeleteTrustPolicyInput,
+): Promise<Result<void, ServiceError>> => {
 	const existing = await get_trust_policy(db, input);
 	if (!existing.ok) return existing;
 	try {
@@ -220,7 +257,10 @@ export const delete_trust_policy = async (db: Database, input: DeleteTrustPolicy
 			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id)));
 		return ok(undefined);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to delete pipeline_oidc_trust ${input.id}: ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to delete pipeline_oidc_trust ${input.id}: ${String(e)}`,
+		} as ServiceError);
 	}
 };
 
@@ -234,7 +274,10 @@ export type TouchTrustPolicyInput = {
  * matcher has already proven ownership via the OIDC claims chain.
  * Idempotent: failure here is non-fatal; the route should log + swallow.
  */
-export const touch_trust_policy_last_used = async (db: Database, input: TouchTrustPolicyInput): Promise<Result<void, ServiceError>> => {
+export const touch_trust_policy_last_used = async (
+	db: Database,
+	input: TouchTrustPolicyInput,
+): Promise<Result<void, ServiceError>> => {
 	try {
 		const now = new Date().toISOString();
 		await db
@@ -243,6 +286,9 @@ export const touch_trust_policy_last_used = async (db: Database, input: TouchTru
 			.where(eq(pipeline_oidc_trust.id, input.id));
 		return ok(undefined);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to touch pipeline_oidc_trust ${input.id}: ${String(e)}` } as ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to touch pipeline_oidc_trust ${input.id}: ${String(e)}`,
+		} as ServiceError);
 	}
 };

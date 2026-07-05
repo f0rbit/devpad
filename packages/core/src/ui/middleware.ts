@@ -11,7 +11,11 @@ interface AuthResult {
 	redirect?: string;
 }
 
-export async function resolveAuth(request: Request, cookies: CookieAdapter, apiServerBase: string): Promise<AuthResult> {
+export async function resolveAuth(
+	request: Request,
+	cookies: CookieAdapter,
+	apiServerBase: string,
+): Promise<AuthResult> {
 	let user: AuthUser = null;
 	let session: { id: string } | null = null;
 

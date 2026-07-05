@@ -13,7 +13,14 @@ import { ProjectSelector } from "@/components/solid/ProjectSelector";
 import { TagPicker } from "@/components/solid/TagPicker";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { getProjectContext } from "@/utils/project-context";
-import { PRIORITY_OPTIONS, PROGRESS_OPTIONS, type Priority, type Progress, VISIBILITY_OPTIONS, type Visibility } from "@/utils/task-status";
+import {
+	PRIORITY_OPTIONS,
+	PROGRESS_OPTIONS,
+	type Priority,
+	type Progress,
+	VISIBILITY_OPTIONS,
+	type Visibility,
+} from "@/utils/task-status";
 
 interface Props {
 	task: TaskWithDetails | null;
@@ -26,7 +33,16 @@ interface Props {
 	default_goal_id?: string | null;
 }
 
-const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_map, default_project_id, default_goal_id }: Props) => {
+const TaskEditor = ({
+	task,
+	user_tags,
+	current_tags,
+	history,
+	user_id,
+	project_map,
+	default_project_id,
+	default_goal_id,
+}: Props) => {
 	const [state, setState] = createStore({
 		title: task?.task?.title ?? "",
 		summary: task?.task?.summary ?? null,
@@ -91,19 +107,36 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<br />
 			<div class="editor" data-todo-id={task?.task?.id ?? null} data-user-id={user_id}>
 				<label for="title">Title</label>
-				<input type="text" id="title" name="title" value={state.title} onInput={e => setState({ title: e.target.value })} />
+				<input
+					type="text"
+					id="title"
+					name="title"
+					value={state.title}
+					onInput={(e) => setState({ title: e.target.value })}
+				/>
 				<label for="summary">Summary</label>
-				<input type="text" id="summary" name="summary" value={state.summary ?? ""} onInput={e => setState({ summary: e.target.value })} />
+				<input
+					type="text"
+					id="summary"
+					name="summary"
+					value={state.summary ?? ""}
+					onInput={(e) => setState({ summary: e.target.value })}
+				/>
 				<label for="description">Description</label>
-				<textarea id="description" name="description" onInput={e => setState({ description: e.target.value })}>
+				<textarea id="description" name="description" onInput={(e) => setState({ description: e.target.value })}>
 					{state.description ?? ""}
 				</textarea>
 
 				<label for="progress">Progress</label>
 				<div class="row row-sm combined-row">
-					<select id="progress" name="progress" value={state.progress} onChange={e => setState({ progress: e.target.value as Progress })}>
+					<select
+						id="progress"
+						name="progress"
+						value={state.progress}
+						onChange={(e) => setState({ progress: e.target.value as Progress })}
+					>
 						<For each={PROGRESS_OPTIONS}>
-							{option => (
+							{(option) => (
 								<option value={option.value} selected={state.progress === option.value}>
 									{option.label}
 								</option>
@@ -113,12 +146,28 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 					<label for="project-selector" style="padding: 0px 5px;">
 						Project
 					</label>
-					<ProjectSelector project_map={project_map} default_id={state.project_id} callback={p => setState({ project_id: p })} disabled={project_disabled()} />
+					<ProjectSelector
+						project_map={project_map}
+						default_id={state.project_id}
+						callback={(p) => setState({ project_id: p })}
+						disabled={project_disabled()}
+					/>
 				</div>
 				<label for="goal-selector">Goal</label>
-				<GoalSelector project_id={state.project_id} goal_id={state.goal_id} onChange={goal_id => setState({ goal_id })} disabled={project_disabled()} />
+				<GoalSelector
+					project_id={state.project_id}
+					goal_id={state.goal_id}
+					onChange={(goal_id) => setState({ goal_id })}
+					disabled={project_disabled()}
+				/>
 				<label for="end_time">End Time</label>
-				<input type="datetime-local" id="end_time" name="end_time" value={state.end_time ?? ""} onInput={e => setState({ end_time: e.target.value })} />
+				<input
+					type="datetime-local"
+					id="end_time"
+					name="end_time"
+					value={state.end_time ?? ""}
+					onInput={(e) => setState({ end_time: e.target.value })}
+				/>
 			</div>
 			<details class="boxed">
 				<summary class="row row-sm" style="font-size: smaller;">
@@ -128,11 +177,22 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 				</summary>
 				<div class="editor">
 					<label for="start_time">Start Time</label>
-					<input type="datetime-local" id="start_time" name="start_time" value={state.start_time ?? ""} onInput={e => setState({ start_time: e.target.value })} />
+					<input
+						type="datetime-local"
+						id="start_time"
+						name="start_time"
+						value={state.start_time ?? ""}
+						onInput={(e) => setState({ start_time: e.target.value })}
+					/>
 					<label for="visibility">Visibility</label>
-					<select id="visibility" name="visibility" value={state.visibility} onChange={e => setState({ visibility: e.target.value as Visibility })}>
+					<select
+						id="visibility"
+						name="visibility"
+						value={state.visibility}
+						onChange={(e) => setState({ visibility: e.target.value as Visibility })}
+					>
 						<For each={VISIBILITY_OPTIONS}>
-							{option => (
+							{(option) => (
 								<option value={option.value} selected={state.visibility === option.value}>
 									{option.label}
 								</option>
@@ -140,9 +200,14 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 						</For>
 					</select>
 					<label for="priority">Priority</label>
-					<select id="priority" name="priority" value={state.priority} onChange={e => setState({ priority: e.target.value as Priority })}>
+					<select
+						id="priority"
+						name="priority"
+						value={state.priority}
+						onChange={(e) => setState({ priority: e.target.value as Priority })}
+					>
 						<For each={PRIORITY_OPTIONS}>
-							{option => (
+							{(option) => (
 								<option value={option.value} selected={state.priority === option.value}>
 									{option.label}
 								</option>
@@ -154,15 +219,30 @@ const TaskEditor = ({ task, user_tags, current_tags, history, user_id, project_m
 			<br />
 			<div class="editor">
 				<label for="tags">Tags</label>
-				<TagPicker currentTags={currentTags()} availableTags={user_tags} owner_id={user_id} onChange={t => setCurrentTags(t)} />
+				<TagPicker
+					currentTags={currentTags()}
+					availableTags={user_tags}
+					owner_id={user_id}
+					onChange={(t) => setCurrentTags(t)}
+				/>
 			</div>
 			<br />
 			<a role="button" id="save-button" onClick={saveTask}>
 				save
 			</a>
 			<Loader size={16} class="icon animate-spin" classList={{ hidden: requestState() !== "loading" }} />
-			<Check size={16} class="icon" style={{ color: "var(--success-fg)" }} classList={{ hidden: requestState() !== "success" }} />
-			<X size={16} class="icon" style={{ color: "var(--error-fg)" }} classList={{ hidden: requestState() !== "error" }} />
+			<Check
+				size={16}
+				class="icon"
+				style={{ color: "var(--success-fg)" }}
+				classList={{ hidden: requestState() !== "success" }}
+			/>
+			<X
+				size={16}
+				class="icon"
+				style={{ color: "var(--error-fg)" }}
+				classList={{ hidden: requestState() !== "error" }}
+			/>
 			<br />
 			<br />
 			<div id="response" class="response"></div>

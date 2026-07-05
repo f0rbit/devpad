@@ -17,7 +17,19 @@ export const defaultStats: StoreStats = { version: "", newCount: 0, total: 0 };
 
 export type MergeResult<T> = { merged: T; newCount: number };
 
-type CreateStore<TData> = (backend: Backend, accountId: string) => Result<{ store: { put: (data: TData) => Promise<Result<{ version: string }, unknown>>; get_latest: () => Promise<Result<{ data: TData }, unknown>> }; id: string }, unknown>;
+type CreateStore<TData> = (
+	backend: Backend,
+	accountId: string,
+) => Result<
+	{
+		store: {
+			put: (data: TData) => Promise<Result<{ version: string }, unknown>>;
+			get_latest: () => Promise<Result<{ data: TData }, unknown>>;
+		};
+		id: string;
+	},
+	unknown
+>;
 
 export type StoreConfig<TIncoming, TStored> = {
 	name: string;
@@ -34,13 +46,22 @@ export type PlatformProvider<TFetch> = {
 };
 
 type StoreProcessor<TData> = {
-	store: { put: (data: TData) => Promise<Result<{ version: string }, unknown>>; get_latest: () => Promise<Result<{ data: TData }, unknown>> };
+	store: {
+		put: (data: TData) => Promise<Result<{ version: string }, unknown>>;
+		get_latest: () => Promise<Result<{ data: TData }, unknown>>;
+	};
 	id: string;
 };
 
-const loadExisting = async <T>(store: StoreProcessor<T>["store"]): Promise<T | null> => to_nullable(await store.get_latest())?.data ?? null;
+const loadExisting = async <T>(store: StoreProcessor<T>["store"]): Promise<T | null> =>
+	to_nullable(await store.get_latest())?.data ?? null;
 
-const processStore = async <TIncoming, TStored>(backend: Backend, accountId: string, config: StoreConfig<TIncoming, TStored>, incoming: TIncoming): Promise<StoreStats> => {
+const processStore = async <TIncoming, TStored>(
+	backend: Backend,
+	accountId: string,
+	config: StoreConfig<TIncoming, TStored>,
+	incoming: TIncoming,
+): Promise<StoreStats> => {
 	const storeResult = config.create(backend, accountId);
 	if (!storeResult.ok) {
 		log.error(`Store creation failed for ${config.name}`, { accountId, error: storeResult.error });
@@ -71,9 +92,19 @@ const processStore = async <TIncoming, TStored>(backend: Backend, accountId: str
 		.unwrap_or(defaultStats);
 };
 
-export const storeWithMerge = async <TIncoming, TStored>(backend: Backend, accountId: string, config: StoreConfig<TIncoming, TStored>, incoming: TIncoming): Promise<StoreStats> => processStore(backend, accountId, config, incoming);
+export const storeWithMerge = async <TIncoming, TStored>(
+	backend: Backend,
+	accountId: string,
+	config: StoreConfig<TIncoming, TStored>,
+	incoming: TIncoming,
+): Promise<StoreStats> => processStore(backend, accountId, config, incoming);
 
-export const storeMeta = async <TMeta>(backend: Backend, accountId: string, create: CreateStore<TMeta>, meta: TMeta): Promise<string> => {
+export const storeMeta = async <TMeta>(
+	backend: Backend,
+	accountId: string,
+	create: CreateStore<TMeta>,
+	meta: TMeta,
+): Promise<string> => {
 	const storeResult = create(backend, accountId);
 	if (!storeResult.ok) return "";
 	const putResult = await storeResult.value.store.put(meta);

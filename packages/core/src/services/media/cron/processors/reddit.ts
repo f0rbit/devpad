@@ -5,7 +5,13 @@ import { createLogger } from "../../../../utils/logger";
 import { mergeByKey } from "../../merge";
 import type { RedditFetchResult, RedditProviderLike } from "../../platforms/reddit";
 import { store } from "../../storage";
-import { formatFetchError, storeMeta as genericStoreMeta, type ProcessError, type StoreStats, storeWithMerge } from "../platform-processor";
+import {
+	formatFetchError,
+	storeMeta as genericStoreMeta,
+	type ProcessError,
+	type StoreStats,
+	storeWithMerge,
+} from "../platform-processor";
 
 const log = createLogger("cron:reddit");
 
@@ -22,31 +28,60 @@ export type RedditProcessResult = {
 	};
 };
 
-const mergePosts = (existing: RedditPostsStore | null, incoming: RedditPostsStore): { merged: RedditPostsStore; newCount: number } => {
-	const { merged: posts, newCount } = mergeByKey(existing?.posts, incoming.posts, p => p.id);
+const mergePosts = (
+	existing: RedditPostsStore | null,
+	incoming: RedditPostsStore,
+): { merged: RedditPostsStore; newCount: number } => {
+	const { merged: posts, newCount } = mergeByKey(existing?.posts, incoming.posts, (p) => p.id);
 	return {
 		merged: { username: incoming.username, posts, total_posts: posts.length, fetched_at: incoming.fetched_at },
 		newCount,
 	};
 };
 
-const mergeComments = (existing: RedditCommentsStore | null, incoming: RedditCommentsStore): { merged: RedditCommentsStore; newCount: number } => {
-	const { merged: comments, newCount } = mergeByKey(existing?.comments, incoming.comments, c => c.id);
+const mergeComments = (
+	existing: RedditCommentsStore | null,
+	incoming: RedditCommentsStore,
+): { merged: RedditCommentsStore; newCount: number } => {
+	const { merged: comments, newCount } = mergeByKey(existing?.comments, incoming.comments, (c) => c.id);
 	return {
 		merged: { username: incoming.username, comments, total_comments: comments.length, fetched_at: incoming.fetched_at },
 		newCount,
 	};
 };
 
-const storeMeta = (backend: Backend, accountId: string, meta: RedditMetaStore): Promise<string> => genericStoreMeta(backend, accountId, store.reddit.meta, meta);
+const storeMeta = (backend: Backend, accountId: string, meta: RedditMetaStore): Promise<string> =>
+	genericStoreMeta(backend, accountId, store.reddit.meta, meta);
 
 const storePosts = (backend: Backend, accountId: string, posts: RedditPostsStore): Promise<StoreStats> =>
-	storeWithMerge(backend, accountId, { name: "posts", create: store.reddit.posts, merge: mergePosts, getKey: () => "", getTotal: m => m.total_posts }, posts);
+	storeWithMerge(
+		backend,
+		accountId,
+		{ name: "posts", create: store.reddit.posts, merge: mergePosts, getKey: () => "", getTotal: (m) => m.total_posts },
+		posts,
+	);
 
 const storeComments = (backend: Backend, accountId: string, comments: RedditCommentsStore): Promise<StoreStats> =>
-	storeWithMerge(backend, accountId, { name: "comments", create: store.reddit.comments, merge: mergeComments, getKey: () => "", getTotal: m => m.total_comments }, comments);
+	storeWithMerge(
+		backend,
+		accountId,
+		{
+			name: "comments",
+			create: store.reddit.comments,
+			merge: mergeComments,
+			getKey: () => "",
+			getTotal: (m) => m.total_comments,
+		},
+		comments,
+	);
 
-export const processRedditAccount = (backend: Backend, accountId: string, token: string, provider: RedditProviderLike, account?: AccountWithUser): Promise<Result<RedditProcessResult, ProcessError>> => {
+export const processRedditAccount = (
+	backend: Backend,
+	accountId: string,
+	token: string,
+	provider: RedditProviderLike,
+	account?: AccountWithUser,
+): Promise<Result<RedditProcessResult, ProcessError>> => {
 	const storedUsername = account?.platform_user_id;
 
 	const fetchPromise = storedUsername ? provider.fetchForUsername(token, storedUsername) : provider.fetch(token);
@@ -62,7 +97,11 @@ export const processRedditAccount = (backend: Backend, accountId: string, token:
 				username: posts.username,
 			});
 
-			const [metaVersion, postsResult, commentsResult] = await Promise.all([storeMeta(backend, accountId, meta), storePosts(backend, accountId, posts), storeComments(backend, accountId, comments)]);
+			const [metaVersion, postsResult, commentsResult] = await Promise.all([
+				storeMeta(backend, accountId, meta),
+				storePosts(backend, accountId, posts),
+				storeComments(backend, accountId, comments),
+			]);
 
 			log.info("Processing complete", {
 				account_id: accountId,

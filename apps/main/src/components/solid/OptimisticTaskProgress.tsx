@@ -28,7 +28,7 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 	// Set up optimistic update for the task's progress
 	const progressUpdate = createOptimisticUpdate({
 		initialData: props.task.task,
-		updateFn: async updatedTask => {
+		updateFn: async (updatedTask) => {
 			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.upsert({
 				id: updatedTask.id,
@@ -42,7 +42,7 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 		showErrorToast: true,
 		successMessage: "Task progress updated",
 		errorTitle: "Failed to update task",
-		onSuccess: updatedTask => {
+		onSuccess: (updatedTask) => {
 			// Notify parent component of successful update
 			props.onUpdate?.(updatedTask.id, { progress: updatedTask.progress });
 		},

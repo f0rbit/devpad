@@ -24,29 +24,31 @@ const ACTIONS = {
 
 export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	const _items = JSON.parse(JSON.stringify(items)) as UpdateData[];
-	const mapped_items = _items.map(item => {
+	const mapped_items = _items.map((item) => {
 		const task = tasks[item.id];
 		return task ? { ...item, task } : item;
 	});
 
-	const { same = [], others = [] } = Object.groupBy(mapped_items, u => (u.type === "SAME" || u.type === "MOVE" ? "same" : "others"));
+	const { same = [], others = [] } = Object.groupBy(mapped_items, (u) =>
+		u.type === "SAME" || u.type === "MOVE" ? "same" : "others",
+	);
 
 	// Initialize actions state with default actions
 	const defaultActions = Object.fromEntries(
-		mapped_items.map(item => [
+		mapped_items.map((item) => [
 			item.id,
 			ACTIONS[item.type as keyof typeof ACTIONS][0], // Default to the 0th action
-		])
+		]),
 	);
 	const [actionsState, setActionsState] = createSignal<Record<string, UpdateAction>>(defaultActions);
 	const [titles, setTitles] = createSignal<Record<string, string>>({});
 
 	const updateAction = (id: string, action: UpdateAction) => {
-		setActionsState(prev => ({ ...prev, [id]: action }));
+		setActionsState((prev) => ({ ...prev, [id]: action }));
 	};
 
 	const updateTitle = (id: string, title: string) => {
-		setTitles(prev => {
+		setTitles((prev) => {
 			prev[id] = title;
 			return prev;
 		});
@@ -64,7 +66,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				}
 				return acc;
 			},
-			{} as Record<UpdateAction, string[]>
+			{} as Record<UpdateAction, string[]>,
 		);
 
 		try {
@@ -109,13 +111,26 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 					</summary>
 					<br />
 					<div class="stack stack-lg">
-						{same.map(item => (
-							<UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />
+						{same.map((item) => (
+							<UpdateDiff
+								update={item}
+								action={actionsState()[item.id]}
+								onActionChange={updateAction}
+								onTitleChange={updateTitle}
+							/>
 						))}
 					</div>
 				</details>
 			)}
-			{others.length > 0 && others.map(item => <UpdateDiff update={item} action={actionsState()[item.id]} onActionChange={updateAction} onTitleChange={updateTitle} />)}
+			{others.length > 0 &&
+				others.map((item) => (
+					<UpdateDiff
+						update={item}
+						action={actionsState()[item.id]}
+						onActionChange={updateAction}
+						onTitleChange={updateTitle}
+					/>
+				))}
 			<hr />
 			<div class="row row-sm" style="gap: 20px; justify-content: center;">
 				<a role="button" onClick={saveActions} class="row row-sm">
@@ -143,7 +158,11 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 	const title: string | null = update?.task?.task?.title ?? null;
 
 	// Determine the path based on new or old data
-	const path = data.new?.file ? formatCodeLocation(data.new.file, data.new.line) : data.old?.file ? formatCodeLocation(data.old.file, data.old.line) : "unknown:?";
+	const path = data.new?.file
+		? formatCodeLocation(data.new.file, data.new.line)
+		: data.old?.file
+			? formatCodeLocation(data.old.file, data.old.line)
+			: "unknown:?";
 
 	// Build contexts for old and new code
 	const old_context = data.old?.context ? buildCodeContext(data.old.context) : null;
@@ -155,7 +174,16 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 				{/** @idea paid users could "generate" title using AI, could have automatic generation as option */}
 				<span>{update.type}</span>
 				<span> - </span>
-				{title ? <span>{title}</span> : <input type="text" placeholder="Enter title" style="width: 50ch" onInput={e => onTitleChange(update.id, e.currentTarget.value)} />}
+				{title ? (
+					<span>{title}</span>
+				) : (
+					<input
+						type="text"
+						placeholder="Enter title"
+						style="width: 50ch"
+						onInput={(e) => onTitleChange(update.id, e.currentTarget.value)}
+					/>
+				)}
 			</h5>
 			<div class="row row-sm">
 				<span>{update.tag}</span> - <code>{path}</code>
@@ -176,9 +204,16 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 				<Context old_context={old_context} new_context={new_context} />
 				<div class="button-container row row-sm">
 					<For each={available_actions}>
-						{label => (
+						{(label) => (
 							<>
-								<input type="radio" name={update.id} id={`${update.id}-${label}`} style="display: none" checked={label === action} onChange={() => onActionChange(update.id, label)} />
+								<input
+									type="radio"
+									name={update.id}
+									id={`${update.id}-${label}`}
+									style="display: none"
+									checked={label === action}
+									onChange={() => onActionChange(update.id, label)}
+								/>
 								<label class="label-modal" for={`${update.id}-${label}`}>
 									{label.toLowerCase()}
 								</label>

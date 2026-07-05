@@ -26,7 +26,7 @@ const UpdateSettingsBodySchema = z.object({
 
 export const connectionRoutes = new Hono<AppContext>();
 
-connectionRoutes.get("/", async c => {
+connectionRoutes.get("/", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const includeSettings = c.req.query("include_settings") === "true";
@@ -40,7 +40,7 @@ connectionRoutes.get("/", async c => {
 	return handleResult(c, result);
 });
 
-connectionRoutes.post("/", async c => {
+connectionRoutes.post("/", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const parseResult = CreateConnectionBodySchema.safeParse(await c.req.json());
@@ -53,7 +53,7 @@ connectionRoutes.post("/", async c => {
 	return handleResult(c, result, 201);
 });
 
-connectionRoutes.delete("/:account_id", async c => {
+connectionRoutes.delete("/:account_id", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accId = accountId(c.req.param("account_id"));
@@ -67,7 +67,7 @@ connectionRoutes.delete("/:account_id", async c => {
 	return handleResult(c, result);
 });
 
-connectionRoutes.post("/:account_id/refresh", async c => {
+connectionRoutes.post("/:account_id/refresh", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accountIdStr = c.req.param("account_id");
@@ -92,7 +92,7 @@ connectionRoutes.post("/:account_id/refresh", async c => {
 	return c.json(result.value);
 });
 
-connectionRoutes.post("/refresh-all", async c => {
+connectionRoutes.post("/refresh-all", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 
@@ -109,7 +109,7 @@ connectionRoutes.post("/refresh-all", async c => {
 	return c.json(result.value);
 });
 
-connectionRoutes.patch("/:account_id", async c => {
+connectionRoutes.patch("/:account_id", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accId = accountId(c.req.param("account_id"));
@@ -123,7 +123,7 @@ connectionRoutes.patch("/:account_id", async c => {
 	return handleResult(c, result);
 });
 
-connectionRoutes.get("/:account_id/settings", async c => {
+connectionRoutes.get("/:account_id/settings", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accId = accountId(c.req.param("account_id"));
@@ -132,7 +132,7 @@ connectionRoutes.get("/:account_id/settings", async c => {
 	return handleResult(c, result);
 });
 
-connectionRoutes.put("/:account_id/settings", async c => {
+connectionRoutes.put("/:account_id/settings", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accId = accountId(c.req.param("account_id"));
@@ -146,7 +146,7 @@ connectionRoutes.put("/:account_id/settings", async c => {
 	return handleResult(c, result);
 });
 
-connectionRoutes.get("/:account_id/repos", async c => {
+connectionRoutes.get("/:account_id/repos", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accId = accountId(c.req.param("account_id"));
@@ -155,7 +155,7 @@ connectionRoutes.get("/:account_id/repos", async c => {
 	return handleResult(c, result);
 });
 
-connectionRoutes.get("/:account_id/subreddits", async c => {
+connectionRoutes.get("/:account_id/subreddits", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const accId = accountId(c.req.param("account_id"));

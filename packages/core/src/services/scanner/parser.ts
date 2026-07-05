@@ -29,7 +29,12 @@ export const extractText = (line: string, match_index: number, match_length: num
 	return stripped;
 };
 
-export const extractContext = (lines: string[], line_index: number, before: number = 4, after: number = 6): string[] => {
+export const extractContext = (
+	lines: string[],
+	line_index: number,
+	before: number = 4,
+	after: number = 6,
+): string[] => {
 	const start = Math.max(0, line_index - before);
 	const end = Math.min(lines.length, line_index + after);
 	return lines.slice(start, end);
@@ -55,4 +60,5 @@ export const parseFileContent = (content: string, file_path: string, config: Sca
 	}, []);
 };
 
-export const shouldIgnorePath = (file_path: string, ignore_patterns: string[]): boolean => ignore_patterns.some(pattern => new RegExp(pattern).test(file_path));
+export const shouldIgnorePath = (file_path: string, ignore_patterns: string[]): boolean =>
+	ignore_patterns.some((pattern) => new RegExp(pattern).test(file_path));

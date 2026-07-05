@@ -1,6 +1,6 @@
 const hex = (buffer: ArrayBuffer): string =>
 	Array.from(new Uint8Array(buffer))
-		.map(b => b.toString(16).padStart(2, "0"))
+		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
 
 const hash = async (token: string): Promise<string> => {

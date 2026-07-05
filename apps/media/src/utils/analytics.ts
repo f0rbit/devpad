@@ -28,7 +28,7 @@ type TimelineEntry = TimelineItem | CommitGroup;
 
 const isCommitGroup = (entry: TimelineEntry): entry is CommitGroup => entry.type === "commit_group";
 
-const flattenGroups = (groups: TimelineGroup[]): TimelineEntry[] => groups.flatMap(g => g.items);
+const flattenGroups = (groups: TimelineGroup[]): TimelineEntry[] => groups.flatMap((g) => g.items);
 
 const getEntryTimestamp = (entry: TimelineEntry): string => (isCommitGroup(entry) ? entry.date : entry.timestamp);
 
@@ -51,7 +51,8 @@ const generateDateRange = (days: number): string[] => {
 
 const uniqueValues = <T>(arr: T[]): T[] => [...new Set(arr)];
 
-const sortDescending = <T>(arr: T[], fn: (item: T) => string): T[] => [...arr].sort((a, b) => fn(b).localeCompare(fn(a)));
+const sortDescending = <T>(arr: T[], fn: (item: T) => string): T[] =>
+	[...arr].sort((a, b) => fn(b).localeCompare(fn(a)));
 
 const toPercentage = (count: number, total: number): number => (total === 0 ? 0 : Math.round((count / total) * 100));
 
@@ -63,7 +64,7 @@ const groupBy = <T, K extends string>(items: T[], keyFn: (item: T) => K): Record
 			acc[key].push(item);
 			return acc;
 		},
-		{} as Record<K, T[]>
+		{} as Record<K, T[]>,
 	);
 
 export function calculateDashboardStats(groups: TimelineGroup[]): DashboardStats {
@@ -76,7 +77,7 @@ export function calculateDashboardStats(groups: TimelineGroup[]): DashboardStats
 	const timestamps = entries.map(getEntryTimestamp);
 	const uniqueDates = uniqueValues(timestamps.map(toDateString));
 	const platforms = uniqueValues(entries.map(getEntryPlatform));
-	const sorted = sortDescending(timestamps, t => t);
+	const sorted = sortDescending(timestamps, (t) => t);
 
 	return {
 		totalEntries: entries.length,
@@ -106,9 +107,9 @@ export function calculatePlatformDistribution(groups: TimelineGroup[]): Platform
 export function calculateActivityByDay(groups: TimelineGroup[], days = 14): DailyActivity[] {
 	const entries = flattenGroups(groups);
 	const dateRange = generateDateRange(days);
-	const countsByDate = groupBy(entries, e => toDateString(getEntryTimestamp(e)));
+	const countsByDate = groupBy(entries, (e) => toDateString(getEntryTimestamp(e)));
 
-	return dateRange.map(date => ({
+	return dateRange.map((date) => ({
 		date,
 		count: countsByDate[date]?.length ?? 0,
 	}));
@@ -121,7 +122,7 @@ export type WeeklyActivity = {
 
 export function calculateActivityByWeek(groups: TimelineGroup[], weeks = 53): WeeklyActivity[] {
 	const entries = flattenGroups(groups);
-	const countsByDate = groupBy(entries, e => toDateString(getEntryTimestamp(e)));
+	const countsByDate = groupBy(entries, (e) => toDateString(getEntryTimestamp(e)));
 
 	const today = new Date();
 	const todayDow = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
@@ -191,5 +192,5 @@ export function getRecentItems(groups: TimelineGroup[], limit = 5): TimelineEntr
 
 export function getItemsForDate(groups: TimelineGroup[], date: string): TimelineEntry[] {
 	const entries = flattenGroups(groups);
-	return entries.filter(e => toDateString(getEntryTimestamp(e)) === date);
+	return entries.filter((e) => toDateString(getEntryTimestamp(e)) === date);
 }

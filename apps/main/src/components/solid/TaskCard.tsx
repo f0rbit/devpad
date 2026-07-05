@@ -14,7 +14,14 @@ import SquareDot from "lucide-solid/icons/square-dot";
 import Target from "lucide-solid/icons/target";
 import { createSignal, For, onMount } from "solid-js";
 import { TagBadge } from "@/components/solid/TagEditor";
-import { advanceTaskProgress, formatDueDate, getPriorityClass, getProgressIconType, isPastDue, isProgressClickable } from "@/utils/task-status";
+import {
+	advanceTaskProgress,
+	formatDueDate,
+	getPriorityClass,
+	getProgressIconType,
+	isPastDue,
+	isProgressClickable,
+} from "@/utils/task-status";
 
 interface Props {
 	task: TaskWithDetails;
@@ -63,8 +70,8 @@ export const TaskCard = (props: Props) => {
 	const priority_class = getPriorityClass(task.priority, !!task.end_time);
 
 	const tag_list = tags
-		.map(tag_id => {
-			return user_tags.find(tag => tag.id === tag_id) ?? null;
+		.map((tag_id) => {
+			return user_tags.find((tag) => tag.id === tag_id) ?? null;
 		})
 		.filter(Boolean) as UpsertTag[];
 
@@ -76,7 +83,9 @@ export const TaskCard = (props: Props) => {
 	};
 
 	const progress = async () => {
-		await advanceTaskProgress(task.id, task.owner_id, task.progress, newProgress => props.update?.(task.id, { progress: newProgress }));
+		await advanceTaskProgress(task.id, task.owner_id, task.progress, (newProgress) =>
+			props.update?.(task.id, { progress: newProgress }),
+		);
 	};
 
 	const has_linked = !!fetched_task.codebase_tasks;
@@ -102,7 +111,9 @@ export const TaskCard = (props: Props) => {
 			<div class="stack stack-sm" style={{ "font-size": "small", gap: "6px" }}>
 				{tag_list.length > 0 && (
 					<span class="row row-sm">
-						<For each={tag_list}>{tag => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}</For>
+						<For each={tag_list}>
+							{(tag) => tag.render && <TagBadge name={() => tag.title} colour={() => tag.color ?? null} />}
+						</For>
 					</span>
 				)}
 				<span class={`row row-sm ${priority_class}`}>
@@ -135,7 +146,15 @@ const DueDate = ({ date }: { date: string | null }) => {
 	return <span>{formatDueDate(date)}</span>;
 };
 
-export function TaskProgress({ progress, onClick, type }: { progress: TaskWithDetails["task"]["progress"]; onClick: () => void; type: "box" | "circle" }) {
+export function TaskProgress({
+	progress,
+	onClick,
+	type,
+}: {
+	progress: TaskWithDetails["task"]["progress"];
+	onClick: () => void;
+	type: "box" | "circle";
+}) {
 	const iconType = getProgressIconType(progress, type);
 	const clickable = isProgressClickable(progress);
 

@@ -50,7 +50,7 @@ export default function PulseOverview(props: PulseOverviewProps) {
 
 	const seriesValues = (key: keyof SummarySeries): number[] => {
 		const s = series()[key];
-		return Array.isArray(s) ? s.map(p => p.count) : [];
+		return Array.isArray(s) ? s.map((p) => p.count) : [];
 	};
 
 	const isEmpty = () => {
@@ -67,7 +67,15 @@ export default function PulseOverview(props: PulseOverviewProps) {
 				</p>
 			</Show>
 
-			<Show when={!isEmpty()} fallback={<Empty title="No analytics data yet" description="Once your project starts emitting events, summary stats will appear here." />}>
+			<Show
+				when={!isEmpty()}
+				fallback={
+					<Empty
+						title="No analytics data yet"
+						description="Once your project starts emitting events, summary stats will appear here."
+					/>
+				}
+			>
 				<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
 					<Stat value={num(totals().pageviews)} label="pageviews" />
 					<Stat value={num(totals().unique_visitors)} label="unique visitors" />
@@ -80,10 +88,17 @@ export default function PulseOverview(props: PulseOverviewProps) {
 					<h3 style={{ margin: 0 }}>last 7 days</h3>
 					<div class="row" style={{ gap: "1rem", "flex-wrap": "wrap" }}>
 						<For each={SPARKS}>
-							{spark => (
+							{(spark) => (
 								<div class="stack stack-xs" style={{ "min-width": "200px" }}>
 									<span class="text-sm text-faint">{spark.label}</span>
-									<PulseChart data={seriesValues(spark.key)} color={spark.color} fill width={220} height={48} aria-label={`${spark.label} sparkline`} />
+									<PulseChart
+										data={seriesValues(spark.key)}
+										color={spark.color}
+										fill
+										width={220}
+										height={48}
+										aria-label={`${spark.label} sparkline`}
+									/>
 								</div>
 							)}
 						</For>

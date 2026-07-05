@@ -13,12 +13,45 @@
  * scheduling/scratch only.
  */
 
-import type { EventDoRouter, EventPulseEmitter, OidcSessionClaims, OidcSessionScope, ResolvedPlan, VerifiedOidcClaims } from "@devpad/core/services/pipelines";
-import { create_run, exchange_oidc_for_session, get_run, ingest_event, is_terminal_status, list_runs, resolve_run_plan } from "@devpad/core/services/pipelines";
-import { create_analysis_template, delete_analysis_template, get_analysis_template, list_analysis_templates, update_analysis_template } from "@devpad/core/services/pipelines/analysis-templates";
+import type {
+	EventDoRouter,
+	EventPulseEmitter,
+	OidcSessionClaims,
+	OidcSessionScope,
+	ResolvedPlan,
+	VerifiedOidcClaims,
+} from "@devpad/core/services/pipelines";
+import {
+	create_run,
+	exchange_oidc_for_session,
+	get_run,
+	ingest_event,
+	is_terminal_status,
+	list_runs,
+	resolve_run_plan,
+} from "@devpad/core/services/pipelines";
+import {
+	create_analysis_template,
+	delete_analysis_template,
+	get_analysis_template,
+	list_analysis_templates,
+	update_analysis_template,
+} from "@devpad/core/services/pipelines/analysis-templates";
 import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
-import { create_trust_policy, delete_trust_policy, get_trust_policy, list_trust_policies, update_trust_policy } from "@devpad/core/services/pipelines/oidc-trust";
-import { create_package, delete_package, get_package, list_packages, update_package } from "@devpad/core/services/pipelines/packages";
+import {
+	create_trust_policy,
+	delete_trust_policy,
+	get_trust_policy,
+	list_trust_policies,
+	update_trust_policy,
+} from "@devpad/core/services/pipelines/oidc-trust";
+import {
+	create_package,
+	delete_package,
+	get_package,
+	list_packages,
+	update_package,
+} from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package, pipeline_stage_event, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -142,7 +175,11 @@ type QueryParseError = { code: "invalid_query"; issues: unknown };
 const parse_list_runs_query = (raw: Record<string, string>): Result<ListRunsParsed, QueryParseError> => {
 	const parsed = list_runs_query.safeParse(raw);
 	if (!parsed.success) return err({ code: "invalid_query", issues: parsed.error.issues });
-	return ok({ package_id: parsed.data.package_id, status: parsed.data.status, limit: parsed.data.limit ?? LIST_RUNS_DEFAULT_LIMIT });
+	return ok({
+		package_id: parsed.data.package_id,
+		status: parsed.data.status,
+		limit: parsed.data.limit ?? LIST_RUNS_DEFAULT_LIMIT,
+	});
 };
 
 export interface ManifestProvider {
@@ -297,7 +334,7 @@ const make_event_deps = (deps: RoutesDeps): { db: Database; pulse: EventPulseEmi
 					method: "POST",
 					headers: { "content-type": "application/json" },
 					body: JSON.stringify(body),
-				})
+				}),
 			);
 		},
 	};
@@ -323,7 +360,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		await next();
 	});
 
-	app.post("/runs", async c => {
+	app.post("/runs", async (c) => {
 		const body = await c.req.json().catch(() => null);
 		const parsed = create_run_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
@@ -344,19 +381,31 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 					return wire_err({ code: "insufficient_scope", required: "runs:start", granted: identity.scope }, 403);
 				}
 				if (!identity.package_ids.includes(parsed.data.package_id)) {
-					return wire_err({ code: "package_scope_mismatch", package_id: parsed.data.package_id, allowed_package_ids: identity.package_ids }, 403);
+					return wire_err(
+						{
+							code: "package_scope_mismatch",
+							package_id: parsed.data.package_id,
+							allowed_package_ids: identity.package_ids,
+						},
+						403,
+					);
 				}
 			}
 		}
 
-		const package_row = (await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, parsed.data.package_id)))[0];
-		if (package_row === undefined) return wire_err({ code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
+		const package_row = (
+			await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, parsed.data.package_id))
+		)[0];
+		if (package_row === undefined)
+			return wire_err({ code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
 
 		const manifest = await deps.manifests.get(parsed.data.version_set_id);
-		if (manifest === null) return wire_err({ code: "not_found", resource: "version_set_manifest", id: parsed.data.version_set_id });
+		if (manifest === null)
+			return wire_err({ code: "not_found", resource: "version_set_manifest", id: parsed.data.version_set_id });
 
 		const template = await deps.templates.resolve(parsed.data.package_id, parsed.data.version_set_id);
-		if (template === null) return wire_err({ code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
+		if (template === null)
+			return wire_err({ code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
 
 		const previous_version_set_id = await deps.lineage.previous(parsed.data.package_id, parsed.data.version_set_id);
 
@@ -377,7 +426,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
 	});
 
-	app.get("/runs", async c => {
+	app.get("/runs", async (c) => {
 		const deps = c.get("deps");
 		const filter = parse_list_runs_query(c.req.query());
 		if (!filter.ok) return wire_err(filter.error, 400);
@@ -387,7 +436,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.get("/runs/:id", async c => {
+	app.get("/runs/:id", async (c) => {
 		const deps = c.get("deps");
 		const run = await get_run(deps.db, c.req.param("id"));
 		if (!run.ok) return wire_err(run.error);
@@ -410,7 +459,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	//   inherits from the route group — no extra scope demanded; if you
 	//   can read the run you can read its events.
 
-	app.post("/runs/:id/events", async c => {
+	app.post("/runs/:id/events", async (c) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 
@@ -432,7 +481,14 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 				return wire_err({ code: "insufficient_scope", required: "runs:events", granted: identity.scope }, 403);
 			}
 			if (!identity.package_ids.includes(run.value.package_id)) {
-				return wire_err({ code: "package_scope_mismatch", package_id: run.value.package_id, allowed_package_ids: identity.package_ids }, 403);
+				return wire_err(
+					{
+						code: "package_scope_mismatch",
+						package_id: run.value.package_id,
+						allowed_package_ids: identity.package_ids,
+					},
+					403,
+				);
 			}
 		}
 
@@ -458,7 +514,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		});
 	});
 
-	app.get("/runs/:id/events", async c => {
+	app.get("/runs/:id/events", async (c) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 
@@ -468,14 +524,18 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (!run.ok) return wire_err(run.error);
 
 		try {
-			const rows = await deps.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id)).orderBy(desc(pipeline_stage_event.ts));
+			const rows = await deps.db
+				.select()
+				.from(pipeline_stage_event)
+				.where(eq(pipeline_stage_event.run_id, run_id))
+				.orderBy(desc(pipeline_stage_event.ts));
 			return json_ok(rows);
 		} catch (e) {
 			return wire_err({ code: "db_error", message: `failed to list pipeline_stage_event: ${String(e)}` }, 500);
 		}
 	});
 
-	app.post("/runs/:id/approve", async c => {
+	app.post("/runs/:id/approve", async (c) => {
 		const body = await c.req.json().catch(() => null);
 		const parsed = approve_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
@@ -496,7 +556,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return normalise_do_response(response);
 	});
 
-	app.post("/runs/:id/cancel", async c => {
+	app.post("/runs/:id/cancel", async (c) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 		const run = await get_run(deps.db, run_id);
@@ -507,7 +567,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return normalise_do_response(response);
 	});
 
-	app.post("/runs/:id/rollback", async c => {
+	app.post("/runs/:id/rollback", async (c) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 		const source_run = await get_run(deps.db, run_id);
@@ -516,9 +576,15 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		// Resolve the predecessor in lineage. If there is none, this run
 		// has nothing to roll back to and we refuse — the operator should
 		// re-upload a known-good version-set instead.
-		const previous_version_set_id = await deps.lineage.previous(source_run.value.package_id, source_run.value.version_set_id);
+		const previous_version_set_id = await deps.lineage.previous(
+			source_run.value.package_id,
+			source_run.value.version_set_id,
+		);
 		if (previous_version_set_id === null) {
-			return wire_err({ code: "no_previous_version_set", run_id, version_set_id: source_run.value.version_set_id }, 400);
+			return wire_err(
+				{ code: "no_previous_version_set", run_id, version_set_id: source_run.value.version_set_id },
+				400,
+			);
 		}
 
 		// In-flight source runs get cancelled first so we don't have two
@@ -533,10 +599,15 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		// Build the rollback run targeting the predecessor at 100%.
 		const manifest = await deps.manifests.get(previous_version_set_id);
-		if (manifest === null) return wire_err({ code: "not_found", resource: "version_set_manifest", id: previous_version_set_id });
+		if (manifest === null)
+			return wire_err({ code: "not_found", resource: "version_set_manifest", id: previous_version_set_id });
 		const template = await deps.templates.resolve(source_run.value.package_id, previous_version_set_id);
-		if (template === null) return wire_err({ code: "not_found", resource: "pipeline_template", id: source_run.value.package_id });
-		const predecessor_of_predecessor = await deps.lineage.previous(source_run.value.package_id, previous_version_set_id);
+		if (template === null)
+			return wire_err({ code: "not_found", resource: "pipeline_template", id: source_run.value.package_id });
+		const predecessor_of_predecessor = await deps.lineage.previous(
+			source_run.value.package_id,
+			previous_version_set_id,
+		);
 
 		const created = await create_run(deps.db, {
 			package_id: source_run.value.package_id,
@@ -553,10 +624,18 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const advance_body = await advance_res.json().catch(() => null);
 		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
 
-		return json_ok({ run_id: run.id, status: run.status, kind: run.kind, target_version_set_id: previous_version_set_id, source_run_id: run_id, plan, advance: advance_body });
+		return json_ok({
+			run_id: run.id,
+			status: run.status,
+			kind: run.kind,
+			target_version_set_id: previous_version_set_id,
+			source_run_id: run_id,
+			plan,
+			advance: advance_body,
+		});
 	});
 
-	app.get("/grants", async c => {
+	app.get("/grants", async (c) => {
 		const deps = c.get("deps");
 		const package_id = c.req.query("package_id");
 		if (!package_id) return wire_err({ code: "missing_param", param: "package_id" }, 400);
@@ -566,7 +645,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(grants_result.value);
 	});
 
-	app.post("/grants/:id/approve", async c => {
+	app.post("/grants/:id/approve", async (c) => {
 		const deps = c.get("deps");
 		const body = await c.req.json().catch(() => null);
 		const parsed = grant_approve_body.safeParse(body);
@@ -578,7 +657,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.post("/grants/:id/deny", async c => {
+	app.post("/grants/:id/deny", async (c) => {
 		const deps = c.get("deps");
 		const body = await c.req.json().catch(() => null);
 		const parsed = grant_deny_body.safeParse(body);
@@ -590,7 +669,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok({ success: true });
 	});
 
-	app.get("/packages", async c => {
+	app.get("/packages", async (c) => {
 		const deps = c.get("deps");
 		const project_id = c.req.query("project_id");
 		const result = await list_packages(deps.db, project_id !== undefined ? { project_id } : {});
@@ -598,7 +677,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.get("/packages/:id", async c => {
+	app.get("/packages/:id", async (c) => {
 		const deps = c.get("deps");
 		const result = await get_package(deps.db, c.req.param("id"));
 		if (!result.ok) return wire_err(result.error);
@@ -612,7 +691,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	// packages without ever touching D1 directly. Read routes above
 	// stay unauthenticated.
 
-	app.post("/packages", async c => {
+	app.post("/packages", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
@@ -626,7 +705,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.patch("/packages/:id", async c => {
+	app.patch("/packages/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
@@ -640,7 +719,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.delete("/packages/:id", async c => {
+	app.delete("/packages/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
@@ -660,7 +739,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	// Intentionally UNAUTHENTICATED at the bearer layer — the OIDC JWT
 	// in the body IS the auth. See plan §E.2.
 
-	app.post("/auth/github-oidc", async c => apply_oidc_exchange(c.req.raw, c.get("deps")));
+	app.post("/auth/github-oidc", async (c) => apply_oidc_exchange(c.req.raw, c.get("deps")));
 
 	// ─── OIDC trust-policy routes (admin-only) ──────────────────────
 	//
@@ -669,11 +748,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	// routes require admin identity (literal `PIPELINES_TOKEN`); session
 	// JWTs are explicitly rejected even when they pass `apply_auth`.
 
-	app.get("/oidc-trust", async c => {
+	app.get("/oidc-trust", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
 		const parsed = list_oidc_trust_query.safeParse(c.req.query());
 		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
@@ -683,11 +763,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.get("/oidc-trust/:id", async c => {
+	app.get("/oidc-trust/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
 		const parsed = list_oidc_trust_query.safeParse(c.req.query());
 		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
@@ -697,11 +778,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.post("/oidc-trust", async c => {
+	app.post("/oidc-trust", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
 		const body = await c.req.json().catch(() => null);
 		const parsed = create_oidc_trust_body.safeParse(body);
@@ -712,11 +794,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.patch("/oidc-trust/:id", async c => {
+	app.patch("/oidc-trust/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
 		const body = await c.req.json().catch(() => null);
 		const parsed = update_oidc_trust_body.safeParse(body);
@@ -728,11 +811,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.delete("/oidc-trust/:id", async c => {
+	app.delete("/oidc-trust/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
 		const parsed = list_oidc_trust_query.safeParse(c.req.query());
 		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
@@ -751,11 +835,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	// body field on every operation. Service-layer `validation_error`
 	// (e.g. malformed threshold DSL) surfaces as 400.
 
-	app.get("/analysis-templates", async c => {
+	app.get("/analysis-templates", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
 		const parsed = list_analysis_templates_query.safeParse(c.req.query());
 		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
@@ -765,11 +850,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.get("/analysis-templates/:id", async c => {
+	app.get("/analysis-templates/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
 		const parsed = list_analysis_templates_query.safeParse(c.req.query());
 		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
@@ -779,11 +865,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.post("/analysis-templates", async c => {
+	app.post("/analysis-templates", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
 		const body = await c.req.json().catch(() => null);
 		const parsed = create_analysis_template_body.safeParse(body);
@@ -794,11 +881,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.patch("/analysis-templates/:id", async c => {
+	app.patch("/analysis-templates/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
 		const body = await c.req.json().catch(() => null);
 		const parsed = update_analysis_template_body.safeParse(body);
@@ -809,11 +897,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		return json_ok(result.value);
 	});
 
-	app.delete("/analysis-templates/:id", async c => {
+	app.delete("/analysis-templates/:id", async (c) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
-		if (auth_result.identity.kind !== "admin") return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
 		const parsed = list_analysis_templates_query.safeParse(c.req.query());
 		if (!parsed.success) return wire_err({ code: "invalid_query", issues: parsed.error.issues }, 400);
@@ -838,10 +927,10 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	// `env.PIPELINES_TOKEN`. Read-only routes above this point are
 	// intentionally unauthenticated.
 
-	app.post("/artifacts/blob", async c => apply_artifact_blob(c.req.raw, c.get("deps")));
-	app.post("/artifacts/version-set", async c => apply_artifact_version_set(c.req.raw, c.get("deps")));
+	app.post("/artifacts/blob", async (c) => apply_artifact_blob(c.req.raw, c.get("deps")));
+	app.post("/artifacts/version-set", async (c) => apply_artifact_version_set(c.req.raw, c.get("deps")));
 
-	app.get("/health", c => c.json({ status: "ok", timestamp: new Date().toISOString() }));
+	app.get("/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }));
 
 	return app;
 };
@@ -877,7 +966,7 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 			now: () => new Date(),
 			new_jti: () => crypto.randomUUID(),
 		},
-		parsed.data
+		parsed.data,
 	);
 	if (!result.ok) return wire_err(result.error);
 
@@ -907,7 +996,8 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	if (auth_result instanceof Response) return auth_result;
 	const identity = auth_result.identity;
 
-	if (deps.backend === undefined) return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
+	if (deps.backend === undefined)
+		return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
 	const store_id = request.headers.get("x-store-id");
 	if (store_id === null || !BLOB_STORE_ID_PATTERN.test(store_id)) {
@@ -921,12 +1011,19 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 
 	const content_length = Number(request.headers.get("content-length") ?? "0");
 	if (content_length > MAX_BLOB_SIZE_BYTES) {
-		return wire_err({ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES }, 413);
+		return wire_err(
+			{ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES },
+			413,
+		);
 	}
 
 	const buffer = await request.arrayBuffer().catch(() => null);
 	if (buffer === null) return wire_err({ code: "invalid_body", message: "could not read body" }, 400);
-	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES) return wire_err({ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES }, 413);
+	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES)
+		return wire_err(
+			{ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES },
+			413,
+		);
 
 	const bytes = new Uint8Array(buffer);
 	const content_hash = await sha256_hex(bytes);
@@ -949,7 +1046,8 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	const put_meta = await deps.backend.metadata.put(meta);
 	if (!put_meta.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put_meta.error) });
 
-	if (deps.pulse !== undefined) await deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }).catch(() => undefined);
+	if (deps.pulse !== undefined)
+		await deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }).catch(() => undefined);
 
 	return json_ok({ version, content_hash, store_id, ref: data_key });
 };
@@ -990,7 +1088,8 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	if (auth_result instanceof Response) return auth_result;
 	const identity = auth_result.identity;
 
-	if (deps.backend === undefined) return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
+	if (deps.backend === undefined)
+		return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
 	const body = await request.json().catch(() => null);
 	if (body === null) return wire_err({ code: "invalid_body", message: "request body is not valid JSON" }, 400);
@@ -1006,7 +1105,10 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 			return wire_err({ code: "insufficient_scope", required: "artifacts:upload", granted: identity.scope }, 403);
 		}
 		if (!identity.package_ids.includes(manifest.package)) {
-			return wire_err({ code: "package_scope_mismatch", package_id: manifest.package, allowed_package_ids: identity.package_ids }, 403);
+			return wire_err(
+				{ code: "package_scope_mismatch", package_id: manifest.package, allowed_package_ids: identity.package_ids },
+				403,
+			);
 		}
 	}
 
@@ -1022,13 +1124,26 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 			? undefined
 			: {
 					parents: [{ store_id: "version-sets", version: parent_version, role: "predecessor" }],
-				}
+				},
 	);
 	if (!put.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put.error) });
 
-	if (deps.pulse !== undefined) await deps.pulse.emit({ event: "artifact_uploaded", store_id: "version-sets", content_hash: put.value.content_hash, kind: "version_set", package: manifest.package }).catch(() => undefined);
+	if (deps.pulse !== undefined)
+		await deps.pulse
+			.emit({
+				event: "artifact_uploaded",
+				store_id: "version-sets",
+				content_hash: put.value.content_hash,
+				kind: "version_set",
+				package: manifest.package,
+			})
+			.catch(() => undefined);
 
-	return json_ok({ version_set_id: put.value.version, content_hash: put.value.content_hash, package: manifest.package });
+	return json_ok({
+		version_set_id: put.value.version,
+		content_hash: put.value.content_hash,
+		package: manifest.package,
+	});
 };
 
 const format_corpus_error = (e: { kind: string; message?: string; cause?: { message?: string } }): string => {
@@ -1095,7 +1210,11 @@ const normalise_do_response = async (response: Response): Promise<Response> => {
  * Phase 2 can collapse this into reading the snapshot directly off
  * the row.
  */
-const reconstruct_plan = async (deps: RoutesDeps, package_id: string, version_set_id: string): Promise<ResolvedPlan | null> => {
+const reconstruct_plan = async (
+	deps: RoutesDeps,
+	package_id: string,
+	version_set_id: string,
+): Promise<ResolvedPlan | null> => {
 	const manifest = await deps.manifests.get(version_set_id);
 	if (manifest === null) return null;
 	const template = await deps.templates.resolve(package_id, version_set_id);

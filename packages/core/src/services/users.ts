@@ -5,7 +5,11 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 
-export async function updateUserPreferences(db: Database, user_id: string, updates: UpdateUser): Promise<Result<User, ServiceError>> {
+export async function updateUserPreferences(
+	db: Database,
+	user_id: string,
+	updates: UpdateUser,
+): Promise<Result<User, ServiceError>> {
 	const { id: _, ...fields } = updates;
 	const result = await db.update(user).set(fields).where(eq(user.id, user_id)).returning();
 

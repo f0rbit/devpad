@@ -4,7 +4,12 @@ import type { Backend } from "@f0rbit/corpus";
 export type LoadFunction<T = unknown> = (backend: Backend, accountId: string) => Promise<T>;
 
 // Re-export from platform-specific files
-export { type CommitWithRepo, type GitHubTimelineData, loadGitHubData, type PRWithRepo } from "../platforms/github/timeline";
+export {
+	type CommitWithRepo,
+	type GitHubTimelineData,
+	loadGitHubData,
+	type PRWithRepo,
+} from "../platforms/github/timeline";
 export { loadRedditData, type RedditTimelineData } from "../platforms/reddit/timeline";
 export { loadTwitterData, type TwitterTimelineData } from "../platforms/twitter/timeline";
 

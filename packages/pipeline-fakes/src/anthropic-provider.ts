@@ -1,6 +1,10 @@
 import type { Result } from "@f0rbit/corpus";
 
-export type AnthropicError = { code: "rate_limited"; message: string; retry_after_ms?: number } | { code: "validation"; message: string } | { code: "unauthorized"; message: string } | { code: "internal"; message: string };
+export type AnthropicError =
+	| { code: "rate_limited"; message: string; retry_after_ms?: number }
+	| { code: "validation"; message: string }
+	| { code: "unauthorized"; message: string }
+	| { code: "internal"; message: string };
 
 export type AnthropicMessage = {
 	role: "user" | "assistant";

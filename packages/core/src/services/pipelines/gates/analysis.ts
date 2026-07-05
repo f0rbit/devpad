@@ -1,11 +1,23 @@
 import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { GateVerdict, StageContext } from "@devpad/pipeline-templates";
-import { pipeline_analysis_template, pipeline_package, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
+import {
+	pipeline_analysis_template,
+	pipeline_package,
+	pipeline_run,
+	pipeline_stage_event,
+} from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { Result } from "@f0rbit/corpus";
 import { err, ok } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
-import { build_summary_query, evaluate_metrics_against_thresholds, is_window_open, type MetricSnapshot, parse_threshold_dsl, type Threshold } from "./analysis-domain.js";
+import {
+	build_summary_query,
+	evaluate_metrics_against_thresholds,
+	is_window_open,
+	type MetricSnapshot,
+	parse_threshold_dsl,
+	type Threshold,
+} from "./analysis-domain.js";
 import type { GateError, GateEvaluator, PulseEmitter } from "./evaluator.js";
 
 type AnalysisTemplate = {
@@ -20,9 +32,15 @@ type AnalysisRunCoordinates = {
 	deploy_completed_at_ms: number;
 };
 
-const read_analysis_template = async (db: Database, template_id: string): Promise<Result<AnalysisTemplate | null, GateError>> => {
+const read_analysis_template = async (
+	db: Database,
+	template_id: string,
+): Promise<Result<AnalysisTemplate | null, GateError>> => {
 	try {
-		const rows = await db.select().from(pipeline_analysis_template).where(eq(pipeline_analysis_template.id, template_id));
+		const rows = await db
+			.select()
+			.from(pipeline_analysis_template)
+			.where(eq(pipeline_analysis_template.id, template_id));
 		const row = rows[0];
 		if (!row) return ok(null);
 		const threshold_dsl = typeof row.threshold_dsl === "string" ? row.threshold_dsl : JSON.stringify(row.threshold_dsl);
@@ -36,15 +54,30 @@ const read_analysis_template = async (db: Database, template_id: string): Promis
 	}
 };
 
-const read_run_coordinates = async (db: Database, run_id: string, from_stage: string): Promise<Result<AnalysisRunCoordinates, GateError>> => {
+const read_run_coordinates = async (
+	db: Database,
+	run_id: string,
+	from_stage: string,
+): Promise<Result<AnalysisRunCoordinates, GateError>> => {
 	try {
-		const run_rows = await db.select({ package_id: pipeline_run.package_id }).from(pipeline_run).where(eq(pipeline_run.id, run_id));
+		const run_rows = await db
+			.select({ package_id: pipeline_run.package_id })
+			.from(pipeline_run)
+			.where(eq(pipeline_run.id, run_id));
 		const run_row = run_rows[0];
 		if (!run_row) return err({ kind: "store_error", operation: "read_run", message: `run ${run_id} not found` });
 
-		const pkg_rows = await db.select({ name: pipeline_package.name }).from(pipeline_package).where(eq(pipeline_package.id, run_row.package_id));
+		const pkg_rows = await db
+			.select({ name: pipeline_package.name })
+			.from(pipeline_package)
+			.where(eq(pipeline_package.id, run_row.package_id));
 		const pkg_row = pkg_rows[0];
-		if (!pkg_row) return err({ kind: "store_error", operation: "read_package", message: `package ${run_row.package_id} not found` });
+		if (!pkg_row)
+			return err({
+				kind: "store_error",
+				operation: "read_package",
+				message: `package ${run_row.package_id} not found`,
+			});
 
 		// Read the deploy_completed event for the stage we're transitioning FROM —
 		// that is the currently-running version whose metrics we evaluate. The
@@ -52,14 +85,30 @@ const read_run_coordinates = async (db: Database, run_id: string, from_stage: st
 		const deploy_rows = await db
 			.select()
 			.from(pipeline_stage_event)
-			.where(and(eq(pipeline_stage_event.run_id, run_id), eq(pipeline_stage_event.stage_name, from_stage), eq(pipeline_stage_event.kind, "deploy_completed")))
+			.where(
+				and(
+					eq(pipeline_stage_event.run_id, run_id),
+					eq(pipeline_stage_event.stage_name, from_stage),
+					eq(pipeline_stage_event.kind, "deploy_completed"),
+				),
+			)
 			.orderBy(desc(pipeline_stage_event.ts))
 			.limit(1);
 		const deploy_row = deploy_rows[0];
-		if (!deploy_row) return err({ kind: "store_error", operation: "read_deploy_event", message: `no deploy_completed event for ${run_id}/${from_stage}` });
+		if (!deploy_row)
+			return err({
+				kind: "store_error",
+				operation: "read_deploy_event",
+				message: `no deploy_completed event for ${run_id}/${from_stage}`,
+			});
 
 		const payload = (deploy_row.payload as { version_id?: string } | null) ?? {};
-		if (!payload.version_id) return err({ kind: "store_error", operation: "read_deploy_event", message: "deploy_completed event missing version_id" });
+		if (!payload.version_id)
+			return err({
+				kind: "store_error",
+				operation: "read_deploy_event",
+				message: "deploy_completed event missing version_id",
+			});
 
 		return ok({
 			package_name: pkg_row.name,
@@ -71,11 +120,23 @@ const read_run_coordinates = async (db: Database, run_id: string, from_stage: st
 	}
 };
 
-const fetch_snapshot = async (pulse_summary: PulseSummaryProvider, coords: AnalysisRunCoordinates, template: AnalysisTemplate, stage_name: string): Promise<Result<MetricSnapshot, GateError>> => {
-	const query = build_summary_query({ window_ms: template.window_ms }, { package: coords.package_name, version_id: coords.version_id }, { name: stage_name });
+const fetch_snapshot = async (
+	pulse_summary: PulseSummaryProvider,
+	coords: AnalysisRunCoordinates,
+	template: AnalysisTemplate,
+	stage_name: string,
+): Promise<Result<MetricSnapshot, GateError>> => {
+	const query = build_summary_query(
+		{ window_ms: template.window_ms },
+		{ package: coords.package_name, version_id: coords.version_id },
+		{ name: stage_name },
+	);
 	const result = await pulse_summary.fetch(query);
 	if (!result.ok) {
-		return err({ kind: "emit_error", message: `pulse summary fetch failed: ${result.error.code} ${result.error.message}` });
+		return err({
+			kind: "emit_error",
+			message: `pulse summary fetch failed: ${result.error.code} ${result.error.message}`,
+		});
 	}
 	return ok(result.value);
 };
@@ -83,7 +144,10 @@ const fetch_snapshot = async (pulse_summary: PulseSummaryProvider, coords: Analy
 const parse_thresholds_or_fail = (dsl: string): Result<Threshold[], GateError> => {
 	const parsed = parse_threshold_dsl(dsl);
 	if (!parsed.ok) {
-		return err({ kind: "emit_error", message: `threshold_dsl parse error (line ${parsed.error.line}): ${parsed.error.message}` });
+		return err({
+			kind: "emit_error",
+			message: `threshold_dsl parse error (line ${parsed.error.line}): ${parsed.error.message}`,
+		});
 	}
 	return ok(parsed.value);
 };

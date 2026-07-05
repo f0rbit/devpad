@@ -1,4 +1,13 @@
-import { accountId, accounts, errors, type ProfileId, profileFilters, profileId, profiles, type UserId } from "@devpad/schema/media";
+import {
+	accountId,
+	accounts,
+	errors,
+	type ProfileId,
+	profileFilters,
+	profileId,
+	profiles,
+	type UserId,
+} from "@devpad/schema/media";
 import { ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import { requireAccountOwnership, requireProfileOwnership } from "../auth-ownership";
@@ -51,7 +60,12 @@ type FilterWithPlatform = {
 	created_at: string;
 };
 
-const checkSlugUniqueness = async (db: Database, uid: string, slug: string, excludeProfileId?: string): Promise<boolean> => {
+const checkSlugUniqueness = async (
+	db: Database,
+	uid: string,
+	slug: string,
+	excludeProfileId?: string,
+): Promise<boolean> => {
 	const existing = await db
 		.select({ id: profiles.id })
 		.from(profiles)
@@ -63,13 +77,17 @@ const checkSlugUniqueness = async (db: Database, uid: string, slug: string, excl
 	return false;
 };
 
-const loadProfileWithRelations = async (db: Database, profId: string, uid: string): Promise<ProfileWithRelations | null> => {
+const loadProfileWithRelations = async (
+	db: Database,
+	profId: string,
+	uid: string,
+): Promise<ProfileWithRelations | null> => {
 	const profile = await db.select().from(profiles).where(eq(profiles.id, profId)).get();
 	if (!profile || profile.user_id !== uid) return null;
 
 	const filterRows = await db.select().from(profileFilters).where(eq(profileFilters.profile_id, profId));
 
-	const filters = filterRows.map(f => ({
+	const filters = filterRows.map((f) => ({
 		id: f.id,
 		account_id: f.account_id,
 		filter_type: f.filter_type,
@@ -116,7 +134,11 @@ const list = async (ctx: AppContext, uid: UserId): Promise<Result<{ profiles: Pr
 	return ok({ profiles: userProfiles });
 };
 
-const create = async (ctx: AppContext, uid: UserId, input: CreateProfileInput): Promise<Result<{ profile: ProfileWithRelations | null }, ServiceError>> => {
+const create = async (
+	ctx: AppContext,
+	uid: UserId,
+	input: CreateProfileInput,
+): Promise<Result<{ profile: ProfileWithRelations | null }, ServiceError>> => {
 	const isUnique = await checkSlugUniqueness(ctx.db, uid, input.slug);
 	if (!isUnique) {
 		return errors.conflict("profile", "A profile with this slug already exists");
@@ -140,7 +162,11 @@ const create = async (ctx: AppContext, uid: UserId, input: CreateProfileInput): 
 	return ok({ profile: created });
 };
 
-const get = async (ctx: AppContext, uid: UserId, profId: ProfileId): Promise<Result<{ profile: ProfileWithRelations | null }, ServiceError>> => {
+const get = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+): Promise<Result<{ profile: ProfileWithRelations | null }, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 
@@ -152,7 +178,12 @@ const get = async (ctx: AppContext, uid: UserId, profId: ProfileId): Promise<Res
 	return ok({ profile: profileData });
 };
 
-const update = async (ctx: AppContext, uid: UserId, profId: ProfileId, updates: UpdateProfileInput): Promise<Result<{ profile: ProfileWithRelations | null }, ServiceError>> => {
+const update = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+	updates: UpdateProfileInput,
+): Promise<Result<{ profile: ProfileWithRelations | null }, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 
@@ -181,7 +212,11 @@ const update = async (ctx: AppContext, uid: UserId, profId: ProfileId, updates: 
 	return ok({ profile: updated });
 };
 
-const remove = async (ctx: AppContext, uid: UserId, profId: ProfileId): Promise<Result<{ deleted: boolean; id: string }, ServiceError>> => {
+const remove = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+): Promise<Result<{ deleted: boolean; id: string }, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 
@@ -195,7 +230,12 @@ type TimelineQueryOptions = {
 	before?: string;
 };
 
-const timeline = async (ctx: AppContext, uid: UserId, slug: string, options: TimelineQueryOptions): Promise<Result<ProfileTimelineResult, ServiceError>> => {
+const timeline = async (
+	ctx: AppContext,
+	uid: UserId,
+	slug: string,
+	options: TimelineQueryOptions,
+): Promise<Result<ProfileTimelineResult, ServiceError>> => {
 	const { limit = 100, before } = options;
 
 	const profileData = await ctx.db
@@ -230,7 +270,11 @@ const timeline = async (ctx: AppContext, uid: UserId, slug: string, options: Tim
 	return ok(result.value);
 };
 
-const filtersList = async (ctx: AppContext, uid: UserId, profId: ProfileId): Promise<Result<{ filters: FilterWithPlatform[] }, ServiceError>> => {
+const filtersList = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+): Promise<Result<{ filters: FilterWithPlatform[] }, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 
@@ -251,7 +295,12 @@ const filtersList = async (ctx: AppContext, uid: UserId, profId: ProfileId): Pro
 	return ok({ filters: filterRows });
 };
 
-const filtersAdd = async (ctx: AppContext, uid: UserId, profId: ProfileId, input: AddFilterInput): Promise<Result<FilterWithPlatform, ServiceError>> => {
+const filtersAdd = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+	input: AddFilterInput,
+): Promise<Result<FilterWithPlatform, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 
@@ -263,7 +312,11 @@ const filtersAdd = async (ctx: AppContext, uid: UserId, profId: ProfileId, input
 		return errors.forbidden("You do not own this account");
 	}
 
-	const account = await ctx.db.select({ platform: accounts.platform }).from(accounts).where(eq(accounts.id, input.account_id)).get();
+	const account = await ctx.db
+		.select({ platform: accounts.platform })
+		.from(accounts)
+		.where(eq(accounts.id, input.account_id))
+		.get();
 
 	const now = new Date().toISOString();
 	const filterId = uuid();
@@ -290,7 +343,12 @@ const filtersAdd = async (ctx: AppContext, uid: UserId, profId: ProfileId, input
 	});
 };
 
-const filtersRemove = async (ctx: AppContext, uid: UserId, profId: ProfileId, filterId: string): Promise<Result<void, ServiceError>> => {
+const filtersRemove = async (
+	ctx: AppContext,
+	uid: UserId,
+	profId: ProfileId,
+	filterId: string,
+): Promise<Result<void, ServiceError>> => {
 	const ownershipResult = await requireProfileOwnership(ctx.db, uid, profId);
 	if (!ownershipResult.ok) return ownershipResult;
 

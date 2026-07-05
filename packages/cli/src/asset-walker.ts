@@ -66,7 +66,10 @@ export interface WalkedAssets {
 	total_size_bytes: number;
 }
 
-export type AssetWalkError = { kind: "not_a_directory"; path: string } | { kind: "io_error"; path: string; reason: string } | { kind: "asset_too_large"; path: string; size_bytes: number; limit_bytes: number };
+export type AssetWalkError =
+	| { kind: "not_a_directory"; path: string }
+	| { kind: "io_error"; path: string; reason: string }
+	| { kind: "asset_too_large"; path: string; size_bytes: number; limit_bytes: number };
 
 export interface WalkAssetsOptions {
 	/**
@@ -154,7 +157,10 @@ const read_assetsignore = (assets_dir: string): string[] => {
  *  - `asset_too_large`: a file exceeds {@link MAX_ASSET_SIZE} — CF rejects
  *    the upload before we even open the session, so fail fast.
  */
-export const walk_assets_dir = (assets_dir: string, options: WalkAssetsOptions = {}): Result<WalkedAssets, AssetWalkError> => {
+export const walk_assets_dir = (
+	assets_dir: string,
+	options: WalkAssetsOptions = {},
+): Result<WalkedAssets, AssetWalkError> => {
 	let st: ReturnType<typeof statSync>;
 	try {
 		st = statSync(assets_dir);
@@ -165,8 +171,14 @@ export const walk_assets_dir = (assets_dir: string, options: WalkAssetsOptions =
 		return err({ kind: "not_a_directory", path: assets_dir });
 	}
 
-	const ignore_patterns: string[] = [`/${CF_ASSETS_IGNORE_FILENAME}`, `/${REDIRECTS_FILENAME}`, `/${HEADERS_FILENAME}`, ...read_assetsignore(assets_dir), ...(options.extra_ignore_patterns ?? [])];
-	const matcher = ignore_factory().add(ignore_patterns.filter(line => line.trim().length > 0));
+	const ignore_patterns: string[] = [
+		`/${CF_ASSETS_IGNORE_FILENAME}`,
+		`/${REDIRECTS_FILENAME}`,
+		`/${HEADERS_FILENAME}`,
+		...read_assetsignore(assets_dir),
+		...(options.extra_ignore_patterns ?? []),
+	];
+	const matcher = ignore_factory().add(ignore_patterns.filter((line) => line.trim().length > 0));
 
 	const files = list_files_recursive(assets_dir);
 	if (!files.ok) return files;
@@ -185,7 +197,12 @@ export const walk_assets_dir = (assets_dir: string, options: WalkAssetsOptions =
 			return err({ kind: "io_error", path: absolute, reason: e instanceof Error ? e.message : String(e) });
 		}
 		if (bytes.byteLength > MAX_ASSET_SIZE) {
-			return err({ kind: "asset_too_large", path: absolute, size_bytes: bytes.byteLength, limit_bytes: MAX_ASSET_SIZE });
+			return err({
+				kind: "asset_too_large",
+				path: absolute,
+				size_bytes: bytes.byteLength,
+				limit_bytes: MAX_ASSET_SIZE,
+			});
 		}
 		const u8 = new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 		const extension = extname(absolute).slice(1);

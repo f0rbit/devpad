@@ -1,5 +1,16 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import { Badge, Button, Empty, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
+import {
+	Badge,
+	Button,
+	Empty,
+	FormField,
+	Input,
+	Modal,
+	ModalBody,
+	ModalFooter,
+	ModalHeader,
+	ModalTitle,
+} from "@f0rbit/ui";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
@@ -89,7 +100,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 			setLoading(false);
 			return;
 		}
-		setSubs(prev => prev.filter(s => s.id !== target.id));
+		setSubs((prev) => prev.filter((s) => s.id !== target.id));
 		setDeleteTarget(null);
 		setLoading(false);
 	};
@@ -115,23 +126,53 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 				</p>
 			</Show>
 
-			<Show when={subs().length > 0} fallback={<Empty title="No subscriptions" description="Create a discord subscription to receive notifications about errors and events." />}>
+			<Show
+				when={subs().length > 0}
+				fallback={
+					<Empty
+						title="No subscriptions"
+						description="Create a discord subscription to receive notifications about errors and events."
+					/>
+				}
+			>
 				<div class="stack stack-sm" data-testid="pulse-subs-list">
 					<For each={subs()}>
-						{sub => (
-							<div class="row row-between" style={{ "align-items": "center", gap: "0.5rem", padding: "0.75rem 1rem", border: "1px solid var(--border)", "border-radius": "var(--radius, 4px)" }}>
+						{(sub) => (
+							<div
+								class="row row-between"
+								style={{
+									"align-items": "center",
+									gap: "0.5rem",
+									padding: "0.75rem 1rem",
+									border: "1px solid var(--border)",
+									"border-radius": "var(--radius, 4px)",
+								}}
+							>
 								<div class="stack stack-xs" style={{ "min-width": 0, flex: 1 }}>
 									<div class="row" style={{ "align-items": "center", gap: "0.5rem" }}>
 										<span style={{ "font-weight": 500 }}>{sub.name ?? "(unnamed)"}</span>
 										<Badge variant={"info" as any}>{sub.channel?.kind ?? "discord"}</Badge>
 									</div>
 									<Show when={sub.channel?.webhook_url}>
-										<span class="text-sm text-faint" style={{ "font-family": "var(--font-mono, monospace)", overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }}>
+										<span
+											class="text-sm text-faint"
+											style={{
+												"font-family": "var(--font-mono, monospace)",
+												overflow: "hidden",
+												"text-overflow": "ellipsis",
+												"white-space": "nowrap",
+											}}
+										>
 											{sub.channel!.webhook_url}
 										</span>
 									</Show>
 								</div>
-								<Button size="sm" variant={"danger" as any} onClick={() => setDeleteTarget(sub)} data-testid={`pulse-sub-delete-${sub.id}`}>
+								<Button
+									size="sm"
+									variant={"danger" as any}
+									onClick={() => setDeleteTarget(sub)}
+									data-testid={`pulse-sub-delete-${sub.id}`}
+								>
 									<Trash2 size={14} />
 								</Button>
 							</div>
@@ -154,18 +195,34 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 					<ModalBody>
 						<div class="stack stack-sm">
 							<FormField label="name">
-								<Input value={name()} onInput={(e: Event) => setName((e.currentTarget as HTMLInputElement).value)} placeholder="discord-notifications" />
+								<Input
+									value={name()}
+									onInput={(e: Event) => setName((e.currentTarget as HTMLInputElement).value)}
+									placeholder="discord-notifications"
+								/>
 							</FormField>
 							<FormField label="discord webhook url">
-								<Input value={webhookUrl()} onInput={(e: Event) => setWebhookUrl((e.currentTarget as HTMLInputElement).value)} placeholder="https://discord.com/api/webhooks/…" data-testid="pulse-sub-webhook" />
+								<Input
+									value={webhookUrl()}
+									onInput={(e: Event) => setWebhookUrl((e.currentTarget as HTMLInputElement).value)}
+									placeholder="https://discord.com/api/webhooks/…"
+									data-testid="pulse-sub-webhook"
+								/>
 							</FormField>
 							<FormField label="min level">
-								<select value={minLevel()} onChange={(e: Event) => setMinLevel((e.currentTarget as HTMLSelectElement).value)}>
-									<For each={LEVELS as readonly string[]}>{lv => <option value={lv}>{lv}</option>}</For>
+								<select
+									value={minLevel()}
+									onChange={(e: Event) => setMinLevel((e.currentTarget as HTMLSelectElement).value)}
+								>
+									<For each={LEVELS as readonly string[]}>{(lv) => <option value={lv}>{lv}</option>}</For>
 								</select>
 							</FormField>
 							<FormField label="cooldown (seconds)">
-								<Input type="number" value={cooldown()} onInput={(e: Event) => setCooldown((e.currentTarget as HTMLInputElement).value)} />
+								<Input
+									type="number"
+									value={cooldown()}
+									onInput={(e: Event) => setCooldown((e.currentTarget as HTMLInputElement).value)}
+								/>
 							</FormField>
 						</div>
 					</ModalBody>
@@ -194,7 +251,8 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 					</ModalHeader>
 					<ModalBody>
 						<p>
-							Delete <strong>{deleteTarget()!.name ?? "this subscription"}</strong>? Notifications will stop immediately.
+							Delete <strong>{deleteTarget()!.name ?? "this subscription"}</strong>? Notifications will stop
+							immediately.
 						</p>
 					</ModalBody>
 					<ModalFooter>

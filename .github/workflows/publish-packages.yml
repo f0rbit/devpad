@@ -4,16 +4,16 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/api/**'
-      - 'packages/cli/**'
-      - 'packages/mcp/**'
-      - 'packages/schema/**'
+      - "packages/api/**"
+      - "packages/cli/**"
+      - "packages/mcp/**"
+      - "packages/schema/**"
   release:
     types: [published]
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Dry run (no actual publish)'
+        description: "Dry run (no actual publish)"
         type: boolean
         required: false
         default: false
@@ -23,7 +23,7 @@ permissions:
   contents: write
 
 env:
-  NODE_VERSION: '24'
+  NODE_VERSION: "24"
 
 jobs:
   publish:
@@ -42,11 +42,11 @@ jobs:
         id: version
         run: |
           cd versions-branch
-          
+
           MAJOR=$(cat VERSION_MAJOR 2>/dev/null || echo "1")
           RELEASE=$(cat VERSION_RELEASE 2>/dev/null || echo "0")
           PATCH=$(cat VERSION_PR 2>/dev/null || echo "0")
-          
+
           if [[ "${{ github.event_name }}" == "release" ]]; then
             # Release: use tag version, reset patch
             TAG="${{ github.event.release.tag_name }}"
@@ -68,23 +68,23 @@ jobs:
             
             echo "📦 Patch version: ${VERSION}"
           fi
-          
+
           echo "$VERSION" > VERSION
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          
+
           # Commit version update
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add VERSION VERSION_MAJOR VERSION_RELEASE VERSION_PR
           git diff --staged --quiet || git commit -m "chore: bump version to ${VERSION}"
           git push origin versions || true
-          
+
           cd ..
 
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          registry-url: 'https://registry.npmjs.org'
+          registry-url: "https://registry.npmjs.org"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2

@@ -9,7 +9,7 @@ import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
 
-app.get("/", requireAuth, async c => {
+app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const query = c.req.query();
@@ -38,18 +38,18 @@ app.get("/", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/public", requireAuth, async c => {
+app.get("/public", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
 	const result = await projects.getUserProjects(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 
-	const public_projects = result.value.filter(p => p.visibility === "PUBLIC");
+	const public_projects = result.value.filter((p) => p.visibility === "PUBLIC");
 	return c.json(public_projects);
 });
 
-app.patch("/", requireAuth, zValidator("json", upsert_project), async c => {
+app.patch("/", requireAuth, zValidator("json", upsert_project), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
@@ -79,17 +79,33 @@ app.patch("/", requireAuth, zValidator("json", upsert_project), async c => {
 	};
 
 	const auth_channel = c.get("auth_channel");
-	const result = await projects.upsertProject(db, data, auth_user.id, access_token ?? undefined, github_client, auth_channel);
+	const result = await projects.upsertProject(
+		db,
+		data,
+		auth_user.id,
+		access_token ?? undefined,
+		github_client,
+		auth_channel,
+	);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
+		if (result.error.kind === "protected")
+			return c.json(
+				{
+					error: result.error.message,
+					entity_id: result.error.entity_id,
+					modified_by: result.error.modified_by,
+					modified_at: result.error.modified_at,
+				},
+				409,
+			);
 		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
 });
 
-app.get("/:project_id/history", requireAuth, async c => {
+app.get("/:project_id/history", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const project_id = c.req.param("project_id");
@@ -97,7 +113,8 @@ app.get("/:project_id/history", requireAuth, async c => {
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
 
 	const project_result = await projects.getProjectById(db, project_id);
-	if (!project_result.ok) return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
+	if (!project_result.ok)
+		return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
 	const result = await action.getProjectHistory(db, project_result.value.id);
@@ -105,7 +122,7 @@ app.get("/:project_id/history", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/config", requireAuth, async c => {
+app.get("/config", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const project_id = c.req.query("project_id");
@@ -113,7 +130,8 @@ app.get("/config", requireAuth, async c => {
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
 
 	const project_result = await projects.getProjectById(db, project_id);
-	if (!project_result.ok) return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
+	if (!project_result.ok)
+		return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
 	const tag_configs = await db
@@ -142,19 +160,22 @@ app.get("/config", requireAuth, async c => {
 				}
 				return acc;
 			},
-			{} as Record<string, { name: string; color: string | null; match: string[] }>
-		)
+			{} as Record<string, { name: string; color: string | null; match: string[] }>,
+		),
 	);
 
-	const ignore_paths = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, project_id));
+	const ignore_paths = await db
+		.select({ path: ignore_path.path })
+		.from(ignore_path)
+		.where(eq(ignore_path.project_id, project_id));
 
 	return c.json({
-		config: { tags: grouped_tags, ignore: ignore_paths.map(p => p.path) },
+		config: { tags: grouped_tags, ignore: ignore_paths.map((p) => p.path) },
 		scan_branch: project_result.value.scan_branch ?? "main",
 	});
 });
 
-app.get("/fetch_spec", requireAuth, async c => {
+app.get("/fetch_spec", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const project_id = c.req.query("project_id");
@@ -162,7 +183,8 @@ app.get("/fetch_spec", requireAuth, async c => {
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
 
 	const project_result = await projects.getProjectById(db, project_id);
-	if (!project_result.ok) return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
+	if (!project_result.ok)
+		return c.json({ error: project_result.error.kind }, project_result.error.kind === "not_found" ? 404 : 500);
 	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
 	const repo_url = project_result.value.repo_url;
@@ -182,7 +204,7 @@ app.get("/fetch_spec", requireAuth, async c => {
 	return new Response(result.value);
 });
 
-app.patch("/save_config", requireAuth, zValidator("json", save_config_request), async c => {
+app.patch("/save_config", requireAuth, zValidator("json", save_config_request), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
@@ -195,12 +217,21 @@ app.patch("/save_config", requireAuth, zValidator("json", save_config_request), 
 	if (found_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
 
 	try {
-		const current_tags = await db.select({ id: tag_config.tag_id }).from(tag_config).where(eq(tag_config.project_id, data.id));
+		const current_tags = await db
+			.select({ id: tag_config.tag_id })
+			.from(tag_config)
+			.where(eq(tag_config.project_id, data.id));
 
 		let tag_ids: string[] = [];
 		if (data.config.tags.length > 0) {
-			const tag_promises = data.config.tags.map(async t => {
-				const tag_result = await tags.upsertTag(db, { owner_id: auth_user.id, title: t.name, deleted: false, color: null, render: true });
+			const tag_promises = data.config.tags.map(async (t) => {
+				const tag_result = await tags.upsertTag(db, {
+					owner_id: auth_user.id,
+					title: t.name,
+					deleted: false,
+					color: null,
+					render: true,
+				});
 				if (!tag_result.ok) throw new Error("Failed to upsert tag");
 				const tag_id = tag_result.value;
 
@@ -209,18 +240,26 @@ app.patch("/save_config", requireAuth, zValidator("json", save_config_request), 
 					.from(tag_config)
 					.where(and(eq(tag_config.project_id, data.id), eq(tag_config.tag_id, tag_id)));
 
-				const current_match_set = new Set(current_matches.map(m => m.match));
-				const new_matches = t.match.filter(m => !current_match_set.has(m));
+				const current_match_set = new Set(current_matches.map((m) => m.match));
+				const new_matches = t.match.filter((m) => !current_match_set.has(m));
 
 				if (new_matches.length > 0) {
-					const values = new_matches.map(match => ({ project_id: data.id, tag_id, match }));
+					const values = new_matches.map((match) => ({ project_id: data.id, tag_id, match }));
 					await db.insert(tag_config).values(values);
 				}
 
-				const matches_to_remove = current_matches.filter(m => !t.match.includes(m.match)).map(m => m.match);
+				const matches_to_remove = current_matches.filter((m) => !t.match.includes(m.match)).map((m) => m.match);
 
 				if (matches_to_remove.length > 0) {
-					await db.delete(tag_config).where(and(eq(tag_config.project_id, data.id), eq(tag_config.tag_id, tag_id), inArray(tag_config.match, matches_to_remove)));
+					await db
+						.delete(tag_config)
+						.where(
+							and(
+								eq(tag_config.project_id, data.id),
+								eq(tag_config.tag_id, tag_id),
+								inArray(tag_config.match, matches_to_remove),
+							),
+						);
 				}
 
 				return tag_id;
@@ -229,22 +268,29 @@ app.patch("/save_config", requireAuth, zValidator("json", save_config_request), 
 			tag_ids = await Promise.all(tag_promises);
 		}
 
-		const tags_to_remove = current_tags.filter(t => !tag_ids.includes(t.id)).map(t => t.id);
+		const tags_to_remove = current_tags.filter((t) => !tag_ids.includes(t.id)).map((t) => t.id);
 		if (tags_to_remove.length > 0) {
-			await db.delete(tag_config).where(and(eq(tag_config.project_id, data.id), inArray(tag_config.tag_id, tags_to_remove)));
+			await db
+				.delete(tag_config)
+				.where(and(eq(tag_config.project_id, data.id), inArray(tag_config.tag_id, tags_to_remove)));
 		}
 
-		const current_paths = await db.select({ path: ignore_path.path }).from(ignore_path).where(eq(ignore_path.project_id, data.id));
-		const current_path_set = new Set(current_paths.map(p => p.path));
-		const new_paths = data.config.ignore.filter(p => !current_path_set.has(p));
+		const current_paths = await db
+			.select({ path: ignore_path.path })
+			.from(ignore_path)
+			.where(eq(ignore_path.project_id, data.id));
+		const current_path_set = new Set(current_paths.map((p) => p.path));
+		const new_paths = data.config.ignore.filter((p) => !current_path_set.has(p));
 
 		if (new_paths.length > 0) {
-			await db.insert(ignore_path).values(new_paths.map(path => ({ project_id: data.id, path })));
+			await db.insert(ignore_path).values(new_paths.map((path) => ({ project_id: data.id, path })));
 		}
 
-		const paths_to_remove = current_paths.filter(p => !data.config.ignore.includes(p.path)).map(p => p.path);
+		const paths_to_remove = current_paths.filter((p) => !data.config.ignore.includes(p.path)).map((p) => p.path);
 		if (paths_to_remove.length > 0) {
-			await db.delete(ignore_path).where(and(eq(ignore_path.project_id, data.id), inArray(ignore_path.path, paths_to_remove)));
+			await db
+				.delete(ignore_path)
+				.where(and(eq(ignore_path.project_id, data.id), inArray(ignore_path.path, paths_to_remove)));
 		}
 
 		if (data.scan_branch) {
@@ -257,7 +303,7 @@ app.patch("/save_config", requireAuth, zValidator("json", save_config_request), 
 	}
 });
 
-app.get("/:id/milestones", requireAuth, async c => {
+app.get("/:id/milestones", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const project_id = c.req.param("id");
@@ -276,7 +322,7 @@ app.get("/:id/milestones", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/repos", requireAuth, async c => {
+app.get("/repos", requireAuth, async (c) => {
 	const session = c.get("session");
 	if (!session?.access_token) {
 		return c.json({ error: "GitHub access token not available. Please re-authenticate with GitHub." }, 401);
@@ -287,7 +333,7 @@ app.get("/repos", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/repos/:owner/:repo/branches", requireAuth, async c => {
+app.get("/repos/:owner/:repo/branches", requireAuth, async (c) => {
 	const db = c.get("db");
 	const session = c.get("session");
 	const owner = c.req.param("owner");

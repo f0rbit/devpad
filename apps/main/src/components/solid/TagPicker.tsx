@@ -8,14 +8,14 @@ import { TagBadge } from "@/components/solid/TagEditor";
 export function TagSelect({ tags, onSelect }: { tags: Tag[]; onSelect: (tag: Tag | null) => void }) {
 	// use a select element
 	function select(id: string) {
-		const found = tags.find(t => t.id === id) ?? null;
+		const found = tags.find((t) => t.id === id) ?? null;
 		onSelect(found);
 	}
 
 	return (
-		<select onChange={e => select(e.target.value)} style="min-width: 6rem">
+		<select onChange={(e) => select(e.target.value)} style="min-width: 6rem">
 			<option value="">-</option>
-			{tags.map(tag => (
+			{tags.map((tag) => (
 				<option value={tag.id}>{tag.title}</option>
 			))}
 		</select>
@@ -53,7 +53,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 			const sel_id = selected.getAttribute("data-id");
 			if (sel_id) {
 				// if we have, add it to the list
-				const found = availableTags.find(t => t.id === sel_id);
+				const found = availableTags.find((t) => t.id === sel_id);
 				if (found) {
 					addTag(found as UpsertTag);
 					return;
@@ -61,7 +61,7 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 			}
 		}
 		// if we haven't check to see if we have one with the same name
-		const existing = availableTags.find(t => t.title === value);
+		const existing = availableTags.find((t) => t.title === value);
 		console.log("existing", existing);
 		if (existing) {
 			// if we do, add it to the list
@@ -81,10 +81,10 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 	function removeTag(tag: UpsertTag) {
 		if (tag.id == null) {
 			// filter by name
-			const newTags = tags().filter(t => t.title !== tag.title);
+			const newTags = tags().filter((t) => t.title !== tag.title);
 			setTags(newTags);
 		} else {
-			const newTags = tags().filter(t => t.id !== tag.id);
+			const newTags = tags().filter((t) => t.id !== tag.id);
 			setTags(newTags);
 		}
 	}
@@ -95,12 +95,12 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 				type="text"
 				list="tags"
 				ref={input}
-				onKeyPress={e => {
+				onKeyPress={(e) => {
 					if (e.key === "Enter") add();
 				}}
 			/>
 			<datalist id="tags">
-				{availableTags.map(tag => (
+				{availableTags.map((tag) => (
 					<option data-id={tag.id} value={tag.title}>
 						{tag.title}
 					</option>
@@ -110,7 +110,11 @@ export function TagPicker({ currentTags, availableTags, owner_id, onChange }: Pr
 				<Plus size={16} />
 			</a>
 			<div class="cluster">
-				<For each={tags()}>{tag => <TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />}</For>
+				<For each={tags()}>
+					{(tag) => (
+						<TagBadge name={() => tag.title} colour={() => tag.color ?? null} onRemove={() => removeTag(tag)} />
+					)}
+				</For>
 			</div>
 		</div>
 	);

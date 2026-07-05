@@ -5,7 +5,7 @@ import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
 
-app.get("/", requireAuth, async c => {
+app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 

@@ -87,7 +87,7 @@ const generate_version = (): string => {
 const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
-		req.on("data", c => chunks.push(c));
+		req.on("data", (c) => chunks.push(c));
 		req.on("end", () => resolve(Buffer.concat(chunks)));
 		req.on("error", reject);
 	});
@@ -175,13 +175,14 @@ const start_test_server = async (): Promise<ServerHandle> => {
 			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 		}
 	});
-	await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
 	if (address === null || typeof address === "string") throw new Error("listen failed");
 	return { server, url: `http://127.0.0.1:${address.port}`, backend, puts_by_store };
 };
 
-const stop_test_server = async (h: ServerHandle): Promise<void> => new Promise(resolve => h.server.close(() => resolve()));
+const stop_test_server = async (h: ServerHandle): Promise<void> =>
+	new Promise((resolve) => h.server.close(() => resolve()));
 
 // ---------------------------------------------------------------------------
 // Fixture authoring — a faux Astro dist tree, plus the sidecar files
@@ -217,11 +218,9 @@ const setup_fixtures = (): Fixtures => {
 	// --- Worker bundle: 1 entrypoint + 1 chunk + 1 wasm. Matches the shape
 	// Astro's Cloudflare adapter emits (index.js, chunks/*.mjs, *.wasm).
 	const main_module_bytes = new TextEncoder().encode(
-		"import './chunks/render.mjs';\nexport default { fetch: () => new Response('hi') };\n"
+		"import './chunks/render.mjs';\nexport default { fetch: () => new Response('hi') };\n",
 	);
-	const chunk_bytes = new TextEncoder().encode(
-		"export const render = () => '<html></html>';\n"
-	);
+	const chunk_bytes = new TextEncoder().encode("export const render = () => '<html></html>';\n");
 	const wasm_bytes = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
 	writeFileSync(join(bundle_dir, "index.js"), Buffer.from(main_module_bytes));
 	writeFileSync(join(bundle_dir, "chunks", "render.mjs"), Buffer.from(chunk_bytes));
@@ -390,20 +389,24 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 
 		// --- Step 4: sub-manifest shapes are valid against the Zod schema
 		// the orchestrator's bundle provider will use to decode them.
-		const bundle_manifest = BundleManifest.parse(JSON.parse(await read_blob_text(h.backend, builds.worker.bundle_manifest_ref!)));
+		const bundle_manifest = BundleManifest.parse(
+			JSON.parse(await read_blob_text(h.backend, builds.worker.bundle_manifest_ref!)),
+		);
 		expect(bundle_manifest.main_module).toBe("index.js");
-		expect(bundle_manifest.modules.map(m => m.name).sort()).toEqual([...fx.expected_module_names].sort());
-		const by_name = new Map(bundle_manifest.modules.map(m => [m.name, m]));
+		expect(bundle_manifest.modules.map((m) => m.name).sort()).toEqual([...fx.expected_module_names].sort());
+		const by_name = new Map(bundle_manifest.modules.map((m) => [m.name, m]));
 		expect(by_name.get("index.js")?.mime_type).toBe("application/javascript+module");
 		expect(by_name.get("chunks/render.mjs")?.mime_type).toBe("application/javascript+module");
 		expect(by_name.get("resvg.wasm")?.mime_type).toBe("application/wasm");
 		// Each module references a unique corpus blob (no accidental dedup
 		// between distinct files).
-		const refs = new Set(bundle_manifest.modules.map(m => m.content_artifact_ref));
+		const refs = new Set(bundle_manifest.modules.map((m) => m.content_artifact_ref));
 		expect(refs.size).toBe(3);
 
-		const asset_manifest = AssetManifest.parse(JSON.parse(await read_blob_text(h.backend, builds.assets!.manifest_ref!)));
-		expect(asset_manifest.assets.map(a => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
+		const asset_manifest = AssetManifest.parse(
+			JSON.parse(await read_blob_text(h.backend, builds.assets!.manifest_ref!)),
+		);
+		expect(asset_manifest.assets.map((a) => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
 		// Asset config flows through verbatim.
 		expect(asset_manifest.config?.html_handling).toBe("auto-trailing-slash");
 		expect(asset_manifest.config?.not_found_handling).toBe("single-page-application");
@@ -430,18 +433,18 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		if (payload.kind !== "directory_bundle") return;
 
 		expect(payload.main_module).toBe("index.js");
-		expect(payload.modules.map(m => m.name).sort()).toEqual([...fx.expected_module_names].sort());
+		expect(payload.modules.map((m) => m.name).sort()).toEqual([...fx.expected_module_names].sort());
 		// Bytes round-trip exactly (no encoding drift).
-		const fetched_main = payload.modules.find(m => m.name === "index.js");
+		const fetched_main = payload.modules.find((m) => m.name === "index.js");
 		expect(fetched_main).toBeDefined();
 		expect(fetched_main!.content).toEqual(fx.main_module_bytes);
-		const fetched_chunk = payload.modules.find(m => m.name === "chunks/render.mjs");
+		const fetched_chunk = payload.modules.find((m) => m.name === "chunks/render.mjs");
 		expect(fetched_chunk!.content).toEqual(fx.chunk_bytes);
-		const fetched_wasm = payload.modules.find(m => m.name === "resvg.wasm");
+		const fetched_wasm = payload.modules.find((m) => m.name === "resvg.wasm");
 		expect(fetched_wasm!.content).toEqual(fx.wasm_bytes);
 
 		expect(payload.assets).toBeDefined();
-		expect(payload.assets!.assets.map(a => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
+		expect(payload.assets!.assets.map((a) => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
 		for (const asset of payload.assets!.assets) {
 			expect(asset.hash).toMatch(/^[0-9a-f]{32}$/);
 			const expected_bytes = fx.asset_bytes_by_path.get(asset.path);
@@ -449,7 +452,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 			expect(asset.content).toEqual(expected_bytes!);
 		}
 		// Default platform bindings flow through the provider as configured.
-		const binding_names = (payload.bindings ?? []).map(b => b.name).sort();
+		const binding_names = (payload.bindings ?? []).map((b) => b.name).sort();
 		expect(binding_names).toEqual(["ANTHROPIC", "PULSE"]);
 
 		// --- Step 6: forward to the in-memory CF provider exactly the way

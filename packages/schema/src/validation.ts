@@ -11,11 +11,30 @@ export const upsert_project = z.object({
 	repo_url: z.string().nullable(),
 	repo_id: z.number().nullable(),
 	icon_url: z.string().nullable(),
-	status: z.union([z.literal("DEVELOPMENT"), z.literal("PAUSED"), z.literal("RELEASED"), z.literal("LIVE"), z.literal("FINISHED"), z.literal("ABANDONED"), z.literal("STOPPED")]).optional(),
+	status: z
+		.union([
+			z.literal("DEVELOPMENT"),
+			z.literal("PAUSED"),
+			z.literal("RELEASED"),
+			z.literal("LIVE"),
+			z.literal("FINISHED"),
+			z.literal("ABANDONED"),
+			z.literal("STOPPED"),
+		])
+		.optional(),
 	deleted: z.boolean().optional().default(false),
 	link_url: z.string().nullable(),
 	link_text: z.string().nullable(),
-	visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]).optional(),
+	visibility: z
+		.union([
+			z.literal("PUBLIC"),
+			z.literal("PRIVATE"),
+			z.literal("HIDDEN"),
+			z.literal("ARCHIVED"),
+			z.literal("DRAFT"),
+			z.literal("DELETED"),
+		])
+		.optional(),
 	current_version: z.string().nullable(),
 	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });
@@ -26,7 +45,16 @@ export const upsert_todo = z.object({
 	summary: z.string().optional().nullable(),
 	description: z.string().optional().nullable(),
 	progress: z.union([z.literal("UNSTARTED"), z.literal("IN_PROGRESS"), z.literal("COMPLETED")]).optional(),
-	visibility: z.union([z.literal("PUBLIC"), z.literal("PRIVATE"), z.literal("HIDDEN"), z.literal("ARCHIVED"), z.literal("DRAFT"), z.literal("DELETED")]).optional(),
+	visibility: z
+		.union([
+			z.literal("PUBLIC"),
+			z.literal("PRIVATE"),
+			z.literal("HIDDEN"),
+			z.literal("ARCHIVED"),
+			z.literal("DRAFT"),
+			z.literal("DELETED"),
+		])
+		.optional(),
 	start_time: z.string().optional().nullable(),
 	end_time: z.string().optional().nullable(),
 	priority: z.union([z.literal("LOW"), z.literal("MEDIUM"), z.literal("HIGH")]).optional(),
@@ -36,13 +64,32 @@ export const upsert_todo = z.object({
 	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });
 
-export const update_action = z.union([z.literal("CONFIRM"), z.literal("UNLINK"), z.literal("CREATE"), z.literal("IGNORE"), z.literal("DELETE"), z.literal("COMPLETE")]);
+export const update_action = z.union([
+	z.literal("CONFIRM"),
+	z.literal("UNLINK"),
+	z.literal("CREATE"),
+	z.literal("IGNORE"),
+	z.literal("DELETE"),
+	z.literal("COMPLETE"),
+]);
 
 export const upsert_tag = z.object({
 	id: z.string().optional(),
 	title: z.string(),
 	color: z
-		.union([z.literal("red"), z.literal("green"), z.literal("blue"), z.literal("yellow"), z.literal("purple"), z.literal("orange"), z.literal("teal"), z.literal("pink"), z.literal("gray"), z.literal("cyan"), z.literal("lime")])
+		.union([
+			z.literal("red"),
+			z.literal("green"),
+			z.literal("blue"),
+			z.literal("yellow"),
+			z.literal("purple"),
+			z.literal("orange"),
+			z.literal("teal"),
+			z.literal("pink"),
+			z.literal("gray"),
+			z.literal("cyan"),
+			z.literal("lime"),
+		])
 		.nullable()
 		.optional(),
 	deleted: z.boolean().optional().default(false),
@@ -55,7 +102,7 @@ export const project_config = z.object({
 		z.object({
 			name: z.string(),
 			match: z.array(z.string()),
-		})
+		}),
 	),
 	ignore: z.array(z.string()),
 });
@@ -81,7 +128,7 @@ export const config_schema = z.object({
 		z.object({
 			name: z.string(),
 			match: z.array(z.string()),
-		})
+		}),
 	),
 	ignore: z.array(z.string().regex(/^[\s\S]*$/, "Invalid path")),
 });

@@ -1,5 +1,15 @@
 import type { AccountWithUser } from "@devpad/schema/media";
-import { accounts, BlueskyRawSchema, type CommitGroup, type CronError, DevpadRawSchema, type Platform, rateLimits, type TimelineItem, YouTubeRawSchema } from "@devpad/schema/media";
+import {
+	accounts,
+	BlueskyRawSchema,
+	type CommitGroup,
+	type CronError,
+	DevpadRawSchema,
+	type Platform,
+	rateLimits,
+	type TimelineItem,
+	YouTubeRawSchema,
+} from "@devpad/schema/media";
 import type { Backend } from "@f0rbit/corpus";
 import { pipe, type Result, to_nullable, try_catch } from "@f0rbit/corpus";
 import { eq, sql } from "drizzle-orm";
@@ -57,7 +67,13 @@ export type ProcessingError = {
 export type CronProcessor = {
 	shouldFetch: (account: AccountWithUser, lastFetchedAt: string | null) => boolean;
 	createProvider: (ctx: AppContext) => unknown;
-	processAccount: (backend: Backend, accountId: string, token: string, provider: unknown, account?: AccountWithUser) => Promise<Result<PlatformProcessResult, ProcessingError>>;
+	processAccount: (
+		backend: Backend,
+		accountId: string,
+		token: string,
+		provider: unknown,
+		account?: AccountWithUser,
+	) => Promise<Result<PlatformProcessResult, ProcessingError>>;
 };
 
 type PlatformCapabilities = {
@@ -193,7 +209,12 @@ const toProcessError = (e: ProviderError): CronError => ({
 	message: formatProviderError(e),
 });
 
-const processPlatformAccountWithProcessor = async (ctx: AppContext, account: AccountWithUser, processor: CronProcessor, platform: Platform): Promise<RawSnapshot | null> =>
+const processPlatformAccountWithProcessor = async (
+	ctx: AppContext,
+	account: AccountWithUser,
+	processor: CronProcessor,
+	platform: Platform,
+): Promise<RawSnapshot | null> =>
 	pipe(secrets.decrypt(account.access_token_encrypted, ctx.encryptionKey))
 		.map_err((e): ProcessingError => ({ kind: e.kind, message: e.message }))
 		.tap_err(() => logAccount.error("Decryption failed", { platform, account_id: account.id }))
@@ -201,7 +222,7 @@ const processPlatformAccountWithProcessor = async (ctx: AppContext, account: Acc
 			const provider = processor.createProvider(ctx);
 			return processor.processAccount(ctx.backend, account.id, token, provider, account);
 		})
-		.tap_err(e => {
+		.tap_err((e) => {
 			logAccount.error("Processing failed", { platform, account_id: account.id, error: e });
 			recordFailure(ctx.db, account.id);
 		})
@@ -215,32 +236,32 @@ const processPlatformAccountWithProcessor = async (ctx: AppContext, account: Acc
 					type: `${platform}_multi_store`,
 					...result.stats,
 				},
-			})
+			}),
 		)
 		.unwrap_or(null as unknown as RawSnapshot)
-		.then(r => r as RawSnapshot | null);
+		.then((r) => r as RawSnapshot | null);
 
 const processGenericAccount = async (ctx: AppContext, account: AccountWithUser): Promise<RawSnapshot | null> =>
 	pipe(secrets.decrypt(account.access_token_encrypted, ctx.encryptionKey))
 		.map_err((e): CronError => ({ kind: "encryption_error", operation: "decrypt", message: e.message }))
-		.flat_map(token => {
+		.flat_map((token) => {
 			const result = ctx.providerFactory.create(account.platform, account.platform_user_id, token);
 			return pipe(result)
-				.map_err(e => toProcessError(e))
+				.map_err((e) => toProcessError(e))
 				.tap_err(() => recordFailure(ctx.db, account.id))
 				.result();
 		})
-		.flat_map(raw_data =>
+		.flat_map((raw_data) =>
 			pipe(store.raw(ctx.backend, account.platform, account.id))
 				.map_err((e): CronError => ({ kind: "store_error", operation: "create", message: e.message ?? "unknown" }))
 				.map(({ store: s }) => ({ raw_data, store: s }))
-				.result()
+				.result(),
 		)
 		.flat_map(({ raw_data, store }) =>
 			pipe(store.put(raw_data as RawData, { tags: [`platform:${account.platform}`, `account:${account.id}`] }))
 				.map_err((e): CronError => ({ kind: "store_error", operation: "put", message: String(e) }))
 				.map((result: { version: string }) => ({ raw_data, version: result.version }))
-				.result()
+				.result(),
 		)
 		.tap_err(logProcessError(account.id))
 		.tap(() => recordSuccess(ctx.db, account.id))
@@ -250,10 +271,10 @@ const processGenericAccount = async (ctx: AppContext, account: AccountWithUser):
 				platform: account.platform,
 				version: result.version,
 				data: result.raw_data,
-			})
+			}),
 		)
 		.unwrap_or(null as unknown as RawSnapshot)
-		.then(r => r as RawSnapshot | null);
+		.then((r) => r as RawSnapshot | null);
 
 export const processAccount = async (ctx: AppContext, account: AccountWithUser): Promise<RawSnapshot | null> => {
 	const rateLimitRow = await ctx.db
@@ -288,7 +309,8 @@ export const processAccount = async (ctx: AppContext, account: AccountWithUser):
 			const processor: CronProcessor = {
 				shouldFetch: () => true,
 				createProvider: () => provider,
-				processAccount: (backend, accountId, token, p, acc) => processRedditAccount(backend, accountId, token, p as RedditProvider, acc),
+				processAccount: (backend, accountId, token, p, acc) =>
+					processRedditAccount(backend, accountId, token, p as RedditProvider, acc),
 			};
 			return processPlatformAccountWithProcessor(ctx, account, processor, platform);
 		}
@@ -309,7 +331,11 @@ export const processAccount = async (ctx: AppContext, account: AccountWithUser):
 	}
 };
 
-export const regenerateTimelinesForUsers = async (backend: Backend, updatedUsers: Set<string>, userAccounts: Map<string, AccountWithUser[]>): Promise<number> => {
+export const regenerateTimelinesForUsers = async (
+	backend: Backend,
+	updatedUsers: Set<string>,
+	userAccounts: Map<string, AccountWithUser[]>,
+): Promise<number> => {
 	let timelinesGenerated = 0;
 	for (const userId of updatedUsers) {
 		const userAccountsList = userAccounts.get(userId) ?? [];
@@ -331,13 +357,18 @@ type TimelineEntry = TimelineItem | CommitGroup;
 const isMultiStore = (platform: string): boolean => MULTI_STORE_PLATFORMS.includes(platform as Platform);
 
 export const groupSnapshotsByPlatform = (snapshots: RawSnapshot[]): PlatformGroups => ({
-	github: snapshots.filter(s => s.platform === "github"),
-	reddit: snapshots.filter(s => s.platform === "reddit"),
-	twitter: snapshots.filter(s => s.platform === "twitter"),
-	other: snapshots.filter(s => !isMultiStore(s.platform)),
+	github: snapshots.filter((s) => s.platform === "github"),
+	reddit: snapshots.filter((s) => s.platform === "reddit"),
+	twitter: snapshots.filter((s) => s.platform === "twitter"),
+	other: snapshots.filter((s) => !isMultiStore(s.platform)),
 });
 
-export const loadPlatformItems = async <T>(backend: Backend, snapshots: RawSnapshot[], loader: (backend: Backend, accountId: string) => Promise<T>, normalizer: (data: T) => TimelineItem[]): Promise<TimelineItem[]> => {
+export const loadPlatformItems = async <T>(
+	backend: Backend,
+	snapshots: RawSnapshot[],
+	loader: (backend: Backend, accountId: string) => Promise<T>,
+	normalizer: (data: T) => TimelineItem[],
+): Promise<TimelineItem[]> => {
 	const items: TimelineItem[] = [];
 	for (const snapshot of snapshots) {
 		const data = await loader(backend, snapshot.account_id);
@@ -374,11 +405,11 @@ const normalizeSnapshot = (snapshot: RawSnapshot): Result<TimelineItem[], Normal
 				}
 			}
 		},
-		(e): NormalizeError => ({ kind: "parse_error", platform: snapshot.platform, message: String(e) })
+		(e): NormalizeError => ({ kind: "parse_error", platform: snapshot.platform, message: String(e) }),
 	);
 
 export const normalizeOtherSnapshots = (snapshots: RawSnapshot[]): TimelineItem[] => {
-	const results = snapshots.map(snapshot => normalizeSnapshot(snapshot));
+	const results = snapshots.map((snapshot) => normalizeSnapshot(snapshot));
 
 	for (const r of results) {
 		if (!r.ok) {
@@ -386,7 +417,7 @@ export const normalizeOtherSnapshots = (snapshots: RawSnapshot[]): TimelineItem[
 		}
 	}
 
-	return results.filter((r): r is { ok: true; value: TimelineItem[] } => r.ok).flatMap(r => r.value);
+	return results.filter((r): r is { ok: true; value: TimelineItem[] } => r.ok).flatMap((r) => r.value);
 };
 
 export const generateTimeline = (userId: string, items: TimelineItem[]) => {
@@ -404,8 +435,13 @@ export const generateTimeline = (userId: string, items: TimelineItem[]) => {
 	};
 };
 
-export const storeTimeline = async (backend: Backend, userId: string, timeline: ReturnType<typeof generateTimeline>, snapshots: RawSnapshot[]): Promise<void> => {
-	const parents = snapshots.map(s => ({
+export const storeTimeline = async (
+	backend: Backend,
+	userId: string,
+	timeline: ReturnType<typeof generateTimeline>,
+	snapshots: RawSnapshot[],
+): Promise<void> => {
+	const parents = snapshots.map((s) => ({
 		store_id: store.id.raw(s.platform, s.account_id),
 		version: s.version,
 		role: "source" as const,
@@ -491,11 +527,15 @@ const getLatestSnapshot = async (backend: Backend, account: AccountWithUser): Pr
 };
 
 export const gatherLatestSnapshots = async (backend: Backend, accounts: AccountWithUser[]): Promise<RawSnapshot[]> => {
-	const results = await Promise.all(accounts.map(account => getLatestSnapshot(backend, account)));
+	const results = await Promise.all(accounts.map((account) => getLatestSnapshot(backend, account)));
 	return results.filter((s): s is RawSnapshot => s !== null);
 };
 
-export const combineUserTimeline = async (backend: Backend, userId: string, snapshots: RawSnapshot[]): Promise<void> => {
+export const combineUserTimeline = async (
+	backend: Backend,
+	userId: string,
+	snapshots: RawSnapshot[],
+): Promise<void> => {
 	logTimeline.info("Building timeline", { user_id: userId, snapshot_count: snapshots.length });
 
 	if (snapshots.length === 0) {
@@ -514,7 +554,7 @@ export const combineUserTimeline = async (backend: Backend, userId: string, snap
 
 	const [githubItems, redditItems, twitterItems] = await Promise.all([
 		loadPlatformItems(backend, byPlatform.github, tl.loaders.github, tl.normalizers.github),
-		loadPlatformItems(backend, byPlatform.reddit, tl.loaders.reddit, data => tl.normalizers.reddit(data, "")),
+		loadPlatformItems(backend, byPlatform.reddit, tl.loaders.reddit, (data) => tl.normalizers.reddit(data, "")),
 		loadPlatformItems(backend, byPlatform.twitter, tl.loaders.twitter, tl.normalizers.twitter),
 	]);
 

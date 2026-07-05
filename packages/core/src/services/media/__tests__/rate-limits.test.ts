@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { initialState, isCircuitOpen, type RateLimitState, shouldFetch, updateOnFailure, updateOnSuccess } from "../rate-limits";
+import {
+	initialState,
+	isCircuitOpen,
+	type RateLimitState,
+	shouldFetch,
+	updateOnFailure,
+	updateOnSuccess,
+} from "../rate-limits";
 
 describe("rate-limits", () => {
 	describe("initialState", () => {

@@ -28,8 +28,8 @@ tagsRouter.get(
 	withAuth(async (c, user, ctx) => {
 		const service = createTagService({ db: ctx.db });
 		const result = await service.list(user.id);
-		return response.with(c, result, tags => ({ tags }));
-	})
+		return response.with(c, result, (tags) => ({ tags }));
+	}),
 );
 
 tagsRouter.get(
@@ -46,8 +46,8 @@ tagsRouter.get(
 		}
 
 		const tagsResult = await service.getPostTags(postResult.value.id);
-		return response.with(c, tagsResult, tags => ({ tags }));
-	})
+		return response.with(c, tagsResult, (tags) => ({ tags }));
+	}),
 );
 
 tagsRouter.put(
@@ -66,8 +66,8 @@ tagsRouter.put(
 		}
 
 		const result = await service.setPostTags(postResult.value.id, newTags);
-		return response.with(c, result, tags => ({ tags }));
-	})
+		return response.with(c, result, (tags) => ({ tags }));
+	}),
 );
 
 tagsRouter.post(
@@ -86,8 +86,8 @@ tagsRouter.post(
 		}
 
 		const result = await service.addPostTags(postResult.value.id, tagsToAdd);
-		return response.with(c, result, tags => ({ tags }), 201);
-	})
+		return response.with(c, result, (tags) => ({ tags }), 201);
+	}),
 );
 
 tagsRouter.delete(
@@ -105,5 +105,5 @@ tagsRouter.delete(
 
 		const result = await service.removePostTag(postResult.value.id, tag);
 		return response.empty(c, result);
-	})
+	}),
 );

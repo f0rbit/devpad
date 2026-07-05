@@ -50,35 +50,37 @@ const TodoScannerConfig = ({
 	};
 
 	const updateTagName = (index: number, name: string) => {
-		setConfig("tags", prev => {
+		setConfig("tags", (prev) => {
 			return prev.map((t, i) => (i === index ? { ...t, name } : t));
 		});
 		validate();
 	};
 
 	const removeTag = (index: number) => {
-		setConfig("tags", prev => {
+		setConfig("tags", (prev) => {
 			return prev.filter((_, i) => i !== index);
 		});
 		validate();
 	};
 
 	const addMatch = (index: number) => {
-		setConfig("tags", prev => {
+		setConfig("tags", (prev) => {
 			return prev.map((t, i) => (i === index ? { ...t, match: [...t.match, ""] } : t));
 		});
 		validate();
 	};
 
 	const updateMatch = (index: number, match_index: number, value: string) => {
-		setConfig("tags", prev => {
-			return prev.map((t, i) => (i === index ? { ...t, match: t.match.map((m, mi) => (mi === match_index ? value : m)) } : t));
+		setConfig("tags", (prev) => {
+			return prev.map((t, i) =>
+				i === index ? { ...t, match: t.match.map((m, mi) => (mi === match_index ? value : m)) } : t,
+			);
 		});
 		validate();
 	};
 
 	const removeMatch = (index: number, match_index: number) => {
-		setConfig("tags", prev => {
+		setConfig("tags", (prev) => {
 			return prev.map((t, i) => (i === index ? { ...t, match: t.match.filter((_, mi) => mi !== match_index) } : t));
 		});
 		validate();
@@ -89,14 +91,14 @@ const TodoScannerConfig = ({
 	};
 
 	const updateIgnorePath = (index: number, value: string) => {
-		setConfig("ignore", prev => {
+		setConfig("ignore", (prev) => {
 			return prev.map((p, i) => (i === index ? value : p));
 		});
 		validate();
 	};
 
 	const removeIgnorePath = (index: number) => {
-		setConfig("ignore", prev => {
+		setConfig("ignore", (prev) => {
 			return prev.filter((_, i) => i !== index);
 		});
 		validate();
@@ -139,8 +141,8 @@ const TodoScannerConfig = ({
 
 	const addDefaultTag = (tagName: DefaultConfig) => {
 		const matches = DEFAULT_CONFIGS[tagName];
-		setConfig("tags", prev => {
-			if (prev.some(tag => tag.name === tagName)) return prev; // Tag already exists
+		setConfig("tags", (prev) => {
+			if (prev.some((tag) => tag.name === tagName)) return prev; // Tag already exists
 
 			return [
 				...prev,
@@ -160,8 +162,8 @@ const TodoScannerConfig = ({
 			const apiClient = getBrowserClient();
 			await apiClient.projects.config.save({
 				config: {
-					tags: config.tags.filter(tag => tag.name && tag.match.length > 0),
-					ignore: config.ignore.filter(path => path.trim()),
+					tags: config.tags.filter((tag) => tag.name && tag.match.length > 0),
+					ignore: config.ignore.filter((path) => path.trim()),
 				},
 				scan_branch: config.branch ?? undefined,
 				id,
@@ -178,7 +180,7 @@ const TodoScannerConfig = ({
 		if (!branch) return null;
 		if (!branches) return null;
 		// find branch with same name inside branches
-		const found = branches.find(b => b.name === branch);
+		const found = branches.find((b) => b.name === branch);
 		if (!found) return null;
 		return found.commit.message;
 	};
@@ -193,9 +195,9 @@ const TodoScannerConfig = ({
 					</div>
 					<div class="row">
 						<GitBranch size={16} />
-						<select value={config.branch ?? ""} onChange={e => selectBranch(e.target.value)}>
+						<select value={config.branch ?? ""} onChange={(e) => selectBranch(e.target.value)}>
 							<For each={branches}>
-								{branch => (
+								{(branch) => (
 									<option value={branch.name} selected={branch.name === config.branch}>
 										{branch.name}
 									</option>
@@ -207,7 +209,7 @@ const TodoScannerConfig = ({
 				</div>
 			) : null}
 			<datalist id="tags">
-				{user_tags.map(tag => (
+				{user_tags.map((tag) => (
 					<option data-id={tag.id} value={tag.title}>
 						{tag.title}
 					</option>
@@ -226,7 +228,13 @@ const TodoScannerConfig = ({
 					{(tag, index) => (
 						<div class="stack stack-sm" style="gap: 4px">
 							<div class="row" style="gap: 10px">
-								<input type="text" placeholder="Tag Name" list="tags" value={tag().name} onInput={e => updateTagName(index, e.target.value)} />
+								<input
+									type="text"
+									placeholder="Tag Name"
+									list="tags"
+									value={tag().name}
+									onInput={(e) => updateTagName(index, e.target.value)}
+								/>
 								<a role="button" onClick={() => removeTag(index)} title="Remove Tag" class="row row-sm">
 									<X size={16} />
 								</a>
@@ -235,14 +243,30 @@ const TodoScannerConfig = ({
 								<For each={tag().match}>
 									{(match, matchIndex) => (
 										<div class="row" style="gap: 10px">
-											<input type="text" placeholder="Match Pattern" value={match} onInput={e => updateMatch(index, matchIndex(), e.target.value)} />
-											<a role="button" onClick={() => removeMatch(index, matchIndex())} title="Remove Match" class="row row-sm">
+											<input
+												type="text"
+												placeholder="Match Pattern"
+												value={match}
+												onInput={(e) => updateMatch(index, matchIndex(), e.target.value)}
+											/>
+											<a
+												role="button"
+												onClick={() => removeMatch(index, matchIndex())}
+												title="Remove Match"
+												class="row row-sm"
+											>
 												<Minus size={16} />
 											</a>
 										</div>
 									)}
 								</For>
-								<a role="button" onClick={() => addMatch(index)} title="Add Match" class="row row-sm" style="font-size: small">
+								<a
+									role="button"
+									onClick={() => addMatch(index)}
+									title="Add Match"
+									class="row row-sm"
+									style="font-size: small"
+								>
 									<Plus size={16} onClick={() => addMatch(index)} />
 									add match
 								</a>
@@ -265,7 +289,12 @@ const TodoScannerConfig = ({
 				<For each={config.ignore}>
 					{(path, index) => (
 						<div class="row row-sm">
-							<input type="text" placeholder="Ignore Path" value={path} onChange={e => updateIgnorePath(index(), e.target.value)} />
+							<input
+								type="text"
+								placeholder="Ignore Path"
+								value={path}
+								onChange={(e) => updateIgnorePath(index(), e.target.value)}
+							/>
 							<a role="button" onClick={() => removeIgnorePath(index())} title="Remove Path" class="row row-sm">
 								<Minus size={16} />
 							</a>
@@ -298,8 +327,8 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 
 	createEffect(() => {
 		// go through default configs, and find the ones that aren't in the tags
-		const available = Object.keys(DEFAULT_CONFIGS).filter(tagName => {
-			return !tags().some(tag => tag.name === tagName);
+		const available = Object.keys(DEFAULT_CONFIGS).filter((tagName) => {
+			return !tags().some((tag) => tag.name === tagName);
 		}) as DefaultConfig[];
 		setAvailable(available);
 	});
@@ -315,10 +344,18 @@ function ConfigDefaults({ tags, add }: { tags: Accessor<Config["tags"]>; add: (t
 			{open() && (
 				<div class="row row-sm">
 					<For each={available()}>
-						{name => (
+						{(name) => (
 							<button
 								onClick={() => add(name)}
-								style={{ background: "none", font: "inherit", cursor: "pointer", "font-size": "small", border: "1px solid var(--border)", "border-radius": "5px", padding: "2px 8px" }}
+								style={{
+									background: "none",
+									font: "inherit",
+									cursor: "pointer",
+									"font-size": "small",
+									border: "1px solid var(--border)",
+									"border-radius": "5px",
+									padding: "2px 8px",
+								}}
 								title={`Add boilerplate config for ${name}`}
 							>
 								<a role="button" class="row row-sm">

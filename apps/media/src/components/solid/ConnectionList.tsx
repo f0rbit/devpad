@@ -9,7 +9,7 @@ import { ResourceState } from "./ResourceState";
 
 const ALL_PLATFORMS: Platform[] = ["github", "bluesky", "youtube", "devpad", "reddit", "twitter"];
 const HIDDEN_PLATFORMS: Platform[] = ["bluesky", "youtube", "devpad"];
-const PLATFORMS = ALL_PLATFORMS.filter(p => !HIDDEN_PLATFORMS.includes(p));
+const PLATFORMS = ALL_PLATFORMS.filter((p) => !HIDDEN_PLATFORMS.includes(p));
 
 type ConnectionListProps = {
 	profileSlug?: string | null;
@@ -37,7 +37,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 		const slug = profileSlug();
 		const list = profileList();
 		if (!slug || !list) return null;
-		return list.find(p => p.slug === slug) ?? null;
+		return list.find((p) => p.slug === slug) ?? null;
 	};
 
 	const profileId = () => currentProfile()?.id ?? null;
@@ -60,7 +60,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 
 			return id;
 		},
-		async id => {
+		async (id) => {
 			if (isServer) return [];
 			setHasFetched(true);
 			const result = await getClient().media.connections.list(id, { include_settings: true });
@@ -69,11 +69,11 @@ export default function ConnectionList(props: ConnectionListProps) {
 		},
 		{
 			initialValue: props.initialConnections ?? [],
-		}
+		},
 	);
 
 	const getConnection = (platform: Platform): ConnectionWithSettings | null => {
-		return data()?.find(c => c.platform === platform) ?? null;
+		return data()?.find((c) => c.platform === platform) ?? null;
 	};
 
 	const sortedPlatforms = () => {
@@ -81,8 +81,8 @@ export default function ConnectionList(props: ConnectionListProps) {
 		if (!accounts) return PLATFORMS;
 
 		return [...PLATFORMS].sort((a, b) => {
-			const connA = accounts.find(c => c.platform === a);
-			const connB = accounts.find(c => c.platform === b);
+			const connA = accounts.find((c) => c.platform === a);
+			const connB = accounts.find((c) => c.platform === b);
 
 			if (connA && !connB) return -1;
 			if (!connA && connB) return 1;
@@ -112,7 +112,18 @@ export default function ConnectionList(props: ConnectionListProps) {
 				<ResourceState resource={data} loadingMessage="Loading connections..." errorPrefix="Failed to load connections">
 					{() => (
 						<Show when={profileId()} keyed>
-							{id => <For each={sortedPlatforms()}>{platform => <PlatformCard platform={platform} profileId={id} connection={getConnection(platform)} onConnectionChange={refetch} />}</For>}
+							{(id) => (
+								<For each={sortedPlatforms()}>
+									{(platform) => (
+										<PlatformCard
+											platform={platform}
+											profileId={id}
+											connection={getConnection(platform)}
+											onConnectionChange={refetch}
+										/>
+									)}
+								</For>
+							)}
 						</Show>
 					)}
 				</ResourceState>

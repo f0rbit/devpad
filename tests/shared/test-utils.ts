@@ -35,7 +35,7 @@ export async function createTestUser(dbPath: string): Promise<string> {
 		const data = encoder.encode(apiKeyValue);
 		const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", data);
 		const keyHash = Array.from(new Uint8Array(hashBuffer))
-			.map(b => b.toString(16).padStart(2, "0"))
+			.map((b) => b.toString(16).padStart(2, "0"))
 			.join("");
 
 		await db.insert(api_keys).values({
@@ -94,7 +94,7 @@ export async function waitForServer(url: string, maxAttempts = 30): Promise<void
 		}
 
 		log(`  Waiting 1 second before next attempt...`);
-		await new Promise(resolve => setTimeout(resolve, 1000));
+		await new Promise((resolve) => setTimeout(resolve, 1000));
 		attempts++;
 	}
 

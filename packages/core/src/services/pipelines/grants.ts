@@ -31,14 +31,19 @@ export async function list_grants(db: Database, package_id: string): Promise<Res
  * Check if a scope is granted at a stage for a package.
  * Returns true if granted, false otherwise (via Result error propagation).
  */
-export async function check_grant(db: Database, package_id: string, stage_name: string, scope: string): Promise<Result<boolean, ServiceError>> {
+export async function check_grant(
+	db: Database,
+	package_id: string,
+	stage_name: string,
+	scope: string,
+): Promise<Result<boolean, ServiceError>> {
 	return match(
 		await list_grants(db, package_id),
-		grants => {
+		(grants) => {
 			const verdict = evaluate_grant_check(grants, scope, stage_name);
 			return ok(verdict.granted) as Result<boolean, ServiceError>;
 		},
-		error => err(error) as Result<boolean, ServiceError>
+		(error) => err(error) as Result<boolean, ServiceError>,
 	);
 }
 
@@ -46,7 +51,12 @@ export async function check_grant(db: Database, package_id: string, stage_name: 
  * Request a new grant. Auto-approves if policy says so, otherwise leaves pending.
  * TODO(phase-2): emit devpad approval item for manual approvals.
  */
-export async function request_grant(db: Database, package_id: string, stage_name: string, scope: string): Promise<Result<PipelineGrant, ServiceError>> {
+export async function request_grant(
+	db: Database,
+	package_id: string,
+	stage_name: string,
+	scope: string,
+): Promise<Result<PipelineGrant, ServiceError>> {
 	try {
 		const now = new Date().toISOString();
 		const auto_approvable = is_auto_approvable(scope, stage_name);
@@ -93,7 +103,11 @@ export async function request_grant(db: Database, package_id: string, stage_name
 /**
  * Approve an existing grant.
  */
-export async function approve_grant(db: Database, grant_id: string, user_id: string): Promise<Result<PipelineGrant, ServiceError>> {
+export async function approve_grant(
+	db: Database,
+	grant_id: string,
+	user_id: string,
+): Promise<Result<PipelineGrant, ServiceError>> {
 	try {
 		const now = new Date().toISOString();
 
@@ -128,7 +142,12 @@ export async function approve_grant(db: Database, grant_id: string, user_id: str
 /**
  * Deny an existing grant.
  */
-export async function deny_grant(db: Database, grant_id: string, user_id: string, reason?: string): Promise<Result<void, ServiceError>> {
+export async function deny_grant(
+	db: Database,
+	grant_id: string,
+	user_id: string,
+	reason?: string,
+): Promise<Result<void, ServiceError>> {
 	try {
 		const now = new Date().toISOString();
 

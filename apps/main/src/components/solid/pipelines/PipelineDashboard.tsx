@@ -101,15 +101,39 @@ const VerdictBar = (props: { label: string; verdicts: Verdicts }) => {
 				<span class="text-sm text-faint">{props.label}</span>
 				<span class="text-sm text-faint">{total()}</span>
 			</div>
-			<Show when={total() > 0} fallback={<div role="img" style={{ height: "8px", background: "var(--bg-alt, #1a1a1a)", "border-radius": "4px" }} aria-label={`${props.label}: no verdicts`} />}>
+			<Show
+				when={total() > 0}
+				fallback={
+					<div
+						role="img"
+						style={{ height: "8px", background: "var(--bg-alt, #1a1a1a)", "border-radius": "4px" }}
+						aria-label={`${props.label}: no verdicts`}
+					/>
+				}
+			>
 				<div
 					role="img"
-					style={{ display: "flex", height: "8px", "border-radius": "4px", overflow: "hidden", background: "var(--bg-alt, #1a1a1a)" }}
+					style={{
+						display: "flex",
+						height: "8px",
+						"border-radius": "4px",
+						overflow: "hidden",
+						background: "var(--bg-alt, #1a1a1a)",
+					}}
 					aria-label={`${props.label}: ${props.verdicts.pass} pass, ${props.verdicts.fail} fail, ${props.verdicts.pending} pending`}
 				>
-					<div style={{ width: pct(props.verdicts.pass), background: VERDICT_COLORS.pass }} title={`pass: ${props.verdicts.pass}`} />
-					<div style={{ width: pct(props.verdicts.fail), background: VERDICT_COLORS.fail }} title={`fail: ${props.verdicts.fail}`} />
-					<div style={{ width: pct(props.verdicts.pending), background: VERDICT_COLORS.pending }} title={`pending: ${props.verdicts.pending}`} />
+					<div
+						style={{ width: pct(props.verdicts.pass), background: VERDICT_COLORS.pass }}
+						title={`pass: ${props.verdicts.pass}`}
+					/>
+					<div
+						style={{ width: pct(props.verdicts.fail), background: VERDICT_COLORS.fail }}
+						title={`fail: ${props.verdicts.fail}`}
+					/>
+					<div
+						style={{ width: pct(props.verdicts.pending), background: VERDICT_COLORS.pending }}
+						title={`pending: ${props.verdicts.pending}`}
+					/>
 				</div>
 			</Show>
 			<div class="row" style={{ gap: "0.75rem" }}>
@@ -128,7 +152,7 @@ const WindowSelector = (props: { project_id: string; current_ms: number }) => {
 	return (
 		<nav aria-label="dashboard window" class="row" style={{ gap: "0.5rem" }}>
 			<For each={WINDOW_OPTIONS}>
-				{opt => (
+				{(opt) => (
 					<a
 						href={href(opt.ms)}
 						data-testid={`window-${opt.label}`}
@@ -164,7 +188,15 @@ export default function PipelineDashboard(props: PipelineDashboardProps) {
 				<WindowSelector project_id={props.project_id} current_ms={props.window_ms} />
 			</div>
 
-			<Show when={!is_empty(data())} fallback={<Empty title="No runs in this window" description="No pipeline activity has been recorded over the selected window. Trigger a run or expand the window to see metrics." />}>
+			<Show
+				when={!is_empty(data())}
+				fallback={
+					<Empty
+						title="No runs in this window"
+						description="No pipeline activity has been recorded over the selected window. Trigger a run or expand the window to see metrics."
+					/>
+				}
+			>
 				{/* Panel 1 — Run counts */}
 				<section class="stack stack-sm" aria-labelledby="dashboard-runs-heading">
 					<h3 id="dashboard-runs-heading" style={{ margin: 0 }}>

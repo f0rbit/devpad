@@ -83,7 +83,8 @@ const interpret_response = async <T>(response: Response): Promise<Result<T, Clou
 	const body_text = await response.text().catch(() => "");
 	if (response.status === 404) return err({ code: "not_found", message: body_text || "cf api 404" });
 	if (response.status === 409) return err({ code: "conflict", message: body_text || "cf api 409" });
-	if (response.status >= 400 && response.status < 500) return err({ code: "validation", message: body_text || `cf api ${response.status}` });
+	if (response.status >= 400 && response.status < 500)
+		return err({ code: "validation", message: body_text || `cf api ${response.status}` });
 	if (response.status >= 500) return err({ code: "internal", message: body_text || `cf api ${response.status}` });
 	let parsed: CfEnvelope<T>;
 	try {
@@ -154,9 +155,11 @@ type CfWorkerVersionResponse = {
 
 const bindings_to_vars = (bindings: CfBinding[] | undefined): WorkerVar[] | undefined => {
 	if (!bindings) return undefined;
-	const plain = bindings.filter((b): b is CfBinding & { text: string } => b.type === "plain_text" && typeof b.text === "string");
+	const plain = bindings.filter(
+		(b): b is CfBinding & { text: string } => b.type === "plain_text" && typeof b.text === "string",
+	);
 	if (plain.length === 0) return undefined;
-	return plain.map(b => ({ type: "plain_text" as const, name: b.name, text: b.text }));
+	return plain.map((b) => ({ type: "plain_text" as const, name: b.name, text: b.text }));
 };
 
 const to_worker_version = (script_name: string, raw: CfWorkerVersionResponse): WorkerVersion => ({
@@ -199,7 +202,7 @@ const build_version_metadata = (input: {
 	annotations: Record<string, string>;
 	assets?: { jwt: string; config: AssetConfig };
 }): Record<string, unknown> => {
-	const vars_as_bindings: VersionBinding[] = input.vars.map(v => ({ type: v.type, name: v.name, text: v.text }));
+	const vars_as_bindings: VersionBinding[] = input.vars.map((v) => ({ type: v.type, name: v.name, text: v.text }));
 	const metadata: Record<string, unknown> = {
 		main_module: input.main_module,
 		bindings: [...input.bindings, ...vars_as_bindings],
@@ -247,7 +250,10 @@ const upload_asset_session = async (
 	const manifest: Record<string, { hash: string; size: number }> = {};
 	for (const asset of assets) {
 		if (asset.hash.length !== 32) {
-			return err({ code: "validation", message: `asset hash must be 32 hex chars, got length ${asset.hash.length} for ${asset.path}` });
+			return err({
+				code: "validation",
+				message: `asset hash must be 32 hex chars, got length ${asset.hash.length} for ${asset.path}`,
+			});
 		}
 		manifest[asset.path] = { hash: asset.hash, size: asset.size_bytes };
 	}
@@ -263,7 +269,7 @@ const upload_asset_session = async (
 		return ok({ jwt: session.value.jwt });
 	}
 
-	const by_hash = new Map(assets.map(a => [a.hash, a]));
+	const by_hash = new Map(assets.map((a) => [a.hash, a]));
 	const upload_url = cf_url(config, "/workers/assets/upload?base64=true");
 
 	for (const bucket of session.value.buckets) {
@@ -277,11 +283,7 @@ const upload_asset_session = async (
 					message: `assets-upload-session returned bucket with unknown hash ${hash}`,
 				});
 			}
-			form.append(
-				hash,
-				new Blob([to_base64(asset.content)], { type: asset.mime_type || "application/null" }),
-				hash,
-			);
+			form.append(hash, new Blob([to_base64(asset.content)], { type: asset.mime_type || "application/null" }), hash);
 		}
 		let response: Response;
 		try {
@@ -310,7 +312,10 @@ const upload_single_file = async (
 	input: Extract<UploadVersionInput, { kind: "single_file" }>,
 ): Promise<Result<WorkerVersion, CloudflareError>> => {
 	if (input.bundle === undefined) {
-		return err({ code: "validation", message: "cf-api-provider.versions.upload requires `bundle` bytes for multipart upload" });
+		return err({
+			code: "validation",
+			message: "cf-api-provider.versions.upload requires `bundle` bytes for multipart upload",
+		});
 	}
 	const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/versions`;
 	const main_module = input.main_module ?? "index.js";
@@ -325,7 +330,11 @@ const upload_single_file = async (
 
 	const form = new FormData();
 	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-	form.append(main_module, new Blob([input.bundle as BlobPart], { type: "application/javascript+module" }), main_module);
+	form.append(
+		main_module,
+		new Blob([input.bundle as BlobPart], { type: "application/javascript+module" }),
+		main_module,
+	);
 
 	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
 	if (!result.ok) return result;
@@ -336,7 +345,7 @@ const upload_directory_bundle = async (
 	config: CfApiConfig,
 	input: Extract<UploadVersionInput, { kind: "directory_bundle" }>,
 ): Promise<Result<WorkerVersion, CloudflareError>> => {
-	const module_names = new Set(input.modules.map(m => m.name));
+	const module_names = new Set(input.modules.map((m) => m.name));
 	if (!module_names.has(input.main_module)) {
 		return err({
 			code: "validation",
@@ -390,7 +399,7 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 			const result = await cf_call<{ items: CfWorkerVersionResponse[] }>(config, path, { method: "GET" });
 			if (!result.ok) return result;
 			const items = result.value.items ?? [];
-			return ok(items.map(v => to_worker_version(script_name, v)));
+			return ok(items.map((v) => to_worker_version(script_name, v)));
 		},
 	};
 
@@ -412,7 +421,7 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 			const result = await cf_call<{ deployments: CfDeploymentResponse[] }>(config, path, { method: "GET" });
 			if (!result.ok) return result;
 			const items = result.value.deployments ?? [];
-			return ok(items.map(d => to_worker_deployment(script_name, d)));
+			return ok(items.map((d) => to_worker_deployment(script_name, d)));
 		},
 	};
 
@@ -425,15 +434,16 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 		},
 	};
 
-	const assert_version_key_header_routed = async (
-		input: { script_name: string; version_key: string },
-	): Promise<Result<{ resolved_version_id: string }, CloudflareError>> => {
+	const assert_version_key_header_routed = async (input: {
+		script_name: string;
+		version_key: string;
+	}): Promise<Result<{ resolved_version_id: string }, CloudflareError>> => {
 		const list = await versions.list(input.script_name);
 		if (!list.ok) return list;
 		// Mirrors the orchestrator's annotation convention from
 		// `deploy.ts` — `workers/tag` carries the version_set_id (CF
 		// rejects any other annotation key with validation error 10021).
-		const matched = list.value.find(v => v.annotations?.["workers/tag"] === input.version_key);
+		const matched = list.value.find((v) => v.annotations?.["workers/tag"] === input.version_key);
 		if (!matched) return err({ code: "not_found", message: `no version matches version_key ${input.version_key}` });
 		return ok({ resolved_version_id: matched.id });
 	};

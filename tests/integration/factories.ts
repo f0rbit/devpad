@@ -1,7 +1,8 @@
 import type { Nullable, Project, Tag, Task, UpsertProject, UpsertTag, UpsertTodo } from "@devpad/schema";
 import { TEST_USER_ID } from "./setup";
 
-type UpsertTaskOverrides = Nullable<UpsertTodo> & Partial<Pick<UpsertTodo, "id" | "owner_id" | "title" | "progress" | "priority" | "visibility" | "project_id">>;
+type UpsertTaskOverrides = Nullable<UpsertTodo> &
+	Partial<Pick<UpsertTodo, "id" | "owner_id" | "title" | "progress" | "priority" | "visibility" | "project_id">>;
 type UpsertProjectOverrides = Partial<UpsertProject>;
 
 export class TestDataFactory {
@@ -72,7 +73,10 @@ export class TestDataFactory {
 		};
 	}
 
-	static createRealisticProject(owner_id: string = TEST_USER_ID, overrides: Partial<UpsertProjectOverrides> = {}): Project {
+	static createRealisticProject(
+		owner_id: string = TEST_USER_ID,
+		overrides: Partial<UpsertProjectOverrides> = {},
+	): Project {
 		const id = TestDataFactory.getNextId();
 		return TestDataFactory.createProject(owner_id, {
 			id: id,

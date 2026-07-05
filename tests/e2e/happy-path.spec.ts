@@ -6,30 +6,30 @@ test.describe("Happy Path Workflow", () => {
 		// This avoids issues with page.route intercepting navigations
 		await context.route(
 			() => true,
-			async route => {
+			async (route) => {
 				await route.continue({
 					headers: {
 						...route.request().headers(),
 						"X-Test-User": "true",
 					},
 				});
-			}
+			},
 		);
 
 		// Add page error listener
-		page.on("pageerror", error => {
+		page.on("pageerror", (error) => {
 			console.error("Page error:", error.message);
 		});
 
 		// Add console listener for debugging
-		page.on("console", msg => {
+		page.on("console", (msg) => {
 			if (msg.type() === "error") {
 				console.error("Browser console error:", msg.text());
 			}
 		});
 
 		// Add response listener to catch failed requests
-		page.on("response", response => {
+		page.on("response", (response) => {
 			if (!response.ok() && !response.url().includes("_astro")) {
 				console.error(`Failed request: ${response.status()} ${response.url()}`);
 			}
@@ -73,7 +73,7 @@ test.describe("Happy Path Workflow", () => {
 			console.log("First task created, redirected to:", page.url());
 		} catch (error) {
 			console.error("Failed to redirect after first task creation. Current URL:", page.url());
-			console.error("Page content:", await page.content().then(html => html.substring(0, 500)));
+			console.error("Page content:", await page.content().then((html) => html.substring(0, 500)));
 			throw error;
 		}
 

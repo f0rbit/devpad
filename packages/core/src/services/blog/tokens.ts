@@ -1,4 +1,11 @@
-import { type AccessKeyCreate, type AccessKeyUpdate, type DrizzleDB, ok, type Result, try_catch_async } from "@devpad/schema/blog";
+import {
+	type AccessKeyCreate,
+	type AccessKeyUpdate,
+	type DrizzleDB,
+	ok,
+	type Result,
+	try_catch_async,
+} from "@devpad/schema/blog";
 import { api_keys } from "@devpad/schema/database/schema";
 import { and, eq } from "drizzle-orm";
 import { hashing } from "../../utils/crypto";
@@ -42,7 +49,8 @@ const notFound = (resource: string): TokenServiceError => ({
 	resource,
 });
 
-const firstRow = <T>(r: T[], resource: string): Result<T, TokenServiceError> => rows.firstOr(r, () => notFound(resource));
+const firstRow = <T>(r: T[], resource: string): Result<T, TokenServiceError> =>
+	rows.firstOr(r, () => notFound(resource));
 
 const sanitize = (t: BlogApiKeyRow): SanitizedToken => ({
 	id: t.id,
@@ -74,7 +82,14 @@ export const createTokenService = ({ db }: Deps) => {
 		const rows = await db
 			.select()
 			.from(api_keys)
-			.where(and(eq(api_keys.user_id, userId), eq(api_keys.id, tokenId), eq(api_keys.scope, "blog"), eq(api_keys.deleted, false)))
+			.where(
+				and(
+					eq(api_keys.user_id, userId),
+					eq(api_keys.id, tokenId),
+					eq(api_keys.scope, "blog"),
+					eq(api_keys.deleted, false),
+				),
+			)
 			.limit(1);
 
 		return firstRow(rows as BlogApiKeyRow[], `token:${tokenId}`);
@@ -105,7 +120,11 @@ export const createTokenService = ({ db }: Deps) => {
 			};
 		}, toDbError);
 
-	const update = async (userId: string, tokenId: string, input: AccessKeyUpdate): Promise<Result<SanitizedToken, TokenServiceError>> => {
+	const update = async (
+		userId: string,
+		tokenId: string,
+		input: AccessKeyUpdate,
+	): Promise<Result<SanitizedToken, TokenServiceError>> => {
 		const existingResult = await find(userId, tokenId);
 		if (!existingResult.ok) return existingResult;
 

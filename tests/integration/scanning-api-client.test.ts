@@ -106,7 +106,9 @@ describe("Scanning API Client Integration", () => {
 
 			const reader = stream.getReader();
 
-			const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Stream read timeout")), 5000));
+			const timeoutPromise = new Promise((_, reject) =>
+				setTimeout(() => reject(new Error("Stream read timeout")), 5000),
+			);
 
 			try {
 				const readPromise = reader.read();

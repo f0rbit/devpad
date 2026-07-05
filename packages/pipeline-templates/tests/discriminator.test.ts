@@ -4,7 +4,11 @@ import { resolve_rollout } from "../src/discriminator.ts";
 import { defaultAtomic, defaultGradual } from "../src/index.ts";
 import type { ForcedAtomicReason, Rollout } from "../src/types.ts";
 
-const make_manifest = (opts: { has_do_migrations: boolean; has_assets: boolean; version_affinity: "pinned" | "none" }): VersionSetManifest => ({
+const make_manifest = (opts: {
+	has_do_migrations: boolean;
+	has_assets: boolean;
+	version_affinity: "pinned" | "none";
+}): VersionSetManifest => ({
 	package: "test-package",
 	git_sha: "0".repeat(40),
 	created_at: "2026-05-16T00:00:00.000Z",
@@ -49,23 +53,135 @@ type Row = {
 // Precedence: do_migrations wins, then asset_affinity_none, else honour declared.
 const rows: Row[] = [
 	// declared = gradual
-	{ declared: "gradual", do_migrations: false, has_assets: false, affinity: "pinned", expected_type: "gradual", expected_reason: null },
-	{ declared: "gradual", do_migrations: false, has_assets: false, affinity: "none", expected_type: "gradual", expected_reason: null },
-	{ declared: "gradual", do_migrations: false, has_assets: true, affinity: "pinned", expected_type: "gradual", expected_reason: null },
-	{ declared: "gradual", do_migrations: false, has_assets: true, affinity: "none", expected_type: "atomic", expected_reason: "asset_affinity_none" },
-	{ declared: "gradual", do_migrations: true, has_assets: false, affinity: "pinned", expected_type: "atomic", expected_reason: "do_migrations" },
-	{ declared: "gradual", do_migrations: true, has_assets: false, affinity: "none", expected_type: "atomic", expected_reason: "do_migrations" },
-	{ declared: "gradual", do_migrations: true, has_assets: true, affinity: "pinned", expected_type: "atomic", expected_reason: "do_migrations" },
-	{ declared: "gradual", do_migrations: true, has_assets: true, affinity: "none", expected_type: "atomic", expected_reason: "do_migrations" },
+	{
+		declared: "gradual",
+		do_migrations: false,
+		has_assets: false,
+		affinity: "pinned",
+		expected_type: "gradual",
+		expected_reason: null,
+	},
+	{
+		declared: "gradual",
+		do_migrations: false,
+		has_assets: false,
+		affinity: "none",
+		expected_type: "gradual",
+		expected_reason: null,
+	},
+	{
+		declared: "gradual",
+		do_migrations: false,
+		has_assets: true,
+		affinity: "pinned",
+		expected_type: "gradual",
+		expected_reason: null,
+	},
+	{
+		declared: "gradual",
+		do_migrations: false,
+		has_assets: true,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: "asset_affinity_none",
+	},
+	{
+		declared: "gradual",
+		do_migrations: true,
+		has_assets: false,
+		affinity: "pinned",
+		expected_type: "atomic",
+		expected_reason: "do_migrations",
+	},
+	{
+		declared: "gradual",
+		do_migrations: true,
+		has_assets: false,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: "do_migrations",
+	},
+	{
+		declared: "gradual",
+		do_migrations: true,
+		has_assets: true,
+		affinity: "pinned",
+		expected_type: "atomic",
+		expected_reason: "do_migrations",
+	},
+	{
+		declared: "gradual",
+		do_migrations: true,
+		has_assets: true,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: "do_migrations",
+	},
 	// declared = atomic — already safe, no forcing reason
-	{ declared: "atomic", do_migrations: false, has_assets: false, affinity: "pinned", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: false, has_assets: false, affinity: "none", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: false, has_assets: true, affinity: "pinned", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: false, has_assets: true, affinity: "none", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: true, has_assets: false, affinity: "pinned", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: true, has_assets: false, affinity: "none", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: true, has_assets: true, affinity: "pinned", expected_type: "atomic", expected_reason: null },
-	{ declared: "atomic", do_migrations: true, has_assets: true, affinity: "none", expected_type: "atomic", expected_reason: null },
+	{
+		declared: "atomic",
+		do_migrations: false,
+		has_assets: false,
+		affinity: "pinned",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: false,
+		has_assets: false,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: false,
+		has_assets: true,
+		affinity: "pinned",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: false,
+		has_assets: true,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: true,
+		has_assets: false,
+		affinity: "pinned",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: true,
+		has_assets: false,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: true,
+		has_assets: true,
+		affinity: "pinned",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
+	{
+		declared: "atomic",
+		do_migrations: true,
+		has_assets: true,
+		affinity: "none",
+		expected_type: "atomic",
+		expected_reason: null,
+	},
 ];
 
 describe("resolve_rollout", () => {

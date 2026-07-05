@@ -6,7 +6,13 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { compute_compatibility_date, derive_template_vars, render_template, type ScaffolderInput, validate_package_name } from "@devpad/pipeline-templates";
+import {
+	compute_compatibility_date,
+	derive_template_vars,
+	render_template,
+	type ScaffolderInput,
+	validate_package_name,
+} from "@devpad/pipeline-templates";
 
 describe("validate_package_name", () => {
 	const valid_cases = ["anthropic-search", "a", "abc-123", "x".repeat(40), "service-with-many-hyphens"];
@@ -17,7 +23,10 @@ describe("validate_package_name", () => {
 		});
 	}
 
-	const invalid_cases: Array<{ name: string; expected_code: "package_name_empty" | "package_name_too_long" | "package_name_invalid_chars" }> = [
+	const invalid_cases: Array<{
+		name: string;
+		expected_code: "package_name_empty" | "package_name_too_long" | "package_name_invalid_chars";
+	}> = [
 		{ name: "", expected_code: "package_name_empty" },
 		{ name: "x".repeat(41), expected_code: "package_name_too_long" },
 		{ name: "Anthropic-Search", expected_code: "package_name_invalid_chars" },

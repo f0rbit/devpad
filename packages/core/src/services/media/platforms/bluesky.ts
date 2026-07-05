@@ -1,4 +1,10 @@
-import { type BlueskyFeedItem, type BlueskyRaw, BlueskyRawSchema, type PostPayload, type TimelineItem } from "@devpad/schema/media";
+import {
+	type BlueskyFeedItem,
+	type BlueskyRaw,
+	BlueskyRawSchema,
+	type PostPayload,
+	type TimelineItem,
+} from "@devpad/schema/media";
 import { err, type FetchError, ok, pipe } from "@f0rbit/corpus";
 import { BaseMemoryProvider } from "./memory-base";
 import { type FetchResult, mapHttpError, type Provider, type ProviderError } from "./types";
@@ -9,9 +15,13 @@ export type BlueskyProviderConfig = {
 	actor: string;
 };
 
-const mapBlueskyError = (e: FetchError): ProviderError => (e.type === "http" ? mapHttpError(e.status, e.status_text) : { kind: "network_error", cause: e.cause instanceof Error ? e.cause : new Error(String(e.cause)) });
+const mapBlueskyError = (e: FetchError): ProviderError =>
+	e.type === "http"
+		? mapHttpError(e.status, e.status_text)
+		: { kind: "network_error", cause: e.cause instanceof Error ? e.cause : new Error(String(e.cause)) };
 
-const parseBlueskyResponse = async (response: Response): Promise<Record<string, unknown>> => (await response.json()) as Record<string, unknown>;
+const parseBlueskyResponse = async (response: Response): Promise<Record<string, unknown>> =>
+	(await response.json()) as Record<string, unknown>;
 
 export class BlueskyProvider implements Provider<BlueskyRaw> {
 	readonly platform = "bluesky";
@@ -35,11 +45,13 @@ export class BlueskyProvider implements Provider<BlueskyRaw> {
 					},
 				},
 				mapBlueskyError,
-				parseBlueskyResponse
+				parseBlueskyResponse,
 			)
-			.flat_map(json => {
+			.flat_map((json) => {
 				const result = BlueskyRawSchema.safeParse({ ...json, fetched_at: new Date().toISOString() });
-				return result.success ? ok(result.data) : err({ kind: "parse_error", message: result.error.message } as ProviderError);
+				return result.success
+					? ok(result.data)
+					: err({ kind: "parse_error", message: result.error.message } as ProviderError);
 			})
 			.result();
 	}

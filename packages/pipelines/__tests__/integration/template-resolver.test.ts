@@ -9,7 +9,12 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { create_memory_backend, pipeline_template_store, version_set_store, type VersionSetManifest } from "@f0rbit/corpus";
+import {
+	create_memory_backend,
+	pipeline_template_store,
+	version_set_store,
+	type VersionSetManifest,
+} from "@f0rbit/corpus";
 import { extendTemplate, PipelineTemplateSchema, type PipelineTemplate } from "@devpad/pipeline-templates";
 import { make_corpus_manifest_provider, make_corpus_template_resolver } from "../../src/providers/corpus-providers";
 

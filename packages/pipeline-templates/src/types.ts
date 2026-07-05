@@ -32,10 +32,16 @@ export type TransitionKey = `${string}→${string}`;
  * `@devpad/core/services/pipelines/gates/*` so this package stays free of
  * runtime concerns.
  */
-export type Gate = { type: "manual" } | { type: "auto"; afterBake?: boolean } | { type: "analysis"; template: AnalysisTemplateRef };
+export type Gate =
+	| { type: "manual" }
+	| { type: "auto"; afterBake?: boolean }
+	| { type: "analysis"; template: AnalysisTemplateRef };
 
 /** Verdict returned by an evaluator and emitted to the state machine. */
-export type GateVerdict = { verdict: "Pass"; reason?: string } | { verdict: "Fail"; reason: string } | { verdict: "Pending" };
+export type GateVerdict =
+	| { verdict: "Pass"; reason?: string }
+	| { verdict: "Fail"; reason: string }
+	| { verdict: "Pending" };
 
 /**
  * A single stage in the rollout: a fraction of traffic to land at, plus the

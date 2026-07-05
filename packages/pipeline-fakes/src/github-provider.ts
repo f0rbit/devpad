@@ -1,6 +1,10 @@
 import type { Result } from "@f0rbit/corpus";
 
-export type GithubError = { code: "not_found"; message: string } | { code: "validation"; message: string } | { code: "unauthorized"; message: string } | { code: "internal"; message: string };
+export type GithubError =
+	| { code: "not_found"; message: string }
+	| { code: "validation"; message: string }
+	| { code: "unauthorized"; message: string }
+	| { code: "internal"; message: string };
 
 export type GithubRepo = {
 	owner: string;

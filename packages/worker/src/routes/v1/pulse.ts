@@ -96,7 +96,7 @@ const guard_project_owner = async (c: Context<AppContext>, project_id: string): 
 
 /* --------------------------------------------------------------------- reads */
 
-app.get("/summary/:project_id", requireAuth, async c => {
+app.get("/summary/:project_id", requireAuth, async (c) => {
 	const project_id = project_param(c);
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -107,7 +107,7 @@ app.get("/summary/:project_id", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: `/summary/${project_id}`, forward_query: true });
 });
 
-app.get("/events/:project_id", requireAuth, async c => {
+app.get("/events/:project_id", requireAuth, async (c) => {
 	const project_id = project_param(c);
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -117,7 +117,7 @@ app.get("/events/:project_id", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: `/events/${project_id}`, forward_query: true });
 });
 
-app.get("/errors/:project_id", requireAuth, async c => {
+app.get("/errors/:project_id", requireAuth, async (c) => {
 	const project_id = project_param(c);
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -128,7 +128,7 @@ app.get("/errors/:project_id", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: `/errors/${project_id}`, forward_query: true });
 });
 
-app.get("/logs/:project_id", requireAuth, async c => {
+app.get("/logs/:project_id", requireAuth, async (c) => {
 	const project_id = project_param(c);
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -138,7 +138,7 @@ app.get("/logs/:project_id", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: `/logs/${project_id}`, forward_query: true });
 });
 
-app.get("/latency/:project_id", requireAuth, async c => {
+app.get("/latency/:project_id", requireAuth, async (c) => {
 	const project_id = project_param(c);
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -151,7 +151,7 @@ app.get("/latency/:project_id", requireAuth, async c => {
 
 /* ----------------------------------------------------------- subs management */
 
-app.get("/admin/subs", requireAuth, async c => {
+app.get("/admin/subs", requireAuth, async (c) => {
 	const project_id = c.req.query("project_id");
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -161,7 +161,7 @@ app.get("/admin/subs", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: "/admin/subs", extra_query: { project_id } });
 });
 
-app.get("/admin/subs/:id", requireAuth, async c => {
+app.get("/admin/subs/:id", requireAuth, async (c) => {
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 
@@ -169,7 +169,7 @@ app.get("/admin/subs/:id", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: `/admin/subs/${id}` });
 });
 
-app.post("/admin/subs", requireAuth, async c => {
+app.post("/admin/subs", requireAuth, async (c) => {
 	const body = (await c.req.json().catch(() => ({}))) as { project_id?: string };
 	const project_id = body.project_id;
 	if (!project_id) return c.json({ error: "Project ID required in body" }, 400);
@@ -208,14 +208,14 @@ app.post("/admin/subs", requireAuth, async c => {
 	return c.text(text, response.status as 200);
 });
 
-app.patch("/admin/subs/:id", requireAuth, async c => {
+app.patch("/admin/subs/:id", requireAuth, async (c) => {
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 	return forward_to_pulse(c, { pulse_path: `/admin/subs/${id}`, method: "PATCH" });
 });
 
-app.delete("/admin/subs/:id", requireAuth, async c => {
+app.delete("/admin/subs/:id", requireAuth, async (c) => {
 	const user = c.get("user");
 	if (!user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
@@ -224,7 +224,7 @@ app.delete("/admin/subs/:id", requireAuth, async c => {
 
 /* --------------------------------------------------------- ingest key admin */
 
-app.post("/admin/keys", requireAuth, async c => {
+app.post("/admin/keys", requireAuth, async (c) => {
 	const body = (await c.req.json().catch(() => ({}))) as { project_id?: string };
 	const project_id = body.project_id;
 	if (!project_id) return c.json({ error: "Project ID required in body" }, 400);
@@ -261,7 +261,7 @@ app.post("/admin/keys", requireAuth, async c => {
 	return c.text(text, response.status as 200);
 });
 
-app.get("/admin/keys", requireAuth, async c => {
+app.get("/admin/keys", requireAuth, async (c) => {
 	const project_id = c.req.query("project_id");
 	if (!project_id) return c.json({ error: "Project ID required" }, 400);
 
@@ -271,7 +271,7 @@ app.get("/admin/keys", requireAuth, async c => {
 	return forward_to_pulse(c, { pulse_path: "/admin/keys", extra_query: { project_id } });
 });
 
-app.delete("/admin/keys/:id", requireAuth, async c => {
+app.delete("/admin/keys/:id", requireAuth, async (c) => {
 	const project_id = c.req.query("project_id");
 	if (!project_id) return c.json({ error: "Project ID required in query" }, 400);
 

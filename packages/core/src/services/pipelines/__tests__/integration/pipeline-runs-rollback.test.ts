@@ -39,7 +39,11 @@ describe("pipeline runs — rollback", () => {
 		// Pre-seed a v0 version + deployment so we have something to roll back to.
 		// Rollback redeploys on the non-staging script (where onebox/wave* land).
 		const script = script_name_for();
-		const v0 = await deps.cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const v0 = await deps.cf.versions.upload({
+			kind: "single_file",
+			script_name: script,
+			annotations: { "workers/tag": "vs_v0" },
+		});
 		if (!v0.ok) throw new Error("v0 upload failed");
 		v0_version_id = v0.value.id;
 		await deps.cf.deployments.create({
@@ -61,7 +65,11 @@ describe("pipeline runs — rollback", () => {
 
 		// Drive to baking after the first manual approval.
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 
 		const after_approve = (await db.select().from(pipeline_run).where(eq(pipeline_run.id, run.id)))[0]!;
 		expect(after_approve.status).toBe("baking");

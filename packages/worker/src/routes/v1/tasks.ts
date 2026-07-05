@@ -9,7 +9,7 @@ import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
 
-app.get("/", requireAuth, async c => {
+app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const query = c.req.query();
@@ -39,7 +39,7 @@ app.get("/", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/history/:task_id", requireAuth, async c => {
+app.get("/history/:task_id", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const task_id = c.req.param("task_id");
@@ -56,7 +56,7 @@ app.get("/history/:task_id", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.patch("/", requireAuth, zValidator("json", upsert_todo), async c => {
+app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
@@ -77,14 +77,23 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async c => {
 	const result = await tasks.upsertTask(db, data, tag_list, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "protected") return c.json({ error: result.error.message, entity_id: result.error.entity_id, modified_by: result.error.modified_by, modified_at: result.error.modified_at }, 409);
+		if (result.error.kind === "protected")
+			return c.json(
+				{
+					error: result.error.message,
+					entity_id: result.error.entity_id,
+					modified_by: result.error.modified_by,
+					modified_at: result.error.modified_at,
+				},
+				409,
+			);
 		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
 });
 
-app.patch("/save_tags", requireAuth, zValidator("json", save_tags_request), async c => {
+app.patch("/save_tags", requireAuth, zValidator("json", save_tags_request), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
@@ -95,11 +104,11 @@ app.patch("/save_tags", requireAuth, zValidator("json", save_tags_request), asyn
 		}
 	}
 
-	const results = await Promise.all(data.map(t => tags.upsertTag(db, t)));
-	const failed = results.find(r => !r.ok);
+	const results = await Promise.all(data.map((t) => tags.upsertTag(db, t)));
+	const failed = results.find((r) => !r.ok);
 	if (failed && !failed.ok) return c.json({ error: "Error saving tags" }, 500);
 
-	const tag_ids = results.filter(r => r.ok).map(r => r.value);
+	const tag_ids = results.filter((r) => r.ok).map((r) => r.value);
 	if (tag_ids.length !== data.length) return c.json({ error: "Tag upsert returned incorrect rows" }, 500);
 
 	const full_tags = await db.select().from(tag).where(inArray(tag.id, tag_ids));

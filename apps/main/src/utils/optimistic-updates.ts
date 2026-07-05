@@ -65,7 +65,9 @@ export interface OptimisticUpdateResult<T> {
  *   Mark Complete
  * </button>
  */
-export function createOptimisticUpdate<T extends Record<string, any>>(options: OptimisticUpdateOptions<T>): OptimisticUpdateResult<T> {
+export function createOptimisticUpdate<T extends Record<string, any>>(
+	options: OptimisticUpdateOptions<T>,
+): OptimisticUpdateResult<T> {
 	const { initialData, updateFn, successDuration = 2000, errorDuration = 5000, onSuccess, onError } = options;
 
 	const [data, setData] = createSignal<T>(initialData);
@@ -162,7 +164,7 @@ export function createOptimisticForm<T extends Record<string, any>>(
 	options: OptimisticUpdateOptions<T> & {
 		/** Validation function */
 		validate?: (data: T) => Record<keyof T, string> | null;
-	}
+	},
 ) {
 	const optimisticUpdate = createOptimisticUpdate(options);
 	const [validationErrors, setValidationErrors] = createSignal<Record<keyof T, string> | null>(null);
@@ -215,7 +217,7 @@ export function createOptimisticList<T extends { id: string }>(options: {
 
 	const updateItem = async (id: string, updates: Partial<T>): Promise<void> => {
 		const originalItems = items();
-		const itemIndex = originalItems.findIndex(item => item.id === id);
+		const itemIndex = originalItems.findIndex((item) => item.id === id);
 
 		if (itemIndex === -1) return;
 
@@ -228,10 +230,10 @@ export function createOptimisticList<T extends { id: string }>(options: {
 		setItems(newItems);
 
 		// Add to loading state
-		setLoadingItems(prev => new Set([...prev, id]));
+		setLoadingItems((prev) => new Set([...prev, id]));
 
 		// Clear any previous error
-		setErrorItems(prev => {
+		setErrorItems((prev) => {
 			const newMap = new Map(prev);
 			newMap.delete(id);
 			return newMap;
@@ -241,7 +243,7 @@ export function createOptimisticList<T extends { id: string }>(options: {
 			const result = await options.updateItemFn(updatedItem);
 
 			// Update with server response
-			const finalItems = items().map(item => (item.id === id ? result : item));
+			const finalItems = items().map((item) => (item.id === id ? result : item));
 			setItems(finalItems);
 
 			options.onSuccess?.("update", result);
@@ -251,12 +253,12 @@ export function createOptimisticList<T extends { id: string }>(options: {
 
 			// Set error state
 			const errorMessage = getUserFriendlyErrorMessage(error);
-			setErrorItems(prev => new Map(prev.set(id, errorMessage)));
+			setErrorItems((prev) => new Map(prev.set(id, errorMessage)));
 
 			options.onError?.(error, "update", originalItem);
 		} finally {
 			// Remove from loading state
-			setLoadingItems(prev => {
+			setLoadingItems((prev) => {
 				const newSet = new Set(prev);
 				newSet.delete(id);
 				return newSet;
@@ -271,26 +273,26 @@ export function createOptimisticList<T extends { id: string }>(options: {
 		const tempItem = { ...newItem, id: tempId } as T;
 
 		// Optimistically add item
-		setItems(prev => [...prev, tempItem]);
-		setLoadingItems(prev => new Set([...prev, tempId]));
+		setItems((prev) => [...prev, tempItem]);
+		setLoadingItems((prev) => new Set([...prev, tempId]));
 
 		try {
 			const result = await options.createItemFn(newItem);
 
 			// Replace temp item with real item
-			setItems(prev => prev.map(item => (item.id === tempId ? result : item)));
+			setItems((prev) => prev.map((item) => (item.id === tempId ? result : item)));
 
 			options.onSuccess?.("create", result);
 		} catch (error) {
 			// Remove temp item
-			setItems(prev => prev.filter(item => item.id !== tempId));
+			setItems((prev) => prev.filter((item) => item.id !== tempId));
 
 			const errorMessage = getUserFriendlyErrorMessage(error);
-			setErrorItems(prev => new Map(prev.set(tempId, errorMessage)));
+			setErrorItems((prev) => new Map(prev.set(tempId, errorMessage)));
 
 			options.onError?.(error, "create", tempItem);
 		} finally {
-			setLoadingItems(prev => {
+			setLoadingItems((prev) => {
 				const newSet = new Set(prev);
 				newSet.delete(tempId);
 				return newSet;
@@ -302,13 +304,13 @@ export function createOptimisticList<T extends { id: string }>(options: {
 		if (!options.deleteItemFn) return;
 
 		const originalItems = items();
-		const itemToDelete = originalItems.find(item => item.id === id);
+		const itemToDelete = originalItems.find((item) => item.id === id);
 
 		if (!itemToDelete) return;
 
 		// Optimistically remove item
-		setItems(prev => prev.filter(item => item.id !== id));
-		setLoadingItems(prev => new Set([...prev, id]));
+		setItems((prev) => prev.filter((item) => item.id !== id));
+		setLoadingItems((prev) => new Set([...prev, id]));
 
 		try {
 			await options.deleteItemFn(id);
@@ -318,11 +320,11 @@ export function createOptimisticList<T extends { id: string }>(options: {
 			setItems(originalItems);
 
 			const errorMessage = getUserFriendlyErrorMessage(error);
-			setErrorItems(prev => new Map(prev.set(id, errorMessage)));
+			setErrorItems((prev) => new Map(prev.set(id, errorMessage)));
 
 			options.onError?.(error, "delete", itemToDelete);
 		} finally {
-			setLoadingItems(prev => {
+			setLoadingItems((prev) => {
 				const newSet = new Set(prev);
 				newSet.delete(id);
 				return newSet;
@@ -338,7 +340,7 @@ export function createOptimisticList<T extends { id: string }>(options: {
 		isItemLoading: (id: string) => loadingItems().has(id),
 		getItemError: (id: string) => errorItems().get(id) || null,
 		clearItemError: (id: string) => {
-			setErrorItems(prev => {
+			setErrorItems((prev) => {
 				const newMap = new Map(prev);
 				newMap.delete(id);
 				return newMap;

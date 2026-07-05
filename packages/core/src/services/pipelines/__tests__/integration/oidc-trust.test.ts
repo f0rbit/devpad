@@ -8,7 +8,14 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { pipeline_oidc_trust } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
-import { create_trust_policy, delete_trust_policy, get_trust_policy, list_trust_policies, touch_trust_policy_last_used, update_trust_policy } from "../../oidc-trust.js";
+import {
+	create_trust_policy,
+	delete_trust_policy,
+	get_trust_policy,
+	list_trust_policies,
+	touch_trust_policy_last_used,
+	update_trust_policy,
+} from "../../oidc-trust.js";
 import { create_test_db, seed_user } from "./helpers.js";
 
 const make_input = (owner_id: string, overrides: Record<string, unknown> = {}) => ({
@@ -50,7 +57,7 @@ describe("oidc-trust service — create_trust_policy", () => {
 				allowed_refs: ["refs/heads/main"],
 				allowed_environments: ["production"],
 				session_ttl_seconds: 300,
-			})
+			}),
 		);
 		expect(result.ok).toBe(true);
 		if (result.ok) {
@@ -95,7 +102,7 @@ describe("oidc-trust service — list_trust_policies", () => {
 			expect(result.value).toHaveLength(3);
 			// All share the same wall-clock timestamp in tests; the secondary
 			// `id ASC` ordering provides deterministic resolution.
-			const owners = result.value.map(r => r.github_owner);
+			const owners = result.value.map((r) => r.github_owner);
 			expect(owners).toContain("alpha");
 			expect(owners).toContain("beta");
 			expect(owners).toContain("gamma");

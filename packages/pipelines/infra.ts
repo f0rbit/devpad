@@ -34,7 +34,15 @@
 
 import alchemy from "alchemy";
 import type { Bindings } from "alchemy/cloudflare";
-import { D1Database, DurableObjectNamespace, R2Bucket, Secret, SecretsStore, Worker, WorkerRef } from "alchemy/cloudflare";
+import {
+	D1Database,
+	DurableObjectNamespace,
+	R2Bucket,
+	Secret,
+	SecretsStore,
+	Worker,
+	WorkerRef,
+} from "alchemy/cloudflare";
 
 const app = await alchemy("devpad-pipelines");
 

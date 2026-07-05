@@ -7,6 +7,7 @@ NEVER EVER DO A GIT PUSH/PULL OR MERGE/REBASE!!!!
 Please don't be super agreeable with whatever I say - if you think there's an issue with my suggestions, push back & suggest better alternatives. I may be wrong upon occasion challenge me. But then once we've come to a decision - let's disagree & commit and move forward.
 
 ## Build & Test Commands
+
 - Dev server: `bun dev` (root) or `cd apps/main && bun dev`
 - Dev blog: `bun dev:blog` (port 3002)
 - Dev media: `bun dev:media` (port 3003)
@@ -22,14 +23,16 @@ Please don't be super agreeable with whatever I say - if you think there's an is
 - Database migrate: `cd apps/main && bun migrate`
 
 ### Dev Server Ports
-| Service | Port | Script |
-|---------|------|--------|
-| Main app | 3000 | `bun dev` |
+
+| Service    | Port | Script           |
+| ---------- | ---- | ---------------- |
+| Main app   | 3000 | `bun dev`        |
 | Worker API | 3001 | `bun dev:server` |
-| Blog app | 3002 | `bun dev:blog` |
-| Media app | 3003 | `bun dev:media` |
+| Blog app   | 3002 | `bun dev:blog`   |
+| Media app  | 3003 | `bun dev:media`  |
 
 ## Code Style & Architecture
+
 - Naming: snake_case (variables), camelCase (functions), PascalCase (classes/types)
 - Use one-word names when possible: `getProjects()` -> `projects.get()`
 - Prefer nested objects over complex function names in interfaces
@@ -42,18 +45,21 @@ Please don't be super agreeable with whatever I say - if you think there's an is
 - No comments except for complex business logic
 
 ## Suggested Development Workflow
+
 1. **Define**: Generate types/schema/interfaces, ask for confirmation
 2. **Test**: Create integration tests for actual use cases (not unit tests)
 3. **Plan**: Layout implementation strategy based on interfaces & tests
 4. **Implement**: Execute plan, validate against tests for completion
 
 ## Framework Guidelines
+
 - Frontend: Astro + SolidJS (functional components)
 - Backend: Bun + TypeScript (strict mode)
 - Database: SQLite + Drizzle ORM
 - Testing: Integration tests log to `packages/worker/server.log` (use `DEBUG_LOGGING="true"` for stdout)
 
 ## Repository Structure & Key Files
+
 ```
 devpad/
 ├── apps/
@@ -124,6 +130,7 @@ devpad/
 ```
 
 ## Database Type Architecture
+
 - Single `Database` type defined in `packages/schema/src/database/types.ts`
 - Uses `BaseSQLiteDatabase<"async", unknown, FullSchema>` -- works for both Bun SQLite (dev/test) and D1 (production)
 - `FullSchema` merges devpad + blog + media schemas in `packages/schema/src/database/full-schema.ts`
@@ -149,13 +156,14 @@ Workload Workers (scaffolded packages such as `anthropic-search`, `anthropic-sum
 
 ### Deployed Workers (Cloudflare)
 
-| Service | Worker name | URL | Singleton |
-|---------|-------------|-----|-----------|
-| Orchestrator | `devpad-pipelines` | `https://devpad-pipelines.dev-818.workers.dev` | yes |
-| Vault | `vault` | (RPC-only, no public URL) | yes |
-| Pulse | `pulse-api` | `https://pulse-api.dev-818.workers.dev` (custom `pulse.devpad.tools`) | yes |
+| Service      | Worker name        | URL                                                                   | Singleton |
+| ------------ | ------------------ | --------------------------------------------------------------------- | --------- |
+| Orchestrator | `devpad-pipelines` | `https://devpad-pipelines.dev-818.workers.dev`                        | yes       |
+| Vault        | `vault`            | (RPC-only, no public URL)                                             | yes       |
+| Pulse        | `pulse-api`        | `https://pulse-api.dev-818.workers.dev` (custom `pulse.devpad.tools`) | yes       |
 
 Deploy via Alchemy from the **devpad repo root**:
+
 ```
 ALCHEMY_CI_STATE_STORE_CHECK=false bunx alchemy deploy ./packages/pipelines/infra.ts --stage production --env-file ./.env --profile default
 ```
@@ -185,6 +193,7 @@ The `CloudflareProvider` lives in `packages/pipeline-fakes/src/cloudflare/` with
 ### Cross-repo service-binding wiring (two-pass deploy)
 
 Vault and pipelines bind to each other:
+
 - vault → pipelines: `GRANTS` (RPC entrypoint `PipelinesGrantsEndpoint`), `PULSE` service binding
 - pipelines → vault: `ANTHROPIC` (RPC entrypoint `AnthropicVault`), `PULSE` service binding
 
@@ -199,12 +208,14 @@ First-time setup uses a two-pass deploy to break the circular dependency: deploy
 - **`CALLER_ENV` is the canonical key, NOT `CALLER_ENVIRONMENT`.** Each caller Worker reads its own stage from `env.CALLER_ENV` (defined per stage in its own infra/wrangler config). `caller-identity.ts:62` in pipelines maps stage values to two literals only: `staging` or `production`. The grants registry keys against these exact strings; anything else (e.g. `prod`, `live`, `preview`) won't match a grant and the call denies.
 
 ### Architecture rules
+
 - **DO holds no business logic.** If you're writing transition logic inside `make_run_handler`, push it down into `@devpad/core/services/pipelines/runs.ts`.
 - **State machine is pure.** `state-machine.ts` is deterministic — no clock, no random, no IO. Side effects belong in `runs.ts`.
 - **Resolved rollout/gates JSON in `pipeline_run`** is the source of truth for in-flight runs, not the template files. Template edits don't affect running pipelines.
 - **Forced-atomic gates fallback.** When the discriminator rewrites a declared `gradual` to `atomic` (DO migrations or unaffinitised assets), `resolve_run_plan` falls back to `defaultAtomicGates` since the declared gate map's transition keys no longer apply.
 
 ### Database
+
 The pipelines module reuses the unified `Database` type — pipeline tables (`pipeline_*`) sit in the same D1 instance. Migrations land under `packages/schema/src/database/drizzle/` like everything else. The vault repo (`~/dev/vault`) does NOT bind to this D1; vault reaches grants exclusively through the pipelines `grants.check` RPC.
 
 ### Drizzle / D1 invariants (Phase 8)
@@ -214,20 +225,24 @@ The pipelines module reuses the unified `Database` type — pipeline tables (`pi
 - **Pipeline grants must exist BEFORE vault calls succeed.** Vault's grant check is fail-closed: if no `pipeline_grant` row matches `(package, environment, scope)`, the call denies with no escalation. Default seed for a new demo package is one row per stage: `(package, "staging", "anthropic:messages")` + `(package, "production", "anthropic:messages")`. The `environment` column only ever holds those two literals (matching `CALLER_ENV`'s two values) — `dev`, `preview`, etc. simply won't match.
 
 ### Testing
+
 - Pipeline tests use the `@devpad/pipeline-fakes` package for in-memory Cloudflare / GitHub / Anthropic / DurableObject substitutes.
 - Test DB harness pattern: `packages/core/src/services/pipelines/__tests__/integration/helpers.ts` uses `createBunDatabase` + migration replay. New core service tests should follow this pattern.
 
 ### Known transient hacks (remove when applicable)
 
 ### Drizzle-kit + manual migrations
+
 If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a manual migration not in `meta/_journal.json`, rename the generated SQL + snapshot to the next available index and add a matching journal entry. The journal advances monotonically; drizzle-kit's filename numbering is advisory. (We hit this with `0007_add_pulse_scope.sql` already on disk when generating `0008_pipelines.sql`.)
 
 **Hand-written ALTER migrations don't generate paired snapshots.** When you add a column via a hand-written SQL migration (e.g. adding `window_ms` to `pipeline_analysis_template`), drizzle-kit doesn't auto-produce a paired entry in `meta/<n>_snapshot.json`. The migration still applies correctly at runtime since `_journal.json` is the source of truth — but the next time someone runs `drizzle-kit generate`, the snapshot may drift. Run `bunx drizzle-kit generate` after the next schema change to reconcile.
 
 ### Biome style for status enums
+
 `packages/schema/src/database/schema.ts` uses single-line const arrays for status enums (e.g. `RUN_STATUSES`, `STAGE_EVENT_KINDS`). Don't break this style — biome's format rule enforces it.
 
 ## Worker Architecture
+
 - Routes NEVER read `c.env` -- all config comes from `c.get("config")` and `c.get("oauth_secrets")`
 - `AppConfig` and `OAuthSecrets` types defined in `packages/worker/src/bindings.ts`
 - `configMiddleware` reads `c.env` (Cloudflare bindings) and maps to typed config -- this is the ONLY place `c.env` is read for config
@@ -237,6 +252,7 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - `createApi(options)` accepts injectable `db`, `config`, `oauth_secrets`, `blogContext`, `mediaContext` -- dev/test inject directly, production reads from `c.env`
 
 ## Test Infrastructure
+
 - Integration tests use `setupIntegration()` from `tests/shared/base-integration-test.ts` -- returns `{ client, cleanup }`
 - Server lifecycle managed by `tests/integration/setup.ts` -- lazy init, shared across all test files
 - `CleanupManager` handles test resource cleanup (projects, tasks, tags) in dependency order
@@ -244,12 +260,14 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - 300 tests: 62 unit + 238 integration
 
 ## Error Handling Patterns
+
 - Core devpad services use `Result<T, ServiceError>` from `@f0rbit/corpus` with `ok()` and `err()`
 - Blog services use `try_catch_async` from `@f0rbit/corpus` -- throws inside are caught by the wrapper and converted to Results (this is intentional, not a bug)
 - Upsert operations use destructuring to exclude `id` field -- never use `delete` on the upsert object (destroys type safety)
 - API client (`packages/api`) wraps all operations in `Result<T, ApiResultError>`
 
 ## Cross-App Navigation
+
 - All 3 apps use shared `DevpadHeader` from `@devpad/core/ui` for row 1 (logo, nav, auth)
 - Row 2 subnav (blog/media only) stays in each app's `.astro` layout (needs Astro's `class:list` directive)
 - `DevpadHeader` generates URLs using domain grouping: main = projects/tasks/docs, blog = blog, media = media
@@ -258,6 +276,7 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - Main's `GithubLogin.tsx` and `DevpadLogo.tsx` are thin re-export wrappers for backward compat (used by landing page, project/todo index)
 
 ## Blog-Project Integration
+
 - Blog posts link to projects via `blog_post_projects` junction table
 - Main app's `/project/[project_id]/blog` page fetches posts via `client.blog.posts.list({ project: id })`
 - Blog editor accepts `?project=<uuid>` URL param to pre-select a project on new posts (`initialProjectIds` prop on PostEditor)
@@ -265,6 +284,7 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - Blog post editor page shows linked projects as clickable pills
 
 ## CSS & @f0rbit/ui Convention
+
 - `@f0rbit/ui` is the source of truth for design tokens AND utility classes (all 3 apps import `@devpad/core/ui/styles` which `@import`s `@f0rbit/ui/styles`)
 - Apps no longer import `@f0rbit/ui/styles` directly -- it's included via `globals.css` in `@devpad/core/ui/styles`
 - **Avoid adding custom CSS classes to `globals.css`** -- use `@f0rbit/ui` classes, components, and inline styles instead. Read `https://f0rbit.github.io/ui/llms.txt` for the full API.
@@ -273,13 +293,17 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - NEVER use legacy token names (`--bg-primary`, `--text-primary`, `--text-secondary`, `--input-background`, `--input-border`) -- they have been fully removed from the codebase
 
 ### Workspace dep declarations under bun's isolated linker (CRITICAL)
+
 Bun 1.3+ installs with an isolated linker by default: a package can only resolve dependencies it explicitly declares in its own `package.json`. Transitive resolution through the workspace root does NOT happen at build time for bare specifiers.
+
 - `packages/core/src/ui/styles/globals.css` does `@import "@f0rbit/ui/styles"`, so `packages/core/package.json` MUST declare `@f0rbit/ui` as a dependency. Without it, `node_modules/.bun/.../packages/core/node_modules/@f0rbit/ui` is not created and Vite/PostCSS fails with `ENOENT: ... open '@f0rbit/ui/styles'`.
 - `apps/blog/src/middleware.ts` and `apps/media/src/middleware.ts` import `@devpad/core/ui/middleware`, so both apps' `package.json` MUST declare `@devpad/core` as a workspace dep. Without it, Rollup fails with `failed to resolve import "@devpad/core/ui/middleware"`.
 - Rule of thumb: if a file uses a bare specifier (`@scope/pkg/path`), the package owning that file must declare the dep — even when the dep is already available transitively elsewhere in the workspace.
 
 ### @f0rbit/ui Utility Class Composition (CRITICAL)
+
 Layout utilities use a **base + modifier** pattern. Modifiers only set CSS variables — they do NOT include `display: flex`. You MUST always include the base class:
+
 - `.stack` = `display: flex; flex-direction: column; gap: var(--stack-gap, var(--space-md))`
 - `.stack-sm` = MODIFIER ONLY, sets `--stack-gap: var(--space-sm)` — **must pair with `.stack`**
 - `.stack-lg` = MODIFIER ONLY, sets `--stack-gap: var(--space-lg)` — **must pair with `.stack`**
@@ -294,6 +318,7 @@ Correct: `class="row row-sm"`, `class="stack stack-lg"`, `class="row row-between
 WRONG: `class="row-sm"`, `class="stack-lg"`, `class="row-between"` (no flex layout applied!)
 
 ## SSR Data Fetching Conventions
+
 - Variable name for API client: `client` (one word, all apps)
 - Main app project pages: use `getProject(Astro)` from `@/utils/api-client` for the guard pattern (validates params, auth, ownership — returns `{ client, project, user }` or `Response`)
 - Parallel fetches: use `Promise.all()` for independent API calls, destructure results
@@ -304,7 +329,9 @@ WRONG: `class="row-sm"`, `class="stack-lg"`, `class="row-between"` (no flex layo
 - `getServerApiClient()` is in `packages/core/src/ui/api-client.ts` (shared across all 3 apps)
 
 ## Known Pre-existing LSP Errors
+
 These type errors exist and should be ignored:
+
 - `CategoryServiceError`/`PostServiceError` type mismatches in blog routes
 - `packages/worker/src/index.ts` fetch type signature
 - `showSuccessToast` in `OptimisticTaskProgress.tsx`
@@ -313,6 +340,7 @@ These type errors exist and should be ignored:
 ## AI Provenance & Protection System
 
 ### Entity Provenance
+
 - `provenance()` schema helper adds `created_by` and `modified_by` columns (enum: "user" | "api", default "user") plus `protected` boolean (default false)
 - `provenance()` → `entity()` → `owned_entity()` — adding columns to `provenance()` cascades to ALL entity tables
 - Auth middleware sets `auth_channel` ("user" for session cookies, "api" for Bearer tokens) in Hono context
@@ -320,6 +348,7 @@ These type errors exist and should be ignored:
 - Action table has a `channel` column recording which auth path created the action
 
 ### Protected Entity Policy
+
 - Entities edited by a user (`auth_channel == "user"`) are auto-protected (`protected = true`)
 - API-channel writes to a protected entity are rejected with 409 Conflict unless `force: true` is passed
 - `force: true` clears the protection flag — the entity becomes unprotected again
@@ -327,22 +356,26 @@ These type errors exist and should be ignored:
 - `force` is a validation-only field — must be destructured out before DB write: `const { id, force: _force, ...fields } = data;`
 
 ### AI Activity Feed
+
 - `GET /activity/ai` returns sessions of API-channel actions grouped by 10-minute time gaps
 - `getAIActivity()` in `packages/core/src/services/action.ts`
 - `activity.ai()` on the API client, `devpad_activity_ai` MCP tool
 
 ### AI Provenance UI
+
 - `AiProvenance` component in `packages/core/src/ui/ai-provenance.tsx` — shared across all 3 apps
 - Uses oklch purple (hue 290) via `.ai-provenance` CSS class in `globals.css`
 - Entity-level: `created_by`/`modified_by` fields on Task, Project, Milestone, Goal → renders purple Bot icon
 - Action-level: `channel` field on HistoryAction → Bot icon rendered directly in HistoryTimeline
 
 ### Milestone/Goal Ownership
+
 - Milestone and goal tables use `entity()` not `owned_entity()` — no `owner_id` column
 - Ownership is checked via the parent project
 - Provenance columns (`created_by`, `modified_by`, `protected`) still apply via `provenance()` in `entity()`
 
 ## Project Context
+
 - `sessionStorage` key: `devpad_project_context` — stores `{ id, name }` for current project
 - Set by `ProjectContextSetter` component on project pages (`client:load`)
 - Read by `TaskSorter` (initial filter) and `TaskEditor` (default project)
@@ -363,25 +396,30 @@ These type errors exist and should be ignored:
 devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloudflare Worker; source: `~/dev/pulse`). The integration is server-to-server only — admin keys never reach the browser.
 
 ### Auth + scope
+
 - `api_keys.scope` enum includes `"pulse"` (added in migration `0007_add_pulse_scope.sql`). Use this scope when issuing keys for analytics access; `"all"` is a superset.
 - `AppVariables.api_key_scope` is `null` for cookie-auth (browser sessions) and a scope literal (`"pulse"`, `"all"`, etc.) for API-key auth. Routes that branch on scope must handle `null`.
 - `getUserAndScopeByApiKey()` in `packages/core/src/auth/keys.ts` returns both user_id and scope; auth middleware exposes scope via `c.set("api_key_scope", ...)`.
 
 ### Worker proxy — `/v1/pulse/*`
+
 - `packages/worker/src/routes/v1/pulse.ts` is a server-to-server forwarder. It holds `pulse_internal_key` (config-injected) and forwards to `pulse_api_base` after rewriting `/v1/pulse/<rest>` → `/<rest>`.
 - Ownership enforcement is per-route via `doesUserOwnProject` from `packages/core/src/services/projects.ts`. Pulse trusts whatever devpad forwards — the boundary is here, not upstream.
 - 60s edge cache on `GET /summary | /errors | /logs | /latency`. None on `/events` or `/admin/*`.
 - Pulse-unreachable (fetch failure or network 502) maps to 503 with `{ error: "pulse_unreachable" }`. Treat 503 as "pulse not deployed yet," not as an error in dashboard pages.
 
 ### ApiClient — `client.pulse.*`
+
 - `client.pulse.{summary, events, errors, logs, latency}` for reads, `client.pulse.subs.*` for subscription CRUD, `client.pulse.keys.*` for ingest-key issuance. All return `ApiResult<T>` (devpad's existing wrapper).
 - All methods hit devpad's `/v1/pulse/*` proxy — they do NOT call pulse directly. Public site never sees pulse's URL or admin keys.
 - **Rebuild `@devpad/api` after editing `packages/api/src/api-client.ts`.** `apps/main` consumes `dist/index.d.ts`, not source. Run `cd packages/api && bun run build` before typechecking dependent packages or you'll see stale type errors.
 
 ### MCP tools
+
 8 tools in `packages/api/src/tools.ts`: `devpad_pulse_summary`, `devpad_pulse_events`, `devpad_pulse_errors`, `devpad_pulse_logs`, `devpad_pulse_latency`, `devpad_alerts_list`, `devpad_alerts_subscribe`, `devpad_alerts_unsubscribe`, `devpad_pulse_key_create`. Same Zod schema → tool description pattern as the rest of `tools.ts`.
 
 ### Dashboard
+
 - `apps/main/src/pages/project/[project_id]/pulse.astro` — server-rendered Astro shell with five tabs (overview / errors / logs / requests / subscriptions). Tab state is URL-driven (`?tab=...`) for deep-linkability.
 - Per-tab components live in `apps/main/src/components/solid/pulse/`. Use `client:visible` for read-only tabs and `client:load` only for the subscriptions tab (which mounts an interactive form). Do NOT use `client:only="solid-js"` — server-rendering preserves the empty-state SDK install snippet and the unreachable-503 fallback.
 - `apps/main/src/components/solid/project/PulseWidget.tsx` is a compact widget on the project overview page (KPIs + 7-day sparkline; click → `/project/[id]/pulse`).
@@ -412,7 +450,7 @@ devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloud
 
 ### Lint/format wiring (scaffolder, `~/dev/lint` linting-strategy Phase 4)
 
-Every package `devpad pipelines init` scaffolds now ships `@f0rbit/lint` from birth: `.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.ts` (`camelCase` naming preset — scaffolded packages use camelCase functions, unlike corpus's snake_case), and `bunfig.toml` (hoisted linker) are template entries in `SCAFFOLDER_TEMPLATES`; `package.json.hbs` pins `@f0rbit/lint` exact; `deploy.yml.hbs` runs `bun run lint && bun run fmt:check` before tests. Same hand-sync rule as above: this only affects packages scaffolded *after* the change landed — pre-existing scaffolded packages need `f0rbit-lint init` run manually to adopt it. `src/index.ts`'s `WorkerEntrypoint` subclass needs a scoped `eslint.config.ts` override (`functional/no-classes` + `functional/no-this-expressions` off) since Cloudflare's Worker API is class-based with no functional-style escape hatch — the scaffolder template already carries this override, so hand-adopting packages should copy it rather than rediscovering it.
+Every package `devpad pipelines init` scaffolds now ships `@f0rbit/lint` from birth: `.oxlintrc.json`, `.oxfmtrc.json`, `eslint.config.ts` (`camelCase` naming preset — scaffolded packages use camelCase functions, unlike corpus's snake*case), and `bunfig.toml` (hoisted linker) are template entries in `SCAFFOLDER_TEMPLATES`; `package.json.hbs` pins `@f0rbit/lint` exact; `deploy.yml.hbs` runs `bun run lint && bun run fmt:check` before tests. Same hand-sync rule as above: this only affects packages scaffolded \_after* the change landed — pre-existing scaffolded packages need `f0rbit-lint init` run manually to adopt it. `src/index.ts`'s `WorkerEntrypoint` subclass needs a scoped `eslint.config.ts` override (`functional/no-classes` + `functional/no-this-expressions` off) since Cloudflare's Worker API is class-based with no functional-style escape hatch — the scaffolder template already carries this override, so hand-adopting packages should copy it rather than rediscovering it.
 
 ### Lint/format wiring (devpad's OWN repo, `~/dev/lint` linting-strategy Phase 5)
 
@@ -427,9 +465,9 @@ The wiring PR added `@f0rbit/lint@0.1.3` (exact) at the workspace root: one root
   - Fixed (cheap, one line, no `rootDir` conflict): `packages/mcp` (root tsconfig.json above), `packages/pipelines/infra.ts` (added to that package's own `include` — it has no `rootDir` set), `tests/integration` + `tests/shared` (new dedicated tsconfig, see above).
   - **Excluded, not fixed — follow-up work for the fix PR**, via `ignores` in root `eslint.config.ts`: `packages/api/tests/**` (that package's own `tsconfig.json` excludes `"tests"` entirely AND sets `rootDir: "./src"`, so these files can't just be added to `include` without a dedicated test tsconfig); `packages/core/src/**/__tests__/**` (own tsconfig excludes `**/*.test.ts` — **the single biggest gap, ~35 files**, including the newest pipelines-domain suite under `packages/core/src/services/pipelines/__tests__/`); `tests/e2e/**` (Playwright specs/fixtures — no tsconfig exists for this directory, and it's a different test runner/type surface from `bun test`); `packages/api/tsup.config.ts` and `packages/schema/drizzle.config.ts` (single root-level config files that sit outside their package's `rootDir: "./src"` — adding them to `include` trips a `rootDir` violation, so they need either a dedicated config-file tsconfig or `rootDir` removed).
 - **Removed a dead, actively-harmful `eslint` pin**: `packages/api/package.json` had `"eslint": "^8.57.0"` (devDependency) and a `"lint": "bun run eslint"` script with **no `.eslintrc`/`eslint.config.*` anywhere in the package** — already broken before this PR (`ESLint couldn't find a configuration file`). Worse, under bun's hoisted linker it won the root `node_modules/.bin/eslint` symlink over `@f0rbit/lint`'s ESLint 9, so `bun run lint` at the root silently ran the wrong major version and errored the same way. Removed both; nothing else in the workspace pins `eslint` directly. If you see this failure mode again (`ESLint: 8.57.1` / "couldn't find a configuration file" when flat config exists), suspect a reintroduced legacy `eslint` devDependency winning the hoist.
-- **`naming: "camelCase"` — verified, but the codebase is genuinely mixed.** Historical devpad code (`packages/core/src/auth/**`, `src/ui/**`, etc.) uses camelCase functions, confirming the preset choice. But `packages/core/src/services/pipelines/**` (grants, gates, analysis — the newest platform-integration code) was written in **snake_case** functions, matching corpus/pipelines-setup convention instead. This is a real, sizable minority cluster left at the factory's default error severity (no override added — overrides in this PR are scoped to documented-intentional exceptions only, not convention disagreements). It's the largest single driver of the `@typescript-eslint/naming-convention` violation count (2089, the single largest rule bucket) along with widespread camelCase *variable* names (`createResult`, `listResult`, etc.) where the preset expects snake_case for variables. Org-level decision candidate for the fix PR: warn-downgrade + graduation note vs. leave at error and fix incrementally.
+- **`naming: "camelCase"` — verified, but the codebase is genuinely mixed.** Historical devpad code (`packages/core/src/auth/**`, `src/ui/**`, etc.) uses camelCase functions, confirming the preset choice. But `packages/core/src/services/pipelines/**` (grants, gates, analysis — the newest platform-integration code) was written in **snake_case** functions, matching corpus/pipelines-setup convention instead. This is a real, sizable minority cluster left at the factory's default error severity (no override added — overrides in this PR are scoped to documented-intentional exceptions only, not convention disagreements). It's the largest single driver of the `@typescript-eslint/naming-convention` violation count (2089, the single largest rule bucket) along with widespread camelCase _variable_ names (`createResult`, `listResult`, etc.) where the preset expects snake_case for variables. Org-level decision candidate for the fix PR: warn-downgrade + graduation note vs. leave at error and fix incrementally.
 - **`unicorn/filename-case` (oxlint, kebab-case) systematically conflicts with ~72 PascalCase Solid/React component files** (`apps/{main,blog,media}/src/components/**/*.tsx`) — the universal ecosystem convention of matching filename to component name. Not overridden in this PR (same "documented-intentional only" scoping rule); flagged as an org-level decision candidate (scoped `**/*.tsx` exception vs. rename) for the fix PR.
-- **Astro pages (`apps/{main,blog,media}/src/**/*.astro`) are out of scope** — oxlint/typescript-eslint don't parse `.astro`. The `ts_files` glob naturally excludes them (ESLint flat config only applies rules to matched `files:`), but an explicit `ignores: ["**/*.astro"]` entry documents the boundary rather than relying on that being silent. They stay on biome's formatter/linter until upstream Astro support exists.
+- **Astro pages (`apps/{main,blog,media}/src/**/_.astro`) are out of scope** — oxlint/typescript-eslint don't parse `.astro`. The `ts_files`glob naturally excludes them (ESLint flat config only applies rules to matched`files:`), but an explicit `ignores: ["\*\*/_.astro"]` entry documents the boundary rather than relying on that being silent. They stay on biome's formatter/linter until upstream Astro support exists.
 - **oxfmt's reach is broader than JS/TS** — it also reformats `.md`, `.yml`, `.json`, `.jsonc`, `.toml` by default. `wrangler.toml` and `packages/pipelines/wrangler.jsonc` are excluded via `.prettierignore` (same care-note as the pulse rollout: hand-placed comments and deploy semantics must survive). Before the normalization PR runs `oxfmt --write .` unscoped, re-check whether `.md`/`.yml` reformatting is actually wanted repo-wide or needs its own exclusion pass.
 - **Golden fixtures** (`packages/cli/tests/golden/**`, scaffolder output snapshots asserted byte-for-byte) and the **scaffolder template stubs** (`packages/pipeline-templates/src/scaffolder/templates/**`, mostly `*.hbs` so already extension-excluded) are excluded from all three tools — confirmed untouched (byte-identical) after this PR.
 - **Baseline violation survey** (`bun run lint`, `bun run fmt:check`, wiring-PR commit): oxlint 973 diagnostics / 493 files; eslint (typed layer) 6774 problems, top rules `@typescript-eslint/naming-convention` (2089), `@typescript-eslint/no-unsafe-member-access` (759), `@typescript-eslint/no-unsafe-assignment` (554), `functional/no-this-expressions` (435, largely class-heavy media-platform providers and `DevpadMCPServer` — none overridden, same "documented-intentional only" scoping), `f0rbit/must-use-result` (65); oxfmt flags 362/533 files as unformatted (biome's width-240 vs. oxfmt's canonical width-120, among other differences). No CI gate wired yet — deliberately deferred to a follow-up PR alongside the fixes.
@@ -456,18 +494,21 @@ The wiring PR added `@f0rbit/lint@0.1.3` (exact) at the workspace root: one root
 - `CallerIdentity.package_id` is the canonical field name (renamed from `package` in Phase 13.E2). DB column is `pipeline_run.package_id`. Route bodies use `package_id`. The only asymmetry: pulse's `events.package` column stays as-is (pulse's storage contract); vault's `pulse-emitter.ts` translates `caller.package_id` → wire `package` at emission. Comment in `pulse-emitter.ts` marks the translation site.
 
 ## Hono Gotchas
+
 - **`c.req.url` and `c.req.method` are getters, not functions.** `c.req.url()` typechecks (`Function.prototype.toString` exists) but TypeErrors at runtime. Same with `method`. Phase 3 verification caught a real instance of this in the pulse proxy.
 
 ## Test Runner Gotchas
+
 - `bun test` from repo root loads Playwright `.spec.ts` files and fails them with "Playwright Test did not expect test.describe() to be called here". This is a pre-existing fail-mode and the correct invocation is `bun run e2e:local` (which spins up a dev server). New e2e specs inherit this fail-mode — don't try to "fix" it by changing `bun test` config.
 
 ## E2E Harness (pipelines-e2e plan, Phase 0–3)
+
 - **Local E2E is TWO servers, not one.** The Astro frontend (`apps/main` / `@devpad/app`) serves PAGES on `:3000` (`astro.config.mjs`) and its Vite proxy forwards `/api` + `/health` to the worker on `:3001`. The worker (`packages/worker`, `bun run dev`) serves ONLY `/api/v1` + `/health` and 404s page routes. Playwright's local `webServer` is a TWO-element array booting both; `baseURL` is `http://localhost:3000`. The unified SSR+API server (`createUnifiedWorker`) is a BUILD artifact (`dist/_worker.js`), NOT wired into `bun run dev` — do not assume `:3001` serves pages.
 - **E2E is NOT in CI** (`.github/workflows/test.yml` runs only `test:unit` + `test:integration`). Commit `2255cb5` deleted `packages/server` (which served SSR pages on `:3001`) and repointed Playwright's `webServer` at the API-only worker without restoring page-serving, silently breaking the entire page-level suite until caught later. Any change to the dev-server topology or the page-serving path MUST be validated against the E2E suite manually until E2E is a CI check.
 - **Fake auth lives in the ASTRO middleware** (`apps/main/src/middleware.ts`), gated on `NODE_ENV === "test"` OR `TEST_MODE === "enabled"` — so the Astro `webServer` MUST set `NODE_ENV=test` in its `env`, else every page redirects to login. Inject `X-Test-User: true` via `context.route()` (see `tests/e2e/pulse.spec.ts` / `pipelines-smoke.spec.ts` `inject_test_user`). The middleware resolves the fake user to id `"test-user-e2e"` — seed fixture data owned by that id. The worker ALSO does a real `validateSession` DB lookup on the forwarded `Cookie: auth_session=test-session`, so the seed must include a matching `session` row.
 - **The seed cannot run via Playwright `globalSetup`.** The seed uses `bun:sqlite`; Playwright's bin is node-shebang and throws `Received protocol 'bun:'` when a node-side `globalSetup` imports it. Instead `e2e:local` runs `bun run tests/e2e/seed.ts` (standalone bun entrypoint) BEFORE `playwright test`. Fixture ids live in a node-safe module `tests/e2e/fixtures/pipeline-ids.ts` (NO runtime imports) so specs import ids without pulling `bun:sqlite` into node; the bun fixture `tests/e2e/fixtures/pipelines.ts` re-exports them (single source of truth). Seed is idempotent (delete-then-insert on fixed ids); it targets repo-root `database/test.db` (NOT `tests/database/test.db`) and closes its SQLite handle before exit.
 - **The local worker mounts ONLY `/api/v1/pipelines/dashboard`.** The orchestrator routes (`/runs`, `/runs/:id/approve`, `/analysis-templates`, `/runs/:id/events`, `/grants`, `/pipelines/packages`) live in the separately-deployed orchestrator singleton and 404 locally. E2E specs needing those must assert the unreachable/empty/render-only path, not the round-trip. Because `packages.list()` 404s locally, the pipeline page is ALWAYS in its degraded state under the local harness.
-- **The pipeline page degrades gracefully when the package service is unreachable — it does NOT 404.** `apps/main/src/pages/project/[project_id]/pipeline.astro` renders the tabbed shell + a `data-testid="pipeline-degraded"` banner when `client.pipelines.packages.list()` returns a non-ok Result. The dashboard fetch is keyed by *project* (not package) and lives outside the `if (pkg)` block, so the dashboard tab still renders under degradation. Three distinct states: degraded (banner + shell), legitimate empty (`pipeline-empty`, packages.list ok with zero rows), happy (shell with package data). Assert `pipeline-degraded` for the local render proof.
+- **The pipeline page degrades gracefully when the package service is unreachable — it does NOT 404.** `apps/main/src/pages/project/[project_id]/pipeline.astro` renders the tabbed shell + a `data-testid="pipeline-degraded"` banner when `client.pipelines.packages.list()` returns a non-ok Result. The dashboard fetch is keyed by _project_ (not package) and lives outside the `if (pkg)` block, so the dashboard tab still renders under degradation. Three distinct states: degraded (banner + shell), legitimate empty (`pipeline-empty`, packages.list ok with zero rows), happy (shell with package data). Assert `pipeline-degraded` for the local render proof.
 - **Seed fixtures via the schema's drizzle helpers, never raw SQL.** Use `@devpad/schema/database/bun` (`createBunDatabase` / `migrateBunDatabase`) and the schema table exports, mirroring `packages/pipelines/__tests__/integration/helpers.ts` and `seed_baseline`. Schema drift then surfaces as a compile error in the fixture, not a runtime 500.
 - **Dashboard-fixture run timestamps MUST be window-relative, not fixed dates** (pipelines-e2e Phase 2). The dashboard aggregator (`packages/core/src/services/pipelines/dashboard.ts`) filters runs by `started_at >= now - window_ms`, and the smallest selectable UI window is 24h. A fixed calendar `started_at` (the fixture originally used `2026-05-16`) falls outside every window as wall-clock advances, so the dashboard reports 0 runs and any "assert N runs" spec becomes hollow/red. `tests/e2e/fixtures/pipelines.ts` now anchors run timestamps ~2h before seed-time (`Date.now() - 2h`); counts stay deterministic (total=2, completed=1) because both runs land inside the default window. Keep new run fixtures window-relative.
 - **The run-detail page hard-404s under the local harness — it does NOT degrade** (pipelines-e2e Phase 2). `apps/main/src/pages/project/[project_id]/pipeline/runs/[run_id].astro` calls `client.pipelines.packages.list()` and `rethrow()`s on a non-ok Result (unlike `pipeline.astro`, which degrades). Since `packages.list()` 404s locally, the whole run-detail page returns a 4xx. So `StageGate` / `RunProgress` / `StageEventTimeline` render-or-wiring is NOT observable locally — that needs the orchestrator stood up (out-of-scope). E2E specs assert the page returns a clean 4xx (not a 5xx/crash), not that the run-detail widgets mount.
@@ -477,6 +518,7 @@ The wiring PR added `@f0rbit/lint@0.1.3` (exact) at the workspace root: one root
 - **`astro check` on `apps/main` has 3 pre-existing errors** unrelated to the pipelines work (`OptimisticTaskProgress.tsx` ts(2353), `Layout.astro` ts(2882) `@devpad/core/ui/styles`, `pipeline/runs/[run_id].astro` ts(2578) unused `@ts-expect-error`). Don't be alarmed by a non-zero exit; diff the error COUNT against baseline to tell whether your change regressed anything. Biome flags `.astro` frontmatter consts as "unused" (it can't see template usage) — these are false-positive warnings, not errors.
 
 # Debugging
+
 When running integration tests, logs will get piped to `packages/worker/server.log`, only read the logs if you're looking for errors.
 
 In the case where you want logs in stdout, specify the exact test suite you want to run in the command using bun specifically rather than `make integration` & pass `DEBUG_LOGGING="true"` as an env variable to the function.

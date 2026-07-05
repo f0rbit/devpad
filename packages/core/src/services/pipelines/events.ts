@@ -82,7 +82,11 @@ export type EventDeps = {
  * other kinds are informational (deploy_started, bake_*, warning, error,
  * approval_requested) and don't advance the run's state machine.
  */
-const TRANSITION_KINDS: ReadonlySet<StageEventKind> = new Set<StageEventKind>(["deploy_completed", "gate_verdict", "rollback_completed"]);
+const TRANSITION_KINDS: ReadonlySet<StageEventKind> = new Set<StageEventKind>([
+	"deploy_completed",
+	"gate_verdict",
+	"rollback_completed",
+]);
 
 const make_event_id = (): string => `pipeline-stage-event_${crypto.randomUUID()}`;
 
@@ -132,20 +136,30 @@ const idempotency_hash = async (idempotency_key: string, payload: unknown): Prom
  * because the event itself has been recorded and the next DO request will
  * pick up the new state.
  */
-export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Promise<Result<IngestEventOutput, ServiceError | EventValidationError>> => {
+export const ingest_event = async (
+	deps: EventDeps,
+	input: IngestEventInput,
+): Promise<Result<IngestEventOutput, ServiceError | EventValidationError>> => {
 	// (1) Load run + caller scope check.
 	let run_row: typeof pipeline_run.$inferSelect | undefined;
 	try {
 		const rows = await deps.db.select().from(pipeline_run).where(eq(pipeline_run.id, input.run_id));
 		run_row = rows[0];
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to read pipeline_run ${input.run_id}: ${String(e)}` } satisfies ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to read pipeline_run ${input.run_id}: ${String(e)}`,
+		} satisfies ServiceError);
 	}
 	if (!run_row) {
 		return err({ kind: "not_found", resource: "pipeline_run", id: input.run_id } satisfies ServiceError);
 	}
 	if (run_row.package_id !== input.package_id) {
-		return err({ kind: "forbidden", reason: "caller package_id does not match run", message: "caller package_id does not match run" } satisfies ServiceError);
+		return err({
+			kind: "forbidden",
+			reason: "caller package_id does not match run",
+			message: "caller package_id does not match run",
+		} satisfies ServiceError);
 	}
 
 	// (2) Hash.
@@ -160,7 +174,10 @@ export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Pr
 			.where(and(eq(pipeline_stage_event.run_id, input.run_id), eq(pipeline_stage_event.idempotency_hash, hash)));
 		existing = rows[0];
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to query pipeline_stage_event: ${String(e)}` } satisfies ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to query pipeline_stage_event: ${String(e)}`,
+		} satisfies ServiceError);
 	}
 	if (existing) return ok({ event_id: existing.id, duplicated: true });
 
@@ -216,7 +233,11 @@ export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Pr
 			idempotency_hash: hash,
 		} as never);
 	} catch (e) {
-		return err({ kind: "store_error", operation: "insert_pipeline_stage_event", message: String(e) } satisfies ServiceError);
+		return err({
+			kind: "store_error",
+			operation: "insert_pipeline_stage_event",
+			message: String(e),
+		} satisfies ServiceError);
 	}
 
 	// (5a) Fire-and-forget pulse emit.
@@ -232,7 +253,9 @@ export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Pr
 
 	// (5b) DO tick for transition-relevant kinds only.
 	if (TRANSITION_KINDS.has(input.kind)) {
-		void deps.do.fetch(input.run_id, "/advance", { kind: "external_event", event_kind: input.kind }).catch(() => undefined);
+		void deps.do
+			.fetch(input.run_id, "/advance", { kind: "external_event", event_kind: input.kind })
+			.catch(() => undefined);
 	}
 
 	return ok({ event_id: id, duplicated: false });
@@ -250,7 +273,10 @@ export const ingest_event = async (deps: EventDeps, input: IngestEventInput): Pr
  * `source` field, we overwrite. Same for `idempotency_key`.
  */
 const stamp_external_source = (payload: unknown, idempotency_key: string): Record<string, unknown> => {
-	const base = payload === undefined || payload === null || typeof payload !== "object" || Array.isArray(payload) ? { value: payload ?? null } : { ...(payload as Record<string, unknown>) };
+	const base =
+		payload === undefined || payload === null || typeof payload !== "object" || Array.isArray(payload)
+			? { value: payload ?? null }
+			: { ...(payload as Record<string, unknown>) };
 	return { ...base, source: "external", idempotency_key };
 };
 
@@ -264,7 +290,12 @@ const stamp_external_source = (payload: unknown, idempotency_key: string): Recor
  * LIKE probe on the raw text column instead so the query is portable to
  * bun:sqlite without the JSON1 extension wired in.
  */
-const find_key_collision = async (db: Database, run_id: string, idempotency_key: string, current_hash: string): Promise<Result<PipelineStageEvent | null, ServiceError>> => {
+const find_key_collision = async (
+	db: Database,
+	run_id: string,
+	idempotency_key: string,
+	current_hash: string,
+): Promise<Result<PipelineStageEvent | null, ServiceError>> => {
 	try {
 		const rows = await db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
 		for (const row of rows) {
@@ -276,6 +307,9 @@ const find_key_collision = async (db: Database, run_id: string, idempotency_key:
 		}
 		return ok(null);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to scan pipeline_stage_event for key collision: ${String(e)}` } satisfies ServiceError);
+		return err({
+			kind: "db_error",
+			message: `failed to scan pipeline_stage_event for key collision: ${String(e)}`,
+		} satisfies ServiceError);
 	}
 };

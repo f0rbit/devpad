@@ -247,7 +247,7 @@ describe("API Key Management Integration", () => {
 						body: JSON.stringify({
 							name: `Concurrent Key ${i + 1}`,
 						}),
-					})
+					}),
 				);
 
 				const responses = await Promise.all(createPromises);
@@ -279,7 +279,7 @@ describe("API Key Management Integration", () => {
 						body: JSON.stringify({
 							name: `Rapid Key ${i + 1}`,
 						}),
-					})
+					}),
 				);
 
 				const responses = await Promise.all(rapidRequests);
@@ -289,10 +289,10 @@ describe("API Key Management Integration", () => {
 					return;
 				}
 
-				const statusCodes = responses.map(r => r.status);
-				const hasRateLimit = statusCodes.some(status => status === 429);
-				const hasSuccess = statusCodes.some(status => [200, 201].includes(status));
-				const hasValidResponses = statusCodes.every(status => [200, 201, 400, 429, 500].includes(status));
+				const statusCodes = responses.map((r) => r.status);
+				const hasRateLimit = statusCodes.some((status) => status === 429);
+				const hasSuccess = statusCodes.some((status) => [200, 201].includes(status));
+				const hasValidResponses = statusCodes.every((status) => [200, 201, 400, 429, 500].includes(status));
 
 				expect(hasValidResponses).toBe(true);
 				expect(hasSuccess || hasRateLimit).toBe(true);

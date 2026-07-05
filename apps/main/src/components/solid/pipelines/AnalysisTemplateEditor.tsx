@@ -103,13 +103,22 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 					</Show>
 
 					<FormField label="Name">
-						<Input placeholder="e.g. default-analysis" value={name()} onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setName(e.currentTarget.value)} />
+						<Input
+							placeholder="e.g. default-analysis"
+							value={name()}
+							onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setName(e.currentTarget.value)}
+						/>
 					</FormField>
 
-					<FormField label="Threshold DSL" description="One rule per line. Format: metric OP value [: pending]. OPs: > < >= <= =.">
+					<FormField
+						label="Threshold DSL"
+						description="One rule per line. Format: metric OP value [: pending]. OPs: > < >= <= =."
+					>
 						<textarea
 							value={thresholdDsl()}
-							onInput={(e: InputEvent & { currentTarget: HTMLTextAreaElement }) => setThresholdDsl(e.currentTarget.value)}
+							onInput={(e: InputEvent & { currentTarget: HTMLTextAreaElement }) =>
+								setThresholdDsl(e.currentTarget.value)
+							}
 							rows={12}
 							style={{
 								width: "100%",
@@ -124,7 +133,11 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 							}}
 						/>
 						<Show when={thresholdError()}>
-							<p class="text-sm" style={{ color: "var(--item-red)", margin: "0.25rem 0 0 0" }} data-testid="threshold-error">
+							<p
+								class="text-sm"
+								style={{ color: "var(--item-red)", margin: "0.25rem 0 0 0" }}
+								data-testid="threshold-error"
+							>
 								{thresholdError()}
 							</p>
 						</Show>
