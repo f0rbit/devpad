@@ -1,6 +1,6 @@
 import type { Project } from "@devpad/schema";
 import { For } from "solid-js";
-import { ProjectCard } from "./ProjectCard";
+import { ProjectCard } from "./project-card";
 
 type PipelineStatus = {
 	package_id: string;

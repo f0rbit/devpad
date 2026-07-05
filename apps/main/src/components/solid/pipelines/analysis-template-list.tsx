@@ -5,7 +5,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
-import AnalysisTemplateEditor from "./AnalysisTemplateEditor";
+import AnalysisTemplateEditor from "./analysis-template-editor";
 
 interface AnalysisTemplateListProps {
 	templates: PipelineAnalysisTemplate[];

@@ -15,7 +15,7 @@ import { Check, Copy, Eye, Pencil, Plus, Trash2 } from "lucide-solid";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
 import { apiUrls, getClient } from "@/utils/client";
-import { ErrorDisplay, Loading } from "./ResourceState";
+import { ErrorDisplay, Loading } from "./resource-state";
 
 type ProfileFilter = {
 	id: string;

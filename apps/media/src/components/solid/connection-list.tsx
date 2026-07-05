@@ -3,9 +3,9 @@ import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
 import { getClient } from "@/utils/client";
 import type { ConnectionWithSettings, ProfileSummary } from "@/utils/types";
-import PlatformCard from "./PlatformCard";
-import type { Platform } from "./PlatformSetupForm";
-import { ResourceState } from "./ResourceState";
+import PlatformCard from "./platform-card";
+import type { Platform } from "./platform-setup-form";
+import { ResourceState } from "./resource-state";
 
 const ALL_PLATFORMS: Platform[] = ["github", "bluesky", "youtube", "devpad", "reddit", "twitter"];
 const HIDDEN_PLATFORMS: Platform[] = ["bluesky", "youtube", "devpad"];
@@ -80,7 +80,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 		const accounts = data();
 		if (!accounts) return PLATFORMS;
 
-		return [...PLATFORMS].sort((a, b) => {
+		return [...PLATFORMS].toSorted((a, b) => {
 			const connA = accounts.find((c) => c.platform === a);
 			const connB = accounts.find((c) => c.platform === b);
 

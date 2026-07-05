@@ -13,7 +13,7 @@ import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import Target from "lucide-solid/icons/target";
 import { createSignal, For, onMount } from "solid-js";
-import { TagBadge } from "@/components/solid/TagEditor";
+import { TagBadge } from "@/components/solid/tag-editor";
 import {
 	advanceTaskProgress,
 	formatDueDate,

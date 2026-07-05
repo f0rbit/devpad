@@ -1,6 +1,6 @@
 import { Show } from "solid-js";
-import PulseChart from "../pulse/PulseChart";
-import type { PulseSummary } from "../pulse/PulseOverview";
+import PulseChart from "../pulse/pulse-chart";
+import type { PulseSummary } from "../pulse/pulse-overview";
 
 interface PulseWidgetProps {
 	projectSlug: string;

@@ -4,7 +4,7 @@ import { createSignal, Show } from "solid-js";
 import { getClient } from "@/utils/client";
 import { format } from "@/utils/formatters";
 import type { Connection } from "@/utils/types";
-import PlatformIcon from "./PlatformIcon";
+import PlatformIcon from "./platform-icon";
 
 type Props = {
 	connection: Connection;

@@ -9,7 +9,7 @@ import X from "lucide-solid/icons/x";
 import { remark } from "remark";
 import remarkHtml from "remark-html";
 import { createEffect, createSignal } from "solid-js";
-import { LoadingIndicator, type LoadingState } from "@/components/solid/LoadingIndicator";
+import { LoadingIndicator, type LoadingState } from "@/components/solid/loading-indicator";
 
 interface Props {
 	project_id: string;

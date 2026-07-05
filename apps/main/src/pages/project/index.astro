@@ -1,11 +1,11 @@
 ---
 import { getServerApiClient } from "@devpad/core/ui/api-client";
 import type { Project } from "@devpad/schema";
-import GithubLogin from "@/components/solid/GithubLogin";
+import GithubLogin from "@/components/solid/github-login";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
-import { ProjectCardGrid } from "../../components/solid/ProjectCardGrid";
-import { WelcomeBanner } from "@/components/solid/WelcomeBanner";
+import { ProjectCardGrid } from "../../components/solid/project-card-grid";
+import { WelcomeBanner } from "@/components/solid/welcome-banner";
 
 const user = Astro.locals.user;
 

@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import type { WeeklyActivity } from "@/utils/analytics";
 import { format } from "@/utils/formatters";
 import type { CommitGroup, TimelineItem } from "@/utils/types";
-import PlatformIcon from "../PlatformIcon";
+import PlatformIcon from "../platform-icon";
 
 type ActivityChartProps = {
 	activity: WeeklyActivity[];

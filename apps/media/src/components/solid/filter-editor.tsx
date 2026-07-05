@@ -2,8 +2,8 @@ import { Button, Empty, FormField, Input, Modal, ModalBody, ModalHeader, ModalTi
 import { X } from "lucide-solid";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { getClient } from "@/utils/client";
-import PlatformIcon from "./PlatformIcon";
-import { ErrorDisplay, Loading } from "./ResourceState";
+import PlatformIcon from "./platform-icon";
+import { ErrorDisplay, Loading } from "./resource-state";
 
 type Filter = {
 	id: string;

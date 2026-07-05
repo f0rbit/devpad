@@ -11,12 +11,12 @@ import {
 } from "@/utils/analytics";
 import { getClient } from "@/utils/client";
 import type { ProfileTimelineResponse } from "@/utils/types";
-import { ResourceState } from "../ResourceState";
-import ActivityChart, { ActivityPreview } from "./ActivityChart";
-import ContentTypeList from "./ContentTypeList";
-import DashboardStats from "./DashboardStats";
-import PlatformDistribution from "./PlatformDistribution";
-import RecentActivity from "./RecentActivity";
+import { ResourceState } from "../resource-state";
+import ActivityChart, { ActivityPreview } from "./activity-chart";
+import ContentTypeList from "./content-type-list";
+import DashboardStats from "./dashboard-stats";
+import PlatformDistribution from "./platform-distribution";
+import RecentActivity from "./recent-activity";
 
 type DashboardProps = {
 	profileSlug?: string | null;

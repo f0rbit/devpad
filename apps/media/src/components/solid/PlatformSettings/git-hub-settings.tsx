@@ -2,8 +2,8 @@ import { Checkbox, Collapsible } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { getClient } from "@/utils/client";
 import type { GitHubRepo } from "@/utils/types";
-import { AsyncState } from "../ResourceState";
-import { useSettings } from "./useSettings";
+import { AsyncState } from "../resource-state";
+import { useSettings } from "./use-settings";
 
 type GitHubSettingsData = { hidden_repos?: string[] };
 

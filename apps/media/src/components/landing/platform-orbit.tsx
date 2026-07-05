@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import PlatformIcon from "../solid/PlatformIcon";
+import PlatformIcon from "../solid/platform-icon";
 
 type Platform = "github" | "reddit" | "twitter" | "bluesky" | "youtube" | "devpad";
 

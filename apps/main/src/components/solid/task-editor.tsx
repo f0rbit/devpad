@@ -7,10 +7,10 @@ import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
 import { createSignal, For } from "solid-js";
 import { createStore } from "solid-js/store";
-import { GoalSelector } from "@/components/solid/GoalSelector";
-import HistoryTimeline from "@/components/solid/HistoryTimeline";
-import { ProjectSelector } from "@/components/solid/ProjectSelector";
-import { TagPicker } from "@/components/solid/TagPicker";
+import { GoalSelector } from "@/components/solid/goal-selector";
+import HistoryTimeline from "@/components/solid/history-timeline";
+import { ProjectSelector } from "@/components/solid/project-selector";
+import { TagPicker } from "@/components/solid/tag-picker";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { getProjectContext } from "@/utils/project-context";
 import {

@@ -69,7 +69,7 @@ function ProgressCircle(props: { percentage: number; size?: number }) {
 export default function MilestonesManager(props: Props) {
 	const sortedMilestones = () => {
 		const ms = props.initialMilestones || [];
-		return [...ms].sort((a, b) => {
+		return [...ms].toSorted((a, b) => {
 			if (!a.target_time && !b.target_time) return 0;
 			if (!a.target_time) return 1;
 			if (!b.target_time) return -1;

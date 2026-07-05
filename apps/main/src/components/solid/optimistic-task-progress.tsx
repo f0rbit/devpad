@@ -7,7 +7,7 @@ import Square from "lucide-solid/icons/square";
 import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { Show } from "solid-js";
-import { OptimisticStatus } from "@/components/solid/OptimisticStatus";
+import { OptimisticStatus } from "@/components/solid/optimistic-status";
 import { createOptimisticUpdate } from "@/utils/optimistic-updates";
 
 type Progress = Task["progress"];

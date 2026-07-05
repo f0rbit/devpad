@@ -3,7 +3,7 @@ import type { Goal, Milestone } from "@devpad/schema";
 import Edit from "lucide-solid/icons/edit";
 import X from "lucide-solid/icons/x";
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { GoalQuickForm } from "./GoalQuickForm";
+import { GoalQuickForm } from "./goal-quick-form";
 
 interface Props {
 	project_id: string | null; // Database ID, not slug

@@ -11,7 +11,7 @@ import { isServer } from "solid-js/web";
 import { getClient } from "@/utils/client";
 import { format } from "@/utils/formatters";
 import type { CommitGroup, PRCommit, PullRequestPayload, TimelineGroup, TimelineItem } from "@/utils/types";
-import { ResourceState } from "./ResourceState";
+import { ResourceState } from "./resource-state";
 
 const GithubUsernamesContext = createContext<string[]>([]);
 
@@ -104,7 +104,7 @@ function TimelineGroups(props: TimelineGroupsProps) {
 			items.push(...group.items);
 		}
 		// Sort by timestamp descending
-		return items.sort((a, b) => {
+		return items.toSorted((a, b) => {
 			const timeA = a.type === "commit_group" ? (a.commits[0]?.timestamp ?? a.date) : a.timestamp;
 			const timeB = b.type === "commit_group" ? (b.commits[0]?.timestamp ?? b.date) : b.timestamp;
 			return new Date(timeB).getTime() - new Date(timeA).getTime();

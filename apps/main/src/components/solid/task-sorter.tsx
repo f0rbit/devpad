@@ -13,11 +13,11 @@ import Search from "lucide-solid/icons/search";
 import ArrowDownWideNarrow from "lucide-solid/icons/sort-desc";
 import Tag from "lucide-solid/icons/tag";
 import { type Accessor, createEffect, createSignal, For } from "solid-js";
-import { ProjectSelector } from "@/components/solid/ProjectSelector";
-import { TagSelect } from "@/components/solid/TagPicker";
+import { ProjectSelector } from "@/components/solid/project-selector";
+import { TagSelect } from "@/components/solid/tag-picker";
 import { getProjectContext } from "@/utils/project-context";
-import { TaskCard } from "./TaskCard";
-import { TaskQuickAdd } from "./TaskQuickAdd";
+import { TaskCard } from "./task-card";
+import { TaskQuickAdd } from "./task-quick-add";
 
 const options = ["upcoming", "recent", "priority", "progress"] as const;
 

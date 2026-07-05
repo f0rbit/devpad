@@ -1,5 +1,5 @@
 import { Checkbox, Collapsible } from "@f0rbit/ui";
-import { useSettings } from "./useSettings";
+import { useSettings } from "./use-settings";
 
 type TwitterSettingsData = {
 	include_retweets?: boolean;

@@ -1,6 +1,6 @@
 import { Empty, Stat } from "@f0rbit/ui";
 import { For, Show } from "solid-js";
-import PulseChart from "./PulseChart";
+import PulseChart from "./pulse-chart";
 
 interface RoutePerf {
 	route?: string;
