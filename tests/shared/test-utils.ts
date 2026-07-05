@@ -33,7 +33,12 @@ export async function createTestUser(dbPath: string): Promise<string> {
 				id: TEST_USER_ID,
 				name: "Integration Test User",
 				email: `test-${String(Date.now())}@devpad.test`,
-				github_id: null,
+				// Must be non-null: authMiddleware's API-key path requires a real
+				// github_id/name (mirrors the session-auth path's pre-existing
+				// check) since every real devpad user signs up via GitHub OAuth.
+				// A null github_id here silently fails every authenticated
+				// integration test with 401 "Invalid or expired API key".
+				github_id: 900_000_000,
 			})
 			.returning();
 

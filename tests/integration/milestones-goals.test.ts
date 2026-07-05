@@ -26,7 +26,7 @@ async function createTestMilestone(projectId: string, milestoneData?: Partial<Up
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${String(t.client["_api_key"])}`,
+			Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 		},
 		body: JSON.stringify(defaultData),
 	});
@@ -40,7 +40,7 @@ async function createTestMilestone(projectId: string, milestoneData?: Partial<Up
 		try {
 			const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${String(milestone.id)}`, {
 				method: "DELETE",
-				headers: { Authorization: `Bearer ${String(t.client["_api_key"])}` },
+				headers: { Authorization: `Bearer ${String(t.client["api_key_field"])}` },
 			});
 			if (deleteResponse.ok) {
 				console.log(`Cleaned up milestone: ${String(milestone.name)} (${String(milestone.id)})`);
@@ -65,7 +65,7 @@ async function createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${String(t.client["_api_key"])}`,
+			Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 		},
 		body: JSON.stringify(defaultData),
 	});
@@ -79,7 +79,7 @@ async function createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal
 		try {
 			const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${String(goal.id)}`, {
 				method: "DELETE",
-				headers: { Authorization: `Bearer ${String(t.client["_api_key"])}` },
+				headers: { Authorization: `Bearer ${String(t.client["api_key_field"])}` },
 			});
 			if (deleteResponse.ok) {
 				console.log(`Cleaned up goal: ${String(goal.name)} (${String(goal.id)})`);
@@ -95,7 +95,7 @@ async function deleteTestMilestone(milestoneId: string): Promise<void> {
 	const response = await fetch(`http://localhost:3001/api/v1/milestones/${milestoneId}`, {
 		method: "DELETE",
 		headers: {
-			Authorization: `Bearer ${String(t.client["_api_key"])}`,
+			Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 		},
 	});
 
@@ -145,7 +145,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -163,7 +163,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -197,7 +197,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -210,7 +210,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/projects/${testProject.id}/milestones`, {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -261,7 +261,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -280,7 +280,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/goals/${createdGoal.id}`, {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -329,7 +329,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/milestones/${testMilestone.id}/goals`, {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
@@ -355,7 +355,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -373,7 +373,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -390,7 +390,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -408,7 +408,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -432,7 +432,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const milestoneGoalsResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}/goals`, {
 				headers: {
-					Authorization: `Bearer ${String(t.client["_api_key"])}`,
+					Authorization: `Bearer ${String(t.client["api_key_field"])}`,
 				},
 			});
 
