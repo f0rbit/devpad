@@ -5,11 +5,11 @@ import type { JSX } from "solid-js";
 import { Show } from "solid-js";
 import type { UpdateState } from "@/utils/optimistic-updates";
 
-interface OptimisticStatusProps {
+type OptimisticStatusProps = {
 	state: UpdateState;
 	size?: "sm" | "md" | "lg";
 	className?: string;
-}
+};
 
 /**
  * Visual indicator for optimistic update states
@@ -46,7 +46,7 @@ export function OptimisticStatus(props: OptimisticStatusProps) {
 	);
 }
 
-interface OptimisticButtonProps {
+type OptimisticButtonProps = {
 	state: UpdateState;
 	children?: JSX.Element;
 	onClick?: () => void;
@@ -54,7 +54,7 @@ interface OptimisticButtonProps {
 	variant?: "primary" | "secondary" | "ghost";
 	size?: "sm" | "md" | "lg";
 	className?: string;
-}
+};
 
 /**
  * Button component with built-in optimistic update status
@@ -113,12 +113,12 @@ export function OptimisticButton(props: OptimisticButtonProps) {
 	);
 }
 
-interface OptimisticFieldProps {
+type OptimisticFieldProps = {
 	state: UpdateState;
 	error?: string | null;
 	children: JSX.Element;
 	className?: string;
-}
+};
 
 /**
  * Wrapper for form fields with optimistic update status

@@ -40,10 +40,7 @@ const app = new Hono<AppContext>();
  * render even when pulse is unreachable — see the route handler for the
  * surrounding logic.
  */
-const try_pulse_summary = async (
-	c: Context<AppContext>,
-	project_id: string,
-): Promise<Record<string, unknown> | null> => {
+const try_pulse_summary = async (c: Context<AppContext>, project_id: string): Promise<unknown> => {
 	const config = c.get("config");
 	const pulse_api_base = config.pulse_api_base;
 	const pulse_internal_key = config.pulse_internal_key;

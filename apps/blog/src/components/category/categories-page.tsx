@@ -7,15 +7,15 @@ import CategoryForm from "./category-form";
 
 type Category = Pick<SchemaCategory, "id" | "name" | "parent">;
 
-interface CategoryNode {
+type CategoryNode = {
 	name: string;
 	parent: string | null;
 	children?: CategoryNode[];
-}
+};
 
-interface Props {
+type Props = {
 	initialCategories?: Category[];
-}
+};
 
 const flattenTree = (nodes: CategoryNode[], id = 1): Category[] =>
 	nodes.flatMap((n, i) => [

@@ -1,9 +1,13 @@
+import { z } from "zod";
+
 const STORAGE_KEY = "devpad_project_context";
 
-interface ProjectContext {
-	id: string;
-	name: string;
-}
+const ProjectContextSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+});
+
+type ProjectContext = z.infer<typeof ProjectContextSchema>;
 
 export function setProjectContext(project: ProjectContext): void {
 	if (typeof window === "undefined") return;
@@ -15,11 +19,8 @@ export function getProjectContext(): ProjectContext | null {
 	const raw = sessionStorage.getItem(STORAGE_KEY);
 	if (!raw) return null;
 	try {
-		const parsed = JSON.parse(raw);
-		if (parsed && typeof parsed.id === "string" && typeof parsed.name === "string") {
-			return parsed;
-		}
-		return null;
+		const result = ProjectContextSchema.safeParse(JSON.parse(raw));
+		return result.success ? result.data : null;
 	} catch {
 		return null;
 	}

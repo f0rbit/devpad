@@ -68,7 +68,8 @@ type Envelope = { ok: boolean; value?: unknown; error?: { code: string } & Recor
 
 const get_req = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "GET", headers }));
-	return { status: res.status, body: (await res.json()) as Envelope };
+	const raw_body: unknown = await res.json();
+	return { status: res.status, body: raw_body as Envelope };
 };
 
 const post_json = async (
@@ -84,7 +85,8 @@ const post_json = async (
 			body: JSON.stringify(body),
 		}),
 	);
-	return { status: res.status, body: (await res.json()) as Envelope };
+	const raw_body: unknown = await res.json();
+	return { status: res.status, body: raw_body as Envelope };
 };
 
 const patch_json = async (
@@ -100,12 +102,14 @@ const patch_json = async (
 			body: JSON.stringify(body),
 		}),
 	);
-	return { status: res.status, body: (await res.json()) as Envelope };
+	const raw_body: unknown = await res.json();
+	return { status: res.status, body: raw_body as Envelope };
 };
 
 const delete_req = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "DELETE", headers }));
-	return { status: res.status, body: (await res.json()) as Envelope };
+	const raw_body: unknown = await res.json();
+	return { status: res.status, body: raw_body as Envelope };
 };
 
 const valid_create_body = (overrides: Record<string, unknown> = {}) => ({

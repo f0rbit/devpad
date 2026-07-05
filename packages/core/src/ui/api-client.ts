@@ -2,7 +2,7 @@ import { ApiClient } from "@devpad/api";
 
 const SESSION_SENTINELS = new Set(["injected", "verified"]);
 
-interface AstroLocals {
+type AstroLocals = {
 	session: { id: string } | null;
 	runtime?: {
 		env?: {
@@ -12,7 +12,7 @@ interface AstroLocals {
 		};
 		ctx?: { waitUntil: (promise: Promise<unknown>) => void; passThroughOnException: () => void };
 	};
-}
+};
 
 export function getServerApiClient(locals: AstroLocals): ApiClient {
 	const runtime = locals.runtime;

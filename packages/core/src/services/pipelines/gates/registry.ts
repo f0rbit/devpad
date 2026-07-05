@@ -6,13 +6,13 @@ import { AutoGateEvaluator } from "./auto.js";
 import type { ApprovalStore, GateEvaluator, PulseEmitter } from "./evaluator.js";
 import { ManualGateEvaluator } from "./manual.js";
 
-export interface GateEvaluatorDeps {
+export type GateEvaluatorDeps = {
 	pulse: PulseEmitter;
 	approvals: ApprovalStore;
 	db?: Database;
 	pulse_summary?: PulseSummaryProvider;
 	now?: () => number;
-}
+};
 
 export function gateEvaluatorFor(gate: Gate, deps: GateEvaluatorDeps): GateEvaluator {
 	switch (gate.type) {

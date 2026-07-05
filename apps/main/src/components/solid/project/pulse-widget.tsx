@@ -2,11 +2,11 @@ import { Show } from "solid-js";
 import PulseChart from "../pulse/pulse-chart";
 import type { PulseSummary } from "../pulse/pulse-overview";
 
-interface PulseWidgetProps {
+type PulseWidgetProps = {
 	projectSlug: string;
 	summary: PulseSummary | null;
 	error?: string | null;
-}
+};
 
 const num = (n: number | undefined): string => (typeof n === "number" ? n.toLocaleString() : "0");
 

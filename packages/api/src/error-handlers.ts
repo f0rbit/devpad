@@ -57,7 +57,8 @@ export async function handleResponseError(response: Response): Promise<never> {
 	// Try to parse structured error responses
 	let parsedError: ParsedErrorBody | null = null;
 	try {
-		parsedError = JSON.parse(errorText) as ParsedErrorBody;
+		const raw: unknown = JSON.parse(errorText);
+		parsedError = raw as ParsedErrorBody;
 	} catch {
 		// Not JSON, use raw text
 	}
@@ -108,13 +109,15 @@ function tryParseZodErrorString(errorMessage: string): ParsedErrorBody | null {
 	const zodErrorMatch = errorMessage.match(/ZodError: (.+)/);
 	if (!zodErrorMatch?.[1]) return null;
 	try {
-		return JSON.parse(zodErrorMatch[1]) as ParsedErrorBody;
+		const raw: unknown = JSON.parse(zodErrorMatch[1]);
+		return raw as ParsedErrorBody;
 	} catch {
 		// If still not JSON, try to extract from the message
 		const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
 		if (!issuesMatch?.[1]) return null;
 		try {
-			return { issues: JSON.parse(issuesMatch[1]) as ZodIssue[] };
+			const raw_issues: unknown = JSON.parse(issuesMatch[1]);
+			return { issues: raw_issues as ZodIssue[] };
 		} catch {
 			// Fall back to basic parsing
 			return null;
@@ -130,7 +133,8 @@ export function parseZodErrors(errorMessage: string): string {
 		// Try to parse as JSON first to get structured error info
 		let parsedError: ParsedErrorBody | null = null;
 		try {
-			parsedError = JSON.parse(errorMessage) as ParsedErrorBody;
+			const raw: unknown = JSON.parse(errorMessage);
+			parsedError = raw as ParsedErrorBody;
 		} catch {
 			// If not JSON, try to extract Zod error details from the error message
 			parsedError = tryParseZodErrorString(errorMessage);
@@ -195,9 +199,8 @@ export function parseZodErrors(errorMessage: string): string {
 			}
 			return `Validation failed:\n• ${friendlyMessages.join("\n• ")}`;
 		}
-	} catch (e) {
+	} catch {
 		// Fall back to original message if parsing fails
-		console.debug("Failed to parse Zod error:", e);
 	}
 
 	return errorMessage;

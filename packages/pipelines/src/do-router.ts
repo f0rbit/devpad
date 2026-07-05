@@ -12,9 +12,9 @@ export type DoStub = {
 	fetch(request: Request): Promise<Response>;
 };
 
-export interface DoRouter {
+export type DoRouter = {
 	get(run_id: string): DoStub;
-}
+};
 
 /**
  * Production router. Wraps the real `DurableObjectNamespace`. The

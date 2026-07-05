@@ -1,21 +1,24 @@
 import { err, ok, type Result, try_catch_async } from "@f0rbit/corpus";
+import { z } from "zod";
 import { parseFileContent, shouldIgnorePath } from "./parser.js";
 import type { GitHubTreeEntry, ParsedTask, ScanConfig, ScannerError } from "./types.js";
 
-type TreeResponse = {
-	tree: Array<{
-		path: string;
-		type: string;
-		sha: string;
-		size?: number;
-	}>;
-	truncated: boolean;
-};
+const TreeResponseSchema = z.object({
+	tree: z.array(
+		z.object({
+			path: z.string(),
+			type: z.string(),
+			sha: z.string(),
+			size: z.number().optional(),
+		}),
+	),
+	truncated: z.boolean(),
+});
 
-type ContentResponse = {
-	content: string;
-	encoding: string;
-};
+const ContentResponseSchema = z.object({
+	content: z.string(),
+	encoding: z.string(),
+});
 
 const github_headers = (access_token: string) => ({
 	Authorization: `Bearer ${access_token}`,
@@ -62,7 +65,10 @@ export const fetchRepoTree = async (
 	const response = fetch_result.value;
 	if (!response.ok) return err(await handle_error_response(response));
 
-	const json_result = await try_catch_async(() => response.json() as Promise<TreeResponse>, parse_json_error);
+	const json_result = await try_catch_async(
+		async () => TreeResponseSchema.parse(await response.json()),
+		parse_json_error,
+	);
 	if (!json_result.ok) return json_result;
 
 	const entries: GitHubTreeEntry[] = json_result.value.tree
@@ -95,7 +101,10 @@ export const fetchFileContent = async (
 	const response = fetch_result.value;
 	if (!response.ok) return err(await handle_error_response(response));
 
-	const json_result = await try_catch_async(() => response.json() as Promise<ContentResponse>, parse_json_error);
+	const json_result = await try_catch_async(
+		async () => ContentResponseSchema.parse(await response.json()),
+		parse_json_error,
+	);
 	if (!json_result.ok) return json_result;
 
 	if (!json_result.value.content) {

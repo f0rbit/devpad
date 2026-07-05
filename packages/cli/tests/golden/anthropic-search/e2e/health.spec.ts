@@ -1,9 +1,13 @@
 import { expect, test } from "@playwright/test";
+import { z } from "zod";
+
+const HealthResponseSchema = z.object({ status: z.string(), service: z.string() });
+const VersionResponseSchema = z.object({ name: z.string(), version: z.string() });
 
 test("/health returns ok", async ({ request }) => {
 	const response = await request.get("/health");
 	expect(response.status()).toBe(200);
-	const body = (await response.json()) as { status: string; service: string };
+	const body = HealthResponseSchema.parse(await response.json());
 	expect(body.status).toBe("ok");
 	expect(body.service).toBe("anthropic-search");
 });
@@ -11,6 +15,6 @@ test("/health returns ok", async ({ request }) => {
 test("/version returns the package name", async ({ request }) => {
 	const response = await request.get("/version");
 	expect(response.status()).toBe(200);
-	const body = (await response.json()) as { name: string; version: string };
+	const body = VersionResponseSchema.parse(await response.json());
 	expect(body.name).toBe("anthropic-search");
 });

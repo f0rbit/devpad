@@ -6,13 +6,14 @@ import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
+import { log } from "@/lib/pulse";
 
-interface Props {
+type Props = {
 	items: UpdateData[];
 	tasks: Record<string, Task>; //key is codebase_tasks.id
 	project_id: string;
 	update_id: number;
-}
+};
 
 const ACTIONS = {
 	SAME: ["CONFIRM", "UNLINK"],
@@ -23,7 +24,7 @@ const ACTIONS = {
 } as const;
 
 export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
-	const deep_copied_items = JSON.parse(JSON.stringify(items)) as UpdateData[];
+	const deep_copied_items = structuredClone(items);
 	const mapped_items = deep_copied_items.map((item) => {
 		const task = tasks[item.id];
 		return { ...item, task };
@@ -76,13 +77,12 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				approved: true,
 			});
 			if (!result.ok) {
-				console.error("Failed to save actions", result.error);
+				log.error("Failed to save actions", undefined, { error: result.error });
 				return;
 			}
 			location.reload();
 		} catch (error) {
-			console.error("Failed to save actions");
-			console.error(error);
+			log.error("Failed to save actions", error);
 		}
 	};
 
@@ -96,13 +96,12 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				approved: true,
 			});
 			if (!result.ok) {
-				console.error("Failed to save actions", result.error);
+				log.error("Failed to save actions", undefined, { error: result.error });
 				return;
 			}
 			location.reload();
 		} catch (error) {
-			console.error("Failed to save actions");
-			console.error(error);
+			log.error("Failed to save actions", error);
 		}
 	};
 
@@ -162,12 +161,12 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 	);
 }
 
-interface ItemProps {
+type ItemProps = {
 	update: UpdateData & { task?: Task };
 	action: UpdateAction;
 	onActionChange: (id: string, action: UpdateAction) => void;
 	onTitleChange: (id: string, title: string) => void;
-}
+};
 
 export function UpdateDiff({ update, action, onActionChange, onTitleChange }: ItemProps) {
 	const available_actions = ACTIONS[update.type];

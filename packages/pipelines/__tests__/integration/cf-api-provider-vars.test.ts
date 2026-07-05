@@ -123,7 +123,8 @@ const start_recorder = (): RecorderHandle => {
 				body = text;
 				if (text.length > 0) {
 					try {
-						body = JSON.parse(text);
+						const raw_body: unknown = JSON.parse(text);
+						body = raw_body;
 					} catch {
 						/* leave as string */
 					}
@@ -213,7 +214,8 @@ describe("cf-api-provider — caller-identity vars", () => {
 		const parts = req.parts!;
 		expect(parts.metadata).toBeDefined();
 		expect(parts.metadata.content_type ?? "").toMatch(/^application\/json/);
-		const metadata = JSON.parse(parts.metadata.text) as {
+		const raw_metadata: unknown = JSON.parse(parts.metadata.text);
+		const metadata = raw_metadata as {
 			main_module: string;
 			bindings: WorkerVar[];
 			annotations: Record<string, string>;
@@ -261,7 +263,8 @@ describe("cf-api-provider — caller-identity vars", () => {
 		expect(result.ok).toBe(true);
 
 		const parts = recorder.requests[0].parts!;
-		const metadata = JSON.parse(parts.metadata.text) as {
+		const raw_metadata: unknown = JSON.parse(parts.metadata.text);
+		const metadata = raw_metadata as {
 			bindings: Array<Record<string, unknown>>;
 			compatibility_date: string;
 			compatibility_flags: string[];

@@ -35,12 +35,12 @@ export const simulateErrors = <T>(
 	return ok(getData());
 };
 
-export interface MemoryProviderControls {
+export type MemoryProviderControls = {
 	getCallCount(): number;
 	reset(): void;
 	setSimulateRateLimit(value: boolean): void;
 	setSimulateAuthExpired(value: boolean): void;
-}
+};
 
 export const createMemoryProviderControlMethods = (state: MemoryProviderState): MemoryProviderControls => ({
 	getCallCount: () => state.call_count,

@@ -72,7 +72,8 @@ app.get("/callback/github", async (c) => {
 
 	let decoded: Record<string, unknown>;
 	try {
-		decoded = JSON.parse(atob(state.replace(/-/g, "+").replace(/_/g, "/")));
+		const raw_state: unknown = JSON.parse(atob(state.replace(/-/g, "+").replace(/_/g, "/")));
+		decoded = raw_state as Record<string, unknown>;
 	} catch {
 		return c.json({ error: "Invalid OAuth state" }, 400);
 	}
@@ -101,10 +102,10 @@ app.get("/callback/github", async (c) => {
 
 	const { sessionId, user: callback_user } = callback_result.value;
 	c.get("log")?.info("login_success", { user_id: callback_user.id, provider: "github" });
-	console.log(`[auth/callback] session created: ${sessionId.substring(0, 8)}...`);
+	c.get("log")?.debug("auth/callback session created", { session_id_prefix: sessionId.substring(0, 8) });
 
 	const cookie_config = cookieConfig(config.environment);
-	console.log(`[auth/callback] cookie config: ${JSON.stringify(cookie_config)}`);
+	c.get("log")?.debug("auth/callback cookie config", { cookie_config });
 	c.header("Set-Cookie", createSessionCookie(sessionId, cookie_config));
 
 	setCookie(c, "github_oauth_state", "", {
@@ -118,16 +119,18 @@ app.get("/callback/github", async (c) => {
 
 	if (config.environment === "development") {
 		const redirect_url = return_to || frontend_url;
-		console.log(`[auth/callback] redirecting to: ${redirect_url}/project?auth_session=${sessionId}`);
+		c.get("log")?.debug("auth/callback redirecting", {
+			redirect_url: `${redirect_url}/project?auth_session=${sessionId}`,
+		});
 		return c.redirect(`${redirect_url}/project?auth_session=${sessionId}`);
 	}
 
 	if (return_to && isAllowedRedirectUrl(return_to) && new URL(return_to).pathname !== "/") {
-		console.log(`[auth/callback] redirecting to: ${return_to}`);
+		c.get("log")?.debug("auth/callback redirecting", { redirect_url: return_to });
 		return c.redirect(return_to);
 	}
 
-	console.log(`[auth/callback] redirecting to: ${frontend_url}/project`);
+	c.get("log")?.debug("auth/callback redirecting", { redirect_url: `${frontend_url}/project` });
 	return c.redirect(`${frontend_url}/project`);
 });
 

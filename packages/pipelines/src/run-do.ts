@@ -236,7 +236,13 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 
 		if (request.method !== "POST") return json_err(405, { code: "method_not_allowed" });
 
-		const body = await request.json().catch(() => null);
+		let body: unknown = null;
+		try {
+			const parsed_body: unknown = await request.json();
+			body = parsed_body;
+		} catch {
+			body = null;
+		}
 		if (body === null) return json_err(400, { code: "invalid_json" });
 
 		if (action === "advance") return handle_advance(body);

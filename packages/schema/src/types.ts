@@ -99,23 +99,23 @@ export type ProjectConfig = z.infer<typeof project_config>;
 export type SaveConfigRequest = z.infer<typeof save_config_request>;
 
 // Utility/combination types for API responses and complex data structures
-export interface TaskWithDetails {
+export type TaskWithDetails = {
 	task: Task;
 	codebase_tasks: CodebaseTask | null;
 	tags: string[];
-}
+};
 
-export interface ProjectWithTasks {
+export type ProjectWithTasks = {
 	project: Project;
 	tasks: TaskWithDetails[];
-}
+};
 
-export interface TagWithColor {
+export type TagWithColor = {
 	id: string;
 	title: string;
 	color: string | null;
 	count?: number;
-}
+};
 
 export type GetConfigResult = { config: ProjectConfig; scan_branch: string };
 
@@ -154,7 +154,7 @@ export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & {
 };
 
 // Update data type for project scanning
-export interface UpdateData {
+export type UpdateData = {
 	id: string;
 	tag: string;
 	type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
@@ -173,7 +173,7 @@ export interface UpdateData {
 		};
 	};
 	task?: TaskWithDetails;
-}
+};
 
 export type UpdateUser = z.infer<typeof update_user>;
 export type ConfigSchemaType = z.infer<typeof config_schema>;

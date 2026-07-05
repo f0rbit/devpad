@@ -35,11 +35,11 @@ type PulseSummary = Record<string, unknown> | null;
 
 export type PipelineDashboardData = DashboardResponse & { pulse: PulseSummary };
 
-export interface PipelineDashboardProps {
+export type PipelineDashboardProps = {
 	data: PipelineDashboardData;
 	project_id: string;
 	window_ms: number;
-}
+};
 
 const WINDOW_OPTIONS: ReadonlyArray<{ label: string; ms: number }> = [
 	{ label: "1h", ms: 60 * 60 * 1000 },

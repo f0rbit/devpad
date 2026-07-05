@@ -181,36 +181,36 @@ const parse_list_runs_query = (raw: Record<string, string>): Result<ListRunsPars
 	});
 };
 
-export interface ManifestProvider {
+export type ManifestProvider = {
 	get(version_set_id: string): Promise<VersionSetManifest | null>;
-}
+};
 
-export interface TemplateResolver {
+export type TemplateResolver = {
 	resolve(package_id: string, version_set_id: string): Promise<PipelineTemplate | null>;
-}
+};
 
-export interface LineageProvider {
+export type LineageProvider = {
 	previous(package_id: string, version_set_id: string): Promise<string | null>;
-}
+};
 
-export interface AuthGate<T = void> {
+export type AuthGate<T = void> = {
 	check(request: Request): Promise<Result<T, AuthError>>;
-}
+};
 
-export interface PulseEmitterLite {
+export type PulseEmitterLite = {
 	emit(event: { event: string } & Record<string, unknown>): Promise<unknown>;
-}
+};
 
 /**
  * Dependency bundle for `POST /auth/github-oidc`. Pulled out so tests can
  * substitute in-memory verifier + signer (`@devpad/core` only describes
  * the contract; production wires through `jose` in `providers/`).
  */
-export interface OidcDeps {
+export type OidcDeps = {
 	verify_oidc: (jwt: string) => Promise<Result<VerifiedOidcClaims, { reason: string }>>;
 	sign_session: (claims: OidcSessionClaims) => Promise<Result<string, { reason: string }>>;
 	verify_session: (token: string) => Promise<Result<OidcSessionClaims, { reason: string }>>;
-}
+};
 
 export type RoutesDeps = {
 	db: Database;
@@ -426,7 +426,13 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const { run, plan } = created.value;
 		const advance_res = await do_call(deps, run.id, "advance", { plan });
-		const advance_body = await advance_res.json().catch(() => null);
+		let advance_body: unknown = null;
+		try {
+			const advance_json: unknown = await advance_res.json();
+			advance_body = advance_json;
+		} catch {
+			advance_body = null;
+		}
 		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
 
 		return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
@@ -627,7 +633,13 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const { run, plan } = created.value;
 		const advance_res = await do_call(deps, run.id, "advance", { plan });
-		const advance_body = await advance_res.json().catch(() => null);
+		let advance_body: unknown = null;
+		try {
+			const advance_json: unknown = await advance_res.json();
+			advance_body = advance_json;
+		} catch {
+			advance_body = null;
+		}
 		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
 
 		return json_ok({
@@ -960,7 +972,13 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 	if (deps.oidc === undefined) {
 		return wire_err({ code: "auth_unavailable", message: "OIDC exchange not configured on this Worker" }, 503);
 	}
-	const body = await request.json().catch(() => null);
+	let body: unknown = null;
+	try {
+		const parsed_body: unknown = await request.json();
+		body = parsed_body;
+	} catch {
+		body = null;
+	}
 	const parsed = oidc_exchange_body.safeParse(body);
 	if (!parsed.success) return wire_err({ code: "invalid_request", issues: parsed.error.issues }, 400);
 
@@ -1105,7 +1123,13 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	if (deps.backend === undefined)
 		return wire_err({ code: "backend_unavailable", message: "corpus backend not configured" }, 503);
 
-	const body = await request.json().catch(() => null);
+	let body: unknown = null;
+	try {
+		const parsed_body: unknown = await request.json();
+		body = parsed_body;
+	} catch {
+		body = null;
+	}
 	if (body === null) return wire_err({ code: "invalid_body", message: "request body is not valid JSON" }, 400);
 
 	const parsed = VersionSetManifestSchema.safeParse(body);
@@ -1202,7 +1226,7 @@ const normalise_do_response = async (response: Response): Promise<Response> => {
 	const parsed =
 		text === ""
 			? null
-			: (() => {
+			: ((): unknown => {
 					try {
 						return JSON.parse(text);
 					} catch {

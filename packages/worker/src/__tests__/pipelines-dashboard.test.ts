@@ -26,6 +26,12 @@ const PROJECT_ID = "proj_test";
 const USER_ID = "user_test";
 const PKG_ID = "pipeline-package_test";
 
+type DashboardResponseBody = {
+	run_counts: { total: number; completed: number };
+	latency_p50_ms: number;
+	pulse: { totals: { requests: number } } | null;
+};
+
 const make_db = (): Database => {
 	const sqlite = new BunSqlite(":memory:");
 	migrateBunDatabase(sqlite);
@@ -190,7 +196,8 @@ describe("/v1/pipelines/dashboard", () => {
 		expect(res.status).toBe(200);
 		expect(res.headers.get("cache-control")).toBe("public, max-age=30");
 
-		const body = await res.json();
+		const raw: unknown = await res.json();
+		const body = raw as DashboardResponseBody;
 		expect(body.run_counts.total).toBe(1);
 		expect(body.run_counts.completed).toBe(1);
 		expect(body.latency_p50_ms).toBe(5 * 60_000);
@@ -277,7 +284,8 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const raw: unknown = await res.json();
+		const body = raw as DashboardResponseBody;
 		expect(body.pulse).toBeNull();
 	});
 
@@ -293,7 +301,8 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const raw: unknown = await res.json();
+		const body = raw as DashboardResponseBody;
 		expect(body.pulse).toBeNull();
 		expect(captured.length).toBe(0);
 	});
@@ -308,7 +317,8 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = await res.json();
+		const raw: unknown = await res.json();
+		const body = raw as DashboardResponseBody;
 		expect(body.run_counts.total).toBe(0);
 		expect(body.pulse).toBeNull();
 	});

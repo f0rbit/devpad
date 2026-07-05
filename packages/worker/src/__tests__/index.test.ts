@@ -53,7 +53,7 @@ const noop_ctx: ExecutionContext = {
 describe("health endpoint", () => {
 	it("returns ok status", async () => {
 		const response = await worker.fetch(request("/health"), MOCK_ENV, noop_ctx);
-		const body = await response.json();
+		const body: unknown = await response.json();
 		expect(response.status).toBe(200);
 		expect(body).toEqual(expect.objectContaining({ status: "ok" }));
 		expect(typeof (body as any).timestamp).toBe("string");
@@ -63,7 +63,8 @@ describe("health endpoint", () => {
 describe("routing", () => {
 	it("returns devpad message for root", async () => {
 		const response = await worker.fetch(request("/"), MOCK_ENV, noop_ctx);
-		const body = (await response.json()) as any;
+		const raw_body: unknown = await response.json();
+		const body = raw_body as any;
 		expect(response.status).toBe(200);
 		expect(body).toHaveProperty("message", "devpad — Cloudflare Worker");
 		expect(body).toHaveProperty("version", "1.0.0");
@@ -73,7 +74,8 @@ describe("routing", () => {
 		const req = new Request("http://blog.devpad.tools/", { headers: { host: "blog.devpad.tools" } });
 		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
-		const body = (await response.json()) as any;
+		const raw_body: unknown = await response.json();
+		const body = raw_body as any;
 		expect(body.message).toContain("Phase 2");
 	});
 
@@ -81,7 +83,8 @@ describe("routing", () => {
 		const req = new Request("http://media.devpad.tools/", { headers: { host: "media.devpad.tools" } });
 		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
-		const body = (await response.json()) as any;
+		const raw_body: unknown = await response.json();
+		const body = raw_body as any;
 		expect(body.message).toContain("Phase 2");
 	});
 
@@ -89,7 +92,8 @@ describe("routing", () => {
 		const req = new Request("http://blog.staging.devpad.tools/", { headers: { host: "blog.staging.devpad.tools" } });
 		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
-		const body = (await response.json()) as any;
+		const raw_body: unknown = await response.json();
+		const body = raw_body as any;
 		expect(body.message).toContain("blog");
 	});
 
@@ -97,7 +101,8 @@ describe("routing", () => {
 		const req = new Request("http://media.staging.devpad.tools/", { headers: { host: "media.staging.devpad.tools" } });
 		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
-		const body = (await response.json()) as any;
+		const raw_body: unknown = await response.json();
+		const body = raw_body as any;
 		expect(body.message).toContain("media");
 	});
 });

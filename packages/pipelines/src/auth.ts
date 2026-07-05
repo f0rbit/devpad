@@ -39,9 +39,9 @@ export type AuthIdentity =
 
 export type AuthError = { code: "unauthorized"; message: string } | { code: "auth_unavailable"; message: string };
 
-export interface SessionVerifier {
+export type SessionVerifier = {
 	verify(token: string): Promise<Result<OidcSessionClaims, { code: string; message: string }>>;
-}
+};
 
 const BEARER_PREFIX = "Bearer ";
 
@@ -82,8 +82,8 @@ const looks_like_jwt = (token: string): boolean => {
 	const parts = token.split(".");
 	if (parts.length !== 3) return false;
 	try {
-		JSON.parse(atob(parts[0]));
-		return true;
+		const decoded: unknown = JSON.parse(atob(parts[0]));
+		return decoded !== undefined;
 	} catch {
 		return false;
 	}

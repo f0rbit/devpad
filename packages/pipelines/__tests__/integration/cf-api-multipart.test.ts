@@ -126,7 +126,8 @@ describe("cf-api-provider — multipart wire format", () => {
 		expect(body_text).toContain('name="worker.mjs"; filename="worker.mjs"');
 		const metadata_match = /name="metadata"[\s\S]*?\r\n\r\n(\{[\s\S]*?\})\r\n/.exec(body_text);
 		expect(metadata_match).not.toBeNull();
-		const metadata = JSON.parse(metadata_match![1]) as { main_module: string };
+		const raw_metadata: unknown = JSON.parse(metadata_match![1]);
+		const metadata = raw_metadata as { main_module: string };
 		expect(metadata.main_module).toBe("worker.mjs");
 	});
 });

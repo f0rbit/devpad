@@ -8,27 +8,27 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 
 type JsonSchemaObject = Record<string, unknown>;
 
-interface MCPTool {
+type MCPTool = {
 	name: string;
 	description: string;
 	inputSchema: JsonSchemaObject;
-}
+};
 
-interface MCPRequest {
+type MCPRequest = {
 	jsonrpc?: "2.0";
 	id: string | number;
 	method: string;
 	params?: { name: string; arguments?: Record<string, unknown> };
-}
+};
 
 type MCPContentResult = { content: Array<{ type: "text"; text: string }>; isError?: boolean };
 type MCPResult = { tools: MCPTool[] } | MCPContentResult;
 
-interface MCPResponse {
+type MCPResponse = {
 	jsonrpc: "2.0";
 	id: string | number;
 	result: MCPResult;
-}
+};
 
 // Helper to convert Zod schema to JSON Schema for MCP.
 // `schema` is typed `unknown` (rather than `z.ZodType`) deliberately: annotating

@@ -7,7 +7,8 @@ import Plus from "lucide-solid/icons/plus";
 import Save from "lucide-solid/icons/save";
 import Trash from "lucide-solid/icons/trash";
 import X from "lucide-solid/icons/x";
-import { type Accessor, createEffect, createSignal, For } from "solid-js";
+import { type Accessor, createSignal, For } from "solid-js";
+import { log } from "@/lib/pulse";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -44,10 +45,13 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 			const values = currentTags().map((t) => ({ ...t, owner_id }));
 			const apiClient = getBrowserClient();
 			const result = await apiClient.tasks.saveTags(values);
-			console.log("result", result);
+			if (!result.ok) {
+				log.error("Error saving tags", undefined, { error: result.error });
+				return;
+			}
 			window.location.reload();
 		} catch (error) {
-			console.error("Error saving tags:", error);
+			log.error("Error saving tags", error);
 		}
 	}
 
@@ -173,10 +177,6 @@ function TagColourPicker({
 	onChange: (value: TagColor | null) => void;
 }) {
 	const [isOpen, setIsOpen] = createSignal(false);
-
-	createEffect(() => {
-		console.log("value", value());
-	}, [value()]);
 
 	function togglePopup() {
 		if (enabled()) {

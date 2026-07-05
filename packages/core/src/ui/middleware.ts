@@ -1,15 +1,21 @@
-import type { AuthUser } from "@devpad/schema/bindings";
+import { AuthUserSchema, type AuthUser } from "@devpad/schema/bindings";
+import { z } from "zod";
 
-interface CookieAdapter {
+const SessionCheckResponseSchema = z.object({
+	authenticated: z.boolean(),
+	user: AuthUserSchema,
+});
+
+type CookieAdapter = {
 	get(name: string): string | undefined;
 	set(name: string, value: string, options: Record<string, unknown>): void;
-}
+};
 
-interface AuthResult {
+type AuthResult = {
 	user: AuthUser;
 	session: { id: string } | null;
 	redirect?: string;
-}
+};
 
 export async function resolveAuth(
 	request: Request,
@@ -22,7 +28,7 @@ export async function resolveAuth(
 	const authUserHeader = request.headers.get("X-Auth-User");
 	if (authUserHeader) {
 		try {
-			user = JSON.parse(authUserHeader);
+			user = AuthUserSchema.parse(JSON.parse(authUserHeader));
 			session = { id: request.headers.get("X-Auth-Session-Id") ?? "injected" };
 		} catch {}
 		return { user, session };
@@ -53,7 +59,7 @@ export async function resolveAuth(
 			},
 		});
 		if (response.ok) {
-			const data = (await response.json()) as { authenticated: boolean; user: AuthUser };
+			const data = SessionCheckResponseSchema.parse(await response.json());
 			if (data.authenticated && data.user) {
 				user = data.user;
 				session = { id: "verified" };

@@ -72,10 +72,10 @@ export function is_auto_approvable(scope: string, stage_name: string): boolean {
 	);
 }
 
-export interface GrantVerdict {
+export type GrantVerdict = {
 	granted: boolean;
 	reason?: string;
-}
+};
 
 /**
  * Evaluate a list of grants against a requested scope and stage.

@@ -2,38 +2,38 @@ import { Empty, Stat } from "@f0rbit/ui";
 import { For, Show } from "solid-js";
 import PulseChart from "./pulse-chart";
 
-interface SeriesPoint {
+type SeriesPoint = {
 	t: number;
 	count: number;
-}
+};
 
-interface SummarySeries {
+type SummarySeries = {
 	pageviews?: SeriesPoint[];
 	errors?: SeriesPoint[];
 	logs?: SeriesPoint[];
 	requests?: SeriesPoint[];
-}
+};
 
-interface SummaryTotals {
+type SummaryTotals = {
 	pageviews?: number;
 	errors?: number;
 	logs?: number;
 	requests?: number;
 	unique_visitors?: number;
-}
+};
 
-export interface PulseSummary {
+export type PulseSummary = {
 	totals?: SummaryTotals;
 	series?: SummarySeries;
 	range?: { from: number; to: number };
-}
+};
 
-interface PulseOverviewProps {
+type PulseOverviewProps = {
 	projectId: string;
 	projectSlug: string;
 	summary: PulseSummary | null;
 	error?: string | null;
-}
+};
 
 const SPARKS: Array<{ key: keyof SummarySeries; label: string; color: string }> = [
 	{ key: "pageviews", label: "pageviews", color: "var(--item-blue, #4a90e2)" },

@@ -5,14 +5,15 @@ import Loader from "lucide-solid/icons/loader";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
+import { log } from "@/lib/pulse";
 
-interface Props {
+type Props = {
 	mode: "create" | "edit";
 	goal: Goal | null;
 	milestones: Milestone[];
 	onSuccess: (goal: Goal) => void;
 	onCancel: () => void;
-}
+};
 
 export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: Props) {
 	const [state, setState] = createStore({
@@ -74,7 +75,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 				onSuccess(result);
 			}, 500);
 		} catch (error) {
-			console.error(`Error ${mode}ing goal:`, error);
+			log.error(`Error ${mode}ing goal`, error);
 			setErrorMessage(`Failed to ${mode} goal. Please try again.`);
 			setRequestState("error");
 

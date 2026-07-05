@@ -25,11 +25,11 @@ const nextProgress = (current: Progress): Progress => {
 	}
 };
 
-interface OptimisticTaskProgressProps {
+type OptimisticTaskProgressProps = {
 	task: TaskWithDetails;
 	type?: "circle" | "box";
 	onUpdate?: (taskId: string, updates: { progress: Progress }) => void;
-}
+};
 
 /**
  * Task progress component with optimistic updates

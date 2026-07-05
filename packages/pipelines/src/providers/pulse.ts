@@ -84,7 +84,14 @@ export const make_pulse_summary_client = (pulse: Fetcher): PulseSummaryProvider 
 				const text = await response.text().catch(() => "");
 				return err({ code: "internal", message: text || `pulse summary ${String(response.status)}` });
 			}
-			const body = (await response.json().catch(() => null)) as PulseSummaryResponse | null;
+			let raw_body: unknown = null;
+			try {
+				const parsed: unknown = await response.json();
+				raw_body = parsed;
+			} catch {
+				raw_body = null;
+			}
+			const body = raw_body as PulseSummaryResponse | null;
 			if (body === null) return err({ code: "internal", message: "pulse summary returned non-json" });
 			const now = Date.now();
 			return ok({

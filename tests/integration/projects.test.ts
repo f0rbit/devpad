@@ -15,7 +15,8 @@ describe("projects API client integration", () => {
 		const response = await fetch("http://localhost:3001/api/v1");
 		expectSuccessfulResponse(response);
 
-		const data = await response.json();
+		const raw: unknown = await response.json();
+		const data = raw as { version: string };
 		expect(data.version).toBe("1");
 	});
 

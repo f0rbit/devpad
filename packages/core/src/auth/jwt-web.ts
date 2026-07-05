@@ -1,11 +1,14 @@
 import { err, ok, type Result } from "@f0rbit/corpus";
+import { z } from "zod";
 
-export type JWTPayload = {
-	user_id: string;
-	session_id: string;
-	iat: number;
-	exp: number;
-};
+const JWTPayloadSchema = z.object({
+	user_id: z.string(),
+	session_id: z.string(),
+	iat: z.number(),
+	exp: z.number(),
+});
+
+export type JWTPayload = z.infer<typeof JWTPayloadSchema>;
 
 export type JWTError =
 	| { kind: "expired" }
@@ -109,7 +112,7 @@ export function decodeJWT(token: string): Result<JWTPayload, JWTError> {
 
 	const raw = (() => {
 		try {
-			return JSON.parse(base64UrlDecodeString(parts[1])) as JWTPayload;
+			return JWTPayloadSchema.parse(JSON.parse(base64UrlDecodeString(parts[1])));
 		} catch {
 			return null;
 		}

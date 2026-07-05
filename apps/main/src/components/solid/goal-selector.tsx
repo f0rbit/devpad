@@ -3,18 +3,19 @@ import type { Goal, Milestone } from "@devpad/schema";
 import Edit from "lucide-solid/icons/edit";
 import X from "lucide-solid/icons/x";
 import { createEffect, createSignal, For, Show } from "solid-js";
+import { log } from "@/lib/pulse";
 import { GoalQuickForm } from "./goal-quick-form";
 
-interface Props {
+type Props = {
 	project_id: string | null; // Database ID, not slug
 	goal_id: string | null;
 	onChange: (goal_id: string | null) => void;
 	disabled?: boolean;
-}
+};
 
-interface MilestoneWithGoals extends Milestone {
+type MilestoneWithGoals = {
 	goals: Goal[];
-}
+} & Milestone;
 
 export function GoalSelector({ project_id, goal_id, onChange, disabled = false }: Props) {
 	const [selected, setSelected] = createSignal<string>(goal_id ?? "");
@@ -47,7 +48,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 		const api_client = getBrowserClient();
 		const result = await api_client.milestones.getByProject(project_id);
 		if (!result.ok) {
-			console.error("Failed to load milestones and goals:", result.error);
+			log.error("Failed to load milestones and goals", undefined, { error: result.error });
 			setMilestones([]);
 			setLoading(false);
 			return;

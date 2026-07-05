@@ -23,10 +23,10 @@ import { errors as jose_errors, jwtVerify, SignJWT } from "jose";
 export type SessionSignError = { reason: string };
 export type SessionVerifyError = { reason: string };
 
-export interface SessionSigner {
+export type SessionSigner = {
 	sign(claims: OidcSessionClaims): Promise<Result<string, SessionSignError>>;
 	verify(token: string): Promise<Result<OidcSessionClaims, SessionVerifyError>>;
-}
+};
 
 const SESSION_ISSUER = "devpad-pipelines";
 const SESSION_AUDIENCE = "devpad-pipelines";

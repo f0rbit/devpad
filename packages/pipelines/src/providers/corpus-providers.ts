@@ -225,9 +225,9 @@ export type BundleProviderError =
  * bindings + compatibility flags and maps the typed error to
  * `BundleFetchError`).
  */
-export interface DirectoryBundleProvider {
+export type DirectoryBundleProvider = {
 	fetch(version_set_id: string): Promise<Result<BundlePayload, BundleProviderError>>;
-}
+};
 
 const fetch_bytes = async (backend: Backend, ref: string): Promise<Result<Uint8Array, string>> => {
 	const handle = await backend.data.get(ref);
@@ -256,7 +256,8 @@ const load_widened_manifest = async (
 	}
 	let json: unknown;
 	try {
-		json = JSON.parse(text);
+		const parsed_json: unknown = JSON.parse(text);
+		json = parsed_json;
 	} catch (e) {
 		return err({ kind: "bundle_unavailable", reason: `manifest json parse failed: ${String(e)}` });
 	}
@@ -276,7 +277,8 @@ const parse_bundle_manifest = (ref: string, bytes: Uint8Array): Result<BundleMan
 	}
 	let json: unknown;
 	try {
-		json = JSON.parse(text);
+		const parsed_json: unknown = JSON.parse(text);
+		json = parsed_json;
 	} catch (e) {
 		return err({ kind: "bundle_manifest_invalid", ref, reason: `json parse failed: ${String(e)}` });
 	}
@@ -296,7 +298,8 @@ const parse_asset_manifest = (ref: string, bytes: Uint8Array): Result<AssetManif
 	}
 	let json: unknown;
 	try {
-		json = JSON.parse(text);
+		const parsed_json: unknown = JSON.parse(text);
+		json = parsed_json;
 	} catch (e) {
 		return err({ kind: "asset_manifest_invalid", ref, reason: `json parse failed: ${String(e)}` });
 	}

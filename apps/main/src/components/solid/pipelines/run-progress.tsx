@@ -1,22 +1,23 @@
 import type { PipelineRun } from "@devpad/schema";
 import { For, Show } from "solid-js";
 
-interface RunProgressProps {
+type RunProgressProps = {
 	run: PipelineRun;
-}
+};
 
-interface RolloutStage {
+type RolloutStage = {
 	name: string;
-}
+};
 
-interface ResolvedRollout {
+type ResolvedRollout = {
 	stages?: RolloutStage[];
-}
+};
 
 export default function RunProgress(props: RunProgressProps) {
 	const stages = (() => {
 		try {
-			const rollout = JSON.parse(props.run.resolved_rollout as string) as ResolvedRollout;
+			const raw: unknown = JSON.parse(props.run.resolved_rollout as string);
+			const rollout = raw as ResolvedRollout;
 			return rollout.stages ?? [];
 		} catch {
 			return [];

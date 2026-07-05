@@ -60,12 +60,12 @@ export const github_branches = z.object({
 // pair, so the record necessarily erases them at rest — `define_tool` below is
 // the single point where a concretely-typed entry gets erased into this shape,
 // keeping every `execute` body itself fully typed against its own schema.
-export interface ToolDefinition {
+export type ToolDefinition = {
 	name: string;
 	description: string;
 	inputSchema: z.ZodTypeAny;
 	execute: (client: ApiClient, input: unknown) => Promise<unknown>;
-}
+};
 
 // `z.ZodType<TInput>` only infers TInput against the schema's input-side shape
 // (pre-`.default()`), not its true output — `S extends z.ZodTypeAny` + `z.infer<S>`

@@ -6,10 +6,10 @@ import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, Show } from "solid-js";
 
-interface GrantsListProps {
+type GrantsListProps = {
 	grants: PipelineGrant[];
 	user_id: string;
-}
+};
 
 const format_date = (dateString: string | null) => {
 	if (!dateString) return null;

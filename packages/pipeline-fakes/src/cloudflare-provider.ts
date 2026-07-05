@@ -212,7 +212,7 @@ export type CreateDeploymentInput = {
  * exists so the orchestrator can verify its zone-level Transform Rule wiring without
  * needing to actually deploy a Worker.
  */
-export interface CloudflareProvider {
+export type CloudflareProvider = {
 	versions: {
 		upload(input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>>;
 		list(script_name: string): Promise<Result<WorkerVersion[], CloudflareError>>;
@@ -228,4 +228,4 @@ export interface CloudflareProvider {
 		script_name: string;
 		version_key: string;
 	}): Promise<Result<{ resolved_version_id: string }, CloudflareError>>;
-}
+};

@@ -142,10 +142,10 @@ export async function getProjectConfig(
 		.where(eq(tag_config.project_id, project_id))
 		.groupBy(tag.id);
 
-	const tags = tag_result.map((row) => ({
-		name: row.name,
-		match: JSON.parse(row.matches || "[]") as string[],
-	}));
+	const tags = tag_result.map((row) => {
+		const raw_matches: unknown = JSON.parse(row.matches || "[]");
+		return { name: row.name, match: raw_matches as string[] };
+	});
 
 	const ignore_result = await db
 		.select({ path: ignore_path.path })

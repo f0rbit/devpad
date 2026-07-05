@@ -12,10 +12,10 @@ export type PipelineStatus = {
 	pending_approval_count: number;
 };
 
-interface Props {
+type Props = {
 	project: Project;
 	pipeline_status?: PipelineStatus;
-}
+};
 
 const STATUS_LABELS: Record<Project["status"], string> = {
 	DEVELOPMENT: "Development",

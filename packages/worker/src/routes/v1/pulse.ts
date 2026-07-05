@@ -71,7 +71,7 @@ const forward_to_pulse = async (c: Context<AppContext>, opts: ForwardOpts): Prom
 	if (response.status === 204) return c.body(null, 204);
 
 	if (content_type.includes("application/json")) {
-		const data = await response.json();
+		const data: unknown = await response.json();
 		return c.json(data as Record<string, unknown>, response.status as 200);
 	}
 
@@ -201,7 +201,7 @@ app.post("/admin/subs", requireAuth, async (c) => {
 
 	const content_type = response.headers.get("content-type") ?? "";
 	if (content_type.includes("application/json")) {
-		const data = await response.json();
+		const data: unknown = await response.json();
 		return c.json(data as Record<string, unknown>, response.status as 200);
 	}
 	const text = await response.text();
@@ -254,7 +254,7 @@ app.post("/admin/keys", requireAuth, async (c) => {
 	if (response.status === 502 || response.status === 503) return c.json({ error: "pulse_unreachable" }, 503);
 	const content_type = response.headers.get("content-type") ?? "";
 	if (content_type.includes("application/json")) {
-		const data = await response.json();
+		const data: unknown = await response.json();
 		return c.json(data as Record<string, unknown>, response.status as 200);
 	}
 	const text = await response.text();

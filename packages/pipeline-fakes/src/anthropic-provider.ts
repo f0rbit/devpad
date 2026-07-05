@@ -33,8 +33,8 @@ export type CreateMessagesOutput = {
  * and the vault adapter. The production provider wraps the official SDK; the in-memory
  * provider records calls for assertions.
  */
-export interface AnthropicProvider {
+export type AnthropicProvider = {
 	messages: {
 		create(input: CreateMessagesInput): Promise<Result<CreateMessagesOutput, AnthropicError>>;
 	};
-}
+};

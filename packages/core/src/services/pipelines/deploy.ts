@@ -70,13 +70,13 @@ export type BundlePayload =
 			assets?: { assets: AssetUpload[]; config?: AssetConfig };
 	  };
 
-export interface BundleProvider {
+export type BundleProvider = {
 	get(input: {
 		version_set_id: string;
 		package_name: string;
 		environment: "staging" | "production";
 	}): Promise<Result<BundlePayload, BundleFetchError>>;
-}
+};
 
 export type DeploymentResult = {
 	version: WorkerVersion;

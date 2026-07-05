@@ -37,9 +37,9 @@ export type GrantRpcError = { kind: "invalid_caller"; message: string } | { kind
  * vault side so vault doesn't need a workspace import on
  * `@devpad/pipelines`.
  */
-export interface PipelinesGrantsRPC {
+export type PipelinesGrantsRPC = {
 	check(caller: CallerIdentity, scope: string): Promise<Result<GrantCheckResponse, GrantRpcError>>;
-}
+};
 
 const validate_caller = (caller: CallerIdentity): Result<void, GrantRpcError> => {
 	if (typeof caller.package_id !== "string" || caller.package_id.length === 0)

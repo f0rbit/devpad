@@ -24,12 +24,13 @@ describe("API Key Management Integration", () => {
 				}
 
 				if (response.ok) {
-					const result = (await response.json()) as any;
+					const raw: unknown = await response.json();
+					const result = raw as { key?: string; name?: string };
 					expect(result).toBeDefined();
 					expect(result.key).toBeDefined();
 					expect(result.name).toBe("Test API Key");
 				} else {
-					const error = (await response.json()) as any;
+					const error: unknown = await response.json();
 					console.warn("API key creation failed:", error);
 				}
 			} catch (error) {
@@ -54,7 +55,8 @@ describe("API Key Management Integration", () => {
 				}
 
 				if (response.ok) {
-					const result = (await response.json()) as any;
+					const raw: unknown = await response.json();
+					const result = raw as { key?: string };
 					expect(result).toBeDefined();
 					expect(result.key).toBeDefined();
 				}
@@ -81,7 +83,8 @@ describe("API Key Management Integration", () => {
 				}
 
 				if (response.ok) {
-					const result = (await response.json()) as any;
+					const raw: unknown = await response.json();
+					const result = raw as { keys?: unknown[] };
 					expect(result).toBeDefined();
 					expect(Array.isArray(result.keys || result)).toBe(true);
 				} else {
@@ -113,7 +116,8 @@ describe("API Key Management Integration", () => {
 				}
 
 				if (createResponse.ok) {
-					const createdKey = (await createResponse.json()) as any;
+					const raw_created: unknown = await createResponse.json();
+					const createdKey = raw_created as { id?: string };
 					const keyId = createdKey.id;
 
 					const deleteResponse = await fetch(`http://localhost:3001/api/v1/keys/${String(keyId)}`, {
@@ -125,7 +129,7 @@ describe("API Key Management Integration", () => {
 					});
 
 					if (deleteResponse.ok) {
-						const result = (await deleteResponse.json()) as any;
+						const result: unknown = await deleteResponse.json();
 						expect(result).toBeDefined();
 					} else {
 						console.warn("API key deletion failed, status:", deleteResponse.status);
@@ -217,7 +221,8 @@ describe("API Key Management Integration", () => {
 				}
 
 				if (response.ok) {
-					const result = (await response.json()) as any;
+					const raw: unknown = await response.json();
+					const result = raw as { keys?: Array<{ key?: string }> };
 					const keys = result.keys || result;
 
 					if (Array.isArray(keys) && keys.length > 0) {

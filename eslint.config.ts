@@ -35,6 +35,22 @@ export default define_lint_config({
 			// f0rbit/must-use-result is deliberately NOT here -- it stays error and
 			// every baseline violation was fixed in this PR (real discarded-Result
 			// bugs, not a style debt bucket).
+			// --- @f0rbit/lint 0.1.5 -> 0.3.0 rollout (chore/lint-030) ---
+			// f0rbit/no-ambient-effects and f0rbit/prefer-pipe ship warn-tier by
+			// factory default in 0.2.0/0.3.0 -- no override needed here to SET the
+			// tier, they're already warn. Appended to this SAME graduation
+			// mechanism (real devpad tasks, not a new ad-hoc list):
+			//   - f0rbit/no-ambient-effects (236 baseline hits): graduates to error
+			//     once packages designate clock/rng provider modules via
+			//     ambient_effect_files (pulse phase-3 precedent). Tracked by
+			//     task_20d205a2-5c6d-40a2-a9af-e47940a6dba2
+			//   - f0rbit/prefer-pipe (15 baseline hits): needs manual per-site
+			//     pipe() composition, not mechanical. Tracked by
+			//     task_093e3f71-2291-4f2e-99ce-2e8392793187
+			// f0rbit/require-schema-at-boundary, no-console, and
+			// consistent-type-definitions (0.2.0/0.3.0 error-tier additions) were
+			// fixed for real in this rollout -- no override, no exceptions beyond
+			// the scoped ones below (env.d.ts, CLI output modules, etc.).
 			// `files` must be scoped to ts_files: an unscoped rules-only override
 			// applies to every file the flat config sees (including plain .js
 			// scripts), and those never get the @typescript-eslint plugin
@@ -179,6 +195,166 @@ export default define_lint_config({
 			files: ["packages/pipelines/__tests__/integration/orchestrator-routes.test.ts"],
 			rules: {
 				"@typescript-eslint/no-unnecessary-type-parameters": "off",
+			},
+		},
+		{
+			// env.d.ts files are ambient Astro/Vite declaration-merging targets
+			// (`declare global { namespace App { interface Locals } } }`,
+			// `interface ImportMetaEnv`). typescript-eslint's --fix for
+			// consistent-type-definitions returns null on interfaces nested in
+			// `declare global` (upstream #2707 -- can't safely rewrite ambient
+			// merged declarations), so those three still error unless silenced
+			// here. apps/main/src/env.d.ts uses `declare namespace App` without
+			// the `declare global` wrapper, so the ambient-guard technically
+			// doesn't catch it and --fix WOULD mechanically rewrite it to a type
+			// alias -- but that risks breaking Astro's own Locals merge-target
+			// contract without a compile error surfacing immediately. All three
+			// are silenced consistently rather than relying on that asymmetry.
+			files: ["**/env.d.ts"],
+			rules: {
+				"@typescript-eslint/consistent-type-definitions": "off",
+			},
+		},
+		{
+			// --- no-console overrides (@f0rbit/lint 0.2.0 wave) ---
+			// packages/cli is a CLI: index.ts (bootstrap banner + top-level error
+			// reporting), printer.ts (its own docstring: "Shared TTY-aware output
+			// helpers"), commands/pipelines.ts (all user-facing command output),
+			// and corpus-http-backend.ts (best-effort shadow-write warnings during
+			// the corpus migration, logged and continued rather than failed) are
+			// all genuine terminal UX, not application logging -- scoped to these
+			// specific output modules, not the whole package.
+			files: [
+				"packages/cli/src/index.ts",
+				"packages/cli/src/printer.ts",
+				"packages/cli/src/commands/**",
+				"packages/cli/src/corpus-http-backend.ts",
+			],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// packages/cli's own tests: packages-commands.test.ts and
+			// oidc-trust-cli.test.ts monkey-patch console.log/console.error to
+			// capture CLI output into buffers for assertions (no-console flags
+			// the property reads, not just the calls); scaffold-init-golden.test.ts
+			// prints a confirmation when regenerating golden fixtures
+			// (UPDATE_GOLDENS=1); compile-pipeline.test.ts prints the raw error
+			// before an `expect(result.ok).toBe(true)` that would otherwise hide it.
+			// All four are test-diagnostic output, not app logging debt.
+			files: ["packages/cli/tests/**"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// packages/core/src/utils/logger.ts is the createLogger() wrapper --
+			// the sanctioned structured-logging channel call sites import instead
+			// of calling console.* directly (see packages/core/src/services/media/**
+			// for ~19 existing consumers, and the pipelines/grants.ts +
+			// pipelines/gates/analysis.ts fixes in this same wave). The wrapper
+			// itself is the one place console.* is legitimately called.
+			files: ["packages/core/src/utils/logger.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// packages/schema/src/errors.ts's defaultLogger is the built-in
+			// console-based implementation of the pluggable ErrorLogFn --
+			// consumers override via configureErrorLogging() when they have a
+			// real channel (see apps/media/src/utils/error-logger.ts below).
+			files: ["packages/schema/src/errors.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// packages/api/src/request.ts's console.log calls are ApiClient's own
+			// opt-in `debug` constructor option (gated behind `this.debug`), not
+			// unconditional logging -- explicit opt-in debug tooling, not app
+			// logging debt.
+			files: ["packages/api/src/request.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// packages/mcp/src/index.ts is a stdio MCP server -- stdout carries
+			// JSON-RPC framing, so console.error (stderr) is the only place this
+			// process can legitimately report its own status/errors. Permanent,
+			// not debt.
+			files: ["packages/mcp/src/index.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// packages/worker/src/index.ts's one remaining console.error is the
+			// Astro-handler-threw catch in createUnifiedWorker's top-level fetch --
+			// it runs outside any Hono request context (no `c.get("log")` available
+			// there), so it's the only signal this crash gets short of wiring pulse
+			// through the raw Worker fetch handler. packages/worker/src/local.ts's
+			// console.error is a bun-native local-dev bootstrap check (fatal
+			// config error before process.exit), the same class as a CLI startup
+			// error, not a Cloudflare-deployed code path.
+			files: ["packages/worker/src/index.ts", "packages/worker/src/local.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// scripts/build-unified.ts is a build script -- console.log/error is
+			// its user-facing terminal progress output (`bun run build:worker`),
+			// the same class as the CLI's output modules above.
+			files: ["scripts/build-unified.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// tests/integration/**'s pre-existing "soft-skip" pattern: several
+			// integration suites console.warn a diagnostic ("X endpoint not
+			// implemented"/"X failed, status: ...") and return early instead of
+			// hard-failing when a route isn't wired up yet in the local test
+			// server. tests/shared/test-utils.ts's `log()` is the analogous
+			// DEBUG_LOGGING-gated helper. Pre-existing test-diagnostics
+			// convention, not application logging debt -- not migrated to avoid
+			// changing which soft-skips are visible in default (non-DEBUG_LOGGING)
+			// CI output.
+			files: ["tests/integration/**", "tests/shared/test-utils.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// apps/main/src/lib/pulse.ts exports a browser `log` namespace
+			// (mirrors packages/worker/src/lib/log.ts on the server side) --
+			// components import `log.error`/`log.warning` from "@/lib/pulse"
+			// instead of calling console.* directly (see update-diff.tsx,
+			// tag-editor.tsx, task-status.ts, task-sorter.tsx, task-editor.tsx,
+			// config-editor.tsx, task-card.tsx, goal-selector.tsx,
+			// goal-quick-form.tsx in this same wave). No override needed for
+			// apps/main -- every call site was migrated for real.
+			//
+			// apps/blog and apps/media have no equivalent client-side pulse
+			// wiring yet, so their handful of `console.error("[Component] ...")`
+			// catch-block logs and (for media) the ErrorLogFn default
+			// implementation stay as scoped overrides until one gets built.
+			files: [
+				"apps/blog/src/components/post/project-selector.tsx",
+				"apps/blog/src/components/post/post-editor.tsx",
+				"apps/media/src/utils/error-logger.ts",
+				"apps/media/src/components/solid/profile-selector.tsx",
+				"apps/media/src/components/solid/profile-list.tsx",
+				"apps/media/src/components/solid/PlatformSettings/you-tube-settings.tsx",
+				"apps/media/src/components/solid/PlatformSettings/use-settings.ts",
+				"apps/media/src/components/solid/PlatformSettings/devpad-settings.tsx",
+				"apps/media/src/components/solid/PlatformSettings/bluesky-settings.tsx",
+			],
+			rules: {
+				"no-console": "off",
 			},
 		},
 	],

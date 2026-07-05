@@ -7,7 +7,8 @@ const getUserId = (): string | undefined => {
 	try {
 		const user = localStorage.getItem("user");
 		if (user) {
-			const parsed = JSON.parse(user);
+			const raw: unknown = JSON.parse(user);
+			const parsed = raw as { id?: string; user_id?: string };
 			return parsed.id || parsed.user_id;
 		}
 	} catch {

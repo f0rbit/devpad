@@ -114,7 +114,8 @@ const start_recorder = (): RecorderHandle => {
 				body = text;
 				if (text.length > 0) {
 					try {
-						body = JSON.parse(text);
+						const raw_body: unknown = JSON.parse(text);
+						body = raw_body;
 					} catch {
 						// leave as string
 					}
@@ -237,7 +238,8 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 
 		const parts = req.parts!;
 		expect(parts.metadata).toBeDefined();
-		const metadata = JSON.parse(parts.metadata.text) as {
+		const raw_metadata: unknown = JSON.parse(parts.metadata.text);
+		const metadata = raw_metadata as {
 			main_module: string;
 			compatibility_date: string;
 			compatibility_flags: string[];
@@ -338,7 +340,8 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 		// And finally the versions upload carries metadata.assets.jwt + config.
 		expect(versions_req.pathname).toBe("/client/v4/accounts/acct_test/workers/scripts/astro-app/versions");
 		expect(versions_req.parts!.metadata).toBeDefined();
-		const metadata = JSON.parse(versions_req.parts!.metadata.text) as {
+		const raw_metadata: unknown = JSON.parse(versions_req.parts!.metadata.text);
+		const metadata = raw_metadata as {
 			assets?: { jwt: string; config: Record<string, unknown> };
 		};
 		expect(metadata.assets).toBeDefined();

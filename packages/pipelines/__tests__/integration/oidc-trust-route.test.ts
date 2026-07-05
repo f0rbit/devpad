@@ -80,25 +80,28 @@ const send_json = async (
 			body: JSON.stringify(body),
 		}),
 	);
+	const raw_body: unknown = await res.json();
 	return {
 		status: res.status,
-		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+		body: raw_body as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
 	};
 };
 
 const send_get = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "GET", headers }));
+	const raw_body: unknown = await res.json();
 	return {
 		status: res.status,
-		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+		body: raw_body as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
 	};
 };
 
 const send_delete = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "DELETE", headers }));
+	const raw_body: unknown = await res.json();
 	return {
 		status: res.status,
-		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+		body: raw_body as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
 	};
 };
 

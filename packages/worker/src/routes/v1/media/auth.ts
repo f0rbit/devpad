@@ -1,9 +1,14 @@
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { credential, token } from "@devpad/core/services/media";
 import { Hono } from "hono";
+import { z } from "zod";
 import type { AppContext } from "../../../bindings.js";
 import { getContext } from "./auth-context.js";
 import { type OAuthCallbackConfig, type OAuthState, oauth, type PlatformSecrets } from "./oauth-helpers.js";
+
+const RedditUserResponseSchema = z.object({ id: z.string(), name: z.string() });
+const TwitterUserResponseSchema = z.object({ data: z.object({ id: z.string(), username: z.string() }) });
+const GitHubUserResponseSchema = z.object({ id: z.number(), login: z.string() });
 
 type RedditOAuthState = { byo?: boolean };
 
@@ -43,7 +48,7 @@ const redditOAuthConfig: OAuthCallbackConfig<RedditOAuthState> = {
 			},
 		});
 		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
-		const data = await response.json();
+		const data = RedditUserResponseSchema.parse(await response.json());
 		return { id: data.id, username: data.name };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.reddit_client_id, clientSecret: secrets.reddit_client_secret }),
@@ -67,7 +72,7 @@ const twitterOAuthConfig: OAuthCallbackConfig<{ code_verifier: string }> = {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		});
 		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
-		const data = await response.json();
+		const data = TwitterUserResponseSchema.parse(await response.json());
 		return { id: data.data.id, username: data.data.username };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.twitter_client_id, clientSecret: secrets.twitter_client_secret }),
@@ -94,7 +99,7 @@ export const githubOAuthConfig: OAuthCallbackConfig = {
 			},
 		});
 		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
-		const data = await response.json();
+		const data = GitHubUserResponseSchema.parse(await response.json());
 		return { id: String(data.id), username: data.login };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.github_client_id, clientSecret: secrets.github_client_secret }),

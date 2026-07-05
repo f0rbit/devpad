@@ -1,7 +1,7 @@
-interface VersionSetDiffProps {
+type VersionSetDiffProps = {
 	current: Record<string, unknown>;
 	previous?: Record<string, unknown>;
-}
+};
 
 const format_json = (obj: Record<string, unknown>): string => {
 	return JSON.stringify(obj, null, 2);

@@ -30,6 +30,6 @@ export type PulseError =
  * Provider port for pulse's per-version summary endpoint. Production wraps the
  * HTTP API; tests inject the in-memory fake.
  */
-export interface PulseSummaryProvider {
+export type PulseSummaryProvider = {
 	fetch(query: PulseSummaryQuery): Promise<Result<MetricSnapshot, PulseError>>;
-}
+};

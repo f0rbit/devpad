@@ -21,7 +21,8 @@ describe("User Preferences & Profile Integration", () => {
 				}
 
 				if (response.ok) {
-					const user = (await response.json()) as any;
+					const raw_user: unknown = await response.json();
+					const user = raw_user as any;
 					expect(user).toBeDefined();
 					expect(user.id).toBeDefined();
 					expect(typeof user.id).toBe("string");
@@ -55,7 +56,8 @@ describe("User Preferences & Profile Integration", () => {
 				}
 
 				if (response.ok) {
-					const result = (await response.json()) as any;
+					const raw_result: unknown = await response.json();
+					const result = raw_result as any;
 					expect(result).toBeDefined();
 				} else {
 					console.warn("User preferences update failed, status:", response.status);
@@ -85,7 +87,8 @@ describe("User Preferences & Profile Integration", () => {
 				}
 
 				if (response.ok) {
-					const result = (await response.json()) as any;
+					const raw_result: unknown = await response.json();
+					const result = raw_result as any;
 					expect(result).toBeDefined();
 				} else {
 					console.warn("User preferences update failed, status:", response.status);
@@ -191,7 +194,8 @@ describe("User Preferences & Profile Integration", () => {
 				}
 
 				if (response.ok) {
-					const history = (await response.json()) as any;
+					const raw_history: unknown = await response.json();
+					const history = raw_history as any;
 					expect(Array.isArray(history)).toBe(true);
 				} else {
 					console.warn("User history fetch failed, status:", response.status);
@@ -336,7 +340,8 @@ describe("User Preferences & Profile Integration", () => {
 					});
 
 					if (profileResponse.ok) {
-						const user = (await profileResponse.json()) as any;
+						const raw_user: unknown = await profileResponse.json();
+						const user = raw_user as any;
 						if (user.task_view !== undefined) {
 							expect(user.task_view).toBe("grid");
 						}

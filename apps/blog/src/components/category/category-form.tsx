@@ -5,12 +5,12 @@ import { form } from "../../lib/form-utils";
 
 type Category = Pick<SchemaCategory, "id" | "name" | "parent">;
 
-interface CategoryFormProps {
+type CategoryFormProps = {
 	categories: Category[];
 	onSubmit: (data: { name: string; parent: string }) => Promise<void>;
 	defaultParent: string;
 	highlighted: boolean;
-}
+};
 
 let formRef: HTMLElement | undefined;
 let nameInputRef: HTMLInputElement | undefined;

@@ -11,11 +11,11 @@ type Token = {
 	created_at: string;
 };
 
-interface TokenListProps {
+type TokenListProps = {
 	tokens: Token[];
 	onToggle: (id: number, enabled: boolean) => void;
 	onDelete: (id: number) => void;
-}
+};
 
 const TokenList: Component<TokenListProps> = (props) => {
 	return (

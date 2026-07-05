@@ -2,11 +2,11 @@ import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, 
 import { type Component, createSignal, Show } from "solid-js";
 import { form } from "../../lib/form-utils";
 
-interface TokenFormProps {
+type TokenFormProps = {
 	isOpen: boolean;
 	onSubmit: (data: { name: string; note?: string }) => Promise<{ key: string }>;
 	onClose: () => void;
-}
+};
 
 const TokenForm: Component<TokenFormProps> = (props) => {
 	const [name, setName] = createSignal("");

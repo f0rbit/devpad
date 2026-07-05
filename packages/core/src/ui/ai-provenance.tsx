@@ -3,10 +3,10 @@ import { Show } from "solid-js";
 
 type ProvenanceState = "created-and-modified" | "created" | "modified";
 
-interface AiProvenanceProps {
+type AiProvenanceProps = {
 	created_by?: "user" | "api" | null;
 	modified_by?: "user" | "api" | null;
-}
+};
 
 export function AiProvenance(props: AiProvenanceProps) {
 	const show = () => props.created_by === "api" || props.modified_by === "api";

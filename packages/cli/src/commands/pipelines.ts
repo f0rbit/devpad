@@ -193,7 +193,7 @@ const action_grants_deny =
 		spinner.succeed(`denied grant ${grant_id}`);
 	};
 
-interface ArtifactsUploadOptions {
+type ArtifactsUploadOptions = {
 	package: string;
 	/** Legacy single-file Worker bundle path. Mutually exclusive with `bundleDir`. */
 	bundle?: string;
@@ -217,7 +217,7 @@ interface ArtifactsUploadOptions {
 	orchestratorUrl?: string;
 	token?: string;
 	mode?: string;
-}
+};
 
 type ResolvedMode = { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined };
 
@@ -289,7 +289,8 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	if (options.manifest !== undefined && options.manifest !== "") {
 		manifest_text = readFileSync(options.manifest, "utf8");
 	}
-	const manifest_obj = JSON.parse(manifest_text) as object;
+	const raw_manifest: unknown = JSON.parse(manifest_text);
+	const manifest_obj = raw_manifest as object;
 	const infra_plan = readFileSync(options.infraPlan);
 	const pipeline = readFileSync(options.pipeline);
 	const grants = readFileSync(options.grants);
@@ -614,7 +615,7 @@ const upload_assets_directory = async (
 
 const try_parse_json_object = (text: string): object | null => {
 	try {
-		const parsed = JSON.parse(text) as unknown;
+		const parsed: unknown = JSON.parse(text);
 		return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : null;
 	} catch {
 		return null;
@@ -696,10 +697,10 @@ const compile_and_upload_template = async (
 	return { ok: true, value: upload.value.ref };
 };
 
-interface RunsStartOptions {
+type RunsStartOptions = {
 	package: string;
 	versionSetId: string;
-}
+};
 
 const action_runs_start =
 	(client_factory: ClientFactory) =>
@@ -719,12 +720,12 @@ const action_runs_start =
 // HttpClient's auth header injection) — external CI uses session JWTs
 // via direct HTTP, not the CLI.
 
-interface EventsIngestOptions {
+type EventsIngestOptions = {
 	stage: string;
 	kind: string;
 	payloadFile?: string;
 	idempotencyKey?: string;
-}
+};
 
 const STAGE_EVENT_KINDS = [
 	"deploy_started",
@@ -757,7 +758,8 @@ const action_runs_events_ingest =
 				return fail_with(spinner, `--payload-file not found: ${options.payloadFile}`);
 			const text = readFileSync(options.payloadFile, "utf8");
 			try {
-				payload = JSON.parse(text);
+				const parsed: unknown = JSON.parse(text);
+				payload = parsed;
 			} catch (e) {
 				return fail_with(spinner, `--payload-file is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
 			}
@@ -807,9 +809,9 @@ const action_runs_events_list =
 // user supplies the human-readable slug instead of memorising the
 // internal id.
 
-export interface PackagesListOptions {
+export type PackagesListOptions = {
 	project?: string;
-}
+};
 
 export const action_packages_list =
 	(client_factory: ClientFactory) =>
@@ -842,12 +844,12 @@ export const action_packages_get =
 		console.log(JSON.stringify(result.value, null, 2));
 	};
 
-export interface PackagesCreateOptions {
+export type PackagesCreateOptions = {
 	name?: string;
 	ownerId?: string;
 	project?: string;
 	repoUrl?: string;
-}
+};
 
 export const action_packages_create =
 	(client_factory: ClientFactory) =>
@@ -885,11 +887,11 @@ export const action_packages_create =
 		console.log(`  repo_url:   ${result.value.repo_url ?? "(none)"}`);
 	};
 
-export interface PackagesUpdateOptions {
+export type PackagesUpdateOptions = {
 	project?: string;
 	repoUrl?: string;
 	scriptNameOverrides?: string;
-}
+};
 
 export const action_packages_update =
 	(client_factory: ClientFactory) =>
@@ -905,7 +907,8 @@ export const action_packages_update =
 		}
 		if (options.scriptNameOverrides !== undefined) {
 			try {
-				patch.script_name_overrides = JSON.parse(options.scriptNameOverrides);
+				const parsed: unknown = JSON.parse(options.scriptNameOverrides);
+				patch.script_name_overrides = parsed;
 			} catch (e) {
 				return fail_with(spinner, `--script-name-overrides is not valid JSON: ${String(e)}`);
 			}
@@ -918,9 +921,9 @@ export const action_packages_update =
 		spinner.succeed(`updated ${result.value.id}`);
 	};
 
-export interface PackagesDeleteOptions {
+export type PackagesDeleteOptions = {
 	force?: boolean;
-}
+};
 
 export const action_packages_delete =
 	(client_factory: ClientFactory) =>
@@ -969,9 +972,9 @@ const confirm_if_tty = async (question: string): Promise<boolean> => {
 	return answer === "y" || answer === "yes";
 };
 
-export interface OidcTrustListOptions {
+export type OidcTrustListOptions = {
 	ownerId?: string;
-}
+};
 
 export const action_oidc_trust_list =
 	(client_factory: ClientFactory) =>
@@ -1004,9 +1007,9 @@ export const action_oidc_trust_list =
 		}
 	};
 
-export interface OidcTrustShowOptions {
+export type OidcTrustShowOptions = {
 	ownerId?: string;
-}
+};
 
 export const action_oidc_trust_show =
 	(client_factory: ClientFactory) =>
@@ -1022,7 +1025,7 @@ export const action_oidc_trust_show =
 		console.log(JSON.stringify(result.value, null, 2));
 	};
 
-export interface OidcTrustAddOptions {
+export type OidcTrustAddOptions = {
 	owner?: string;
 	ownerId?: string;
 	repoPattern?: string;
@@ -1031,7 +1034,7 @@ export interface OidcTrustAddOptions {
 	refs?: string;
 	environments?: string;
 	ttl?: string;
-}
+};
 
 export const action_oidc_trust_add =
 	(client_factory: ClientFactory) =>
@@ -1094,10 +1097,10 @@ export const action_oidc_trust_add =
 		console.log(`  ttl:          ${String(result.value.session_ttl_seconds)}s`);
 	};
 
-export interface OidcTrustRemoveOptions {
+export type OidcTrustRemoveOptions = {
 	ownerId?: string;
 	yes?: boolean;
-}
+};
 
 export const action_oidc_trust_remove =
 	(client_factory: ClientFactory) =>
@@ -1143,9 +1146,9 @@ const read_threshold_file = (path_: string): { ok: true; value: string } | { ok:
 	}
 };
 
-export interface AnalysisTemplatesListOptions {
+export type AnalysisTemplatesListOptions = {
 	ownerId?: string;
-}
+};
 
 export const action_analysis_templates_list =
 	(client_factory: ClientFactory) =>
@@ -1171,9 +1174,9 @@ export const action_analysis_templates_list =
 		}
 	};
 
-export interface AnalysisTemplatesGetOptions {
+export type AnalysisTemplatesGetOptions = {
 	ownerId?: string;
-}
+};
 
 export const action_analysis_templates_get =
 	(client_factory: ClientFactory) =>
@@ -1189,12 +1192,12 @@ export const action_analysis_templates_get =
 		console.log(JSON.stringify(result.value, null, 2));
 	};
 
-export interface AnalysisTemplatesCreateOptions {
+export type AnalysisTemplatesCreateOptions = {
 	name?: string;
 	ownerId?: string;
 	thresholdFile?: string;
 	windowMs?: string;
-}
+};
 
 export const action_analysis_templates_create =
 	(client_factory: ClientFactory) =>
@@ -1232,12 +1235,12 @@ export const action_analysis_templates_create =
 		console.log(`  window_ms:  ${String(result.value.window_ms)}`);
 	};
 
-export interface AnalysisTemplatesUpdateOptions {
+export type AnalysisTemplatesUpdateOptions = {
 	ownerId?: string;
 	name?: string;
 	thresholdFile?: string;
 	windowMs?: string;
-}
+};
 
 export const action_analysis_templates_update =
 	(client_factory: ClientFactory) =>
@@ -1269,9 +1272,9 @@ export const action_analysis_templates_update =
 		spinner.succeed(`updated ${result.value.id}`);
 	};
 
-export interface AnalysisTemplatesDeleteOptions {
+export type AnalysisTemplatesDeleteOptions = {
 	ownerId?: string;
-}
+};
 
 export const action_analysis_templates_delete =
 	(client_factory: ClientFactory) =>
@@ -1300,13 +1303,13 @@ export const action_analysis_templates_delete =
 //      render a workflow file, only to identify what the user named the
 //      package, which they pass explicitly).
 
-export interface WorkflowMigrateOptions {
+export type WorkflowMigrateOptions = {
 	cwd?: string;
 	rollout?: string;
 	defaultGate?: string;
 	buildShape?: string;
 	dryRun?: boolean;
-}
+};
 
 export const action_workflow_migrate =
 	(_client_factory: ClientFactory) =>
