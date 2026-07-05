@@ -31,7 +31,7 @@ type RecordedRequest = {
 };
 
 type RecorderHandle = {
-	server: Server;
+	server: Server<unknown>;
 	base_url: string;
 	requests: RecordedRequest[];
 	next_response: (handler: (req: RecordedRequest) => unknown) => void;
@@ -97,14 +97,16 @@ const parse_multipart_raw = (raw: Uint8Array, content_type: string): RecordedReq
 	return out;
 };
 
+const default_responder = (): unknown => ({
+	success: true,
+	errors: [],
+	messages: [],
+	result: {},
+});
+
 const start_recorder = (): RecorderHandle => {
 	const requests: RecordedRequest[] = [];
-	let responder: (req: RecordedRequest) => unknown = () => ({
-		success: true,
-		errors: [],
-		messages: [],
-		result: {},
-	});
+	let responder: (req: RecordedRequest) => unknown = default_responder;
 
 	const server = Bun.serve({
 		port: 0,
@@ -143,7 +145,7 @@ const start_recorder = (): RecorderHandle => {
 
 	return {
 		server,
-		base_url: `http://localhost:${server.port}/client/v4`,
+		base_url: `http://localhost:${String(server.port)}/client/v4`,
 		requests,
 		next_response: (handler) => {
 			responder = handler;
@@ -165,8 +167,8 @@ describe("cf-api-provider — caller-identity vars", () => {
 		recorder = start_recorder();
 	});
 
-	afterEach(() => {
-		recorder.server.stop(true);
+	afterEach(async () => {
+		await recorder.server.stop(true);
 	});
 
 	test("versions.upload posts multipart with metadata.bindings carrying the plain_text trio", async () => {

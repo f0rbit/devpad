@@ -7,11 +7,11 @@ import {
 	extendTemplate,
 } from "../src/index";
 
-const unwrap_ok = <T, E>(r: { ok: true; value: T } | { ok: false; error: E }): T => {
+const unwrap_ok = <T>(r: { ok: true; value: T } | { ok: false; error: unknown }): T => {
 	if (!r.ok) throw new Error(`expected ok, got err: ${JSON.stringify(r.error)}`);
 	return r.value;
 };
-const unwrap_err = <T, E>(r: { ok: true; value: T } | { ok: false; error: E }): E => {
+const unwrap_err = <E>(r: { ok: true; value: unknown } | { ok: false; error: E }): E => {
 	if (r.ok) throw new Error(`expected err, got ok: ${JSON.stringify(r.value)}`);
 	return r.error;
 };
@@ -117,7 +117,7 @@ describe("extendTemplate", () => {
 
 	test("unknown transition key in override → err(unknown_transition)", () => {
 		const result = extendTemplate({
-			gates: { "foo→bar": { type: "manual" } } as Record<`${string}→${string}`, { type: "manual" }>,
+			gates: { "foo→bar": { type: "manual" } },
 		});
 		const error = unwrap_err(result);
 		expect(error.code).toBe("unknown_transition");

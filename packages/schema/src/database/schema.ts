@@ -256,9 +256,7 @@ export const tag = sqliteTable(
 		color: text("color"),
 		render: int("render", { mode: "boolean" }).notNull().default(true),
 	},
-	table => ({
-		tag_unique: unique("tag_unique").on(table.owner_id, table.title),
-	})
+	table => [unique("tag_unique").on(table.owner_id, table.title)]
 );
 
 export const task_tag = sqliteTable(
@@ -272,9 +270,7 @@ export const task_tag = sqliteTable(
 			.references(() => tag.id),
 		...timestamps(),
 	},
-	table => ({
-		task_tag_unique: primaryKey({ columns: [table.task_id, table.tag_id] }),
-	})
+	table => [primaryKey({ columns: [table.task_id, table.tag_id] })]
 );
 
 export const commit_detail = sqliteTable("commit_detail", {

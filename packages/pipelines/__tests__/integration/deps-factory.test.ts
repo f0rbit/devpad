@@ -39,7 +39,7 @@ import {
 	make_corpus_template_resolver,
 } from "../../src/providers/corpus-providers";
 import { make_pulse_emitter, make_pulse_summary_client } from "../../src/providers/pulse";
-import { type DoCtx, make_run_handler } from "../../src/run-do";
+import { make_run_handler } from "../../src/run-do";
 import { InMemoryBundleProvider } from "./helpers";
 
 const make_db = () => {
@@ -54,12 +54,10 @@ const seed_pkg = async (db: ReturnType<typeof make_db>, pkg_id = "pipeline-packa
 		id: "user_factory",
 		name: "factory",
 		email: "factory@test.example",
-		email_verified: true,
+		email_verified: now,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
-		created_at: now,
-		updated_at: now,
-	} as never);
+	});
 	await db.insert(pipeline_package).values({
 		id: pkg_id,
 		owner_id: "user_factory",
@@ -72,7 +70,7 @@ const seed_pkg = async (db: ReturnType<typeof make_db>, pkg_id = "pipeline-packa
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 	return pkg_id;
 };
 
@@ -220,10 +218,11 @@ describe("deps factory — production wiring shape", () => {
 			annotations: { "workers/tag": "vs_v0" },
 		});
 		if (!v0.ok) throw new Error("v0 upload failed");
-		await cf.deployments.create({
+		const deployment = await cf.deployments.create({
 			script_name: script,
 			strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
 		});
+		if (!deployment.ok) throw new Error("initial deployment failed");
 
 		const deps: RunDeps = {
 			db,
@@ -260,8 +259,8 @@ describe("deps factory — production wiring shape", () => {
 			shape: "gradual",
 			status: "queued",
 			current_stage: "staging",
-			resolved_rollout: { type: "gradual", stages: [] } as never,
-			resolved_gates: {} as never,
+			resolved_rollout: { type: "gradual", stages: [] },
+			resolved_gates: {},
 			forced_atomic_reason: null,
 			started_at: now,
 			finished_at: null,
@@ -271,9 +270,9 @@ describe("deps factory — production wiring shape", () => {
 			modified_by: "api",
 			protected: false,
 			deleted: false,
-		} as never);
+		});
 
-		const advanced = await advance_run(deps, run_id, { kind: "start" }, plan as never);
+		const advanced = await advance_run(deps, run_id, { kind: "start" }, plan);
 		expect(advanced.ok).toBe(true);
 
 		const row = await get_run(db, run_id);
@@ -288,7 +287,7 @@ describe("deps factory — production wiring shape", () => {
 		// Mirrors what `make_cf_router` is asked to do in production, via
 		// `InMemoryDurableObjectNamespace` (which exposes `idFromName` +
 		// `get` with the same shape as the real CF namespace).
-		const namespace = new InMemoryDurableObjectNamespace<{ count: number }>({ count: 0 }, (ctx) => {
+		const namespace = new InMemoryDurableObjectNamespace<{ count: number }>({ count: 0 }, (_) => {
 			const handler = {
 				fetch: async (_request: Request) => new Response("ok", { status: 200 }),
 				alarm: async () => undefined,
@@ -316,10 +315,11 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 			annotations: { "workers/tag": "vs_v0" },
 		});
 		if (!v0.ok) throw new Error("v0 upload failed");
-		await cf.deployments.create({
+		const deployment = await cf.deployments.create({
 			script_name: script,
 			strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
 		});
+		if (!deployment.ok) throw new Error("initial deployment failed");
 
 		const deps: RunDeps = {
 			db,
@@ -355,8 +355,8 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 			shape: "gradual",
 			status: "queued",
 			current_stage: "staging",
-			resolved_rollout: { type: "gradual", stages: [] } as never,
-			resolved_gates: {} as never,
+			resolved_rollout: { type: "gradual", stages: [] },
+			resolved_gates: {},
 			forced_atomic_reason: null,
 			started_at: now,
 			finished_at: null,
@@ -366,10 +366,10 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 			modified_by: "api",
 			protected: false,
 			deleted: false,
-		} as never);
+		});
 
 		const namespace = new InMemoryDurableObjectNamespace<{ deps: RunDeps }>({ deps }, (ctx, env) => {
-			const h = make_run_handler(ctx as DoCtx, { deps: env.deps });
+			const h = make_run_handler(ctx, { deps: env.deps });
 			return { fetch: h.handle, alarm: h.fire_alarm };
 		});
 
@@ -384,6 +384,6 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 		expect(response.status).toBe(200);
 
 		const row = (await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0];
-		expect(row?.status).toBe("awaiting_approval");
+		expect(row.status).toBe("awaiting_approval");
 	});
 });

@@ -16,10 +16,7 @@ export const media_profiles = sqliteTable(
 		created_at: text("created_at").notNull(),
 		updated_at: text("updated_at").notNull(),
 	},
-	table => ({
-		user_idx: index("idx_media_profiles_user").on(table.user_id),
-		user_slug_idx: uniqueIndex("idx_media_profiles_user_slug").on(table.user_id, table.slug),
-	})
+	table => [index("idx_media_profiles_user").on(table.user_id), uniqueIndex("idx_media_profiles_user_slug").on(table.user_id, table.slug)]
 );
 
 export const media_accounts = sqliteTable(
@@ -40,10 +37,10 @@ export const media_accounts = sqliteTable(
 		created_at: text("created_at").notNull(),
 		updated_at: text("updated_at").notNull(),
 	},
-	table => ({
-		profile_idx: index("idx_media_accounts_profile").on(table.profile_id),
-		profile_platform_user_idx: uniqueIndex("idx_media_accounts_profile_platform_user").on(table.profile_id, table.platform, table.platform_user_id),
-	})
+	table => [
+		index("idx_media_accounts_profile").on(table.profile_id),
+		uniqueIndex("idx_media_accounts_profile_platform_user").on(table.profile_id, table.platform, table.platform_user_id),
+	]
 );
 
 export const media_rate_limits = sqliteTable(
@@ -61,9 +58,7 @@ export const media_rate_limits = sqliteTable(
 		circuit_open_until: text("circuit_open_until"),
 		updated_at: text("updated_at").notNull(),
 	},
-	table => ({
-		account_idx: uniqueIndex("idx_media_rate_limits_account").on(table.account_id),
-	})
+	table => [uniqueIndex("idx_media_rate_limits_account").on(table.account_id)]
 );
 
 export const media_account_settings = sqliteTable(
@@ -78,10 +73,10 @@ export const media_account_settings = sqliteTable(
 		created_at: text("created_at").notNull(),
 		updated_at: text("updated_at").notNull(),
 	},
-	table => ({
-		account_key_idx: uniqueIndex("idx_media_account_settings_unique").on(table.account_id, table.setting_key),
-		account_idx: index("idx_media_account_settings_account").on(table.account_id),
-	})
+	table => [
+		uniqueIndex("idx_media_account_settings_unique").on(table.account_id, table.setting_key),
+		index("idx_media_account_settings_account").on(table.account_id),
+	]
 );
 
 export const media_profile_filters = sqliteTable(
@@ -100,10 +95,7 @@ export const media_profile_filters = sqliteTable(
 		created_at: text("created_at").notNull(),
 		updated_at: text("updated_at").notNull(),
 	},
-	table => ({
-		profile_idx: index("idx_media_profile_filters_profile").on(table.profile_id),
-		account_idx: index("idx_media_profile_filters_account").on(table.account_id),
-	})
+	table => [index("idx_media_profile_filters_profile").on(table.profile_id), index("idx_media_profile_filters_account").on(table.account_id)]
 );
 
 export const media_platform_credentials = sqliteTable(
@@ -122,8 +114,5 @@ export const media_platform_credentials = sqliteTable(
 		created_at: text("created_at").notNull(),
 		updated_at: text("updated_at").notNull(),
 	},
-	table => ({
-		profile_platform_idx: uniqueIndex("idx_platform_credentials_unique").on(table.profile_id, table.platform),
-		profile_idx: index("idx_platform_credentials_profile").on(table.profile_id),
-	})
+	table => [uniqueIndex("idx_platform_credentials_unique").on(table.profile_id, table.platform), index("idx_platform_credentials_profile").on(table.profile_id)]
 );

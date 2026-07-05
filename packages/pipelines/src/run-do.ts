@@ -32,7 +32,6 @@ import {
 	request_rollback,
 	tick_bake_complete,
 } from "@devpad/core/services/pipelines";
-import type { ApprovalDecision } from "@devpad/schema";
 import type { Result } from "@f0rbit/corpus";
 import { z } from "zod";
 
@@ -61,7 +60,7 @@ export type DoCtx = {
 	id: { toString(): string };
 	storage: {
 		get<T = unknown>(key: string): Promise<T | undefined>;
-		put<T = unknown>(key: string, value: T): Promise<void>;
+		put(key: string, value: unknown): Promise<void>;
 		delete(key: string): Promise<boolean>;
 		getAlarm(): Promise<number | null>;
 		setAlarm(ms: number): Promise<void>;
@@ -75,13 +74,22 @@ export type RunDoServices = {
 	now?: () => number;
 };
 
-const json = <T>(value: T, init?: ResponseInit): Response =>
-	new Response(JSON.stringify(value), {
-		...init,
-		headers: { "content-type": "application/json", ...init?.headers },
-	});
+// `init.headers` is `ResponseInit["headers"]` — may be a `Headers` instance
+// (not a plain object), so spreading it directly can silently drop entries.
+const response_header_entries = (h: ResponseInit["headers"]): Array<[string, string]> => {
+	if (h === undefined) return [];
+	if (h instanceof Headers) return [...h.entries()];
+	if (Array.isArray(h)) return h;
+	return Object.entries(h);
+};
 
-const json_ok = <T>(value: T): Response => json({ ok: true, value });
+const json = (value: unknown, init?: ResponseInit): Response => {
+	const headers = new Headers({ "content-type": "application/json" });
+	for (const [key, value_] of response_header_entries(init?.headers)) headers.set(key, value_);
+	return new Response(JSON.stringify(value), { ...init, headers });
+};
+
+const json_ok = (value: unknown): Response => json({ ok: true, value });
 
 /**
  * Wire-shaped error envelope. Normalises service-layer `kind` to the
@@ -182,7 +190,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 			{
 				run_id,
 				stage_name: parsed.data.stage_name,
-				decision: parsed.data.decision as ApprovalDecision,
+				decision: parsed.data.decision,
 				user_id: parsed.data.user_id,
 				reason: parsed.data.reason,
 			},

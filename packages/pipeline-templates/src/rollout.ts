@@ -20,7 +20,7 @@ export type DurationParseError = {
 	input: string;
 };
 
-const DURATION_RE = /^(\d+(?:\.\d+)?)(ms|s|m|h|d)?$/;
+const NUMBER_RE = /^\d+(?:\.\d+)?/;
 
 const UNIT_MS: Record<string, number> = {
 	ms: 1,
@@ -39,15 +39,21 @@ const UNIT_MS: Record<string, number> = {
  * this as a stage-validation failure, never throws.
  */
 export const parse_duration = (input: string): Result<Duration, DurationParseError> => {
-	if (input === "0") return ok({ ms: 0 });
-	const match = DURATION_RE.exec(input.trim());
-	if (!match) {
+	const trimmed = input.trim();
+	if (trimmed === "0") return ok({ ms: 0 });
+	const value_match = NUMBER_RE.exec(trimmed);
+	if (!value_match) {
 		return err({ code: "duration_parse", message: `invalid duration: ${input}`, input });
 	}
-	const [, raw_value, raw_unit] = match;
-	const value = Number(raw_value);
-	const unit = raw_unit ?? "ms";
-	return ok({ ms: Math.round(value * UNIT_MS[unit]) });
+	// The regex only anchors the numeric prefix — whatever remains is the unit,
+	// defaulting to "ms" when omitted (e.g. bare "500"). `in` confirms it's one
+	// of the known keys before indexing UNIT_MS.
+	const raw_unit = trimmed.slice(value_match[0].length) || "ms";
+	if (!(raw_unit in UNIT_MS)) {
+		return err({ code: "duration_parse", message: `invalid duration: ${input}`, input });
+	}
+	const value = Number(value_match[0]);
+	return ok({ ms: Math.round(value * UNIT_MS[raw_unit]) });
 };
 
 /**

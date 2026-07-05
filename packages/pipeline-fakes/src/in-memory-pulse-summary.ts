@@ -16,8 +16,8 @@ export type PulseSummaryCall = {
  */
 export class InMemoryPulseSummaryProvider implements PulseSummaryProvider {
 	readonly calls: PulseSummaryCall[] = [];
-	private responses = new Map<string, MetricSnapshot>();
-	private errors = new Map<string, PulseError>();
+	private readonly responses = new Map<string, MetricSnapshot>();
+	private readonly errors = new Map<string, PulseError>();
 
 	set_next_response(query: Omit<PulseSummaryQuery, "window_ms">, snapshot: MetricSnapshot): void {
 		this.responses.set(query_key({ ...query, window_ms: 0 }), snapshot);

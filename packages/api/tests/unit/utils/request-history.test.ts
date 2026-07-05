@@ -82,7 +82,7 @@ describe("ApiClient request history", () => {
 
 	test("should demonstrate usage pattern", () => {
 		// This test shows how developers would use the history feature
-		const client = new ApiClient({
+		const demoClient = new ApiClient({
 			base_url: "https://api.example.com",
 			api_key: "my-api-key",
 			max_history_size: 10, // Optional: defaults to 5
@@ -91,15 +91,15 @@ describe("ApiClient request history", () => {
 		// After making requests (mocked here), developers could:
 
 		// Check the last request
-		const lastRequest = client.history().latest();
+		const lastRequest = demoClient.history().latest();
 		expect(lastRequest).toBeNull(); // No requests made yet
 
 		// Get full history
-		const allHistory = client.history().list();
+		const allHistory = demoClient.history().list();
 		expect(allHistory).toEqual([]);
 
 		// Clear history if needed
-		client.history().clear();
-		expect(client.history().list()).toEqual([]);
+		demoClient.history().clear();
+		expect(demoClient.history().list()).toEqual([]);
 	});
 });

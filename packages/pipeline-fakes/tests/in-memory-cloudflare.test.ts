@@ -110,17 +110,20 @@ describe("InMemoryCloudflareProvider — invariants", () => {
 	test("assertPercentageSum throws on a corrupted deployment", async () => {
 		const cf = new InMemoryCloudflareProvider();
 		const [v1] = await upload_two(cf, "worker-a");
-		await cf.deployments.create({
+		const created = await cf.deployments.create({
 			script_name: "worker-a",
 			strategy: { strategy: "percentage", versions: [{ version_id: v1.id, percentage: 100 }] },
 		});
+		expect(created.ok).toBe(true);
 
 		// simulate corruption by mutating the active deployment
 		const active = cf.get_active_deployment("worker-a");
 		if (!active) throw new Error("no active deployment");
 		active.strategy.versions[0].percentage = 80;
 
-		expect(() => cf.assertPercentageSum()).toThrow(/sum to 80/);
+		expect(() => {
+			cf.assertPercentageSum();
+		}).toThrow(/sum to 80/);
 	});
 });
 
@@ -235,7 +238,9 @@ describe("InMemoryCloudflareProvider — directory_bundle uploads", () => {
 			compatibility_date: "2026-05-01",
 		});
 		if (!result.ok) throw new Error("upload failed");
-		expect(() => cf.assertVersionHasAssets("astro-app", result.value.id, ["/anything"])).toThrow(/no assets/);
+		expect(() => {
+			cf.assertVersionHasAssets("astro-app", result.value.id, ["/anything"]);
+		}).toThrow(/no assets/);
 	});
 
 	test("single_file + directory_bundle uploads on the same script share version numbering", async () => {

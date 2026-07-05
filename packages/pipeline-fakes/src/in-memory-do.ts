@@ -31,7 +31,7 @@ const make_id = (name: string): DurableObjectIdFake => ({
 
 export type StorageFake = {
 	get<T = unknown>(key: string): Promise<T | undefined>;
-	put<T = unknown>(key: string, value: T): Promise<void>;
+	put(key: string, value: unknown): Promise<void>;
 	delete(key: string): Promise<boolean>;
 	list<T = unknown>(): Promise<Map<string, T>>;
 	getAlarm(): Promise<number | null>;

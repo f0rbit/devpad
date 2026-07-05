@@ -39,14 +39,14 @@ export const validate_package_name = (name: string): Result<void, ValidationErro
 	if (name.length > MAX_PACKAGE_NAME_LENGTH) {
 		return err({
 			code: "package_name_too_long",
-			message: `package name must be ≤ ${MAX_PACKAGE_NAME_LENGTH} chars, got ${name.length}`,
+			message: `package name must be ≤ ${String(MAX_PACKAGE_NAME_LENGTH)} chars, got ${String(name.length)}`,
 			length: name.length,
 		});
 	}
 	if (!PACKAGE_NAME_PATTERN.test(name)) {
 		return err({
 			code: "package_name_invalid_chars",
-			message: `package name must match ${PACKAGE_NAME_PATTERN}; got "${name}"`,
+			message: `package name must match ${String(PACKAGE_NAME_PATTERN)}; got "${name}"`,
 			name,
 		});
 	}
@@ -61,7 +61,7 @@ export const compute_compatibility_date = (now: Date): string => {
 	const year = now.getUTCFullYear();
 	const month = String(now.getUTCMonth() + 1).padStart(2, "0");
 	const day = String(now.getUTCDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
+	return `${String(year)}-${month}-${day}`;
 };
 
 const to_pascal_case = (name: string): string => {
@@ -143,20 +143,20 @@ export const render_template = (template: string, vars: Record<string, string>):
 		const key = match[1];
 		// Skip template syntax keywords
 		if (!["if", "else", "endif"].includes(key.toLowerCase())) {
-			all_matches.push({ full: match[0], key, index: match.index ?? 0 });
+			all_matches.push({ full: match[0], key, index: match.index });
 		}
 	}
 
 	// Find variables in if-else conditions
 	for (const match of template.matchAll(IF_ELSE_BLOCK_PATTERN)) {
 		const key = match[1];
-		all_matches.push({ full: match[0], key, index: match.index ?? 0 });
+		all_matches.push({ full: match[0], key, index: match.index });
 	}
 
 	// Find variables in if conditions (without else)
 	for (const match of template.matchAll(IF_BLOCK_PATTERN)) {
 		const key = match[1];
-		all_matches.push({ full: match[0], key, index: match.index ?? 0 });
+		all_matches.push({ full: match[0], key, index: match.index });
 	}
 
 	// Check for missing variables

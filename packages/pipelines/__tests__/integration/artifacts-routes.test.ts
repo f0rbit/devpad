@@ -15,6 +15,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type { Database } from "@devpad/schema/database/types";
 import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
 import type { AuthError, AuthIdentity } from "../../src/auth";
 import { is_bearer_valid, parse_bearer_header } from "../../src/auth";
@@ -50,12 +51,12 @@ const build_routes_deps = (
 	const emitted: Array<Record<string, unknown>> = [];
 	const pulse: PulseEmitterLite = overrides.pulse ?? {
 		emit: async (event) => {
-			emitted.push(event as Record<string, unknown>);
+			emitted.push(event);
 			return undefined;
 		},
 	};
 	const deps: RoutesDeps = {
-		db: {} as never,
+		db: {} as unknown as Database,
 		do_router: { get: () => ({ fetch: async () => new Response("", { status: 500 }) }) },
 		manifests: { get: async () => null },
 		templates: { resolve: async () => null },

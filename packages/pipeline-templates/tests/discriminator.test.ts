@@ -186,7 +186,7 @@ const rows: Row[] = [
 
 describe("resolve_rollout", () => {
 	for (const row of rows) {
-		const label = `declared=${row.declared} do=${row.do_migrations} assets=${row.has_assets} affinity=${row.affinity}`;
+		const label = `declared=${row.declared} do=${String(row.do_migrations)} assets=${String(row.has_assets)} affinity=${row.affinity}`;
 		test(label, () => {
 			const declared: Rollout = row.declared === "gradual" ? defaultGradual : defaultAtomic;
 			const manifest = make_manifest({

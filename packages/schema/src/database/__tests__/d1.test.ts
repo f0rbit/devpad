@@ -59,9 +59,9 @@ describe("unified schema exports", () => {
 describe("Bindings type", () => {
 	it("has the expected shape at type level", () => {
 		const mock_bindings: Bindings = {
-			DB: {} as D1Database,
-			BLOG_CORPUS_BUCKET: {} as R2Bucket,
-			MEDIA_CORPUS_BUCKET: {} as R2Bucket,
+			DB: {} as unknown as D1Database,
+			BLOG_CORPUS_BUCKET: {} as unknown as R2Bucket,
+			MEDIA_CORPUS_BUCKET: {} as unknown as R2Bucket,
 			ENVIRONMENT: "test",
 			API_URL: "http://localhost",
 			FRONTEND_URL: "http://localhost",

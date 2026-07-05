@@ -1,4 +1,13 @@
+import type { ZodIssue } from "zod";
 import { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
+
+// Shape of a parsed HTTP error body -- genuinely unknown JSON from the wire,
+// narrowed just enough to detect the Zod validation-error envelope the
+// worker's `zValidator` middleware emits.
+type ParsedErrorBody = {
+	error?: { name?: string; issues?: ZodIssue[] };
+	issues?: ZodIssue[];
+};
 
 /**
  * Centralized error handling utilities to reduce duplication
@@ -46,16 +55,16 @@ export async function handleResponseError(response: Response): Promise<never> {
 	const errorMessage = errorText || "Request failed";
 
 	// Try to parse structured error responses
-	let parsedError: any = null;
+	let parsedError: ParsedErrorBody | null = null;
 	try {
-		parsedError = JSON.parse(errorText);
+		parsedError = JSON.parse(errorText) as ParsedErrorBody;
 	} catch {
 		// Not JSON, use raw text
 	}
 
 	if (response.status === HTTP_STATUS.BAD_REQUEST && parsedError?.error?.name === "ZodError") {
 		// Enhanced: Create a more detailed ValidationError with the original Zod error info
-		const zodErrorDetails = parsedError.error?.issues ? JSON.stringify(parsedError.error) : errorMessage;
+		const zodErrorDetails = parsedError.error.issues ? JSON.stringify(parsedError.error) : errorMessage;
 		throw new ValidationError(zodErrorDetails);
 	}
 
@@ -95,17 +104,17 @@ export function isNetworkError(error: unknown): error is NetworkError {
  * Best-effort fallback parse when the raw error message isn't JSON --
  * extracted from parseZodErrors to keep nesting within the max-depth limit.
  */
-function tryParseZodErrorString(errorMessage: string): any {
+function tryParseZodErrorString(errorMessage: string): ParsedErrorBody | null {
 	const zodErrorMatch = errorMessage.match(/ZodError: (.+)/);
 	if (!zodErrorMatch?.[1]) return null;
 	try {
-		return JSON.parse(zodErrorMatch[1]);
+		return JSON.parse(zodErrorMatch[1]) as ParsedErrorBody;
 	} catch {
 		// If still not JSON, try to extract from the message
 		const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
 		if (!issuesMatch?.[1]) return null;
 		try {
-			return { issues: JSON.parse(issuesMatch[1]) };
+			return { issues: JSON.parse(issuesMatch[1]) as ZodIssue[] };
 		} catch {
 			// Fall back to basic parsing
 			return null;
@@ -119,17 +128,17 @@ function tryParseZodErrorString(errorMessage: string): any {
 export function parseZodErrors(errorMessage: string): string {
 	try {
 		// Try to parse as JSON first to get structured error info
-		let parsedError: any = null;
+		let parsedError: ParsedErrorBody | null = null;
 		try {
-			parsedError = JSON.parse(errorMessage);
+			parsedError = JSON.parse(errorMessage) as ParsedErrorBody;
 		} catch {
 			// If not JSON, try to extract Zod error details from the error message
 			parsedError = tryParseZodErrorString(errorMessage);
 		}
 
 		if (parsedError?.issues && Array.isArray(parsedError.issues)) {
-			const friendlyMessages = parsedError.issues.map((issue: any) => {
-				const path = issue.path && issue.path.length > 0 ? issue.path.join(".") : "field";
+			const friendlyMessages = parsedError.issues.map((issue) => {
+				const path = issue.path.length > 0 ? issue.path.join(".") : "field";
 				const message = issue.message || "is invalid";
 
 				// Handle common validation types with friendly messages
@@ -138,18 +147,18 @@ export function parseZodErrors(errorMessage: string): string {
 						return `${path} must be a ${issue.expected} (received ${issue.received})`;
 					case "too_small":
 						if (issue.type === "string") {
-							return `${path} must be at least ${issue.minimum} characters long`;
+							return `${path} must be at least ${String(issue.minimum)} characters long`;
 						}
 						if (issue.type === "number") {
-							return `${path} must be at least ${issue.minimum}`;
+							return `${path} must be at least ${String(issue.minimum)}`;
 						}
 						return `${path} is too small`;
 					case "too_big":
 						if (issue.type === "string") {
-							return `${path} must be no more than ${issue.maximum} characters long`;
+							return `${path} must be no more than ${String(issue.maximum)} characters long`;
 						}
 						if (issue.type === "number") {
-							return `${path} must be no more than ${issue.maximum}`;
+							return `${path} must be no more than ${String(issue.maximum)}`;
 						}
 						return `${path} is too large`;
 					case "invalid_string":
@@ -165,13 +174,24 @@ export function parseZodErrors(errorMessage: string): string {
 						return `${path} format is invalid`;
 					case "custom":
 						return `${path}: ${message}`;
+					case "invalid_literal":
+					case "unrecognized_keys":
+					case "invalid_union":
+					case "invalid_union_discriminator":
+					case "invalid_enum_value":
+					case "invalid_arguments":
+					case "invalid_return_type":
+					case "invalid_date":
+					case "invalid_intersection_types":
+					case "not_multiple_of":
+					case "not_finite":
 					default:
 						return `${path}: ${message}`;
 				}
 			});
 
 			if (friendlyMessages.length === 1) {
-				return friendlyMessages[0];
+				return friendlyMessages[0] ?? errorMessage;
 			}
 			return `Validation failed:\n• ${friendlyMessages.join("\n• ")}`;
 		}

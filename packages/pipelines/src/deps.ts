@@ -149,7 +149,7 @@ const build_core = (env: PipelineEnv) => {
 	// Cast: corpus's local R2Bucket type uses `put: Promise<void>` while
 	// the workers-types R2Bucket returns `Promise<R2Object | null>`. The
 	// shapes are runtime-compatible — corpus discards the return value.
-	const backend: Backend = create_cloudflare_backend({ d1: env.DB as never, r2: env.CORPUS_BUCKET as never });
+	const backend: Backend = create_cloudflare_backend({ d1: env.DB, r2: env.CORPUS_BUCKET as never });
 	const cf = make_lazy_cf_provider(env);
 	const pulse = make_pulse_emitter(env.PULSE);
 	const pulse_summary = make_pulse_summary_client(env.PULSE);

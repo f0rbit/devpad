@@ -22,7 +22,7 @@ const seed_grant = async (
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 };
 
 describe("PipelinesGrantsService.check — RPC contract consumed by vault", () => {

@@ -6,15 +6,46 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-// Helper to convert Zod schema to JSON Schema for MCP
-function zodToMCPSchema(schema: any) {
+type JsonSchemaObject = Record<string, unknown>;
+
+interface MCPTool {
+	name: string;
+	description: string;
+	inputSchema: JsonSchemaObject;
+}
+
+interface MCPRequest {
+	jsonrpc?: "2.0";
+	id: string | number;
+	method: string;
+	params?: { name: string; arguments?: Record<string, unknown> };
+}
+
+type MCPContentResult = { content: Array<{ type: "text"; text: string }>; isError?: boolean };
+type MCPResult = { tools: MCPTool[] } | MCPContentResult;
+
+interface MCPResponse {
+	jsonrpc: "2.0";
+	id: string | number;
+	result: MCPResult;
+}
+
+// Helper to convert Zod schema to JSON Schema for MCP.
+// `schema` is typed `unknown` (rather than `z.ZodType`) deliberately: annotating
+// it as an actual Zod type here makes `zodToJsonSchema`'s call below hit
+// "type instantiation is excessively deep" under this repo's zod /
+// zod-to-json-schema version pairing (reproduced in isolation, unrelated to
+// @devpad/api) — the cast at the call site keeps that structural comparison
+// from ever happening while `zodToJsonSchema`'s own declared parameter type
+// still governs what's actually passed through.
+function zodToMCPSchema(schema: unknown): JsonSchemaObject {
 	try {
-		const jsonSchema = zodToJsonSchema(schema, {
+		const jsonSchema = zodToJsonSchema(schema as Parameters<typeof zodToJsonSchema>[0], {
 			target: "openApi3",
 			$refStrategy: "none",
-		}) as any;
+		}) as JsonSchemaObject;
 		// Remove the $schema property that zod-to-json-schema adds
-		const { $schema, ...cleanSchema } = jsonSchema;
+		const { $schema: _, ...cleanSchema } = jsonSchema;
 
 		if (jsonSchema.type === "object") return jsonSchema;
 
@@ -26,7 +57,7 @@ function zodToMCPSchema(schema: any) {
 			},
 			required: [],
 		};
-	} catch (error) {
+	} catch {
 		// Fallback for problematic schemas
 		return {
 			type: "object",
@@ -36,10 +67,10 @@ function zodToMCPSchema(schema: any) {
 	}
 }
 
-function assertObjectRootSchema(tools: any[]) {
+function assertObjectRootSchema(tools: MCPTool[]): MCPTool[] {
 	tools.forEach((tool, i) => {
 		if (tool.inputSchema.type !== "object") {
-			console.error(`! Tool ${i} (${tool.name}) has non-object root type: ${tool.inputSchema.type}`);
+			console.error(`! Tool ${String(i)} (${tool.name}) has non-object root type: ${String(tool.inputSchema.type)}`);
 		}
 	});
 	return tools;
@@ -53,8 +84,8 @@ const tools = Object.values(sharedTools).map((tool) => ({
 }));
 
 class DevpadMCPServer {
-	private server: Server;
-	private apiClient: ApiClient;
+	private readonly server: Server;
+	private readonly apiClient: ApiClient;
 
 	constructor(api_key?: string, base_url?: string) {
 		this.server = new Server(
@@ -139,13 +170,15 @@ class DevpadMCPServer {
 	 * @param request JSON-RPC request object
 	 * @returns JSON-RPC response object
 	 */
-	async processRequest(request: any): Promise<any> {
+	async processRequest(request: MCPRequest): Promise<MCPResponse> {
 		try {
-			let result: any;
+			let result: MCPResult;
 			if (request.method === "tools/list") {
 				result = { tools };
 			} else if (request.method === "tools/call") {
-				const { name, arguments: args } = request.params;
+				const params = request.params;
+				if (!params) throw new Error("Missing params for tools/call");
+				const { name, arguments: args } = params;
 
 				const tool = getTool(name);
 				if (!tool) {
@@ -205,7 +238,7 @@ export { DevpadMCPServer };
 
 // Check if this file is being run directly
 if (process.argv[1] === new URL(import.meta.url).pathname) {
-	main().catch((error) => {
+	main().catch((error: unknown) => {
 		console.error("Server error:", error);
 		process.exit(1);
 	});

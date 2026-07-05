@@ -98,8 +98,8 @@ async function seed_run(db: Database, package_id = SEEDED_PACKAGE_ID, run_id = S
 		kind: "deploy",
 		status: "queued",
 		current_stage: "staging",
-		resolved_rollout: { type: "atomic" } as never,
-		resolved_gates: {} as never,
+		resolved_rollout: { type: "atomic" },
+		resolved_gates: {},
 		forced_atomic_reason: null,
 		started_at: now,
 		finished_at: null,
@@ -109,7 +109,7 @@ async function seed_run(db: Database, package_id = SEEDED_PACKAGE_ID, run_id = S
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 }
 
 type Setup = {

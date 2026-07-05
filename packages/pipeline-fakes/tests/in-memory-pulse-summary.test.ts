@@ -64,8 +64,10 @@ describe("InMemoryPulseSummaryProvider", () => {
 
 	test("records every fetch call in order", async () => {
 		const provider = new InMemoryPulseSummaryProvider();
-		await provider.fetch({ package: "a", environment: "e", version_id: "v1", window_ms: 1 });
-		await provider.fetch({ package: "b", environment: "e", version_id: "v2", window_ms: 2 });
+		const first = await provider.fetch({ package: "a", environment: "e", version_id: "v1", window_ms: 1 });
+		const second = await provider.fetch({ package: "b", environment: "e", version_id: "v2", window_ms: 2 });
+		expect(first.ok).toBe(true);
+		expect(second.ok).toBe(true);
 		expect(provider.calls).toHaveLength(2);
 		expect(provider.calls[0]?.query.package).toBe("a");
 		expect(provider.calls[1]?.query.package).toBe("b");

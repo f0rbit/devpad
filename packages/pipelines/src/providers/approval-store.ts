@@ -18,6 +18,11 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import type { ApprovalDecision } from "@devpad/schema";
 import { pipeline_approval } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
+
+// This package's tsconfig doesn't set `noUncheckedIndexedAccess`, so
+// `rows[0]` types as the element directly — masking the real possibility of
+// a zero-row query. The declared return type here is honest about it.
+const first_row = <T>(rows: T[]): T | undefined => rows[0];
 import type { ApprovalStore, Decision, StoreError } from "@devpad/core/services/pipelines/gates";
 import { and, desc, eq } from "drizzle-orm";
 
@@ -48,7 +53,7 @@ export const make_d1_approval_store = (db: Database): ApprovalStore => ({
 				.where(and(eq(pipeline_approval.run_id, run_id), eq(pipeline_approval.stage_name, stage)))
 				.orderBy(desc(pipeline_approval.decided_at))
 				.limit(1);
-			const row = rows[0];
+			const row = first_row(rows);
 			if (!row) return ok(null);
 			return ok(db_to_decision(row.decision));
 		} catch (e) {
@@ -69,7 +74,7 @@ export const make_d1_approval_store = (db: Database): ApprovalStore => ({
 				decided_at: now,
 				created_at: now,
 				updated_at: now,
-			} as never);
+			});
 			return ok(undefined);
 		} catch (e) {
 			return err({ kind: "store_error", operation: "write_decision", message: String(e) });

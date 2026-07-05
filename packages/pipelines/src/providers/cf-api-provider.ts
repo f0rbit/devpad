@@ -40,7 +40,6 @@ import type {
 	CloudflareError,
 	CloudflareProvider,
 	CreateDeploymentInput,
-	ModuleUpload,
 	UploadVersionInput,
 	VersionBinding,
 	WorkerDeployment,
@@ -84,8 +83,9 @@ const interpret_response = async <T>(response: Response): Promise<Result<T, Clou
 	if (response.status === 404) return err({ code: "not_found", message: body_text || "cf api 404" });
 	if (response.status === 409) return err({ code: "conflict", message: body_text || "cf api 409" });
 	if (response.status >= 400 && response.status < 500)
-		return err({ code: "validation", message: body_text || `cf api ${response.status}` });
-	if (response.status >= 500) return err({ code: "internal", message: body_text || `cf api ${response.status}` });
+		return err({ code: "validation", message: body_text || `cf api ${String(response.status)}` });
+	if (response.status >= 500)
+		return err({ code: "internal", message: body_text || `cf api ${String(response.status)}` });
 	let parsed: CfEnvelope<T>;
 	try {
 		parsed = JSON.parse(body_text) as CfEnvelope<T>;
@@ -93,10 +93,21 @@ const interpret_response = async <T>(response: Response): Promise<Result<T, Clou
 		return err({ code: "internal", message: `cf api decode failed: ${String(e)}` });
 	}
 	if (!parsed.success) {
-		const message = parsed.errors?.[0]?.message ?? "cf api unsuccessful";
+		const message = parsed.errors[0]?.message ?? "cf api unsuccessful";
 		return err({ code: "internal", message });
 	}
 	return ok(parsed.result);
+};
+
+// `init.headers` is `RequestInit["headers"]` — may be a `Headers` instance
+// (not a plain object) or a `[string, string][]` tuple list, so spreading it
+// directly (`{ ...init.headers }`) can silently drop entries. Normalise to
+// tuples first so every shape merges into `headers` correctly.
+const header_entries = (h: RequestInit["headers"]): Array<[string, string]> => {
+	if (h === undefined) return [];
+	if (h instanceof Headers) return [...h.entries()];
+	if (Array.isArray(h)) return h;
+	return Object.entries(h);
 };
 
 const cf_call = async <T>(
@@ -106,8 +117,10 @@ const cf_call = async <T>(
 ): Promise<Result<T, CloudflareError>> => {
 	const url = cf_url(config, path);
 	let response: Response;
+	const headers = new Headers(json_headers_for(config));
+	for (const [key, value] of header_entries(init.headers)) headers.set(key, value);
 	try {
-		response = await fetch(url, { ...init, headers: { ...json_headers_for(config), ...init.headers } });
+		response = await fetch(url, { ...init, headers });
 	} catch (e) {
 		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
 	}
@@ -252,7 +265,7 @@ const upload_asset_session = async (
 		if (asset.hash.length !== 32) {
 			return err({
 				code: "validation",
-				message: `asset hash must be 32 hex chars, got length ${asset.hash.length} for ${asset.path}`,
+				message: `asset hash must be 32 hex chars, got length ${String(asset.hash.length)} for ${asset.path}`,
 			});
 		}
 		manifest[asset.path] = { hash: asset.hash, size: asset.size_bytes };
@@ -299,7 +312,7 @@ const upload_asset_session = async (
 			const body_text = await response.text().catch(() => "");
 			return err({
 				code: "assets_upload_failed",
-				message: `assets/upload returned ${response.status}: ${body_text || "<no body>"}`,
+				message: `assets/upload returned ${String(response.status)}: ${body_text || "<no body>"}`,
 			});
 		}
 	}
@@ -332,7 +345,7 @@ const upload_single_file = async (
 	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
 	form.append(
 		main_module,
-		new Blob([input.bundle as BlobPart], { type: "application/javascript+module" }),
+		new Blob([input.bundle], { type: "application/javascript+module" }),
 		main_module,
 	);
 
@@ -374,7 +387,7 @@ const upload_directory_bundle = async (
 	const form = new FormData();
 	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
 	for (const module of input.modules) {
-		form.append(module.name, new Blob([module.content as BlobPart], { type: module.mime_type }), module.name);
+		form.append(module.name, new Blob([module.content], { type: module.mime_type }), module.name);
 	}
 
 	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
@@ -396,7 +409,7 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 		},
 		list: async (script_name: string): Promise<Result<WorkerVersion[], CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}/versions`;
-			const result = await cf_call<{ items: CfWorkerVersionResponse[] }>(config, path, { method: "GET" });
+			const result = await cf_call<{ items?: CfWorkerVersionResponse[] }>(config, path, { method: "GET" });
 			if (!result.ok) return result;
 			const items = result.value.items ?? [];
 			return ok(items.map((v) => to_worker_version(script_name, v)));
@@ -418,7 +431,7 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 		},
 		list: async (script_name: string): Promise<Result<WorkerDeployment[], CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}/deployments`;
-			const result = await cf_call<{ deployments: CfDeploymentResponse[] }>(config, path, { method: "GET" });
+			const result = await cf_call<{ deployments?: CfDeploymentResponse[] }>(config, path, { method: "GET" });
 			if (!result.ok) return result;
 			const items = result.value.deployments ?? [];
 			return ok(items.map((d) => to_worker_deployment(script_name, d)));

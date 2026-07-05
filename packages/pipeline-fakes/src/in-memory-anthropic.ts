@@ -11,7 +11,7 @@ const make_id = (): string => `msg_${crypto.randomUUID().slice(0, 12)}`;
 const count_tokens = (text: string): number => Math.max(1, Math.ceil(text.length / 4));
 
 const echo_reply = (input: CreateMessagesInput): string => {
-	const last_user = [...input.messages].toReversed().find((m) => m.role === "user");
+	const last_user = input.messages.toReversed().find((m) => m.role === "user");
 	if (!last_user) return "[echo: no user message]";
 	return `echo:${last_user.content}`;
 };
