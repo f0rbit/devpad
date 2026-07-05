@@ -11,21 +11,21 @@ export function formatRelativeTime(date: Date): string {
 
 	if (diff_sec < 60) {
 		const sec = Math.round(diff_sec);
-		return sec === 1 ? "1s ago" : `${sec}s ago`;
+		return sec === 1 ? "1s ago" : `${String(sec)}s ago`;
 	}
 	if (diff_min < 60) {
 		const min = Math.round(diff_min);
-		return min === 1 ? "1m ago" : `${min}m ago`;
+		return min === 1 ? "1m ago" : `${String(min)}m ago`;
 	}
 	if (diff_hour < 24) {
 		const hour = Math.round(diff_hour);
-		return hour === 1 ? "1h ago" : `${hour}h ago`;
+		return hour === 1 ? "1h ago" : `${String(hour)}h ago`;
 	}
 	if (diff_day < 7) {
 		const day = Math.round(diff_day);
-		return day === 1 ? "1d ago" : `${day}d ago`;
+		return day === 1 ? "1d ago" : `${String(day)}d ago`;
 	}
 
 	const week = Math.round(diff_day / 7);
-	return week === 1 ? "1w ago" : `${week}w ago`;
+	return week === 1 ? "1w ago" : `${String(week)}w ago`;
 }

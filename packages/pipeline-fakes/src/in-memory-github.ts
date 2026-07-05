@@ -1,8 +1,8 @@
 import { err, ok, type Result } from "@f0rbit/corpus";
-import type { GithubError, GithubProvider, GithubRepo, WorkflowDispatchInput, WorkflowRun } from "./github-provider.ts";
+import type { GithubError, GithubProvider, GithubRepo, WorkflowDispatchInput, WorkflowRun } from "./github-provider";
 
 type RepoKey = `${string}/${string}`;
-const key = (owner: string, repo: string): RepoKey => `${owner}/${repo}` as RepoKey;
+const key = (owner: string, repo: string): RepoKey => `${owner}/${repo}`;
 
 export type DispatchRecord = WorkflowDispatchInput & { run_id: number; dispatched_at: string };
 

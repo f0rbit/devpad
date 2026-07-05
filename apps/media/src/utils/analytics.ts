@@ -52,20 +52,17 @@ const generateDateRange = (days: number): string[] => {
 const uniqueValues = <T>(arr: T[]): T[] => [...new Set(arr)];
 
 const sortDescending = <T>(arr: T[], fn: (item: T) => string): T[] =>
-	[...arr].sort((a, b) => fn(b).localeCompare(fn(a)));
+	[...arr].toSorted((a, b) => fn(b).localeCompare(fn(a)));
 
 const toPercentage = (count: number, total: number): number => (total === 0 ? 0 : Math.round((count / total) * 100));
 
-const groupBy = <T, K extends string>(items: T[], keyFn: (item: T) => K): Record<K, T[]> =>
-	items.reduce(
-		(acc, item) => {
-			const key = keyFn(item);
-			acc[key] = acc[key] ?? [];
-			acc[key].push(item);
-			return acc;
-		},
-		{} as Record<K, T[]>,
-	);
+const groupBy = <T, K extends string>(items: T[], keyFn: (item: T) => K): Partial<Record<K, T[]>> =>
+	items.reduce<Partial<Record<K, T[]>>>((acc, item) => {
+		const key = keyFn(item);
+		acc[key] = acc[key] ?? [];
+		acc[key].push(item);
+		return acc;
+	}, {});
 
 export function calculateDashboardStats(groups: TimelineGroup[]): DashboardStats {
 	const entries = flattenGroups(groups);
@@ -101,7 +98,7 @@ export function calculatePlatformDistribution(groups: TimelineGroup[]): Platform
 			count: items.length,
 			percentage: toPercentage(items.length, total),
 		}))
-		.sort((a, b) => b.count - a.count);
+		.toSorted((a, b) => b.count - a.count);
 }
 
 export function calculateActivityByDay(groups: TimelineGroup[], days = 14): DailyActivity[] {
@@ -176,12 +173,11 @@ export function calculateContentTypes(groups: TimelineGroup[]): ContentTypeCount
 	const grouped = groupBy(entries, getEntryType);
 
 	return Object.entries(grouped)
-		.map(([type, items]) => ({
-			type,
-			count: items.length,
-			percentage: toPercentage(items.length, total),
-		}))
-		.sort((a, b) => b.count - a.count);
+		.map(([type, items]) => {
+			const count = items?.length ?? 0;
+			return { type, count, percentage: toPercentage(count, total) };
+		})
+		.toSorted((a, b) => b.count - a.count);
 }
 
 export function getRecentItems(groups: TimelineGroup[], limit = 5): TimelineEntry[] {

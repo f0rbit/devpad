@@ -11,7 +11,8 @@ const app = new Hono<AppContext>();
 
 app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const query = c.req.query();
 
 	if (query.id) {
@@ -40,7 +41,8 @@ app.get("/", requireAuth, async (c) => {
 
 app.get("/public", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 
 	const result = await projects.getUserProjects(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -51,7 +53,8 @@ app.get("/public", requireAuth, async (c) => {
 
 app.patch("/", requireAuth, zValidator("json", upsert_project), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const data = c.req.valid("json");
 
 	if (data.owner_id && data.owner_id !== auth_user.id) {
@@ -107,7 +110,8 @@ app.patch("/", requireAuth, zValidator("json", upsert_project), async (c) => {
 
 app.get("/:project_id/history", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const project_id = c.req.param("project_id");
 
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
@@ -124,7 +128,8 @@ app.get("/:project_id/history", requireAuth, async (c) => {
 
 app.get("/config", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const project_id = c.req.query("project_id");
 
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
@@ -146,22 +151,19 @@ app.get("/config", requireAuth, async (c) => {
 		.where(eq(tag_config.project_id, project_id));
 
 	const grouped_tags = Object.values(
-		tag_configs.reduce(
-			(acc, config) => {
-				const tag_id = config.tag_id;
-				if (!acc[tag_id]) {
-					acc[tag_id] = {
-						name: config.tag_name || "Unknown",
-						color: config.tag_color,
-						match: [config.match],
-					};
-				} else {
-					acc[tag_id].match.push(config.match);
-				}
-				return acc;
-			},
-			{} as Record<string, { name: string; color: string | null; match: string[] }>,
-		),
+		tag_configs.reduce<Record<string, { name: string; color: string | null; match: string[] }>>((acc, config) => {
+			const tag_id = config.tag_id;
+			if (!(tag_id in acc)) {
+				acc[tag_id] = {
+					name: config.tag_name || "Unknown",
+					color: config.tag_color,
+					match: [config.match],
+				};
+			} else {
+				acc[tag_id].match.push(config.match);
+			}
+			return acc;
+		}, {}),
 	);
 
 	const ignore_paths = await db
@@ -177,7 +179,8 @@ app.get("/config", requireAuth, async (c) => {
 
 app.get("/fetch_spec", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const project_id = c.req.query("project_id");
 
 	if (!project_id) return c.json({ error: "Missing project_id parameter" }, 400);
@@ -206,7 +209,8 @@ app.get("/fetch_spec", requireAuth, async (c) => {
 
 app.patch("/save_config", requireAuth, zValidator("json", save_config_request), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const data = c.req.valid("json");
 
 	const found_result = await projects.getProjectById(db, data.id);
@@ -305,7 +309,8 @@ app.patch("/save_config", requireAuth, zValidator("json", save_config_request), 
 
 app.get("/:id/milestones", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const project_id = c.req.param("id");
 
 	if (!project_id) return c.json({ error: "Missing project ID" }, 400);

@@ -1,4 +1,4 @@
-import type { CommitGroup, DateGroup, GitHubRepo, PlatformSettings, TimelineItem } from "@devpad/schema/media";
+import type { CommitGroup, DateGroup, PlatformSettings, TimelineItem } from "@devpad/schema/media";
 
 export type {
 	CommentPayload,

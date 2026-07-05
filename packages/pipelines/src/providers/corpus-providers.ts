@@ -30,7 +30,7 @@ import {
 	version_set_store,
 } from "@f0rbit/corpus";
 import { z } from "zod";
-import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes.ts";
+import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes";
 
 /**
  * Read the full {@link VersionSetManifest} body keyed by the corpus
@@ -94,7 +94,6 @@ export const make_corpus_lineage_provider = (backend: Backend): LineageProvider 
  * the pre-Phase-5 era would 404 at run-start.
  */
 export const make_corpus_template_resolver = (backend: Backend, manifests: ManifestProvider): TemplateResolver => {
-	const version_sets = version_set_store(backend);
 	const templates = pipeline_template_store(backend, PipelineTemplateSchema);
 
 	const default_built = extendTemplate({});
@@ -142,7 +141,7 @@ const extract_template_content_hash = (template_ref: string): string | null => {
 	if (template_ref.includes("/")) {
 		const parts = template_ref.split("/");
 		const tail = parts[parts.length - 1];
-		return tail !== undefined && tail !== "" ? tail : null;
+		return tail !== "" ? tail : null;
 	}
 	return template_ref === "" ? null : template_ref;
 };
@@ -425,7 +424,7 @@ export const make_corpus_directory_bundle_provider = (backend: Backend): Directo
 			});
 		}
 
-		if (artifact_ref !== undefined && artifact_ref !== "") {
+		if (artifact_ref !== "") {
 			const bytes = await fetch_bytes(backend, artifact_ref);
 			if (!bytes.ok) {
 				return err({ kind: "bundle_unavailable", reason: bytes.error });

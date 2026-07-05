@@ -42,8 +42,8 @@ const redditOAuthConfig: OAuthCallbackConfig<RedditOAuthState> = {
 				"User-Agent": "media-timeline/2.0.0",
 			},
 		});
-		if (!response.ok) throw new Error(`User fetch failed: ${response.status}`);
-		const data = (await response.json()) as { id: string; name: string };
+		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
+		const data = await response.json();
 		return { id: data.id, username: data.name };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.reddit_client_id, clientSecret: secrets.reddit_client_secret }),
@@ -66,8 +66,8 @@ const twitterOAuthConfig: OAuthCallbackConfig<{ code_verifier: string }> = {
 		const response = await fetch("https://api.twitter.com/2/users/me", {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		});
-		if (!response.ok) throw new Error(`User fetch failed: ${response.status}`);
-		const data = (await response.json()) as { data: { id: string; username: string } };
+		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
+		const data = await response.json();
 		return { id: data.data.id, username: data.data.username };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.twitter_client_id, clientSecret: secrets.twitter_client_secret }),
@@ -93,8 +93,8 @@ export const githubOAuthConfig: OAuthCallbackConfig = {
 				"User-Agent": "media-timeline/2.0.0",
 			},
 		});
-		if (!response.ok) throw new Error(`User fetch failed: ${response.status}`);
-		const data = (await response.json()) as { id: number; login: string };
+		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
+		const data = await response.json();
 		return { id: String(data.id), username: data.login };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.github_client_id, clientSecret: secrets.github_client_secret }),

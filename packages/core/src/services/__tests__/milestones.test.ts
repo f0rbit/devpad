@@ -76,9 +76,9 @@ function createSequenceMockDb(overrides: Record<string, any> = {}) {
 	};
 
 	return {
-		select: (fields?: any) => make_chain(),
+		select: (_?: any) => make_chain(),
 		insert: () => ({
-			values: (v: any) => ({
+			values: (_: any) => ({
 				returning: () => overrides.insert_returning ?? [{ id: "new_1" }],
 				onConflictDoUpdate: () => ({
 					returning: () => overrides.insert_returning ?? [{ id: "new_1" }],
@@ -86,7 +86,7 @@ function createSequenceMockDb(overrides: Record<string, any> = {}) {
 			}),
 		}),
 		update: () => ({
-			set: (v: any) => ({
+			set: (_: any) => ({
 				where: () => ({
 					returning: () => overrides.update_returning ?? [overrides.update_result ?? mockMilestone],
 				}),

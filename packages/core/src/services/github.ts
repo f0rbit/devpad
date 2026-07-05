@@ -3,11 +3,12 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
-import { inArray } from "drizzle-orm";
 import { batchedQuery } from "./batch.js";
 import type { ServiceError } from "./errors.js";
 
 type GitHubBranchFromAPI = Endpoints["GET /repos/{owner}/{repo}/branches"]["response"]["data"][0];
+type GitHubRepoListItem = Endpoints["GET /user/repos"]["response"]["data"][0];
+type GitHubRepoMetadata = Endpoints["GET /repos/{owner}/{repo}"]["response"]["data"];
 
 export interface GitHubBranch extends GitHubBranchFromAPI {
 	commit: GitHubBranchFromAPI["commit"] & {
@@ -24,7 +25,7 @@ function createOctokit(access_token: string): Octokit {
 	return new Octokit({ auth: access_token });
 }
 
-export async function getRepos(access_token: string): Promise<Result<any[], ServiceError>> {
+export async function getRepos(access_token: string): Promise<Result<GitHubRepoListItem[], ServiceError>> {
 	const octokit = createOctokit(access_token);
 	const response = await octokit.rest.repos.listForAuthenticatedUser({
 		sort: "updated",
@@ -37,7 +38,7 @@ export async function getRepoMetadata(
 	owner: string,
 	repo: string,
 	access_token: string,
-): Promise<Result<any, ServiceError>> {
+): Promise<Result<GitHubRepoMetadata, ServiceError>> {
 	const octokit = createOctokit(access_token);
 	const response = await octokit.rest.repos.get({ owner, repo });
 	return ok(response.data);
@@ -79,7 +80,8 @@ export async function getBranches(
 			author_user: "",
 		};
 
-		return { ...branch, commit: enriched_commit } as GitHubBranch;
+		const enriched_branch: GitHubBranch = { ...branch, commit: enriched_commit };
+		return enriched_branch;
 	});
 
 	enriched_branches.sort((a, b) => {
@@ -105,7 +107,7 @@ async function getCommitDetails(
 		commit_detail.sha,
 	);
 
-	const existing_shas = new Set(existing.map((c: any) => c.sha));
+	const existing_shas = new Set(existing.map((c) => c.sha));
 	const missing_shas = Array.from(shas.filter((sha) => !existing_shas.has(sha)));
 
 	let commits = [...existing];
@@ -126,7 +128,7 @@ async function getCommitDetails(
 			const values = valid_commits.map((c) => ({
 				sha: c.sha,
 				url: c.url,
-				message: c.commit.message ?? "",
+				message: c.commit.message,
 				avatar_url: c.author?.avatar_url ?? null,
 				author_user: c.author?.login ?? "",
 				author_name: c.commit.author?.name ?? "",

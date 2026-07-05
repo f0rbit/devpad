@@ -15,13 +15,12 @@ import {
 	render_template as render_pkg_template,
 	SCAFFOLDER_TEMPLATES,
 } from "@devpad/pipeline-templates";
-import type { VersionSetManifest } from "@f0rbit/corpus";
 import chalk from "chalk";
 import type { Command } from "commander";
-import { type AssetWalkError, type WalkedAssets, walk_assets_dir } from "../asset-walker.ts";
-import { type BundleWalkError, type WalkedBundle, walk_bundle_dir } from "../bundle-walker.ts";
-import { type CorpusBackendMode, selectCorpusBackend } from "../corpus-backend.ts";
-import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend.ts";
+import { type AssetWalkError, type WalkedAssets, walk_assets_dir } from "../asset-walker";
+import { type BundleWalkError, type WalkedBundle, walk_bundle_dir } from "../bundle-walker";
+import { type CorpusBackendMode, selectCorpusBackend } from "../corpus-backend";
+import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend";
 import {
 	type ArtifactInputs,
 	build_asset_manifest_from_walk,
@@ -33,10 +32,10 @@ import {
 	compute_hash,
 	type VersionSetOutput,
 	validate_artifact_paths,
-} from "../pipelines-artifacts-helpers.ts";
-import { fail_with, make_spinner, print_next_steps as print_next_steps_shared } from "../printer.ts";
-import { type ScaffolderError, scaffold_package } from "../scaffolder/index.ts";
-import type { DefaultGateKind, RolloutMode } from "../scaffolder/types.ts";
+} from "../pipelines-artifacts-helpers";
+import { fail_with, make_spinner, print_next_steps as print_next_steps_shared } from "../printer";
+import { type ScaffolderError, scaffold_package } from "../scaffolder/index";
+import type { DefaultGateKind, RolloutMode } from "../scaffolder/types";
 
 const ROLLOUT_MODES = ["gradual", "atomic"] as const;
 const GATE_KINDS = ["manual", "auto", "analysis"] as const;
@@ -95,14 +94,14 @@ export const action_init = async (
 		target_dir,
 		rollout: options.rollout,
 		default_gate: options.defaultGate,
-		build_shape: options.buildShape as (typeof BUILD_SHAPES)[number],
+		build_shape: options.buildShape,
 		skip_install: options.skipInstall === true,
 		skip_git: options.skipGit === true,
 	});
 
 	if (!result.ok) return fail_with(spinner, format_scaffolder_error(result.error));
 
-	spinner.succeed(`Scaffolded ${result.value.files_written.length} files`);
+	spinner.succeed(`Scaffolded ${String(result.value.files_written.length)} files`);
 	print_next_steps(result.value.target_dir, result.value.package_name, options.rollout);
 };
 
@@ -163,7 +162,7 @@ const action_grants_list =
 		const client = client_factory();
 		const result = await client.pipelines.grants.list(options.package);
 		if (!result.ok) return fail_with(spinner, result.error.message);
-		spinner.succeed(`${result.value.length} grant(s)`);
+		spinner.succeed(`${String(result.value.length)} grant(s)`);
 		for (const g of result.value) {
 			const granted_at = g.granted_at ?? chalk.dim("pending");
 			console.log(`  ${chalk.bold(g.id)}  ${g.stage_name}  ${chalk.cyan(g.scope)}  ${granted_at}`);
@@ -220,16 +219,35 @@ interface ArtifactsUploadOptions {
 	mode?: string;
 }
 
-const resolve_mode = (
-	options: ArtifactsUploadOptions,
-): { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined } => {
-	const explicit =
-		options.mode === "memory" || options.mode === "cloudflare-http" ? (options.mode as CorpusBackendMode) : undefined;
+type ResolvedMode = { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined };
+
+const resolve_mode = (options: ArtifactsUploadOptions): ResolvedMode => {
+	const explicit = options.mode === "memory" || options.mode === "cloudflare-http" ? options.mode : undefined;
 	const url = options.orchestratorUrl ?? process.env.DEVPAD_PIPELINES_URL;
 	const token = options.token ?? process.env.DEVPAD_PIPELINES_TOKEN;
 	const mode: CorpusBackendMode =
 		explicit ?? (url !== undefined && url !== "" && token !== undefined && token !== "" ? "cloudflare-http" : "memory");
 	return { mode, pipelines_url: url, pipelines_token: token };
+};
+
+/**
+ * `resolved.mode === "cloudflare-http"` does not by itself guarantee
+ * `pipelines_url`/`pipelines_token` are set — an explicit `--mode
+ * cloudflare-http` without the required env/flags forces this mode with
+ * both fields still `undefined`. Every cloudflare-http call site validates
+ * through here instead of asserting non-null, so a misconfigured run fails
+ * with an actionable message rather than an "undefined" URL/token.
+ */
+const require_http_input = (
+	resolved: ResolvedMode,
+): { ok: true; value: { pipelines_url: string; pipelines_token: string } } | { ok: false; error: string } => {
+	if (resolved.pipelines_url === undefined || resolved.pipelines_token === undefined) {
+		return {
+			ok: false,
+			error: "cloudflare-http mode requires DEVPAD_PIPELINES_URL + DEVPAD_PIPELINES_TOKEN (env or input)",
+		};
+	}
+	return { ok: true, value: { pipelines_url: resolved.pipelines_url, pipelines_token: resolved.pipelines_token } };
 };
 
 export const action_artifacts_upload = async (options: ArtifactsUploadOptions): Promise<void> => {
@@ -295,7 +313,9 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	let grants_ref: string;
 
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return fail_with(spinner, http_input_result.error);
+		const http_input = http_input_result.value;
 		const refs = await upload_sidecars_http(http_input, { manifest_text, infra_plan, pipeline, grants });
 		if (!refs.ok) return fail_with(spinner, refs.error);
 		manifest_ref = refs.value.manifest_ref;
@@ -318,7 +338,9 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	if (options.bundle !== undefined) {
 		bundle_bytes = readFileSync(options.bundle);
 		if (resolved.mode === "cloudflare-http") {
-			const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+			const http_input_result = require_http_input(resolved);
+			if (!http_input_result.ok) return fail_with(spinner, http_input_result.error);
+			const http_input = http_input_result.value;
 			const u8 = new Uint8Array(bundle_bytes.buffer, bundle_bytes.byteOffset, bundle_bytes.byteLength);
 			const upload = await upload_blob_to_store(http_input, "worker-bundles", u8);
 			if (!upload.ok) return fail_with(spinner, `worker-bundles upload failed: ${format_http_error(upload.error)}`);
@@ -327,11 +349,15 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 			bundle_ref = `worker-bundles/${compute_hash(bundle_bytes).slice(0, 12)}`;
 		}
 	} else {
-		const walk = walk_bundle_dir(options.bundleDir!);
+		if (options.bundleDir === undefined) return fail_with(spinner, "--bundle-dir is required");
+		const walk = walk_bundle_dir(options.bundleDir);
 		if (!walk.ok) return fail_with(spinner, format_bundle_walk_error(walk.error));
 		bundle_total_size_bytes = walk.value.total_size_bytes;
 
-		const main_module = options.mainModule!;
+		if (options.mainModule === undefined) {
+			return fail_with(spinner, "--main-module is required when --bundle-dir is supplied");
+		}
+		const main_module = options.mainModule;
 		const has_main = walk.value.parts.some((p) => p.name === main_module);
 		if (!has_main) {
 			return fail_with(
@@ -367,7 +393,9 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	// --- Pipeline template snapshot (HTTP mode only) ---
 	let template_ref: string | undefined;
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return fail_with(spinner, http_input_result.error);
+		const http_input = http_input_result.value;
 		const template_upload = await compile_and_upload_template(http_input, options.pipeline);
 		if (!template_upload.ok) return fail_with(spinner, template_upload.error);
 		template_ref = template_upload.value;
@@ -394,8 +422,10 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	let version_set_id: string;
 
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
-		const upload = await upload_version_set(http_input, manifest_result.value as VersionSetManifest);
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return fail_with(spinner, http_input_result.error);
+		const http_input = http_input_result.value;
+		const upload = await upload_version_set(http_input, manifest_result.value);
 		if (!upload.ok) {
 			return fail_with(spinner, `version-set upload failed: ${format_http_error(upload.error)}`);
 		}
@@ -404,11 +434,11 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 		const backend = await selectCorpusBackend({ mode: "memory" });
 		const { version_set_store } = await import("@f0rbit/corpus");
 		const version_sets = version_set_store(backend);
-		const put_result = await version_sets.put(manifest_result.value as VersionSetManifest);
+		const put_result = await version_sets.put(manifest_result.value);
 		if (!put_result.ok) {
 			const error_msg =
 				put_result.error.kind === "storage_error"
-					? put_result.error.cause?.message || "Storage error"
+					? put_result.error.cause.message || "Storage error"
 					: "Failed to store manifest";
 			return fail_with(spinner, error_msg);
 		}
@@ -433,7 +463,7 @@ const format_http_error = (e: {
 	cause?: unknown;
 	message?: string;
 }): string => {
-	if (e.kind === "http") return `HTTP ${e.status} ${e.status_text}`;
+	if (e.kind === "http") return `HTTP ${String(e.status)} ${String(e.status_text)}`;
 	if (e.kind === "network") return `network error: ${String(e.cause)}`;
 	return e.message ?? "unknown error";
 };
@@ -458,7 +488,7 @@ const format_asset_walk_error = (e: AssetWalkError): string => {
 		case "io_error":
 			return `assets-dir read failed at ${e.path}: ${e.reason}`;
 		case "asset_too_large":
-			return `asset exceeds CF limit (${e.limit_bytes} bytes): ${e.path} is ${e.size_bytes} bytes`;
+			return `asset exceeds CF limit (${String(e.limit_bytes)} bytes): ${e.path} is ${String(e.size_bytes)} bytes`;
 	}
 };
 
@@ -487,8 +517,6 @@ const upload_sidecars_http = async (
 
 const to_u8 = (b: Buffer): Uint8Array => new Uint8Array(b.buffer, b.byteOffset, b.byteLength);
 
-type ResolvedMode = { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined };
-
 /**
  * Upload every module part to the `worker-modules` corpus store, build a
  * `BundleManifest`, and upload it to the `bundle-manifests` store.
@@ -508,7 +536,9 @@ const upload_bundle_directory = async (
 ): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
 	const module_refs: string[] = [];
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return http_input_result;
+		const http_input = http_input_result.value;
 		for (const part of walk.parts) {
 			const upload = await upload_blob_to_store(http_input, "worker-modules", part.bytes);
 			if (!upload.ok)
@@ -535,7 +565,9 @@ const upload_bundle_directory = async (
 
 	const manifest_bytes = new TextEncoder().encode(JSON.stringify(manifest.value));
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return http_input_result;
+		const http_input = http_input_result.value;
 		const upload = await upload_blob_to_store(http_input, "bundle-manifests", manifest_bytes);
 		if (!upload.ok) return { ok: false, error: `bundle-manifests upload failed: ${format_http_error(upload.error)}` };
 		return { ok: true, value: upload.value.ref };
@@ -550,7 +582,9 @@ const upload_assets_directory = async (
 ): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
 	const asset_refs: string[] = [];
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return http_input_result;
+		const http_input = http_input_result.value;
 		for (const part of walk.parts) {
 			const upload = await upload_blob_to_store(http_input, "asset-files", part.bytes);
 			if (!upload.ok)
@@ -568,12 +602,23 @@ const upload_assets_directory = async (
 
 	const manifest_bytes = new TextEncoder().encode(JSON.stringify(manifest.value));
 	if (resolved.mode === "cloudflare-http") {
-		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
+		const http_input_result = require_http_input(resolved);
+		if (!http_input_result.ok) return http_input_result;
+		const http_input = http_input_result.value;
 		const upload = await upload_blob_to_store(http_input, "asset-manifests", manifest_bytes);
 		if (!upload.ok) return { ok: false, error: `asset-manifests upload failed: ${format_http_error(upload.error)}` };
 		return { ok: true, value: upload.value.ref };
 	}
 	return { ok: true, value: `asset-manifests/${compute_hash(Buffer.from(manifest_bytes)).slice(0, 12)}` };
+};
+
+const try_parse_json_object = (text: string): object | null => {
+	try {
+		const parsed = JSON.parse(text) as unknown;
+		return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
 };
 
 const parse_asset_config = (raw: string | undefined): { ok: true; value: object } | { ok: false; error: string } => {
@@ -582,23 +627,15 @@ const parse_asset_config = (raw: string | undefined): { ok: true; value: object 
 	// heuristic: if the value parses as JSON we trust it; otherwise we
 	// `readFileSync` and re-parse. Either failure mode surfaces a clear
 	// error.
-	const try_parse = (text: string): object | null => {
-		try {
-			const parsed = JSON.parse(text) as unknown;
-			return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? (parsed as object) : null;
-		} catch {
-			return null;
-		}
-	};
-	const inline = try_parse(raw);
+	const inline = try_parse_json_object(raw);
 	if (inline !== null) return { ok: true, value: inline };
 	let file_text: string;
 	try {
 		file_text = readFileSync(raw, "utf8");
-	} catch (e) {
+	} catch {
 		return { ok: false, error: `--asset-config is neither valid JSON nor a readable file path: ${raw}` };
 	}
-	const from_file = try_parse(file_text);
+	const from_file = try_parse_json_object(file_text);
 	if (from_file === null) return { ok: false, error: `--asset-config file does not contain a JSON object: ${raw}` };
 	return { ok: true, value: from_file };
 };
@@ -755,7 +792,7 @@ const action_runs_events_list =
 		const client = client_factory();
 		const result = await client.pipelines.events.list(run_id);
 		if (!result.ok) return fail_with(spinner, result.error.message);
-		spinner.succeed(`${result.value.length} event(s)`);
+		spinner.succeed(`${String(result.value.length)} event(s)`);
 		for (const ev of result.value) {
 			console.log(`  ${chalk.dim(ev.ts)}  ${chalk.cyan(ev.kind)}  ${ev.stage_name}  ${chalk.dim(ev.id)}`);
 		}
@@ -782,11 +819,11 @@ export const action_packages_list =
 		const filter =
 			options.project !== undefined ? { project_id: await resolve_project_id(client, options.project) } : undefined;
 		if (filter !== undefined && filter.project_id === null)
-			return fail_with(spinner, `project "${options.project}" not found`);
+			return fail_with(spinner, `project "${String(options.project)}" not found`);
 
 		const result = await client.pipelines.packages.list(filter as { project_id?: string } | undefined);
 		if (!result.ok) return fail_with(spinner, result.error.message);
-		spinner.succeed(`${result.value.length} package(s)`);
+		spinner.succeed(`${String(result.value.length)} package(s)`);
 		for (const p of result.value) {
 			const project_label = p.project_id ?? chalk.dim("(unlinked)");
 			const repo_label = p.repo_url ?? chalk.dim("(no repo)");
@@ -801,7 +838,7 @@ export const action_packages_get =
 		const client = client_factory();
 		const result = await client.pipelines.packages.get(id);
 		if (!result.ok) return fail_with(spinner, result.error.message);
-		spinner.succeed(`${result.value.id}`);
+		spinner.succeed(result.value.id);
 		console.log(JSON.stringify(result.value, null, 2));
 	};
 
@@ -947,25 +984,22 @@ export const action_oidc_trust_list =
 		const result = await client.pipelines.oidc_trust.list({ owner_id });
 		if (!result.ok) return fail_with(spinner, result.error.message);
 
-		spinner.succeed(`${result.value.length} policy(ies)`);
+		spinner.succeed(`${String(result.value.length)} policy(ies)`);
 		if (result.value.length === 0) {
 			console.log(chalk.dim("  no policies — run `pipelines oidc-trust add` to create one"));
 			return;
 		}
 		for (const p of result.value) {
-			const refs_label = p.allowed_refs && p.allowed_refs.length > 0 ? p.allowed_refs.join(",") : chalk.dim("any");
-			const envs_label =
-				p.allowed_environments && p.allowed_environments.length > 0
-					? p.allowed_environments.join(",")
-					: chalk.dim("any");
+			const refs_label = p.allowed_refs.length > 0 ? p.allowed_refs.join(",") : chalk.dim("any");
+			const envs_label = p.allowed_environments.length > 0 ? p.allowed_environments.join(",") : chalk.dim("any");
 			const last_used = p.last_used_at ?? chalk.dim("(never)");
 			console.log(`  ${chalk.bold(p.id)}`);
 			console.log(`    owner:        ${chalk.cyan(p.github_owner)}/${p.repo_pattern}`);
 			console.log(`    aud:          ${p.expected_audience}`);
-			console.log(`    actions:      ${(p.allowed_actions ?? []).join(",")}`);
+			console.log(`    actions:      ${p.allowed_actions.join(",")}`);
 			console.log(`    refs:         ${refs_label}`);
 			console.log(`    environments: ${envs_label}`);
-			console.log(`    ttl:          ${p.session_ttl_seconds}s`);
+			console.log(`    ttl:          ${String(p.session_ttl_seconds)}s`);
 			console.log(`    last_used:    ${last_used}`);
 		}
 	};
@@ -1056,8 +1090,8 @@ export const action_oidc_trust_add =
 		console.log(`  github_owner: ${result.value.github_owner}`);
 		console.log(`  repo_pattern: ${result.value.repo_pattern}`);
 		console.log(`  aud:          ${result.value.expected_audience}`);
-		console.log(`  actions:      ${(result.value.allowed_actions ?? []).join(",")}`);
-		console.log(`  ttl:          ${result.value.session_ttl_seconds}s`);
+		console.log(`  actions:      ${result.value.allowed_actions.join(",")}`);
+		console.log(`  ttl:          ${String(result.value.session_ttl_seconds)}s`);
 	};
 
 export interface OidcTrustRemoveOptions {
@@ -1123,15 +1157,17 @@ export const action_analysis_templates_list =
 
 		const result = await client.pipelines.analysis_templates.list({ owner_id });
 		if (!result.ok) return fail_with(spinner, result.error.message);
-		spinner.succeed(`${result.value.length} template(s)`);
+		spinner.succeed(`${String(result.value.length)} template(s)`);
 		if (result.value.length === 0) {
 			console.log(chalk.dim("  no templates — run `pipelines analysis-templates create` to add one"));
 			return;
 		}
 		for (const t of result.value) {
-			const dsl_text = typeof t.threshold_dsl === "string" ? t.threshold_dsl : String(t.threshold_dsl ?? "");
+			const dsl_text = typeof t.threshold_dsl === "string" ? t.threshold_dsl : JSON.stringify(t.threshold_dsl ?? "");
 			const dsl_lines = dsl_text.split("\n").filter((l: string) => l.trim().length > 0).length;
-			console.log(`  ${chalk.bold(t.id)}  ${chalk.cyan(t.name)}  ${dsl_lines} threshold(s)  ${t.window_ms}ms`);
+			console.log(
+				`  ${chalk.bold(t.id)}  ${chalk.cyan(t.name)}  ${String(dsl_lines)} threshold(s)  ${String(t.window_ms)}ms`,
+			);
 		}
 	};
 
@@ -1193,7 +1229,7 @@ export const action_analysis_templates_create =
 		spinner.succeed(`created ${result.value.id}`);
 		console.log(chalk.green(`  id:         ${result.value.id}`));
 		console.log(`  name:       ${result.value.name}`);
-		console.log(`  window_ms:  ${result.value.window_ms}`);
+		console.log(`  window_ms:  ${String(result.value.window_ms)}`);
 	};
 
 export interface AnalysisTemplatesUpdateOptions {
@@ -1317,7 +1353,7 @@ export const action_workflow_migrate =
 
 		const source = readFileSync(source_path, "utf8");
 		const vars = derive_template_vars({ package_name, rollout, default_gate, build_shape, now: new Date() });
-		const rendered = render_pkg_template(source, vars as unknown as Record<string, string>);
+		const rendered = render_pkg_template(source, vars);
 		if (!rendered.ok) return fail_with(spinner, `failed to render workflow template: ${rendered.error.message}`);
 
 		const existed_before = existsSync(workflow_path);
@@ -1333,8 +1369,8 @@ export const action_workflow_migrate =
 			if (changed) {
 				const old_lines = previous.split("\n").length;
 				const new_lines = rendered.value.split("\n").length;
-				console.log(`  before: ${old_lines} lines`);
-				console.log(`  after:  ${new_lines} lines`);
+				console.log(`  before: ${String(old_lines)} lines`);
+				console.log(`  after:  ${String(new_lines)} lines`);
 				console.log(chalk.dim(`  omit --dry-run to write`));
 			}
 			return;
@@ -1348,8 +1384,8 @@ export const action_workflow_migrate =
 		if (changed) {
 			const old_lines = previous.split("\n").length;
 			const new_lines = rendered.value.split("\n").length;
-			console.log(`  before: ${old_lines} lines${existed_before ? "" : " (new file)"}`);
-			console.log(`  after:  ${new_lines} lines`);
+			console.log(`  before: ${String(old_lines)} lines${existed_before ? "" : " (new file)"}`);
+			console.log(`  after:  ${String(new_lines)} lines`);
 		}
 	};
 

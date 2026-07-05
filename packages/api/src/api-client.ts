@@ -33,11 +33,11 @@ import type {
 	PipelineRun,
 	PipelineStageEvent,
 	Project,
-	ProjectConfig,
 	SaveConfigRequest,
 	StageEventKind,
 	TagWithTypedColor,
 	TaskWithDetails,
+	TodoUpdate,
 	UpsertProject,
 	UpsertTag,
 	UpsertTodo,
@@ -57,6 +57,38 @@ type SanitizedToken = {
 type CreatedToken = SanitizedToken & { token: string };
 type AccessKeyCreate = { name: string; note?: string };
 type AccessKeyUpdate = { name?: string; note?: string; enabled?: boolean };
+type SessionUser = {
+	id: string;
+	name: string | null;
+	email?: string | null;
+	github_id: number | null;
+	image_url?: string | null;
+	task_view: "list" | "grid";
+};
+type SessionInfo = { id: string };
+type ScanStatusUpdate = {
+	id: number;
+	actions: Record<string, string[]>;
+	titles: Record<string, string>;
+	approved: boolean;
+};
+// Minimal subset of GitHub's REST API repo/branch shapes — the full response
+// types (`Endpoints[...]` from octokit) live in `@devpad/core`'s github
+// service, which this package doesn't depend on. Only the fields the
+// frontend actually reads are modelled here.
+type GithubRepo = { name: string; full_name: string; private: boolean; default_branch: string };
+type GithubBranch = { name: string; commit: { sha: string; message?: string } };
+// The media-connections GitHub repo listing is a distinct, pre-normalised
+// shape from `@devpad/core`'s connection service (not the raw octokit
+// response `GithubRepo` above models) — field names genuinely differ
+// (`is_private` vs `private`, no `default_branch`).
+type MediaGithubRepo = {
+	full_name: string;
+	name: string;
+	owner: string;
+	is_private: boolean;
+	pushed_at: string | null;
+};
 
 /**
  * Authentication mode for the API client
@@ -69,8 +101,8 @@ export type AuthMode = "session" | "key" | "cookie";
  */
 export class ApiClient {
 	private readonly clients;
-	private _api_key: string;
-	private _auth_mode: AuthMode;
+	private readonly api_key_field: string;
+	private readonly auth_mode_field: AuthMode;
 
 	constructor(options: {
 		base_url?: string;
@@ -83,15 +115,15 @@ export class ApiClient {
 	}) {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
-		this._api_key = options.api_key ?? "";
-		this._auth_mode =
+		this.api_key_field = options.api_key ?? "";
+		this.auth_mode_field =
 			options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : options.api_key ? "key" : "cookie");
 
 		const clientOptions = {
 			base_url,
 			api_key: options.api_key,
 			max_history_size: options.max_history_size,
-			auth_mode: this._auth_mode,
+			auth_mode: this.auth_mode_field,
 			credentials: options.credentials,
 			default_headers: options.default_headers,
 			custom_fetch: options.custom_fetch,
@@ -123,12 +155,14 @@ export class ApiClient {
 	 * Auth namespace with Result-wrapped operations
 	 */
 	public readonly auth = {
-		session: (): Promise<ApiResult<{ authenticated: boolean; user: any; session: any; scope?: string }>> =>
+		session: (): Promise<
+			ApiResult<{ authenticated: boolean; user: SessionUser | null; session: SessionInfo | null; scope?: string }>
+		> =>
 			wrap(() =>
 				this.clients.auth_root.get<{
 					authenticated: boolean;
-					user: any;
-					session: any;
+					user: SessionUser | null;
+					session: SessionInfo | null;
 					scope?: string;
 				}>("/auth/session"),
 			),
@@ -170,20 +204,17 @@ export class ApiClient {
 			wrap(async () => {
 				const result = await this.projects.list(filters);
 				if (!result.ok) throw new Error(result.error.message);
-				return result.value.reduce(
-					(acc, project) => {
-						acc[project.id] = project;
-						return acc;
-					},
-					{} as Record<string, Project>,
-				);
+				return result.value.reduce<Record<string, Project>>((acc, project) => {
+					acc[project.id] = project;
+					return acc;
+				}, {});
 			}),
 
 		/**
 		 * Get project by ID
 		 */
 		find: (id: string): Promise<ApiResult<Project | null>> =>
-			wrap(() => this.clients.projects.get<any>("/projects", { query: { id } })),
+			wrap(() => this.clients.projects.get<Project | null>("/projects", { query: { id } })),
 
 		/**
 		 * Get project by name
@@ -275,7 +306,7 @@ export class ApiClient {
 			 */
 			save: (request: SaveConfigRequest): Promise<ApiResult<void>> =>
 				wrap(() =>
-					this.clients.projects.patch<void>("/projects/save_config", {
+					this.clients.projects.patch("/projects/save_config", {
 						body: request,
 					}),
 				),
@@ -305,11 +336,11 @@ export class ApiClient {
 			/**
 			 * Get pending scan updates for a project
 			 */
-			updates: (project_id: string): Promise<ApiResult<any[]>> =>
+			updates: (project_id: string): Promise<ApiResult<TodoUpdate[]>> =>
 				wrap(() =>
 					this.clients.projects
 						.get<{
-							updates: any[];
+							updates: TodoUpdate[];
 						}>("/projects/updates", { query: { project_id } })
 						.then((response) => response.updates),
 				),
@@ -317,9 +348,9 @@ export class ApiClient {
 			/**
 			 * Process scan results
 			 */
-			update: (project_id: string, data: any): Promise<ApiResult<void>> =>
+			update: (project_id: string, data: ScanStatusUpdate): Promise<ApiResult<void>> =>
 				wrap(() =>
-					this.clients.projects.post<void>("/projects/scan_status", {
+					this.clients.projects.post("/projects/scan_status", {
 						query: { project_id },
 						body: data,
 					}),
@@ -329,8 +360,8 @@ export class ApiClient {
 		/**
 		 * Get project history
 		 */
-		history: (project_id: string): Promise<ApiResult<any[]>> =>
-			wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`)),
+		history: (project_id: string): Promise<ApiResult<HistoryAction[]>> =>
+			wrap(() => this.clients.projects.get<HistoryAction[]>(`/projects/${project_id}/history`)),
 
 		/**
 		 * Legacy methods (keeping for compatibility)
@@ -353,7 +384,7 @@ export class ApiClient {
 		 */
 		deleteProject: (project: Project): Promise<ApiResult<void>> =>
 			wrap(() =>
-				this.clients.projects.patch<void>("/projects", {
+				this.clients.projects.patch("/projects", {
 					body: { ...project, deleted: true },
 				}),
 			),
@@ -366,13 +397,13 @@ export class ApiClient {
 		/**
 		 * List milestones for authenticated user
 		 */
-		list: (): Promise<ApiResult<Milestone[]>> => wrap(() => this.clients.milestones.get<any[]>("/milestones")),
+		list: (): Promise<ApiResult<Milestone[]>> => wrap(() => this.clients.milestones.get<Milestone[]>("/milestones")),
 
 		/**
 		 * Get milestones by project ID
 		 */
 		getByProject: (project_id: string): Promise<ApiResult<Milestone[]>> =>
-			wrap(() => this.clients.milestones.get<any[]>(`/projects/${project_id}/milestones`)),
+			wrap(() => this.clients.milestones.get<Milestone[]>(`/projects/${project_id}/milestones`)),
 
 		/**
 		 * Get milestone by ID
@@ -380,8 +411,8 @@ export class ApiClient {
 		find: (id: string): Promise<ApiResult<Milestone | null>> =>
 			wrap(async () => {
 				try {
-					return await this.clients.milestones.get<any>(`/milestones/${id}`);
-				} catch (error) {
+					return await this.clients.milestones.get<Milestone>(`/milestones/${id}`);
+				} catch {
 					return null;
 				}
 			}),
@@ -392,11 +423,12 @@ export class ApiClient {
 		create: (data: {
 			project_id: string;
 			name: string;
-			description?: string;
-			target_time?: string;
-			target_version?: string;
-			finished_at?: string;
-		}): Promise<ApiResult<Milestone>> => wrap(() => this.clients.milestones.post<any>("/milestones", { body: data })),
+			description?: string | null;
+			target_time?: string | null;
+			target_version?: string | null;
+			finished_at?: string | null;
+		}): Promise<ApiResult<Milestone>> =>
+			wrap(() => this.clients.milestones.post<Milestone>("/milestones", { body: data })),
 
 		/**
 		 * Update milestone
@@ -405,9 +437,9 @@ export class ApiClient {
 			id: string,
 			data: {
 				name?: string;
-				description?: string;
-				target_time?: string;
-				target_version?: string;
+				description?: string | null;
+				target_time?: string | null;
+				target_version?: string | null;
 				finished_at?: string | null;
 			},
 		): Promise<ApiResult<Milestone>> =>
@@ -430,7 +462,7 @@ export class ApiClient {
 					finished_at: data.finished_at !== undefined ? data.finished_at : milestone.finished_at,
 				};
 
-				return this.clients.milestones.patch<any>(`/milestones/${id}`, {
+				return this.clients.milestones.patch<Milestone>(`/milestones/${id}`, {
 					body: updateData,
 				});
 			}),
@@ -445,7 +477,7 @@ export class ApiClient {
 		 * Get goals for a milestone
 		 */
 		goals: (id: string): Promise<ApiResult<Goal[]>> =>
-			wrap(() => this.clients.milestones.get<any[]>(`/milestones/${id}/goals`)),
+			wrap(() => this.clients.milestones.get<Goal[]>(`/milestones/${id}/goals`)),
 	};
 
 	/**
@@ -455,12 +487,13 @@ export class ApiClient {
 		/**
 		 * List goals for authenticated user
 		 */
-		list: (): Promise<ApiResult<Goal[]>> => wrap(() => this.clients.goals.get<any[]>("/goals")),
+		list: (): Promise<ApiResult<Goal[]>> => wrap(() => this.clients.goals.get<Goal[]>("/goals")),
 
 		/**
 		 * Get goal by ID
 		 */
-		find: (id: string): Promise<ApiResult<Goal | null>> => wrap(() => this.clients.goals.get<any>(`/goals/${id}`)),
+		find: (id: string): Promise<ApiResult<Goal | null>> =>
+			wrap(() => this.clients.goals.get<Goal | null>(`/goals/${id}`)),
 
 		/**
 		 * Create new goal
@@ -468,17 +501,17 @@ export class ApiClient {
 		create: (data: {
 			milestone_id: string;
 			name: string;
-			description?: string;
-			target_time?: string;
-			finished_at?: string;
-		}): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<any>("/goals", { body: data })),
+			description?: string | null;
+			target_time?: string | null;
+			finished_at?: string | null;
+		}): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<Goal>("/goals", { body: data })),
 
 		/**
 		 * Update goal
 		 */
 		update: async (
 			id: string,
-			data: { name?: string; description?: string; target_time?: string; finished_at?: string | null },
+			data: { name?: string; description?: string | null; target_time?: string | null; finished_at?: string | null },
 		): Promise<ApiResult<Goal>> =>
 			wrap(async () => {
 				// Fetch the existing goal to get required fields
@@ -498,7 +531,7 @@ export class ApiClient {
 					finished_at: data.finished_at !== undefined ? data.finished_at : goal.finished_at,
 				};
 
-				return this.clients.goals.patch<any>(`/goals/${id}`, {
+				return this.clients.goals.patch<Goal>(`/goals/${id}`, {
 					body: updateData,
 				});
 			}),
@@ -529,7 +562,7 @@ export class ApiClient {
 		 * Get task by ID
 		 */
 		find: (id: string): Promise<ApiResult<TaskWithDetails | null>> =>
-			wrap(() => this.clients.tasks.get<any>("/tasks", { query: { id } })),
+			wrap(() => this.clients.tasks.get<TaskWithDetails | null>("/tasks", { query: { id } })),
 
 		/**
 		 * Get tasks by project ID
@@ -591,15 +624,15 @@ export class ApiClient {
 		/**
 		 * Save tags for tasks
 		 */
-		saveTags: (data: any): Promise<ApiResult<void>> =>
-			wrap(() => this.clients.tasks.patch<void>("/tasks/save_tags", { body: data })),
+		saveTags: (data: UpsertTag[]): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.tasks.patch("/tasks/save_tags", { body: data })),
 
 		/**
 		 * Delete task (soft delete)
 		 */
 		deleteTask: (task: TaskWithDetails): Promise<ApiResult<void>> =>
 			wrap(() =>
-				this.clients.tasks.patch<void>("/tasks", {
+				this.clients.tasks.patch("/tasks", {
 					body: { ...task.task, deleted: true },
 				}),
 			),
@@ -634,13 +667,13 @@ export class ApiClient {
 		/**
 		 * List repositories for authenticated user
 		 */
-		repos: (): Promise<ApiResult<any[]>> => wrap(() => this.clients.github.get<any[]>("/repos")),
+		repos: (): Promise<ApiResult<GithubRepo[]>> => wrap(() => this.clients.github.get<GithubRepo[]>("/repos")),
 
 		/**
 		 * List branches for a GitHub repository
 		 */
-		branches: (owner: string, repo: string): Promise<ApiResult<any[]>> =>
-			wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`)),
+		branches: (owner: string, repo: string): Promise<ApiResult<GithubBranch[]>> =>
+			wrap(() => this.clients.github.get<GithubBranch[]>(`/repos/${owner}/${repo}/branches`)),
 	};
 
 	public readonly blog = {
@@ -695,7 +728,7 @@ export class ApiClient {
 				wrap(() => this.clients.blog.post<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
 
 			removeFromPost: (uuid: string, tag: string): Promise<ApiResult<void>> =>
-				wrap(() => this.clients.blog.delete<void>(`/blog/tags/posts/${uuid}/tags/${tag}`)),
+				wrap(() => this.clients.blog.delete(`/blog/tags/posts/${uuid}/tags/${tag}`)),
 		},
 
 		categories: {
@@ -713,7 +746,7 @@ export class ApiClient {
 				),
 
 			delete: (name: string): Promise<ApiResult<void>> =>
-				wrap(() => this.clients.blog.delete<void>(`/blog/categories/${name}`)),
+				wrap(() => this.clients.blog.delete(`/blog/categories/${name}`)),
 		},
 
 		tokens: {
@@ -730,8 +763,7 @@ export class ApiClient {
 					}),
 				),
 
-			delete: (id: string): Promise<ApiResult<void>> =>
-				wrap(() => this.clients.blog.delete<void>(`/blog/tokens/${id}`)),
+			delete: (id: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete(`/blog/tokens/${id}`)),
 		},
 	};
 
@@ -767,7 +799,7 @@ export class ApiClient {
 					wrap(() => this.clients.media.post<ProfileFilter>(`/profiles/${profile_id}/filters`, { body: data })),
 
 				remove: (profile_id: string, filter_id: string): Promise<ApiResult<void>> =>
-					wrap(() => this.clients.media.delete<void>(`/profiles/${profile_id}/filters/${filter_id}`)),
+					wrap(() => this.clients.media.delete(`/profiles/${profile_id}/filters/${filter_id}`)),
 			},
 
 			timeline: (slug: string, params?: { limit?: number; before?: string }): Promise<ApiResult<Timeline>> =>
@@ -804,10 +836,11 @@ export class ApiClient {
 			delete: (account_id: string): Promise<ApiResult<{ success: boolean }>> =>
 				wrap(() => this.clients.media.delete<{ success: boolean }>(`/connections/${account_id}`)),
 
-			refresh: (account_id: string): Promise<ApiResult<any>> =>
-				wrap(() => this.clients.media.post<any>(`/connections/${account_id}/refresh`)),
+			refresh: (account_id: string): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.media.post<unknown>(`/connections/${account_id}/refresh`)),
 
-			refreshAll: (): Promise<ApiResult<any>> => wrap(() => this.clients.media.post<any>("/connections/refresh-all")),
+			refreshAll: (): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.media.post<unknown>("/connections/refresh-all")),
 
 			updateStatus: (account_id: string, is_active: boolean): Promise<ApiResult<Account>> =>
 				wrap(() =>
@@ -820,24 +853,24 @@ export class ApiClient {
 				get: (account_id: string): Promise<ApiResult<PlatformSettings>> =>
 					wrap(() => this.clients.media.get<PlatformSettings>(`/connections/${account_id}/settings`)),
 
-				update: (account_id: string, settings: Record<string, unknown>): Promise<ApiResult<any>> =>
+				update: (account_id: string, settings: Record<string, unknown>): Promise<ApiResult<{ updated: boolean }>> =>
 					wrap(() =>
-						this.clients.media.put<any>(`/connections/${account_id}/settings`, {
+						this.clients.media.put<{ updated: boolean }>(`/connections/${account_id}/settings`, {
 							body: { settings },
 						}),
 					),
 			},
 
-			repos: (account_id: string): Promise<ApiResult<any[]>> =>
+			repos: (account_id: string): Promise<ApiResult<MediaGithubRepo[]>> =>
 				wrap(async () => {
-					const res = await this.clients.media.get<{ repos: any[] }>(`/connections/${account_id}/repos`);
+					const res = await this.clients.media.get<{ repos: MediaGithubRepo[] }>(`/connections/${account_id}/repos`);
 					return res.repos;
 				}),
 
-			subreddits: (account_id: string): Promise<ApiResult<any[]>> =>
+			subreddits: (account_id: string): Promise<ApiResult<string[]>> =>
 				wrap(async () => {
 					const res = await this.clients.media.get<{
-						subreddits: any[];
+						subreddits: string[];
 						username: string;
 					}>(`/connections/${account_id}/subreddits`);
 					return res.subreddits;
@@ -892,9 +925,9 @@ export class ApiClient {
 					return this.clients.media.get<Timeline>(`/timeline/${user_id}`, Object.keys(query).length ? { query } : {});
 				}),
 
-			getRaw: (user_id: string, platform: string, account_id: string): Promise<ApiResult<any>> =>
+			getRaw: (user_id: string, platform: string, account_id: string): Promise<ApiResult<unknown>> =>
 				wrap(() =>
-					this.clients.media.get<any>(`/timeline/${user_id}/raw/${platform}`, {
+					this.clients.media.get<unknown>(`/timeline/${user_id}/raw/${platform}`, {
 						query: { account_id },
 					}),
 				),
@@ -905,12 +938,12 @@ export class ApiClient {
 	 * User namespace with Result-wrapped operations
 	 */
 	public readonly activity = {
-		ai: (options?: { limit?: number; since?: string }): Promise<ApiResult<{ sessions: any[] }>> =>
+		ai: (options?: { limit?: number; since?: string }): Promise<ApiResult<{ sessions: unknown[] }>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (options?.limit) query.limit = String(options.limit);
 				if (options?.since) query.since = options.since;
-				return this.clients.projects.get<{ sessions: any[] }>(
+				return this.clients.projects.get<{ sessions: unknown[] }>(
 					"/activity/ai",
 					Object.keys(query).length ? { query } : {},
 				);
@@ -921,13 +954,21 @@ export class ApiClient {
 		/**
 		 * Get user activity history
 		 */
-		history: (): Promise<ApiResult<any[]>> => wrap(() => this.clients.auth.get<any[]>("/user/history")),
+		history: (): Promise<ApiResult<HistoryAction[]>> =>
+			wrap(() => this.clients.auth.get<HistoryAction[]>("/user/history")),
 
 		/**
 		 * Update user preferences
 		 */
-		preferences: (data: { id: string; task_view: string }): Promise<ApiResult<any>> =>
-			wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data })),
+		preferences: (data: {
+			id: string;
+			task_view: string;
+		}): Promise<ApiResult<{ id: string; name: string | null; task_view: string }>> =>
+			wrap(() =>
+				this.clients.auth.patch<{ id: string; name: string | null; task_view: string }>("/user/preferences", {
+					body: data,
+				}),
+			),
 	};
 
 	/**
@@ -947,9 +988,9 @@ export class ApiClient {
 		summary: (input: {
 			project_id: string;
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
-		}): Promise<ApiResult<any>> =>
+		}): Promise<ApiResult<unknown>> =>
 			wrap(() =>
-				this.clients.pulse.get<any>("/summary/:project_id".replace(":project_id", input.project_id), {
+				this.clients.pulse.get<unknown>("/summary/:project_id".replace(":project_id", input.project_id), {
 					query:
 						typeof input.range === "string"
 							? { range: input.range }
@@ -969,7 +1010,7 @@ export class ApiClient {
 			search?: string;
 			limit?: number;
 			cursor?: string;
-		}): Promise<ApiResult<any>> =>
+		}): Promise<ApiResult<unknown>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (input.name) query.name = input.name;
@@ -979,7 +1020,9 @@ export class ApiClient {
 				if (input.search) query.search = input.search;
 				if (input.limit) query.limit = String(input.limit);
 				if (input.cursor) query.cursor = input.cursor;
-				return this.clients.pulse.get<any>("/events/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/events/:project_id".replace(":project_id", input.project_id), {
+					query,
+				});
 			}),
 
 		/**
@@ -989,7 +1032,7 @@ export class ApiClient {
 			project_id: string;
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 			group_by_fingerprint?: boolean;
-		}): Promise<ApiResult<any>> =>
+		}): Promise<ApiResult<unknown>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
@@ -999,7 +1042,9 @@ export class ApiClient {
 					query.to = String(input.range.to);
 				}
 				if (input.group_by_fingerprint) query.group_by_fingerprint = "true";
-				return this.clients.pulse.get<any>("/errors/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/errors/:project_id".replace(":project_id", input.project_id), {
+					query,
+				});
 			}),
 
 		/**
@@ -1010,7 +1055,7 @@ export class ApiClient {
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 			level?: string;
 			search?: string;
-		}): Promise<ApiResult<any>> =>
+		}): Promise<ApiResult<unknown>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
@@ -1021,7 +1066,7 @@ export class ApiClient {
 				}
 				if (input.level) query.level = input.level;
 				if (input.search) query.search = input.search;
-				return this.clients.pulse.get<any>("/logs/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/logs/:project_id".replace(":project_id", input.project_id), { query });
 			}),
 
 		/**
@@ -1032,7 +1077,7 @@ export class ApiClient {
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 			route?: string;
 			percentiles?: number[];
-		}): Promise<ApiResult<any>> =>
+		}): Promise<ApiResult<unknown>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
@@ -1043,7 +1088,9 @@ export class ApiClient {
 				}
 				if (input.route) query.route = input.route;
 				if (input.percentiles && input.percentiles.length > 0) query.percentiles = input.percentiles.join(",");
-				return this.clients.pulse.get<any>("/latency/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/latency/:project_id".replace(":project_id", input.project_id), {
+					query,
+				});
 			}),
 
 		/**
@@ -1053,8 +1100,8 @@ export class ApiClient {
 			/**
 			 * List subscriptions for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
-				wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<unknown[]>> =>
+				wrap(() => this.clients.pulse.get<unknown[]>("/admin/subs", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a subscription
@@ -1062,8 +1109,8 @@ export class ApiClient {
 			create: (input: {
 				project_id: string;
 				name: string;
-				filter: any;
-				channel: any;
+				filter: Record<string, unknown>;
+				channel: Record<string, unknown>;
 				cooldown_seconds?: number;
 			}): Promise<ApiResult<{ id: string }>> =>
 				wrap(() =>
@@ -1081,15 +1128,22 @@ export class ApiClient {
 			/**
 			 * Get a subscription by ID
 			 */
-			get: (id: string): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.get<any>(`/admin/subs/${id}`)),
+			get: (id: string): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.pulse.get<unknown>(`/admin/subs/${id}`)),
 
 			/**
 			 * Update a subscription
 			 */
 			update: (
 				id: string,
-				patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>,
-			): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
+				patch: Partial<{
+					name: string;
+					filter: Record<string, unknown>;
+					channel: Record<string, unknown>;
+					cooldown_seconds: number;
+				}>,
+			): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.pulse.patch<unknown>(`/admin/subs/${id}`, { body: patch })),
 
 			/**
 			 * Delete a subscription
@@ -1105,8 +1159,8 @@ export class ApiClient {
 			/**
 			 * List ingest keys for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
-				wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<unknown[]>> =>
+				wrap(() => this.clients.pulse.get<unknown[]>("/admin/keys", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a new ingest key (returns plaintext only once)
@@ -1211,7 +1265,7 @@ export class ApiClient {
 			input: { stage_name: string; decision: "approved" | "denied"; user_id: string; reason?: string },
 		): Promise<ApiResult<void>> =>
 			wrap(() =>
-				this.clients.pipelines.post<void>(`/runs/${run_id}/approve`, {
+				this.clients.pipelines.post(`/runs/${run_id}/approve`, {
 					body: input,
 				}),
 			),
@@ -1220,13 +1274,13 @@ export class ApiClient {
 		 * Cancel a pipeline run
 		 */
 		cancel: (run_id: string): Promise<ApiResult<void>> =>
-			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
+			wrap(() => this.clients.pipelines.post(`/runs/${run_id}/cancel`, { body: {} })),
 
 		/**
 		 * Rollback a pipeline run
 		 */
 		rollback: (run_id: string): Promise<ApiResult<void>> =>
-			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+			wrap(() => this.clients.pipelines.post(`/runs/${run_id}/rollback`, { body: {} })),
 
 		/**
 		 * Stage-event namespace — Phase 2.C webhook ingestion + read-back.
@@ -1515,13 +1569,13 @@ export class ApiClient {
 	 * Get the API key
 	 */
 	public getApiKey(): string {
-		return this._api_key;
+		return this.api_key_field;
 	}
 
 	/**
 	 * Get the authentication mode
 	 */
 	public getAuthMode(): AuthMode {
-		return this._auth_mode;
+		return this.auth_mode_field;
 	}
 }

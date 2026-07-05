@@ -9,7 +9,7 @@ type ErrorMapping = {
 	defaultMessage: string;
 };
 
-export const ERROR_MAPPINGS: Record<string, ErrorMapping> = {
+export const ERROR_MAPPINGS: Record<string, ErrorMapping | undefined> = {
 	not_found: { status: 404, code: "NOT_FOUND", defaultMessage: "Resource not found" },
 	forbidden: { status: 403, code: "FORBIDDEN", defaultMessage: "Access denied" },
 	unauthorized: { status: 401, code: "UNAUTHORIZED", defaultMessage: "Authentication required" },
@@ -36,7 +36,7 @@ export const ERROR_MAPPINGS: Record<string, ErrorMapping> = {
 
 type ExtendedError = ServiceError & Record<string, unknown>;
 
-const ERROR_NAMES: Record<number, string> = {
+const ERROR_NAMES: Record<number, string | undefined> = {
 	400: "Bad request",
 	401: "Unauthorized",
 	403: "Forbidden",
@@ -50,8 +50,8 @@ const buildMessage = (error: ExtendedError, defaultMessage: string): string => {
 	if (error.message) return error.message;
 	if ("inner" in error && typeof error.inner === "object" && error.inner && "message" in error.inner)
 		return String(error.inner.message);
-	if ("resource" in error && error.resource) return `${defaultMessage}: ${error.resource}`;
-	if ("slug" in error && error.slug) return `${defaultMessage}: ${error.slug}`;
+	if (typeof error.resource === "string" && error.resource !== "") return `${defaultMessage}: ${error.resource}`;
+	if (typeof error.slug === "string" && error.slug !== "") return `${defaultMessage}: ${error.slug}`;
 	return defaultMessage;
 };
 
@@ -95,10 +95,10 @@ export const handleResult = <T>(
 	return c.json(result.value as object, successStatus);
 };
 
-export const handleResultWith = <T, R>(
+export const handleResultWith = <T>(
 	c: Context,
 	result: Result<T, ServiceError>,
-	mapper: (value: T) => R,
+	mapper: (value: T) => unknown,
 	successStatus: ContentfulStatusCode = 200,
 ): Response => {
 	if (!result.ok) {
@@ -132,10 +132,10 @@ export const serverError = (c: Context, message: string) => httpError(c, 500, me
 export const response = {
 	result: <T>(c: Context, result: Result<T, ServiceError>, successStatus: ContentfulStatusCode = 200): Response =>
 		handleResult(c, result, successStatus),
-	with: <T, R>(
+	with: <T>(
 		c: Context,
 		result: Result<T, ServiceError>,
-		mapper: (value: T) => R,
+		mapper: (value: T) => unknown,
 		successStatus: ContentfulStatusCode = 200,
 	): Response => handleResultWith(c, result, mapper, successStatus),
 	empty: <T>(c: Context, result: Result<T, ServiceError>): Response => handleResultNoContent(c, result),
@@ -146,4 +146,4 @@ export const errorMap = {
 };
 
 type ValidTarget = "query" | "param" | "json";
-export const valid = <T>(c: Context, target: ValidTarget): T => (c.req.valid as (t: ValidTarget) => T)(target);
+export const valid = (c: Context, target: ValidTarget): unknown => (c.req.valid as (t: ValidTarget) => unknown)(target);

@@ -10,45 +10,45 @@ export interface BufferedQueue<T> {
 }
 
 export class ArrayBufferedQueue<T> implements BufferedQueue<T> {
-	private _entries: T[] = [];
-	private _head: number = 0;
-	private _tail: number = 0;
-	private _size: number = 0;
+	private entries: T[] = [];
+	private head: number = 0;
+	private tail: number = 0;
+	private count: number = 0;
 
-	constructor(private _capacity: number) {}
+	constructor(private readonly capacity: number) {}
 
 	latest(): T | null {
-		if (this._size === 0) return null;
-		return this._entries[this._tail - 1] ?? null;
+		if (this.count === 0) return null;
+		return this.entries[this.tail - 1] ?? null;
 	}
 
 	list(): T[] {
-		if (this._size === 0) return [];
-		if (this._head < this._tail) {
-			return this._entries.slice(this._head, this._tail);
+		if (this.count === 0) return [];
+		if (this.head < this.tail) {
+			return this.entries.slice(this.head, this.tail);
 		}
-		return this._entries.slice(this._head).concat(this._entries.slice(0, this._tail));
+		return this.entries.slice(this.head).concat(this.entries.slice(0, this.tail));
 	}
 
 	add(item: T): void {
-		if (this._size === this._capacity) {
-			this._head = (this._head + 1) % this._capacity;
+		if (this.count === this.capacity) {
+			this.head = (this.head + 1) % this.capacity;
 		} else {
-			this._size++;
+			this.count++;
 		}
-		this._entries[this._tail] = item;
-		this._tail = (this._tail + 1) % this._capacity;
+		this.entries[this.tail] = item;
+		this.tail = (this.tail + 1) % this.capacity;
 	}
 
 	size(): number {
-		return this._size;
+		return this.count;
 	}
 
 	clear(): void {
-		this._entries = [];
-		this._head = 0;
-		this._tail = 0;
-		this._size = 0;
+		this.entries = [];
+		this.head = 0;
+		this.tail = 0;
+		this.count = 0;
 	}
 }
 
@@ -71,16 +71,16 @@ export type RequestHistoryEntry = {
 };
 
 export class ApiClient {
-	private base_url: string;
-	private api_key: string;
-	private request_history: BufferedQueue<RequestHistoryEntry>;
-	private category: string = "api";
-	private default_headers: Record<string, string>;
-	private custom_fetch?: typeof fetch;
+	private readonly base_url: string;
+	private readonly api_key: string;
+	private readonly request_history: BufferedQueue<RequestHistoryEntry>;
+	private readonly category: string = "api";
+	private readonly default_headers: Record<string, string>;
+	private readonly custom_fetch?: typeof fetch;
 
-	private credentials?: "include" | "omit" | "same-origin";
-	private auth_mode: "session" | "key" | "cookie";
-	private debug: boolean;
+	private readonly credentials?: "include" | "omit" | "same-origin";
+	private readonly auth_mode: "session" | "key" | "cookie";
+	private readonly debug: boolean;
 
 	constructor(options: {
 		base_url: string;
@@ -123,7 +123,7 @@ export class ApiClient {
 	}
 
 	private generateRequestId(): string {
-		return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+		return `${String(Date.now())}-${Math.random().toString(36).substring(2, 11)}`;
 	}
 
 	private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -187,7 +187,7 @@ export class ApiClient {
 				if (this.debug) {
 					console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
 						status: response.status,
-						duration: `${duration}ms`,
+						duration: `${String(duration)}ms`,
 						body,
 						query,
 					});
@@ -220,7 +220,7 @@ export class ApiClient {
 				} else {
 					try {
 						result = JSON.parse(text) as T;
-					} catch (parseError) {
+					} catch {
 						result = text as T;
 					}
 				}
@@ -229,7 +229,7 @@ export class ApiClient {
 			if (this.debug) {
 				console.log(`[INFO][${this.category}] ${method} ${path} [${requestId}] completed`, {
 					status: response.status,
-					duration: `${duration}ms`,
+					duration: `${String(duration)}ms`,
 				});
 			}
 
@@ -240,7 +240,7 @@ export class ApiClient {
 			if (this.debug) {
 				console.log(`[ERROR][${this.category}] ${method} ${path} [${requestId}] failed`, {
 					url,
-					duration: `${duration}ms`,
+					duration: `${String(duration)}ms`,
 					error: error instanceof Error ? error.message : String(error),
 					body,
 					query,

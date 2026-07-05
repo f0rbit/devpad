@@ -1,9 +1,59 @@
 import { define_lint_config } from "@f0rbit/lint";
 
 export default define_lint_config({
-	naming: "camelCase",
+	naming: "snake_case",
 	tsconfig_root_dir: import.meta.dirname,
+	// devpad writes extensionless relative imports throughout (Vite/Astro apps,
+	// tsup-built packages) -- the ecosystem-standard bundler convention, not the
+	// Node-ESM "every relative import needs .js" rule. See lint's own AGENTS.md
+	// on the module_resolution option (added 0.1.4 specifically for this case).
+	module_resolution: "bundler",
 	overrides: [
+		{
+			// --- Rule tiers (fix/lint-gate PR) ---
+			// devpad is mid-migration from camelCase to snake_case naming (user
+			// decision, phased separately -- see AGENTS.md) and carries substantial
+			// pre-toolchain debt in unsafe-* boundary typing, class-based provider
+			// code, and raw try/catch/throw. None of these are "off" -- they stay
+			// visible in CI/editor output at warn severity and graduate back to
+			// error incrementally, package by package, as each is cleaned up.
+			// Distribution was checked before tiering (post-bump/post-flip survey,
+			// PR body): every rule below hits 6+ top-level packages/apps roughly
+			// evenly (tests/, core, worker, cli, api, mcp, pipelines*, apps/*) --
+			// none is concentrated enough to scope narrower than repo-wide.
+			//   - naming-convention: tracked by devpad task
+			//     task_77589418-c5e0-4f8f-8864-713d5199085f
+			//   - no-unsafe-{assignment,member-access,argument,call,return} +
+			//     functional/no-this-expressions + functional/no-classes: tracked by
+			//     task_ed8646a5-97e8-41a8-b279-317fe5b210bd
+			//   - functional/no-throw-statements + no-try-statements: this family
+			//     wasn't in the original wiring-PR's top-5 list (dominated at the
+			//     time by naming-convention/unsafe-*) but the post-bump survey found
+			//     it at 327+243 -- a real architectural migration to Result
+			//     combinators, not a mechanical fix. Tracked by
+			//     task_90024e9a-6d3a-4ebc-8134-55ff2c5f3616
+			// f0rbit/must-use-result is deliberately NOT here -- it stays error and
+			// every baseline violation was fixed in this PR (real discarded-Result
+			// bugs, not a style debt bucket).
+			// `files` must be scoped to ts_files: an unscoped rules-only override
+			// applies to every file the flat config sees (including plain .js
+			// scripts), and those never get the @typescript-eslint plugin
+			// registered (that only happens inside the ts_files-scoped typed
+			// family) -- ESLint errors "could not find plugin" without this.
+			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			rules: {
+				"@typescript-eslint/naming-convention": "warn",
+				"@typescript-eslint/no-unsafe-assignment": "warn",
+				"@typescript-eslint/no-unsafe-member-access": "warn",
+				"@typescript-eslint/no-unsafe-argument": "warn",
+				"@typescript-eslint/no-unsafe-call": "warn",
+				"@typescript-eslint/no-unsafe-return": "warn",
+				"functional/no-this-expressions": "warn",
+				"functional/no-classes": "warn",
+				"functional/no-throw-statements": "warn",
+				"functional/no-try-statements": "warn",
+			},
+		},
 		{
 			// Golden fixtures are scaffolder OUTPUT snapshots asserted byte-for-byte by
 			// packages/cli's tests -- each ships its own full lint toolchain wiring
@@ -79,6 +129,56 @@ export default define_lint_config({
 			rules: {
 				"functional/no-classes": "off",
 				"functional/no-this-expressions": "off",
+			},
+		},
+		{
+			// import-x's bundler-mode resolver (createNodeResolver) has no
+			// tsconfig-paths awareness -- it can't resolve `@/*` alias specifiers
+			// at all (see ~/dev/lint AGENTS.md gotcha on why the factory doesn't
+			// ship eslint-import-resolver-typescript). Verified empirically: an
+			// unresolvable `@/` specifier fails import-x/extensions BOTH with and
+			// without an explicit extension, so no per-import fix exists -- only
+			// these three apps' src/** trees use the `@/*` alias pervasively.
+			// Real relative-import extension checking elsewhere is unaffected.
+			files: ["apps/main/src/**", "apps/blog/src/**", "apps/media/src/**"],
+			rules: {
+				"import-x/extensions": "off",
+			},
+		},
+		{
+			// @modelcontextprotocol/sdk ships real Node-ESM with a mandatory `.js`
+			// extension in its package exports map. Bundler mode's `pattern`
+			// override applies "never" to `.js` unconditionally, including bare
+			// package specifiers -- there's no per-import escape from the
+			// generated pattern, so this one file (the only mcp-sdk import site)
+			// gets a narrow exception rather than disabling the rule package-wide.
+			files: ["packages/mcp/src/index.ts"],
+			rules: {
+				"import-x/extensions": "off",
+			},
+		},
+		{
+			// The MCP SDK's own JSDoc on `Server` says "Only use `Server` for
+			// advanced use cases" (custom request handlers, dynamic tool list) --
+			// exactly this file's usage (DevpadMCPServer wires up custom
+			// ListTools/CallTool handlers). Migrating to `McpServer.registerTool`
+			// is a real behavioral rewrite, not a mechanical fix -- deferred
+			// rather than done blind during the fix/lint-gate lint pass.
+			files: ["packages/mcp/src/index.ts"],
+			rules: {
+				"@typescript-eslint/no-deprecated": "off",
+			},
+		},
+		{
+			// expect_ok<T>(body): T is a test-only response-unwrapping cast helper
+			// called with an explicit <T> at 20+ sites across this file. T only
+			// appears in the return position structurally, which
+			// no-unnecessary-type-parameters flags, but de-genericizing it would
+			// push an `as T` to every call site -- strictly worse ergonomics for
+			// identical type safety.
+			files: ["packages/pipelines/__tests__/integration/orchestrator-routes.test.ts"],
+			rules: {
+				"@typescript-eslint/no-unnecessary-type-parameters": "off",
 			},
 		},
 	],

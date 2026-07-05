@@ -18,7 +18,7 @@ export type GitHubMemoryConfig = {
 
 export class GitHubMemoryProvider extends BaseMemoryProvider<GitHubFetchResult> {
 	readonly platform = "github";
-	private config: GitHubMemoryConfig;
+	private readonly config: GitHubMemoryConfig;
 
 	constructor(config: GitHubMemoryConfig = {}) {
 		super();

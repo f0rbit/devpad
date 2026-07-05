@@ -53,7 +53,7 @@ const firstRow = <T>(r: T[], resource: string): Result<T, CategoryServiceError> 
 
 type CategoryLike = { name: string; parent: string | null };
 
-const buildTree = <T extends CategoryLike>(items: T[]): CategoryNode[] => {
+const buildTree = (items: CategoryLike[]): CategoryNode[] => {
 	const nodeMap = new Map<string, CategoryNode>();
 
 	for (const cat of items) {
@@ -94,13 +94,13 @@ export const createCategoryService = ({ db }: Deps) => {
 	};
 
 	const find = async (userId: string, name: string): Promise<Result<Category, CategoryServiceError>> => {
-		const rows = await db
+		const found = await db
 			.select()
 			.from(categories)
 			.where(and(eq(categories.owner_id, userId), eq(categories.name, name)))
 			.limit(1);
 
-		return firstRow(rows, `category:${name}`);
+		return firstRow(found, `category:${name}`);
 	};
 
 	const hasChildren = async (userId: string, name: string): Promise<boolean> => {
@@ -137,17 +137,17 @@ export const createCategoryService = ({ db }: Deps) => {
 		}
 
 		return try_catch_async(async () => {
-			const [created] = await db
+			const created_rows = await db
 				.insert(categories)
 				.values({
 					owner_id: userId,
 					name: input.name,
-					parent: input.parent ?? "root",
+					parent: input.parent,
 				})
 				.returning();
 
-			if (!created) throw new Error("Insert returned no rows");
-			return created;
+			if (created_rows.length === 0) throw new Error("Insert returned no rows");
+			return created_rows[0];
 		}, toDbError);
 	};
 
@@ -179,14 +179,14 @@ export const createCategoryService = ({ db }: Deps) => {
 				.set({ category: input.name })
 				.where(and(eq(posts.author_id, userId), eq(posts.category, name)));
 
-			const [updated] = await db
+			const updated_rows = await db
 				.update(categories)
 				.set({ name: input.name })
 				.where(and(eq(categories.owner_id, userId), eq(categories.name, name)))
 				.returning();
 
-			if (!updated) throw new Error("Update returned no rows");
-			return updated;
+			if (updated_rows.length === 0) throw new Error("Update returned no rows");
+			return updated_rows[0];
 		}, toDbError);
 	};
 

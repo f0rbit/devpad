@@ -10,7 +10,7 @@ import type {
 	WorkerDeployment,
 	WorkerMeta,
 	WorkerVersion,
-} from "./cloudflare-provider.ts";
+} from "./cloudflare-provider";
 
 type ScriptState = {
 	versions: WorkerVersion[];
@@ -95,13 +95,13 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 		}
 		if (latest.bundle.length !== expected_bytes.length) {
 			throw new Error(
-				`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle length mismatch: got ${latest.bundle.length}, expected ${expected_bytes.length}`,
+				`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle length mismatch: got ${String(latest.bundle.length)}, expected ${String(expected_bytes.length)}`,
 			);
 		}
 		for (let i = 0; i < latest.bundle.length; i++) {
 			if (latest.bundle[i] !== expected_bytes[i]) {
 				throw new Error(
-					`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle byte mismatch at index ${i}`,
+					`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle byte mismatch at index ${String(i)}`,
 				);
 			}
 		}
@@ -133,8 +133,8 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} has no modules (not a directory_bundle upload?)`,
 			);
 		}
-		const got = version.modules.map((m) => m.name).sort();
-		const expected = [...expected_module_names].sort();
+		const got = version.modules.map((m) => m.name).toSorted();
+		const expected = [...expected_module_names].toSorted();
 		if (got.length !== expected.length || got.some((name, i) => name !== expected[i])) {
 			throw new Error(
 				`InMemoryCloudflareProvider.assertVersionHasModules: script="${script_name}" version="${version_id}" expected modules ${JSON.stringify(expected)} got ${JSON.stringify(got)}`,
@@ -159,8 +159,8 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} has no assets recorded`,
 			);
 		}
-		const got = version.assets.map((a) => a.path).sort();
-		const expected = [...expected_asset_paths].sort();
+		const got = version.assets.map((a) => a.path).toSorted();
+		const expected = [...expected_asset_paths].toSorted();
 		if (got.length !== expected.length || got.some((path, i) => path !== expected[i])) {
 			throw new Error(
 				`InMemoryCloudflareProvider.assertVersionHasAssets: script="${script_name}" version="${version_id}" expected assets ${JSON.stringify(expected)} got ${JSON.stringify(got)}`,
@@ -178,7 +178,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				const total = sum_percentages(deployment.strategy);
 				if (total !== 100) {
 					throw new Error(
-						`InMemoryCloudflareProvider invariant violation: script="${name}" deployment="${deployment.id}" percentages sum to ${total}, expected 100`,
+						`InMemoryCloudflareProvider invariant violation: script="${name}" deployment="${deployment.id}" percentages sum to ${String(total)}, expected 100`,
 					);
 				}
 			}
@@ -232,7 +232,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				if (asset.hash.length !== 32) {
 					return err({
 						code: "validation",
-						message: `directory_bundle asset hash must be 32 hex chars, got length ${asset.hash.length} for ${asset.path}`,
+						message: `directory_bundle asset hash must be 32 hex chars, got length ${String(asset.hash.length)} for ${asset.path}`,
 					});
 				}
 			}
@@ -277,7 +277,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			if (total !== 100) {
 				return err({
 					code: "validation",
-					message: `deployment percentages must sum to 100, got ${total}`,
+					message: `deployment percentages must sum to 100, got ${String(total)}`,
 				});
 			}
 
@@ -289,7 +289,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				if (v.percentage < 0 || v.percentage > 100) {
 					return err({
 						code: "validation",
-						message: `version ${v.version_id} percentage out of range: ${v.percentage}`,
+						message: `version ${v.version_id} percentage out of range: ${String(v.percentage)}`,
 					});
 				}
 			}

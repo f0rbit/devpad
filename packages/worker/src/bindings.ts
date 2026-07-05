@@ -38,12 +38,19 @@ export type AppVariables = {
 	session: SessionData | null;
 	auth_channel: AuthChannel;
 	api_key_scope: string | null;
-	blogContext: BlogAppContext;
-	mediaContext: MediaAppContext;
+	// Optional: `unifiedContextMiddleware` skips setting these when the
+	// required Cloudflare bindings (DB/BLOG_CORPUS_BUCKET/MEDIA_CORPUS_BUCKET)
+	// aren't configured — consumers must check for undefined rather than
+	// assume these are always populated.
+	blogContext?: BlogAppContext;
+	mediaContext?: MediaAppContext;
 	config: AppConfig;
 	oauth_secrets: OAuthSecrets;
 	pulse?: Pulse;
-	log: PulseLog;
+	// Optional like `pulse` above: the same middleware wires both up, and test
+	// harnesses that don't install it must see `undefined`, not a lying
+	// non-optional type -- callers use `c.get("log")?.warning(...)` etc.
+	log?: PulseLog;
 };
 
 export type AppContext = {

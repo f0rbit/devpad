@@ -7,7 +7,8 @@ const app = new Hono<AppContext>();
 
 app.get("/ai", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const query = c.req.query();
 
 	const options: { limit?: number; since?: string } = {};

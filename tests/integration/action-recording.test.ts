@@ -98,7 +98,9 @@ describe("action recording integration", () => {
 		if (!result.ok) throw new Error(`Failed to create milestone: ${result.error.message}`);
 		milestone = result.value;
 		t.cleanup.registerCleanup("milestones", async () => {
-			await t.client.milestones.delete(milestone.id);
+			const cleanupResult = await t.client.milestones.delete(milestone.id);
+			if (!cleanupResult.ok)
+				console.warn(`Failed to cleanup milestone ${milestone.id}: ${cleanupResult.error.message}`);
 		});
 
 		const history_result = await t.client.projects.history(project.id);
@@ -117,7 +119,8 @@ describe("action recording integration", () => {
 		if (!result.ok) throw new Error(`Failed to create goal: ${result.error.message}`);
 		goal = result.value;
 		t.cleanup.registerCleanup("goals", async () => {
-			await t.client.goals.delete(goal.id);
+			const cleanupResult = await t.client.goals.delete(goal.id);
+			if (!cleanupResult.ok) console.warn(`Failed to cleanup goal ${goal.id}: ${cleanupResult.error.message}`);
 		});
 
 		const history_result = await t.client.projects.history(project.id);

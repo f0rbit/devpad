@@ -22,8 +22,8 @@ export async function list_grants(db: Database, package_id: string): Promise<Res
 	} catch (e) {
 		return err({
 			kind: "db_error",
-			message: `Failed to list grants for package ${package_id}`,
-		} as ServiceError);
+			message: `Failed to list grants for package ${package_id}: ${String(e)}`,
+		});
 	}
 }
 
@@ -41,7 +41,7 @@ export async function check_grant(
 		await list_grants(db, package_id),
 		(grants) => {
 			const verdict = evaluate_grant_check(grants, scope, stage_name);
-			return ok(verdict.granted) as Result<boolean, ServiceError>;
+			return ok(verdict.granted);
 		},
 		(error) => err(error) as Result<boolean, ServiceError>,
 	);
@@ -88,15 +88,15 @@ export async function request_grant(
 				kind: "store_error",
 				operation: "insert_grant",
 				message: "Failed to insert grant",
-			} as ServiceError);
+			});
 		}
 
 		return ok(inserted[0]);
 	} catch (e) {
 		return err({
 			kind: "db_error",
-			message: `Failed to request grant for scope "${scope}" at stage "${stage_name}"`,
-		} as ServiceError);
+			message: `Failed to request grant for scope "${scope}" at stage "${stage_name}": ${String(e)}`,
+		});
 	}
 }
 
@@ -127,15 +127,15 @@ export async function approve_grant(
 				kind: "not_found",
 				resource: "grant",
 				id: grant_id,
-			} as ServiceError);
+			});
 		}
 
 		return ok(updated[0]);
 	} catch (e) {
 		return err({
 			kind: "db_error",
-			message: `Failed to approve grant ${grant_id}`,
-		} as ServiceError);
+			message: `Failed to approve grant ${grant_id}: ${String(e)}`,
+		});
 	}
 }
 
@@ -167,14 +167,20 @@ export async function deny_grant(
 				kind: "not_found",
 				resource: "grant",
 				id: grant_id,
-			} as ServiceError);
+			});
 		}
+
+		// `pipeline_grant` has no denied_by/denied_reason columns yet (a
+		// schema change, out of scope here) -- log the audit context so the
+		// denying user + reason aren't silently dropped until the schema
+		// catches up to record them on the row itself.
+		console.info(`pipeline grant ${grant_id} denied by ${user_id}${reason ? `: ${reason}` : ""}`);
 
 		return ok(undefined);
 	} catch (e) {
 		return err({
 			kind: "db_error",
-			message: `Failed to deny grant ${grant_id}`,
-		} as ServiceError);
+			message: `Failed to deny grant ${grant_id}: ${String(e)}`,
+		});
 	}
 }

@@ -4,7 +4,7 @@ import { TEST_USER_ID } from "./setup";
 
 const t = setupIntegration();
 
-const uniqueSlug = () => `test-timeline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const uniqueSlug = () => `test-timeline-${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("media timeline integration", () => {
 	describe("profile timeline", () => {

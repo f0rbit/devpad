@@ -101,7 +101,7 @@ const mapYouTubeError = (e: FetchError): ProviderError => {
 
 export class YouTubeProvider implements Provider<YouTubeRaw> {
 	readonly platform = "youtube";
-	private config: YouTubeProviderConfig;
+	private readonly config: YouTubeProviderConfig;
 
 	constructor(config: YouTubeProviderConfig) {
 		this.config = config;
@@ -114,7 +114,7 @@ export class YouTubeProvider implements Provider<YouTubeRaw> {
 			maxResults: "50",
 			key: token,
 		});
-		const url = `https://www.googleapis.com/youtube/v3/playlistItems?${params}`;
+		const url = `https://www.googleapis.com/youtube/v3/playlistItems?${params.toString()}`;
 
 		return pipe
 			.fetch<unknown, ProviderError>(url, { headers: { Accept: "application/json" } }, mapYouTubeError)
@@ -175,7 +175,7 @@ export type YouTubeMemoryConfig = {
 
 export class YouTubeMemoryProvider extends BaseMemoryProvider<YouTubeRaw> implements Provider<YouTubeRaw> {
 	readonly platform = "youtube";
-	private config: YouTubeMemoryConfig;
+	private readonly config: YouTubeMemoryConfig;
 
 	constructor(config: YouTubeMemoryConfig = {}) {
 		super({ rate_limit_retry_after: 3600 });

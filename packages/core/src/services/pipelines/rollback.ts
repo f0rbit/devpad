@@ -51,7 +51,7 @@ export const find_rollback_target = (
 	const candidates = lineage
 		.filter((v) => v.version_set_id !== current_version_set_id && v.deployed_successfully)
 		.slice()
-		.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
+		.toSorted((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
 
 	const target = candidates[0];
 	if (target === undefined) {

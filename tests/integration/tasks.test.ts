@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { Project, TaskWithDetails } from "@devpad/schema";
 import { setupIntegration } from "../shared/base-integration-test";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
@@ -153,7 +152,7 @@ describe("tasks API client integration", () => {
 
 		expect(Array.isArray(listResult.value)).toBe(true);
 		expect(listResult.value.length).toBeGreaterThan(0);
-		const task_ids = listResult.value.map((t) => t.task.id);
+		const task_ids = listResult.value.map((item) => item.task.id);
 		expect(task_ids).toContain(taskResult.value.task.id);
 	});
 });

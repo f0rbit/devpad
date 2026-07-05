@@ -54,7 +54,7 @@ export async function createSession(
 			access_token,
 		})
 		.returning()
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (result instanceof Error) return err({ kind: "db_error", message: result.message });
 
@@ -85,17 +85,21 @@ export async function validateSession(
 		.from(session)
 		.innerJoin(user, eq(session.userId, user.id))
 		.where(eq(session.id, session_id))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
-	if (!rows || rows.length === 0) return err({ kind: "session_not_found" });
+	if (rows.length === 0) return err({ kind: "session_not_found" });
 
 	const row = rows[0];
 	const now_seconds = Math.floor(Date.now() / 1000);
 
 	if (row.session_expires_at <= now_seconds) {
-		await invalidateSession(db, session_id);
+		const invalidate_result = await invalidateSession(db, session_id);
+		if (!invalidate_result.ok) {
+			// Best-effort cleanup — the session is expired either way, so surface
+			// the expiry to the caller regardless of whether invalidation succeeded.
+		}
 		return err({ kind: "session_expired" });
 	}
 
@@ -148,7 +152,7 @@ export async function invalidateSession(db: Database, session_id: string): Promi
 	const result = await db
 		.delete(session)
 		.where(eq(session.id, session_id))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (result instanceof Error) return err({ kind: "db_error", message: result.message });
 
@@ -173,7 +177,7 @@ export function createSessionCookie(session_id: string, config: CookieConfig): s
 
 	if (config.secure) parts.push("Secure");
 	if (config.domain) parts.push(`Domain=${config.domain}`);
-	parts.push(`Max-Age=${max_age_seconds}`);
+	parts.push(`Max-Age=${String(max_age_seconds)}`);
 
 	return parts.join("; ");
 }

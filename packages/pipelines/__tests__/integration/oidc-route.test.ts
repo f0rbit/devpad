@@ -15,10 +15,10 @@ import { describe, expect, test } from "bun:test";
 import type { OidcSessionClaims, VerifiedOidcClaims } from "@devpad/core/services/pipelines";
 import { pipeline_oidc_trust } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import type { Backend, Result } from "@f0rbit/corpus";
+import type { Backend } from "@f0rbit/corpus";
 import { create_memory_backend, err, ok } from "@f0rbit/corpus";
-import { make_routes, type OidcDeps, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
-import { create_test_db, seed_package, seed_user } from "./helpers.ts";
+import { make_routes, type OidcDeps, type PulseEmitterLite, type RoutesDeps } from "../../src/routes";
+import { create_test_db, seed_package, seed_user } from "./helpers";
 
 const BASE_AUDIENCE = "https://devpad-pipelines.dev-818.workers.dev";
 
@@ -65,10 +65,10 @@ const seed_trust_policy = async (
 		provider: "github",
 		github_owner: overrides.github_owner ?? "f0rbit",
 		repo_pattern: overrides.repo_pattern ?? "*",
-		allowed_refs: (overrides.allowed_refs ?? []) as string[],
-		allowed_environments: [] as string[],
+		allowed_refs: overrides.allowed_refs ?? [],
+		allowed_environments: [],
 		expected_audience: overrides.expected_audience ?? BASE_AUDIENCE,
-		allowed_actions: (overrides.allowed_actions ?? ["artifacts:upload", "runs:start"]) as string[],
+		allowed_actions: overrides.allowed_actions ?? ["artifacts:upload", "runs:start"],
 		session_ttl_seconds: 900,
 		last_used_at: null,
 		created_at: now,
@@ -77,7 +77,7 @@ const seed_trust_policy = async (
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 	return { id };
 };
 

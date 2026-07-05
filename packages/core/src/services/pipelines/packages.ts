@@ -54,7 +54,7 @@ export const list_packages = async (
 		const rows = await where;
 		return ok(rows);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to list pipeline_package: ${String(e)}` } as ServiceError);
+		return err({ kind: "db_error", message: `failed to list pipeline_package: ${String(e)}` });
 	}
 };
 
@@ -65,14 +65,14 @@ export const list_packages = async (
 export const get_package = async (db: Database, package_id: string): Promise<Result<PipelinePackage, ServiceError>> => {
 	try {
 		const rows = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
-		const row = rows[0];
-		if (!row) return err({ kind: "not_found", resource: "pipeline_package", id: package_id } as ServiceError);
+		const row = rows.at(0);
+		if (!row) return err({ kind: "not_found", resource: "pipeline_package", id: package_id });
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to read pipeline_package ${package_id}: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -97,54 +97,56 @@ export const create_package = async (
 	try {
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, input.id));
 		if (existing[0]) {
-			return err({
+			const conflict_error = {
 				kind: "conflict",
 				resource: "pipeline_package",
 				id: input.id,
 				message: `pipeline_package "${input.id}" already exists`,
-			} as ServiceError);
+			};
+			return err(conflict_error as ServiceError);
 		}
 
 		if (input.project_id !== undefined && input.project_id !== null) {
 			const project_row = await db.select().from(project).where(eq(project.id, input.project_id));
 			if (!project_row[0]) {
-				return err({ kind: "not_found", resource: "project", id: input.project_id } as ServiceError);
+				return err({ kind: "not_found", resource: "project", id: input.project_id });
 			}
 		}
 
 		const now = new Date().toISOString();
+		const insert_values = {
+			id: input.id,
+			owner_id: input.owner_id,
+			name: input.name,
+			repo_url: input.repo_url ?? null,
+			project_id: input.project_id ?? null,
+			default_template_ref: input.default_template_ref ?? null,
+			script_name_overrides: null,
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
 		const inserted = await db
 			.insert(pipeline_package)
-			.values({
-				id: input.id,
-				owner_id: input.owner_id,
-				name: input.name,
-				repo_url: input.repo_url ?? null,
-				project_id: input.project_id ?? null,
-				default_template_ref: input.default_template_ref ?? null,
-				script_name_overrides: null,
-				created_at: now,
-				updated_at: now,
-				created_by: "api",
-				modified_by: "api",
-				protected: false,
-				deleted: false,
-			} as never)
+			.values(insert_values as never)
 			.returning();
 
-		const row = inserted[0];
+		const row = inserted.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "insert_pipeline_package",
 				message: "insert returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to create pipeline_package "${input.id}": ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -167,11 +169,11 @@ export const update_package = async (
 ): Promise<Result<PipelinePackage, ServiceError>> => {
 	try {
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
-		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_package", id: package_id } as ServiceError);
+		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_package", id: package_id });
 
 		if (input.project_id !== undefined && input.project_id !== null) {
 			const project_row = await db.select().from(project).where(eq(project.id, input.project_id));
-			if (!project_row[0]) return err({ kind: "not_found", resource: "project", id: input.project_id } as ServiceError);
+			if (!project_row[0]) return err({ kind: "not_found", resource: "project", id: input.project_id });
 		}
 
 		const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), modified_by: "api" };
@@ -185,19 +187,19 @@ export const update_package = async (
 			.set(patch as never)
 			.where(eq(pipeline_package.id, package_id))
 			.returning();
-		const row = updated[0];
+		const row = updated.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "update_pipeline_package",
 				message: "update returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to update pipeline_package "${package_id}": ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -209,21 +211,22 @@ export const update_package = async (
 export const delete_package = async (db: Database, package_id: string): Promise<Result<void, ServiceError>> => {
 	try {
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
-		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_package", id: package_id } as ServiceError);
+		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_package", id: package_id });
 
 		const runs = await db
 			.select({ id: pipeline_run.id })
 			.from(pipeline_run)
 			.where(eq(pipeline_run.package_id, package_id));
 		if (runs.length > 0) {
-			return err({
+			const conflict_error = {
 				kind: "conflict",
 				resource: "pipeline_package",
 				id: package_id,
 				reason: "active_runs",
 				count: runs.length,
-				message: `pipeline_package "${package_id}" still has ${runs.length} run(s); delete them first`,
-			} as ServiceError);
+				message: `pipeline_package "${package_id}" still has ${String(runs.length)} run(s); delete them first`,
+			};
+			return err(conflict_error as ServiceError);
 		}
 
 		await db.delete(pipeline_package).where(eq(pipeline_package.id, package_id));
@@ -232,6 +235,6 @@ export const delete_package = async (db: Database, package_id: string): Promise<
 		return err({
 			kind: "db_error",
 			message: `failed to delete pipeline_package "${package_id}": ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };

@@ -91,12 +91,12 @@ export async function handleGitHubCallback(
 			client_secret: env.GITHUB_CLIENT_SECRET,
 			code,
 		}),
-	}).catch((e: Error) => e);
+	}).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (token_response instanceof Error) return err({ kind: "github_error", message: token_response.message });
 
 	if (!token_response.ok)
-		return err({ kind: "github_error", message: `Token exchange failed: ${token_response.status}` });
+		return err({ kind: "github_error", message: `Token exchange failed: ${String(token_response.status)}` });
 
 	const token_data = (await token_response.json()) as { access_token?: string; error?: string };
 
@@ -146,14 +146,14 @@ async function fetchGitHubUser(access_token: string): Promise<Result<GitHubUser,
 			Authorization: `Bearer ${access_token}`,
 			"User-Agent": "devpad-app",
 		},
-	}).catch((e: Error) => e);
+	}).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (response instanceof Error) return err({ kind: "github_error", message: response.message });
 
 	if (!response.ok)
-		return err({ kind: "github_error", message: `GitHub API: ${response.status} ${response.statusText}` });
+		return err({ kind: "github_error", message: `GitHub API: ${String(response.status)} ${response.statusText}` });
 
-	const user_data = (await response.json()) as any;
+	const user_data = (await response.json()) as GitHubUser;
 
 	if (!user_data.email) {
 		const email_result = await fetchGitHubEmail(access_token);
@@ -175,7 +175,7 @@ async function fetchGitHubEmail(access_token: string): Promise<Result<string | n
 			Authorization: `Bearer ${access_token}`,
 			"User-Agent": "devpad-app",
 		},
-	}).catch((e: Error) => e);
+	}).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (response instanceof Error) return ok(null);
 	if (!response.ok) return ok(null);
@@ -194,7 +194,7 @@ async function createOrUpdateUser(
 		.from(user)
 		.where(eq(user.github_id, github_user.id))
 		.limit(1)
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (existing instanceof Error) return err({ kind: "db_error", message: existing.message });
 
@@ -208,7 +208,7 @@ async function createOrUpdateUser(
 			})
 			.where(eq(user.github_id, github_user.id))
 			.returning()
-			.catch((e: Error) => e);
+			.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 		if (updated instanceof Error) return err({ kind: "db_error", message: updated.message });
 
@@ -225,7 +225,7 @@ async function createOrUpdateUser(
 			task_view: "list",
 		})
 		.returning()
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (created instanceof Error) return err({ kind: "db_error", message: created.message });
 

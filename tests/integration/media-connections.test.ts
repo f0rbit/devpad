@@ -3,7 +3,7 @@ import { setupIntegration } from "../shared/base-integration-test";
 
 const t = setupIntegration();
 
-const uniqueSlug = () => `test-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const uniqueSlug = () => `test-profile-${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("media connections integration", () => {
 	let profile_id = "";
@@ -43,7 +43,7 @@ describe("media connections integration", () => {
 			const result = await t.client.media.connections.create({
 				profile_id,
 				platform: "github",
-				access_token: `test-token-${Date.now()}`,
+				access_token: `test-token-${String(Date.now())}`,
 				platform_user_id: "test-user-123",
 				platform_username: "testuser",
 			});
@@ -116,7 +116,7 @@ describe("media connections integration", () => {
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 
-			const value = result.value as any;
+			const value: any = result.value;
 			expect(value.updated).toBe(true);
 		});
 

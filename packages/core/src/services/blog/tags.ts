@@ -25,14 +25,14 @@ const notFound = (resource: string): TagServiceError => ({
 
 export const createTagService = ({ db }: Deps) => {
 	const findPost = async (userId: string, uuid: string): Promise<Result<PostRow, TagServiceError>> => {
-		const [post] = await db
+		const found = await db
 			.select()
 			.from(posts)
 			.where(and(eq(posts.author_id, userId), eq(posts.uuid, uuid)))
 			.limit(1);
 
-		if (!post) return err(notFound(`post:${uuid}`));
-		return ok(post);
+		if (found.length === 0) return err(notFound(`post:${uuid}`));
+		return ok(found[0]);
 	};
 	const list = async (userId: string): Promise<Result<TagWithCount[], TagServiceError>> =>
 		try_catch_async(async () => {
@@ -49,7 +49,7 @@ export const createTagService = ({ db }: Deps) => {
 
 			return tagCounts.map((row) => ({
 				tag: row.tag,
-				count: Number(row.count),
+				count: row.count,
 			}));
 		}, toDbError);
 
@@ -90,13 +90,13 @@ export const createTagService = ({ db }: Deps) => {
 	};
 
 	const removePostTag = async (postId: number, tag: string): Promise<Result<void, TagServiceError>> => {
-		const [existing] = await db
+		const existing = await db
 			.select()
 			.from(tags)
 			.where(and(eq(tags.post_id, postId), eq(tags.tag, tag)))
 			.limit(1);
 
-		if (!existing) {
+		if (existing.length === 0) {
 			return err({ kind: "not_found", resource: `tag:${tag}` });
 		}
 

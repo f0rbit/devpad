@@ -15,7 +15,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
 import type { AssetUpload, ModuleUpload } from "@devpad/pipeline-fakes";
-import { build_assets_manifest, make_cf_api_provider } from "../../src/providers/cf-api-provider.ts";
+import { build_assets_manifest, make_cf_api_provider } from "../../src/providers/cf-api-provider";
 
 type ParsedParts = Record<
 	string,
@@ -34,7 +34,7 @@ type RecordedRequest = {
 type RouteHandler = (req: RecordedRequest) => { status?: number; body: unknown };
 
 type RecorderHandle = {
-	server: Server;
+	server: Server<unknown>;
 	base_url: string;
 	requests: RecordedRequest[];
 	route(matcher: (req: RecordedRequest) => boolean, handler: RouteHandler): void;
@@ -91,13 +91,13 @@ const parse_multipart_raw = (raw: Uint8Array, content_type: string): ParsedParts
 	return out;
 };
 
+const default_handler: RouteHandler = () => ({
+	body: { success: true, errors: [], messages: [], result: {} },
+});
+
 const start_recorder = (): RecorderHandle => {
 	const requests: RecordedRequest[] = [];
 	const routes: Array<{ matcher: (req: RecordedRequest) => boolean; handler: RouteHandler }> = [];
-
-	const default_handler: RouteHandler = () => ({
-		body: { success: true, errors: [], messages: [], result: {} },
-	});
 
 	const server = Bun.serve({
 		port: 0,
@@ -141,7 +141,7 @@ const start_recorder = (): RecorderHandle => {
 
 	return {
 		server,
-		base_url: `http://localhost:${server.port}/client/v4`,
+		base_url: `http://localhost:${String(server.port)}/client/v4`,
 		requests,
 		route(matcher, handler) {
 			routes.push({ matcher, handler });
@@ -198,8 +198,8 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 		recorder = start_recorder();
 	});
 
-	afterEach(() => {
-		recorder.server.stop(true);
+	afterEach(async () => {
+		await recorder.server.stop(true);
 	});
 
 	test("posts multipart with metadata + one part per module (no assets)", async () => {

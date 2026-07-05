@@ -32,7 +32,7 @@ export async function getAPIKeys(
 		.select()
 		.from(api_keys)
 		.where(and(...conditions))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
@@ -46,14 +46,14 @@ export async function getUserByAPIKey(db: Database, raw_key: string): Promise<Re
 		.select()
 		.from(api_keys)
 		.where(and(eq(api_keys.key_hash, key_hash), eq(api_keys.enabled, true), eq(api_keys.deleted, false)))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
-	if (!rows || rows.length === 0) return err({ kind: "not_found" });
+	if (rows.length === 0) return err({ kind: "not_found" });
 	if (rows.length > 1) return err({ kind: "conflict", resource: "api_key", message: "Multiple matching keys found" });
 
-	return ok(rows[0].user_id!);
+	return ok(rows[0].user_id);
 }
 
 export async function getUserByApiKey(db: Database, raw_key: string): Promise<Result<User, KeyError>> {
@@ -64,13 +64,13 @@ export async function getUserByApiKey(db: Database, raw_key: string): Promise<Re
 		.select()
 		.from(user)
 		.where(eq(user.id, key_result.value))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (users instanceof Error) return err({ kind: "db_error", message: users.message });
 
-	if (!users || users.length === 0) return err({ kind: "not_found", resource: "user" });
+	if (users.length === 0) return err({ kind: "not_found", resource: "user" });
 
-	return ok(users[0] as User);
+	return ok(users[0]);
 }
 
 export type CreatedApiKey = { key: ApiKey; raw_key: string };
@@ -93,13 +93,13 @@ export async function createApiKey(
 			scope,
 		})
 		.returning()
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
-	if (!rows || rows.length === 0) return err({ kind: "db_error", message: "Insert returned no rows" });
+	if (rows.length === 0) return err({ kind: "db_error", message: "Insert returned no rows" });
 
-	return ok({ key: rows[0] as ApiKey, raw_key });
+	return ok({ key: rows[0], raw_key });
 }
 
 export async function deleteApiKey(db: Database, key_id: string): Promise<Result<void, KeyError>> {
@@ -108,11 +108,11 @@ export async function deleteApiKey(db: Database, key_id: string): Promise<Result
 		.set({ deleted: true })
 		.where(eq(api_keys.id, key_id))
 		.returning()
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (rows instanceof Error) return err({ kind: "db_error", message: rows.message });
 
-	if (!rows || rows.length === 0) return err({ kind: "not_found" });
+	if (rows.length === 0) return err({ kind: "not_found" });
 
 	return ok(undefined);
 }
@@ -127,11 +127,11 @@ export async function getUserAndScopeByApiKey(
 		.select()
 		.from(api_keys)
 		.where(and(eq(api_keys.key_hash, key_hash), eq(api_keys.enabled, true), eq(api_keys.deleted, false)))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (key_rows instanceof Error) return err({ kind: "db_error", message: key_rows.message });
 
-	if (!key_rows || key_rows.length === 0) return err({ kind: "not_found" });
+	if (key_rows.length === 0) return err({ kind: "not_found" });
 	if (key_rows.length > 1)
 		return err({ kind: "conflict", resource: "api_key", message: "Multiple matching keys found" });
 
@@ -141,11 +141,11 @@ export async function getUserAndScopeByApiKey(
 		.select()
 		.from(user)
 		.where(eq(user.id, api_key.user_id))
-		.catch((e: Error) => e);
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (users instanceof Error) return err({ kind: "db_error", message: users.message });
 
-	if (!users || users.length === 0) return err({ kind: "not_found", resource: "user" });
+	if (users.length === 0) return err({ kind: "not_found", resource: "user" });
 
-	return ok({ user: users[0] as User, scope: api_key.scope });
+	return ok({ user: users[0], scope: api_key.scope });
 }

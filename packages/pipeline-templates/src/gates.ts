@@ -8,7 +8,7 @@
  * dependencies.
  */
 
-import type { AnalysisTemplateRef, Gate } from "./types.ts";
+import type { AnalysisTemplateRef, Gate } from "./types";
 
 export const manual = (): Gate => ({ type: "manual" });
 
@@ -19,4 +19,4 @@ export const auto = (opts?: { afterBake?: boolean }): Gate => ({
 
 export const analysis = (template: AnalysisTemplateRef): Gate => ({ type: "analysis", template });
 
-export type { Gate } from "./types.ts";
+export type { Gate } from "./types";

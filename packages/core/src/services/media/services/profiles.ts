@@ -4,7 +4,6 @@ import {
 	errors,
 	type ProfileId,
 	profileFilters,
-	profileId,
 	profiles,
 	type UserId,
 } from "@devpad/schema/media";
@@ -14,7 +13,7 @@ import { requireAccountOwnership, requireProfileOwnership } from "../auth-owners
 import type { AppContext } from "../context";
 import type { Database } from "../db";
 import type { ServiceError } from "../route-helpers";
-import { generateProfileTimeline, type ProfileTimelineOptions, type ProfileTimelineResult } from "../timeline";
+import { generateProfileTimeline, type ProfileTimelineResult } from "../timeline";
 import { uuid } from "../utils";
 
 type ProfileWithRelations = {
@@ -261,10 +260,7 @@ const timeline = async (
 		if (error.kind === "not_found") {
 			return errors.notFound("profile");
 		}
-		if (error.kind === "store_error") {
-			return errors.storeError("timeline_generation", error.message);
-		}
-		return errors.storeError("timeline_generation", "Timeline generation failed");
+		return errors.storeError("timeline_generation", error.message);
 	}
 
 	return ok(result.value);

@@ -4,24 +4,24 @@ import { MCPTestClient } from "../shared/mcp-test-client";
 import { TestDataFactory } from "./factories";
 import { TEST_USER_ID } from "./setup";
 
+// Helper function to extract response from MCP result
+function extractMCPResponse(result: any): any {
+	// Handle in-memory mode response format
+	if (result?.result?.content?.[0]?.text) {
+		const response_text = result.result.content[0].text;
+		if (response_text.startsWith("Error:")) {
+			throw new Error(`MCP call failed: ${String(response_text)}`);
+		}
+		return JSON.parse(response_text);
+	}
+
+	throw new Error(`Invalid MCP response format: ${JSON.stringify(result)}`);
+}
+
 describe("MCP Extended Tools Integration", () => {
 	let mcp_client: MCPTestClient;
 	let api_client: ApiClient;
 	const created_resources: { type: string; id: string }[] = [];
-
-	// Helper function to extract response from MCP result
-	function extractMCPResponse(result: any): any {
-		// Handle in-memory mode response format
-		if (result?.result?.content?.[0]?.text) {
-			const response_text = result.result.content[0].text;
-			if (response_text.startsWith("Error:")) {
-				throw new Error(`MCP call failed: ${response_text}`);
-			}
-			return JSON.parse(response_text);
-		}
-
-		throw new Error(`Invalid MCP response format: ${JSON.stringify(result)}`);
-	}
 
 	beforeAll(async () => {
 		// Get the shared API key from the test setup
@@ -45,13 +45,16 @@ describe("MCP Extended Tools Integration", () => {
 		for (const resource of created_resources) {
 			try {
 				if (resource.type === "project") {
-					await api_client.projects.update(resource.id, { deleted: true });
+					const result = await api_client.projects.update(resource.id, { deleted: true });
+					if (!result.ok) console.warn(`Failed to cleanup project ${resource.id}: ${result.error.message}`);
 				} else if (resource.type === "milestone") {
-					await api_client.milestones.delete(resource.id);
+					const result = await api_client.milestones.delete(resource.id);
+					if (!result.ok) console.warn(`Failed to cleanup milestone ${resource.id}: ${result.error.message}`);
 				} else if (resource.type === "goal") {
-					await api_client.goals.delete(resource.id);
+					const result = await api_client.goals.delete(resource.id);
+					if (!result.ok) console.warn(`Failed to cleanup goal ${resource.id}: ${result.error.message}`);
 				}
-			} catch (e) {
+			} catch {
 				// Ignore cleanup errors
 			}
 		}
@@ -62,7 +65,7 @@ describe("MCP Extended Tools Integration", () => {
 		test("should delete a project via MCP", async () => {
 			// Create a project first using TestDataFactory
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `MCP Delete Test ${Date.now()}`,
+				name: `MCP Delete Test ${String(Date.now())}`,
 				specification: "Test specification for MCP",
 				repo_url: "https://github.com/test/repo",
 				repo_id: 12345,
@@ -86,7 +89,7 @@ describe("MCP Extended Tools Integration", () => {
 			// Fixed: Updated route to use getProjectById instead of getProject for UUID lookup
 			// Create a project using TestDataFactory
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `History Test ${Date.now()}`,
+				name: `History Test ${String(Date.now())}`,
 			});
 
 			const create_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
@@ -111,13 +114,13 @@ describe("MCP Extended Tools Integration", () => {
 			expect(Array.isArray(history)).toBe(true);
 			// Note: History may be empty if actions are not recorded properly
 			// This test mainly verifies the endpoint works, not action recording
-			console.log(`Project history length: ${history.length}`);
+			console.log(`Project history length: ${String(history.length)}`);
 		});
 
 		test("should load project configuration via MCP", async () => {
 			// Create a project using TestDataFactory
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Config Test ${Date.now()}`,
+				name: `Config Test ${String(Date.now())}`,
 			});
 
 			const create_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
@@ -148,7 +151,7 @@ describe("MCP Extended Tools Integration", () => {
 		test("should delete a milestone via MCP", async () => {
 			// Create a project first
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Milestone Project ${Date.now()}`,
+				name: `Milestone Project ${String(Date.now())}`,
 			});
 			const project_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
 			const project = extractMCPResponse(project_result);
@@ -156,7 +159,7 @@ describe("MCP Extended Tools Integration", () => {
 
 			// Create a milestone
 			const milestone_data = {
-				name: `Test Milestone ${Date.now()}`,
+				name: `Test Milestone ${String(Date.now())}`,
 				project_id: project.id,
 				description: "Test milestone for deletion",
 			};
@@ -180,14 +183,14 @@ describe("MCP Extended Tools Integration", () => {
 		test("should get milestone goals via MCP", async () => {
 			// Create project and milestone
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Goals Project ${Date.now()}`,
+				name: `Goals Project ${String(Date.now())}`,
 			});
 			const project_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
 			const project = extractMCPResponse(project_result);
 			created_resources.push({ type: "project", id: project.id });
 
 			const milestone_data = {
-				name: `Goals Milestone ${Date.now()}`,
+				name: `Goals Milestone ${String(Date.now())}`,
 				project_id: project.id,
 			};
 			const milestone_result = await mcp_client.callTool("devpad_milestones_upsert", milestone_data);
@@ -219,14 +222,14 @@ describe("MCP Extended Tools Integration", () => {
 		test("should delete a goal via MCP", async () => {
 			// Create project, milestone, and goal
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Goal Delete Project ${Date.now()}`,
+				name: `Goal Delete Project ${String(Date.now())}`,
 			});
 			const project_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
 			const project = extractMCPResponse(project_result);
 			created_resources.push({ type: "project", id: project.id });
 
 			const milestone_data = {
-				name: `Goal Delete Milestone ${Date.now()}`,
+				name: `Goal Delete Milestone ${String(Date.now())}`,
 				project_id: project.id,
 			};
 			const milestone_result = await mcp_client.callTool("devpad_milestones_upsert", milestone_data);
@@ -234,7 +237,7 @@ describe("MCP Extended Tools Integration", () => {
 			created_resources.push({ type: "milestone", id: milestone.id });
 
 			const goal_data = {
-				name: `Test Goal ${Date.now()}`,
+				name: `Test Goal ${String(Date.now())}`,
 				milestone_id: milestone.id,
 			};
 			const goal_result = await mcp_client.callTool("devpad_goals_upsert", goal_data);
@@ -252,14 +255,14 @@ describe("MCP Extended Tools Integration", () => {
 		test("should delete a task via MCP", async () => {
 			// Create a project and task
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Task Delete Project ${Date.now()}`,
+				name: `Task Delete Project ${String(Date.now())}`,
 			});
 			const project_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
 			const project = extractMCPResponse(project_result);
 			created_resources.push({ type: "project", id: project.id });
 
 			const task_data = TestDataFactory.createTask({
-				title: `Test Task ${Date.now()}`,
+				title: `Test Task ${String(Date.now())}`,
 				project_id: project.id,
 				owner_id: TEST_USER_ID,
 			});
@@ -276,14 +279,14 @@ describe("MCP Extended Tools Integration", () => {
 		test("should get task history via MCP", async () => {
 			// Create a project and task
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Task History Project ${Date.now()}`,
+				name: `Task History Project ${String(Date.now())}`,
 			});
 			const project_result = await mcp_client.callTool("devpad_projects_upsert", project_data);
 			const project = extractMCPResponse(project_result);
 			created_resources.push({ type: "project", id: project.id });
 
 			const task_data = TestDataFactory.createTask({
-				title: `History Task ${Date.now()}`,
+				title: `History Task ${String(Date.now())}`,
 				project_id: project.id,
 				owner_id: TEST_USER_ID,
 			});
@@ -308,7 +311,7 @@ describe("MCP Extended Tools Integration", () => {
 			expect(Array.isArray(history)).toBe(true);
 			// Note: History may be empty if actions are not recorded properly
 			// This test mainly verifies the endpoint works, not action recording
-			console.log(`Task history length: ${history.length}`);
+			console.log(`Task history length: ${String(history.length)}`);
 		});
 	});
 
@@ -316,7 +319,7 @@ describe("MCP Extended Tools Integration", () => {
 		test("should get user history via MCP", async () => {
 			// Create some activity first
 			const project_data = TestDataFactory.createRealisticProject(TEST_USER_ID, {
-				name: `Activity Test ${Date.now()}`,
+				name: `Activity Test ${String(Date.now())}`,
 			});
 			const result = await mcp_client.callTool("devpad_projects_upsert", project_data);
 			const project = extractMCPResponse(result);

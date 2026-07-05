@@ -1,5 +1,5 @@
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { E2E_PROJECT_ID, E2E_PROJECT_NO_PKG } from "./fixtures/pipeline-ids.ts";
+import { E2E_PROJECT_ID, E2E_PROJECT_NO_PKG } from "./fixtures/pipeline-ids";
 
 /**
  * Task 2.1 — dashboard tab aggregated counts.

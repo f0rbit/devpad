@@ -17,10 +17,10 @@ import { pipeline_package, pipeline_run, project } from "@devpad/schema/database
 import type { Database } from "@devpad/schema/database/types";
 import type { Backend } from "@f0rbit/corpus";
 import { create_memory_backend } from "@f0rbit/corpus";
-import type { AuthError, AuthIdentity } from "../../src/auth.ts";
-import { is_bearer_valid } from "../../src/auth.ts";
-import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
-import { create_test_db, seed_package, seed_user } from "./helpers.ts";
+import type { AuthError, AuthIdentity } from "../../src/auth";
+import { is_bearer_valid } from "../../src/auth";
+import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes";
+import { create_test_db, seed_package, seed_user } from "./helpers";
 
 const PIPELINES_TOKEN = "test-token-AAAAAAAAAA";
 const auth_header = (token: string) => `Bearer ${token}`;
@@ -74,7 +74,7 @@ const seed_project_row = async (db: Database, id: string, owner_id = "user_test"
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 };
 
 const seed_run_row = async (db: Database, package_id: string, run_id = "pipeline-run_a"): Promise<void> => {
@@ -86,8 +86,8 @@ const seed_run_row = async (db: Database, package_id: string, run_id = "pipeline
 		shape: "atomic",
 		status: "queued",
 		current_stage: null,
-		resolved_rollout: { type: "atomic", stages: [] } as never,
-		resolved_gates: {} as never,
+		resolved_rollout: { type: "atomic", stages: [] },
+		resolved_gates: {},
 		forced_atomic_reason: null,
 		started_at: now,
 		finished_at: null,
@@ -97,7 +97,7 @@ const seed_run_row = async (db: Database, package_id: string, run_id = "pipeline
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 };
 
 const post_json = async (

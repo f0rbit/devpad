@@ -23,10 +23,10 @@
  */
 
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { defaultAtomic, defaultAtomicGates } from "./default-atomic.ts";
-import { defaultGradual, defaultGradualGates } from "./default-gradual.ts";
-import { parse_duration } from "./rollout.ts";
-import type { Duration, Gate, PipelineTemplate, Rollout, TransitionKey } from "./types.ts";
+import { defaultAtomic, defaultAtomicGates } from "./default-atomic";
+import { defaultGradual, defaultGradualGates } from "./default-gradual";
+import { parse_duration } from "./rollout";
+import type { Duration, Gate, PipelineTemplate, Rollout, TransitionKey } from "./types";
 
 export type DslError =
 	| { code: "unknown_stage"; message: string; stage: string }

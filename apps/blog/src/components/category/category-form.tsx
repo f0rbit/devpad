@@ -49,7 +49,7 @@ const CategoryForm: Component<CategoryFormProps> = (props) => {
 			classList={{ "category-form-section--highlighted": props.highlighted }}
 		>
 			<h3 class="category-form-title">New Category</h3>
-			<form onSubmit={handleSubmit} class="category-form">
+			<form onSubmit={(e) => void handleSubmit(e)} class="category-form">
 				<div class="form-row">
 					<label for="category-name" class="text-xs text-subtle">
 						Name

@@ -4,7 +4,7 @@ import { type Column, inArray, type SQL } from "drizzle-orm";
 export const D1_PARAM_LIMIT = 99;
 
 export async function batchedQuery<TRow>(
-	values: any[],
+	values: unknown[],
 	queryFn: (condition: SQL) => Promise<TRow[]>,
 	column: Column,
 ): Promise<TRow[]> {

@@ -24,7 +24,7 @@ import {
 	validate_package_name,
 } from "@devpad/pipeline-templates";
 import { err, format_error, ok, type Result, try_catch_async } from "@f0rbit/corpus";
-import type { ScaffoldedPackage, ScaffolderError, ScaffoldRequest } from "./types.ts";
+import type { ScaffoldedPackage, ScaffolderError, ScaffoldRequest } from "./types";
 
 const TEMPLATES_PACKAGE_ROOT = path.resolve(
 	import.meta.dir,
@@ -80,7 +80,7 @@ const write_file_atomic = async (target_path: string, contents: string): Promise
 };
 
 const render_one = (entry: TemplateEntry, source: string, vars: TemplateVars): Result<string, ScaffolderError> => {
-	const render_result = render_template(source, vars as unknown as Record<string, string>);
+	const render_result = render_template(source, vars);
 	if (!render_result.ok) {
 		return err({
 			code: "render_failed",
@@ -115,10 +115,15 @@ const run_command = async (
 ): Promise<Result<void, { message: string; code: number | null }>> => {
 	return new Promise((resolve) => {
 		const proc = spawn(command, args, { cwd, stdio: "ignore" });
-		proc.on("error", (e) => resolve(err({ message: format_error(e), code: null })));
+		proc.on("error", (e) => {
+			resolve(err({ message: format_error(e), code: null }));
+		});
 		proc.on("close", (code) => {
-			if (code === 0) return resolve(ok(undefined));
-			resolve(err({ message: `${command} exited with code ${code}`, code }));
+			if (code === 0) {
+				resolve(ok(undefined));
+				return;
+			}
+			resolve(err({ message: `${command} exited with code ${String(code)}`, code }));
 		});
 	});
 };

@@ -42,7 +42,7 @@ export const log = {
 	/**
 	 * Application startup messages (migrations, server start, config)
 	 */
-	startup: (message: string, data?: any) => {
+	startup: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.startup && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🚀 [STARTUP] ${message}`, data);
@@ -54,7 +54,7 @@ export const log = {
 	/**
 	 * Authentication & JWT flows (login, logout, sessions, tokens)
 	 */
-	auth: (message: string, data?: any) => {
+	auth: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.auth && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🔐 [AUTH] ${message}`, data);
@@ -67,7 +67,7 @@ export const log = {
 	/**
 	 * Task operations (create, update, delete, history)
 	 */
-	tasks: (message: string, data?: any) => {
+	tasks: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.tasks && typeof console !== "undefined") {
 			if (data) {
 				console.log(`📋 [TASKS] ${message}`, data);
@@ -79,7 +79,7 @@ export const log = {
 	/**
 	 * Project operations (create, update, config, scan)
 	 */
-	projects: (message: string, data?: any) => {
+	projects: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.projects && typeof console !== "undefined") {
 			if (data) {
 				console.log(`📁 [PROJECTS] ${message}`, data);
@@ -91,7 +91,7 @@ export const log = {
 	/**
 	 * GitHub repository operations
 	 */
-	repos: (message: string, data?: any) => {
+	repos: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.repos && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🐙 [REPOS] ${message}`, data);
@@ -103,7 +103,7 @@ export const log = {
 	/**
 	 * Request middleware processing
 	 */
-	middleware: (message: string, data?: any) => {
+	middleware: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.middleware && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🔍 [MIDDLEWARE] ${message}`, data);
@@ -116,7 +116,7 @@ export const log = {
 	/**
 	 * General API operations
 	 */
-	api: (message: string, data?: any) => {
+	api: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.api && typeof console !== "undefined") {
 			if (data) {
 				console.log(`📡 [API] ${message}`, data);
@@ -129,7 +129,7 @@ export const log = {
 	/**
 	 * Server startup & configuration
 	 */
-	server: (message: string, data?: any) => {
+	server: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.server && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🌐 [SERVER] ${message}`, data);
@@ -142,7 +142,7 @@ export const log = {
 	/**
 	 * Codebase scanning operations
 	 */
-	scanning: (message: string, data?: any) => {
+	scanning: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.scanning && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🔍 [SCANNING] ${message}`, data);
@@ -155,7 +155,7 @@ export const log = {
 	/**
 	 * GitHub API interactions
 	 */
-	github: (message: string, data?: any) => {
+	github: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.github && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🐙 [GITHUB] ${message}`, data);
@@ -168,7 +168,7 @@ export const log = {
 	/**
 	 * JWT token operations
 	 */
-	jwt: (message: string, data?: any) => {
+	jwt: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.jwt && typeof console !== "undefined") {
 			if (data) {
 				console.log(`🎟  [JWT] ${message}`, data);
@@ -181,7 +181,7 @@ export const log = {
 	/**
 	 * Database operations
 	 */
-	database: (message: string, data?: any) => {
+	database: (message: string, data?: unknown) => {
 		if (CLIENT_DEBUG_LOGS.database && typeof console !== "undefined") {
 			if (data) {
 				console.log(`💾 [DATABASE] ${message}`, data);
@@ -194,7 +194,7 @@ export const log = {
 	/**
 	 * Always log errors (can't be disabled)
 	 */
-	error: (message: string, error?: any) => {
+	error: (message: string, error?: unknown) => {
 		if (typeof console !== "undefined") {
 			if (error) {
 				console.error(`❌ [ERROR] ${message}`, error);
@@ -207,7 +207,7 @@ export const log = {
 	/**
 	 * Always log important info (can't be disabled)
 	 */
-	info: (message: string, data?: any) => {
+	info: (message: string, data?: unknown) => {
 		if (typeof console !== "undefined") {
 			if (data) {
 				console.log(`i  [INFO] ${message}`, data);
@@ -220,7 +220,7 @@ export const log = {
 	/**
 	 * Always log warnings (can't be disabled)
 	 */
-	warn: (message: string, data?: any) => {
+	warn: (message: string, data?: unknown) => {
 		if (typeof console !== "undefined") {
 			if (data) {
 				console.warn(`!  [WARN] ${message}`, data);

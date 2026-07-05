@@ -39,10 +39,20 @@ const TokenList: Component<TokenListProps> = (props) => {
 							</div>
 						</div>
 						<div class="token-item__actions">
-							<Button variant="secondary" onClick={() => props.onToggle(token.id, !token.enabled)}>
+							<Button
+								variant="secondary"
+								onClick={() => {
+									props.onToggle(token.id, !token.enabled);
+								}}
+							>
 								{token.enabled ? "Disable" : "Enable"}
 							</Button>
-							<Button variant="danger" onClick={() => props.onDelete(token.id)}>
+							<Button
+								variant="danger"
+								onClick={() => {
+									props.onDelete(token.id);
+								}}
+							>
 								Delete
 							</Button>
 						</div>

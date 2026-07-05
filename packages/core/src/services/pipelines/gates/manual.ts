@@ -1,11 +1,11 @@
 import type { GateVerdict, StageContext } from "@devpad/pipeline-templates";
 import type { Result } from "@f0rbit/corpus";
-import { err, ok, pipe } from "@f0rbit/corpus";
-import type { ApprovalStore, EmitError, GateError, GateEvaluator, PulseEmitter, StoreError } from "./evaluator.js";
+import { ok } from "@f0rbit/corpus";
+import type { ApprovalStore, GateError, GateEvaluator, PulseEmitter } from "./evaluator.js";
 
 export class ManualGateEvaluator implements GateEvaluator {
-	private pulse: PulseEmitter;
-	private approvals: ApprovalStore;
+	private readonly pulse: PulseEmitter;
+	private readonly approvals: ApprovalStore;
 
 	constructor(pulse: PulseEmitter, approvals: ApprovalStore) {
 		this.pulse = pulse;
@@ -16,13 +16,13 @@ export class ManualGateEvaluator implements GateEvaluator {
 		const decision = await this.approvals.read_decision(ctx.run_id, ctx.to_stage);
 
 		if (!decision.ok) {
-			return decision as Result<never, GateError>;
+			return decision;
 		}
 
 		if (decision.value === null) {
 			const pending_write = await this.approvals.write_pending(ctx.run_id, ctx.to_stage);
 			if (!pending_write.ok) {
-				return pending_write as Result<never, GateError>;
+				return pending_write;
 			}
 
 			const pulse_emit = await this.pulse.emit({
@@ -32,7 +32,7 @@ export class ManualGateEvaluator implements GateEvaluator {
 			});
 
 			if (!pulse_emit.ok) {
-				return pulse_emit as Result<never, GateError>;
+				return pulse_emit;
 			}
 
 			return ok({ verdict: "Pending" as const });

@@ -31,24 +31,26 @@ import { startSpan, type Span } from "@f0rbit/pulse-client/spans";
 
 type LogLevel = "raw" | "debug" | "info" | "notice" | "warning" | "error" | "critical";
 
-let _pulse: Pulse | null = null;
-let _initialized = false;
-let _handlers_installed = false;
+let pulse_instance: Pulse | null = null;
+let initialized = false;
+let handlers_installed = false;
+
+const env_string = (value: unknown): string | undefined => (typeof value === "string" ? value : undefined);
 
 const ensureInitialized = (): Pulse | null => {
-	if (_initialized) return _pulse;
-	_initialized = true;
+	if (initialized) return pulse_instance;
+	initialized = true;
 
 	if (typeof window === "undefined") return null;
 
-	const endpoint = import.meta.env.PUBLIC_PULSE_INGEST_URL as string | undefined;
-	const project_id = import.meta.env.PUBLIC_DEVPAD_PROJECT_ID as string | undefined;
-	const ingest_key = import.meta.env.PUBLIC_DEVPAD_PULSE_INGEST_KEY as string | undefined;
-	const release = import.meta.env.PUBLIC_GIT_SHA as string | undefined;
+	const endpoint = env_string(import.meta.env.PUBLIC_PULSE_INGEST_URL);
+	const project_id = env_string(import.meta.env.PUBLIC_DEVPAD_PROJECT_ID);
+	const ingest_key = env_string(import.meta.env.PUBLIC_DEVPAD_PULSE_INGEST_KEY);
+	const release = env_string(import.meta.env.PUBLIC_GIT_SHA);
 
 	if (!endpoint || !project_id || !ingest_key) return null;
 
-	_pulse = createPulse({
+	pulse_instance = createPulse({
 		project_id,
 		ingest_key,
 		endpoint,
@@ -56,13 +58,13 @@ const ensureInitialized = (): Pulse | null => {
 		release,
 	});
 
-	install_browser_handlers(_pulse);
-	return _pulse;
+	install_browser_handlers(pulse_instance);
+	return pulse_instance;
 };
 
 const install_browser_handlers = (p: Pulse): void => {
-	if (_handlers_installed || typeof window === "undefined") return;
-	_handlers_installed = true;
+	if (handlers_installed || typeof window === "undefined") return;
+	handlers_installed = true;
 
 	window.addEventListener("error", (e: ErrorEvent) => {
 		p.captureError(e.error ?? new Error(e.message), {
@@ -100,11 +102,21 @@ const error_or_critical =
 
 /** Opinionated namespaced log surface — see file header for the severity ladder. */
 export const log = {
-	raw: (msg: string, attrs?: Record<string, unknown>) => emit("raw", msg, attrs),
-	debug: (msg: string, attrs?: Record<string, unknown>) => emit("debug", msg, attrs),
-	info: (msg: string, attrs?: Record<string, unknown>) => emit("info", msg, attrs),
-	notice: (msg: string, attrs?: Record<string, unknown>) => emit("notice", msg, attrs),
-	warning: (msg: string, attrs?: Record<string, unknown>) => emit("warning", msg, attrs),
+	raw: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("raw", msg, attrs);
+	},
+	debug: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("debug", msg, attrs);
+	},
+	info: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("info", msg, attrs);
+	},
+	notice: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("notice", msg, attrs);
+	},
+	warning: (msg: string, attrs?: Record<string, unknown>) => {
+		emit("warning", msg, attrs);
+	},
 	/** `log.error(msg, err?, attrs?)` — when an Error is passed it's captured as an exception. */
 	error: error_or_critical("error"),
 	/** `log.critical(msg, err?, attrs?)` — same shape as error, higher severity. */
@@ -112,7 +124,10 @@ export const log = {
 
 	span(name: string): Span {
 		const p = ensureInitialized();
-		if (!p) return { end: () => {} } as Span;
+		if (!p) {
+			const noop: Span = { end: () => {} };
+			return noop;
+		}
 		return startSpan({ pulse: p, name });
 	},
 

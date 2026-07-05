@@ -7,7 +7,8 @@ const app = new Hono<AppContext>();
 
 app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 
 	const result = await tags.getActiveUserTags(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);

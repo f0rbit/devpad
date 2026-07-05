@@ -1,5 +1,5 @@
 import { type BrowserContext, type ConsoleMessage, expect, test } from "@playwright/test";
-import { E2E_PROJECT_ID, E2E_RUN_AWAITING } from "./fixtures/pipeline-ids.ts";
+import { E2E_PROJECT_ID, E2E_RUN_AWAITING } from "./fixtures/pipeline-ids";
 
 /**
  * Task 2.2 — pipeline page / tab render-smoke (local-worker scope, plan task-2-0 → Option a).

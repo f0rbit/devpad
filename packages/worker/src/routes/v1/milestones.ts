@@ -1,4 +1,4 @@
-import { milestones, projects } from "@devpad/core/services";
+import { milestones } from "@devpad/core/services";
 import { upsert_milestone } from "@devpad/schema";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
@@ -9,7 +9,8 @@ const app = new Hono<AppContext>();
 
 app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 
 	const result = await milestones.getUserMilestones(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -33,7 +34,8 @@ app.get("/:id", requireAuth, async (c) => {
 
 app.post("/", requireAuth, zValidator("json", upsert_milestone), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const data = c.req.valid("json");
 
 	const auth_channel = c.get("auth_channel");
@@ -50,7 +52,7 @@ app.post("/", requireAuth, zValidator("json", upsert_milestone), async (c) => {
 				},
 				409,
 			);
-		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
+		if (result.error.kind === "not_found") return c.json({ error: `${result.error.resource} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
@@ -58,7 +60,8 @@ app.post("/", requireAuth, zValidator("json", upsert_milestone), async (c) => {
 
 app.patch("/:id", requireAuth, zValidator("json", upsert_milestone), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const milestone_id = c.req.param("id");
 	const data = c.req.valid("json");
 
@@ -79,7 +82,7 @@ app.patch("/:id", requireAuth, zValidator("json", upsert_milestone), async (c) =
 				},
 				409,
 			);
-		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
+		if (result.error.kind === "not_found") return c.json({ error: `${result.error.resource} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
@@ -87,7 +90,8 @@ app.patch("/:id", requireAuth, zValidator("json", upsert_milestone), async (c) =
 
 app.delete("/:id", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const milestone_id = c.req.param("id");
 
 	if (!milestone_id) return c.json({ error: "Missing milestone ID" }, 400);
@@ -96,7 +100,7 @@ app.delete("/:id", requireAuth, async (c) => {
 	const result = await milestones.deleteMilestone(db, milestone_id, auth_user.id, auth_channel);
 	if (!result.ok) {
 		if (result.error.kind === "forbidden") return c.json({ error: result.error.message }, 401);
-		if (result.error.kind === "not_found") return c.json({ error: `${result.error.entity} not found` }, 404);
+		if (result.error.kind === "not_found") return c.json({ error: `${result.error.resource} not found` }, 404);
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json({ success: true, message: "Milestone deleted" });

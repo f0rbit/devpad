@@ -45,11 +45,11 @@ import { join } from "node:path";
 // CLI imports are reached via relative path: the `@devpad/cli` workspace
 // package has no `exports` map, so we can't shortcut through its `main`.
 // This intentionally exercises the real CLI source — no test duplicate.
-import { compute_asset_hash } from "../../../cli/src/asset-walker.ts";
-import { action_artifacts_upload } from "../../../cli/src/commands/pipelines.ts";
+import { compute_asset_hash } from "../../../cli/src/asset-walker";
+import { action_artifacts_upload } from "../../../cli/src/commands/pipelines";
 import { AssetManifest, BundleManifest, InMemoryCloudflareProvider } from "@devpad/pipeline-fakes";
 import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
-import { make_corpus_bundle_provider } from "../../src/providers/corpus-providers.ts";
+import { make_corpus_bundle_provider } from "../../src/providers/corpus-providers";
 
 const VALID_TOKEN = "test-e2e-token";
 
@@ -88,7 +88,9 @@ const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
 		req.on("data", (c) => chunks.push(c));
-		req.on("end", () => resolve(Buffer.concat(chunks)));
+		req.on("end", () => {
+			resolve(Buffer.concat(chunks));
+		});
 		req.on("error", reject);
 	});
 
@@ -101,88 +103,114 @@ const send_json = (res: http.ServerResponse, status: number, body: unknown): voi
 const start_test_server = async (): Promise<ServerHandle> => {
 	const backend = create_memory_backend();
 	const puts_by_store = new Map<string, number>();
-	const server = http.createServer(async (req, res) => {
-		try {
-			const url = req.url ?? "/";
-			const auth = req.headers.authorization ?? "";
-			if (!url.startsWith("/artifacts/")) {
-				send_json(res, 404, { ok: false, error: { code: "not_found" } });
-				return;
-			}
-			if (!auth.startsWith("Bearer ") || auth.slice("Bearer ".length).trim() !== VALID_TOKEN) {
-				send_json(res, 401, { ok: false, error: { code: "unauthorized" } });
-				return;
-			}
-			if (url === "/artifacts/blob" && req.method === "POST") {
-				const store_id = (req.headers["x-store-id"] as string) ?? "";
-				const buf = await read_body(req);
-				const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-				const content_hash = await sha256_hex(bytes);
-				puts_by_store.set(store_id, (puts_by_store.get(store_id) ?? 0) + 1);
-				const version = generate_version();
-				const data_key = `${store_id}/${content_hash}`;
-				const existing = await backend.metadata.find_by_hash(store_id, content_hash);
-				if (existing === null) {
-					await backend.data.put(data_key, bytes);
-					await backend.metadata.put({
-						store_id,
+	const server = http.createServer((req, res) => {
+		void (async () => {
+			try {
+				const url = req.url ?? "/";
+				const auth = req.headers.authorization ?? "";
+				if (!url.startsWith("/artifacts/")) {
+					send_json(res, 404, { ok: false, error: { code: "not_found" } });
+					return;
+				}
+				if (!auth.startsWith("Bearer ") || auth.slice("Bearer ".length).trim() !== VALID_TOKEN) {
+					send_json(res, 401, { ok: false, error: { code: "unauthorized" } });
+					return;
+				}
+				if (url === "/artifacts/blob" && req.method === "POST") {
+					const store_id = (req.headers["x-store-id"] as string | undefined) ?? "";
+					const buf = await read_body(req);
+					const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+					const content_hash = await sha256_hex(bytes);
+					puts_by_store.set(store_id, (puts_by_store.get(store_id) ?? 0) + 1);
+					const version = generate_version();
+					const data_key = `${store_id}/${content_hash}`;
+					const existing = await backend.metadata.find_by_hash(store_id, content_hash);
+					if (existing === null) {
+						const put_data = await backend.data.put(data_key, bytes);
+						if (!put_data.ok) {
+							send_json(res, 500, { ok: false, error: { code: "internal", message: put_data.error.kind } });
+							return;
+						}
+						const put_meta = await backend.metadata.put({
+							store_id,
+							version,
+							parents: [],
+							created_at: new Date(),
+							content_hash,
+							content_type: "application/octet-stream",
+							size_bytes: bytes.byteLength,
+							data_key,
+						});
+						if (!put_meta.ok) {
+							send_json(res, 500, { ok: false, error: { code: "internal", message: put_meta.error.kind } });
+							return;
+						}
+					}
+					send_json(res, 200, { ok: true, value: { version, content_hash, store_id, ref: data_key } });
+					return;
+				}
+				if (url === "/artifacts/version-set" && req.method === "POST") {
+					const buf = await read_body(req);
+					let parsed: unknown;
+					try {
+						parsed = JSON.parse(buf.toString("utf8"));
+					} catch {
+						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
+						return;
+					}
+					if (parsed === null || typeof parsed !== "object") {
+						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
+						return;
+					}
+					const manifest = parsed as VersionSetManifest;
+					const text = buf.toString("utf8");
+					const content_hash = await sha256_hex(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+					const version = generate_version();
+					const data_key = `version-sets/${manifest.package}/${content_hash}`;
+					const put_data = await backend.data.put(data_key, new TextEncoder().encode(text));
+					if (!put_data.ok) {
+						send_json(res, 500, { ok: false, error: { code: "internal", message: put_data.error.kind } });
+						return;
+					}
+					const put_meta = await backend.metadata.put({
+						store_id: "version-sets",
 						version,
 						parents: [],
 						created_at: new Date(),
 						content_hash,
-						content_type: "application/octet-stream",
-						size_bytes: bytes.byteLength,
+						content_type: "application/json",
+						size_bytes: buf.byteLength,
 						data_key,
+						tags: [`pkg:${manifest.package}`],
 					});
-				}
-				send_json(res, 200, { ok: true, value: { version, content_hash, store_id, ref: data_key } });
-				return;
-			}
-			if (url === "/artifacts/version-set" && req.method === "POST") {
-				const buf = await read_body(req);
-				let manifest: VersionSetManifest | null = null;
-				try {
-					manifest = JSON.parse(buf.toString("utf8")) as VersionSetManifest;
-				} catch {
-					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
+					if (!put_meta.ok) {
+						send_json(res, 500, { ok: false, error: { code: "internal", message: put_meta.error.kind } });
+						return;
+					}
+					send_json(res, 200, {
+						ok: true,
+						value: { version_set_id: version, content_hash, package: manifest.package },
+					});
 					return;
 				}
-				if (manifest === null || typeof manifest !== "object") {
-					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
-					return;
-				}
-				const text = buf.toString("utf8");
-				const content_hash = await sha256_hex(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-				const version = generate_version();
-				const data_key = `version-sets/${manifest.package}/${content_hash}`;
-				await backend.data.put(data_key, new TextEncoder().encode(text));
-				await backend.metadata.put({
-					store_id: "version-sets",
-					version,
-					parents: [],
-					created_at: new Date(),
-					content_hash,
-					content_type: "application/json",
-					size_bytes: buf.byteLength,
-					data_key,
-					tags: [`pkg:${manifest.package}`],
-				});
-				send_json(res, 200, { ok: true, value: { version_set_id: version, content_hash, package: manifest.package } });
-				return;
+				send_json(res, 404, { ok: false, error: { code: "not_found" } });
+			} catch (e) {
+				send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 			}
-			send_json(res, 404, { ok: false, error: { code: "not_found" } });
-		} catch (e) {
-			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
-		}
+		})();
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
 	if (address === null || typeof address === "string") throw new Error("listen failed");
-	return { server, url: `http://127.0.0.1:${address.port}`, backend, puts_by_store };
+	return { server, url: `http://127.0.0.1:${String(address.port)}`, backend, puts_by_store };
 };
 
 const stop_test_server = async (h: ServerHandle): Promise<void> =>
-	new Promise((resolve) => h.server.close(() => resolve()));
+	new Promise((resolve) => {
+		h.server.close(() => {
+			resolve();
+		});
+	});
 
 // ---------------------------------------------------------------------------
 // Fixture authoring — a faux Astro dist tree, plus the sidecar files
@@ -291,12 +319,12 @@ const set_pipelines_env = (url: string): { restore: () => void } => {
 };
 
 const expect_exit = async (run: () => Promise<unknown>): Promise<number> => {
-	const original_exit = process.exit;
+	const original_exit = process.exit.bind(process);
 	let exit_code: number | undefined;
-	(process as unknown as { exit: (code?: number) => never }).exit = ((code?: number) => {
+	(process as unknown as { exit: (code?: number) => never }).exit = (code?: number) => {
 		exit_code = code ?? 0;
 		throw new Error("__exit__");
-	}) as unknown as typeof process.exit;
+	};
 	try {
 		await run();
 	} catch (e) {
@@ -393,7 +421,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 			JSON.parse(await read_blob_text(h.backend, builds.worker.bundle_manifest_ref!)),
 		);
 		expect(bundle_manifest.main_module).toBe("index.js");
-		expect(bundle_manifest.modules.map((m) => m.name).sort()).toEqual([...fx.expected_module_names].sort());
+		expect(bundle_manifest.modules.map((m) => m.name).toSorted()).toEqual([...fx.expected_module_names].toSorted());
 		const by_name = new Map(bundle_manifest.modules.map((m) => [m.name, m]));
 		expect(by_name.get("index.js")?.mime_type).toBe("application/javascript+module");
 		expect(by_name.get("chunks/render.mjs")?.mime_type).toBe("application/javascript+module");
@@ -406,10 +434,10 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		const asset_manifest = AssetManifest.parse(
 			JSON.parse(await read_blob_text(h.backend, builds.assets!.manifest_ref!)),
 		);
-		expect(asset_manifest.assets.map((a) => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
+		expect(asset_manifest.assets.map((a) => a.path).toSorted()).toEqual([...fx.expected_asset_paths].toSorted());
 		// Asset config flows through verbatim.
-		expect(asset_manifest.config?.html_handling).toBe("auto-trailing-slash");
-		expect(asset_manifest.config?.not_found_handling).toBe("single-page-application");
+		expect(asset_manifest.config.html_handling).toBe("auto-trailing-slash");
+		expect(asset_manifest.config.not_found_handling).toBe("single-page-application");
 		// Every hash is exactly 32 hex chars (CF's truncated BLAKE3 form).
 		for (const asset of asset_manifest.assets) {
 			expect(asset.hash).toMatch(/^[0-9a-f]{32}$/);
@@ -433,7 +461,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		if (payload.kind !== "directory_bundle") return;
 
 		expect(payload.main_module).toBe("index.js");
-		expect(payload.modules.map((m) => m.name).sort()).toEqual([...fx.expected_module_names].sort());
+		expect(payload.modules.map((m) => m.name).toSorted()).toEqual([...fx.expected_module_names].toSorted());
 		// Bytes round-trip exactly (no encoding drift).
 		const fetched_main = payload.modules.find((m) => m.name === "index.js");
 		expect(fetched_main).toBeDefined();
@@ -444,7 +472,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		expect(fetched_wasm!.content).toEqual(fx.wasm_bytes);
 
 		expect(payload.assets).toBeDefined();
-		expect(payload.assets!.assets.map((a) => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
+		expect(payload.assets!.assets.map((a) => a.path).toSorted()).toEqual([...fx.expected_asset_paths].toSorted());
 		for (const asset of payload.assets!.assets) {
 			expect(asset.hash).toMatch(/^[0-9a-f]{32}$/);
 			const expected_bytes = fx.asset_bytes_by_path.get(asset.path);
@@ -452,7 +480,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 			expect(asset.content).toEqual(expected_bytes!);
 		}
 		// Default platform bindings flow through the provider as configured.
-		const binding_names = (payload.bindings ?? []).map((b) => b.name).sort();
+		const binding_names = (payload.bindings ?? []).map((b) => b.name).toSorted();
 		expect(binding_names).toEqual(["ANTHROPIC", "PULSE"]);
 
 		// --- Step 6: forward to the in-memory CF provider exactly the way

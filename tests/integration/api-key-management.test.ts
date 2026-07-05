@@ -116,7 +116,7 @@ describe("API Key Management Integration", () => {
 					const createdKey = (await createResponse.json()) as any;
 					const keyId = createdKey.id;
 
-					const deleteResponse = await fetch(`http://localhost:3001/api/v1/keys/${keyId}`, {
+					const deleteResponse = await fetch(`http://localhost:3001/api/v1/keys/${String(keyId)}`, {
 						method: "DELETE",
 						headers: {
 							Authorization: `Bearer ${t.client.getApiKey()}`,
@@ -245,7 +245,7 @@ describe("API Key Management Integration", () => {
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
-							name: `Concurrent Key ${i + 1}`,
+							name: `Concurrent Key ${String(i + 1)}`,
 						}),
 					}),
 				);
@@ -277,7 +277,7 @@ describe("API Key Management Integration", () => {
 							"Content-Type": "application/json",
 						},
 						body: JSON.stringify({
-							name: `Rapid Key ${i + 1}`,
+							name: `Rapid Key ${String(i + 1)}`,
 						}),
 					}),
 				);

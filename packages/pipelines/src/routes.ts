@@ -17,7 +17,6 @@ import type {
 	EventDoRouter,
 	EventPulseEmitter,
 	OidcSessionClaims,
-	OidcSessionScope,
 	ResolvedPlan,
 	VerifiedOidcClaims,
 } from "@devpad/core/services/pipelines";
@@ -61,8 +60,8 @@ import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/co
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import type { AuthError, AuthIdentity } from "./auth.ts";
-import type { DoRouter } from "./do-router.ts";
+import type { AuthError, AuthIdentity } from "./auth";
+import type { DoRouter } from "./do-router";
 
 export const create_run_body = z.object({
 	package_id: z.string().min(1),
@@ -208,9 +207,9 @@ export interface PulseEmitterLite {
  * the contract; production wires through `jose` in `providers/`).
  */
 export interface OidcDeps {
-	verify_oidc(jwt: string): Promise<Result<VerifiedOidcClaims, { reason: string }>>;
-	sign_session(claims: OidcSessionClaims): Promise<Result<string, { reason: string }>>;
-	verify_session(token: string): Promise<Result<OidcSessionClaims, { reason: string }>>;
+	verify_oidc: (jwt: string) => Promise<Result<VerifiedOidcClaims, { reason: string }>>;
+	sign_session: (claims: OidcSessionClaims) => Promise<Result<string, { reason: string }>>;
+	verify_session: (token: string) => Promise<Result<OidcSessionClaims, { reason: string }>>;
 }
 
 export type RoutesDeps = {
@@ -311,11 +310,16 @@ const wire_err = (input: unknown, status?: number): Response => {
 	return json_err_raw(status ?? status_for_code(wire.code), wire);
 };
 
-const json_ok = <T>(value: T) =>
+const json_ok = (value: unknown) =>
 	new Response(JSON.stringify({ ok: true, value }), {
 		status: 200,
 		headers: { "content-type": "application/json" },
 	});
+
+// This package's tsconfig doesn't set `noUncheckedIndexedAccess`, so
+// `rows[0]` types as the element directly — masking the real possibility of
+// a zero-row query result. The declared return type here is honest about it.
+const first_row = <T>(rows: T[]): T | undefined => rows[0];
 
 /**
  * Build the `EventDeps` bundle the `ingest_event` service expects.
@@ -393,9 +397,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			}
 		}
 
-		const package_row = (
-			await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, parsed.data.package_id))
-		)[0];
+		const package_rows = await deps.db
+			.select()
+			.from(pipeline_package)
+			.where(eq(pipeline_package.id, parsed.data.package_id));
+		const package_row = first_row(package_rows);
 		if (package_row === undefined)
 			return wire_err({ code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
 
@@ -976,7 +982,7 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 				event: "oidc_exchange",
 				trust_policy_id: result.value.trust_policy_id,
 				package_id: result.value.package_ids[0] ?? null,
-				scope: result.value.scope as readonly OidcSessionScope[],
+				scope: result.value.scope,
 				status: "ok",
 			})
 			.catch(() => undefined);
@@ -1012,7 +1018,11 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	const content_length = Number(request.headers.get("content-length") ?? "0");
 	if (content_length > MAX_BLOB_SIZE_BYTES) {
 		return wire_err(
-			{ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES },
+			{
+				code: "payload_too_large",
+				message: `body exceeds ${String(MAX_BLOB_SIZE_BYTES)} bytes`,
+				limit: MAX_BLOB_SIZE_BYTES,
+			},
 			413,
 		);
 	}
@@ -1021,7 +1031,11 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	if (buffer === null) return wire_err({ code: "invalid_body", message: "could not read body" }, 400);
 	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES)
 		return wire_err(
-			{ code: "payload_too_large", message: `body exceeds ${MAX_BLOB_SIZE_BYTES} bytes`, limit: MAX_BLOB_SIZE_BYTES },
+			{
+				code: "payload_too_large",
+				message: `body exceeds ${String(MAX_BLOB_SIZE_BYTES)} bytes`,
+				limit: MAX_BLOB_SIZE_BYTES,
+			},
 			413,
 		);
 
@@ -1097,7 +1111,7 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	const parsed = VersionSetManifestSchema.safeParse(body);
 	if (!parsed.success) return wire_err({ code: "invalid_manifest", issues: parsed.error.issues }, 400);
 
-	const manifest = parsed.data as VersionSetManifest;
+	const manifest = parsed.data;
 
 	// Phase 15: When session identity, require artifacts:upload scope and package membership
 	if (identity.kind === "session") {

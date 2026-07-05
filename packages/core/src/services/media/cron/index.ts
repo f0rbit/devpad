@@ -1,14 +1,8 @@
 import { createLogger } from "../../../utils/logger";
 import type { AppContext } from "../context";
-import { GitHubProvider } from "../platforms";
-import { RedditProvider } from "../platforms/reddit";
-import { TwitterProvider } from "../platforms/twitter";
 import type { ProviderFactory } from "../platforms/types";
 import { type AccountWithUser, connection } from "../services/connections";
-import { type PlatformGroups, processAccount, type RawSnapshot, userTimeline } from "../sync";
-import { processGitHubAccount } from "./processors/github";
-import { processRedditAccount } from "./processors/reddit";
-import { processTwitterAccount } from "./processors/twitter";
+import { processAccount, userTimeline } from "../sync";
 import type { CronResult } from "./types";
 
 export {

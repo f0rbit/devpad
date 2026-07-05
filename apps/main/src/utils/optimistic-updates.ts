@@ -65,7 +65,7 @@ export interface OptimisticUpdateResult<T> {
  *   Mark Complete
  * </button>
  */
-export function createOptimisticUpdate<T extends Record<string, any>>(
+export function createOptimisticUpdate<T extends Record<string, unknown>>(
 	options: OptimisticUpdateOptions<T>,
 ): OptimisticUpdateResult<T> {
 	const { initialData, updateFn, successDuration = 2000, errorDuration = 5000, onSuccess, onError } = options;
@@ -160,7 +160,7 @@ export function createOptimisticUpdate<T extends Record<string, any>>(
 /**
  * Hook for optimistic form state management
  */
-export function createOptimisticForm<T extends Record<string, any>>(
+export function createOptimisticForm<T extends Record<string, unknown>>(
 	options: OptimisticUpdateOptions<T> & {
 		/** Validation function */
 		validate?: (data: T) => Record<keyof T, string> | null;
@@ -222,7 +222,7 @@ export function createOptimisticList<T extends { id: string }>(options: {
 		if (itemIndex === -1) return;
 
 		const originalItem = originalItems[itemIndex];
-		const updatedItem = { ...originalItem, ...updates } as T;
+		const updatedItem: T = { ...originalItem, ...updates };
 
 		// Optimistically update
 		const newItems = [...originalItems];
@@ -270,7 +270,7 @@ export function createOptimisticList<T extends { id: string }>(options: {
 		if (!options.createItemFn) return;
 
 		const tempId = crypto.randomUUID();
-		const tempItem = { ...newItem, id: tempId } as T;
+		const tempItem: T = { ...newItem, id: tempId };
 
 		// Optimistically add item
 		setItems((prev) => [...prev, tempItem]);

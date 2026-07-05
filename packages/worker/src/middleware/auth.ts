@@ -5,12 +5,13 @@ import {
 	keys,
 	validateSession,
 } from "@devpad/core/auth";
+import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppContext } from "../bindings.js";
 import { cookieConfig } from "../utils/cookies.js";
 
-const setNullAuth = (c: any) => {
+const setNullAuth = (c: Context<AppContext>) => {
 	c.set("user", null);
 	c.set("session", null);
 	c.set("auth_channel", "user");
@@ -26,12 +27,12 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 		const token = auth_header.slice(7);
 
 		const key_result = await keys.getUserAndScopeByApiKey(db, token);
-		if (key_result.ok) {
+		if (key_result.ok && key_result.value.user.github_id !== null && key_result.value.user.name !== null) {
 			c.set("user", {
 				id: key_result.value.user.id,
-				github_id: key_result.value.user.github_id!,
-				name: key_result.value.user.name!,
-				task_view: key_result.value.user.task_view as "list" | "grid",
+				github_id: key_result.value.user.github_id,
+				name: key_result.value.user.name,
+				task_view: key_result.value.user.task_view,
 			});
 			c.set("session", null);
 			c.set("auth_channel", "api");
@@ -43,12 +44,12 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	const session_id = getCookie(c, getSessionCookieName());
 	if (session_id) {
 		const session_result = await validateSession(db, session_id);
-		if (session_result.ok) {
+		if (session_result.ok && session_result.value.user.github_id !== null && session_result.value.user.name !== null) {
 			const { user: session_user, session: session_data } = session_result.value;
 			c.set("user", {
 				id: session_user.id,
-				github_id: session_user.github_id!,
-				name: session_user.name!,
+				github_id: session_user.github_id,
+				name: session_user.name,
 				task_view: session_user.task_view,
 			});
 			c.set("session", session_data);
@@ -60,14 +61,14 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 			}
 			return next();
 		}
-
+		// Falls through here both when the session lookup failed AND when it
+		// succeeded but the user record is missing github_id/name (a data
+		// integrity gap) — either way we treat it as unauthenticated rather
+		// than asserting past nullable DB columns.
 		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 
-	const log = c.get("log");
-	if (log) {
-		log.warning("auth_failed", { path: c.req.path, has_session: Boolean(c.req.header("cookie")) });
-	}
+	c.get("log")?.warning("auth_failed", { path: c.req.path, has_session: Boolean(c.req.header("cookie")) });
 
 	setNullAuth(c);
 	return next();

@@ -33,7 +33,7 @@ export type Spinner = {
  * blank when the CLI exits non-zero.
  */
 export const make_spinner = (text: string): Spinner => {
-	if (process.stdout.isTTY) return ora(text) as unknown as Spinner;
+	if (process.stdout.isTTY) return ora(text);
 	const log_stderr = (msg?: string): Spinner => {
 		if (msg !== undefined && msg !== "") console.error(msg);
 		return noop;

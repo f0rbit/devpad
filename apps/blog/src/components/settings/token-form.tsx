@@ -72,7 +72,7 @@ const TokenForm: Component<TokenFormProps> = (props) => {
 									<label>API Key (copy now - shown only once)</label>
 									<div class="row" style={{ gap: "8px" }}>
 										<input type="text" value={generatedKey() ?? ""} readonly class="font-mono" style={{ flex: 1 }} />
-										<Button variant="secondary" onClick={copyToClipboard}>
+										<Button variant="secondary" onClick={() => void copyToClipboard()}>
 											Copy
 										</Button>
 									</div>
@@ -91,7 +91,7 @@ const TokenForm: Component<TokenFormProps> = (props) => {
 				}
 			>
 				<ModalBody>
-					<form onSubmit={handleSubmit} class="modal-form">
+					<form onSubmit={(e) => void handleSubmit(e)} class="modal-form">
 						<Show when={formState.error()}>
 							<div
 								style={{

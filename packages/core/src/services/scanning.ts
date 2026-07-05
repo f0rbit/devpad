@@ -55,8 +55,8 @@ export async function* initiateScan(
 
 	yield "scanning repo\n";
 	const scan_config = {
-		tags: config.tags ?? [],
-		ignore: config.ignore ?? [],
+		tags: config.tags,
+		ignore: config.ignore,
 	};
 
 	const scan_result = await scanGitHubRepo(owner, repo, scan_branch || "main", access_token, scan_config);
@@ -97,7 +97,7 @@ export async function* initiateScan(
 	if (old_result.length === 1) {
 		const existing = await db.select().from(codebase_tasks).where(eq(codebase_tasks.recent_scan_id, old_result[0].id));
 
-		old_tasks = existing.map((item: any) => ({
+		old_tasks = existing.map((item) => ({
 			id: item.id,
 			file: item.file || "",
 			line: item.line || 0,
@@ -126,21 +126,21 @@ export async function* initiateScan(
 	yield "done\n";
 }
 
-function createCodebaseTaskValues(update_item: any, new_id: number): any {
-	const new_text = update_item.data?.new?.text || "";
+function createCodebaseTaskValues(update_item: DiffResult, new_id: number) {
+	const new_text = update_item.data.new?.text || "";
 	return {
 		id: update_item.id,
 		text: new_text,
-		line: update_item.data?.new?.line || 0,
-		file: update_item.data?.new?.file || "unknown",
+		line: update_item.data.new?.line || 0,
+		file: update_item.data.new?.file || "unknown",
 		type: update_item.tag || "todo",
-		context: update_item.data?.new?.context ? JSON.stringify(update_item.data.new.context) : null,
+		context: update_item.data.new?.context ? JSON.stringify(update_item.data.new.context) : null,
 		recent_scan_id: new_id,
 		updated_at: new Date().toISOString(),
 	};
 }
 
-async function upsertCodebaseTask(db: Database, update_item: any, new_id: number): Promise<void> {
+async function upsertCodebaseTask(db: Database, update_item: DiffResult, new_id: number): Promise<void> {
 	const values = createCodebaseTaskValues(update_item, new_id);
 	await db
 		.insert(codebase_tasks)
@@ -150,14 +150,14 @@ async function upsertCodebaseTask(db: Database, update_item: any, new_id: number
 
 async function handleCreateAction(
 	db: Database,
-	update_item: any,
+	update_item: DiffResult,
 	titles: Record<string, string>,
 	user_id: string,
 	project_id: string,
 	new_id: number,
 ): Promise<void> {
-	const title = titles[update_item.id] || update_item.data?.new?.text || "Untitled Task";
-	const new_text = update_item.data?.new?.text || "";
+	const title = titles[update_item.id] || update_item.data.new?.text || "Untitled Task";
+	const new_text = update_item.data.new?.text || "";
 
 	const new_task_data: UpsertTodo = {
 		title,
@@ -178,7 +178,7 @@ async function handleCreateAction(
 
 async function processScanItem(
 	db: Database,
-	update_item: any,
+	update_item: DiffResult,
 	actions_map: Record<string, string[]>,
 	titles: Record<string, string>,
 	user_id: string,
@@ -289,7 +289,8 @@ export async function processScanResults(
 
 	if (!approved) return ok({ success: true });
 
-	const update_items: any[] = typeof update_data.data === "string" ? JSON.parse(update_data.data) : update_data.data;
+	const raw_items = typeof update_data.data === "string" ? JSON.parse(update_data.data) : update_data.data;
+	const update_items = raw_items as DiffResult[];
 
 	for (const update_item of update_items) {
 		await processScanItem(db, update_item, actions_map, titles, user_id, project_id, new_id);

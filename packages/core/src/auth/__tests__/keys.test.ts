@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createApiKey, deleteApiKey, getAPIKeys, getUserByAPIKey } from "../keys.js";
+import { createApiKey, getAPIKeys, getUserByAPIKey } from "../keys.js";
 
 describe("getUserByAPIKey", () => {
 	test("returns not_found for invalid key", async () => {

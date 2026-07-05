@@ -23,7 +23,7 @@
 
 import type { OidcAudit, OidcSessionClaims } from "@devpad/core/services/pipelines";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import type { PipelineEnv } from "./bindings.ts";
+import type { PipelineEnv } from "./bindings";
 
 export type { OidcAudit, OidcSessionClaims } from "@devpad/core/services/pipelines";
 
@@ -139,7 +139,7 @@ export const authenticate_request = async (
 		return err({ code: "auth_unavailable", message: "PIPELINES_TOKEN is not bound on this Worker" });
 	}
 	const expected = await env.PIPELINES_TOKEN.get();
-	if (expected === undefined || expected === "") {
+	if (expected === "") {
 		return err({ code: "auth_unavailable", message: "PIPELINES_TOKEN resolved to empty" });
 	}
 
@@ -169,7 +169,7 @@ export const require_bearer_token = async (env: PipelineEnv, request: Request): 
 		return err({ code: "auth_unavailable", message: "PIPELINES_TOKEN is not bound on this Worker" });
 	}
 	const expected = await env.PIPELINES_TOKEN.get();
-	if (expected === undefined || expected === "") {
+	if (expected === "") {
 		return err({ code: "auth_unavailable", message: "PIPELINES_TOKEN resolved to empty" });
 	}
 	const header = request.headers.get("authorization");

@@ -20,7 +20,7 @@
  */
 
 import type { VersionSetManifest } from "@f0rbit/corpus";
-import type { ForcedAtomicReason, Rollout } from "./types.ts";
+import type { ForcedAtomicReason, Rollout } from "./types";
 
 export type ResolvedRollout = {
 	rollout: Rollout;

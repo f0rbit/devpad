@@ -139,9 +139,9 @@ export const scanGitHubRepo = async (
 		);
 
 		for (let i = 0; i < results.length; i++) {
-			const result = results[i]!;
+			const result = results[i];
 			if (!result.ok) continue;
-			const tasks = parseFileContent(result.value, file_batch[i]!, config);
+			const tasks = parseFileContent(result.value, file_batch[i], config);
 			all_tasks.push(...tasks);
 		}
 	}

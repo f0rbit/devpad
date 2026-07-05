@@ -14,12 +14,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, test } from "bun:test";
-import {
-	type BuildShape,
-	type DefaultGateKind,
-	type RolloutMode,
-	scaffold_package,
-} from "../../src/scaffolder/index.ts";
+import { type BuildShape, type DefaultGateKind, type RolloutMode, scaffold_package } from "../../src/scaffolder/index";
 
 const GOLDEN_ROOT = path.resolve(import.meta.dir, "..", "golden");
 const FIXED_NOW = new Date(Date.UTC(2026, 4, 17));
@@ -78,7 +73,7 @@ const list_files = async (root: string): Promise<string[]> => {
 		}
 	};
 	await walk(root);
-	return out.sort();
+	return out.toSorted();
 };
 
 const copy_tree = async (src: string, dest: string): Promise<void> => {
@@ -217,7 +212,7 @@ describe("scaffold_package — typecheck", () => {
 
 		const proc = spawnSync("bunx", ["tsc", "-p", "tsconfig.json"], { cwd: target, encoding: "utf8" });
 		if (proc.status !== 0) {
-			throw new Error(`tsc failed:\n${proc.stdout ?? ""}\n${proc.stderr ?? ""}`);
+			throw new Error(`tsc failed:\n${proc.stdout}\n${proc.stderr}`);
 		}
 
 		await rm(path.dirname(target), { recursive: true, force: true });

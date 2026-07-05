@@ -4,8 +4,8 @@ import { ApiClient, getTool } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
-import { register_pipelines_commands } from "./commands/pipelines.ts";
-import { make_spinner as createSpinner } from "./printer.ts";
+import { register_pipelines_commands } from "./commands/pipelines";
+import { make_spinner as createSpinner } from "./printer";
 
 // Helper to get API client
 function getApiClient(): ApiClient {
@@ -25,13 +25,13 @@ function getApiClient(): ApiClient {
 }
 
 // Helper to handle errors
-function handleError(error: any) {
+function handleError(error: unknown) {
 	const message = error instanceof Error ? error.message : String(error);
 	console.error(chalk.red(`Error: ${message}`));
 	process.exit(1);
 }
 
-async function formatOutput(data: any, format: string = "json") {
+async function formatOutput(data: unknown, format: string = "json") {
 	if (format === "json") {
 		const output = JSON.stringify(data, null, 2) + "\n";
 		const flushed = process.stdout.write(output);
@@ -40,7 +40,7 @@ async function formatOutput(data: any, format: string = "json") {
 		}
 	} else if (format === "table" && Array.isArray(data)) {
 		const table = new Table();
-		data.forEach((item) => table.addRow(item));
+		data.forEach((item: unknown) => table.addRow(item as Record<string, unknown>));
 		table.printTable();
 	} else {
 		console.log(data);
@@ -115,8 +115,8 @@ projects
 				description: options.description,
 				private: options.private,
 			});
-			spinner.succeed(`Project "${result.name}" created`);
-			console.log(chalk.green(`ID: ${result.id}`));
+			spinner.succeed(`Project "${String(result.name)}" created`);
+			console.log(chalk.green(`ID: ${String(result.id)}`));
 		} catch (error) {
 			spinner.fail("Failed to create project");
 			handleError(error);
@@ -237,8 +237,8 @@ tasks
 				priority: options.priority.toUpperCase(),
 				progress: options.status === "done" ? "DONE" : options.status === "in_progress" ? "IN_PROGRESS" : "TODO",
 			});
-			spinner.succeed(`Task "${result.title}" created`);
-			console.log(chalk.green(`ID: ${result.id}`));
+			spinner.succeed(`Task "${String(result.title)}" created`);
+			console.log(chalk.green(`ID: ${String(result.id)}`));
 		} catch (error) {
 			spinner.fail("Failed to create task");
 			handleError(error);
@@ -259,7 +259,7 @@ tasks
 				id,
 				progress: "DONE",
 			});
-			spinner.succeed(`Task "${result.title}" marked as done`);
+			spinner.succeed(`Task "${String(result.title)}" marked as done`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
 			handleError(error);
@@ -280,7 +280,7 @@ tasks
 				id,
 				progress: "TODO",
 			});
-			spinner.succeed(`Task "${result.title}" marked as todo`);
+			spinner.succeed(`Task "${String(result.title)}" marked as todo`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
 			handleError(error);
@@ -379,8 +379,8 @@ milestones
 				target_time: options.targetTime,
 				target_version: options.targetVersion,
 			});
-			spinner.succeed(`Milestone "${result.name}" created`);
-			console.log(chalk.green(`ID: ${result.id}`));
+			spinner.succeed(`Milestone "${String(result.name)}" created`);
+			console.log(chalk.green(`ID: ${String(result.id)}`));
 		} catch (error) {
 			spinner.fail("Failed to create milestone");
 			handleError(error);
@@ -430,8 +430,8 @@ goals
 				description: options.description,
 				target_time: options.targetTime,
 			});
-			spinner.succeed(`Goal "${result.name}" created`);
-			console.log(chalk.green(`ID: ${result.id}`));
+			spinner.succeed(`Goal "${String(result.name)}" created`);
+			console.log(chalk.green(`ID: ${String(result.id)}`));
 		} catch (error) {
 			spinner.fail("Failed to create goal");
 			handleError(error);

@@ -36,7 +36,7 @@ tagsRouter.get(
 	"/posts/:uuid/tags",
 	zValidator("param", PostUuidSchema),
 	withAuth(async (c, user, ctx) => {
-		const { uuid } = valid<z.infer<typeof PostUuidSchema>>(c, "param");
+		const { uuid } = valid(c, "param") as z.infer<typeof PostUuidSchema>;
 		const service = createTagService({ db: ctx.db });
 
 		const postResult = await service.findPost(user.id, uuid);
@@ -55,8 +55,8 @@ tagsRouter.put(
 	zValidator("param", PostUuidSchema),
 	zValidator("json", TagsBodySchema),
 	withAuth(async (c, user, ctx) => {
-		const { uuid } = valid<z.infer<typeof PostUuidSchema>>(c, "param");
-		const { tags: newTags } = valid<z.infer<typeof TagsBodySchema>>(c, "json");
+		const { uuid } = valid(c, "param") as z.infer<typeof PostUuidSchema>;
+		const { tags: newTags } = valid(c, "json") as z.infer<typeof TagsBodySchema>;
 		const service = createTagService({ db: ctx.db });
 
 		const postResult = await service.findPost(user.id, uuid);
@@ -75,8 +75,8 @@ tagsRouter.post(
 	zValidator("param", PostUuidSchema),
 	zValidator("json", TagsBodySchema),
 	withAuth(async (c, user, ctx) => {
-		const { uuid } = valid<z.infer<typeof PostUuidSchema>>(c, "param");
-		const { tags: tagsToAdd } = valid<z.infer<typeof TagsBodySchema>>(c, "json");
+		const { uuid } = valid(c, "param") as z.infer<typeof PostUuidSchema>;
+		const { tags: tagsToAdd } = valid(c, "json") as z.infer<typeof TagsBodySchema>;
 		const service = createTagService({ db: ctx.db });
 
 		const postResult = await service.findPost(user.id, uuid);
@@ -94,7 +94,7 @@ tagsRouter.delete(
 	"/posts/:uuid/tags/:tag",
 	zValidator("param", TagParamSchema),
 	withAuth(async (c, user, ctx) => {
-		const { uuid, tag } = valid<z.infer<typeof TagParamSchema>>(c, "param");
+		const { uuid, tag } = valid(c, "param") as z.infer<typeof TagParamSchema>;
 		const service = createTagService({ db: ctx.db });
 
 		const postResult = await service.findPost(user.id, uuid);

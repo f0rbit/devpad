@@ -43,7 +43,7 @@ export const make_pulse_emitter = (pulse: Fetcher): PulseEmitter => ({
 			});
 			if (response.status >= 400) {
 				const text = await response.text().catch(() => "");
-				return err({ kind: "emit_error", message: `pulse ingest ${response.status}: ${text}` });
+				return err({ kind: "emit_error", message: `pulse ingest ${String(response.status)}: ${text}` });
 			}
 			return ok(undefined);
 		} catch (e) {
@@ -82,7 +82,7 @@ export const make_pulse_summary_client = (pulse: Fetcher): PulseSummaryProvider 
 			}
 			if (response.status >= 400) {
 				const text = await response.text().catch(() => "");
-				return err({ code: "internal", message: text || `pulse summary ${response.status}` });
+				return err({ code: "internal", message: text || `pulse summary ${String(response.status)}` });
 			}
 			const body = (await response.json().catch(() => null)) as PulseSummaryResponse | null;
 			if (body === null) return err({ code: "internal", message: "pulse summary returned non-json" });

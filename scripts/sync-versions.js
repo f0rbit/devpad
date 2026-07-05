@@ -16,9 +16,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const rootDir = path.resolve(__dirname, "..");
+const current_file = fileURLToPath(import.meta.url);
+const current_dir = path.dirname(current_file);
+const rootDir = path.resolve(current_dir, "..");
 
 // Publishable packages
 const PUBLISHABLE_PACKAGES = ["api", "cli", "mcp"];

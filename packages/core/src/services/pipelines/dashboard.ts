@@ -76,7 +76,7 @@ const is_gate_type = (v: unknown): v is GateType =>
 export const compute_percentile = (values: readonly number[], p: number): number | null => {
 	if (values.length === 0) return null;
 	if (values.length === 1) return values[0] ?? null;
-	const sorted = [...values].sort((a, b) => a - b);
+	const sorted = [...values].toSorted((a, b) => a - b);
 	const idx = Math.min(sorted.length - 1, Math.floor(sorted.length * p));
 	return sorted[idx] ?? null;
 };

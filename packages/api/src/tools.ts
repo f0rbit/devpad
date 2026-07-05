@@ -1,3 +1,4 @@
+import { CategoryCreateSchema, PostCreateSchema, PostListParamsSchema, PostUpdateSchema } from "@devpad/schema/blog";
 import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import {
 	save_config_request,
@@ -55,41 +56,58 @@ export const github_branches = z.object({
 	repo: z.string().describe("Repository name"),
 });
 
-// Tool metadata type
-export interface ToolDefinition<TInput = any, TOutput = any> {
+// Tool metadata type. Every entry stores a differently-shaped `TInput`/`TOutput`
+// pair, so the record necessarily erases them at rest — `define_tool` below is
+// the single point where a concretely-typed entry gets erased into this shape,
+// keeping every `execute` body itself fully typed against its own schema.
+export interface ToolDefinition {
 	name: string;
 	description: string;
-	inputSchema: z.ZodType<TInput>;
-	execute: (client: ApiClient, input: TInput) => Promise<TOutput>;
+	inputSchema: z.ZodTypeAny;
+	execute: (client: ApiClient, input: unknown) => Promise<unknown>;
 }
+
+// `z.ZodType<TInput>` only infers TInput against the schema's input-side shape
+// (pre-`.default()`), not its true output — `S extends z.ZodTypeAny` + `z.infer<S>`
+// mirrors how every schema's exported type alias (e.g. `UpsertProject`) is derived
+// elsewhere, so `input` inside `execute` matches what the client methods expect.
+const define_tool = <S extends z.ZodTypeAny>(def: {
+	name: string;
+	description: string;
+	inputSchema: S;
+	execute: (client: ApiClient, input: z.infer<S>) => Promise<unknown>;
+}): ToolDefinition => def;
 
 // Tool definitions
 export const tools: Record<string, ToolDefinition> = {
 	// Projects
-	devpad_projects_list: {
+	devpad_projects_list: define_tool({
 		name: "devpad_projects_list",
 		description: "List all projects (or only public ones)",
 		inputSchema: project_filters,
 		execute: async (client, input) => unwrap(await client.projects.list(input)),
-	},
+	}),
 
-	devpad_projects_get: {
+	devpad_projects_get: define_tool({
 		name: "devpad_projects_get",
 		description: "Get project by ID or name",
 		inputSchema: project_by_id_or_name,
-		execute: async (client, input) =>
-			unwrap(input.id ? await client.projects.getById(input.id) : await client.projects.getByName(input.name!)),
-	},
+		execute: async (client, input) => {
+			if (input.id) return unwrap(await client.projects.getById(input.id));
+			if (!input.name) throw new Error("either id or name must be provided");
+			return unwrap(await client.projects.getByName(input.name));
+		},
+	}),
 
-	devpad_projects_upsert: {
+	devpad_projects_upsert: define_tool({
 		name: "devpad_projects_upsert",
 		description:
 			"Create or update a project (set deleted=true to delete). Returns 409 if entity is protected by user - pass force=true to override.",
 		inputSchema: upsert_project,
 		execute: async (client, input) => unwrap(await client.projects.upsert(input)),
-	},
+	}),
 
-	devpad_projects_config_save: {
+	devpad_projects_config_save: define_tool({
 		name: "devpad_projects_config_save",
 		description: "Save project configuration",
 		inputSchema: save_config_request,
@@ -97,32 +115,32 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.projects.config.save(input));
 			return { success: true };
 		},
-	},
+	}),
 
 	// Tasks
-	devpad_tasks_list: {
+	devpad_tasks_list: define_tool({
 		name: "devpad_tasks_list",
 		description: "List tasks, optionally filtered by project or tag",
 		inputSchema: task_filters,
 		execute: async (client, input) => unwrap(await client.tasks.list(input)),
-	},
+	}),
 
-	devpad_tasks_get: {
+	devpad_tasks_get: define_tool({
 		name: "devpad_tasks_get",
 		description: "Get task by ID",
 		inputSchema: task_by_id,
 		execute: async (client, input) => unwrap(await client.tasks.find(input.id)),
-	},
+	}),
 
-	devpad_tasks_upsert: {
+	devpad_tasks_upsert: define_tool({
 		name: "devpad_tasks_upsert",
 		description:
 			"Create or update a task (set deleted=true to delete). Returns 409 if entity is protected by user - pass force=true to override.",
 		inputSchema: upsert_todo,
 		execute: async (client, input) => unwrap(await client.tasks.upsert(input)),
-	},
+	}),
 
-	devpad_tasks_save_tags: {
+	devpad_tasks_save_tags: define_tool({
 		name: "devpad_tasks_save_tags",
 		description: "Save tags for tasks",
 		inputSchema: save_tags_request,
@@ -130,10 +148,10 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.tasks.saveTags(input));
 			return { success: true };
 		},
-	},
+	}),
 
 	// Milestones
-	devpad_milestones_list: {
+	devpad_milestones_list: define_tool({
 		name: "devpad_milestones_list",
 		description: "List milestones for authenticated user or by project",
 		inputSchema: milestone_filters,
@@ -141,16 +159,16 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(
 				input.project_id ? await client.milestones.getByProject(input.project_id) : await client.milestones.list(),
 			),
-	},
+	}),
 
-	devpad_milestones_get: {
+	devpad_milestones_get: define_tool({
 		name: "devpad_milestones_get",
 		description: "Get milestone by ID",
 		inputSchema: milestone_by_id,
 		execute: async (client, input) => unwrap(await client.milestones.find(input.id)),
-	},
+	}),
 
-	devpad_milestones_upsert: {
+	devpad_milestones_upsert: define_tool({
 		name: "devpad_milestones_upsert",
 		description:
 			"Create or update a milestone. Returns 409 if entity is protected by user - pass force=true to override.",
@@ -174,24 +192,24 @@ export const tools: Record<string, ToolDefinition> = {
 							finished_at: input.finished_at,
 						}),
 			),
-	},
+	}),
 
 	// Goals
-	devpad_goals_list: {
+	devpad_goals_list: define_tool({
 		name: "devpad_goals_list",
 		description: "List goals for authenticated user",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.goals.list()),
-	},
+	}),
 
-	devpad_goals_get: {
+	devpad_goals_get: define_tool({
 		name: "devpad_goals_get",
 		description: "Get goal by ID",
 		inputSchema: goal_by_id,
 		execute: async (client, input) => unwrap(await client.goals.find(input.id)),
-	},
+	}),
 
-	devpad_goals_upsert: {
+	devpad_goals_upsert: define_tool({
 		name: "devpad_goals_upsert",
 		description: "Create or update a goal. Returns 409 if entity is protected by user - pass force=true to override.",
 		inputSchema: upsert_goal,
@@ -212,33 +230,33 @@ export const tools: Record<string, ToolDefinition> = {
 							finished_at: input.finished_at,
 						}),
 			),
-	},
+	}),
 
 	// Tags
-	devpad_tags_list: {
+	devpad_tags_list: define_tool({
 		name: "devpad_tags_list",
 		description: "List tags for authenticated user",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.tags.list()),
-	},
+	}),
 
 	// GitHub integration
-	devpad_github_repos: {
+	devpad_github_repos: define_tool({
 		name: "devpad_github_repos",
 		description: "List GitHub repositories for authenticated user",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.github.repos()),
-	},
+	}),
 
-	devpad_github_branches: {
+	devpad_github_branches: define_tool({
 		name: "devpad_github_branches",
 		description: "List branches for a GitHub repository",
 		inputSchema: github_branches,
 		execute: async (client, input) => unwrap(await client.github.branches(input.owner, input.repo)),
-	},
+	}),
 
 	// Additional project operations
-	devpad_projects_delete: {
+	devpad_projects_delete: define_tool({
 		name: "devpad_projects_delete",
 		description: "Delete a project",
 		inputSchema: z.object({
@@ -250,66 +268,66 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.projects.deleteProject(project));
 			return { success: true };
 		},
-	},
+	}),
 
-	devpad_projects_history: {
+	devpad_projects_history: define_tool({
 		name: "devpad_projects_history",
 		description: "Get project history",
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.projects.history(input.project_id)),
-	},
+	}),
 
-	devpad_projects_specification: {
+	devpad_projects_specification: define_tool({
 		name: "devpad_projects_specification",
 		description: "Fetch project specification from GitHub",
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.projects.specification(input.project_id)),
-	},
+	}),
 
-	devpad_projects_config_load: {
+	devpad_projects_config_load: define_tool({
 		name: "devpad_projects_config_load",
 		description: "Load project configuration",
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.projects.config.load(input.project_id)),
-	},
+	}),
 
 	// Additional milestone operations
-	devpad_milestones_delete: {
+	devpad_milestones_delete: define_tool({
 		name: "devpad_milestones_delete",
 		description: "Delete a milestone",
 		inputSchema: z.object({
 			id: z.string().describe("Milestone ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.milestones.delete(input.id)),
-	},
+	}),
 
-	devpad_milestones_goals: {
+	devpad_milestones_goals: define_tool({
 		name: "devpad_milestones_goals",
 		description: "Get goals for a milestone",
 		inputSchema: z.object({
 			id: z.string().describe("Milestone ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.milestones.goals(input.id)),
-	},
+	}),
 
 	// Additional goal operations
-	devpad_goals_delete: {
+	devpad_goals_delete: define_tool({
 		name: "devpad_goals_delete",
 		description: "Delete a goal",
 		inputSchema: z.object({
 			id: z.string().describe("Goal ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.goals.delete(input.id)),
-	},
+	}),
 
 	// Additional task operations
-	devpad_tasks_delete: {
+	devpad_tasks_delete: define_tool({
 		name: "devpad_tasks_delete",
 		description: "Delete a task",
 		inputSchema: z.object({
@@ -321,26 +339,26 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.tasks.deleteTask(task));
 			return { success: true };
 		},
-	},
+	}),
 
-	devpad_tasks_history: {
+	devpad_tasks_history: define_tool({
 		name: "devpad_tasks_history",
 		description: "Get task history",
 		inputSchema: z.object({
 			task_id: z.string().describe("Task ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.tasks.history.get(input.task_id)),
-	},
+	}),
 
 	// User operations
-	devpad_user_history: {
+	devpad_user_history: define_tool({
 		name: "devpad_user_history",
 		description: "Get user activity history",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.user.history()),
-	},
+	}),
 
-	devpad_user_preferences: {
+	devpad_user_preferences: define_tool({
 		name: "devpad_user_preferences",
 		description: "Update user preferences",
 		inputSchema: z.object({
@@ -348,9 +366,9 @@ export const tools: Record<string, ToolDefinition> = {
 			task_view: z.enum(["list", "grid"]).describe("Task view preference"),
 		}),
 		execute: async (client, input) => unwrap(await client.user.preferences(input)),
-	},
+	}),
 
-	devpad_activity_ai: {
+	devpad_activity_ai: define_tool({
 		name: "devpad_activity_ai",
 		description: "Get AI activity feed - shows recent actions made via API/MCP grouped into sessions by time window",
 		inputSchema: z.object({
@@ -358,114 +376,79 @@ export const tools: Record<string, ToolDefinition> = {
 			since: z.string().optional().describe("Only show activity after this ISO date"),
 		}),
 		execute: async (client, input) => unwrap(await client.activity.ai(input)),
-	},
+	}),
 
-	devpad_blog_posts_list: {
+	devpad_blog_posts_list: define_tool({
 		name: "devpad_blog_posts_list",
 		description: "List blog posts with optional filters",
-		inputSchema: z.object({
-			category: z.string().optional().describe("Filter by category"),
-			tag: z.string().optional().describe("Filter by tag"),
-			project: z.string().optional().describe("Filter by project ID"),
-			status: z.enum(["draft", "published"]).optional().describe("Filter by status"),
-			archived: z.boolean().optional().describe("Filter by archived state"),
-			limit: z.number().optional().describe("Max posts to return"),
-			offset: z.number().optional().describe("Offset for pagination"),
-			sort: z.string().optional().describe("Sort order"),
-		}),
+		inputSchema: PostListParamsSchema.partial(),
 		execute: async (client, input) => unwrap(await client.blog.posts.list(input)),
-	},
+	}),
 
-	devpad_blog_posts_get: {
+	devpad_blog_posts_get: define_tool({
 		name: "devpad_blog_posts_get",
 		description: "Get a blog post by slug",
 		inputSchema: z.object({
 			slug: z.string().describe("Post slug"),
 		}),
 		execute: async (client, input) => unwrap(await client.blog.posts.getBySlug(input.slug)),
-	},
+	}),
 
-	devpad_blog_posts_create: {
+	devpad_blog_posts_create: define_tool({
 		name: "devpad_blog_posts_create",
 		description: "Create a new blog post",
-		inputSchema: z.object({
-			title: z.string().describe("Post title"),
-			content: z.string().describe("Post content"),
-			format: z.enum(["markdown", "html"]).describe("Content format"),
-			slug: z.string().optional().describe("Custom slug"),
-			category: z.string().optional().describe("Category name"),
-			tags: z.array(z.string()).optional().describe("Tag names"),
-			description: z.string().optional().describe("Post description"),
-			publish_at: z.string().optional().describe("Scheduled publish date (ISO string)"),
-			project_ids: z.array(z.string()).optional().describe("Associated project IDs"),
-			archived: z.boolean().optional().describe("Whether post is archived"),
-		}),
+		inputSchema: PostCreateSchema,
 		execute: async (client, input) => unwrap(await client.blog.posts.create(input)),
-	},
+	}),
 
-	devpad_blog_posts_update: {
+	devpad_blog_posts_update: define_tool({
 		name: "devpad_blog_posts_update",
 		description: "Update a blog post by UUID",
-		inputSchema: z.object({
-			uuid: z.string().describe("Post UUID"),
-			title: z.string().optional().describe("Post title"),
-			content: z.string().optional().describe("Post content"),
-			format: z.enum(["markdown", "html"]).optional().describe("Content format"),
-			slug: z.string().optional().describe("Custom slug"),
-			category: z.string().optional().describe("Category name"),
-			tags: z.array(z.string()).optional().describe("Tag names"),
-			description: z.string().optional().describe("Post description"),
-			publish_at: z.string().optional().describe("Scheduled publish date (ISO string)"),
-			project_ids: z.array(z.string()).optional().describe("Associated project IDs"),
-			archived: z.boolean().optional().describe("Whether post is archived"),
-		}),
+		inputSchema: PostUpdateSchema.extend({ uuid: z.string().describe("Post UUID") }),
 		execute: async (client, input) => {
 			const { uuid, ...data } = input;
 			return unwrap(await client.blog.posts.update(uuid, data));
 		},
-	},
+	}),
 
-	devpad_blog_posts_delete: {
+	devpad_blog_posts_delete: define_tool({
 		name: "devpad_blog_posts_delete",
 		description: "Delete a blog post by UUID",
 		inputSchema: z.object({
 			uuid: z.string().describe("Post UUID"),
 		}),
 		execute: async (client, input) => unwrap(await client.blog.posts.delete(input.uuid)),
-	},
+	}),
 
-	devpad_blog_tags_list: {
+	devpad_blog_tags_list: define_tool({
 		name: "devpad_blog_tags_list",
 		description: "List all blog tags with post counts",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.blog.tags.list()),
-	},
+	}),
 
-	devpad_blog_categories_tree: {
+	devpad_blog_categories_tree: define_tool({
 		name: "devpad_blog_categories_tree",
 		description: "Get the blog category tree",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.blog.categories.tree()),
-	},
+	}),
 
-	devpad_blog_categories_create: {
+	devpad_blog_categories_create: define_tool({
 		name: "devpad_blog_categories_create",
 		description: "Create a blog category",
-		inputSchema: z.object({
-			name: z.string().describe("Category name"),
-			parent: z.string().optional().describe("Parent category name"),
-		}),
+		inputSchema: CategoryCreateSchema,
 		execute: async (client, input) => unwrap(await client.blog.categories.create(input)),
-	},
+	}),
 
-	devpad_blog_tokens_list: {
+	devpad_blog_tokens_list: define_tool({
 		name: "devpad_blog_tokens_list",
 		description: "List blog access tokens",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.blog.tokens.list()),
-	},
+	}),
 
-	devpad_blog_tokens_create: {
+	devpad_blog_tokens_create: define_tool({
 		name: "devpad_blog_tokens_create",
 		description: "Create a blog access token",
 		inputSchema: z.object({
@@ -473,16 +456,16 @@ export const tools: Record<string, ToolDefinition> = {
 			note: z.string().optional().describe("Optional note"),
 		}),
 		execute: async (client, input) => unwrap(await client.blog.tokens.create(input)),
-	},
+	}),
 
-	devpad_media_profiles_list: {
+	devpad_media_profiles_list: define_tool({
 		name: "devpad_media_profiles_list",
 		description: "List media profiles",
 		inputSchema: z.object({}),
 		execute: async (client) => unwrap(await client.media.profiles.list()),
-	},
+	}),
 
-	devpad_media_profiles_create: {
+	devpad_media_profiles_create: define_tool({
 		name: "devpad_media_profiles_create",
 		description: "Create a media profile",
 		inputSchema: z.object({
@@ -490,18 +473,18 @@ export const tools: Record<string, ToolDefinition> = {
 			slug: z.string().describe("Profile slug"),
 		}),
 		execute: async (client, input) => unwrap(await client.media.profiles.create(input)),
-	},
+	}),
 
-	devpad_media_profiles_get: {
+	devpad_media_profiles_get: define_tool({
 		name: "devpad_media_profiles_get",
 		description: "Get a media profile by ID",
 		inputSchema: z.object({
 			id: z.string().describe("Profile ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.media.profiles.get(input.id)),
-	},
+	}),
 
-	devpad_media_profiles_update: {
+	devpad_media_profiles_update: define_tool({
 		name: "devpad_media_profiles_update",
 		description: "Update a media profile by ID",
 		inputSchema: z.object({
@@ -513,36 +496,36 @@ export const tools: Record<string, ToolDefinition> = {
 			const { id, ...data } = input;
 			return unwrap(await client.media.profiles.update(id, data));
 		},
-	},
+	}),
 
-	devpad_media_profiles_delete: {
+	devpad_media_profiles_delete: define_tool({
 		name: "devpad_media_profiles_delete",
 		description: "Delete a media profile by ID",
 		inputSchema: z.object({
 			id: z.string().describe("Profile ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.media.profiles.delete(input.id)),
-	},
+	}),
 
-	devpad_media_connections_list: {
+	devpad_media_connections_list: define_tool({
 		name: "devpad_media_connections_list",
 		description: "List connections for a media profile",
 		inputSchema: z.object({
 			profile_id: z.string().describe("Profile ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.media.connections.list(input.profile_id)),
-	},
+	}),
 
-	devpad_media_connections_refresh: {
+	devpad_media_connections_refresh: define_tool({
 		name: "devpad_media_connections_refresh",
 		description: "Refresh a media connection",
 		inputSchema: z.object({
 			account_id: z.string().describe("Account/connection ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.media.connections.refresh(input.account_id)),
-	},
+	}),
 
-	devpad_media_timeline_get: {
+	devpad_media_timeline_get: define_tool({
 		name: "devpad_media_timeline_get",
 		description: "Get media timeline for a user",
 		inputSchema: z.object({
@@ -554,10 +537,10 @@ export const tools: Record<string, ToolDefinition> = {
 			const { user_id, ...params } = input;
 			return unwrap(await client.media.timeline.get(user_id, params));
 		},
-	},
+	}),
 
 	// Pulse analytics tools
-	devpad_pulse_summary: {
+	devpad_pulse_summary: define_tool({
 		name: "devpad_pulse_summary",
 		description: "Get summary analytics for a project (pageviews, sessions, errors, latency)",
 		inputSchema: z.object({
@@ -566,9 +549,9 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pulse.summary({ project_id: input.project_id, range: input.range })),
-	},
+	}),
 
-	devpad_pulse_events: {
+	devpad_pulse_events: define_tool({
 		name: "devpad_pulse_events",
 		description: "List events for a project with optional filtering",
 		inputSchema: z.object({
@@ -582,9 +565,9 @@ export const tools: Record<string, ToolDefinition> = {
 			cursor: z.string().optional().describe("Pagination cursor"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.events(input)),
-	},
+	}),
 
-	devpad_pulse_errors: {
+	devpad_pulse_errors: define_tool({
 		name: "devpad_pulse_errors",
 		description: "List error issues for a project, optionally grouped by fingerprint",
 		inputSchema: z.object({
@@ -600,9 +583,9 @@ export const tools: Record<string, ToolDefinition> = {
 					group_by_fingerprint: input.group_by_fingerprint,
 				}),
 			),
-	},
+	}),
 
-	devpad_pulse_logs: {
+	devpad_pulse_logs: define_tool({
 		name: "devpad_pulse_logs",
 		description: "List logs for a project with optional level and message filtering",
 		inputSchema: z.object({
@@ -612,9 +595,9 @@ export const tools: Record<string, ToolDefinition> = {
 			search: z.string().optional().describe("Search in log messages"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.logs(input)),
-	},
+	}),
 
-	devpad_pulse_latency: {
+	devpad_pulse_latency: define_tool({
 		name: "devpad_pulse_latency",
 		description: "Get request latency metrics (p50, p95, p99) for a project",
 		inputSchema: z.object({
@@ -624,18 +607,18 @@ export const tools: Record<string, ToolDefinition> = {
 			percentiles: z.array(z.number()).optional().describe("Percentiles to compute (default [50, 95, 99])"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.latency(input)),
-	},
+	}),
 
-	devpad_alerts_list: {
+	devpad_alerts_list: define_tool({
 		name: "devpad_alerts_list",
 		description: "List notification subscriptions (alerts) for a project",
 		inputSchema: z.object({
 			project_id: z.string().describe("Project ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.subs.list(input)),
-	},
+	}),
 
-	devpad_alerts_subscribe: {
+	devpad_alerts_subscribe: define_tool({
 		name: "devpad_alerts_subscribe",
 		description: "Create a new notification subscription (alert) for events",
 		inputSchema: z.object({
@@ -646,18 +629,18 @@ export const tools: Record<string, ToolDefinition> = {
 			cooldown_seconds: z.number().optional().describe("Cooldown between notifications (default 60)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.subs.create(input)),
-	},
+	}),
 
-	devpad_alerts_unsubscribe: {
+	devpad_alerts_unsubscribe: define_tool({
 		name: "devpad_alerts_unsubscribe",
 		description: "Delete a notification subscription by ID",
 		inputSchema: z.object({
 			id: z.string().describe("Subscription ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.subs.delete(input.id)),
-	},
+	}),
 
-	devpad_pulse_key_create: {
+	devpad_pulse_key_create: define_tool({
 		name: "devpad_pulse_key_create",
 		description: "Create a new ingest key for a project (returns plaintext once)",
 		inputSchema: z.object({
@@ -666,9 +649,9 @@ export const tools: Record<string, ToolDefinition> = {
 			rate_limit_per_min: z.number().optional().describe("Rate limit in requests per minute (default 600)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pulse.keys.create(input)),
-	},
+	}),
 
-	devpad_pipelines_list: {
+	devpad_pipelines_list: define_tool({
 		name: "devpad_pipelines_list",
 		description: "List pipeline runs (newest first). Optionally filter by package and/or status; cap limit at 200.",
 		inputSchema: z.object({
@@ -677,18 +660,18 @@ export const tools: Record<string, ToolDefinition> = {
 			limit: z.number().int().positive().max(200).optional().describe("Max rows to return (default 50, cap 200)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.list(input)),
-	},
+	}),
 
-	devpad_pipelines_get: {
+	devpad_pipelines_get: define_tool({
 		name: "devpad_pipelines_get",
 		description: "Get a pipeline run by ID",
 		inputSchema: z.object({
 			run_id: z.string().describe("Pipeline run ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.get(input.run_id)),
-	},
+	}),
 
-	devpad_pipelines_create: {
+	devpad_pipelines_create: define_tool({
 		name: "devpad_pipelines_create",
 		description: "Create a new pipeline run",
 		inputSchema: z.object({
@@ -696,9 +679,9 @@ export const tools: Record<string, ToolDefinition> = {
 			version_set_id: z.string().describe("Version set ID to deploy"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.create(input)),
-	},
+	}),
 
-	devpad_pipelines_approve: {
+	devpad_pipelines_approve: define_tool({
 		name: "devpad_pipelines_approve",
 		description: "Approve or deny a stage in a pipeline run",
 		inputSchema: z.object({
@@ -712,9 +695,9 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.pipelines.approve(input.run_id, input));
 			return { success: true };
 		},
-	},
+	}),
 
-	devpad_pipelines_cancel: {
+	devpad_pipelines_cancel: define_tool({
 		name: "devpad_pipelines_cancel",
 		description: "Cancel a pipeline run",
 		inputSchema: z.object({
@@ -724,9 +707,9 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.pipelines.cancel(input.run_id));
 			return { success: true };
 		},
-	},
+	}),
 
-	devpad_pipelines_rollback: {
+	devpad_pipelines_rollback: define_tool({
 		name: "devpad_pipelines_rollback",
 		description: "Rollback a completed or failed pipeline run",
 		inputSchema: z.object({
@@ -736,9 +719,9 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.pipelines.rollback(input.run_id));
 			return { success: true };
 		},
-	},
+	}),
 
-	devpad_pipelines_runs_events_ingest: {
+	devpad_pipelines_runs_events_ingest: define_tool({
 		name: "devpad_pipelines_runs_events_ingest",
 		description:
 			'Ingest an external webhook event against an in-flight pipeline run. Idempotent on (idempotency_key, payload). Server-side stamps payload.source = "external".',
@@ -761,27 +744,27 @@ export const tools: Record<string, ToolDefinition> = {
 					idempotency_key: input.idempotency_key,
 				}),
 			),
-	},
+	}),
 
-	devpad_pipelines_runs_events_list: {
+	devpad_pipelines_runs_events_list: define_tool({
 		name: "devpad_pipelines_runs_events_list",
 		description: "List stored stage events for a pipeline run, newest-first",
 		inputSchema: z.object({
 			run_id: z.string().describe("Pipeline run ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.events.list(input.run_id)),
-	},
+	}),
 
-	devpad_pipelines_grants_list: {
+	devpad_pipelines_grants_list: define_tool({
 		name: "devpad_pipelines_grants_list",
 		description: "List vault grants for a pipeline package",
 		inputSchema: z.object({
 			package_id: z.string().describe("Package ID to filter grants by"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.grants.list(input.package_id)),
-	},
+	}),
 
-	devpad_pipelines_grants_approve: {
+	devpad_pipelines_grants_approve: define_tool({
 		name: "devpad_pipelines_grants_approve",
 		description: "Approve a pending vault grant request for a pipeline package",
 		inputSchema: z.object({
@@ -789,9 +772,9 @@ export const tools: Record<string, ToolDefinition> = {
 			user_id: z.string().describe("User ID making the approval decision"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.grants.approve(input.grant_id, input.user_id)),
-	},
+	}),
 
-	devpad_pipelines_grants_deny: {
+	devpad_pipelines_grants_deny: define_tool({
 		name: "devpad_pipelines_grants_deny",
 		description: "Deny a pending vault grant request for a pipeline package",
 		inputSchema: z.object({
@@ -801,9 +784,9 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pipelines.grants.deny(input.grant_id, input.user_id, input.reason)),
-	},
+	}),
 
-	devpad_pipelines_packages_list: {
+	devpad_pipelines_packages_list: define_tool({
 		name: "devpad_pipelines_packages_list",
 		description:
 			"List pipeline packages. Optionally filter by linked devpad project_id; unlinked packages have project_id = null.",
@@ -811,18 +794,18 @@ export const tools: Record<string, ToolDefinition> = {
 			project_id: z.string().optional().describe("Filter packages by linked devpad project"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.packages.list(input)),
-	},
+	}),
 
-	devpad_pipelines_packages_get: {
+	devpad_pipelines_packages_get: define_tool({
 		name: "devpad_pipelines_packages_get",
 		description: "Get a pipeline package by ID",
 		inputSchema: z.object({
 			package_id: z.string().describe("Pipeline package ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.packages.get(input.package_id)),
-	},
+	}),
 
-	devpad_pipelines_packages_create: {
+	devpad_pipelines_packages_create: define_tool({
 		name: "devpad_pipelines_packages_create",
 		description:
 			"Register a new pipeline-managed package. By convention `id` equals the package `name`. `project_id` optionally links the package to a devpad project.",
@@ -835,9 +818,9 @@ export const tools: Record<string, ToolDefinition> = {
 			default_template_ref: z.string().optional().describe("Optional default pipeline template ref"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.packages.create(input)),
-	},
+	}),
 
-	devpad_pipelines_packages_update: {
+	devpad_pipelines_packages_update: define_tool({
 		name: "devpad_pipelines_packages_update",
 		description: "Partially update a pipeline package. Only the provided fields are touched.",
 		inputSchema: z.object({
@@ -851,9 +834,9 @@ export const tools: Record<string, ToolDefinition> = {
 			const { id, ...patch } = input;
 			return unwrap(await client.pipelines.packages.update(id, patch));
 		},
-	},
+	}),
 
-	devpad_pipelines_packages_delete: {
+	devpad_pipelines_packages_delete: define_tool({
 		name: "devpad_pipelines_packages_delete",
 		description:
 			"Delete a pipeline package. Refuses with conflict if existing pipeline_run rows still reference the package.",
@@ -861,9 +844,9 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("Pipeline package ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.packages.delete(input.id)),
-	},
+	}),
 
-	devpad_pipelines_analysis_templates_list: {
+	devpad_pipelines_analysis_templates_list: define_tool({
 		name: "devpad_pipelines_analysis_templates_list",
 		description:
 			"List pipeline analysis templates for an owner. Each row encodes the threshold DSL + window referenced by analysis-gate evaluations.",
@@ -871,9 +854,9 @@ export const tools: Record<string, ToolDefinition> = {
 			owner_id: z.string().describe("Devpad user ID whose templates to list"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.analysis_templates.list(input)),
-	},
+	}),
 
-	devpad_pipelines_analysis_templates_get: {
+	devpad_pipelines_analysis_templates_get: define_tool({
 		name: "devpad_pipelines_analysis_templates_get",
 		description: "Get a single pipeline analysis template by id, scoped to its owner.",
 		inputSchema: z.object({
@@ -882,9 +865,9 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pipelines.analysis_templates.get(input.id, { owner_id: input.owner_id })),
-	},
+	}),
 
-	devpad_pipelines_analysis_templates_create: {
+	devpad_pipelines_analysis_templates_create: define_tool({
 		name: "devpad_pipelines_analysis_templates_create",
 		description:
 			'Create a new pipeline analysis template. `threshold_dsl` is a multi-line DSL: `metric_name OP value [: pending]` (OPs: > < >= <= =). Trailing ": pending" marks a breach as Pending rather than Fail. Server-side parse failure surfaces as `validation_error` with field=threshold_dsl. `window_ms` defaults to 600000 (10 min).',
@@ -896,9 +879,9 @@ export const tools: Record<string, ToolDefinition> = {
 			window_ms: z.number().int().positive().optional().describe("Analysis window in milliseconds. Default: 600000"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.analysis_templates.create(input)),
-	},
+	}),
 
-	devpad_pipelines_analysis_templates_update: {
+	devpad_pipelines_analysis_templates_update: define_tool({
 		name: "devpad_pipelines_analysis_templates_update",
 		description:
 			"Partially update a pipeline analysis template. Only the supplied fields are touched. Re-validates threshold_dsl when present.",
@@ -914,9 +897,9 @@ export const tools: Record<string, ToolDefinition> = {
 			const { id, ...patch } = input;
 			return unwrap(await client.pipelines.analysis_templates.update(id, patch));
 		},
-	},
+	}),
 
-	devpad_pipelines_analysis_templates_delete: {
+	devpad_pipelines_analysis_templates_delete: define_tool({
 		name: "devpad_pipelines_analysis_templates_delete",
 		description:
 			"Hard-delete a pipeline analysis template. Does NOT consult pipeline_run.resolved_gates — runs snapshot their gate template at resolve-time, so deletion never orphans in-flight runs.",
@@ -926,9 +909,9 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pipelines.analysis_templates.delete(input.id, { owner_id: input.owner_id })),
-	},
+	}),
 
-	devpad_pipelines_oidc_trust_list: {
+	devpad_pipelines_oidc_trust_list: define_tool({
 		name: "devpad_pipelines_oidc_trust_list",
 		description:
 			"List GitHub Actions OIDC trust policies for an owner. Returned ordered by created_at DESC, id ASC to match the orchestrator's trust-matcher resolution order.",
@@ -936,9 +919,9 @@ export const tools: Record<string, ToolDefinition> = {
 			owner_id: z.string().describe("User ID whose trust policies to list"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.list(input)),
-	},
+	}),
 
-	devpad_pipelines_oidc_trust_create: {
+	devpad_pipelines_oidc_trust_create: define_tool({
 		name: "devpad_pipelines_oidc_trust_create",
 		description:
 			'Create a GitHub Actions OIDC trust policy. Authorises CI in repos owned by `github_owner` (filtered by `repo_pattern` and optional ref/environment lists) to mint orchestrator session tokens. Defaults: repo_pattern="*", allowed_actions=["artifacts:upload","runs:start"], session_ttl_seconds=900.',
@@ -962,9 +945,9 @@ export const tools: Record<string, ToolDefinition> = {
 			session_ttl_seconds: z.number().int().positive().optional().describe("Session token TTL. Default: 900 (15 min)"),
 		}),
 		execute: async (client, input) => unwrap(await client.pipelines.oidc_trust.create(input)),
-	},
+	}),
 
-	devpad_pipelines_oidc_trust_update: {
+	devpad_pipelines_oidc_trust_update: define_tool({
 		name: "devpad_pipelines_oidc_trust_update",
 		description:
 			"Partially update a GitHub Actions OIDC trust policy. Only the supplied fields are touched; validation runs server-side against the merged record.",
@@ -983,9 +966,9 @@ export const tools: Record<string, ToolDefinition> = {
 			const { id, ...patch } = input;
 			return unwrap(await client.pipelines.oidc_trust.update(id, patch));
 		},
-	},
+	}),
 
-	devpad_pipelines_oidc_trust_delete: {
+	devpad_pipelines_oidc_trust_delete: define_tool({
 		name: "devpad_pipelines_oidc_trust_delete",
 		description:
 			"Soft-delete a GitHub Actions OIDC trust policy. The row is preserved for audit; the matcher and list operations skip soft-deleted rows.",
@@ -995,7 +978,7 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pipelines.oidc_trust.delete(input.id, { owner_id: input.owner_id })),
-	},
+	}),
 };
 
 // Get all tool names

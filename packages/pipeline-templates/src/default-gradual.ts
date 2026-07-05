@@ -11,7 +11,7 @@
  * mutating. The DSL handles cloning.
  */
 
-import type { Gate, Rollout, TransitionKey } from "./types.ts";
+import type { Gate, Rollout, TransitionKey } from "./types";
 
 const MIN = 60_000;
 

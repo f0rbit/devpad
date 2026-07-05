@@ -16,7 +16,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
-import { make_cf_api_provider } from "../../src/providers/cf-api-provider.ts";
+import { make_cf_api_provider } from "../../src/providers/cf-api-provider";
 
 type Captured = {
 	method: string;
@@ -26,7 +26,7 @@ type Captured = {
 };
 
 type Recorder = {
-	server: Server;
+	server: Server<unknown>;
 	base_url: string;
 	captured: Captured[];
 };
@@ -55,7 +55,7 @@ const start_recorder = (): Recorder => {
 			);
 		},
 	});
-	return { server, base_url: `http://localhost:${server.port}/client/v4`, captured };
+	return { server, base_url: `http://localhost:${String(server.port)}/client/v4`, captured };
 };
 
 describe("cf-api-provider — multipart wire format", () => {
@@ -65,8 +65,8 @@ describe("cf-api-provider — multipart wire format", () => {
 		recorder = start_recorder();
 	});
 
-	afterEach(() => {
-		recorder.server.stop(true);
+	afterEach(async () => {
+		await recorder.server.stop(true);
 	});
 
 	test("posts multipart/form-data with metadata + script parts", async () => {
@@ -114,12 +114,13 @@ describe("cf-api-provider — multipart wire format", () => {
 		});
 
 		const bundle = new TextEncoder().encode("export default {}");
-		await provider.versions.upload({
+		const uploaded = await provider.versions.upload({
 			kind: "single_file",
 			script_name: "demo",
 			bundle,
 			main_module: "worker.mjs",
 		});
+		expect(uploaded.ok).toBe(true);
 
 		const body_text = new TextDecoder().decode(recorder.captured[0].raw);
 		expect(body_text).toContain('name="worker.mjs"; filename="worker.mjs"');

@@ -15,11 +15,7 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import type { BundleFetchError, BundlePayload, BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
 import type { Decision, EmitError, PulseEvent, StoreError } from "@devpad/core/services/pipelines/gates";
-import {
-	InMemoryCloudflareProvider,
-	InMemoryDurableObjectNamespace,
-	type InMemoryDurableObjectState,
-} from "@devpad/pipeline-fakes";
+import { InMemoryCloudflareProvider, InMemoryDurableObjectNamespace } from "@devpad/pipeline-fakes";
 import { extendTemplate, type PipelineTemplate } from "@devpad/pipeline-templates";
 import type { ApprovalDecision, PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
@@ -37,8 +33,8 @@ import {
 	make_routes,
 	type RoutesDeps,
 	type TemplateResolver,
-} from "../../src/routes.ts";
-import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
+} from "../../src/routes";
+import { make_run_handler } from "../../src/run-do";
 
 /**
  * Test helper mirroring `resolve_script_name`'s convention:
@@ -75,8 +71,8 @@ export class InMemoryBundleProvider implements BundleProvider {
 }
 
 export class InMemoryApprovalStore {
-	private decisions = new Map<string, Decision>();
-	private pending = new Set<string>();
+	private readonly decisions = new Map<string, Decision>();
+	private readonly pending = new Set<string>();
 	async write_pending(run_id: string, stage: string): Promise<Result<void, StoreError>> {
 		this.pending.add(`${run_id}:${stage}`);
 		return ok(undefined);
@@ -102,14 +98,12 @@ export const seed_user = async (db: Database, id = "user_test"): Promise<User> =
 		id,
 		name: "tester",
 		email: `${id}@test.example`,
-		email_verified: true,
+		email_verified: now,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
-		created_at: now,
-		updated_at: now,
-	} as never);
+	});
 	const rows = await db.select().from(user);
-	return rows[0]!;
+	return rows[0];
 };
 
 export const seed_package = async (
@@ -133,9 +127,9 @@ export const seed_package = async (
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	});
 	const rows = await db.select().from(pipeline_package).where(eq(pipeline_package.id, id));
-	return rows[0]!;
+	return rows[0];
 };
 
 export const default_manifest: VersionSetManifest = {
@@ -194,10 +188,11 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 		annotations: { "workers/tag": "vs_v0" },
 	});
 	if (!v0.ok) throw new Error("v0 upload failed");
-	await deps.cf.deployments.create({
+	const deployment = await deps.cf.deployments.create({
 		script_name: script,
 		strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
 	});
+	if (!deployment.ok) throw new Error("initial deployment failed");
 
 	// vs_v0 also has a manifest so the new rollback route (which creates
 	// a synthetic run targeting the predecessor) can reconstruct its plan.
@@ -208,7 +203,7 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 	const previous_for = new Map<string, string>([["vs_v1", "vs_v0"]]);
 
 	const namespace = new InMemoryDurableObjectNamespace<{ deps: RunDeps }>({ deps }, (ctx, env) => {
-		const h = make_run_handler(ctx as DoCtx, { deps: env.deps });
+		const h = make_run_handler(ctx, { deps: env.deps });
 		return { fetch: h.handle, alarm: h.fire_alarm };
 	});
 

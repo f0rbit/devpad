@@ -1,12 +1,5 @@
-import { describe, expect, mock, test } from "bun:test";
-import {
-	addProjectAction,
-	doesUserOwnProject,
-	getProject,
-	getProjectById,
-	getUserProjectMap,
-	getUserProjects,
-} from "../projects.js";
+import { describe, expect, test } from "bun:test";
+import { doesUserOwnProject, getProject, getProjectById, getUserProjectMap, getUserProjects } from "../projects.js";
 
 const mockProject = {
 	id: "project_123",
@@ -52,7 +45,7 @@ function createMockDb(results: Record<string, any[]> = {}) {
 		...chain,
 		select: () => ({
 			...chain,
-			from: (table: any) => ({
+			from: (_: any) => ({
 				...chain,
 				where: () => results.select ?? [],
 			}),

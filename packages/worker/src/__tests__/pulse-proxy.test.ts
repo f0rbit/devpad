@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import { Hono } from "hono";
 import type { AppContext } from "../bindings.js";
 import pulse_routes from "../routes/v1/pulse.js";
@@ -62,7 +62,7 @@ const build_app = (
 		} else if (headers_init && typeof headers_init === "object") {
 			for (const [k, v] of Object.entries(headers_init as Record<string, string>)) headers_obj[k] = v;
 		}
-		const body = init?.body ? String(init.body) : null;
+		const body = typeof init?.body === "string" ? init.body : null;
 		const cap: Captured = { url, method, headers: headers_obj, body };
 		captured.push(cap);
 		return upstream(cap);
@@ -87,7 +87,7 @@ const build_app = (
 	const app = new Hono<AppContext>();
 	app.use("*", async (c, next) => {
 		c.set("db", stub_db as never);
-		c.set("config", {
+		const config_stub = {
 			environment: "test",
 			api_url: "http://test",
 			frontend_url: "http://test",
@@ -95,9 +95,11 @@ const build_app = (
 			encryption_key: "x",
 			pulse_api_base: stub.pulse_api_base,
 			pulse_internal_key: stub.pulse_internal_key,
-		} as never);
+		};
+		c.set("config", config_stub as never);
 		if (stub.user_id) {
-			c.set("user", { id: stub.user_id, github_id: 1, name: "stub", task_view: "list" } as never);
+			const user_stub = { id: stub.user_id, github_id: 1, name: "stub", task_view: "list" };
+			c.set("user", user_stub as never);
 			c.set("session", null);
 			c.set("auth_channel", "api");
 			c.set("api_key_scope", "pulse");
@@ -112,7 +114,7 @@ const build_app = (
 	app.route("/v1/pulse", pulse_routes);
 
 	// Restore fetch after teardown — register a cleanup the test will explicitly call.
-	(app as unknown as { _restore: () => void })._restore = () => {
+	(app as unknown as { restore_env: () => void }).restore_env = () => {
 		globalThis.fetch = original_fetch;
 	};
 
@@ -145,11 +147,11 @@ describe("/v1/pulse/* proxy", () => {
 			},
 			default_upstream(200, { pageviews: 42 }),
 		);
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc?range=24h"));
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { pageviews: number };
+		const body = await res.json();
 		expect(body.pageviews).toBe(42);
 
 		expect(captured.length).toBe(1);
@@ -167,7 +169,7 @@ describe("/v1/pulse/* proxy", () => {
 			},
 			default_upstream(),
 		);
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc"));
 		expect(res.status).toBe(403);
@@ -184,7 +186,7 @@ describe("/v1/pulse/* proxy", () => {
 			},
 			default_upstream(),
 		);
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc"));
 		expect(res.status).toBe(401);
@@ -193,7 +195,7 @@ describe("/v1/pulse/* proxy", () => {
 
 	it("503s when PULSE_API_BASE / PULSE_INTERNAL_KEY are missing", async () => {
 		const { app, captured } = build_app({ user_id: "user_1", owns_project: true }, default_upstream());
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc"));
 		expect(res.status).toBe(503);
@@ -208,13 +210,13 @@ describe("/v1/pulse/* proxy", () => {
 				pulse_api_base: "https://pulse.test",
 				pulse_internal_key: "internal_secret",
 			},
-			(req: Captured) =>
+			(_: Captured) =>
 				new Response(JSON.stringify({ id: "sub_xyz" }), {
 					status: 201,
 					headers: { "content-type": "application/json" },
 				}),
 		);
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(
 			new Request("http://test/v1/pulse/admin/subs", {
@@ -229,7 +231,7 @@ describe("/v1/pulse/* proxy", () => {
 			}),
 		);
 		expect(res.status).toBe(201);
-		const body = (await res.json()) as { id: string };
+		const body = await res.json();
 		expect(body.id).toBe("sub_xyz");
 
 		expect(captured.length).toBe(1);
@@ -250,7 +252,7 @@ describe("/v1/pulse/* proxy", () => {
 			},
 			(_: Captured) => new Response(null, { status: 204 }),
 		);
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(
 			new Request("http://test/v1/pulse/admin/keys/pkid_abc?project_id=proj_abc", {
@@ -276,11 +278,11 @@ describe("/v1/pulse/* proxy", () => {
 					headers: { "content-type": "application/json" },
 				}),
 		);
-		teardown = (app as unknown as { _restore: () => void })._restore;
+		teardown = (app as unknown as { restore_env: () => void }).restore_env;
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc"));
 		expect(res.status).toBe(503);
-		const body = (await res.json()) as { error: string };
+		const body = await res.json();
 		expect(body.error).toBe("pulse_unreachable");
 	});
 });

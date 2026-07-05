@@ -3,7 +3,7 @@ import { setupIntegration } from "../shared/base-integration-test";
 
 const t = setupIntegration();
 
-const uniqueSlug = () => `test-post-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const uniqueSlug = () => `test-post-${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("blog API client integration", () => {
 	test("should verify blog client namespace exists", () => {
@@ -48,7 +48,7 @@ describe("blog API client integration", () => {
 
 	test("should create a blog token", async () => {
 		const result = await t.client.blog.tokens.create({
-			name: `test-token-${Date.now()}`,
+			name: `test-token-${String(Date.now())}`,
 			note: "Integration test",
 		});
 		expect(result.ok).toBe(true);
@@ -241,7 +241,7 @@ describe("blog API client integration", () => {
 
 		test("should create a token", async () => {
 			const result = await t.client.blog.tokens.create({
-				name: `test-token-crud-${Date.now()}`,
+				name: `test-token-crud-${String(Date.now())}`,
 				note: "Integration test token",
 			});
 			expect(result.ok).toBe(true);

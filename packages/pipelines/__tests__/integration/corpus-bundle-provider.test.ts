@@ -21,15 +21,13 @@
 import { describe, expect, test } from "bun:test";
 import type { AssetManifest, BundleManifest } from "@devpad/pipeline-fakes";
 import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
-import {
-	type BundleProviderError,
-	make_corpus_directory_bundle_provider,
-} from "../../src/providers/corpus-providers.ts";
+import { make_corpus_directory_bundle_provider } from "../../src/providers/corpus-providers";
 
 // VersionSetManifest is "strict" in the corpus types; the directory provider
-// reads the extra Phase 2.B fields from the JSON-serialised manifest. We cast
-// through `unknown` at the seed boundary so the test compiles without faking
-// out the corpus typings repo-wide.
+// reads the extra Phase 2.B fields from the JSON-serialised manifest.
+// `ManifestWithExtras` extends it directly (structural subtype) so the seed
+// helpers can pass it straight to `version_set_store(...).put(...)` with no
+// cast — corpus's `json_codec` serialises via `JSON.stringify` regardless.
 type ManifestWithExtras = VersionSetManifest & {
 	builds: VersionSetManifest["builds"] & {
 		worker: VersionSetManifest["builds"]["worker"] & { bundle_manifest_ref?: string };
@@ -133,6 +131,12 @@ const sample_asset_manifest = (): AssetManifest => ({
 	config: { html_handling: "auto-trailing-slash", run_worker_first: false },
 });
 
+// `Record` indexing is total per this package's tsconfig (no
+// `noUncheckedIndexedAccess`) — TS believes `contents[key]` always succeeds.
+// Route through a function whose DECLARED return type is honest about the
+// real possibility of a missing fixture entry, so the guard below stays live.
+const lookup_bytes = (contents: Record<string, Uint8Array>, key: string): Uint8Array | undefined => contents[key];
+
 const seed_bundle = async (
 	backend: Backend,
 	manifest: BundleManifest,
@@ -140,7 +144,7 @@ const seed_bundle = async (
 ) => {
 	await seed_json_blob(backend, refs.ref, manifest);
 	for (const m of manifest.modules) {
-		const bytes = refs.contents[m.name];
+		const bytes = lookup_bytes(refs.contents, m.name);
 		if (bytes === undefined) throw new Error(`test fixture missing bytes for module ${m.name}`);
 		await seed_blob(backend, m.content_artifact_ref, bytes);
 	}
@@ -153,7 +157,7 @@ const seed_assets = async (
 ) => {
 	await seed_json_blob(backend, refs.ref, manifest);
 	for (const a of manifest.assets) {
-		const bytes = refs.contents[a.path];
+		const bytes = lookup_bytes(refs.contents, a.path);
 		if (bytes === undefined) throw new Error(`test fixture missing bytes for asset ${a.path}`);
 		await seed_blob(backend, a.content_artifact_ref, bytes);
 	}
@@ -164,7 +168,7 @@ const put_manifest = async (backend: Backend, manifest: ManifestWithExtras): Pro
 	// encodes via `JSON.stringify(value)` without schema validation, so the
 	// extra Phase 2.B fields survive into the stored bytes. The directory
 	// provider reads them back via its locally-extended schema.
-	const put = await version_set_store(backend).put(manifest as unknown as VersionSetManifest);
+	const put = await version_set_store(backend).put(manifest);
 	if (!put.ok) throw new Error(`manifest put failed: ${put.error.kind}`);
 	return put.value.version;
 };
@@ -276,7 +280,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("bundle_manifest_missing");
 		if (error.kind !== "bundle_manifest_missing") return;
 		expect(error.ref).toBe("bundle-manifests/dir-bundle-001");
@@ -293,7 +297,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("bundle_manifest_invalid");
 	});
 
@@ -312,7 +316,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("module_fetch_failed");
 		if (error.kind !== "module_fetch_failed") return;
 		expect(error.ref).toBe("worker-bundles/lib-mjs-001");
@@ -338,7 +342,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("asset_manifest_missing");
 		if (error.kind !== "asset_manifest_missing") return;
 		expect(error.ref).toBe("asset-manifests/assets-001");
@@ -364,7 +368,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("asset_manifest_invalid");
 	});
 
@@ -390,7 +394,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("asset_fetch_failed");
 		if (error.kind !== "asset_fetch_failed") return;
 		expect(error.ref).toBe("asset-bundles/index-html-001");
@@ -437,7 +441,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("bundle_unavailable");
 	});
 
@@ -452,7 +456,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("bundle_unavailable");
 	});
 
@@ -463,7 +467,7 @@ describe("make_corpus_directory_bundle_provider", () => {
 
 		expect(result.ok).toBe(false);
 		if (result.ok) return;
-		const error = result.error as BundleProviderError;
+		const error = result.error;
 		expect(error.kind).toBe("version_set_missing");
 		if (error.kind !== "version_set_missing") return;
 		expect(error.version_set_id).toBe("does-not-exist");

@@ -1,6 +1,6 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { E2E_PROJECT_ID, open_test_db, seed_pipeline_fixtures } from "./fixtures/pipelines.ts";
+import { E2E_PROJECT_ID, open_test_db, seed_pipeline_fixtures } from "./fixtures/pipelines";
 
 /**
  * Standalone bun seed entrypoint — seeds the pipelines E2E fixture into the

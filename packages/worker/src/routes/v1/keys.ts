@@ -13,7 +13,8 @@ const create_key_schema = z.object({
 
 app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 
 	const result = await keys.getAPIKeys(db, auth_user.id);
 	if (!result.ok) return c.json({ error: "Failed to fetch API keys" }, 500);
@@ -22,7 +23,8 @@ app.get("/", requireAuth, async (c) => {
 
 app.post("/", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 
 	const body = await c.req.json();
 	const parsed = create_key_schema.safeParse(body);
@@ -37,7 +39,8 @@ app.post("/", requireAuth, async (c) => {
 
 app.delete("/:key_id", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const key_id = c.req.param("key_id");
 
 	if (!key_id) return c.json({ error: "Key ID required" }, 400);

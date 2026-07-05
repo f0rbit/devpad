@@ -25,7 +25,7 @@ const parseBlueskyResponse = async (response: Response): Promise<Record<string, 
 
 export class BlueskyProvider implements Provider<BlueskyRaw> {
 	readonly platform = "bluesky";
-	private config: BlueskyProviderConfig;
+	private readonly config: BlueskyProviderConfig;
 
 	constructor(config: BlueskyProviderConfig) {
 		this.config = config;
@@ -33,7 +33,7 @@ export class BlueskyProvider implements Provider<BlueskyRaw> {
 
 	fetch(token: string): Promise<FetchResult<BlueskyRaw>> {
 		const params = new URLSearchParams({ actor: this.config.actor, limit: "50" });
-		const url = `https://bsky.social/xrpc/app.bsky.feed.getAuthorFeed?${params}`;
+		const url = `https://bsky.social/xrpc/app.bsky.feed.getAuthorFeed?${params.toString()}`;
 
 		return pipe
 			.fetch<Record<string, unknown>, ProviderError>(
@@ -49,9 +49,7 @@ export class BlueskyProvider implements Provider<BlueskyRaw> {
 			)
 			.flat_map((json) => {
 				const result = BlueskyRawSchema.safeParse({ ...json, fetched_at: new Date().toISOString() });
-				return result.success
-					? ok(result.data)
-					: err({ kind: "parse_error", message: result.error.message } as ProviderError);
+				return result.success ? ok(result.data) : err({ kind: "parse_error", message: result.error.message });
 			})
 			.result();
 	}
@@ -88,9 +86,9 @@ export const normalizeBluesky = (raw: BlueskyRaw): TimelineItem[] =>
 			author_handle: post.author.handle,
 			author_name: post.author.displayName,
 			author_avatar: post.author.avatar,
-			reply_count: post.replyCount ?? 0,
-			repost_count: post.repostCount ?? 0,
-			like_count: post.likeCount ?? 0,
+			reply_count: post.replyCount,
+			repost_count: post.repostCount,
+			like_count: post.likeCount,
 			has_media: hasMedia,
 			is_reply: isReply,
 			is_repost: isRepost,
@@ -115,7 +113,7 @@ export type BlueskyMemoryConfig = {
 
 export class BlueskyMemoryProvider extends BaseMemoryProvider<BlueskyRaw> implements Provider<BlueskyRaw> {
 	readonly platform = "bluesky";
-	private config: BlueskyMemoryConfig;
+	private readonly config: BlueskyMemoryConfig;
 
 	constructor(config: BlueskyMemoryConfig = {}) {
 		super();

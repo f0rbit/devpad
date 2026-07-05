@@ -6,41 +6,42 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import type { D1Database, DurableObjectNamespace, Fetcher, R2Bucket } from "@cloudflare/workers-types";
 import { err, ok } from "@f0rbit/corpus";
-import type { AuthIdentity, OidcSessionClaims, SessionVerifier } from "../../src/auth.ts";
-import { authenticate_request } from "../../src/auth.ts";
-import type { PipelineEnv } from "../../src/bindings.ts";
+import type { OidcSessionClaims, SessionVerifier } from "../../src/auth";
+import { authenticate_request } from "../../src/auth";
+import type { PipelineEnv } from "../../src/bindings";
+
+// In-memory fake verifier for tests
+const make_fake_verifier = (
+	claimsOrError?: OidcSessionClaims | { code: string; message: string },
+): SessionVerifier => ({
+	verify: async (_token) => {
+		if (claimsOrError === undefined) {
+			return err({ code: "verification_failed", message: "test: no claims configured" });
+		}
+		if ("code" in claimsOrError) {
+			return err(claimsOrError);
+		}
+		return ok(claimsOrError);
+	},
+});
+
+const make_fake_env = (pipelines_token: string): PipelineEnv => ({
+	DB: {} as unknown as D1Database,
+	CORPUS_BUCKET: {} as unknown as R2Bucket,
+	PIPELINE_RUNS: {} as unknown as DurableObjectNamespace,
+	ANTHROPIC: {} as unknown as Fetcher,
+	PULSE: {} as unknown as Fetcher,
+	ENVIRONMENT: "development",
+	CF_ACCOUNT_ID: undefined,
+	CF_API_TOKEN: undefined,
+	PIPELINES_TOKEN: {
+		get: async () => pipelines_token,
+	},
+});
 
 describe("authenticate_request", () => {
-	// In-memory fake verifier for tests
-	const make_fake_verifier = (
-		claimsOrError?: OidcSessionClaims | { code: string; message: string },
-	): SessionVerifier => ({
-		verify: async (_token) => {
-			if (claimsOrError === undefined) {
-				return err({ code: "verification_failed", message: "test: no claims configured" });
-			}
-			if ("code" in claimsOrError) {
-				return err(claimsOrError);
-			}
-			return ok(claimsOrError);
-		},
-	});
-
-	const make_fake_env = (pipelines_token: string): PipelineEnv => ({
-		DB: {} as never,
-		CORPUS_BUCKET: {} as never,
-		PIPELINE_RUNS: {} as never,
-		ANTHROPIC: {} as never,
-		PULSE: {} as never,
-		ENVIRONMENT: "development",
-		CF_ACCOUNT_ID: undefined,
-		CF_API_TOKEN: undefined,
-		PIPELINES_TOKEN: {
-			get: async () => pipelines_token,
-		} as never,
-	});
-
 	const admin_token = "admin-secret-12345";
 
 	test("admin bypass via literal bearer token", async () => {
@@ -135,26 +136,6 @@ describe("authenticate_request", () => {
 	});
 
 	test("expired session falls through to bearer comparison", async () => {
-		const expired_claims: OidcSessionClaims = {
-			iss: "devpad-pipelines",
-			aud: "devpad-pipelines",
-			exp: Math.floor(Date.now() / 1000) - 100, // expired
-			iat: Math.floor(Date.now() / 1000) - 1000,
-			jti: "test-jti",
-			sub: "package:my-package",
-			scope: ["artifacts:upload"],
-			package_ids: ["my-package"],
-			trust_policy_id: "policy-1",
-			oidc: {
-				sub: "repo:owner/repo:ref:refs/heads/main",
-				repository: "owner/repo",
-				ref: "refs/heads/main",
-				sha: "abc123",
-				run_id: "123",
-				actor: "bot-user",
-			},
-		};
-
 		const env = make_fake_env(admin_token);
 		const request = new Request("https://test", {
 			headers: { authorization: `Bearer ${admin_token}` },
@@ -223,17 +204,7 @@ describe("authenticate_request", () => {
 	});
 
 	test("PIPELINES_TOKEN not bound returns auth_unavailable", async () => {
-		const env: PipelineEnv = {
-			DB: {} as never,
-			CORPUS_BUCKET: {} as never,
-			PIPELINE_RUNS: {} as never,
-			ANTHROPIC: {} as never,
-			PULSE: {} as never,
-			ENVIRONMENT: "development",
-			CF_ACCOUNT_ID: undefined,
-			CF_API_TOKEN: undefined,
-			PIPELINES_TOKEN: undefined,
-		};
+		const env: PipelineEnv = { ...make_fake_env(""), PIPELINES_TOKEN: undefined };
 		const request = new Request("https://test", {
 			headers: { authorization: "Bearer some-token" },
 		});
@@ -247,19 +218,7 @@ describe("authenticate_request", () => {
 	});
 
 	test("empty PIPELINES_TOKEN returns auth_unavailable", async () => {
-		const env: PipelineEnv = {
-			DB: {} as never,
-			CORPUS_BUCKET: {} as never,
-			PIPELINE_RUNS: {} as never,
-			ANTHROPIC: {} as never,
-			PULSE: {} as never,
-			ENVIRONMENT: "development",
-			CF_ACCOUNT_ID: undefined,
-			CF_API_TOKEN: undefined,
-			PIPELINES_TOKEN: {
-				get: async () => "",
-			} as never,
-		};
+		const env: PipelineEnv = make_fake_env("");
 		const request = new Request("https://test", {
 			headers: { authorization: "Bearer some-token" },
 		});

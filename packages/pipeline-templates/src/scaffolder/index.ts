@@ -5,8 +5,8 @@
  * (filesystem IO, `git init`, `bun install`) lives in `@devpad/cli`.
  */
 
-export { compute_compatibility_date, derive_template_vars, render_template, validate_package_name } from "./domain.ts";
-export { SCAFFOLDER_TEMPLATES, type TemplateEntry } from "./manifest.ts";
+export { compute_compatibility_date, derive_template_vars, render_template, validate_package_name } from "./domain";
+export { SCAFFOLDER_TEMPLATES, type TemplateEntry } from "./manifest";
 export type {
 	BuildShape,
 	DefaultGateKind,
@@ -15,4 +15,4 @@ export type {
 	ScaffolderInput,
 	TemplateVars,
 	ValidationError,
-} from "./types.ts";
+} from "./types";

@@ -17,20 +17,6 @@ describe("GitHub Service with Octokit Fixtures", () => {
 		// For now, we'll document the testing strategy rather than implement broken mocks
 		// This is better than having failing tests that don't add value
 
-		const testPlan = {
-			approach: "octokit-fixtures",
-			removed: "msw",
-			benefits: [
-				"Lighter weight than MSW",
-				"Official Octokit support",
-				"Real GitHub API request/response data",
-				"No additional configuration needed",
-			],
-			implementation: "Will be added once nock/Bun compatibility issues resolved",
-		};
-
-		// console.log("📋 GitHub Service Test Plan:", testPlan);
-
 		// Verify our GitHub service functions exist and are testable
 		expect(typeof getBranches).toBe("function");
 		expect(typeof getRepoMetadata).toBe("function");

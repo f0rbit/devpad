@@ -12,7 +12,7 @@ import { parseContextToArray } from "@devpad/core/utils/context";
  * @param context - The context data which can be a JSON string, array of strings, or other
  * @returns Formatted context string with normalized indentation, or null if invalid
  */
-export function buildCodeContext(context: any): string | null {
+export function buildCodeContext(context: unknown): string | null {
 	const contextArray = parseContextToArray(context);
 
 	// Ensure we have a valid array with content
@@ -53,7 +53,7 @@ export function formatCodeLocation(file?: string | null, line?: number | null): 
 
 	let path = file;
 	if (line) {
-		path += `:${line}`;
+		path += `:${String(line)}`;
 	}
 	return path;
 }

@@ -54,7 +54,7 @@ const map_jose_error = (e: unknown): OidcVerifyError => {
 	if (e instanceof jose_errors.JWTInvalid) return { reason: "invalid JWT structure" };
 	if (e instanceof jose_errors.JWKSNoMatchingKey) return { reason: "no matching key in JWKS" };
 	if (e instanceof jose_errors.JWKSInvalid) return { reason: "invalid JWKS response from issuer" };
-	if (e instanceof jose_errors.JOSEError) return { reason: `jose error: ${e.code ?? e.message}` };
+	if (e instanceof jose_errors.JOSEError) return { reason: `jose error: ${e.code}` };
 	return { reason: `unknown verification error: ${String(e)}` };
 };
 
@@ -62,8 +62,8 @@ const verify_payload_shape = (payload: JWTPayload): Result<VerifiedOidcClaims, O
 	const parsed = verified_oidc_claims_schema.safeParse(payload);
 	if (!parsed.success) {
 		const first = parsed.error.issues[0];
-		const path = first?.path.join(".") ?? "<root>";
-		return err({ reason: `claim shape invalid at '${path}': ${first?.message ?? "unknown"}` });
+		const path = first.path.join(".");
+		return err({ reason: `claim shape invalid at '${path}': ${first.message}` });
 	}
 	return ok(parsed.data);
 };

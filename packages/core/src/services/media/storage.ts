@@ -50,7 +50,6 @@ const createTypedStore = <TData, TId extends string>(
 		.with_store(define_store(id, json_codec(schema)))
 		.build();
 	const store = corpus.stores[id];
-	if (!store) return errors.storeError("get", `Store not found: ${id}`);
 	return ok({ store, id });
 };
 

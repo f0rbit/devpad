@@ -79,20 +79,19 @@ export const match_trust_policy = (
 	const repo = repo_basename(claims.repository).toLowerCase();
 
 	for (const policy of policies) {
-		if (policy.provider !== "github") continue;
 		if (policy.expected_audience !== claims.aud) continue;
 		if (policy.github_owner.toLowerCase() !== owner) continue;
 
 		const repo_regex = compile_glob(policy.repo_pattern);
 		if (!repo_regex.test(repo)) continue;
 
-		const allowed_refs = (policy.allowed_refs ?? []) as string[];
+		const allowed_refs = policy.allowed_refs;
 		if (!has_wildcard(allowed_refs)) {
 			if (claims.ref === undefined) continue;
 			if (!list_includes_ci(allowed_refs, claims.ref)) continue;
 		}
 
-		const allowed_envs = (policy.allowed_environments ?? []) as string[];
+		const allowed_envs = policy.allowed_environments;
 		if (!has_wildcard(allowed_envs)) {
 			// When the policy requires a specific environment, the claim
 			// must carry one and it must be in the allowlist.
@@ -100,7 +99,7 @@ export const match_trust_policy = (
 			if (!list_includes_ci(allowed_envs, claims.environment)) continue;
 		}
 
-		const allowed_actions = (policy.allowed_actions ?? []) as OidcSessionScope[];
+		const allowed_actions = policy.allowed_actions as OidcSessionScope[];
 		return ok({ policy, granted_scope: allowed_actions });
 	}
 
@@ -255,7 +254,7 @@ export const exchange_oidc_for_session = async (
 		let pkg: PipelinePackage | undefined;
 		try {
 			const rows = await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, input.package_id));
-			pkg = rows[0];
+			pkg = rows.at(0);
 		} catch (e) {
 			return err({ kind: "db_error", message: `failed to load pipeline_package: ${String(e)}` });
 		}
@@ -276,7 +275,7 @@ export const exchange_oidc_for_session = async (
 	// Mint the session
 	const now = deps.now();
 	const iat = Math.floor(now.getTime() / 1000);
-	const exp = iat + (policy.session_ttl_seconds ?? 900);
+	const exp = iat + policy.session_ttl_seconds;
 	const session: OidcSessionClaims = {
 		iss: "devpad-pipelines",
 		aud: "devpad-pipelines",

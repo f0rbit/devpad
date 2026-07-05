@@ -42,7 +42,7 @@ const validate = (response: unknown): Result<ValidatedTokens, TokenValidationErr
 	}
 
 	if (obj.token_type !== undefined && typeof obj.token_type !== "string") {
-		return errors.badRequest(`Invalid token_type: expected Bearer, got ${String(obj.token_type)}`);
+		return errors.badRequest(`Invalid token_type: expected Bearer, got ${JSON.stringify(obj.token_type)}`);
 	}
 
 	const tokenType = (obj.token_type as string) || "Bearer";

@@ -104,6 +104,12 @@ const parallel_map = async <T, R>(items: T[], fn: (item: T) => Promise<R>, concu
 	return results;
 };
 
+class ProviderErrorSignal extends Error {
+	constructor(readonly provider_error: ProviderError) {
+		super("provider_error");
+	}
+}
+
 const mapOctokitError = (error: unknown): ProviderError => {
 	if (error && typeof error === "object" && "status" in error) {
 		const status = (error as { status: number }).status;
@@ -135,9 +141,26 @@ const fetchAllPages = async <T>(
 	return results.slice(0, maxItems);
 };
 
+const empty_commits = (repoMeta: GitHubRepoMeta): GitHubRepoCommitsStore => ({
+	owner: repoMeta.owner,
+	repo: repoMeta.name,
+	branches: repoMeta.branches,
+	commits: [],
+	total_commits: 0,
+	fetched_at: new Date().toISOString(),
+});
+
+const empty_prs = (repoMeta: GitHubRepoMeta): GitHubRepoPRsStore => ({
+	owner: repoMeta.owner,
+	repo: repoMeta.name,
+	pull_requests: [],
+	total_prs: 0,
+	fetched_at: new Date().toISOString(),
+});
+
 export class GitHubProvider {
 	readonly platform = "github";
-	private config: GitHubProviderConfig;
+	private readonly config: GitHubProviderConfig;
 
 	constructor(config: Partial<GitHubProviderConfig> = {}) {
 		this.config = { ...DEFAULT_CONFIG, ...config };
@@ -155,12 +178,12 @@ export class GitHubProvider {
 			.try(
 				async () => {
 					const userResult = await this.fetchUser(octokit);
-					if (!userResult.ok) throw userResult.error;
+					if (!userResult.ok) throw new ProviderErrorSignal(userResult.error);
 					const username = userResult.value;
 					log.info("Authenticated as", username);
 
 					const reposResult = await this.fetchRepos(octokit);
-					if (!reposResult.ok) throw reposResult.error;
+					if (!reposResult.ok) throw new ProviderErrorSignal(reposResult.error);
 					const repos = reposResult.value;
 					log.debug("Found repos", { count: repos.length });
 
@@ -174,8 +197,8 @@ export class GitHubProvider {
 					return { meta, repos: repoDataMap };
 				},
 				(error): ProviderError => {
-					if (typeof error === "object" && error !== null && "kind" in error) {
-						return error as ProviderError;
+					if (error instanceof ProviderErrorSignal) {
+						return error.provider_error;
 					}
 					log.error("Fetch failed", error);
 					return mapOctokitError(error);
@@ -202,7 +225,7 @@ export class GitHubProvider {
 						direction: "desc",
 						per_page: 100,
 						page,
-					}) as Promise<OctokitResponse<RepoData[]>>,
+					}),
 				this.config.maxRepos,
 			);
 
@@ -264,21 +287,6 @@ export class GitHubProvider {
 	): Promise<Map<string, { commits: GitHubRepoCommitsStore; prs: GitHubRepoPRsStore }>> {
 		let processed = 0;
 		const total = repoMetas.length;
-		const empty_commits = (repoMeta: GitHubRepoMeta): GitHubRepoCommitsStore => ({
-			owner: repoMeta.owner,
-			repo: repoMeta.name,
-			branches: repoMeta.branches,
-			commits: [],
-			total_commits: 0,
-			fetched_at: new Date().toISOString(),
-		});
-		const empty_prs = (repoMeta: GitHubRepoMeta): GitHubRepoPRsStore => ({
-			owner: repoMeta.owner,
-			repo: repoMeta.name,
-			pull_requests: [],
-			total_prs: 0,
-			fetched_at: new Date().toISOString(),
-		});
 
 		const results = await parallel_map(
 			repoMetas,

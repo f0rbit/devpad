@@ -70,7 +70,7 @@ describe("packages service — list_packages", () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value).toHaveLength(2);
-			expect(result.value.map((p) => p.id).sort()).toEqual(["pipeline-package_a", "pipeline-package_b"]);
+			expect(result.value.map((p) => p.id).toSorted()).toEqual(["pipeline-package_a", "pipeline-package_b"]);
 		}
 	});
 

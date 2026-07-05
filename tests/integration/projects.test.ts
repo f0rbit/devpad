@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import {
 	expectMatchesPartial,
 	expectSuccessfulResponse,
-	expectValidApiError,
 	expectValidArray,
 	expectValidProject,
 } from "../shared/assertions";

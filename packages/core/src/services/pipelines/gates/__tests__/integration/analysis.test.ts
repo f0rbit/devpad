@@ -51,7 +51,7 @@ const seed_user = async (db: Database): Promise<string> => {
 		id,
 		name: "tester",
 		email: `${id}@test.example`,
-		email_verified: true,
+		email_verified: now,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
 		created_at: now,

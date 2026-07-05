@@ -33,7 +33,7 @@ export type ApiOptions = {
 };
 
 type AstroHandler = {
-	fetch: (request: Request, env: any, ctx: ExecutionContext) => Promise<Response>;
+	fetch: (request: Request, env: Record<string, unknown>, ctx: ExecutionContext) => Promise<Response>;
 };
 
 type UnifiedHandlers = {
@@ -82,7 +82,7 @@ export const createApi = (options?: ApiOptions) => {
 		app.use("*", dbMiddleware);
 	}
 
-	if (options?.config && options?.oauth_secrets) {
+	if (options?.config && options.oauth_secrets) {
 		const injected_config = options.config;
 		const injected_secrets = options.oauth_secrets;
 		app.use("*", async (c, next) => {
@@ -114,7 +114,7 @@ export const createApi = (options?: ApiOptions) => {
 		c.set("log", make_log(pulse));
 		await pulseTracing({ pulse })(c, next);
 		try {
-			c.executionCtx?.waitUntil(pulse.flush());
+			c.executionCtx.waitUntil(pulse.flush());
 		} catch {
 			// executionCtx unavailable in some local/test contexts — skip waitUntil.
 		}
@@ -129,7 +129,7 @@ export const createApi = (options?: ApiOptions) => {
 				path: c.req.path,
 			});
 			try {
-				c.executionCtx?.waitUntil(pulse.flush());
+				c.executionCtx.waitUntil(pulse.flush());
 			} catch {
 				// no-op
 			}
@@ -139,7 +139,7 @@ export const createApi = (options?: ApiOptions) => {
 	});
 
 	app.use("*", authMiddleware);
-	if (options?.blogContext && options?.mediaContext) {
+	if (options?.blogContext && options.mediaContext) {
 		const blog_ctx = options.blogContext;
 		const media_ctx = options.mediaContext;
 		app.use("*", async (c, next) => {
@@ -176,7 +176,7 @@ function parseCookie(request: Request, name: string): string | undefined {
 }
 
 async function resolveAuth(request: Request, env: Bindings): Promise<{ request: Request; session_cookie?: string }> {
-	console.log(`[resolveAuth] starting, has DB: ${!!env.DB}`);
+	console.log(`[resolveAuth] starting, has DB: ${String(!!env.DB)}`);
 	if (!env.DB) return { request };
 
 	const session_id = parseCookie(request, getSessionCookieName());
@@ -185,7 +185,7 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 
 	const db = createD1Database(env.DB);
 	const result = await validateSession(db, session_id);
-	console.log(`[resolveAuth] validation result ok: ${result.ok}`);
+	console.log(`[resolveAuth] validation result ok: ${String(result.ok)}`);
 	if (!result.ok) {
 		console.log(`[resolveAuth] validation error: ${JSON.stringify(result.error)}`);
 		return { request };
@@ -205,7 +205,7 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 
 	const authed = new Request(request, { headers });
 	const session_cookie = result.value.session.fresh
-		? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT ?? "production"))
+		? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT))
 		: undefined;
 
 	console.log(`[resolveAuth] injecting X-Auth-User for user: ${result.value.user.id}`);
@@ -221,14 +221,14 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			const path = new URL(request.url).pathname;
 			console.log(`[worker] ${request.method} ${hostname}${path}`);
 
-			const enriched_env = { ...env, __api: api };
+			const enriched_env = { ...env, internal_api: api };
 
 			if (isApiRequest(path)) {
 				return api.fetch(request, enriched_env, ctx);
 			}
 
 			const auth = await resolveAuth(request, env);
-			console.log(`[worker] auth resolved, has X-Auth-User: ${auth.request.headers.has("X-Auth-User")}`);
+			console.log(`[worker] auth resolved, has X-Auth-User: ${String(auth.request.headers.has("X-Auth-User"))}`);
 
 			const handler = hostname.startsWith("blog.")
 				? handlers.blog

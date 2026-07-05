@@ -94,9 +94,9 @@ const storeCommits = async (
 
 	return pipe(putResult)
 		.map(({ version }: { version: string }) => ({ owner, repo, version, newCount, total: merged.total_commits }))
-		.tap(({ newCount: n, total }: { newCount: number; total: number }) =>
-			log.debug("Stored commits", { owner, repo, new: n, total }),
-		)
+		.tap(({ newCount: n, total }: { newCount: number; total: number }) => {
+			log.debug("Stored commits", { owner, repo, new: n, total });
+		})
 		.unwrap_or(defaultRepoStats(owner, repo));
 };
 
@@ -117,9 +117,9 @@ const storePRs = async (
 
 	return pipe(putResult)
 		.map(({ version }: { version: string }) => ({ owner, repo, version, newCount, total: merged.total_prs }))
-		.tap(({ newCount: n, total }: { newCount: number; total: number }) =>
-			log.debug("Stored PRs", { owner, repo, new: n, total }),
-		)
+		.tap(({ newCount: n, total }: { newCount: number; total: number }) => {
+			log.debug("Stored PRs", { owner, repo, new: n, total });
+		})
 		.unwrap_or(defaultRepoStats(owner, repo));
 };
 

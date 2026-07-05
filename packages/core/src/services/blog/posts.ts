@@ -92,13 +92,13 @@ const syncTags = async (db: DrizzleDB, postId: number, tagNames: string[]): Prom
 const fetchProjectIdsForPosts = async (db: DrizzleDB, postIds: number[]): Promise<Map<number, string[]>> => {
 	if (postIds.length === 0) return new Map();
 
-	const rows = await batchedQuery(
+	const postProjectRows = await batchedQuery(
 		postIds,
 		(condition) => db.select().from(postProjects).where(condition),
 		postProjects.post_id,
 	);
 
-	return rows.reduce((acc, row) => {
+	return postProjectRows.reduce((acc, row) => {
 		const existing = acc.get(row.post_id) ?? [];
 		acc.set(row.post_id, [...existing, row.project_id]);
 		return acc;
@@ -162,7 +162,7 @@ export const createPostService = ({ db, corpus }: Deps) => {
 			title: input.title,
 			content: input.content,
 			description: input.description,
-			format: input.format ?? "md",
+			format: input.format,
 		};
 
 		return pipe(postsCorpus.put(corpus, path, content))
@@ -180,7 +180,7 @@ export const createPostService = ({ db, corpus }: Deps) => {
 								author_id: userId,
 								slug: input.slug,
 								corpus_version: hash,
-								category: input.category ?? "root",
+								category: input.category,
 								archived: false,
 								publish_at: publishAt,
 								created_at: now,
@@ -188,12 +188,12 @@ export const createPostService = ({ db, corpus }: Deps) => {
 							})
 							.returning();
 
+						if (inserted.length === 0) throw new Error("Insert returned no rows");
 						const row = inserted[0];
-						if (!row) throw new Error("Insert returned no rows");
 
-						await syncTags(db, row.id, input.tags ?? []);
+						await syncTags(db, row.id, input.tags);
 						await syncProjects(db, row.id, input.project_ids ?? []);
-						return assemblePost(row, content, input.tags ?? [], input.project_ids ?? []);
+						return assemblePost(row, content, input.tags, input.project_ids ?? []);
 					}, toDbError),
 				).result(),
 			)
@@ -280,8 +280,8 @@ export const createPostService = ({ db, corpus }: Deps) => {
 
 				const updated = await db.update(posts).set(updates).where(eq(posts.id, row.id)).returning();
 
+				if (updated.length === 0) throw new Error("Update returned no rows");
 				const updatedRow = updated[0];
-				if (!updatedRow) throw new Error("Update returned no rows");
 
 				if (input.tags !== undefined) {
 					await syncTags(db, updatedRow.id, input.tags);
@@ -320,26 +320,26 @@ export const createPostService = ({ db, corpus }: Deps) => {
 	};
 
 	const getBySlug = async (userId: string, slug: string): Promise<Result<Post, PostServiceError>> => {
-		const rows = await db
+		const found = await db
 			.select()
 			.from(posts)
 			.where(and(eq(posts.author_id, userId), eq(posts.slug, slug)))
 			.limit(1);
 
-		const rowResult = firstRow(rows, `post:slug:${slug}`);
+		const rowResult = firstRow(found, `post:slug:${slug}`);
 		if (!rowResult.ok) return rowResult;
 
 		return assemblePostFromRow(userId, rowResult.value);
 	};
 
 	const getByUuid = async (userId: string, uuid: string): Promise<Result<Post, PostServiceError>> => {
-		const rows = await db
+		const found = await db
 			.select()
 			.from(posts)
 			.where(and(eq(posts.author_id, userId), eq(posts.uuid, uuid)))
 			.limit(1);
 
-		const rowResult = firstRow(rows, `post:${uuid}`);
+		const rowResult = firstRow(found, `post:${uuid}`);
 		if (!rowResult.ok) return rowResult;
 
 		return assemblePostFromRow(userId, rowResult.value);
@@ -398,9 +398,9 @@ export const createPostService = ({ db, corpus }: Deps) => {
 					.from(posts)
 					.where(whereClause);
 
-				const totalPosts = Number(countResult[0]?.count ?? 0);
+				const totalPosts = countResult[0]?.count ?? 0;
 
-				const rows = await db
+				const pageRows = await db
 					.select()
 					.from(posts)
 					.where(whereClause)
@@ -408,32 +408,34 @@ export const createPostService = ({ db, corpus }: Deps) => {
 					.limit(params.limit)
 					.offset(params.offset);
 
-				let filteredRows = rows;
+				let filteredRows = pageRows;
 				if (params.tag) {
 					const taggedPostIds = await db.select({ post_id: tags.post_id }).from(tags).where(eq(tags.tag, params.tag));
 
 					const taggedIds = new Set(taggedPostIds.map((t) => t.post_id));
-					filteredRows = rows.filter((r) => taggedIds.has(r.id));
+					filteredRows = pageRows.filter((r) => taggedIds.has(r.id));
 				}
 
 				return { rows: filteredRows, totalPosts };
 			}, toDbError),
 		)
-			.flat_map(({ rows, totalPosts }) => assemblePostsResponse(userId, rows, totalPosts, params))
+			.flat_map(({ rows: pageRows, totalPosts }) => assemblePostsResponse(userId, pageRows, totalPosts, params))
 			.result();
 	};
 
 	const assemblePostsResponse = async (
 		userId: string,
-		rows: PostRow[],
+		postRows: PostRow[],
 		totalPosts: number,
 		params: PostListParams,
 	): Promise<Result<PostsResponse, PostServiceError>> => {
-		const postIds = rows.map((r) => r.id);
+		const postIds = postRows.map((r) => r.id);
 		const tagsMap = await fetchTagsForPosts(db, postIds);
 		const projectsMap = await fetchProjectIdsForPosts(db, postIds);
 
-		const rowsWithVersion = rows.flatMap((row) => (row.corpus_version ? [{ row, version: row.corpus_version }] : []));
+		const rowsWithVersion = postRows.flatMap((row) =>
+			row.corpus_version ? [{ row, version: row.corpus_version }] : [],
+		);
 
 		const contentResults = await Promise.all(
 			rowsWithVersion.map(async ({ row, version }) => {
@@ -561,8 +563,8 @@ export const createPostService = ({ db, corpus }: Deps) => {
 									.where(eq(posts.id, row.id))
 									.returning();
 
+								if (updated.length === 0) throw new Error("Update returned no rows");
 								const updatedRow = updated[0];
-								if (!updatedRow) throw new Error("Update returned no rows");
 
 								const tagsMap = await fetchTagsForPosts(db, [updatedRow.id]);
 								const projectsMap = await fetchProjectIdsForPosts(db, [updatedRow.id]);

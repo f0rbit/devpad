@@ -15,7 +15,7 @@ const t = setupIntegration();
 async function createTestMilestone(projectId: string, milestoneData?: Partial<UpsertMilestone>): Promise<Milestone> {
 	const defaultData: UpsertMilestone = {
 		project_id: projectId,
-		name: `Test Milestone ${Date.now()}`,
+		name: `Test Milestone ${String(Date.now())}`,
 		description: "Test milestone description",
 		target_version: "v1.0.0",
 		target_time: "2024-12-31",
@@ -26,27 +26,27 @@ async function createTestMilestone(projectId: string, milestoneData?: Partial<Up
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${t.client["_api_key"]}`,
+			Authorization: `Bearer ${t.client["api_key_field"]}`,
 		},
 		body: JSON.stringify(defaultData),
 	});
 
 	if (!response.ok) {
-		throw new Error(`Failed to create milestone: ${response.status}`);
+		throw new Error(`Failed to create milestone: ${String(response.status)}`);
 	}
 
 	const milestone = await response.json();
 	t.cleanup.registerCleanup("milestones", async () => {
 		try {
-			const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}`, {
+			const deleteResponse = await fetch(`http://localhost:3001/api/v1/milestones/${String(milestone.id)}`, {
 				method: "DELETE",
-				headers: { Authorization: `Bearer ${t.client["_api_key"]}` },
+				headers: { Authorization: `Bearer ${t.client["api_key_field"]}` },
 			});
 			if (deleteResponse.ok) {
-				console.log(`Cleaned up milestone: ${milestone.name} (${milestone.id})`);
+				console.log(`Cleaned up milestone: ${String(milestone.name)} (${String(milestone.id)})`);
 			}
 		} catch (error) {
-			console.log(`Failed to cleanup milestone ${milestone.id}:`, error);
+			console.log(`Failed to cleanup milestone ${String(milestone.id)}:`, error);
 		}
 	});
 	return milestone;
@@ -55,7 +55,7 @@ async function createTestMilestone(projectId: string, milestoneData?: Partial<Up
 async function createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal>): Promise<Goal> {
 	const defaultData: UpsertGoal = {
 		milestone_id: milestoneId,
-		name: `Test Goal ${Date.now()}`,
+		name: `Test Goal ${String(Date.now())}`,
 		description: "Test goal description",
 		target_time: "2024-06-30",
 		...goalData,
@@ -65,27 +65,27 @@ async function createTestGoal(milestoneId: string, goalData?: Partial<UpsertGoal
 		method: "POST",
 		headers: {
 			"Content-Type": "application/json",
-			Authorization: `Bearer ${t.client["_api_key"]}`,
+			Authorization: `Bearer ${t.client["api_key_field"]}`,
 		},
 		body: JSON.stringify(defaultData),
 	});
 
 	if (!response.ok) {
-		throw new Error(`Failed to create goal: ${response.status}`);
+		throw new Error(`Failed to create goal: ${String(response.status)}`);
 	}
 
 	const goal = await response.json();
 	t.cleanup.registerCleanup("goals", async () => {
 		try {
-			const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${goal.id}`, {
+			const deleteResponse = await fetch(`http://localhost:3001/api/v1/goals/${String(goal.id)}`, {
 				method: "DELETE",
-				headers: { Authorization: `Bearer ${t.client["_api_key"]}` },
+				headers: { Authorization: `Bearer ${t.client["api_key_field"]}` },
 			});
 			if (deleteResponse.ok) {
-				console.log(`Cleaned up goal: ${goal.name} (${goal.id})`);
+				console.log(`Cleaned up goal: ${String(goal.name)} (${String(goal.id)})`);
 			}
 		} catch (error) {
-			console.log(`Failed to cleanup goal ${goal.id}:`, error);
+			console.log(`Failed to cleanup goal ${String(goal.id)}:`, error);
 		}
 	});
 	return goal;
@@ -95,12 +95,12 @@ async function deleteTestMilestone(milestoneId: string): Promise<void> {
 	const response = await fetch(`http://localhost:3001/api/v1/milestones/${milestoneId}`, {
 		method: "DELETE",
 		headers: {
-			Authorization: `Bearer ${t.client["_api_key"]}`,
+			Authorization: `Bearer ${t.client["api_key_field"]}`,
 		},
 	});
 
 	if (!response.ok) {
-		throw new Error(`Failed to delete milestone: ${response.status}`);
+		throw new Error(`Failed to delete milestone: ${String(response.status)}`);
 	}
 }
 
@@ -145,7 +145,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch("http://localhost:3001/api/v1/milestones", {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -163,7 +163,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -197,7 +197,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/milestones/${createdMilestone.id}`, {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -210,7 +210,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/projects/${testProject.id}/milestones`, {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -261,7 +261,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch("http://localhost:3001/api/v1/goals", {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -280,7 +280,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/goals/${createdGoal.id}`, {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -329,7 +329,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const response = await fetch(`http://localhost:3001/api/v1/milestones/${testMilestone.id}/goals`, {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -355,7 +355,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -373,7 +373,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -390,7 +390,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -408,7 +408,7 @@ describe("Milestones & Goals Integration Tests", () => {
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 				body: JSON.stringify(invalidData),
 			});
@@ -432,7 +432,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 			const milestoneGoalsResponse = await fetch(`http://localhost:3001/api/v1/milestones/${milestone.id}/goals`, {
 				headers: {
-					Authorization: `Bearer ${t.client["_api_key"]}`,
+					Authorization: `Bearer ${t.client["api_key_field"]}`,
 				},
 			});
 
@@ -465,7 +465,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 		test("should create task with goal relationship", async () => {
 			const taskData = {
-				title: `Test Task ${Date.now()}`,
+				title: `Test Task ${String(Date.now())}`,
 				summary: "Test task with goal",
 				progress: "UNSTARTED",
 				visibility: "PRIVATE",
@@ -487,7 +487,7 @@ describe("Milestones & Goals Integration Tests", () => {
 
 		test("should modify task goal relationship", async () => {
 			const taskData = {
-				title: `Test Task ${Date.now()}`,
+				title: `Test Task ${String(Date.now())}`,
 				owner_id: TEST_USER_ID,
 				project_id: testProject.id,
 			};

@@ -1,5 +1,5 @@
 import { afterAll, beforeAll } from "bun:test";
-import type ApiClient from "@devpad/api";
+import type { ApiClient } from "@devpad/api";
 import { getSharedApiClient } from "../integration/setup";
 import { CleanupManager } from "./cleanup-manager";
 

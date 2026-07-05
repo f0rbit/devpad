@@ -56,7 +56,7 @@ const map_verify_error = (e: unknown): SessionVerifyError => {
 	if (e instanceof jose_errors.JWSSignatureVerificationFailed) return { reason: "session signature invalid" };
 	if (e instanceof jose_errors.JWSInvalid) return { reason: "session jws invalid" };
 	if (e instanceof jose_errors.JWTInvalid) return { reason: "session jwt invalid" };
-	if (e instanceof jose_errors.JOSEError) return { reason: `session jose error: ${e.code ?? e.message}` };
+	if (e instanceof jose_errors.JOSEError) return { reason: `session jose error: ${e.code}` };
 	return { reason: `unknown session error: ${String(e)}` };
 };
 
@@ -75,7 +75,7 @@ export const make_session_signer = (env: { OIDC_SESSION_SIGNING_KEY?: SecretsSto
 			return err({ reason: "OIDC_SESSION_SIGNING_KEY not bound on this Worker" });
 		}
 		const raw = await env.OIDC_SESSION_SIGNING_KEY.get();
-		if (raw === undefined || raw === "") {
+		if (raw === "") {
 			return err({ reason: "OIDC_SESSION_SIGNING_KEY resolved to empty value" });
 		}
 		cached_key = decode_signing_key(raw);

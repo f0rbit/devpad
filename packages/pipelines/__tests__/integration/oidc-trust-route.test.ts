@@ -19,10 +19,10 @@ import { describe, expect, test } from "bun:test";
 import type { Database } from "@devpad/schema/database/types";
 import type { Backend } from "@f0rbit/corpus";
 import { create_memory_backend } from "@f0rbit/corpus";
-import type { AuthError, AuthIdentity } from "../../src/auth.ts";
-import { is_bearer_valid } from "../../src/auth.ts";
-import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
-import { create_test_db, seed_user } from "./helpers.ts";
+import type { AuthError, AuthIdentity } from "../../src/auth";
+import { is_bearer_valid } from "../../src/auth";
+import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes";
+import { create_test_db, seed_user } from "./helpers";
 
 // Test bearer abbreviated in logs per token-logging guidance — the
 // literal value lives only in this file.
@@ -186,7 +186,7 @@ describe("GET /oidc-trust", () => {
 		expect(res.status).toBe(200);
 		const policies = res.body.value as Array<{ github_owner: string }>;
 		expect(policies).toHaveLength(2);
-		const owners = policies.map((p) => p.github_owner).sort();
+		const owners = policies.map((p) => p.github_owner).toSorted();
 		expect(owners).toEqual(["mine-a", "mine-b"]);
 	});
 

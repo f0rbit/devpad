@@ -122,10 +122,9 @@ app.get("/callback/github", async (c) => {
 		return c.redirect(`${redirect_url}/project?auth_session=${sessionId}`);
 	}
 
-	const return_url = return_to ? new URL(return_to) : null;
-	if (return_url && isAllowedRedirectUrl(return_to!) && return_url.pathname !== "/") {
+	if (return_to && isAllowedRedirectUrl(return_to) && new URL(return_to).pathname !== "/") {
 		console.log(`[auth/callback] redirecting to: ${return_to}`);
-		return c.redirect(return_to!);
+		return c.redirect(return_to);
 	}
 
 	console.log(`[auth/callback] redirecting to: ${frontend_url}/project`);
@@ -138,7 +137,13 @@ app.get("/logout", async (c) => {
 	const session = c.get("session");
 
 	if (session) {
-		await invalidateSession(db, session.id);
+		// The client-side cookie is cleared unconditionally below regardless
+		// of whether the server-side row delete succeeds — a failed
+		// invalidation only leaves a stale session row to expire naturally,
+		// it must not block the user from logging out.
+		const invalidated = await invalidateSession(db, session.id);
+		if (!invalidated.ok)
+			c.get("log")?.warning("session_invalidate_failed", { user_id: session.id, error: invalidated.error });
 		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 

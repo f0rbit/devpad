@@ -1,4 +1,4 @@
-import type { Gate, GateVerdict, StageContext } from "@devpad/pipeline-templates";
+import type { GateVerdict, StageContext } from "@devpad/pipeline-templates";
 import type { Result } from "@f0rbit/corpus";
 
 export type EmitError = {

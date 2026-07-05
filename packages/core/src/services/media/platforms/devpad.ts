@@ -27,13 +27,13 @@ const mapPriority = (priority: string): "low" | "medium" | "high" => {
 	}
 };
 
-const mapTaskToDevpadTask = (t: any): DevpadTask => ({
+const mapTaskToDevpadTask = (t: tasks.Task): DevpadTask => ({
 	id: t.task.id,
 	title: t.task.title,
 	status: t.task.visibility === "ARCHIVED" ? "archived" : mapProgress(t.task.progress),
 	priority: mapPriority(t.task.priority),
 	project: t.task.project_id ?? undefined,
-	tags: t.tags ?? [],
+	tags: t.tags,
 	created_at: t.task.created_at,
 	updated_at: t.task.updated_at,
 	due_date: undefined,
@@ -42,7 +42,7 @@ const mapTaskToDevpadTask = (t: any): DevpadTask => ({
 
 export class DevpadProvider implements Provider<DevpadRaw> {
 	readonly platform = "devpad";
-	private db: Database;
+	private readonly db: Database;
 
 	constructor(db: Database, user_id: string) {
 		this.db = db;
@@ -52,8 +52,8 @@ export class DevpadProvider implements Provider<DevpadRaw> {
 	async fetch(_token: string): Promise<FetchResult<DevpadRaw>> {
 		const result = await tasks.getUserTasks(this.db, this.user_id);
 		if (!result.ok) return err({ kind: "api_error", status: 500, message: result.error.kind });
-		const tasks = result.value.map(mapTaskToDevpadTask);
-		return ok({ tasks, fetched_at: new Date().toISOString() });
+		const devpadTasks = result.value.map(mapTaskToDevpadTask);
+		return ok({ tasks: devpadTasks, fetched_at: new Date().toISOString() });
 	}
 }
 
@@ -88,7 +88,7 @@ export type DevpadMemoryConfig = {
 
 export class DevpadMemoryProvider extends BaseMemoryProvider<DevpadRaw> implements Provider<DevpadRaw> {
 	readonly platform = "devpad";
-	private config: DevpadMemoryConfig;
+	private readonly config: DevpadMemoryConfig;
 
 	constructor(config: DevpadMemoryConfig = {}) {
 		super();
@@ -102,7 +102,7 @@ export class DevpadMemoryProvider extends BaseMemoryProvider<DevpadRaw> implemen
 		};
 	}
 
-	setTasks(tasks: DevpadTask[]): void {
-		this.config.tasks = tasks;
+	setTasks(taskList: DevpadTask[]): void {
+		this.config.tasks = taskList;
 	}
 }

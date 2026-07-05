@@ -55,12 +55,12 @@ function createMockDb(opts: { selectResults?: any[][]; returning?: any[] } = {})
 	};
 
 	return {
-		select: (...args: any[]) => makeChain(),
+		select: (..._: any[]) => makeChain(),
 		insert: () => {
 			const chain = makeChain();
 			return {
 				...chain,
-				values: (...args: any[]) => ({
+				values: (..._: any[]) => ({
 					...chain,
 					returning: () => Promise.resolve(opts.returning ?? []),
 				}),
@@ -140,6 +140,8 @@ describe("createPostService", () => {
 				title: "New Post",
 				content: "Content here",
 				format: "md",
+				category: "root",
+				tags: [],
 			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
@@ -159,6 +161,8 @@ describe("createPostService", () => {
 				title: "New Post",
 				content: "Content",
 				format: "md",
+				category: "root",
+				tags: [],
 			});
 			expect(result.ok).toBe(false);
 			if (!result.ok) {

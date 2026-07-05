@@ -15,7 +15,7 @@
  */
 
 import { z } from "zod";
-import type { Gate, PipelineTemplate, Rollout } from "./types.ts";
+import type { Gate, PipelineTemplate, Rollout } from "./types";
 
 export const DurationSchema = z.object({ ms: z.number().int().min(0) });
 

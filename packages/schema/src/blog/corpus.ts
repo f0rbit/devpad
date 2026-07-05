@@ -29,17 +29,24 @@ export type PostCorpusError =
 	| { kind: "invalid_content"; message: string }
 	| { kind: "io_error"; message: string };
 
+type WithCause = { cause: unknown };
+
+// packages/schema targets lib ES2020, which predates Error.cause (ES2022) —
+// narrow structurally instead of widening the type or reaching for `any`.
+const hasCause = (value: unknown): value is WithCause =>
+	typeof value === "object" && value !== null && "cause" in value;
+
 export const mapCorpusError = (e: LibCorpusError): PostCorpusError => {
 	if (e.kind === "not_found") {
 		return { kind: "not_found", path: e.store_id, version: e.version };
 	}
 	if (e.kind === "decode_error" || e.kind === "validation_error") {
-		return { kind: "invalid_content", message: e.cause?.message ?? "Decode error" };
+		return { kind: "invalid_content", message: e.cause.message };
 	}
 	if (e.kind === "storage_error") {
 		const drizzle_err = e.cause;
-		const underlying = (drizzle_err as any)?.cause;
-		const message = underlying?.message ?? drizzle_err?.message ?? "Storage error";
+		const underlying = hasCause(drizzle_err) ? drizzle_err.cause : undefined;
+		const message = underlying instanceof Error ? underlying.message : drizzle_err.message;
 		return { kind: "io_error", message };
 	}
 	return { kind: "io_error", message: "Unknown corpus error" };

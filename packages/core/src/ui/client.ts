@@ -1,15 +1,15 @@
-import ApiClient from "@devpad/api";
+import { ApiClient } from "@devpad/api";
 
-let _client: ApiClient | null = null;
+let client_instance: ApiClient | null = null;
 
 export function getBrowserClient(baseUrl?: string): ApiClient {
-	if (_client) return _client;
+	if (client_instance) return client_instance;
 
 	const host = baseUrl || (typeof window !== "undefined" ? window.location.origin : "");
-	_client = new ApiClient({
-		base_url: `${host}/api/v1`,
+	client_instance = new ApiClient({
+		base_url: `${String(host)}/api/v1`,
 		auth_mode: "cookie",
 		credentials: "include",
 	});
-	return _client;
+	return client_instance;
 }

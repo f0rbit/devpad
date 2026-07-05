@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type ApiClient from "@devpad/api";
+import type { ApiClient } from "@devpad/api";
 import { CleanupManager } from "../shared/cleanup-manager";
 import { MCPTestClient } from "../shared/mcp-test-client";
+import { omit } from "../shared/test-utils";
 import { TestDataFactory } from "./factories";
 import { getSharedApiClient, TEST_BASE_URL, TEST_USER_ID } from "./setup";
 
@@ -21,7 +22,7 @@ describe("MCP Server Integration", () => {
 		await mcpClient.start(apiClient.getApiKey(), TEST_BASE_URL);
 
 		// Generate unique project ID for this test run
-		testProjectId = `mcp-test-${Date.now()}`;
+		testProjectId = `mcp-test-${String(Date.now())}`;
 	});
 
 	afterAll(async () => {
@@ -59,7 +60,7 @@ describe("MCP Server Integration", () => {
 			status: "DEVELOPMENT",
 		});
 
-		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+		const projectForUpsert = omit(projectData, ["id", "created_at", "updated_at", "deleted", "scan_branch"] as const);
 
 		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
@@ -102,7 +103,7 @@ describe("MCP Server Integration", () => {
 			visibility: "PRIVATE",
 			status: "DEVELOPMENT",
 		});
-		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+		const projectForUpsert = omit(projectData, ["id", "created_at", "updated_at", "deleted", "scan_branch"] as const);
 
 		const projectResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
@@ -144,7 +145,7 @@ describe("MCP Server Integration", () => {
 
 		for (const task of taskData) {
 			// Remove fields that are auto-generated or not part of upsert
-			const { id, created_at, updated_at, deleted, codebase_task_id, ...taskForUpsert } = task;
+			const taskForUpsert = omit(task, ["id", "created_at", "updated_at", "deleted", "codebase_task_id"] as const);
 
 			const response = await mcpClient.callTool("devpad_tasks_upsert", taskForUpsert);
 
@@ -194,7 +195,7 @@ describe("MCP Server Integration", () => {
 			visibility: "PRIVATE",
 			status: "DEVELOPMENT",
 		});
-		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+		const projectForUpsert = omit(projectData, ["id", "created_at", "updated_at", "deleted", "scan_branch"] as const);
 
 		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 
@@ -244,7 +245,7 @@ describe("MCP Server Integration", () => {
 			visibility: "PRIVATE",
 			status: "DEVELOPMENT",
 		});
-		const { id, created_at, updated_at, deleted, scan_branch, ...projectForUpsert } = projectData;
+		const projectForUpsert = omit(projectData, ["id", "created_at", "updated_at", "deleted", "scan_branch"] as const);
 
 		const createResponse = await mcpClient.callTool("devpad_projects_upsert", projectForUpsert);
 

@@ -15,9 +15,7 @@ export const blog_posts = sqliteTable(
 		created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 		updated_at: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 	},
-	table => ({
-		posts_author_slug_unique: unique("posts_author_slug_unique").on(table.author_id, table.slug),
-	})
+	table => [unique("posts_author_slug_unique").on(table.author_id, table.slug)]
 );
 
 export const blog_categories = sqliteTable(
@@ -28,9 +26,7 @@ export const blog_categories = sqliteTable(
 		name: text("name").notNull(),
 		parent: text("parent").default("root"),
 	},
-	table => ({
-		categories_owner_name_unique: unique("categories_owner_name_unique").on(table.owner_id, table.name),
-	})
+	table => [unique("categories_owner_name_unique").on(table.owner_id, table.name)]
 );
 
 export const blog_tags = sqliteTable(
@@ -41,9 +37,7 @@ export const blog_tags = sqliteTable(
 			.references(() => blog_posts.id, { onDelete: "cascade" }),
 		tag: text("tag").notNull(),
 	},
-	table => ({
-		blog_tags_pk: primaryKey({ columns: [table.post_id, table.tag] }),
-	})
+	table => [primaryKey({ columns: [table.post_id, table.tag] })]
 );
 
 export const blog_integrations = sqliteTable("blog_integrations", {
@@ -69,9 +63,7 @@ export const blog_fetch_links = sqliteTable(
 			.references(() => blog_integrations.id, { onDelete: "cascade" }),
 		identifier: text("identifier").notNull(),
 	},
-	table => ({
-		fetch_links_integration_identifier_unique: unique("fetch_links_integration_identifier_unique").on(table.integration_id, table.identifier),
-	})
+	table => [unique("fetch_links_integration_identifier_unique").on(table.integration_id, table.identifier)]
 );
 
 export const blog_post_projects = sqliteTable(
@@ -83,7 +75,5 @@ export const blog_post_projects = sqliteTable(
 		project_id: text("project_id").notNull(),
 		created_at: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 	},
-	table => ({
-		blog_post_projects_pk: primaryKey({ columns: [table.post_id, table.project_id] }),
-	})
+	table => [primaryKey({ columns: [table.post_id, table.project_id] })]
 );

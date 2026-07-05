@@ -4,7 +4,7 @@ import { pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
-import { advance_run, approve_stage, create_run, request_rollback, tick_bake_complete } from "../../runs.js";
+import { advance_run, approve_stage, create_run, request_rollback } from "../../runs.js";
 import { create_test_db, make_deps, script_name_for, seed_package, seed_user } from "./helpers.js";
 
 const manifest: VersionSetManifest = {

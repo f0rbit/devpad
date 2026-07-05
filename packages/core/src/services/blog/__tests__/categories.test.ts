@@ -65,7 +65,7 @@ describe("category.tree (pure)", () => {
 		];
 		const tree = category.tree(items);
 		expect(tree).toHaveLength(3);
-		expect(tree.map((n) => n.name).sort()).toEqual(["code", "life", "tech"]);
+		expect(tree.map((n) => n.name).toSorted()).toEqual(["code", "life", "tech"]);
 		expect(tree.every((n) => n.children.length === 0)).toBe(true);
 	});
 
@@ -91,7 +91,7 @@ describe("category.tree (pure)", () => {
 
 		const tech = tree.find((n) => n.name === "tech")!;
 		expect(tech.children).toHaveLength(2);
-		expect(tech.children.map((c) => c.name).sort()).toEqual(["javascript", "python"]);
+		expect(tech.children.map((c) => c.name).toSorted()).toEqual(["javascript", "python"]);
 
 		const life = tree.find((n) => n.name === "life")!;
 		expect(life.children).toHaveLength(0);

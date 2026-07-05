@@ -63,7 +63,9 @@ const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
 		req.on("data", (c) => chunks.push(c));
-		req.on("end", () => resolve(Buffer.concat(chunks)));
+		req.on("end", () => {
+			resolve(Buffer.concat(chunks));
+		});
 		req.on("error", reject);
 	});
 
@@ -77,7 +79,7 @@ const start_test_server = async (): Promise<ServerHandle> => {
 	const backend = create_memory_backend();
 	const puts_by_hash = new Map<string, number>();
 	const puts_by_store = new Map<string, number>();
-	const server = http.createServer(async (req, res) => {
+	const handle_request = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
 		try {
 			const url = req.url ?? "/";
 			const auth = req.headers.authorization ?? "";
@@ -90,7 +92,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				return;
 			}
 			if (url === "/artifacts/blob" && req.method === "POST") {
-				const store_id = (req.headers["x-store-id"] as string) ?? "";
+				const store_id_header = req.headers["x-store-id"];
+				const store_id = typeof store_id_header === "string" ? store_id_header : "";
 				const buf = await read_body(req);
 				const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
 				const content_hash = await sha256_hex(bytes);
@@ -105,8 +108,9 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				// this is the production behaviour we mirror.
 				const existing = await backend.metadata.find_by_hash(store_id, content_hash);
 				if (existing === null) {
-					await backend.data.put(data_key, bytes);
-					await backend.metadata.put({
+					const put_result = await backend.data.put(data_key, bytes);
+					if (!put_result.ok) throw new Error(`backend.data.put failed: ${put_result.error.kind}`);
+					const meta_result = await backend.metadata.put({
 						store_id,
 						version,
 						parents: [],
@@ -116,20 +120,21 @@ const start_test_server = async (): Promise<ServerHandle> => {
 						size_bytes: bytes.byteLength,
 						data_key,
 					});
+					if (!meta_result.ok) throw new Error(`backend.metadata.put failed: ${meta_result.error.kind}`);
 				}
 				send_json(res, 200, { ok: true, value: { version, content_hash, store_id, ref: data_key } });
 				return;
 			}
 			if (url === "/artifacts/version-set" && req.method === "POST") {
 				const buf = await read_body(req);
-				let manifest: VersionSetManifest | null = null;
+				let parsed_body: unknown = null;
 				try {
-					manifest = JSON.parse(buf.toString("utf8")) as VersionSetManifest;
+					parsed_body = JSON.parse(buf.toString("utf8"));
 				} catch {
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
 				}
-				if (manifest === null || typeof manifest !== "object") {
+				if (parsed_body === null || typeof parsed_body !== "object") {
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
 				}
@@ -138,12 +143,14 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				// We bypass the typed store and stamp metadata directly so the
 				// directory-bundle fields (which aren't in the upstream schema
 				// yet) round-trip without rejection.
+				const manifest = parsed_body as VersionSetManifest;
 				const text = buf.toString("utf8");
 				const content_hash = await sha256_hex(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
 				const version = generate_version();
 				const data_key = `version-sets/${manifest.package}/${content_hash}`;
-				await backend.data.put(data_key, new TextEncoder().encode(text));
-				await backend.metadata.put({
+				const put_result = await backend.data.put(data_key, new TextEncoder().encode(text));
+				if (!put_result.ok) throw new Error(`backend.data.put failed: ${put_result.error.kind}`);
+				const meta_result = await backend.metadata.put({
 					store_id: "version-sets",
 					version,
 					parents: [],
@@ -154,6 +161,7 @@ const start_test_server = async (): Promise<ServerHandle> => {
 					data_key,
 					tags: [`pkg:${manifest.package}`],
 				});
+				if (!meta_result.ok) throw new Error(`backend.metadata.put failed: ${meta_result.error.kind}`);
 				send_json(res, 200, { ok: true, value: { version_set_id: version, content_hash, package: manifest.package } });
 				return;
 			}
@@ -161,15 +169,22 @@ const start_test_server = async (): Promise<ServerHandle> => {
 		} catch (e) {
 			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 		}
+	};
+	const server = http.createServer((req, res) => {
+		void handle_request(req, res);
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
 	if (address === null || typeof address === "string") throw new Error("listen failed");
-	return { server, url: `http://127.0.0.1:${address.port}`, backend, puts_by_hash, puts_by_store };
+	return { server, url: `http://127.0.0.1:${String(address.port)}`, backend, puts_by_hash, puts_by_store };
 };
 
 const stop_test_server = async (h: ServerHandle): Promise<void> =>
-	new Promise((resolve) => h.server.close(() => resolve()));
+	new Promise((resolve) => {
+		h.server.close(() => {
+			resolve();
+		});
+	});
 
 const read_blob_text = async (backend: Backend, ref: string): Promise<string> => {
 	const get = await backend.data.get(ref);
@@ -234,12 +249,12 @@ const set_pipelines_env = (url: string): { restore: () => void } => {
 };
 
 const expect_exit = async (run: () => Promise<unknown>): Promise<number> => {
-	const original_exit = process.exit;
+	const original_exit = process.exit.bind(process);
 	let exit_code: number | undefined;
-	(process as unknown as { exit: (code?: number) => never }).exit = ((code?: number) => {
+	(process as unknown as { exit: (code?: number) => never }).exit = (code?: number) => {
 		exit_code = code ?? 0;
 		throw new Error("__exit__");
-	}) as unknown as typeof process.exit;
+	};
 	try {
 		await run();
 	} catch (e) {
@@ -321,9 +336,9 @@ describe("artifacts upload — directory bundles", () => {
 		const parsed = BundleManifest.parse(JSON.parse(bundle_text));
 		expect(parsed.main_module).toBe("index.js");
 		expect(parsed.modules).toHaveLength(1);
-		expect(parsed.modules[0]!.name).toBe("index.js");
-		expect(parsed.modules[0]!.mime_type).toBe("application/javascript+module");
-		expect(parsed.modules[0]!.content_artifact_ref).toMatch(/^worker-modules\//);
+		expect(parsed.modules[0].name).toBe("index.js");
+		expect(parsed.modules[0].mime_type).toBe("application/javascript+module");
+		expect(parsed.modules[0].content_artifact_ref).toMatch(/^worker-modules\//);
 	});
 
 	test("--bundle-dir with multiple modules + wasm uploads each as separate corpus blobs", async () => {
@@ -420,7 +435,7 @@ describe("artifacts upload — directory bundles", () => {
 		const asset_text = await read_blob_text(h.backend, builds.assets!.manifest_ref!);
 		const parsed = AssetManifest.parse(JSON.parse(asset_text));
 		expect(parsed.assets).toHaveLength(2);
-		const paths = parsed.assets.map((a) => a.path).sort();
+		const paths = parsed.assets.map((a) => a.path).toSorted();
 		expect(paths).toEqual(["/logo.png", "/style.css"]);
 		// Hashes must match wrangler's 32-char BLAKE3 form.
 		for (const a of parsed.assets) {
@@ -493,7 +508,7 @@ describe("artifacts upload — directory bundles", () => {
 		// → counter on that single key shows 2. Confirms the server saw the
 		// same content twice and dedup'd at the metadata.find_by_hash
 		// gate (so backend.data has one underlying blob).
-		const counts = Array.from(h.puts_by_hash.values()).sort();
+		const counts = Array.from(h.puts_by_hash.values()).toSorted();
 		// We had: 1 index.js (worker-modules), 1 a.css/b.css shared, 1 bundle-manifest, 1 asset-manifest, 1 pipeline-templates, 1 env-manifests, 1 infra-plans, 1 grants
 		// The asset dedup count of 2 sits among those — at least one hash counter must be ≥ 2.
 		expect(Math.max(...counts)).toBeGreaterThanOrEqual(2);
@@ -514,8 +529,8 @@ describe("artifacts upload — directory bundles", () => {
 		expect(walk.ok).toBe(true);
 		if (!walk.ok) return;
 		expect(walk.value.parts).toHaveLength(1);
-		expect(walk.value.parts[0]!.hash).toBe(expected);
-		expect(walk.value.parts[0]!.hash).toMatch(/^[0-9a-f]{32}$/);
+		expect(walk.value.parts[0].hash).toBe(expected);
+		expect(walk.value.parts[0].hash).toMatch(/^[0-9a-f]{32}$/);
 	});
 
 	test("bundle walker rejects unsupported extensions", () => {
@@ -537,7 +552,7 @@ describe("artifacts upload — directory bundles", () => {
 		const walk = walk_assets_dir(fx.assets_dir);
 		expect(walk.ok).toBe(true);
 		if (!walk.ok) return;
-		const paths = walk.value.parts.map((p) => p.path).sort();
+		const paths = walk.value.parts.map((p) => p.path).toSorted();
 		expect(paths).toEqual(["/page.html"]);
 	});
 });

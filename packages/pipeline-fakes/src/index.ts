@@ -4,7 +4,7 @@ export type {
 	AnthropicProvider,
 	CreateMessagesInput,
 	CreateMessagesOutput,
-} from "./anthropic-provider.ts";
+} from "./anthropic-provider";
 export type {
 	AssetConfig,
 	AssetUpload,
@@ -20,24 +20,24 @@ export type {
 	WorkerMeta,
 	WorkerVar,
 	WorkerVersion,
-} from "./cloudflare-provider.ts";
+} from "./cloudflare-provider";
 
-export type { GithubError, GithubProvider, GithubRepo, WorkflowDispatchInput, WorkflowRun } from "./github-provider.ts";
-export { type AnthropicCall, InMemoryAnthropicProvider } from "./in-memory-anthropic.ts";
-export { InMemoryCloudflareProvider } from "./in-memory-cloudflare.ts";
+export type { GithubError, GithubProvider, GithubRepo, WorkflowDispatchInput, WorkflowRun } from "./github-provider";
+export { type AnthropicCall, InMemoryAnthropicProvider } from "./in-memory-anthropic";
+export { InMemoryCloudflareProvider } from "./in-memory-cloudflare";
 export {
 	type DurableObjectFetcher,
 	type DurableObjectIdFake,
 	InMemoryDurableObjectNamespace,
 	InMemoryDurableObjectState,
 	type StorageFake,
-} from "./in-memory-do.ts";
-export { type DispatchRecord, InMemoryGithubProvider } from "./in-memory-github.ts";
-export { InMemoryPulseSummaryProvider, type PulseSummaryCall } from "./in-memory-pulse-summary.ts";
-export { AssetManifest, AssetPart, BundleManifest, ModulePart } from "./manifests.ts";
+} from "./in-memory-do";
+export { type DispatchRecord, InMemoryGithubProvider } from "./in-memory-github";
+export { InMemoryPulseSummaryProvider, type PulseSummaryCall } from "./in-memory-pulse-summary";
+export { AssetManifest, AssetPart, BundleManifest, ModulePart } from "./manifests";
 export type {
 	MetricSnapshot,
 	PulseError as PulseSummaryError,
 	PulseSummaryProvider,
 	PulseSummaryQuery,
-} from "./pulse-summary-provider.ts";
+} from "./pulse-summary-provider";

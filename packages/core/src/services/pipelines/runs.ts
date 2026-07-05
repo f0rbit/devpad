@@ -128,7 +128,7 @@ const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "at
 		type: "gradual",
 		stages: stages
 			.filter((s) => s.name !== "staging")
-			.map((s) => ({ name: s.name, traffic: s.traffic, bake: s.bake === null ? null : `${s.bake.ms}ms` })),
+			.map((s) => ({ name: s.name, traffic: s.traffic, bake: s.bake === null ? null : `${String(s.bake.ms)}ms` })),
 	};
 };
 
@@ -184,7 +184,7 @@ export const create_run = async (
 		kind === "rollback"
 			? {
 					stages: expand_rollout({ type: "atomic" }),
-					gates: { "staging→atomic-prod": { type: "auto" } } as Record<TransitionKey, Gate>,
+					gates: { "staging→atomic-prod": { type: "auto" } },
 					forced_reason: null,
 					version_set_id: input.version_set_id,
 					previous_version_set_id: input.previous_version_set_id ?? null,
@@ -210,53 +210,55 @@ export const create_run = async (
 	};
 
 	try {
+		const insert_values = {
+			...upsert,
+			id: row_id,
+			current_stage: upsert.current_stage ?? null,
+			started_at: now,
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
 		const inserted = await db
 			.insert(pipeline_run)
-			.values({
-				...upsert,
-				id: row_id,
-				current_stage: upsert.current_stage ?? null,
-				started_at: now,
-				created_at: now,
-				updated_at: now,
-				created_by: "api",
-				modified_by: "api",
-				protected: false,
-				deleted: false,
-			} as never)
+			.values(insert_values as never)
 			.returning();
-		const row = inserted[0];
+		const row = inserted.at(0);
 		if (!row) {
 			return err({
 				kind: "store_error",
 				operation: "insert_pipeline_run",
 				message: "insert returned no row",
-			} as ServiceError);
+			});
 		}
 
 		if (plan.forced_reason !== null) {
-			await record_stage_event_row(db, {
+			const forced_event = await record_stage_event_row(db, {
 				run_id: row.id,
 				stage_name: plan.stages[0]?.name ?? "staging",
 				kind: "warning",
 				payload: { kind: "forced_atomic", reason: plan.forced_reason },
 			});
+			if (!forced_event.ok) return forced_event;
 		}
 
 		return ok({ run: row, plan });
 	} catch (e) {
-		return err({ kind: "store_error", operation: "insert_pipeline_run", message: String(e) } as ServiceError);
+		return err({ kind: "store_error", operation: "insert_pipeline_run", message: String(e) });
 	}
 };
 
 export const get_run = async (db: Database, run_id: string): Promise<Result<PipelineRun, ServiceError>> => {
 	try {
 		const rows = await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id));
-		const row = rows[0];
-		if (!row) return err({ kind: "not_found", resource: "pipeline_run", id: run_id } as ServiceError);
+		const row = rows.at(0);
+		if (!row) return err({ kind: "not_found", resource: "pipeline_run", id: run_id });
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to read pipeline_run ${run_id}: ${String(e)}` } as ServiceError);
+		return err({ kind: "db_error", message: `failed to read pipeline_run ${run_id}: ${String(e)}` });
 	}
 };
 
@@ -292,7 +294,7 @@ export const list_runs = async (
 		const rows = await where.orderBy(desc(pipeline_run.created_at)).limit(limit);
 		return ok(rows);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to list pipeline_run: ${String(e)}` } as ServiceError);
+		return err({ kind: "db_error", message: `failed to list pipeline_run: ${String(e)}` });
 	}
 };
 
@@ -321,7 +323,7 @@ const update_run_state = async (
 			.where(eq(pipeline_run.id, run_id));
 		return ok(undefined);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to update pipeline_run ${run_id}: ${String(e)}` } as ServiceError);
+		return err({ kind: "db_error", message: `failed to update pipeline_run ${run_id}: ${String(e)}` });
 	}
 };
 
@@ -353,27 +355,28 @@ const record_stage_event_row = async (
 ): Promise<Result<PipelineStageEvent, ServiceError>> => {
 	try {
 		const id = make_event_id();
+		const insert_values = {
+			id,
+			run_id: input.run_id,
+			stage_name: input.stage_name,
+			kind: input.kind,
+			payload: input.payload ?? null,
+			ts: new Date().toISOString(),
+		};
 		const inserted = await db
 			.insert(pipeline_stage_event)
-			.values({
-				id,
-				run_id: input.run_id,
-				stage_name: input.stage_name,
-				kind: input.kind,
-				payload: input.payload ?? null,
-				ts: new Date().toISOString(),
-			} as never)
+			.values(insert_values as never)
 			.returning();
-		const row = inserted[0];
+		const row = inserted.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "insert_pipeline_stage_event",
 				message: "insert returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "store_error", operation: "insert_pipeline_stage_event", message: String(e) } as ServiceError);
+		return err({ kind: "store_error", operation: "insert_pipeline_stage_event", message: String(e) });
 	}
 };
 
@@ -391,12 +394,13 @@ export const cancel_run = async (
 	if (!t.ok) return t;
 	const persisted = await update_run_state(db, run_id, t.value.next, plan.stages);
 	if (!persisted.ok) return persisted;
-	await record_stage_event_row(db, {
+	const cancel_event = await record_stage_event_row(db, {
 		run_id,
 		stage_name: plan.stages[t.value.next.stage_index]?.name ?? "staging",
 		kind: "error",
 		payload: { kind: "cancel" },
 	});
+	if (!cancel_event.ok) return cancel_event;
 	return ok(t.value.next);
 };
 
@@ -411,7 +415,7 @@ export const approve_stage = async (
 ): Promise<Result<TransitionOutput, AdvanceError>> => {
 	const now = new Date().toISOString();
 	try {
-		await deps.db.insert(pipeline_approval).values({
+		const insert_values = {
 			id: make_approval_id(),
 			run_id: input.run_id,
 			stage_name: input.stage_name,
@@ -421,25 +425,27 @@ export const approve_stage = async (
 			decided_at: now,
 			created_at: now,
 			updated_at: now,
-		} as never);
+		};
+		await deps.db.insert(pipeline_approval).values(insert_values as never);
 	} catch (e) {
-		return err({ kind: "store_error", operation: "insert_pipeline_approval", message: String(e) } as ServiceError);
+		return err({ kind: "store_error", operation: "insert_pipeline_approval", message: String(e) });
 	}
 
 	// Mirror the decision into the approval store so re-evaluating a
 	// manual gate sees it. The in-memory store is the source of truth
 	// the manual evaluator reads.
 	const write = await deps.approvals.write_decision(input.run_id, input.stage_name, input.decision);
-	if (!write.ok) return write as Result<TransitionOutput, AdvanceError>;
+	if (!write.ok) return write;
 
 	// Record the resolved verdict as a stage event so downstream
 	// observers see the human decision, not just the prior Pending.
-	await record_stage_event_row(deps.db, {
+	const verdict_event = await record_stage_event_row(deps.db, {
 		run_id: input.run_id,
 		stage_name: input.stage_name,
 		kind: "gate_verdict",
 		payload: { type: "manual", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason },
 	});
+	if (!verdict_event.ok) return verdict_event;
 
 	return advance_run(
 		deps,
@@ -473,24 +479,26 @@ const execute_output = async (
 	}
 
 	if (output.kind === "needs_bake_schedule") {
-		await record_stage_event_row(deps.db, {
+		const bake_event = await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
 			kind: "bake_started",
 			payload: { duration_ms: output.duration_ms },
 		});
+		if (!bake_event.ok) return bake_event;
 		return ok({ output, next_event: null });
 	}
 
 	if (output.kind === "needs_deploy") {
 		const resolved = await package_script_for_stage(deps.db, run_id, output.stage.name);
 		if (!resolved.ok) return resolved;
-		await record_stage_event_row(deps.db, {
+		const started_event = await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
 			kind: "deploy_started",
 			payload: { traffic: output.stage.traffic, version_set_id: output.version_set_id },
 		});
+		if (!started_event.ok) return started_event;
 		const deployed = await deploy_stage(deps.cf, deps.bundles, {
 			script_name: resolved.value.script_name,
 			stage: output.stage,
@@ -499,12 +507,13 @@ const execute_output = async (
 			environment: environment_for_stage(output.stage.name),
 		});
 		if (!deployed.ok) return deployed;
-		await record_stage_event_row(deps.db, {
+		const completed_event = await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
 			kind: "deploy_completed",
 			payload: { deployment_id: deployed.value.deployment_id, version_id: deployed.value.version.id },
 		});
+		if (!completed_event.ok) return completed_event;
 		return ok({ output, next_event: { kind: "deploy_complete" } });
 	}
 
@@ -524,12 +533,13 @@ const execute_output = async (
 		// the corresponding human decision will be recorded by
 		// {@link approve_stage} once it arrives.
 		if (verdict.value.verdict !== "Pending") {
-			await record_stage_event_row(deps.db, {
+			const verdict_event = await record_stage_event_row(deps.db, {
 				run_id,
 				stage_name: output.to_stage.name,
 				kind: "gate_verdict",
 				payload: { type: output.gate.type, verdict: verdict.value.verdict, reason: verdict.value.reason },
 			});
+			if (!verdict_event.ok) return verdict_event;
 		}
 		return ok({
 			output,
@@ -541,31 +551,35 @@ const execute_output = async (
 		});
 	}
 
-	if (output.kind === "needs_rollback") {
-		const stage_name = plan.stages[state.stage_index]?.name ?? "staging";
-		const resolved = await package_script_for_stage(deps.db, run_id, stage_name);
-		if (!resolved.ok) return resolved;
-		await record_stage_event_row(deps.db, {
-			run_id,
-			stage_name,
-			kind: "rollback_started",
-			payload: { target_version_set_id: output.previous_version_set_id },
-		});
-		const result = await rollback_run(deps.cf, {
-			script_name: resolved.value.script_name,
-			target_version_set_id: output.previous_version_set_id,
-		});
-		if (!result.ok) return result;
-		await record_stage_event_row(deps.db, {
-			run_id,
-			stage_name: plan.stages[state.stage_index]?.name ?? "staging",
-			kind: "rollback_completed",
-			payload: { deployment_id: result.value.deployment_id, version_id: result.value.version_id },
-		});
-		return ok({ output, next_event: { kind: "deploy_complete" } });
-	}
-
-	return ok({ output, next_event: null });
+	// `output.kind` is exhaustively narrowed to "needs_rollback" by this point
+	// -- every other `TransitionOutput` variant returned above, so this is the
+	// only case left; a redundant `if` here was dead per the type checker.
+	// Adding a new `TransitionOutput` variant will now fail to compile right
+	// here (the `output.*` accesses below stop narrowing) instead of silently
+	// falling through a catch-all branch.
+	const stage_name = plan.stages[state.stage_index]?.name ?? "staging";
+	const resolved = await package_script_for_stage(deps.db, run_id, stage_name);
+	if (!resolved.ok) return resolved;
+	const started_event = await record_stage_event_row(deps.db, {
+		run_id,
+		stage_name,
+		kind: "rollback_started",
+		payload: { target_version_set_id: output.previous_version_set_id },
+	});
+	if (!started_event.ok) return started_event;
+	const result = await rollback_run(deps.cf, {
+		script_name: resolved.value.script_name,
+		target_version_set_id: output.previous_version_set_id,
+	});
+	if (!result.ok) return result;
+	const completed_event = await record_stage_event_row(deps.db, {
+		run_id,
+		stage_name: plan.stages[state.stage_index]?.name ?? "staging",
+		kind: "rollback_completed",
+		payload: { deployment_id: result.value.deployment_id, version_id: result.value.version_id },
+	});
+	if (!completed_event.ok) return completed_event;
+	return ok({ output, next_event: { kind: "deploy_complete" } });
 };
 
 const package_script_for_stage = async (
@@ -577,14 +591,14 @@ const package_script_for_stage = async (
 	if (!run.ok) return run;
 
 	const pkg = await db.query.pipeline_package.findFirst({
-		where: (tbl, { eq }) => eq(tbl.id, run.value.package_id),
+		where: (tbl, { eq: matches }) => matches(tbl.id, run.value.package_id),
 	});
 	if (!pkg) {
 		return err({
 			kind: "not_found",
 			resource: "pipeline_package",
 			id: run.value.package_id,
-		} as ServiceError);
+		});
 	}
 
 	try {
@@ -597,10 +611,15 @@ const package_script_for_stage = async (
 		});
 		return ok({ script_name, package_name: pkg.name });
 	} catch (e) {
+		// `field` is required on `ValidationFieldError` -- `stage_name` is the
+		// input `resolve_script_name` actually validates (both of its throw
+		// conditions -- missing package name, missing stage name -- surface
+		// through this one call site keyed by stage).
 		return err({
 			kind: "validation_error",
+			field: "stage_name",
 			message: `Failed to resolve script name: ${e instanceof Error ? e.message : String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 

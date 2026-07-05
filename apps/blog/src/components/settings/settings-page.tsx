@@ -40,6 +40,10 @@ const integrations: IntegrationDisplay[] = [
 	{ id: "hashnode", name: "Hashnode", connected: false },
 ];
 
+const handleIntegrationClick = (integration: IntegrationDisplay) => {
+	alert(`${integration.name} integration coming soon!`);
+};
+
 const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const [user] = createSignal<User | null>(props.initialUser ?? null);
 
@@ -52,7 +56,7 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const fetchTokens = async () => {
 		try {
 			const data = unwrap(await getBrowserClient().blog.tokens.list());
-			setTokens((data.tokens ?? []) as Token[]);
+			setTokens(data.tokens as Token[]);
 		} catch {
 			setTokensError("Failed to fetch tokens");
 		} finally {
@@ -63,7 +67,7 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const refetchTokens = () => {
 		setTokensLoading(true);
 		setTokensError(null);
-		fetchTokens();
+		void fetchTokens();
 	};
 
 	const handleToggle = async (id: number, enabled: boolean) => {
@@ -90,10 +94,6 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		const result = unwrap(await getBrowserClient().blog.tokens.create(data));
 		refetchTokens();
 		return { key: result.token };
-	};
-
-	const handleIntegrationClick = (integration: IntegrationDisplay) => {
-		alert(`${integration.name} integration coming soon!`);
 	};
 
 	return (
@@ -144,7 +144,12 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 									fallback={
 										<>
 											<span class="integration-row__status text-muted">Not connected</span>
-											<Button variant="secondary" onClick={() => handleIntegrationClick(integration)}>
+											<Button
+												variant="secondary"
+												onClick={() => {
+													handleIntegrationClick(integration);
+												}}
+											>
 												Connect
 											</Button>
 										</>
@@ -153,7 +158,12 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 									<span class="integration-row__status">
 										<span class="integration-connected">✓</span> @{integration.username}
 									</span>
-									<Button variant="secondary" onClick={() => handleIntegrationClick(integration)}>
+									<Button
+										variant="secondary"
+										onClick={() => {
+											handleIntegrationClick(integration);
+										}}
+									>
 										Disconnect
 									</Button>
 								</Show>
@@ -191,7 +201,13 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 					</Show>
 
 					<Show when={tokens()} keyed>
-						{(tokenList) => <TokenList tokens={tokenList} onToggle={handleToggle} onDelete={handleDelete} />}
+						{(tokenList) => (
+							<TokenList
+								tokens={tokenList}
+								onToggle={(id, enabled) => void handleToggle(id, enabled)}
+								onDelete={(id) => void handleDelete(id)}
+							/>
+						)}
 					</Show>
 
 					<div class="settings-section__actions">

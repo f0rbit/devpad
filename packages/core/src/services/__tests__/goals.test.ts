@@ -90,9 +90,9 @@ function createSequenceMockDb(overrides: Record<string, any> = {}) {
 	};
 
 	return {
-		select: (fields?: any) => make_chain(),
+		select: (_?: any) => make_chain(),
 		insert: () => ({
-			values: (v: any) => ({
+			values: (_: any) => ({
 				returning: () => overrides.insert_returning ?? [{ id: "new_1" }],
 				onConflictDoUpdate: () => ({
 					returning: () => overrides.insert_returning ?? [{ id: "new_1" }],
@@ -100,7 +100,7 @@ function createSequenceMockDb(overrides: Record<string, any> = {}) {
 			}),
 		}),
 		update: () => ({
-			set: (v: any) => ({
+			set: (_: any) => ({
 				where: () => ({
 					returning: () => overrides.update_returning ?? [overrides.update_result ?? mockGoal],
 				}),
@@ -256,7 +256,6 @@ describe("goals", () => {
 		});
 
 		test("rejects modification of deleted goal", async () => {
-			const deleted_goal = { ...mockGoal, deleted: true };
 			const db = createSequenceMockDb({
 				// getGoal returns not_found for deleted goal, so previous will be null
 				// Actually, getGoal returns err for deleted, so previous_result?.ok is false, previous = null

@@ -34,17 +34,18 @@ const make_db = (): Database => {
 
 const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): Promise<void> => {
 	const now = new Date().toISOString();
-	await db.insert(user).values({
+	const user_row = {
 		id: USER_ID,
 		name: "tester",
 		email: `${USER_ID}@test.example`,
-		email_verified: true,
+		email_verified: now,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
 		created_at: now,
 		updated_at: now,
-	} as never);
-	await db.insert(project).values({
+	};
+	await db.insert(user).values(user_row as never);
+	const project_row = {
 		id: PROJECT_ID,
 		owner_id: USER_ID,
 		name: "test-project",
@@ -57,8 +58,9 @@ const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): 
 		modified_by: "user",
 		protected: false,
 		deleted: false,
-	} as never);
-	await db.insert(pipeline_package).values({
+	};
+	await db.insert(project).values(project_row as never);
+	const pipeline_package_row = {
 		id: PKG_ID,
 		owner_id: USER_ID,
 		name: "test-pkg",
@@ -71,13 +73,14 @@ const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): 
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
+	};
+	await db.insert(pipeline_package).values(pipeline_package_row as never);
 
 	if (opts.with_runs) {
 		const base = Date.now();
 		const start = new Date(base - 10 * 60_000).toISOString();
 		const finish = new Date(base - 5 * 60_000).toISOString();
-		await db.insert(pipeline_run).values({
+		const pipeline_run_row = {
 			id: "pipeline-run_1",
 			package_id: PKG_ID,
 			version_set_id: "vs_v1",
@@ -85,8 +88,8 @@ const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): 
 			kind: "deploy",
 			status: "completed",
 			current_stage: null,
-			resolved_rollout: { type: "atomic" } as never,
-			resolved_gates: { "staging→atomic-prod": { type: "manual" } } as never,
+			resolved_rollout: { type: "atomic" },
+			resolved_gates: { "staging→atomic-prod": { type: "manual" } },
 			forced_atomic_reason: null,
 			started_at: start,
 			finished_at: finish,
@@ -96,7 +99,8 @@ const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): 
 			modified_by: "api",
 			protected: false,
 			deleted: false,
-		} as never);
+		};
+		await db.insert(pipeline_run).values(pipeline_run_row as never);
 	}
 };
 
@@ -114,19 +118,19 @@ const build_app = (
 	const captured: Array<{ url: string; method: string }> = [];
 	const original_fetch = globalThis.fetch;
 	if (opts.pulse_upstream !== undefined) {
-		globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+		globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 			const method = init?.method ?? "GET";
 			captured.push({ url, method });
 			if (opts.pulse_upstream === null) throw new Error("pulse unreachable");
 			return opts.pulse_upstream!({ url, method });
-		}) as typeof fetch;
+		};
 	}
 
 	const app = new Hono<AppContext>();
 	app.use("*", async (c, next) => {
 		c.set("db", db as never);
-		c.set("config", {
+		const config_stub = {
 			environment: "test",
 			api_url: "http://test",
 			frontend_url: "http://test",
@@ -134,9 +138,11 @@ const build_app = (
 			encryption_key: "x",
 			pulse_api_base: opts.pulse_api_base,
 			pulse_internal_key: opts.pulse_internal_key,
-		} as never);
+		};
+		c.set("config", config_stub as never);
 		if (opts.authed) {
-			c.set("user", { id: USER_ID, github_id: 1, name: "stub", task_view: "list" } as never);
+			const user_stub = { id: USER_ID, github_id: 1, name: "stub", task_view: "list" };
+			c.set("user", user_stub as never);
 			c.set("session", null);
 			c.set("auth_channel", "api");
 			c.set("api_key_scope", "pipelines");
@@ -184,11 +190,7 @@ describe("/v1/pipelines/dashboard", () => {
 		expect(res.status).toBe(200);
 		expect(res.headers.get("cache-control")).toBe("public, max-age=30");
 
-		const body = (await res.json()) as {
-			run_counts: { total: number; completed: number };
-			pulse: { totals: { requests: number } } | null;
-			latency_p50_ms: number | null;
-		};
+		const body = await res.json();
 		expect(body.run_counts.total).toBe(1);
 		expect(body.run_counts.completed).toBe(1);
 		expect(body.latency_p50_ms).toBe(5 * 60_000);
@@ -214,14 +216,16 @@ describe("/v1/pipelines/dashboard", () => {
 		const app2 = new Hono<AppContext>();
 		app2.use("*", async (c, next) => {
 			c.set("db", db as never);
-			c.set("config", {
+			const config_stub = {
 				environment: "test",
 				api_url: "x",
 				frontend_url: "x",
 				jwt_secret: "x",
 				encryption_key: "x",
-			} as never);
-			c.set("user", { id: "user_attacker", github_id: 2, name: "stub", task_view: "list" } as never);
+			};
+			c.set("config", config_stub as never);
+			const user_stub = { id: "user_attacker", github_id: 2, name: "stub", task_view: "list" };
+			c.set("user", user_stub as never);
 			c.set("session", null);
 			c.set("auth_channel", "api");
 			c.set("api_key_scope", "pipelines");
@@ -273,7 +277,7 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { pulse: unknown };
+		const body = await res.json();
 		expect(body.pulse).toBeNull();
 	});
 
@@ -289,7 +293,7 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { pulse: unknown };
+		const body = await res.json();
 		expect(body.pulse).toBeNull();
 		expect(captured.length).toBe(0);
 	});
@@ -304,7 +308,7 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { run_counts: { total: number }; pulse: unknown };
+		const body = await res.json();
 		expect(body.run_counts.total).toBe(0);
 		expect(body.pulse).toBeNull();
 	});

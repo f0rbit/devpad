@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { VersionSetManifest } from "@f0rbit/corpus";
-import { resolve_rollout } from "../src/discriminator.ts";
-import { defaultAtomic, defaultGradual } from "../src/index.ts";
-import type { ForcedAtomicReason, Rollout } from "../src/types.ts";
+import { resolve_rollout } from "../src/discriminator";
+import { defaultAtomic, defaultGradual } from "../src/index";
+import type { ForcedAtomicReason, Rollout } from "../src/types";
 
 const make_manifest = (opts: {
 	has_do_migrations: boolean;
@@ -186,7 +186,7 @@ const rows: Row[] = [
 
 describe("resolve_rollout", () => {
 	for (const row of rows) {
-		const label = `declared=${row.declared} do=${row.do_migrations} assets=${row.has_assets} affinity=${row.affinity}`;
+		const label = `declared=${row.declared} do=${String(row.do_migrations)} assets=${String(row.has_assets)} affinity=${row.affinity}`;
 		test(label, () => {
 			const declared: Rollout = row.declared === "gradual" ? defaultGradual : defaultAtomic;
 			const manifest = make_manifest({

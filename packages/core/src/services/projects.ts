@@ -51,7 +51,7 @@ export async function getUserProjectMap(
 	const projects_result = await getUserProjects(db, user_id);
 	if (!projects_result.ok) return projects_result;
 
-	const project_map = projects_result.value.reduce((acc, p) => ({ ...acc, [p.id]: p }), {} as Record<string, Project>);
+	const project_map = projects_result.value.reduce<Record<string, Project>>((acc, p) => ({ ...acc, [p.id]: p }), {});
 	return ok(project_map);
 }
 
@@ -104,7 +104,7 @@ export async function getRecentUpdate(
 		.orderBy(desc(todo_updates.created_at))
 		.limit(1);
 
-	if (!updates?.[0]) return ok(null);
+	if (updates.length === 0) return ok(null);
 
 	const update = updates[0] as TodoUpdate & { old_data: TrackerResult | null; new_data: TrackerResult | null };
 	update.old_data = null;
@@ -112,11 +112,11 @@ export async function getRecentUpdate(
 
 	if (update.old_id) {
 		const old = await db.select().from(tracker_result).where(eq(tracker_result.id, update.old_id));
-		if (old?.[0]) update.old_data = old[0];
+		if (old.length > 0) update.old_data = old[0];
 	}
 	if (update.new_id) {
-		const new_ = await db.select().from(tracker_result).where(eq(tracker_result.id, update.new_id));
-		if (new_?.[0]) update.new_data = new_[0];
+		const next_result = await db.select().from(tracker_result).where(eq(tracker_result.id, update.new_id));
+		if (next_result.length > 0) update.new_data = next_result[0];
 	}
 
 	return ok(update);
@@ -142,8 +142,8 @@ export async function getProjectConfig(
 		.where(eq(tag_config.project_id, project_id))
 		.groupBy(tag.id);
 
-	const tags = tag_result.map((row: any) => ({
-		name: row.name as string,
+	const tags = tag_result.map((row) => ({
+		name: row.name,
 		match: JSON.parse(row.matches || "[]") as string[],
 	}));
 
@@ -152,7 +152,7 @@ export async function getProjectConfig(
 		.from(ignore_path)
 		.where(eq(ignore_path.project_id, project_id));
 
-	const ignore = ignore_result.map((row: any) => row.path as string);
+	const ignore = ignore_result.map((row) => row.path);
 
 	return ok({
 		id: project_id,
@@ -190,11 +190,11 @@ export async function upsertProject(
 			}
 		}
 
-		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous?.repo_url);
+		const github_linked = (data.repo_id && data.repo_url) || (previous?.repo_id && previous.repo_url);
 		const fetch_specification = github_linked && repo_url && (!previous || !previous.specification);
 
-		if (fetch_specification && !data.specification && github_client.getSpecification) {
-			const slices = repo_url!.split("/");
+		if (fetch_specification && repo_url && !data.specification && github_client.getSpecification) {
+			const slices = repo_url.split("/");
 			const repo = slices.at(-1);
 			const owner = slices.at(-2);
 			if (repo && owner) {
@@ -242,14 +242,14 @@ export async function upsertProject(
 	let result: Project | null = null;
 	if (exists && id) {
 		const update_result = await db.update(project).set(upsert).where(eq(project.id, id)).returning();
-		result = update_result[0] || null;
+		result = update_result.length > 0 ? update_result[0] : null;
 	} else {
 		const insert_result = await db
 			.insert(project)
 			.values(upsert)
 			.onConflictDoUpdate({ target: [project.id], set: upsert })
 			.returning();
-		result = insert_result[0] || null;
+		result = insert_result.length > 0 ? insert_result[0] : null;
 	}
 
 	if (!result) return err({ kind: "db_error", message: "Project operation failed - no result returned" });
@@ -262,13 +262,14 @@ export async function upsertProject(
 			? "Updated specification"
 			: "Updated project settings";
 
-	await addProjectAction(db, {
+	const action_result = await addProjectAction(db, {
 		owner_id: final_owner_id,
 		project_id: new_project.id,
 		type: action_type,
 		description: action_desc,
 		channel: auth_channel,
 	});
+	if (!action_result.ok) return action_result;
 
 	return ok(new_project);
 }

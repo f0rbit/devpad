@@ -133,7 +133,7 @@ async function build() {
 	console.log("\nDeploy with: bunx wrangler deploy");
 }
 
-build().catch((error) => {
+build().catch((error: unknown) => {
 	console.error("Build failed:", error);
 	process.exit(1);
 });

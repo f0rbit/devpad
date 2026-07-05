@@ -9,8 +9,8 @@
  * have to reach back in.
  */
 
-export { defaultAtomic, defaultAtomicGates } from "./default-atomic.ts";
-export { defaultGradual, defaultGradualGates } from "./default-gradual.ts";
+export { defaultAtomic, defaultAtomicGates } from "./default-atomic";
+export { defaultGradual, defaultGradualGates } from "./default-gradual";
 export {
 	AnalysisGateSchema,
 	AtomicRolloutSchema,
@@ -22,11 +22,11 @@ export {
 	PipelineTemplateSchema,
 	RolloutSchema,
 	StageSchema,
-} from "./schema.ts";
-export { type ResolvedRollout, resolve_rollout } from "./discriminator.ts";
-export { type DslError, type ExtendTemplateOverrides, extendTemplate } from "./dsl.ts";
-export { analysis, auto, manual } from "./gates.ts";
-export { type DurationParseError, expand_rollout, parse_duration } from "./rollout.ts";
+} from "./schema";
+export { type ResolvedRollout, resolve_rollout } from "./discriminator";
+export { type DslError, type ExtendTemplateOverrides, extendTemplate } from "./dsl";
+export { analysis, auto, manual } from "./gates";
+export { type DurationParseError, expand_rollout, parse_duration } from "./rollout";
 export type {
 	AnalysisTemplateRef,
 	BakeWindow,
@@ -39,7 +39,7 @@ export type {
 	Stage,
 	StageContext,
 	TransitionKey,
-} from "./types.ts";
+} from "./types";
 
 // Scaffolder pure surface — consumed by `@devpad/cli` for `pipelines init`.
 export {
@@ -49,7 +49,7 @@ export {
 	SCAFFOLDER_TEMPLATES,
 	type TemplateEntry,
 	validate_package_name,
-} from "./scaffolder/index.ts";
+} from "./scaffolder/index";
 export type {
 	BuildShape,
 	DefaultGateKind,
@@ -58,4 +58,4 @@ export type {
 	ScaffolderInput,
 	TemplateVars,
 	ValidationError as ScaffolderValidationError,
-} from "./scaffolder/index.ts";
+} from "./scaffolder/index";

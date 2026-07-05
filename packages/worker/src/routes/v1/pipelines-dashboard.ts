@@ -74,7 +74,7 @@ const try_pulse_summary = async (
 	if (!content_type.includes("application/json")) return null;
 
 	try {
-		const body = (await response.json()) as Record<string, unknown>;
+		const body = await response.json();
 		return body;
 	} catch {
 		return null;
@@ -98,7 +98,7 @@ const try_pulse_summary = async (
 const aggregate_snapshots = (
 	snapshots: ReadonlyArray<{ snap: DashboardResponse; deploys: number; rollbacks: number }>,
 ): DashboardResponse => {
-	if (snapshots.length === 1) return snapshots[0]!.snap;
+	if (snapshots.length === 1) return snapshots[0].snap;
 	if (snapshots.length === 0) {
 		return {
 			run_counts: { total: 0, completed: 0, failed: 0, cancelled: 0, rolled_back: 0, in_flight: 0 },

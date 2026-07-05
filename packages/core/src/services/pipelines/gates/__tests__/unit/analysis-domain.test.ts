@@ -8,6 +8,21 @@ import {
 	type Threshold,
 } from "../../analysis-domain.js";
 
+const snapshot = (metrics: Record<string, number>): MetricSnapshot => ({
+	metrics,
+	window_start_ms: 0,
+	window_end_ms: 600_000,
+	sample_count: 100,
+});
+
+const t = (overrides: Partial<Threshold>): Threshold => ({
+	metric: "error_rate",
+	op: ">",
+	value: 0.01,
+	on_fail: "Fail",
+	...overrides,
+});
+
 describe("parse_threshold_dsl", () => {
 	test("parses a single threshold", () => {
 		const result = parse_threshold_dsl("error_rate > 0.01");
@@ -94,21 +109,6 @@ describe("build_summary_query", () => {
 });
 
 describe("evaluate_metrics_against_thresholds", () => {
-	const snapshot = (metrics: Record<string, number>): MetricSnapshot => ({
-		metrics,
-		window_start_ms: 0,
-		window_end_ms: 600_000,
-		sample_count: 100,
-	});
-
-	const t = (overrides: Partial<Threshold>): Threshold => ({
-		metric: "error_rate",
-		op: ">",
-		value: 0.01,
-		on_fail: "Fail",
-		...overrides,
-	});
-
 	test("window_passed_threshold_met → Pass", () => {
 		const result = evaluate_metrics_against_thresholds(snapshot({ error_rate: 0.001 }), [t({})]);
 		expect(result.verdict).toBe("Pass");

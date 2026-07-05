@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { parse_duration } from "../src/index.ts";
+import { parse_duration } from "../src/index";
 
-const unwrap_ok = <T, E>(r: { ok: true; value: T } | { ok: false; error: E }): T => {
+const unwrap_ok = <T>(r: { ok: true; value: T } | { ok: false; error: unknown }): T => {
 	if (!r.ok) throw new Error(`expected ok, got err: ${JSON.stringify(r.error)}`);
 	return r.value;
 };

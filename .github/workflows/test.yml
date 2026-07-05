@@ -50,6 +50,11 @@ jobs:
           DATABASE_FILE: ./test.db
           NODE_ENV: test
 
+      - name: Lint
+        run: |
+          bun run lint
+          bun run fmt:check
+
       - name: Generate coverage report
         if: github.event_name == 'pull_request'
         run: |

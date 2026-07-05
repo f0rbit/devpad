@@ -1,5 +1,5 @@
 import type { Result } from "@f0rbit/corpus";
-import type { MODULE_MIME_TYPES } from "./manifests.ts";
+import type { MODULE_MIME_TYPES } from "./manifests";
 
 export type CloudflareError =
 	| { code: "not_found"; message: string }

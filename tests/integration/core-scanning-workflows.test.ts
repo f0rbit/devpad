@@ -120,7 +120,7 @@ describe("Core Scanning Workflows", () => {
 			const fetchResult = await t.client.projects.getById(project.id);
 			if (!fetchResult.ok) {
 				expect(fetchResult.ok).toBe(false);
-			} else if (fetchResult.value) {
+			} else {
 				expect(fetchResult.value.deleted).toBe(true);
 			}
 		} catch (error) {

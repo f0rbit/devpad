@@ -17,7 +17,7 @@ export async function getUserGoals(db: Database, user_id: string): Promise<Resul
 		.where(and(eq(project.owner_id, user_id), eq(goal.deleted, false)))
 		.orderBy(desc(goal.created_at));
 
-	return ok(result.map((r: any) => r.goal));
+	return ok(result.map((r) => r.goal));
 }
 
 export async function getMilestoneGoals(db: Database, milestone_id: string): Promise<Result<Goal[], ServiceError>> {
@@ -33,8 +33,9 @@ export async function getMilestoneGoals(db: Database, milestone_id: string): Pro
 export async function getGoal(db: Database, goal_id: string): Promise<Result<Goal | null, ServiceError>> {
 	const result = await db.select().from(goal).where(eq(goal.id, goal_id));
 
+	if (result.length === 0) return err({ kind: "not_found", resource: "goal", id: goal_id });
 	const record = result[0];
-	if (!record || record.deleted) return err({ kind: "not_found", resource: "goal", id: goal_id });
+	if (record.deleted) return err({ kind: "not_found", resource: "goal", id: goal_id });
 	return ok(record);
 }
 
@@ -81,21 +82,21 @@ export async function upsertGoal(
 	let result: Goal | null = null;
 	if (exists && id) {
 		const update_result = await db.update(goal).set(upsert).where(eq(goal.id, id)).returning();
-		result = update_result[0] || null;
+		result = update_result.length > 0 ? update_result[0] : null;
 	} else {
 		const insert_result = await db
 			.insert(goal)
 			.values(upsert)
 			.onConflictDoUpdate({ target: [goal.id], set: upsert })
 			.returning();
-		result = insert_result[0] || null;
+		result = insert_result.length > 0 ? insert_result[0] : null;
 	}
 
 	if (!result) return err({ kind: "db_error", message: "Goal upsert failed" });
 
 	const action_type: ActionType = !exists ? "CREATE_GOAL" : "UPDATE_GOAL";
 	const action_desc = !exists ? "Created goal" : "Updated goal";
-	await addGoalAction(db, {
+	const action_result = await addGoalAction(db, {
 		owner_id,
 		goal_id: result.id,
 		milestone_id: data.milestone_id,
@@ -105,6 +106,7 @@ export async function upsertGoal(
 		description: action_desc,
 		channel: auth_channel,
 	});
+	if (!action_result.ok) return action_result;
 
 	return ok(result);
 }
@@ -128,7 +130,7 @@ export async function deleteGoal(
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return err({ kind: "forbidden", reason: "User does not own this project" });
 
-	await addGoalAction(db, {
+	const action_result = await addGoalAction(db, {
 		owner_id,
 		goal_id,
 		milestone_id: goal_result.value.milestone_id,
@@ -138,6 +140,7 @@ export async function deleteGoal(
 		description: "Deleted goal",
 		channel: auth_channel,
 	});
+	if (!action_result.ok) return action_result;
 
 	await db.update(goal).set({ deleted: true, updated_at: new Date().toISOString() }).where(eq(goal.id, goal_id));
 

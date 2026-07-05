@@ -14,7 +14,7 @@ mock.module("../scanner/index.js", () => ({
 			},
 		],
 	}),
-	generateDiff: (old_tasks: any[], new_tasks: any[]) => [
+	generateDiff: () => [
 		{
 			id: "task_1",
 			tag: "todo",
@@ -85,7 +85,7 @@ function createScanMockDb(overrides: Record<string, any> = {}) {
 	return {
 		select: () => make_result_chain(),
 		insert: () => ({
-			values: (v: any) => ({
+			values: (_: any) => ({
 				returning: () => overrides.insert_returning ?? [{ id: 1 }],
 				onConflictDoUpdate: () => ({
 					returning: () => overrides.insert_returning ?? [{ id: 1 }],

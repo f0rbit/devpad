@@ -11,10 +11,10 @@ import {
 	post_json,
 	SCRIPT_NAME_FOR,
 	type TestHarness,
-} from "./helpers.ts";
+} from "./helpers";
 
 const run_status_of = async (db: Database, run_id: string) =>
-	(await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0]!;
+	(await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0];
 
 const events_of = async (db: Database, run_id: string) =>
 	db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
@@ -364,7 +364,9 @@ describe("orchestrator routes — GET /runs list", () => {
 		expect(res.status).toBe(200);
 		const runs = expect_ok<Array<{ package_id: string }>>(res.body);
 		expect(runs.length).toBeGreaterThan(0);
-		runs.forEach((r) => expect(r.package_id).toBe(h.pkg.id));
+		runs.forEach((r) => {
+			expect(r.package_id).toBe(h.pkg.id);
+		});
 
 		const other = await get_json(h.app, "/runs?package_id=pipeline-package_does_not_exist");
 		expect(other.status).toBe(200);

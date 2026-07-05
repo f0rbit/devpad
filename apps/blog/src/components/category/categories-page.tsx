@@ -28,7 +28,7 @@ const fetchCategories = async (): Promise<Category[]> => {
 		return [];
 	}
 	const data = unwrap(await getBrowserClient().blog.categories.tree());
-	return flattenTree((data.categories ?? []) as CategoryNode[]);
+	return flattenTree(data.categories);
 };
 
 const IconPlus = () => (
@@ -66,7 +66,7 @@ const IconMinus = () => (
 
 const CategoriesPage: Component<Props> = (props) => {
 	const [fetchTrigger, setFetchTrigger] = createSignal(0);
-	const [categories, { refetch }] = createResource(
+	const [categories] = createResource(
 		() => {
 			const trigger = fetchTrigger();
 			// Skip initial fetch if we have SSR data, but always fetch on trigger > 0
@@ -97,7 +97,6 @@ const CategoriesPage: Component<Props> = (props) => {
 
 	const treeNodes = createMemo(() => {
 		const cats = categories();
-		if (!cats) return [];
 		const items = cats.map((c) => ({
 			id: c.name,
 			label: c.name,
@@ -171,7 +170,9 @@ const CategoriesPage: Component<Props> = (props) => {
 											variant="ghost"
 											icon
 											size="sm"
-											onClick={() => selectParentForAdd(node.id)}
+											onClick={() => {
+												selectParentForAdd(node.id);
+											}}
 											label={`Add child to ${node.label}`}
 										>
 											<IconPlus />
@@ -181,7 +182,7 @@ const CategoriesPage: Component<Props> = (props) => {
 												variant="ghost"
 												icon
 												size="sm"
-												onClick={() => handleDelete(node.id)}
+												onClick={() => void handleDelete(node.id)}
 												label={`Delete ${node.label}`}
 											>
 												<IconMinus />
