@@ -81,9 +81,8 @@ export async function waitForServer(url: string, maxAttempts = 30): Promise<void
 			if (response.ok) {
 				log("✅ Server started and responding");
 				return;
-			} else {
-				log(`  Server responded but with error status: ${response.status}`);
 			}
+			log(`  Server responded but with error status: ${response.status}`);
 		} catch (error: any) {
 			log(`  Error connecting to server: ${error.name}: ${error.message}`);
 			if (error.name === "AbortError") {

@@ -133,8 +133,8 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} has no modules (not a directory_bundle upload?)`,
 			);
 		}
-		const got = version.modules.map((m) => m.name).sort();
-		const expected = [...expected_module_names].sort();
+		const got = version.modules.map((m) => m.name).toSorted();
+		const expected = [...expected_module_names].toSorted();
 		if (got.length !== expected.length || got.some((name, i) => name !== expected[i])) {
 			throw new Error(
 				`InMemoryCloudflareProvider.assertVersionHasModules: script="${script_name}" version="${version_id}" expected modules ${JSON.stringify(expected)} got ${JSON.stringify(got)}`,
@@ -159,8 +159,8 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} has no assets recorded`,
 			);
 		}
-		const got = version.assets.map((a) => a.path).sort();
-		const expected = [...expected_asset_paths].sort();
+		const got = version.assets.map((a) => a.path).toSorted();
+		const expected = [...expected_asset_paths].toSorted();
 		if (got.length !== expected.length || got.some((path, i) => path !== expected[i])) {
 			throw new Error(
 				`InMemoryCloudflareProvider.assertVersionHasAssets: script="${script_name}" version="${version_id}" expected assets ${JSON.stringify(expected)} got ${JSON.stringify(got)}`,

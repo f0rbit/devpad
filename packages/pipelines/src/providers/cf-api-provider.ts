@@ -107,7 +107,7 @@ const cf_call = async <T>(
 	const url = cf_url(config, path);
 	let response: Response;
 	try {
-		response = await fetch(url, { ...init, headers: { ...json_headers_for(config), ...(init.headers ?? {}) } });
+		response = await fetch(url, { ...init, headers: { ...json_headers_for(config), ...init.headers } });
 	} catch (e) {
 		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
 	}

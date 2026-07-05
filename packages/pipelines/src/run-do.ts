@@ -78,7 +78,7 @@ export type RunDoServices = {
 const json = <T>(value: T, init?: ResponseInit): Response =>
 	new Response(JSON.stringify(value), {
 		...init,
-		headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+		headers: { "content-type": "application/json", ...init?.headers },
 	});
 
 const json_ok = <T>(value: T): Response => json({ ok: true, value });

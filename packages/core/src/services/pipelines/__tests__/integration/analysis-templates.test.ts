@@ -45,7 +45,7 @@ describe("analysis-templates service — list_analysis_templates", () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value).toHaveLength(2);
-			expect(result.value.map((t) => t.id).sort()).toEqual([
+			expect(result.value.map((t) => t.id).toSorted()).toEqual([
 				"pipeline-analysis-template_a",
 				"pipeline-analysis-template_b",
 			]);

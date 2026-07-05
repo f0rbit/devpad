@@ -229,11 +229,11 @@ const lookup_previous_active_version = async (
 	}
 	const sorted = list.value
 		.slice()
-		.sort((a, b) => (a.created_on < b.created_on ? 1 : a.created_on > b.created_on ? -1 : 0));
+		.toSorted((a, b) => (a.created_on < b.created_on ? 1 : a.created_on > b.created_on ? -1 : 0));
 	for (const deployment of sorted) {
 		const candidates = deployment.strategy.versions.filter((v) => v.version_id !== exclude_version_id);
 		if (candidates.length === 0) continue;
-		const best = candidates.slice().sort((a, b) => b.percentage - a.percentage)[0];
+		const best = candidates.slice().toSorted((a, b) => b.percentage - a.percentage)[0];
 		return ok(best.version_id);
 	}
 	return ok(null);

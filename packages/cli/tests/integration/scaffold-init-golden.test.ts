@@ -78,7 +78,7 @@ const list_files = async (root: string): Promise<string[]> => {
 		}
 	};
 	await walk(root);
-	return out.sort();
+	return out.toSorted();
 };
 
 const copy_tree = async (src: string, dest: string): Promise<void> => {

@@ -393,7 +393,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 			JSON.parse(await read_blob_text(h.backend, builds.worker.bundle_manifest_ref!)),
 		);
 		expect(bundle_manifest.main_module).toBe("index.js");
-		expect(bundle_manifest.modules.map((m) => m.name).sort()).toEqual([...fx.expected_module_names].sort());
+		expect(bundle_manifest.modules.map((m) => m.name).toSorted()).toEqual([...fx.expected_module_names].toSorted());
 		const by_name = new Map(bundle_manifest.modules.map((m) => [m.name, m]));
 		expect(by_name.get("index.js")?.mime_type).toBe("application/javascript+module");
 		expect(by_name.get("chunks/render.mjs")?.mime_type).toBe("application/javascript+module");
@@ -406,7 +406,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		const asset_manifest = AssetManifest.parse(
 			JSON.parse(await read_blob_text(h.backend, builds.assets!.manifest_ref!)),
 		);
-		expect(asset_manifest.assets.map((a) => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
+		expect(asset_manifest.assets.map((a) => a.path).toSorted()).toEqual([...fx.expected_asset_paths].toSorted());
 		// Asset config flows through verbatim.
 		expect(asset_manifest.config?.html_handling).toBe("auto-trailing-slash");
 		expect(asset_manifest.config?.not_found_handling).toBe("single-page-application");
@@ -433,7 +433,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		if (payload.kind !== "directory_bundle") return;
 
 		expect(payload.main_module).toBe("index.js");
-		expect(payload.modules.map((m) => m.name).sort()).toEqual([...fx.expected_module_names].sort());
+		expect(payload.modules.map((m) => m.name).toSorted()).toEqual([...fx.expected_module_names].toSorted());
 		// Bytes round-trip exactly (no encoding drift).
 		const fetched_main = payload.modules.find((m) => m.name === "index.js");
 		expect(fetched_main).toBeDefined();
@@ -444,7 +444,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 		expect(fetched_wasm!.content).toEqual(fx.wasm_bytes);
 
 		expect(payload.assets).toBeDefined();
-		expect(payload.assets!.assets.map((a) => a.path).sort()).toEqual([...fx.expected_asset_paths].sort());
+		expect(payload.assets!.assets.map((a) => a.path).toSorted()).toEqual([...fx.expected_asset_paths].toSorted());
 		for (const asset of payload.assets!.assets) {
 			expect(asset.hash).toMatch(/^[0-9a-f]{32}$/);
 			const expected_bytes = fx.asset_bytes_by_path.get(asset.path);
@@ -452,7 +452,7 @@ describe("directory-bundle end-to-end (CLI → corpus → orchestrator → CF fa
 			expect(asset.content).toEqual(expected_bytes!);
 		}
 		// Default platform bindings flow through the provider as configured.
-		const binding_names = (payload.bindings ?? []).map((b) => b.name).sort();
+		const binding_names = (payload.bindings ?? []).map((b) => b.name).toSorted();
 		expect(binding_names).toEqual(["ANTHROPIC", "PULSE"]);
 
 		// --- Step 6: forward to the in-memory CF provider exactly the way

@@ -108,7 +108,7 @@ export async function getProjectHistory(
 		data: { project_id, message: s.commit_msg, status: s.status },
 	}));
 
-	return ok(filtered.concat(mapped_scan).sort(sortByDate));
+	return ok(filtered.concat(mapped_scan).toSorted(sortByDate));
 }
 
 export async function getTaskHistory(db: Database, task_id: string): Promise<Result<HistoryAction[], ServiceError>> {
@@ -125,7 +125,7 @@ export async function getTaskHistory(db: Database, task_id: string): Promise<Res
 
 	const filtered: HistoryAction[] = actions_result.value.filter((a) => a.data.task_id === task_id);
 
-	return ok(filtered.sort(sortByDate));
+	return ok(filtered.toSorted(sortByDate));
 }
 
 export async function getUserHistory(db: Database, user_id: string): Promise<Result<HistoryAction[], ServiceError>> {
@@ -134,7 +134,7 @@ export async function getUserHistory(db: Database, user_id: string): Promise<Res
 	const actions_result = await getActions(db, user_id, project_filter);
 	if (!actions_result.ok) return actions_result;
 
-	return ok((actions_result.value as HistoryAction[]).sort(sortByDate));
+	return ok((actions_result.value as HistoryAction[]).toSorted(sortByDate));
 }
 
 export type AISession = {
@@ -206,7 +206,7 @@ export async function getAIActivity(
 }
 
 function buildSession(actions: ActionWithData[]): AISession {
-	const sorted = [...actions].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+	const sorted = [...actions].toSorted((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 	const started_at = sorted[0].created_at;
 	const ended_at = sorted[sorted.length - 1].created_at;
 

@@ -28,7 +28,7 @@ const isPRItem = (item: TimelineItem): item is PRItem =>
 const makeGroupKey = (repo: string, branch: string, date: string): string => `${repo}:${branch}:${date}`;
 
 const buildCommitGroup = (repo: string, branch: string, date: string, commits: CommitItem[]): CommitGroup => {
-	const sorted = [...commits].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+	const sorted = [...commits].toSorted((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 	const totals = commits.reduce(
 		(acc, c) => ({
@@ -126,7 +126,7 @@ const deduplicateCommitsFromPRs = (items: TimelineItem[]): DeduplicationResult =
 // === PUBLIC API ===
 
 export const combineTimelines = (items: TimelineItem[]): TimelineItem[] =>
-	[...items].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+	[...items].toSorted((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 export const groupCommits = (items: TimelineItem[]): TimelineEntry[] => {
 	log.debug("Grouping commits", { total_items: items.length });
@@ -159,7 +159,7 @@ export const groupCommits = (items: TimelineItem[]): TimelineEntry[] => {
 export const groupByDate = (entries: TimelineEntry[]): DateGroup[] => {
 	log.debug("Grouping by date", { total_entries: entries.length });
 
-	const sorted = [...entries].sort(compareTimestampDesc);
+	const sorted = [...entries].toSorted(compareTimestampDesc);
 
 	const grouped = sorted.reduce<Map<string, TimelineEntry[]>>((acc, entry) => {
 		const date = getDateKey(entry);
@@ -169,7 +169,7 @@ export const groupByDate = (entries: TimelineEntry[]): DateGroup[] => {
 	}, new Map());
 
 	const result = Array.from(grouped.entries())
-		.sort(([a], [b]) => b.localeCompare(a))
+		.toSorted(([a], [b]) => b.localeCompare(a))
 		.map(([date, items]) => ({ date, items }));
 
 	log.debug("Date grouping complete", { date_groups: result.length });

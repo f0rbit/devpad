@@ -37,7 +37,7 @@ const mergeTweets = (
 		merged: {
 			user_id: incoming.user_id,
 			username: incoming.username,
-			tweets: tweets.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+			tweets: tweets.toSorted((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
 			media,
 			total_tweets: tweets.length,
 			oldest_tweet_id: existing?.oldest_tweet_id ?? incoming.oldest_tweet_id,

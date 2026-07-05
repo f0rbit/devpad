@@ -186,7 +186,7 @@ describe("GET /oidc-trust", () => {
 		expect(res.status).toBe(200);
 		const policies = res.body.value as Array<{ github_owner: string }>;
 		expect(policies).toHaveLength(2);
-		const owners = policies.map((p) => p.github_owner).sort();
+		const owners = policies.map((p) => p.github_owner).toSorted();
 		expect(owners).toEqual(["mine-a", "mine-b"]);
 	});
 

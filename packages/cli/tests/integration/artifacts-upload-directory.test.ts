@@ -420,7 +420,7 @@ describe("artifacts upload — directory bundles", () => {
 		const asset_text = await read_blob_text(h.backend, builds.assets!.manifest_ref!);
 		const parsed = AssetManifest.parse(JSON.parse(asset_text));
 		expect(parsed.assets).toHaveLength(2);
-		const paths = parsed.assets.map((a) => a.path).sort();
+		const paths = parsed.assets.map((a) => a.path).toSorted();
 		expect(paths).toEqual(["/logo.png", "/style.css"]);
 		// Hashes must match wrangler's 32-char BLAKE3 form.
 		for (const a of parsed.assets) {
@@ -493,7 +493,7 @@ describe("artifacts upload — directory bundles", () => {
 		// → counter on that single key shows 2. Confirms the server saw the
 		// same content twice and dedup'd at the metadata.find_by_hash
 		// gate (so backend.data has one underlying blob).
-		const counts = Array.from(h.puts_by_hash.values()).sort();
+		const counts = Array.from(h.puts_by_hash.values()).toSorted();
 		// We had: 1 index.js (worker-modules), 1 a.css/b.css shared, 1 bundle-manifest, 1 asset-manifest, 1 pipeline-templates, 1 env-manifests, 1 infra-plans, 1 grants
 		// The asset dedup count of 2 sits among those — at least one hash counter must be ≥ 2.
 		expect(Math.max(...counts)).toBeGreaterThanOrEqual(2);
@@ -537,7 +537,7 @@ describe("artifacts upload — directory bundles", () => {
 		const walk = walk_assets_dir(fx.assets_dir);
 		expect(walk.ok).toBe(true);
 		if (!walk.ok) return;
-		const paths = walk.value.parts.map((p) => p.path).sort();
+		const paths = walk.value.parts.map((p) => p.path).toSorted();
 		expect(paths).toEqual(["/page.html"]);
 	});
 });

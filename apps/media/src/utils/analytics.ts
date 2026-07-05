@@ -52,7 +52,7 @@ const generateDateRange = (days: number): string[] => {
 const uniqueValues = <T>(arr: T[]): T[] => [...new Set(arr)];
 
 const sortDescending = <T>(arr: T[], fn: (item: T) => string): T[] =>
-	[...arr].sort((a, b) => fn(b).localeCompare(fn(a)));
+	[...arr].toSorted((a, b) => fn(b).localeCompare(fn(a)));
 
 const toPercentage = (count: number, total: number): number => (total === 0 ? 0 : Math.round((count / total) * 100));
 
@@ -101,7 +101,7 @@ export function calculatePlatformDistribution(groups: TimelineGroup[]): Platform
 			count: items.length,
 			percentage: toPercentage(items.length, total),
 		}))
-		.sort((a, b) => b.count - a.count);
+		.toSorted((a, b) => b.count - a.count);
 }
 
 export function calculateActivityByDay(groups: TimelineGroup[], days = 14): DailyActivity[] {
@@ -181,7 +181,7 @@ export function calculateContentTypes(groups: TimelineGroup[]): ContentTypeCount
 			count: items.length,
 			percentage: toPercentage(items.length, total),
 		}))
-		.sort((a, b) => b.count - a.count);
+		.toSorted((a, b) => b.count - a.count);
 }
 
 export function getRecentItems(groups: TimelineGroup[], limit = 5): TimelineEntry[] {

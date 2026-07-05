@@ -27,7 +27,7 @@ export async function getProjectMilestones(
 		.from(milestone)
 		.where(and(eq(milestone.project_id, project_id), eq(milestone.deleted, false)));
 
-	const sorted = result.sort((a: Milestone, b: Milestone) => {
+	const sorted = result.toSorted((a: Milestone, b: Milestone) => {
 		if (a.after_id === b.id) return 1;
 		if (b.after_id === a.id) return -1;
 		return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
