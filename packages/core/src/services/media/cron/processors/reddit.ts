@@ -3,7 +3,7 @@ import type { Backend } from "@f0rbit/corpus";
 import { ok, pipe, type Result } from "@f0rbit/corpus";
 import { createLogger } from "../../../../utils/logger";
 import { mergeByKey } from "../../merge";
-import type { RedditFetchResult, RedditProviderLike } from "../../platforms/reddit";
+import type { RedditProviderLike } from "../../platforms/reddit";
 import { store } from "../../storage";
 import {
 	formatFetchError,
@@ -87,7 +87,9 @@ export const processRedditAccount = (
 	const fetchPromise = storedUsername ? provider.fetchForUsername(token, storedUsername) : provider.fetch(token);
 
 	return pipe(fetchPromise)
-		.tap(() => log.info("Processing account", { account_id: accountId, username: storedUsername ?? "from-oauth" }))
+		.tap(() => {
+			log.info("Processing account", { account_id: accountId, username: storedUsername ?? "from-oauth" });
+		})
 		.map_err((e): ProcessError => formatFetchError("Reddit", e))
 		.flat_map(async ({ meta, posts, comments }) => {
 			log.debug("Storing Reddit data", {

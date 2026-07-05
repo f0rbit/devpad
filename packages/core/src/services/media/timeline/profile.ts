@@ -183,7 +183,6 @@ const buildAccountIdMap = (items: TimelineItem[], accountsByPlatform: Map<Platfo
 		if (!platformAccounts || platformAccounts.length === 0) continue;
 
 		const firstAccount = platformAccounts[0];
-		if (!firstAccount) continue;
 
 		if (platformAccounts.length === 1) {
 			idMap.set(item.id, firstAccount.id);
@@ -234,7 +233,7 @@ type PlatformLoader = {
 	normalize: (data: unknown) => TimelineItem[];
 };
 
-const platformLoaders: Record<string, PlatformLoader> = {
+const platformLoaders: Partial<Record<Platform, PlatformLoader>> = {
 	github: {
 		load: loadGitHubData,
 		normalize: (data) => normalizeGitHub(data as Awaited<ReturnType<typeof loadGitHubData>>),

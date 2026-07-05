@@ -7,7 +7,7 @@ export function getBrowserClient(baseUrl?: string): ApiClient {
 
 	const host = baseUrl || (typeof window !== "undefined" ? window.location.origin : "");
 	client_instance = new ApiClient({
-		base_url: `${host}/api/v1`,
+		base_url: `${String(host)}/api/v1`,
 		auth_mode: "cookie",
 		credentials: "include",
 	});

@@ -97,7 +97,7 @@ const get = async (
 	return ok({
 		id: row.id,
 		profileId: row.profile_id,
-		platform: row.platform as Platform,
+		platform: row.platform,
 		clientId: row.client_id,
 		clientSecret: decryptResult.value,
 		redirectUri: row.redirect_uri,

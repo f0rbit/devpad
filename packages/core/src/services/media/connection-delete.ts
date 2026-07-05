@@ -9,7 +9,7 @@ import type {
 } from "@devpad/schema/media";
 import { accountSettings, accounts, errors, profiles, rateLimits } from "@devpad/schema/media";
 import type { Backend } from "@f0rbit/corpus";
-import { err, ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
+import { ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { createLogger } from "../../utils/logger";
 import type { Database } from "./db";
@@ -357,7 +357,7 @@ export async function deleteConnection(
 		})
 		.flat_map(
 			async ({
-				account,
+				account: validatedAccount,
 				affectedUsers,
 				deletedStores,
 			}): Promise<Result<DeleteConnectionResult, DeleteConnectionError>> => {
@@ -367,14 +367,14 @@ export async function deleteConnection(
 				log.info("Connection deletion completed", {
 					step: "complete",
 					accountId: accId,
-					platform: account.platform,
+					platform: validatedAccount.platform,
 					deletedStores: deletedStores.length,
 					affectedUsers: affectedUsers.length,
 				});
 
 				return ok({
 					account_id: accId,
-					platform: account.platform,
+					platform: validatedAccount.platform,
 					deleted_stores: deletedStores,
 					affected_users: affectedUsers,
 				});

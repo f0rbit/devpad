@@ -76,7 +76,9 @@ export const processTwitterAccount = (
 	provider: TwitterProvider,
 ): Promise<Result<TwitterProcessResult, ProcessError>> =>
 	pipe(provider.fetch(token))
-		.tap(() => log.info("Processing account", { account_id: accountId }))
+		.tap(() => {
+			log.info("Processing account", { account_id: accountId });
+		})
 		.map_err((e): ProcessError => formatFetchError("Twitter", e))
 		.flat_map(async ({ meta, tweets }) => {
 			const [metaVersion, tweetsResult] = await Promise.all([

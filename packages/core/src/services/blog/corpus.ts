@@ -25,6 +25,12 @@ const corpusToBackend = (corpus: PostsCorpus): Backend => {
 const createDynamicStore = (corpus: PostsCorpus, storeId: string) =>
 	create_store(corpusToBackend(corpus), { ...postsStoreDefinition, id: storeId });
 
+const storageErrorMessage = (e: unknown): string => {
+	const cause = e instanceof Error ? e.cause : undefined;
+	const underlyingMessage = cause instanceof Error ? cause.message : undefined;
+	return underlyingMessage ?? (e instanceof Error ? e.message : "Storage error");
+};
+
 const put = async (
 	corpus: PostsCorpus,
 	path: string,
@@ -58,7 +64,7 @@ const versions = async (corpus: PostsCorpus, path: string): Promise<Result<Versi
 
 	try {
 		for await (const meta of store.list()) {
-			const firstParent = meta.parents[0];
+			const firstParent = meta.parents.length > 0 ? meta.parents[0] : undefined;
 			versionList.push({
 				hash: meta.version,
 				parent: firstParent?.version ?? null,
@@ -66,9 +72,7 @@ const versions = async (corpus: PostsCorpus, path: string): Promise<Result<Versi
 			});
 		}
 	} catch (e) {
-		const underlying = (e as any)?.cause;
-		const message = underlying?.message ?? (e as Error)?.message ?? "Storage error";
-		return err({ kind: "io_error", message });
+		return err({ kind: "io_error", message: storageErrorMessage(e) });
 	}
 
 	versionList.sort((a, b) => b.created_at.getTime() - a.created_at.getTime());
@@ -85,9 +89,7 @@ const remove = async (corpus: PostsCorpus, path: string): Promise<Result<void, P
 			if (!result.ok) return err(mapCorpusError(result.error));
 		}
 	} catch (e) {
-		const underlying = (e as any)?.cause;
-		const message = underlying?.message ?? (e as Error)?.message ?? "Storage error";
-		return err({ kind: "io_error", message });
+		return err({ kind: "io_error", message: storageErrorMessage(e) });
 	}
 
 	return ok(undefined);

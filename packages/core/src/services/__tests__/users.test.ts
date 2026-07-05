@@ -35,7 +35,7 @@ function createMockDb(results: Record<string, any[]> = {}) {
 		...chain,
 		select: () => ({
 			...chain,
-			from: (table: any) => ({
+			from: (_: any) => ({
 				...chain,
 				where: () => results.select ?? [],
 			}),

@@ -10,7 +10,7 @@ import {
 	type TimelineItem,
 	YouTubeRawSchema,
 } from "@devpad/schema/media";
-import type { Backend } from "@f0rbit/corpus";
+import type { Backend, CorpusError } from "@f0rbit/corpus";
 import { pipe, type Result, to_nullable, try_catch } from "@f0rbit/corpus";
 import { eq, sql } from "drizzle-orm";
 import { createLogger } from "../../utils/logger";
@@ -22,7 +22,7 @@ import type { Database } from "./db";
 import { GitHubProvider, normalizeBluesky, normalizeDevpad, normalizeYouTube } from "./platforms";
 import { RedditProvider } from "./platforms/reddit";
 import { TwitterProvider } from "./platforms/twitter";
-import type { ProviderError, ProviderFactory } from "./platforms/types";
+import type { ProviderError } from "./platforms/types";
 import { type RateLimitState, type RawData, shouldFetch, store } from "./storage";
 import { timeline as tl } from "./timeline";
 import { secrets, uuid } from "./utils";
@@ -130,17 +130,43 @@ const toRateLimitState = (row: RateLimitRow | null): RateLimitState => ({
 const formatProviderError = (e: ProviderError): string => {
 	switch (e.kind) {
 		case "api_error":
-			return `API error ${e.status}: ${e.message}`;
+			return `API error ${String(e.status)}: ${String(e.message)}`;
 		case "bad_request":
-			return `Bad request: ${e.message}`;
+			return `Bad request: ${String(e.message)}`;
 		case "network_error":
 			return e.cause?.message ?? "Network error";
 		case "rate_limited":
-			return `Rate limited, retry after ${e.retry_after}s`;
+			return `Rate limited, retry after ${String(e.retry_after)}s`;
 		case "auth_expired":
-			return `Auth expired: ${e.message}`;
+			return `Auth expired: ${String(e.message)}`;
 		case "parse_error":
-			return `Parse error: ${e.message}`;
+			return `Parse error: ${String(e.message)}`;
+	}
+};
+
+const formatCorpusError = (e: CorpusError): string => {
+	switch (e.kind) {
+		case "not_found":
+		case "already_exists":
+		case "concurrent_modification":
+			return `${e.kind}: ${e.store_id}@${e.version}`;
+		case "storage_error":
+			return `storage_error (${e.operation}): ${e.cause.message}`;
+		case "decode_error":
+		case "encode_error":
+			return `${e.kind}: ${e.cause.message}`;
+		case "hash_mismatch":
+			return `hash_mismatch: expected ${e.expected}, got ${e.actual}`;
+		case "invalid_config":
+			return `invalid_config: ${e.message}`;
+		case "validation_error":
+			return `validation_error: ${e.message}`;
+		case "observation_not_found":
+			return `observation_not_found: ${e.id}`;
+		case "transaction_aborted":
+			return `transaction_aborted (${e.reason})${e.cause ? `: ${e.cause.message}` : ""}`;
+		case "partial_commit":
+			return `partial_commit: ${String(e.ops_completed)} completed, ${String(e.ops_failed)} failed`;
 	}
 };
 
@@ -217,14 +243,16 @@ const processPlatformAccountWithProcessor = async (
 ): Promise<RawSnapshot | null> =>
 	pipe(secrets.decrypt(account.access_token_encrypted, ctx.encryptionKey))
 		.map_err((e): ProcessingError => ({ kind: e.kind, message: e.message }))
-		.tap_err(() => logAccount.error("Decryption failed", { platform, account_id: account.id }))
+		.tap_err(() => {
+			logAccount.error("Decryption failed", { platform, account_id: account.id });
+		})
 		.flat_map(async (token): Promise<Result<PlatformProcessResult, ProcessingError>> => {
 			const provider = processor.createProvider(ctx);
 			return processor.processAccount(ctx.backend, account.id, token, provider, account);
 		})
-		.tap_err((e) => {
+		.tap_err(async (e) => {
 			logAccount.error("Processing failed", { platform, account_id: account.id, error: e });
-			recordFailure(ctx.db, account.id);
+			await recordFailure(ctx.db, account.id);
 		})
 		.tap(() => recordSuccess(ctx.db, account.id))
 		.map(
@@ -257,9 +285,9 @@ const processGenericAccount = async (ctx: AppContext, account: AccountWithUser):
 				.map(({ store: s }) => ({ raw_data, store: s }))
 				.result(),
 		)
-		.flat_map(({ raw_data, store }) =>
-			pipe(store.put(raw_data as RawData, { tags: [`platform:${account.platform}`, `account:${account.id}`] }))
-				.map_err((e): CronError => ({ kind: "store_error", operation: "put", message: String(e) }))
+		.flat_map(({ raw_data, store: accountStore }) =>
+			pipe(accountStore.put(raw_data as RawData, { tags: [`platform:${account.platform}`, `account:${account.id}`] }))
+				.map_err((e): CronError => ({ kind: "store_error", operation: "put", message: formatCorpusError(e) }))
 				.map((result: { version: string }) => ({ raw_data, version: result.version }))
 				.result(),
 		)
@@ -326,7 +354,9 @@ export const processAccount = async (ctx: AppContext, account: AccountWithUser):
 			};
 			return processPlatformAccountWithProcessor(ctx, account, processor, platform);
 		}
-		default:
+		case "bluesky":
+		case "youtube":
+		case "devpad":
 			return processGenericAccount(ctx, account);
 	}
 };
@@ -447,12 +477,19 @@ export const storeTimeline = async (
 		role: "source" as const,
 	}));
 
-	await pipe(store.timeline(backend, userId))
-		.tap_err(() => logTimeline.error("Timeline store creation failed", { user_id: userId }))
-		.tap(async ({ store: s }) => {
-			await s.put(timeline, { parents });
+	const result = await pipe(store.timeline(backend, userId))
+		.tap_err(() => {
+			logTimeline.error("Timeline store creation failed", { user_id: userId });
+		})
+		.flat_map(({ store: s }) => s.put(timeline, { parents }))
+		.tap_err((e) => {
+			logTimeline.error("Timeline put failed", { user_id: userId, error: e });
 		})
 		.result();
+	if (!result.ok) {
+		// storeTimeline is fire-and-forget by design (background sync) — the
+		// failure is already logged above via tap_err.
+	}
 };
 
 const storeEmptyTimeline = async (backend: Backend, userId: string): Promise<void> => {
@@ -461,11 +498,19 @@ const storeEmptyTimeline = async (backend: Backend, userId: string): Promise<voi
 		generated_at: new Date().toISOString(),
 		groups: [],
 	};
-	await pipe(store.timeline(backend, userId))
-		.tap(async ({ store: s }) => {
-			await s.put(emptyTimeline, { parents: [] });
+	const result = await pipe(store.timeline(backend, userId))
+		.tap_err(() => {
+			logTimeline.error("Empty timeline store creation failed", { user_id: userId });
+		})
+		.flat_map(({ store: s }) => s.put(emptyTimeline, { parents: [] }))
+		.tap_err((e) => {
+			logTimeline.error("Empty timeline put failed", { user_id: userId, error: e });
 		})
 		.result();
+	if (!result.ok) {
+		// storeEmptyTimeline is fire-and-forget by design (background sync) — the
+		// failure is already logged above via tap_err.
+	}
 };
 
 const getLatestSnapshot = async (backend: Backend, account: AccountWithUser): Promise<RawSnapshot | null> => {
@@ -526,8 +571,11 @@ const getLatestSnapshot = async (backend: Backend, account: AccountWithUser): Pr
 	};
 };
 
-export const gatherLatestSnapshots = async (backend: Backend, accounts: AccountWithUser[]): Promise<RawSnapshot[]> => {
-	const results = await Promise.all(accounts.map((account) => getLatestSnapshot(backend, account)));
+export const gatherLatestSnapshots = async (
+	backend: Backend,
+	accountList: AccountWithUser[],
+): Promise<RawSnapshot[]> => {
+	const results = await Promise.all(accountList.map((account) => getLatestSnapshot(backend, account)));
 	return results.filter((s): s is RawSnapshot => s !== null);
 };
 

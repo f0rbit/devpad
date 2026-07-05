@@ -20,13 +20,6 @@ const mockTag = {
 	deleted: false,
 };
 
-const mockDeletedTag = {
-	...mockTag,
-	id: "tag_2",
-	title: "archived",
-	deleted: true,
-};
-
 function createMockDb(results: Record<string, any[]> = {}) {
 	const chain: any = {
 		select: () => chain,
@@ -48,12 +41,12 @@ function createMockDb(results: Record<string, any[]> = {}) {
 
 	return {
 		...chain,
-		select: (fields?: any) => ({
+		select: (_fields?: any) => ({
 			...chain,
-			from: (table: any) => ({
+			from: (_: any) => ({
 				...chain,
 				where: () => results.select ?? [],
-				innerJoin: (joinTable: any, condition: any) => ({
+				innerJoin: (_joinTable: any, _condition: any) => ({
 					...chain,
 					where: () => results.select ?? [],
 				}),
@@ -61,7 +54,7 @@ function createMockDb(results: Record<string, any[]> = {}) {
 		}),
 		insert: () => ({
 			...chain,
-			values: (v: any) => ({
+			values: (_: any) => ({
 				...chain,
 				onConflictDoUpdate: () => ({
 					...chain,

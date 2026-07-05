@@ -15,7 +15,7 @@ function createMockDb(opts: { selectResults?: any[][]; insertCalled?: { value: b
 			innerJoin: () => chain,
 			groupBy: () => chain,
 			set: () => chain,
-			values: (v: any) => {
+			values: (_: any) => {
 				if (opts.insertCalled) opts.insertCalled.value = true;
 				return chain;
 			},
@@ -26,7 +26,7 @@ function createMockDb(opts: { selectResults?: any[][]; insertCalled?: { value: b
 	};
 
 	return {
-		select: (...args: any[]) => {
+		select: (..._: any[]) => {
 			const idx = selectCallIndex++;
 			return makeChain(idx);
 		},

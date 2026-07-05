@@ -15,7 +15,7 @@ export async function getUserMilestones(db: Database, user_id: string): Promise<
 		.where(and(eq(project.owner_id, user_id), eq(milestone.deleted, false)))
 		.orderBy(desc(milestone.created_at));
 
-	return ok(result.map((r: any) => r.milestone));
+	return ok(result.map((r) => r.milestone));
 }
 
 export async function getProjectMilestones(
@@ -42,8 +42,9 @@ export async function getMilestone(
 ): Promise<Result<Milestone | null, ServiceError>> {
 	const result = await db.select().from(milestone).where(eq(milestone.id, milestone_id));
 
+	if (result.length === 0) return err({ kind: "not_found", resource: "milestone", id: milestone_id });
 	const record = result[0];
-	if (!record || record.deleted) return err({ kind: "not_found", resource: "milestone", id: milestone_id });
+	if (record.deleted) return err({ kind: "not_found", resource: "milestone", id: milestone_id });
 	return ok(record);
 }
 
@@ -86,21 +87,21 @@ export async function upsertMilestone(
 	let result: Milestone | null = null;
 	if (exists && id) {
 		const update_result = await db.update(milestone).set(upsert).where(eq(milestone.id, id)).returning();
-		result = update_result[0] || null;
+		result = update_result.length > 0 ? update_result[0] : null;
 	} else {
 		const insert_result = await db
 			.insert(milestone)
 			.values(upsert)
 			.onConflictDoUpdate({ target: [milestone.id], set: upsert })
 			.returning();
-		result = insert_result[0] || null;
+		result = insert_result.length > 0 ? insert_result[0] : null;
 	}
 
 	if (!result) return err({ kind: "db_error", message: "Milestone upsert failed" });
 
 	const action_type: ActionType = !exists ? "CREATE_MILESTONE" : "UPDATE_MILESTONE";
 	const action_desc = !exists ? "Created milestone" : "Updated milestone";
-	await addMilestoneAction(db, {
+	const action_result = await addMilestoneAction(db, {
 		owner_id,
 		milestone_id: result.id,
 		project_id: data.project_id,
@@ -109,6 +110,7 @@ export async function upsertMilestone(
 		description: action_desc,
 		channel: auth_channel,
 	});
+	if (!action_result.ok) return action_result;
 
 	return ok(result);
 }
@@ -127,7 +129,7 @@ export async function deleteMilestone(
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return err({ kind: "forbidden", reason: "User does not own this project" });
 
-	await addMilestoneAction(db, {
+	const action_result = await addMilestoneAction(db, {
 		owner_id,
 		milestone_id,
 		project_id: milestone_result.value.project_id,
@@ -136,6 +138,7 @@ export async function deleteMilestone(
 		description: "Deleted milestone",
 		channel: auth_channel,
 	});
+	if (!action_result.ok) return action_result;
 
 	await db
 		.update(goal)

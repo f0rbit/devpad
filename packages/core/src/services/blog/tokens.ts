@@ -79,7 +79,7 @@ export const createTokenService = ({ db }: Deps) => {
 		}, toDbError);
 
 	const find = async (userId: string, tokenId: string): Promise<Result<BlogApiKeyRow, TokenServiceError>> => {
-		const rows = await db
+		const found = await db
 			.select()
 			.from(api_keys)
 			.where(
@@ -92,7 +92,7 @@ export const createTokenService = ({ db }: Deps) => {
 			)
 			.limit(1);
 
-		return firstRow(rows as BlogApiKeyRow[], `token:${tokenId}`);
+		return firstRow(found as BlogApiKeyRow[], `token:${tokenId}`);
 	};
 
 	const create = async (userId: string, input: AccessKeyCreate): Promise<Result<CreatedToken, TokenServiceError>> =>
@@ -100,7 +100,7 @@ export const createTokenService = ({ db }: Deps) => {
 			const plainToken = token.generate();
 			const keyHash = await hashing.hash(plainToken);
 
-			const [created] = await db
+			const created_rows = await db
 				.insert(api_keys)
 				.values({
 					user_id: userId,
@@ -112,10 +112,10 @@ export const createTokenService = ({ db }: Deps) => {
 				})
 				.returning();
 
-			if (!created) throw new Error("Insert returned no rows");
+			if (created_rows.length === 0) throw new Error("Insert returned no rows");
 
 			return {
-				...token.sanitize(created as BlogApiKeyRow),
+				...token.sanitize(created_rows[0]),
 				token: plainToken,
 			};
 		}, toDbError);
@@ -144,14 +144,14 @@ export const createTokenService = ({ db }: Deps) => {
 		}
 
 		return try_catch_async(async () => {
-			const [updated] = await db
+			const updated_rows = await db
 				.update(api_keys)
 				.set(updates)
 				.where(and(eq(api_keys.user_id, userId), eq(api_keys.id, tokenId), eq(api_keys.scope, "blog")))
 				.returning();
 
-			if (!updated) throw new Error("Update returned no rows");
-			return token.sanitize(updated as BlogApiKeyRow);
+			if (updated_rows.length === 0) throw new Error("Update returned no rows");
+			return token.sanitize(updated_rows[0]);
 		}, toDbError);
 	};
 

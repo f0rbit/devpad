@@ -53,7 +53,7 @@ export async function resolveAuth(
 			},
 		});
 		if (response.ok) {
-			const data = (await response.json()) as { authenticated: boolean; user: any };
+			const data = (await response.json()) as { authenticated: boolean; user: AuthUser };
 			if (data.authenticated && data.user) {
 				user = data.user;
 				session = { id: "verified" };

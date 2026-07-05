@@ -1,5 +1,5 @@
 import { errors, type ParseError } from "@devpad/schema/media";
-import { type FetchError, ok, pipe, type Result, try_catch, try_catch_async } from "@f0rbit/corpus";
+import { ok, pipe, type Result, try_catch, try_catch_async } from "@f0rbit/corpus";
 import type { z } from "zod";
 import { createLogger } from "../../utils/logger";
 
@@ -13,7 +13,7 @@ export const safeJsonParse = <T>(value: string, schema: z.ZodType<T>): T | undef
 	}
 };
 
-export const tryJsonParse = (value: string): unknown | undefined => {
+export const tryJsonParse = (value: string): unknown => {
 	try {
 		return JSON.parse(value);
 	} catch {
@@ -170,7 +170,7 @@ export const safeWaitUntil = (
 	try {
 		ctx.executionCtx?.waitUntil?.(task());
 	} catch {
-		task().catch((error) => {
+		task().catch((error: unknown) => {
 			log.error("Background task failed", { error });
 		});
 	}

@@ -1,8 +1,8 @@
-import type { Action, HistoryAction } from "@devpad/schema";
+import type { Action, HistoryAction, TodoUpdate } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { action, todo_updates } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { err, ok, type Result } from "@f0rbit/corpus";
+import { ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { getProjectById, getUserProjectMap } from "./projects.js";
@@ -51,7 +51,10 @@ export async function getActions(
 	return ok(data);
 }
 
-export async function getProjectScanHistory(db: Database, project_id: string): Promise<Result<any[], ServiceError>> {
+export async function getProjectScanHistory(
+	db: Database,
+	project_id: string,
+): Promise<Result<TodoUpdate[], ServiceError>> {
 	const result = await db
 		.select()
 		.from(todo_updates)
@@ -95,10 +98,10 @@ export async function getProjectHistory(
 	const scan_result = await getProjectScanHistory(db, project_id);
 	if (!scan_result.ok) return scan_result;
 
-	const mapped_scan: HistoryAction[] = scan_result.value.map((s: any) => ({
-		id: `scan-${s.id}`,
+	const mapped_scan: HistoryAction[] = scan_result.value.map((s) => ({
+		id: `scan-${String(s.id)}`,
 		type: "SCAN" as const,
-		description: `Scanned branch '${s.branch}'`,
+		description: `Scanned branch '${String(s.branch)}'`,
 		created_at: s.created_at,
 		deleted: false,
 		channel: "user" as const,
@@ -225,7 +228,7 @@ function buildSession(actions: ActionWithData[]): AISession {
 	}
 
 	const summary = Object.entries(type_counts)
-		.map(([key, count]) => `${key}${count > 1 ? "s" : ""}: ${count}`)
+		.map(([key, count]) => `${key}${count > 1 ? "s" : ""}: ${String(count)}`)
 		.join(", ");
 
 	return {

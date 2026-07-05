@@ -26,7 +26,7 @@ export const loadGitHubData = async (backend: Backend, accountId: string): Promi
 			if (!storeResult.ok) return;
 
 			const snapshotResult = await storeResult.value.store.get_latest();
-			if (!snapshotResult.ok || !snapshotResult.value) return;
+			if (!snapshotResult.ok) return;
 
 			const fullName = `${owner}/${repo}`;
 			for (const commit of snapshotResult.value.data.commits) {
@@ -43,7 +43,7 @@ export const loadGitHubData = async (backend: Backend, accountId: string): Promi
 			if (!storeResult.ok) return;
 
 			const snapshotResult = await storeResult.value.store.get_latest();
-			if (!snapshotResult.ok || !snapshotResult.value) return;
+			if (!snapshotResult.ok) return;
 
 			const fullName = `${owner}/${repo}`;
 			for (const pr of snapshotResult.value.data.pull_requests) {
@@ -84,7 +84,7 @@ export const normalizeGitHub = (data: GitHubTimelineData): TimelineItem[] => {
 
 	for (const pr of data.prs) {
 		items.push({
-			id: `github:pr:${pr.repo_name}:${pr.number}`,
+			id: `github:pr:${pr.repo_name}:${String(pr.number)}`,
 			platform: "github",
 			type: "pull_request",
 			timestamp: pr.merged_at ?? pr.updated_at,

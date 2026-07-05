@@ -5,7 +5,7 @@ import type {
 	RedditPost,
 	RedditPostsStore,
 } from "@devpad/schema/media";
-import { err, type FetchError, ok, pipe, type Result } from "@f0rbit/corpus";
+import { type FetchError, ok, pipe, type Result } from "@f0rbit/corpus";
 import { createLogger } from "../../../utils/logger";
 import { mapHttpError, type ProviderError } from "./types";
 
@@ -42,7 +42,7 @@ const mapRedditError = (e: FetchError): ProviderError =>
 
 export class RedditProvider implements RedditProviderLike {
 	readonly platform = "reddit";
-	private config: RedditProviderConfig;
+	private readonly config: RedditProviderConfig;
 
 	constructor(config: Partial<RedditProviderConfig> = {}) {
 		this.config = { ...DEFAULT_CONFIG, ...config };
@@ -52,7 +52,9 @@ export class RedditProvider implements RedditProviderLike {
 		log.debug("Starting fetch", { maxPosts: this.config.maxPosts, maxComments: this.config.maxComments });
 
 		return pipe(this.fetchUser(token))
-			.tap(({ username }) => log.info("Authenticated as", username))
+			.tap(({ username }) => {
+				log.info("Authenticated as", username);
+			})
 			.flat_map(async ({ username, meta }) => {
 				const [postsResult, commentsResult] = await Promise.all([
 					this.fetchPosts(token, username),
@@ -93,7 +95,9 @@ export class RedditProvider implements RedditProviderLike {
 
 				return ok(result);
 			})
-			.tap_err((e) => log.error("Fetch failed", e))
+			.tap_err((e) => {
+				log.error("Fetch failed", e);
+			})
 			.result();
 	}
 
@@ -178,11 +182,11 @@ export class RedditProvider implements RedditProviderLike {
 						username,
 						user_id: data.id as string,
 						icon_img: data.icon_img as string | undefined,
-						total_karma: (data.total_karma as number) ?? 0,
-						link_karma: (data.link_karma as number) ?? 0,
-						comment_karma: (data.comment_karma as number) ?? 0,
+						total_karma: (data.total_karma as number | undefined) ?? 0,
+						link_karma: (data.link_karma as number | undefined) ?? 0,
+						comment_karma: (data.comment_karma as number | undefined) ?? 0,
 						created_utc: data.created_utc as number,
-						is_gold: (data.is_gold as boolean) ?? false,
+						is_gold: (data.is_gold as boolean | undefined) ?? false,
 						subreddits_active: [],
 						fetched_at: new Date().toISOString(),
 					},
@@ -253,25 +257,25 @@ export class RedditProvider implements RedditProviderLike {
 			id: data.id as string,
 			name: data.name as string,
 			title: data.title as string,
-			selftext: (data.selftext as string) ?? "",
+			selftext: (data.selftext as string | undefined) ?? "",
 			url: data.url as string,
 			permalink: data.permalink as string,
 			subreddit: data.subreddit as string,
-			subreddit_prefixed: (data.subreddit_name_prefixed as string) ?? `r/${data.subreddit}`,
+			subreddit_prefixed: (data.subreddit_name_prefixed as string | undefined) ?? `r/${String(data.subreddit)}`,
 			author: data.author as string,
 			created_utc: data.created_utc as number,
 			score: data.score as number,
 			upvote_ratio: data.upvote_ratio as number | undefined,
 			num_comments: data.num_comments as number,
 			is_self: data.is_self as boolean,
-			is_video: (data.is_video as boolean) ?? false,
+			is_video: (data.is_video as boolean | undefined) ?? false,
 			thumbnail: data.thumbnail as string | undefined,
 			link_flair_text: data.link_flair_text as string | null | undefined,
-			over_18: (data.over_18 as boolean) ?? false,
-			spoiler: (data.spoiler as boolean) ?? false,
-			stickied: (data.stickied as boolean) ?? false,
-			locked: (data.locked as boolean) ?? false,
-			archived: (data.archived as boolean) ?? false,
+			over_18: (data.over_18 as boolean | undefined) ?? false,
+			spoiler: (data.spoiler as boolean | undefined) ?? false,
+			stickied: (data.stickied as boolean | undefined) ?? false,
+			locked: (data.locked as boolean | undefined) ?? false,
+			archived: (data.archived as boolean | undefined) ?? false,
 		};
 	}
 
@@ -284,15 +288,15 @@ export class RedditProvider implements RedditProviderLike {
 			permalink: data.permalink as string,
 			link_id: data.link_id as string,
 			link_title: data.link_title as string,
-			link_permalink: (data.link_permalink as string) ?? "",
+			link_permalink: (data.link_permalink as string | undefined) ?? "",
 			subreddit: data.subreddit as string,
-			subreddit_prefixed: (data.subreddit_name_prefixed as string) ?? `r/${data.subreddit}`,
+			subreddit_prefixed: (data.subreddit_name_prefixed as string | undefined) ?? `r/${String(data.subreddit)}`,
 			author: data.author as string,
 			created_utc: data.created_utc as number,
 			score: data.score as number,
-			is_submitter: (data.is_submitter as boolean) ?? false,
-			stickied: (data.stickied as boolean) ?? false,
-			edited: (data.edited as boolean | number) ?? false,
+			is_submitter: (data.is_submitter as boolean | undefined) ?? false,
+			stickied: (data.stickied as boolean | undefined) ?? false,
+			edited: (data.edited as boolean | number | undefined) ?? false,
 			parent_id: data.parent_id as string,
 		};
 	}

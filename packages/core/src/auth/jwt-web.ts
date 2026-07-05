@@ -64,11 +64,11 @@ export async function generateJWT(
 	const encoded_payload = base64UrlEncodeString(JSON.stringify(full_payload));
 	const signing_input = `${encoded_header}.${encoded_payload}`;
 
-	const key = await importKey(secret).catch((e: Error) => e);
+	const key = await importKey(secret).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 	if (key instanceof Error) return err({ kind: "encoding_error", message: key.message });
 
 	const encoder = new TextEncoder();
-	const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signing_input)).catch((e: Error) => e);
+	const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signing_input)).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (signature instanceof Error) return err({ kind: "encoding_error", message: signature.message });
 
@@ -83,7 +83,7 @@ export async function verifyJWT(secret: string, token: string): Promise<Result<J
 	const [encoded_header, encoded_payload, encoded_signature] = parts;
 	const signing_input = `${encoded_header}.${encoded_payload}`;
 
-	const key = await importKey(secret).catch((e: Error) => e);
+	const key = await importKey(secret).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 	if (key instanceof Error) return err({ kind: "encoding_error", message: key.message });
 
 	const signature = base64UrlDecode(encoded_signature);

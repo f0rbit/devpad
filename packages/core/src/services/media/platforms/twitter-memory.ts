@@ -12,7 +12,7 @@ export type TwitterMemoryConfig = {
 
 export class TwitterMemoryProvider extends BaseMemoryProvider<TwitterFetchResult> {
 	readonly platform = "twitter";
-	private config: TwitterMemoryConfig;
+	private readonly config: TwitterMemoryConfig;
 
 	constructor(config: TwitterMemoryConfig = {}) {
 		super();

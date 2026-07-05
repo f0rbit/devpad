@@ -6,7 +6,7 @@ interface AstroLocals {
 	session: { id: string } | null;
 	runtime?: {
 		env?: {
-			internal_api?: { fetch: (request: Request, env: any, ctx: any) => Promise<Response> };
+			internal_api?: { fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> };
 			API_URL?: string;
 			[key: string]: unknown;
 		};
@@ -32,8 +32,8 @@ export function getServerApiClient(locals: AstroLocals): ApiClient {
 	const custom_fetch = api_app
 		? ((async (input: string | Request, init?: RequestInit): Promise<Response> => {
 				const request = new Request(input as string, init);
-				const ctx = runtime?.ctx ?? { waitUntil: () => {}, passThroughOnException: () => {} };
-				return api_app.fetch(request, runtime?.env, ctx);
+				const ctx = runtime.ctx ?? { waitUntil: () => {}, passThroughOnException: () => {} };
+				return api_app.fetch(request, runtime.env, ctx);
 			}) as unknown as typeof fetch)
 		: undefined;
 

@@ -25,9 +25,9 @@ const isCommitItem = (item: TimelineItem): item is CommitItem =>
 const isPRItem = (item: TimelineItem): item is PRItem =>
 	item.type === "pull_request" && item.payload.type === "pull_request";
 
-const makeGroupKey = (repo: string, branch: string, date: string): string => `${repo}:${branch}:${date}`;
+const makeGroupKey = (repo: string, branch: string, dateKey: string): string => `${repo}:${branch}:${dateKey}`;
 
-const buildCommitGroup = (repo: string, branch: string, date: string, commits: CommitItem[]): CommitGroup => {
+const buildCommitGroup = (repo: string, branch: string, dateKey: string, commits: CommitItem[]): CommitGroup => {
 	const sorted = [...commits].toSorted((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
 	const totals = commits.reduce(
@@ -43,7 +43,7 @@ const buildCommitGroup = (repo: string, branch: string, date: string, commits: C
 		type: "commit_group",
 		repo,
 		branch,
-		date,
+		date: dateKey,
 		commits: sorted,
 		total_additions: totals.additions,
 		total_deletions: totals.deletions,
@@ -79,7 +79,7 @@ const deduplicateCommitsFromPRs = (items: TimelineItem[]): DeduplicationResult =
 	const prToCommitShas = new Map<string, string[]>();
 
 	for (const pr of prs) {
-		const shas = pr.payload.commit_shas ?? [];
+		const shas = pr.payload.commit_shas;
 		prToCommitShas.set(pr.id, shas);
 		for (const sha of shas) {
 			prCommitShas.add(sha);
@@ -111,13 +111,14 @@ const deduplicateCommitsFromPRs = (items: TimelineItem[]): DeduplicationResult =
 			}
 		}
 
-		return {
+		const enrichedPR: PRItem = {
 			...pr,
 			payload: {
 				...pr.payload,
 				commits: prCommits,
 			},
-		} as PRItem;
+		};
+		return enrichedPR;
 	});
 
 	return { orphanCommits, enrichedPRs, otherItems };
@@ -141,12 +142,12 @@ export const groupCommits = (items: TimelineItem[]): TimelineEntry[] => {
 		return acc;
 	}, new Map());
 
-	const commitGroups = Array.from(groupedByRepoBranchDate.entries()).map(([key, groupCommits]) => {
+	const commitGroups = Array.from(groupedByRepoBranchDate.entries()).map(([key, groupedCommits]) => {
 		const parts = key.split(":");
-		const repo = parts[0] as string;
-		const branch = parts[1] as string;
-		const commitDate = parts[2] as string;
-		return buildCommitGroup(repo, branch, commitDate, groupCommits);
+		const repo = parts[0];
+		const branch = parts[1];
+		const commitDate = parts[2];
+		return buildCommitGroup(repo, branch, commitDate, groupedCommits);
 	});
 
 	const result = [...commitGroups, ...enrichedPRs, ...otherItems];
@@ -162,15 +163,15 @@ export const groupByDate = (entries: TimelineEntry[]): DateGroup[] => {
 	const sorted = [...entries].toSorted(compareTimestampDesc);
 
 	const grouped = sorted.reduce<Map<string, TimelineEntry[]>>((acc, entry) => {
-		const date = getDateKey(entry);
-		const existing = acc.get(date) ?? [];
-		acc.set(date, [...existing, entry]);
+		const dateKey = getDateKey(entry);
+		const existing = acc.get(dateKey) ?? [];
+		acc.set(dateKey, [...existing, entry]);
 		return acc;
 	}, new Map());
 
 	const result = Array.from(grouped.entries())
 		.toSorted(([a], [b]) => b.localeCompare(a))
-		.map(([date, items]) => ({ date, items }));
+		.map(([dateKey, items]) => ({ date: dateKey, items }));
 
 	log.debug("Date grouping complete", { date_groups: result.length });
 

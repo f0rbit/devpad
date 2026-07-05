@@ -10,7 +10,7 @@
  * @param context - The context data which can be a JSON string, array, object, or other
  * @returns Array of strings, or empty array if invalid
  */
-export function parseContextToArray(context: any): string[] {
+export function parseContextToArray(context: unknown): string[] {
 	if (!context) return [];
 
 	// If already an array, return it (ensuring all elements are strings)

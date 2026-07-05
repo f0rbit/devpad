@@ -228,12 +228,12 @@ describe("TwitterMemoryProvider", () => {
 	});
 
 	test("constructor config sets initial data", async () => {
-		const provider = new TwitterMemoryProvider({
+		const customProvider = new TwitterMemoryProvider({
 			userId: "custom-id",
 			username: "custom-name",
 			name: "Custom Name",
 		});
-		const result = await provider.fetch("token");
+		const result = await customProvider.fetch("token");
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value.meta.id).toBe("custom-id");
@@ -364,11 +364,11 @@ describe("RedditMemoryProvider", () => {
 	});
 
 	test("constructor config overrides meta defaults", async () => {
-		const provider = new RedditMemoryProvider({
+		const customProvider = new RedditMemoryProvider({
 			username: "custom-user",
 			meta: { total_karma: 5000, is_gold: true },
 		});
-		const result = await provider.fetch("token");
+		const result = await customProvider.fetch("token");
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value.meta.username).toBe("custom-user");

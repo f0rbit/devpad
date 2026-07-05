@@ -12,7 +12,9 @@ export {
 	valid,
 } from "@devpad/worker/utils/response";
 
-export const getContext = (c: any): AppContext => {
+type MediaContextGetter = { get(key: "mediaContext"): AppContext | undefined };
+
+export const getContext = (c: MediaContextGetter): AppContext => {
 	const ctx = c.get("mediaContext");
 	if (!ctx) throw new Error("AppContext not set");
 	return ctx;

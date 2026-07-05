@@ -1,5 +1,5 @@
 import type { Backend } from "@f0rbit/corpus";
-import { err, ok, pipe, type Result, to_nullable } from "@f0rbit/corpus";
+import { pipe, type Result, to_nullable } from "@f0rbit/corpus";
 import { createLogger } from "../../../utils/logger";
 import { mergeByKey } from "../merge";
 import type { ProviderError } from "../platforms/types";
@@ -88,7 +88,9 @@ const processStore = async <TIncoming, TStored>(
 
 	return pipe(putResult)
 		.map(({ version }) => ({ version, newCount, total: config.getTotal(merged) }))
-		.tap(({ newCount: n, total }) => log.debug(`Stored ${config.name}`, { new: n, total }))
+		.tap(({ newCount: n, total }) => {
+			log.debug(`Stored ${config.name}`, { new: n, total });
+		})
 		.unwrap_or(defaultStats);
 };
 
@@ -112,7 +114,7 @@ export const storeMeta = async <TMeta>(
 };
 
 export const createMerger =
-	<T, TKey extends string>(getKey: (item: T) => TKey) =>
+	<T>(getKey: (item: T) => string) =>
 	<TStore extends { [K in string]: T[] }>(field: keyof TStore) =>
 	(existing: TStore | null, incoming: TStore): MergeResult<T[]> =>
 		mergeByKey(existing?.[field] as T[] | null, incoming[field] as T[], getKey);

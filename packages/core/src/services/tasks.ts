@@ -62,7 +62,7 @@ export async function getTasksByTag(db: Database, tag_id: string): Promise<Resul
 		.select({ task_id: task_tag.task_id })
 		.from(task_tag)
 		.where(eq(task_tag.tag_id, tag_id));
-	const task_ids = task_tag_relations.map((rel: any) => rel.task_id as string);
+	const task_ids = task_tag_relations.map((rel) => rel.task_id);
 
 	if (task_ids.length === 0) return ok([]);
 
@@ -208,10 +208,10 @@ export async function upsertTask(
 	}
 
 	let tag_ids: string[] = [];
-	if (tags && tags.length > 0) {
+	if (tags.length > 0) {
 		const results = await Promise.all(tags.map((t) => upsertTag(db, t)));
 		const failed = results.find((r) => !r.ok);
-		if (failed && !failed.ok) return err(failed.error);
+		if (failed) return err(failed.error);
 		tag_ids = results.filter((r) => r.ok).map((r) => r.value);
 	}
 
@@ -229,14 +229,14 @@ export async function upsertTask(
 	let result: Task["task"] | null = null;
 	if (exists && id) {
 		const update_result = await db.update(task).set(upsert).where(eq(task.id, id)).returning();
-		result = update_result[0] || null;
+		result = update_result.length > 0 ? update_result[0] : null;
 	} else {
 		const insert_result = await db
 			.insert(task)
 			.values(upsert)
 			.onConflictDoUpdate({ target: [task.id], set: upsert })
 			.returning();
-		result = insert_result[0] || null;
+		result = insert_result.length > 0 ? insert_result[0] : null;
 	}
 
 	if (!result) return err({ kind: "db_error", message: "Task upsert failed" });
@@ -247,7 +247,7 @@ export async function upsertTask(
 	const action_type: ActionType = !exists ? "CREATE_TASK" : "UPDATE_TASK";
 	const action_desc = !exists ? "Created task" : fresh_complete ? "Completed task" : "Updated task";
 
-	await addTaskAction(db, {
+	const action_result = await addTaskAction(db, {
 		owner_id,
 		task_id: new_todo.id,
 		title: new_todo.title,
@@ -256,6 +256,7 @@ export async function upsertTask(
 		project_id,
 		channel: auth_channel,
 	});
+	if (!action_result.ok) return action_result;
 
 	if (tag_ids.length > 0) {
 		await upsertTaskTags(db, new_todo.id, tag_ids);

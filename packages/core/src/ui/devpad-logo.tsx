@@ -1,6 +1,6 @@
 export function DevpadLogo({ size = 24 }: { size?: number }) {
 	return (
-		<div style={{ width: `${size}px`, height: `${size}px` }}>
+		<div style={{ width: `${String(size)}px`, height: `${String(size)}px` }}>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				style="width: 100%; height: 100%"

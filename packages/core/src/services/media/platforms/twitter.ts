@@ -39,6 +39,8 @@ const mapVerifiedType = (type: string | undefined): VerifiedType => {
 			return "business";
 		case "government":
 			return "government";
+		case undefined:
+			return "none";
 		default:
 			return "none";
 	}
@@ -207,7 +209,7 @@ const parseTweet = (tweet: XDKTweet): TwitterTweet => ({
 
 const parseMedia = (media: XDKMedia): TweetMedia => ({
 	media_key: media.media_key,
-	type: (media.type as "photo" | "video" | "animated_gif") ?? "photo",
+	type: (media.type as "photo" | "video" | "animated_gif" | undefined) ?? "photo",
 	url: media.url,
 	preview_image_url: media.preview_image_url,
 	alt_text: media.alt_text,
@@ -240,7 +242,7 @@ const parseUserMeta = (user: XDKUser): TwitterMetaStore => ({
 
 export class TwitterProvider {
 	readonly platform = "twitter";
-	private config: TwitterProviderConfig;
+	private readonly config: TwitterProviderConfig;
 
 	constructor(config: Partial<TwitterProviderConfig> = {}) {
 		this.config = { ...DEFAULT_CONFIG, ...config };
@@ -296,7 +298,7 @@ export class TwitterProvider {
 				],
 			});
 
-			const user = response.data as XDKUser | undefined;
+			const user = response.data;
 			if (!user) {
 				log.error("No user data in response");
 				return errors.apiError(404, "User not found");

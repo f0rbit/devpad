@@ -1,6 +1,8 @@
 import type { RedditComment, RedditMetaStore, RedditPost } from "@devpad/schema/media";
+import type { Result } from "@f0rbit/corpus";
 import { BaseMemoryProvider } from "./memory-base";
 import type { RedditFetchResult } from "./reddit";
+import type { ProviderError } from "./types";
 
 export type { RedditFetchResult };
 
@@ -13,7 +15,7 @@ export type RedditMemoryConfig = {
 
 export class RedditMemoryProvider extends BaseMemoryProvider<RedditFetchResult> {
 	readonly platform = "reddit";
-	private config: RedditMemoryConfig;
+	private readonly config: RedditMemoryConfig;
 
 	constructor(config: RedditMemoryConfig = {}) {
 		super();
@@ -56,10 +58,7 @@ export class RedditMemoryProvider extends BaseMemoryProvider<RedditFetchResult> 
 	 * For BYO credentials, fetch using a specific username.
 	 * In the memory provider, this just returns the same data.
 	 */
-	async fetchForUsername(
-		_token: string,
-		_username: string,
-	): Promise<import("../utils").Result<RedditFetchResult, import("./types").ProviderError>> {
+	async fetchForUsername(_token: string, _username: string): Promise<Result<RedditFetchResult, ProviderError>> {
 		return this.fetch("");
 	}
 

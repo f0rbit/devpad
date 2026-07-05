@@ -55,12 +55,12 @@ function createMockDb(opts: { selectResults?: any[][]; returning?: any[] } = {})
 	};
 
 	return {
-		select: (...args: any[]) => makeChain(),
+		select: (..._: any[]) => makeChain(),
 		insert: () => {
 			const chain = makeChain();
 			return {
 				...chain,
-				values: (...args: any[]) => ({
+				values: (..._: any[]) => ({
 					...chain,
 					returning: () => Promise.resolve(opts.returning ?? []),
 				}),
