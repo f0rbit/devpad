@@ -30,7 +30,10 @@ export type Threshold = {
 };
 
 export type MetricSnapshot = {
-	metrics: Record<string, number>;
+	// Partial: a threshold can name a metric the snapshot never reported
+	// (missing data, not-yet-emitted metric) -- that's the real "Pending"
+	// path below, not an impossible state.
+	metrics: Partial<Record<string, number>>;
 	window_start_ms: number;
 	window_end_ms: number;
 	sample_count: number;
@@ -128,7 +131,7 @@ const compare = (actual: number, op: ThresholdOp, expected: number): boolean => 
 };
 
 const format_breach = (t: Threshold, actual: number): string =>
-	t.reason_template ?? `${t.metric}=${actual} ${t.op} ${t.value}`;
+	t.reason_template ?? `${t.metric}=${String(actual)} ${t.op} ${String(t.value)}`;
 
 /**
  * Determine whether the analysis window has elapsed.
@@ -165,7 +168,7 @@ export function evaluate_metrics_against_thresholds(metrics: MetricSnapshot, thr
 	}
 
 	if (pending.length > 0) {
-		const reasons = pending.map((t) => `${t.metric} ${t.op} ${t.value}`).join(", ");
+		const reasons = pending.map((t) => `${t.metric} ${t.op} ${String(t.value)}`).join(", ");
 		return { verdict: "Pending", reason: `pending thresholds breached: ${reasons}` };
 	}
 	if (fails.length > 0) {

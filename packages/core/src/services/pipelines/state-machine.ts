@@ -107,7 +107,7 @@ const TERMINAL: ReadonlySet<RunStatus> = new Set(["completed", "rolled_back", "f
 
 export const is_terminal_status = (status: RunStatus): boolean => TERMINAL.has(status);
 
-const transition_key_for = (from: Stage, to: Stage): TransitionKey => `${from.name}→${to.name}` as TransitionKey;
+const transition_key_for = (from: Stage, to: Stage): TransitionKey => `${from.name}→${to.name}`;
 
 const has_bake = (stage: Stage): boolean => stage.bake !== null && stage.bake.ms > 0;
 
@@ -138,7 +138,7 @@ const post_deploy_step = (state: RunState, plan: ResolvedPlan): Result<Transitio
 	const deployed_index = state.stage_index;
 	const updated_state: RunState = { ...state, last_deployed_index: deployed_index };
 
-	if (deployed_index >= plan.stages.length - 1) {
+	if (is_last_stage(updated_state, plan)) {
 		return ok({
 			next: { ...updated_state, status: "completed" },
 			emit: { kind: "done" },
@@ -168,7 +168,12 @@ const request_gate_eval = (state: RunState, plan: ResolvedPlan): Result<Transiti
 	const from = plan.stages[state.stage_index];
 	const to = plan.stages[state.stage_index + 1];
 	const key = transition_key_for(from, to);
-	const gate = plan.gates[key];
+	// `Record<TransitionKey, Gate>` over-promises completeness for the
+	// template-literal key type -- a transition key computed from arbitrary
+	// stage names can genuinely miss the map (that's exactly what
+	// `missing_gate` below reports), so read through a `Partial` view here
+	// rather than trusting the non-optional element type.
+	const gate = (plan.gates as Partial<Record<TransitionKey, Gate>>)[key];
 	if (gate === undefined) {
 		return err({
 			code: "missing_gate",
@@ -316,6 +321,10 @@ export const transition = (
 			});
 		}
 
+		case "completed":
+		case "failed":
+		case "cancelled":
+		case "rolled_back":
 		default: {
 			return err({
 				code: "invalid_event",

@@ -2,6 +2,22 @@ import { describe, expect, test } from "bun:test";
 import type { PipelineGrant } from "@devpad/schema";
 import { evaluate_grant_check, is_auto_approvable, is_grant_match } from "../../grants-domain.js";
 
+const build_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant => ({
+	id: "pipeline-grant_123",
+	package_id: "pipeline-package_pkg",
+	stage_name: "staging",
+	scope: "anthropic:messages",
+	granted_by: "user_123",
+	granted_at: "2024-01-01T00:00:00Z",
+	created_at: "2024-01-01T00:00:00Z",
+	updated_at: "2024-01-01T00:00:00Z",
+	created_by: "user",
+	modified_by: "user",
+	protected: false,
+	deleted: false,
+	...overrides,
+});
+
 describe("grants-domain", () => {
 	describe("is_grant_match", () => {
 		const test_cases: Array<{
@@ -108,22 +124,6 @@ describe("grants-domain", () => {
 	});
 
 	describe("evaluate_grant_check", () => {
-		const build_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant => ({
-			id: "pipeline-grant_123",
-			package_id: "pipeline-package_pkg",
-			stage_name: "staging",
-			scope: "anthropic:messages",
-			granted_by: "user_123",
-			granted_at: "2024-01-01T00:00:00Z",
-			created_at: "2024-01-01T00:00:00Z",
-			updated_at: "2024-01-01T00:00:00Z",
-			created_by: "user",
-			modified_by: "user",
-			protected: false,
-			deleted: false,
-			...overrides,
-		});
-
 		test("grants when matching approved grant exists", () => {
 			const grants = [
 				build_grant({

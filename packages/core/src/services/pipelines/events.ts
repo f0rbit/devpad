@@ -102,9 +102,7 @@ const idempotency_hash = async (idempotency_key: string, payload: unknown): Prom
 	const bytes = new TextEncoder().encode(input);
 	const digest = await crypto.subtle.digest("SHA-256", bytes);
 	const view = new Uint8Array(digest);
-	let out = "";
-	for (let i = 0; i < view.length; i++) out += view[i]!.toString(16).padStart(2, "0");
-	return out;
+	return Array.from(view, (byte) => byte.toString(16).padStart(2, "0")).join("");
 };
 
 // ─── ingest_event ───────────────────────────────────────────────────
@@ -144,7 +142,7 @@ export const ingest_event = async (
 	let run_row: typeof pipeline_run.$inferSelect | undefined;
 	try {
 		const rows = await deps.db.select().from(pipeline_run).where(eq(pipeline_run.id, input.run_id));
-		run_row = rows[0];
+		run_row = rows.at(0);
 	} catch (e) {
 		return err({
 			kind: "db_error",
@@ -172,7 +170,7 @@ export const ingest_event = async (
 			.select()
 			.from(pipeline_stage_event)
 			.where(and(eq(pipeline_stage_event.run_id, input.run_id), eq(pipeline_stage_event.idempotency_hash, hash)));
-		existing = rows[0];
+		existing = rows.at(0);
 	} catch (e) {
 		return err({
 			kind: "db_error",
@@ -223,15 +221,16 @@ export const ingest_event = async (
 	const now = new Date().toISOString();
 	const payload_obj = stamp_external_source(input.payload, input.idempotency_key);
 	try {
-		await deps.db.insert(pipeline_stage_event).values({
+		const insert_values = {
 			id,
 			run_id: input.run_id,
 			stage_name: input.stage_name,
 			kind: input.kind,
-			payload: payload_obj as never,
+			payload: payload_obj,
 			ts: now,
 			idempotency_hash: hash,
-		} as never);
+		};
+		await deps.db.insert(pipeline_stage_event).values(insert_values as never);
 	} catch (e) {
 		return err({
 			kind: "store_error",

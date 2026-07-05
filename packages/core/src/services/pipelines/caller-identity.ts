@@ -18,7 +18,13 @@ import type { WorkerVar } from "@devpad/pipeline-fakes";
 
 export type CallerIdentityInput = {
 	package_name: string;
-	environment: "staging" | "production";
+	// Not narrowed to the `"staging" | "production"` literal union deploy_stage
+	// declares: every current caller already satisfies that union, so the
+	// runtime check below is provably dead code against it (TS would flag the
+	// `!== "production"` arm as always-false). Widening to `string` keeps this
+	// a real boundary validation for any future/external caller instead of
+	// deleting the defense-in-depth check outright.
+	environment: string;
 	version_set_id: string;
 };
 

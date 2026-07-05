@@ -60,7 +60,7 @@ export const list_trust_policies = async (
 			.orderBy(desc(pipeline_oidc_trust.created_at), asc(pipeline_oidc_trust.id));
 		return ok(rows);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to list pipeline_oidc_trust: ${String(e)}` } as ServiceError);
+		return err({ kind: "db_error", message: `failed to list pipeline_oidc_trust: ${String(e)}` });
 	}
 };
 
@@ -90,14 +90,14 @@ export const get_trust_policy = async (
 					eq(pipeline_oidc_trust.deleted, false),
 				),
 			);
-		const row = rows[0];
-		if (!row) return err({ kind: "not_found", resource: "pipeline_oidc_trust", id: input.id } as ServiceError);
+		const row = rows.at(0);
+		if (!row) return err({ kind: "not_found", resource: "pipeline_oidc_trust", id: input.id });
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to read pipeline_oidc_trust ${input.id}: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -120,42 +120,43 @@ export const create_trust_policy = async (
 			const key = issue.path.join(".") || "_";
 			(errors[key] ??= []).push(issue.message);
 		}
-		return err({ kind: "validation", errors, message: "invalid trust policy input" } as ServiceError);
+		return err({ kind: "validation", errors, message: "invalid trust policy input" });
 	}
 	const data = parsed.data;
 	try {
 		const now = new Date().toISOString();
+		const insert_values = {
+			owner_id: data.owner_id,
+			provider: data.provider ?? "github",
+			github_owner: data.github_owner,
+			repo_pattern: data.repo_pattern ?? DEFAULT_REPO_PATTERN,
+			allowed_refs: data.allowed_refs ?? [],
+			allowed_environments: data.allowed_environments ?? [],
+			expected_audience: data.expected_audience,
+			allowed_actions: data.allowed_actions ?? [...DEFAULT_ALLOWED_ACTIONS],
+			session_ttl_seconds: data.session_ttl_seconds ?? DEFAULT_SESSION_TTL_SECONDS,
+			last_used_at: data.last_used_at ?? null,
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
 		const inserted = await db
 			.insert(pipeline_oidc_trust)
-			.values({
-				owner_id: data.owner_id,
-				provider: data.provider ?? "github",
-				github_owner: data.github_owner,
-				repo_pattern: data.repo_pattern ?? DEFAULT_REPO_PATTERN,
-				allowed_refs: data.allowed_refs ?? [],
-				allowed_environments: data.allowed_environments ?? [],
-				expected_audience: data.expected_audience,
-				allowed_actions: data.allowed_actions ?? [...DEFAULT_ALLOWED_ACTIONS],
-				session_ttl_seconds: data.session_ttl_seconds ?? DEFAULT_SESSION_TTL_SECONDS,
-				last_used_at: data.last_used_at ?? null,
-				created_at: now,
-				updated_at: now,
-				created_by: "api",
-				modified_by: "api",
-				protected: false,
-				deleted: false,
-			} as never)
+			.values(insert_values as never)
 			.returning();
-		const row = inserted[0];
+		const row = inserted.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "insert_pipeline_oidc_trust",
 				message: "insert returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
-		return err({ kind: "db_error", message: `failed to create pipeline_oidc_trust: ${String(e)}` } as ServiceError);
+		return err({ kind: "db_error", message: `failed to create pipeline_oidc_trust: ${String(e)}` });
 	}
 };
 
@@ -183,8 +184,8 @@ export const update_trust_policy = async (
 		provider: input.provider ?? existing.value.provider,
 		github_owner: input.github_owner ?? existing.value.github_owner,
 		repo_pattern: input.repo_pattern ?? existing.value.repo_pattern,
-		allowed_refs: input.allowed_refs ?? existing.value.allowed_refs ?? [],
-		allowed_environments: input.allowed_environments ?? existing.value.allowed_environments ?? [],
+		allowed_refs: input.allowed_refs ?? existing.value.allowed_refs,
+		allowed_environments: input.allowed_environments ?? existing.value.allowed_environments,
 		expected_audience: input.expected_audience ?? existing.value.expected_audience,
 		allowed_actions: input.allowed_actions ?? existing.value.allowed_actions,
 		session_ttl_seconds: input.session_ttl_seconds ?? existing.value.session_ttl_seconds,
@@ -198,7 +199,7 @@ export const update_trust_policy = async (
 			const key = issue.path.join(".") || "_";
 			(errors[key] ??= []).push(issue.message);
 		}
-		return err({ kind: "validation", errors, message: "invalid trust policy patch" } as ServiceError);
+		return err({ kind: "validation", errors, message: "invalid trust policy patch" });
 	}
 
 	try {
@@ -218,19 +219,19 @@ export const update_trust_policy = async (
 			.set(patch as never)
 			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id)))
 			.returning();
-		const row = updated[0];
+		const row = updated.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "update_pipeline_oidc_trust",
 				message: "update returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to update pipeline_oidc_trust ${input.id}: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -251,16 +252,17 @@ export const delete_trust_policy = async (
 	const existing = await get_trust_policy(db, input);
 	if (!existing.ok) return existing;
 	try {
+		const patch = { deleted: true, updated_at: new Date().toISOString(), modified_by: "api" };
 		await db
 			.update(pipeline_oidc_trust)
-			.set({ deleted: true, updated_at: new Date().toISOString(), modified_by: "api" } as never)
+			.set(patch as never)
 			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id)));
 		return ok(undefined);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to delete pipeline_oidc_trust ${input.id}: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -280,15 +282,16 @@ export const touch_trust_policy_last_used = async (
 ): Promise<Result<void, ServiceError>> => {
 	try {
 		const now = new Date().toISOString();
+		const patch = { last_used_at: now, updated_at: now };
 		await db
 			.update(pipeline_oidc_trust)
-			.set({ last_used_at: now, updated_at: now } as never)
+			.set(patch)
 			.where(eq(pipeline_oidc_trust.id, input.id));
 		return ok(undefined);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to touch pipeline_oidc_trust ${input.id}: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };

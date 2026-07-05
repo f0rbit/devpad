@@ -18,7 +18,7 @@ import {
 	parse_threshold_dsl,
 	type Threshold,
 } from "./analysis-domain.js";
-import type { GateError, GateEvaluator, PulseEmitter } from "./evaluator.js";
+import type { GateError, GateEvaluator, PulseEmitter, PulseEvent } from "./evaluator.js";
 
 type AnalysisTemplate = {
 	template_id: string;
@@ -41,7 +41,7 @@ const read_analysis_template = async (
 			.select()
 			.from(pipeline_analysis_template)
 			.where(eq(pipeline_analysis_template.id, template_id));
-		const row = rows[0];
+		const row = rows.at(0);
 		if (!row) return ok(null);
 		const threshold_dsl = typeof row.threshold_dsl === "string" ? row.threshold_dsl : JSON.stringify(row.threshold_dsl);
 		return ok({
@@ -64,14 +64,14 @@ const read_run_coordinates = async (
 			.select({ package_id: pipeline_run.package_id })
 			.from(pipeline_run)
 			.where(eq(pipeline_run.id, run_id));
-		const run_row = run_rows[0];
+		const run_row = run_rows.at(0);
 		if (!run_row) return err({ kind: "store_error", operation: "read_run", message: `run ${run_id} not found` });
 
 		const pkg_rows = await db
 			.select({ name: pipeline_package.name })
 			.from(pipeline_package)
 			.where(eq(pipeline_package.id, run_row.package_id));
-		const pkg_row = pkg_rows[0];
+		const pkg_row = pkg_rows.at(0);
 		if (!pkg_row)
 			return err({
 				kind: "store_error",
@@ -94,7 +94,7 @@ const read_run_coordinates = async (
 			)
 			.orderBy(desc(pipeline_stage_event.ts))
 			.limit(1);
-		const deploy_row = deploy_rows[0];
+		const deploy_row = deploy_rows.at(0);
 		if (!deploy_row)
 			return err({
 				kind: "store_error",
@@ -141,12 +141,25 @@ const fetch_snapshot = async (
 	return ok(result.value);
 };
 
+/**
+ * Fire-and-forget pulse emit for gate-verdict telemetry. The verdict
+ * returned to the caller is already fully determined by the D1 reads +
+ * threshold evaluation above -- a pulse outage must not fail an
+ * already-computed gate verdict, same fire-and-forget precedent as
+ * `events.ts`'s post-insert pulse emit. Failures are logged, not
+ * propagated.
+ */
+const emit_pulse = async (pulse: PulseEmitter, event: PulseEvent): Promise<void> => {
+	const result = await pulse.emit(event);
+	if (!result.ok) console.warn(`analysis gate pulse emit failed (${event.event}): ${result.error.message ?? result.error.kind}`);
+};
+
 const parse_thresholds_or_fail = (dsl: string): Result<Threshold[], GateError> => {
 	const parsed = parse_threshold_dsl(dsl);
 	if (!parsed.ok) {
 		return err({
 			kind: "emit_error",
-			message: `threshold_dsl parse error (line ${parsed.error.line}): ${parsed.error.message}`,
+			message: `threshold_dsl parse error (line ${String(parsed.error.line)}): ${parsed.error.message}`,
 		});
 	}
 	return ok(parsed.value);
@@ -164,10 +177,10 @@ const parse_thresholds_or_fail = (dsl: string): Result<Threshold[], GateError> =
  *   (e.g. insufficient traffic to make a verdict)
  */
 export class AnalysisGateEvaluator implements GateEvaluator {
-	private db: Database;
-	private pulse: PulseEmitter;
-	private pulse_summary: PulseSummaryProvider;
-	private now: () => number;
+	private readonly db: Database;
+	private readonly pulse: PulseEmitter;
+	private readonly pulse_summary: PulseSummaryProvider;
+	private readonly now: () => number;
 
 	constructor(deps: { db: Database; pulse: PulseEmitter; pulse_summary: PulseSummaryProvider; now?: () => number }) {
 		this.db = deps.db;
@@ -184,7 +197,7 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 		const template_result = await read_analysis_template(this.db, ctx.gate.template.template_id);
 		if (!template_result.ok) {
 			const error_reason = template_result.error.message ?? "analysis template unavailable";
-			await this.pulse.emit({
+			await emit_pulse(this.pulse, {
 				event: "gate_analysis_verdict",
 				run_id: ctx.run_id,
 				stage: ctx.to_stage,
@@ -200,7 +213,7 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 		// because of an unconfigured gate is worse than waving it through. To
 		// opt into fail-closed behaviour, point at a real template.
 		if (template_result.value === null) {
-			await this.pulse.emit({
+			await emit_pulse(this.pulse, {
 				event: "gate_analysis_no_template",
 				run_id: ctx.run_id,
 				stage: ctx.to_stage,
@@ -214,7 +227,7 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 		const thresholds_result = parse_thresholds_or_fail(template.threshold_dsl);
 		if (!thresholds_result.ok) {
 			const error_reason = thresholds_result.error.message ?? "threshold_dsl parse error";
-			await this.pulse.emit({
+			await emit_pulse(this.pulse, {
 				event: "gate_analysis_verdict",
 				run_id: ctx.run_id,
 				stage: ctx.to_stage,
@@ -228,7 +241,7 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 		const coords_result = await read_run_coordinates(this.db, ctx.run_id, ctx.from_stage);
 		if (!coords_result.ok) {
 			const error_reason = coords_result.error.message ?? "deploy not yet observable";
-			await this.pulse.emit({
+			await emit_pulse(this.pulse, {
 				event: "gate_analysis_verdict",
 				run_id: ctx.run_id,
 				stage: ctx.to_stage,
@@ -241,8 +254,8 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 		const coords = coords_result.value;
 
 		if (is_window_open(this.now(), coords.deploy_completed_at_ms, template.window_ms)) {
-			const reason = `analysis window still open (window_ms=${template.window_ms})`;
-			await this.pulse.emit({
+			const reason = `analysis window still open (window_ms=${String(template.window_ms)})`;
+			await emit_pulse(this.pulse, {
 				event: "gate_analysis_verdict",
 				run_id: ctx.run_id,
 				stage: ctx.to_stage,
@@ -257,7 +270,7 @@ export class AnalysisGateEvaluator implements GateEvaluator {
 		if (!snapshot_result.ok) return snapshot_result;
 
 		const verdict = evaluate_metrics_against_thresholds(snapshot_result.value, thresholds_result.value);
-		await this.pulse.emit({
+		await emit_pulse(this.pulse, {
 			event: "gate_analysis_verdict",
 			run_id: ctx.run_id,
 			stage: ctx.to_stage,

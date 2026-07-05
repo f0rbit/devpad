@@ -51,7 +51,7 @@ export const list_analysis_templates = async (
 		return err({
 			kind: "db_error",
 			message: `failed to list pipeline_analysis_template: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -73,14 +73,14 @@ export const get_analysis_template = async (
 			.select()
 			.from(pipeline_analysis_template)
 			.where(and(eq(pipeline_analysis_template.id, input.id), eq(pipeline_analysis_template.owner_id, input.owner_id)));
-		const row = rows[0];
-		if (!row) return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id } as ServiceError);
+		const row = rows.at(0);
+		if (!row) return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id });
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to read pipeline_analysis_template ${input.id}: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -104,7 +104,7 @@ export const create_analysis_template = async (
 ): Promise<Result<PipelineAnalysisTemplate, ServiceError>> => {
 	const parsed = parse_threshold_dsl(input.threshold_dsl);
 	if (!parsed.ok) {
-		return err({ kind: "validation_error", field: "threshold_dsl", message: parsed.error.message } as ServiceError);
+		return err({ kind: "validation_error", field: "threshold_dsl", message: parsed.error.message });
 	}
 
 	try {
@@ -115,46 +115,48 @@ export const create_analysis_template = async (
 			.from(pipeline_analysis_template)
 			.where(and(eq(pipeline_analysis_template.id, id), eq(pipeline_analysis_template.owner_id, input.owner_id)));
 		if (existing[0]) {
-			return err({
+			const conflict_error = {
 				kind: "conflict",
 				resource: "pipeline_analysis_template",
 				id,
 				message: `pipeline_analysis_template "${id}" already exists`,
-			} as ServiceError);
+			};
+			return err(conflict_error as ServiceError);
 		}
 
 		const now = new Date().toISOString();
+		const insert_values = {
+			id,
+			owner_id: input.owner_id,
+			name: input.name,
+			query_dsl: input.query_dsl ?? {},
+			threshold_dsl: input.threshold_dsl,
+			window_ms: input.window_ms ?? 600_000,
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
 		const inserted = await db
 			.insert(pipeline_analysis_template)
-			.values({
-				id,
-				owner_id: input.owner_id,
-				name: input.name,
-				query_dsl: (input.query_dsl ?? {}) as never,
-				threshold_dsl: input.threshold_dsl as never,
-				window_ms: input.window_ms ?? 600_000,
-				created_at: now,
-				updated_at: now,
-				created_by: "api",
-				modified_by: "api",
-				protected: false,
-				deleted: false,
-			} as never)
+			.values(insert_values as never)
 			.returning();
 
-		const row = inserted[0];
+		const row = inserted.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "insert_pipeline_analysis_template",
 				message: "insert returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to create pipeline_analysis_template: ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -182,7 +184,7 @@ export const update_analysis_template = async (
 	if (input.threshold_dsl !== undefined) {
 		const parsed = parse_threshold_dsl(input.threshold_dsl);
 		if (!parsed.ok) {
-			return err({ kind: "validation_error", field: "threshold_dsl", message: parsed.error.message } as ServiceError);
+			return err({ kind: "validation_error", field: "threshold_dsl", message: parsed.error.message });
 		}
 	}
 
@@ -191,8 +193,7 @@ export const update_analysis_template = async (
 			.select()
 			.from(pipeline_analysis_template)
 			.where(and(eq(pipeline_analysis_template.id, input.id), eq(pipeline_analysis_template.owner_id, input.owner_id)));
-		if (!existing[0])
-			return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id } as ServiceError);
+		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id });
 
 		const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), modified_by: "api" };
 		if ("name" in input && input.name !== undefined) patch.name = input.name;
@@ -205,19 +206,19 @@ export const update_analysis_template = async (
 			.set(patch as never)
 			.where(and(eq(pipeline_analysis_template.id, input.id), eq(pipeline_analysis_template.owner_id, input.owner_id)))
 			.returning();
-		const row = updated[0];
+		const row = updated.at(0);
 		if (!row)
 			return err({
 				kind: "store_error",
 				operation: "update_pipeline_analysis_template",
 				message: "update returned no row",
-			} as ServiceError);
+			});
 		return ok(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
 			message: `failed to update pipeline_analysis_template "${input.id}": ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };
 
@@ -240,8 +241,7 @@ export const delete_analysis_template = async (
 			.select()
 			.from(pipeline_analysis_template)
 			.where(and(eq(pipeline_analysis_template.id, input.id), eq(pipeline_analysis_template.owner_id, input.owner_id)));
-		if (!existing[0])
-			return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id } as ServiceError);
+		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id });
 
 		await db
 			.delete(pipeline_analysis_template)
@@ -251,6 +251,6 @@ export const delete_analysis_template = async (
 		return err({
 			kind: "db_error",
 			message: `failed to delete pipeline_analysis_template "${input.id}": ${String(e)}`,
-		} as ServiceError);
+		});
 	}
 };

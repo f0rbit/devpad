@@ -140,7 +140,7 @@ export const build_deployment_request = (req: DeployRequest): Result<CreateDeplo
 	if (previous_active_version_id === null) {
 		return err({
 			code: "validation",
-			message: `partial-traffic stage ${stage.name} at ${stage.traffic}% requires a previous active version`,
+			message: `partial-traffic stage ${stage.name} at ${String(stage.traffic)}% requires a previous active version`,
 		});
 	}
 

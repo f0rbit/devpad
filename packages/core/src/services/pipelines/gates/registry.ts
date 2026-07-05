@@ -33,7 +33,7 @@ export function gateEvaluatorFor(gate: Gate, deps: GateEvaluatorDeps): GateEvalu
 		}
 		default: {
 			const exhaustive_check: never = gate;
-			throw new Error(`Unknown gate type: ${exhaustive_check}`);
+			throw new Error(`Unknown gate type: ${String(exhaustive_check)}`);
 		}
 	}
 }
