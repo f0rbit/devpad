@@ -68,15 +68,16 @@ const list_files_recursive = (root: string): Result<string[], BundleWalkError> =
 	const out: string[] = [];
 	const stack: string[] = [root];
 	while (stack.length > 0) {
-		const dir = stack.pop()!;
+		const dir = stack.pop();
+		if (dir === undefined) break;
 		let entries: Dirent[] = [];
 		try {
-			entries = readdirSync(dir, { withFileTypes: true }) as Dirent[];
+			entries = readdirSync(dir, { withFileTypes: true });
 		} catch (e) {
 			return err({ kind: "io_error", path: dir, reason: e instanceof Error ? e.message : String(e) });
 		}
 		for (const entry of entries) {
-			const full = join(dir, String(entry.name));
+			const full = join(dir, entry.name);
 			if (entry.isSymbolicLink()) continue;
 			if (entry.isDirectory()) {
 				stack.push(full);
@@ -116,7 +117,7 @@ export const walk_bundle_dir = (bundle_dir: string): Result<WalkedBundle, Bundle
 	let st: ReturnType<typeof statSync>;
 	try {
 		st = statSync(bundle_dir);
-	} catch (e) {
+	} catch {
 		return err({ kind: "not_a_directory", path: bundle_dir });
 	}
 	if (!st.isDirectory()) {

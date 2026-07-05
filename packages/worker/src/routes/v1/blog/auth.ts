@@ -1,5 +1,6 @@
 import type { AppContext as BlogContext } from "@devpad/core/services/blog";
 import type { Context, Input } from "hono";
+import type { AppContext } from "../../../bindings.js";
 
 type AuthUser = {
 	id: string;
@@ -9,14 +10,14 @@ type AuthUser = {
 };
 
 type AuthenticatedHandler<P extends string, I extends Input, T> = (
-	c: Context<any, P, I>,
+	c: Context<AppContext, P, I>,
 	user: AuthUser,
 	ctx: BlogContext,
 ) => Promise<T>;
 
 export const withAuth =
 	<P extends string, I extends Input, T>(handler: AuthenticatedHandler<P, I, T>) =>
-	async (c: Context<any, P, I>): Promise<T | Response> => {
+	async (c: Context<AppContext, P, I>): Promise<T | Response> => {
 		const user = c.get("user");
 		const ctx = c.get("blogContext");
 

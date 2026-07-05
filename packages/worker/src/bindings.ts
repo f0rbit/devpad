@@ -38,8 +38,12 @@ export type AppVariables = {
 	session: SessionData | null;
 	auth_channel: AuthChannel;
 	api_key_scope: string | null;
-	blogContext: BlogAppContext;
-	mediaContext: MediaAppContext;
+	// Optional: `unifiedContextMiddleware` skips setting these when the
+	// required Cloudflare bindings (DB/BLOG_CORPUS_BUCKET/MEDIA_CORPUS_BUCKET)
+	// aren't configured — consumers must check for undefined rather than
+	// assume these are always populated.
+	blogContext?: BlogAppContext;
+	mediaContext?: MediaAppContext;
 	config: AppConfig;
 	oauth_secrets: OAuthSecrets;
 	pulse?: Pulse;

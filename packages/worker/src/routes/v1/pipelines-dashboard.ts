@@ -61,12 +61,12 @@ const try_pulse_summary = async (
 			},
 		});
 	} catch {
-		c.get("log")?.warning("dashboard_pulse_unreachable", { project_id });
+		c.get("log").warning("dashboard_pulse_unreachable", { project_id });
 		return null;
 	}
 
 	if (!response.ok) {
-		c.get("log")?.warning("dashboard_pulse_non_ok", { project_id, status: response.status });
+		c.get("log").warning("dashboard_pulse_non_ok", { project_id, status: response.status });
 		return null;
 	}
 
@@ -74,7 +74,7 @@ const try_pulse_summary = async (
 	if (!content_type.includes("application/json")) return null;
 
 	try {
-		const body = (await response.json()) as Record<string, unknown>;
+		const body = (await response.json());
 		return body;
 	} catch {
 		return null;
@@ -98,7 +98,7 @@ const try_pulse_summary = async (
 const aggregate_snapshots = (
 	snapshots: ReadonlyArray<{ snap: DashboardResponse; deploys: number; rollbacks: number }>,
 ): DashboardResponse => {
-	if (snapshots.length === 1) return snapshots[0]!.snap;
+	if (snapshots.length === 1) return snapshots[0].snap;
 	if (snapshots.length === 0) {
 		return {
 			run_counts: { total: 0, completed: 0, failed: 0, cancelled: 0, rolled_back: 0, in_flight: 0 },
@@ -179,7 +179,7 @@ app.get("/dashboard", requireAuth, async (c) => {
 	// Ownership BEFORE any DB read of pipeline_* tables.
 	const ownership = await projects.doesUserOwnProject(db, user.id, project_id);
 	if (!ownership.ok || !ownership.value) {
-		c.get("log")?.warning("dashboard_forbidden", { project_id, user_id: user.id });
+		c.get("log").warning("dashboard_forbidden", { project_id, user_id: user.id });
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
@@ -196,7 +196,7 @@ app.get("/dashboard", requireAuth, async (c) => {
 	// Resolve the project's pipeline_package(s).
 	const packages_result = await pipelines.list_packages(db, { project_id });
 	if (!packages_result.ok) {
-		c.get("log")?.error("dashboard_packages_lookup_failed", { project_id, error: packages_result.error });
+		c.get("log").error("dashboard_packages_lookup_failed", { project_id, error: packages_result.error });
 		return c.json({ error: "Failed to load pipeline packages" }, 500);
 	}
 	const packages = packages_result.value;
@@ -216,7 +216,7 @@ app.get("/dashboard", requireAuth, async (c) => {
 	for (const pkg of packages) {
 		const dash = await pipelines.get_dashboard({ db }, { package_id: pkg.id, window_ms });
 		if (!dash.ok) {
-			c.get("log")?.error("dashboard_aggregator_failed", { package_id: pkg.id, error: dash.error });
+			c.get("log").error("dashboard_aggregator_failed", { package_id: pkg.id, error: dash.error });
 			return c.json({ error: "Failed to aggregate dashboard" }, 500);
 		}
 		// Cheap re-derive of deploy/rollback weights for cross-package aggregation:

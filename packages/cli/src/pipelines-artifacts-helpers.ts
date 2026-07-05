@@ -61,8 +61,8 @@ export function validate_artifact_paths(input: ArtifactInputs): Result<void, Art
 		{ name: "grants_path", path: input.grants_path },
 	];
 
-	for (const { name, path } of paths) {
-		if (!path || path.trim() === "") {
+	for (const { name, path: field_path } of paths) {
+		if (!field_path || field_path.trim() === "") {
 			return err({
 				kind: "validation_error",
 				message: `${name} must not be empty`,
@@ -146,9 +146,9 @@ export function build_manifest(
 			});
 		}
 
-		const worker_base = has_single_file
+		const worker_base = artifacts.bundle_ref !== undefined
 			? {
-					artifact_ref: artifacts.bundle_ref!,
+					artifact_ref: artifacts.bundle_ref,
 					size_bytes: artifacts.bundle?.length ?? 0,
 					compatibility_date,
 				}
@@ -160,7 +160,10 @@ export function build_manifest(
 					// manifest, while the new `bundle_manifest_ref` is the
 					// authoritative reference.
 					artifact_ref: "",
-					bundle_manifest_ref: artifacts.bundle_manifest_ref!,
+					// `has_single_file === has_directory` was rejected above, so
+					// `bundle_manifest_ref` is always set here — the `?? ""`
+					// fallback is type-safety only, never reached at runtime.
+					bundle_manifest_ref: artifacts.bundle_manifest_ref ?? "",
 					size_bytes: artifacts.bundle_total_size_bytes ?? 0,
 					compatibility_date,
 				};
@@ -221,13 +224,13 @@ export function build_bundle_manifest_from_walk(
 	if (module_refs.length !== walked.parts.length) {
 		return err({
 			kind: "schema_error",
-			message: `module_refs length (${module_refs.length}) doesn't match walked parts (${walked.parts.length})`,
+			message: `module_refs length (${String(module_refs.length)}) doesn't match walked parts (${String(walked.parts.length)})`,
 		});
 	}
 	const modules: ModulePart[] = walked.parts.map((part, idx) => ({
 		name: part.name,
 		mime_type: part.mime_type,
-		content_artifact_ref: module_refs[idx]!,
+		content_artifact_ref: module_refs[idx],
 		size_bytes: part.size_bytes,
 	}));
 	const candidate: unknown = {
@@ -256,7 +259,7 @@ export function build_asset_manifest_from_walk(
 	if (asset_refs.length !== walked.parts.length) {
 		return err({
 			kind: "schema_error",
-			message: `asset_refs length (${asset_refs.length}) doesn't match walked parts (${walked.parts.length})`,
+			message: `asset_refs length (${String(asset_refs.length)}) doesn't match walked parts (${String(walked.parts.length)})`,
 		});
 	}
 	const assets: AssetPart[] = walked.parts.map((part, idx) => ({
@@ -264,7 +267,7 @@ export function build_asset_manifest_from_walk(
 		hash: part.hash,
 		size_bytes: part.size_bytes,
 		mime_type: part.mime_type,
-		content_artifact_ref: asset_refs[idx]!,
+		content_artifact_ref: asset_refs[idx],
 	}));
 	const candidate: unknown = { assets, config };
 	const parsed = AssetManifest.safeParse(candidate);
@@ -363,7 +366,7 @@ export function parse_template_from_json(json: string): Result<PipelineTemplate,
  */
 export async function compile_pipeline_ts(pipeline_path: string): Promise<Result<PipelineTemplate, CompileError>> {
 	const absolute_path = path.resolve(pipeline_path);
-	const cache_bust = `?t=${Date.now()}-${Math.floor(Math.random() * 1_000_000)}`;
+	const cache_bust = `?t=${String(Date.now())}-${String(Math.floor(Math.random() * 1_000_000))}`;
 	const import_url = `${absolute_path}${cache_bust}`;
 
 	let module_ns: { default?: unknown };
@@ -391,7 +394,7 @@ const normalise_module_default = (default_export: unknown): Result<PipelineTempl
 	// Case 1: `extendTemplate(...)` returns a `Result<PipelineTemplate, DslError>`.
 	if (typeof default_export === "object" && "ok" in (default_export as Record<string, unknown>)) {
 		const result = default_export as { ok: boolean; value?: unknown; error?: unknown };
-		if (result.ok === false) {
+		if (!result.ok) {
 			return err({ kind: "dsl_error", cause: result.error });
 		}
 		return validate_template_shape(result.value);

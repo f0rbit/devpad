@@ -264,17 +264,19 @@ describe("action_workflow_migrate", () => {
 	test("invalid --rollout returns an error to stderr", async () => {
 		const client = build_fake_client();
 		// `fail_with` calls `process.exit(1)`. Stub it out for this test.
-		const orig_exit = process.exit;
+		const orig_exit = process.exit.bind(process);
 		const exit_box: { code: number | null } = { code: null };
 		process.exit = ((code?: number) => {
 			exit_box.code = code ?? 0;
 			throw new Error("__exit__");
-		}) as typeof process.exit;
+		});
 		try {
-			await action_workflow_migrate(() => client as never)("my-pkg", { cwd: tmp, rollout: "bogus" }).catch((e) => {
-				if (e instanceof Error && e.message === "__exit__") return;
-				throw e;
-			});
+			await action_workflow_migrate(() => client as never)("my-pkg", { cwd: tmp, rollout: "bogus" }).catch(
+				(e: unknown) => {
+					if (e instanceof Error && e.message === "__exit__") return;
+					throw e;
+				},
+			);
 		} finally {
 			process.exit = orig_exit;
 		}

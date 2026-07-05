@@ -30,10 +30,10 @@ describe("compile_pipeline_ts — real golden pipelines", () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 		expect(result.value.rollout.type).toBe("gradual");
-		expect(result.value.gates["staging→onebox"]?.type).toBe("manual");
-		expect(result.value.gates["onebox→wave1"]?.type).toBe("manual");
-		expect(result.value.gates["wave1→wave2"]?.type).toBe("manual");
-		expect(result.value.gates["wave2→full"]?.type).toBe("manual");
+		expect(result.value.gates["staging→onebox"].type).toBe("manual");
+		expect(result.value.gates["onebox→wave1"].type).toBe("manual");
+		expect(result.value.gates["wave1→wave2"].type).toBe("manual");
+		expect(result.value.gates["wave2→full"].type).toBe("manual");
 	});
 
 	test("gradual-analysis compiles with analysis gates carrying template_id", async () => {
@@ -42,8 +42,8 @@ describe("compile_pipeline_ts — real golden pipelines", () => {
 		if (!result.ok) return;
 		expect(result.value.rollout.type).toBe("gradual");
 		const gate = result.value.gates["staging→onebox"];
-		expect(gate?.type).toBe("analysis");
-		if (gate?.type !== "analysis") return;
+		expect(gate.type).toBe("analysis");
+		if (gate.type !== "analysis") return;
 		expect(gate.template.template_id).toBe("default");
 	});
 });

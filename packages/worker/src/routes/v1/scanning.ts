@@ -16,19 +16,21 @@ const scan_status_schema = z.object({
 
 app.post("/scan", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const session = c.get("session");
 
 	if (!session?.access_token) return c.json({ error: "Authentication required" }, 401);
+	const access_token = session.access_token;
 
 	const project_id = c.req.query("project_id");
 	if (!project_id) return c.json({ error: "project_id parameter required" }, 400);
 
 	const log = c.get("log");
-	const span = log?.span("github_scan") ?? { end: () => {} };
+	const span = log.span("github_scan");
 	return stream(c, async (s) => {
 		try {
-			for await (const chunk of scanning.initiateScan(db, project_id, auth_user.id, session.access_token!)) {
+			for await (const chunk of scanning.initiateScan(db, project_id, auth_user.id, access_token)) {
 				await s.write(chunk);
 			}
 			span.end({ status: "ok", project_id });
@@ -41,7 +43,8 @@ app.post("/scan", requireAuth, async (c) => {
 
 app.get("/updates", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const project_id = c.req.query("project_id");
 
 	if (!project_id) return c.json({ error: "project_id required" }, 400);
@@ -53,7 +56,8 @@ app.get("/updates", requireAuth, async (c) => {
 
 app.post("/scan_status", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const project_id = c.req.query("project_id");
 
 	if (!project_id) return c.json({ error: "project_id parameter required" }, 400);

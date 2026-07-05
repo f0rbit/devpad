@@ -61,13 +61,11 @@ const build_fake_client = (
 						overrides.list
 							? overrides.list(filter)
 							: ok([{ id: "pipeline-package_a", name: "a", project_id: null, repo_url: null }])
-					) as Promise<ApiResult<unknown[]>>;
+					);
 				},
 				get: async (id) => {
 					calls.push({ kind: "get", args: [id] });
-					return (overrides.get ? overrides.get(id) : ok({ id, name: "a", project_id: null })) as Promise<
-						ApiResult<unknown>
-					>;
+					return (overrides.get ? overrides.get(id) : ok({ id, name: "a", project_id: null }));
 				},
 				create: async (input) => {
 					calls.push({ kind: "create", args: [input] });
@@ -75,13 +73,13 @@ const build_fake_client = (
 						overrides.create
 							? overrides.create(input)
 							: ok({ ...(input as Record<string, unknown>), id: (input as { id: string }).id })
-					) as Promise<ApiResult<unknown>>;
+					);
 				},
 				update: async (id, patch) => {
 					calls.push({ kind: "update", args: [id, patch] });
 					return (
 						overrides.update ? overrides.update(id, patch) : ok({ id, ...(patch as Record<string, unknown>) })
-					) as Promise<ApiResult<unknown>>;
+					);
 				},
 				delete: async (id) => {
 					calls.push({ kind: "delete", args: [id] });

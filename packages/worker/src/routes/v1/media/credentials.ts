@@ -1,7 +1,7 @@
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { credential, secrets, uuid } from "@devpad/core/services/media";
 import { createLogger } from "@devpad/core/utils/logger";
-import { accounts, type Platform, PlatformSchema, profiles } from "@devpad/schema/media";
+import { accounts, PlatformSchema, profiles } from "@devpad/schema/media";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -64,8 +64,6 @@ type RedditUserResponse = {
 const authenticateWithReddit = async (
 	clientId: string,
 	clientSecret: string,
-	username: string,
-	password: string,
 ): Promise<{ ok: true; accessToken: string; user: RedditUserResponse } | { ok: false; error: string }> => {
 	const auth = btoa(`${clientId}:${clientSecret}`);
 
@@ -87,7 +85,7 @@ const authenticateWithReddit = async (
 		return { ok: false, error: "Invalid Reddit credentials. Please check your Client ID and Secret." };
 	}
 
-	const tokenData = (await tokenResponse.json()) as RedditTokenResponse;
+	const tokenData: RedditTokenResponse = await tokenResponse.json();
 
 	if (!tokenData.access_token) {
 		return { ok: false, error: "Failed to get access token from Reddit" };
@@ -112,7 +110,7 @@ const setupRedditAccount = async (
 	clientSecret: string,
 	redditUsername: string,
 ): Promise<{ ok: true; accountId: string } | { ok: false; error: string }> => {
-	const authResult = await authenticateWithReddit(clientId, clientSecret, "", "");
+	const authResult = await authenticateWithReddit(clientId, clientSecret);
 
 	if (!authResult.ok) {
 		return authResult;
@@ -185,7 +183,7 @@ credentialRoutes.get("/:platform", async (c) => {
 		return notFound(c, "Profile not found");
 	}
 
-	const platform = platformResult.data as Platform;
+	const platform = platformResult.data;
 	const hasCredentials = await credential.exists(ctx, profileId, platform);
 	if (!hasCredentials) {
 		return c.json({ exists: false, isVerified: false, clientId: null });
@@ -226,7 +224,7 @@ credentialRoutes.post("/:platform", async (c) => {
 		return notFound(c, "Profile not found");
 	}
 
-	const platform = platformResult.data as Platform;
+	const platform = platformResult.data;
 
 	if (platform === "reddit") {
 		const { reddit_username } = parseResult.data;
@@ -307,7 +305,7 @@ credentialRoutes.delete("/:platform", async (c) => {
 		return notFound(c, "Profile not found");
 	}
 
-	const platform = platformResult.data as Platform;
+	const platform = platformResult.data;
 	const deleted = await credential.delete(ctx, profileId, platform);
 
 	return c.json({

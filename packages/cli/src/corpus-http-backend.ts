@@ -186,7 +186,11 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 				version: upload.value.version_set_id,
 				content_hash: upload.value.content_hash,
 			};
-			await shadow.data.put(meta.data_key, bytes).catch(() => undefined);
+			// Remote upload already succeeded; a failed local shadow write only
+			// degrades read-back consistency for this process, not correctness
+			// of the remote store, so we log and continue rather than fail.
+			const shadow_write = await shadow.data.put(meta.data_key, bytes);
+			if (!shadow_write.ok) console.warn(`corpus-http-backend: shadow data write failed for ${meta.data_key}`, shadow_write.error);
 			return shadow.metadata.put(remote_meta);
 		}
 
@@ -197,7 +201,8 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 			version: upload.value.version,
 			content_hash: upload.value.content_hash,
 		};
-		await shadow.data.put(meta.data_key, bytes).catch(() => undefined);
+		const shadow_write = await shadow.data.put(meta.data_key, bytes);
+		if (!shadow_write.ok) console.warn(`corpus-http-backend: shadow data write failed for ${meta.data_key}`, shadow_write.error);
 		return shadow.metadata.put(remote_meta);
 	};
 
@@ -270,13 +275,11 @@ const to_bytes = async (data: ReadableStream<Uint8Array> | Uint8Array): Promise<
 	const reader = data.getReader();
 	const chunks: Uint8Array[] = [];
 	let total = 0;
-	while (true) {
+	for (;;) {
 		const { done, value } = await reader.read();
 		if (done) break;
-		if (value !== undefined) {
-			chunks.push(value);
-			total += value.byteLength;
-		}
+		chunks.push(value);
+		total += value.byteLength;
 	}
 	const out = new Uint8Array(total);
 	let off = 0;
@@ -290,7 +293,7 @@ const to_bytes = async (data: ReadableStream<Uint8Array> | Uint8Array): Promise<
 const translate_http_error = (e: CorpusHttpUploadError, operation: string): CorpusError => {
 	const message =
 		e.kind === "http"
-			? `HTTP ${e.status} ${e.status_text}`
+			? `HTTP ${String(e.status)} ${e.status_text}`
 			: e.kind === "network"
 				? `network error: ${String(e.cause)}`
 				: `decode error: ${e.message}`;

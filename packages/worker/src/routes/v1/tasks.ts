@@ -1,5 +1,5 @@
 import { action, tags, tasks } from "@devpad/core/services";
-import { save_tags_request, upsert_todo } from "@devpad/schema";
+import { save_tags_request, type UpsertTag, upsert_todo } from "@devpad/schema";
 import { tag } from "@devpad/schema/database";
 import { zValidator } from "@hono/zod-validator";
 import { inArray } from "drizzle-orm";
@@ -11,7 +11,8 @@ const app = new Hono<AppContext>();
 
 app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const query = c.req.query();
 
 	if (query.id) {
@@ -41,7 +42,8 @@ app.get("/", requireAuth, async (c) => {
 
 app.get("/history/:task_id", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const task_id = c.req.param("task_id");
 
 	if (!task_id) return c.json({ error: "Missing task_id parameter" }, 400);
@@ -58,7 +60,8 @@ app.get("/history/:task_id", requireAuth, async (c) => {
 
 app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const data = c.req.valid("json");
 	const body = await c.req.json();
 
@@ -66,7 +69,7 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 		return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
 	}
 
-	let tag_list: any[] = [];
+	let tag_list: UpsertTag[] = [];
 	if (body.tags) {
 		const tag_parse = save_tags_request.safeParse(body.tags);
 		if (!tag_parse.success) return c.json({ error: tag_parse.error.message }, 400);
@@ -95,7 +98,8 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 
 app.patch("/save_tags", requireAuth, zValidator("json", save_tags_request), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const data = c.req.valid("json");
 
 	for (const t of data) {
@@ -106,7 +110,7 @@ app.patch("/save_tags", requireAuth, zValidator("json", save_tags_request), asyn
 
 	const results = await Promise.all(data.map((t) => tags.upsertTag(db, t)));
 	const failed = results.find((r) => !r.ok);
-	if (failed && !failed.ok) return c.json({ error: "Error saving tags" }, 500);
+	if (failed) return c.json({ error: "Error saving tags" }, 500);
 
 	const tag_ids = results.filter((r) => r.ok).map((r) => r.value);
 	if (tag_ids.length !== data.length) return c.json({ error: "Tag upsert returned incorrect rows" }, 500);

@@ -44,9 +44,15 @@ const worker = createUnifiedWorker({
 
 const request = (path: string, options?: RequestInit) => new Request(`http://localhost${path}`, options);
 
+const noop_ctx: ExecutionContext = {
+	waitUntil: () => {},
+	passThroughOnException: () => {},
+	props: {},
+};
+
 describe("health endpoint", () => {
 	it("returns ok status", async () => {
-		const response = await worker.fetch(request("/health"), MOCK_ENV as never, {} as never);
+		const response = await worker.fetch(request("/health"), MOCK_ENV, noop_ctx);
 		const body = await response.json();
 		expect(response.status).toBe(200);
 		expect(body).toEqual(expect.objectContaining({ status: "ok" }));
@@ -56,7 +62,7 @@ describe("health endpoint", () => {
 
 describe("routing", () => {
 	it("returns devpad message for root", async () => {
-		const response = await worker.fetch(request("/"), MOCK_ENV as never, {} as never);
+		const response = await worker.fetch(request("/"), MOCK_ENV, noop_ctx);
 		const body = (await response.json()) as any;
 		expect(response.status).toBe(200);
 		expect(body).toHaveProperty("message", "devpad — Cloudflare Worker");
@@ -65,7 +71,7 @@ describe("routing", () => {
 
 	it("returns 501 for blog subdomain", async () => {
 		const req = new Request("http://blog.devpad.tools/", { headers: { host: "blog.devpad.tools" } });
-		const response = await worker.fetch(req, MOCK_ENV as never, {} as never);
+		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
 		const body = (await response.json()) as any;
 		expect(body.message).toContain("Phase 2");
@@ -73,7 +79,7 @@ describe("routing", () => {
 
 	it("returns 501 for media subdomain", async () => {
 		const req = new Request("http://media.devpad.tools/", { headers: { host: "media.devpad.tools" } });
-		const response = await worker.fetch(req, MOCK_ENV as never, {} as never);
+		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
 		const body = (await response.json()) as any;
 		expect(body.message).toContain("Phase 2");
@@ -81,7 +87,7 @@ describe("routing", () => {
 
 	it("routes blog.staging subdomain to blog handler", async () => {
 		const req = new Request("http://blog.staging.devpad.tools/", { headers: { host: "blog.staging.devpad.tools" } });
-		const response = await worker.fetch(req, MOCK_ENV as never, {} as never);
+		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
 		const body = (await response.json()) as any;
 		expect(body.message).toContain("blog");
@@ -89,7 +95,7 @@ describe("routing", () => {
 
 	it("routes media.staging subdomain to media handler", async () => {
 		const req = new Request("http://media.staging.devpad.tools/", { headers: { host: "media.staging.devpad.tools" } });
-		const response = await worker.fetch(req, MOCK_ENV as never, {} as never);
+		const response = await worker.fetch(req, MOCK_ENV, noop_ctx);
 		expect(response.status).toBe(501);
 		const body = (await response.json()) as any;
 		expect(body.message).toContain("media");

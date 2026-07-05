@@ -100,7 +100,7 @@ app.get("/callback/github", async (c) => {
 	if (!callback_result.ok) return c.json({ error: "OAuth callback failed", detail: callback_result.error }, 500);
 
 	const { sessionId, user: callback_user } = callback_result.value;
-	c.get("log")?.info("login_success", { user_id: callback_user.id, provider: "github" });
+	c.get("log").info("login_success", { user_id: callback_user.id, provider: "github" });
 	console.log(`[auth/callback] session created: ${sessionId.substring(0, 8)}...`);
 
 	const cookie_config = cookieConfig(config.environment);
@@ -122,10 +122,9 @@ app.get("/callback/github", async (c) => {
 		return c.redirect(`${redirect_url}/project?auth_session=${sessionId}`);
 	}
 
-	const return_url = return_to ? new URL(return_to) : null;
-	if (return_url && isAllowedRedirectUrl(return_to!) && return_url.pathname !== "/") {
+	if (return_to && isAllowedRedirectUrl(return_to) && new URL(return_to).pathname !== "/") {
 		console.log(`[auth/callback] redirecting to: ${return_to}`);
-		return c.redirect(return_to!);
+		return c.redirect(return_to);
 	}
 
 	console.log(`[auth/callback] redirecting to: ${frontend_url}/project`);
@@ -138,7 +137,12 @@ app.get("/logout", async (c) => {
 	const session = c.get("session");
 
 	if (session) {
-		await invalidateSession(db, session.id);
+		// The client-side cookie is cleared unconditionally below regardless
+		// of whether the server-side row delete succeeds — a failed
+		// invalidation only leaves a stale session row to expire naturally,
+		// it must not block the user from logging out.
+		const invalidated = await invalidateSession(db, session.id);
+		if (!invalidated.ok) c.get("log").warning("session_invalidate_failed", { user_id: session.id, error: invalidated.error });
 		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 
@@ -167,7 +171,7 @@ app.get("/session", async (c) => {
 	const full_user_result = await users.getUserById(db, user.id);
 	const full_user = full_user_result.ok ? full_user_result.value : null;
 
-	c.get("log")?.info("session_check_ok", { user_id: user.id, scope: api_key_scope });
+	c.get("log").info("session_check_ok", { user_id: user.id, scope: api_key_scope });
 
 	return c.json({
 		authenticated: true,

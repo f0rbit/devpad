@@ -38,7 +38,7 @@ import { extname, join, relative, sep } from "node:path";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import * as blake3 from "blake3-wasm";
 import ignore_factory from "ignore";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+ 
 // @ts-expect-error — `mime` v3 ships JS-only; we adapt to its
 // `Mime.getType(path) → string | null` runtime contract below.
 import mime from "mime";
@@ -101,7 +101,7 @@ export const compute_asset_hash = (bytes: Uint8Array, extension_without_dot: str
  */
 export const mime_for_asset = (filepath: string): string => {
 	const type = (mime as unknown as { getType: (p: string) => string | null }).getType(filepath);
-	return type === null || type === undefined ? "application/octet-stream" : type;
+	return type === null ? "application/octet-stream" : type;
 };
 
 const to_posix_relative = (root: string, full: string): string => {
@@ -114,15 +114,16 @@ const list_files_recursive = (root: string): Result<string[], AssetWalkError> =>
 	const out: string[] = [];
 	const stack: string[] = [root];
 	while (stack.length > 0) {
-		const dir = stack.pop()!;
+		const dir = stack.pop();
+		if (dir === undefined) break;
 		let entries: Dirent[] = [];
 		try {
-			entries = readdirSync(dir, { withFileTypes: true }) as Dirent[];
+			entries = readdirSync(dir, { withFileTypes: true });
 		} catch (e) {
 			return err({ kind: "io_error", path: dir, reason: e instanceof Error ? e.message : String(e) });
 		}
 		for (const entry of entries) {
-			const full = join(dir, String(entry.name));
+			const full = join(dir, entry.name);
 			if (entry.isSymbolicLink()) continue;
 			if (entry.isDirectory()) {
 				stack.push(full);
@@ -164,7 +165,7 @@ export const walk_assets_dir = (
 	let st: ReturnType<typeof statSync>;
 	try {
 		st = statSync(assets_dir);
-	} catch (e) {
+	} catch {
 		return err({ kind: "not_a_directory", path: assets_dir });
 	}
 	if (!st.isDirectory()) {

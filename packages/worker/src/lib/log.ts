@@ -53,7 +53,7 @@ export const noop_log: PulseLog = {
 };
 
 const emit_level = (pulse: Pulse, level: LogLevel) => (msg: string, attrs?: Record<string, unknown>) =>
-	pulse.log(level as never, msg, attrs);
+	{ pulse.log(level as never, msg, attrs); };
 
 const emit_error =
 	(pulse: Pulse, level: "error" | "critical") =>
@@ -75,7 +75,7 @@ export const make_log = (pulse: Pulse): PulseLog => ({
 	error: emit_error(pulse, "error"),
 	critical: emit_error(pulse, "critical"),
 	span: (name: string) => startSpan({ pulse, name }),
-	trace: (name: string, attrs?: Record<string, unknown>) => startSpan({ pulse, name }).end(attrs),
+	trace: (name: string, attrs?: Record<string, unknown>) => { startSpan({ pulse, name }).end(attrs); },
 	flush: async () => {
 		await pulse.flush();
 	},

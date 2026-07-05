@@ -217,7 +217,7 @@ describe("scaffold_package — typecheck", () => {
 
 		const proc = spawnSync("bunx", ["tsc", "-p", "tsconfig.json"], { cwd: target, encoding: "utf8" });
 		if (proc.status !== 0) {
-			throw new Error(`tsc failed:\n${proc.stdout ?? ""}\n${proc.stderr ?? ""}`);
+			throw new Error(`tsc failed:\n${proc.stdout}\n${proc.stderr}`);
 		}
 
 		await rm(path.dirname(target), { recursive: true, force: true });

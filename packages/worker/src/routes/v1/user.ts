@@ -9,7 +9,8 @@ const app = new Hono<AppContext>();
 
 app.patch("/preferences", requireAuth, zValidator("json", update_user), async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const data = c.req.valid("json");
 
 	if (auth_user.id !== data.id) return c.json({ error: "Forbidden" }, 403);
@@ -35,7 +36,8 @@ app.patch("/preferences", requireAuth, zValidator("json", update_user), async (c
 
 app.get("/history", requireAuth, async (c) => {
 	const db = c.get("db");
-	const auth_user = c.get("user")!;
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 
 	const result = await action.getUserHistory(db, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -43,7 +45,8 @@ app.get("/history", requireAuth, async (c) => {
 });
 
 app.get("/me", requireAuth, async (c) => {
-	const user = c.get("user")!;
+	const user = c.get("user");
+	if (!user) return c.json({ error: "Unauthorized" }, 401);
 	return c.json({
 		id: user.id,
 		name: user.name,

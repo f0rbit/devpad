@@ -54,7 +54,7 @@ const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
 		req.on("data", (c) => chunks.push(c));
-		req.on("end", () => resolve(Buffer.concat(chunks)));
+		req.on("end", () => { resolve(Buffer.concat(chunks)); });
 		req.on("error", reject);
 	});
 
@@ -66,7 +66,7 @@ const send_json = (res: http.ServerResponse, status: number, body: unknown): voi
 
 const start_test_server = async (): Promise<ServerHandle> => {
 	const backend = create_memory_backend();
-	const server = http.createServer(async (req, res) => {
+	const handle_request = async (req: http.IncomingMessage, res: http.ServerResponse): Promise<void> => {
 		try {
 			const url = req.url ?? "/";
 			const auth = req.headers.authorization ?? "";
@@ -79,7 +79,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				return;
 			}
 			if (url === "/artifacts/blob" && req.method === "POST") {
-				const store_id = (req.headers["x-store-id"] as string) ?? "";
+				const store_id_header = req.headers["x-store-id"];
+				const store_id = typeof store_id_header === "string" ? store_id_header : "";
 				if (!BLOB_STORE_ID_PATTERN.test(store_id)) {
 					send_json(res, 400, { ok: false, error: { code: "invalid_store_id" } });
 					return;
@@ -117,17 +118,18 @@ const start_test_server = async (): Promise<ServerHandle> => {
 			}
 			if (url === "/artifacts/version-set" && req.method === "POST") {
 				const buf = await read_body(req);
-				let manifest: VersionSetManifest | null = null;
+				let parsed_body: unknown = null;
 				try {
-					manifest = JSON.parse(buf.toString("utf8")) as VersionSetManifest;
+					parsed_body = JSON.parse(buf.toString("utf8"));
 				} catch {
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
 				}
-				if (manifest === null || typeof manifest !== "object") {
+				if (parsed_body === null || typeof parsed_body !== "object") {
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
 				}
+				const manifest = parsed_body as VersionSetManifest;
 				const store = version_set_store(backend);
 				const put = await store.put(manifest);
 				if (!put.ok) {
@@ -144,15 +146,18 @@ const start_test_server = async (): Promise<ServerHandle> => {
 		} catch (e) {
 			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 		}
+	};
+	const server = http.createServer((req, res) => {
+		void handle_request(req, res);
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
 	if (address === null || typeof address === "string") throw new Error("listen failed");
-	return { server, url: `http://127.0.0.1:${address.port}`, backend };
+	return { server, url: `http://127.0.0.1:${String(address.port)}`, backend };
 };
 
 const stop_test_server = async (h: ServerHandle): Promise<void> =>
-	new Promise((resolve) => h.server.close(() => resolve()));
+	new Promise((resolve) => h.server.close(() => { resolve(); }));
 
 const valid_manifest = (overrides: Partial<VersionSetManifest> = {}): VersionSetManifest => ({
 	package: "test-pkg",
@@ -190,7 +195,17 @@ describe("selectCorpusBackend", () => {
 	});
 
 	test("explicit cloudflare-http mode without env throws", async () => {
-		await expect(selectCorpusBackend({ mode: "cloudflare-http" })).rejects.toThrow();
+		// Not `.rejects.toThrow()` — bun-types declares `.rejects`/`.toThrow()` as
+		// synchronous (`void`), which trips `await-thenable` +
+		// `no-confusing-void-expression` even though the chain is genuinely
+		// async at runtime. A plain try/catch stays honest to the types.
+		let threw = false;
+		try {
+			await selectCorpusBackend({ mode: "cloudflare-http" });
+		} catch {
+			threw = true;
+		}
+		expect(threw).toBe(true);
 	});
 });
 
