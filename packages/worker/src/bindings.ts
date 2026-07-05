@@ -47,7 +47,10 @@ export type AppVariables = {
 	config: AppConfig;
 	oauth_secrets: OAuthSecrets;
 	pulse?: Pulse;
-	log: PulseLog;
+	// Optional like `pulse` above: the same middleware wires both up, and test
+	// harnesses that don't install it must see `undefined`, not a lying
+	// non-optional type -- callers use `c.get("log")?.warning(...)` etc.
+	log?: PulseLog;
 };
 
 export type AppContext = {

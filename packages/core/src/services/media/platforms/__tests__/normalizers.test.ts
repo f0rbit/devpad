@@ -26,7 +26,7 @@ describe("normalizeGitHub", () => {
 					additions: 10,
 					deletions: 3,
 					files_changed: 2,
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 			prs: [],
@@ -67,7 +67,7 @@ describe("normalizeGitHub", () => {
 					committer_date: "2024-06-15T10:00:00.000Z",
 					url: "https://github.com/user/repo/commit/abc1234",
 					branch: "main",
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 			prs: [],
@@ -100,7 +100,7 @@ describe("normalizeGitHub", () => {
 					additions: 100,
 					deletions: 20,
 					changed_files: 5,
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 		};
@@ -147,7 +147,7 @@ describe("normalizeGitHub", () => {
 					commit_shas: [],
 					merge_commit_sha: null,
 					author_login: "dev",
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 		};
@@ -172,7 +172,7 @@ describe("normalizeGitHub", () => {
 					commit_shas: [],
 					merge_commit_sha: null,
 					author_login: "dev",
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 		};
@@ -193,7 +193,7 @@ describe("normalizeGitHub", () => {
 					committer_date: "2024-06-15T10:00:00.000Z",
 					url: "https://github.com/user/repo/commit/abc1234",
 					branch: "main",
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 			prs: [
@@ -213,7 +213,7 @@ describe("normalizeGitHub", () => {
 					commit_shas: [],
 					merge_commit_sha: null,
 					author_login: "dev",
-					_repo: "user/repo",
+					repo_name: "user/repo",
 				},
 			],
 		};

@@ -58,12 +58,12 @@ const forward_to_pulse = async (c: Context<AppContext>, opts: ForwardOpts): Prom
 	try {
 		response = await fetch(url.toString(), fetch_options);
 	} catch {
-		c.get("log").warning("pulse_proxy_unreachable", { pulse_path: opts.pulse_path });
+		c.get("log")?.warning("pulse_proxy_unreachable", { pulse_path: opts.pulse_path });
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
 	if (response.status === 502 || response.status === 503) {
-		c.get("log").warning("pulse_proxy_unreachable", { pulse_path: opts.pulse_path });
+		c.get("log")?.warning("pulse_proxy_unreachable", { pulse_path: opts.pulse_path });
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
@@ -88,7 +88,7 @@ const guard_project_owner = async (c: Context<AppContext>, project_id: string): 
 
 	const ownership = await projects.doesUserOwnProject(db, user.id, project_id);
 	if (!ownership.ok || !ownership.value) {
-		c.get("log").warning("pulse_proxy_forbidden", { project_id, user_id: user.id });
+		c.get("log")?.warning("pulse_proxy_forbidden", { project_id, user_id: user.id });
 		return c.json({ error: "Forbidden" }, 403);
 	}
 	return null;

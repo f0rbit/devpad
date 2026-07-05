@@ -68,7 +68,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 
-	c.get("log").warning("auth_failed", { path: c.req.path, has_session: Boolean(c.req.header("cookie")) });
+	c.get("log")?.warning("auth_failed", { path: c.req.path, has_session: Boolean(c.req.header("cookie")) });
 
 	setNullAuth(c);
 	return next();
