@@ -105,95 +105,98 @@ const start_test_server = async (): Promise<ServerHandle> => {
 	const puts_by_store = new Map<string, number>();
 	const server = http.createServer((req, res) => {
 		void (async () => {
-		try {
-			const url = req.url ?? "/";
-			const auth = req.headers.authorization ?? "";
-			if (!url.startsWith("/artifacts/")) {
-				send_json(res, 404, { ok: false, error: { code: "not_found" } });
-				return;
-			}
-			if (!auth.startsWith("Bearer ") || auth.slice("Bearer ".length).trim() !== VALID_TOKEN) {
-				send_json(res, 401, { ok: false, error: { code: "unauthorized" } });
-				return;
-			}
-			if (url === "/artifacts/blob" && req.method === "POST") {
-				const store_id = (req.headers["x-store-id"] as string | undefined) ?? "";
-				const buf = await read_body(req);
-				const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-				const content_hash = await sha256_hex(bytes);
-				puts_by_store.set(store_id, (puts_by_store.get(store_id) ?? 0) + 1);
-				const version = generate_version();
-				const data_key = `${store_id}/${content_hash}`;
-				const existing = await backend.metadata.find_by_hash(store_id, content_hash);
-				if (existing === null) {
-					const put_data = await backend.data.put(data_key, bytes);
+			try {
+				const url = req.url ?? "/";
+				const auth = req.headers.authorization ?? "";
+				if (!url.startsWith("/artifacts/")) {
+					send_json(res, 404, { ok: false, error: { code: "not_found" } });
+					return;
+				}
+				if (!auth.startsWith("Bearer ") || auth.slice("Bearer ".length).trim() !== VALID_TOKEN) {
+					send_json(res, 401, { ok: false, error: { code: "unauthorized" } });
+					return;
+				}
+				if (url === "/artifacts/blob" && req.method === "POST") {
+					const store_id = (req.headers["x-store-id"] as string | undefined) ?? "";
+					const buf = await read_body(req);
+					const bytes = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+					const content_hash = await sha256_hex(bytes);
+					puts_by_store.set(store_id, (puts_by_store.get(store_id) ?? 0) + 1);
+					const version = generate_version();
+					const data_key = `${store_id}/${content_hash}`;
+					const existing = await backend.metadata.find_by_hash(store_id, content_hash);
+					if (existing === null) {
+						const put_data = await backend.data.put(data_key, bytes);
+						if (!put_data.ok) {
+							send_json(res, 500, { ok: false, error: { code: "internal", message: put_data.error.kind } });
+							return;
+						}
+						const put_meta = await backend.metadata.put({
+							store_id,
+							version,
+							parents: [],
+							created_at: new Date(),
+							content_hash,
+							content_type: "application/octet-stream",
+							size_bytes: bytes.byteLength,
+							data_key,
+						});
+						if (!put_meta.ok) {
+							send_json(res, 500, { ok: false, error: { code: "internal", message: put_meta.error.kind } });
+							return;
+						}
+					}
+					send_json(res, 200, { ok: true, value: { version, content_hash, store_id, ref: data_key } });
+					return;
+				}
+				if (url === "/artifacts/version-set" && req.method === "POST") {
+					const buf = await read_body(req);
+					let parsed: unknown;
+					try {
+						parsed = JSON.parse(buf.toString("utf8"));
+					} catch {
+						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
+						return;
+					}
+					if (parsed === null || typeof parsed !== "object") {
+						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
+						return;
+					}
+					const manifest = parsed as VersionSetManifest;
+					const text = buf.toString("utf8");
+					const content_hash = await sha256_hex(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+					const version = generate_version();
+					const data_key = `version-sets/${manifest.package}/${content_hash}`;
+					const put_data = await backend.data.put(data_key, new TextEncoder().encode(text));
 					if (!put_data.ok) {
 						send_json(res, 500, { ok: false, error: { code: "internal", message: put_data.error.kind } });
 						return;
 					}
 					const put_meta = await backend.metadata.put({
-						store_id,
+						store_id: "version-sets",
 						version,
 						parents: [],
 						created_at: new Date(),
 						content_hash,
-						content_type: "application/octet-stream",
-						size_bytes: bytes.byteLength,
+						content_type: "application/json",
+						size_bytes: buf.byteLength,
 						data_key,
+						tags: [`pkg:${manifest.package}`],
 					});
 					if (!put_meta.ok) {
 						send_json(res, 500, { ok: false, error: { code: "internal", message: put_meta.error.kind } });
 						return;
 					}
+					send_json(res, 200, {
+						ok: true,
+						value: { version_set_id: version, content_hash, package: manifest.package },
+					});
+					return;
 				}
-				send_json(res, 200, { ok: true, value: { version, content_hash, store_id, ref: data_key } });
-				return;
+				send_json(res, 404, { ok: false, error: { code: "not_found" } });
+			} catch (e) {
+				send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 			}
-			if (url === "/artifacts/version-set" && req.method === "POST") {
-				const buf = await read_body(req);
-				let parsed: unknown;
-				try {
-					parsed = JSON.parse(buf.toString("utf8"));
-				} catch {
-					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
-					return;
-				}
-				if (parsed === null || typeof parsed !== "object") {
-					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
-					return;
-				}
-				const manifest = parsed as VersionSetManifest;
-				const text = buf.toString("utf8");
-				const content_hash = await sha256_hex(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
-				const version = generate_version();
-				const data_key = `version-sets/${manifest.package}/${content_hash}`;
-				const put_data = await backend.data.put(data_key, new TextEncoder().encode(text));
-				if (!put_data.ok) {
-					send_json(res, 500, { ok: false, error: { code: "internal", message: put_data.error.kind } });
-					return;
-				}
-				const put_meta = await backend.metadata.put({
-					store_id: "version-sets",
-					version,
-					parents: [],
-					created_at: new Date(),
-					content_hash,
-					content_type: "application/json",
-					size_bytes: buf.byteLength,
-					data_key,
-					tags: [`pkg:${manifest.package}`],
-				});
-				if (!put_meta.ok) {
-					send_json(res, 500, { ok: false, error: { code: "internal", message: put_meta.error.kind } });
-					return;
-				}
-				send_json(res, 200, { ok: true, value: { version_set_id: version, content_hash, package: manifest.package } });
-				return;
-			}
-			send_json(res, 404, { ok: false, error: { code: "not_found" } });
-		} catch (e) {
-			send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
-		}
 		})();
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));

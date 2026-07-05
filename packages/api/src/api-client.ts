@@ -82,7 +82,13 @@ type GithubBranch = { name: string; commit: { sha: string; message?: string } };
 // shape from `@devpad/core`'s connection service (not the raw octokit
 // response `GithubRepo` above models) — field names genuinely differ
 // (`is_private` vs `private`, no `default_branch`).
-type MediaGithubRepo = { full_name: string; name: string; owner: string; is_private: boolean; pushed_at: string | null };
+type MediaGithubRepo = {
+	full_name: string;
+	name: string;
+	owner: string;
+	is_private: boolean;
+	pushed_at: string | null;
+};
 
 /**
  * Authentication mode for the API client
@@ -421,7 +427,8 @@ export class ApiClient {
 			target_time?: string | null;
 			target_version?: string | null;
 			finished_at?: string | null;
-		}): Promise<ApiResult<Milestone>> => wrap(() => this.clients.milestones.post<Milestone>("/milestones", { body: data })),
+		}): Promise<ApiResult<Milestone>> =>
+			wrap(() => this.clients.milestones.post<Milestone>("/milestones", { body: data })),
 
 		/**
 		 * Update milestone
@@ -485,7 +492,8 @@ export class ApiClient {
 		/**
 		 * Get goal by ID
 		 */
-		find: (id: string): Promise<ApiResult<Goal | null>> => wrap(() => this.clients.goals.get<Goal | null>(`/goals/${id}`)),
+		find: (id: string): Promise<ApiResult<Goal | null>> =>
+			wrap(() => this.clients.goals.get<Goal | null>(`/goals/${id}`)),
 
 		/**
 		 * Create new goal
@@ -755,8 +763,7 @@ export class ApiClient {
 					}),
 				),
 
-			delete: (id: string): Promise<ApiResult<void>> =>
-				wrap(() => this.clients.blog.delete(`/blog/tokens/${id}`)),
+			delete: (id: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete(`/blog/tokens/${id}`)),
 		},
 	};
 
@@ -832,7 +839,8 @@ export class ApiClient {
 			refresh: (account_id: string): Promise<ApiResult<unknown>> =>
 				wrap(() => this.clients.media.post<unknown>(`/connections/${account_id}/refresh`)),
 
-			refreshAll: (): Promise<ApiResult<unknown>> => wrap(() => this.clients.media.post<unknown>("/connections/refresh-all")),
+			refreshAll: (): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.media.post<unknown>("/connections/refresh-all")),
 
 			updateStatus: (account_id: string, is_active: boolean): Promise<ApiResult<Account>> =>
 				wrap(() =>
@@ -855,9 +863,7 @@ export class ApiClient {
 
 			repos: (account_id: string): Promise<ApiResult<MediaGithubRepo[]>> =>
 				wrap(async () => {
-					const res = await this.clients.media.get<{ repos: MediaGithubRepo[] }>(
-						`/connections/${account_id}/repos`,
-					);
+					const res = await this.clients.media.get<{ repos: MediaGithubRepo[] }>(`/connections/${account_id}/repos`);
 					return res.repos;
 				}),
 
@@ -948,14 +954,16 @@ export class ApiClient {
 		/**
 		 * Get user activity history
 		 */
-		history: (): Promise<ApiResult<HistoryAction[]>> => wrap(() => this.clients.auth.get<HistoryAction[]>("/user/history")),
+		history: (): Promise<ApiResult<HistoryAction[]>> =>
+			wrap(() => this.clients.auth.get<HistoryAction[]>("/user/history")),
 
 		/**
 		 * Update user preferences
 		 */
-		preferences: (
-			data: { id: string; task_view: string },
-		): Promise<ApiResult<{ id: string; name: string | null; task_view: string }>> =>
+		preferences: (data: {
+			id: string;
+			task_view: string;
+		}): Promise<ApiResult<{ id: string; name: string | null; task_view: string }>> =>
 			wrap(() =>
 				this.clients.auth.patch<{ id: string; name: string | null; task_view: string }>("/user/preferences", {
 					body: data,
@@ -1012,7 +1020,9 @@ export class ApiClient {
 				if (input.search) query.search = input.search;
 				if (input.limit) query.limit = String(input.limit);
 				if (input.cursor) query.cursor = input.cursor;
-				return this.clients.pulse.get<unknown>("/events/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/events/:project_id".replace(":project_id", input.project_id), {
+					query,
+				});
 			}),
 
 		/**
@@ -1032,7 +1042,9 @@ export class ApiClient {
 					query.to = String(input.range.to);
 				}
 				if (input.group_by_fingerprint) query.group_by_fingerprint = "true";
-				return this.clients.pulse.get<unknown>("/errors/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/errors/:project_id".replace(":project_id", input.project_id), {
+					query,
+				});
 			}),
 
 		/**
@@ -1076,7 +1088,9 @@ export class ApiClient {
 				}
 				if (input.route) query.route = input.route;
 				if (input.percentiles && input.percentiles.length > 0) query.percentiles = input.percentiles.join(",");
-				return this.clients.pulse.get<unknown>("/latency/:project_id".replace(":project_id", input.project_id), { query });
+				return this.clients.pulse.get<unknown>("/latency/:project_id".replace(":project_id", input.project_id), {
+					query,
+				});
 			}),
 
 		/**
@@ -1114,15 +1128,22 @@ export class ApiClient {
 			/**
 			 * Get a subscription by ID
 			 */
-			get: (id: string): Promise<ApiResult<unknown>> => wrap(() => this.clients.pulse.get<unknown>(`/admin/subs/${id}`)),
+			get: (id: string): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.pulse.get<unknown>(`/admin/subs/${id}`)),
 
 			/**
 			 * Update a subscription
 			 */
 			update: (
 				id: string,
-				patch: Partial<{ name: string; filter: Record<string, unknown>; channel: Record<string, unknown>; cooldown_seconds: number }>,
-			): Promise<ApiResult<unknown>> => wrap(() => this.clients.pulse.patch<unknown>(`/admin/subs/${id}`, { body: patch })),
+				patch: Partial<{
+					name: string;
+					filter: Record<string, unknown>;
+					channel: Record<string, unknown>;
+					cooldown_seconds: number;
+				}>,
+			): Promise<ApiResult<unknown>> =>
+				wrap(() => this.clients.pulse.patch<unknown>(`/admin/subs/${id}`, { body: patch })),
 
 			/**
 			 * Delete a subscription

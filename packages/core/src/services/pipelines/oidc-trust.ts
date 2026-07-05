@@ -283,10 +283,7 @@ export const touch_trust_policy_last_used = async (
 	try {
 		const now = new Date().toISOString();
 		const patch = { last_used_at: now, updated_at: now };
-		await db
-			.update(pipeline_oidc_trust)
-			.set(patch)
-			.where(eq(pipeline_oidc_trust.id, input.id));
+		await db.update(pipeline_oidc_trust).set(patch).where(eq(pipeline_oidc_trust.id, input.id));
 		return ok(undefined);
 	} catch (e) {
 		return err({

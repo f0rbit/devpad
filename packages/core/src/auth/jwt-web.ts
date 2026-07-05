@@ -68,7 +68,9 @@ export async function generateJWT(
 	if (key instanceof Error) return err({ kind: "encoding_error", message: key.message });
 
 	const encoder = new TextEncoder();
-	const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(signing_input)).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
+	const signature = await crypto.subtle
+		.sign("HMAC", key, encoder.encode(signing_input))
+		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 
 	if (signature instanceof Error) return err({ kind: "encoding_error", message: signature.message });
 

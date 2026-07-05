@@ -142,7 +142,8 @@ app.get("/logout", async (c) => {
 		// invalidation only leaves a stale session row to expire naturally,
 		// it must not block the user from logging out.
 		const invalidated = await invalidateSession(db, session.id);
-		if (!invalidated.ok) c.get("log")?.warning("session_invalidate_failed", { user_id: session.id, error: invalidated.error });
+		if (!invalidated.ok)
+			c.get("log")?.warning("session_invalidate_failed", { user_id: session.id, error: invalidated.error });
 		c.header("Set-Cookie", createBlankSessionCookie(cookieConfig(config.environment)));
 	}
 

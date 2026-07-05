@@ -115,9 +115,14 @@ const run_command = async (
 ): Promise<Result<void, { message: string; code: number | null }>> => {
 	return new Promise((resolve) => {
 		const proc = spawn(command, args, { cwd, stdio: "ignore" });
-		proc.on("error", (e) => { resolve(err({ message: format_error(e), code: null })); });
+		proc.on("error", (e) => {
+			resolve(err({ message: format_error(e), code: null }));
+		});
 		proc.on("close", (code) => {
-			if (code === 0) { resolve(ok(undefined)); return; }
+			if (code === 0) {
+				resolve(ok(undefined));
+				return;
+			}
 			resolve(err({ message: `${command} exited with code ${String(code)}`, code }));
 		});
 	});

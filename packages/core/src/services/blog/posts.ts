@@ -433,7 +433,9 @@ export const createPostService = ({ db, corpus }: Deps) => {
 		const tagsMap = await fetchTagsForPosts(db, postIds);
 		const projectsMap = await fetchProjectIdsForPosts(db, postIds);
 
-		const rowsWithVersion = postRows.flatMap((row) => (row.corpus_version ? [{ row, version: row.corpus_version }] : []));
+		const rowsWithVersion = postRows.flatMap((row) =>
+			row.corpus_version ? [{ row, version: row.corpus_version }] : [],
+		);
 
 		const contentResults = await Promise.all(
 			rowsWithVersion.map(async ({ row, version }) => {

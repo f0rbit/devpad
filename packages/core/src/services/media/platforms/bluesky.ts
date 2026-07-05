@@ -49,9 +49,7 @@ export class BlueskyProvider implements Provider<BlueskyRaw> {
 			)
 			.flat_map((json) => {
 				const result = BlueskyRawSchema.safeParse({ ...json, fetched_at: new Date().toISOString() });
-				return result.success
-					? ok(result.data)
-					: err({ kind: "parse_error", message: result.error.message });
+				return result.success ? ok(result.data) : err({ kind: "parse_error", message: result.error.message });
 			})
 			.result();
 	}

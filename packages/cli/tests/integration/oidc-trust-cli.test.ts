@@ -266,10 +266,10 @@ describe("action_workflow_migrate", () => {
 		// `fail_with` calls `process.exit(1)`. Stub it out for this test.
 		const orig_exit = process.exit.bind(process);
 		const exit_box: { code: number | null } = { code: null };
-		process.exit = ((code?: number) => {
+		process.exit = (code?: number) => {
 			exit_box.code = code ?? 0;
 			throw new Error("__exit__");
-		});
+		};
 		try {
 			await action_workflow_migrate(() => client as never)("my-pkg", { cwd: tmp, rollout: "bogus" }).catch(
 				(e: unknown) => {

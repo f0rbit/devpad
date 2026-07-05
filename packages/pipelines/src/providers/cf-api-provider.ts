@@ -343,11 +343,7 @@ const upload_single_file = async (
 
 	const form = new FormData();
 	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-	form.append(
-		main_module,
-		new Blob([input.bundle], { type: "application/javascript+module" }),
-		main_module,
-	);
+	form.append(main_module, new Blob([input.bundle], { type: "application/javascript+module" }), main_module);
 
 	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
 	if (!result.ok) return result;

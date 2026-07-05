@@ -190,7 +190,8 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 			// degrades read-back consistency for this process, not correctness
 			// of the remote store, so we log and continue rather than fail.
 			const shadow_write = await shadow.data.put(meta.data_key, bytes);
-			if (!shadow_write.ok) console.warn(`corpus-http-backend: shadow data write failed for ${meta.data_key}`, shadow_write.error);
+			if (!shadow_write.ok)
+				console.warn(`corpus-http-backend: shadow data write failed for ${meta.data_key}`, shadow_write.error);
 			return shadow.metadata.put(remote_meta);
 		}
 
@@ -202,7 +203,8 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 			content_hash: upload.value.content_hash,
 		};
 		const shadow_write = await shadow.data.put(meta.data_key, bytes);
-		if (!shadow_write.ok) console.warn(`corpus-http-backend: shadow data write failed for ${meta.data_key}`, shadow_write.error);
+		if (!shadow_write.ok)
+			console.warn(`corpus-http-backend: shadow data write failed for ${meta.data_key}`, shadow_write.error);
 		return shadow.metadata.put(remote_meta);
 	};
 

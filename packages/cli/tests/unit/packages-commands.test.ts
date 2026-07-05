@@ -57,29 +57,23 @@ const build_fake_client = (
 			packages: {
 				list: async (filter) => {
 					calls.push({ kind: "list", args: [filter] });
-					return (
-						overrides.list
-							? overrides.list(filter)
-							: ok([{ id: "pipeline-package_a", name: "a", project_id: null, repo_url: null }])
-					);
+					return overrides.list
+						? overrides.list(filter)
+						: ok([{ id: "pipeline-package_a", name: "a", project_id: null, repo_url: null }]);
 				},
 				get: async (id) => {
 					calls.push({ kind: "get", args: [id] });
-					return (overrides.get ? overrides.get(id) : ok({ id, name: "a", project_id: null }));
+					return overrides.get ? overrides.get(id) : ok({ id, name: "a", project_id: null });
 				},
 				create: async (input) => {
 					calls.push({ kind: "create", args: [input] });
-					return (
-						overrides.create
-							? overrides.create(input)
-							: ok({ ...(input as Record<string, unknown>), id: (input as { id: string }).id })
-					);
+					return overrides.create
+						? overrides.create(input)
+						: ok({ ...(input as Record<string, unknown>), id: (input as { id: string }).id });
 				},
 				update: async (id, patch) => {
 					calls.push({ kind: "update", args: [id, patch] });
-					return (
-						overrides.update ? overrides.update(id, patch) : ok({ id, ...(patch as Record<string, unknown>) })
-					);
+					return overrides.update ? overrides.update(id, patch) : ok({ id, ...(patch as Record<string, unknown>) });
 				},
 				delete: async (id) => {
 					calls.push({ kind: "delete", args: [id] });

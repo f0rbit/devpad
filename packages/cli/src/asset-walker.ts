@@ -38,7 +38,7 @@ import { extname, join, relative, sep } from "node:path";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import * as blake3 from "blake3-wasm";
 import ignore_factory from "ignore";
- 
+
 // @ts-expect-error — `mime` v3 ships JS-only; we adapt to its
 // `Mime.getType(path) → string | null` runtime contract below.
 import mime from "mime";

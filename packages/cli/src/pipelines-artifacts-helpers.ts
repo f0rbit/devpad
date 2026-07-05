@@ -146,27 +146,28 @@ export function build_manifest(
 			});
 		}
 
-		const worker_base = artifacts.bundle_ref !== undefined
-			? {
-					artifact_ref: artifacts.bundle_ref,
-					size_bytes: artifacts.bundle?.length ?? 0,
-					compatibility_date,
-				}
-			: {
-					// Phase 2.B keeps `artifact_ref` required at the corpus type
-					// level — the orchestrator's local extended schema treats it
-					// as optional. For the directory path we stamp an empty
-					// `artifact_ref` so old strict consumers don't reject the
-					// manifest, while the new `bundle_manifest_ref` is the
-					// authoritative reference.
-					artifact_ref: "",
-					// `has_single_file === has_directory` was rejected above, so
-					// `bundle_manifest_ref` is always set here — the `?? ""`
-					// fallback is type-safety only, never reached at runtime.
-					bundle_manifest_ref: artifacts.bundle_manifest_ref ?? "",
-					size_bytes: artifacts.bundle_total_size_bytes ?? 0,
-					compatibility_date,
-				};
+		const worker_base =
+			artifacts.bundle_ref !== undefined
+				? {
+						artifact_ref: artifacts.bundle_ref,
+						size_bytes: artifacts.bundle?.length ?? 0,
+						compatibility_date,
+					}
+				: {
+						// Phase 2.B keeps `artifact_ref` required at the corpus type
+						// level — the orchestrator's local extended schema treats it
+						// as optional. For the directory path we stamp an empty
+						// `artifact_ref` so old strict consumers don't reject the
+						// manifest, while the new `bundle_manifest_ref` is the
+						// authoritative reference.
+						artifact_ref: "",
+						// `has_single_file === has_directory` was rejected above, so
+						// `bundle_manifest_ref` is always set here — the `?? ""`
+						// fallback is type-safety only, never reached at runtime.
+						bundle_manifest_ref: artifacts.bundle_manifest_ref ?? "",
+						size_bytes: artifacts.bundle_total_size_bytes ?? 0,
+						compatibility_date,
+					};
 
 		const assets_block =
 			artifacts.asset_manifest_ref !== undefined

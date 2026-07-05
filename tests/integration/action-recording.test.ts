@@ -99,7 +99,8 @@ describe("action recording integration", () => {
 		milestone = result.value;
 		t.cleanup.registerCleanup("milestones", async () => {
 			const cleanupResult = await t.client.milestones.delete(milestone.id);
-			if (!cleanupResult.ok) console.warn(`Failed to cleanup milestone ${milestone.id}: ${cleanupResult.error.message}`);
+			if (!cleanupResult.ok)
+				console.warn(`Failed to cleanup milestone ${milestone.id}: ${cleanupResult.error.message}`);
 		});
 
 		const history_result = await t.client.projects.history(project.id);

@@ -151,7 +151,7 @@ describe("/v1/pulse/* proxy", () => {
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc?range=24h"));
 		expect(res.status).toBe(200);
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.pageviews).toBe(42);
 
 		expect(captured.length).toBe(1);
@@ -231,7 +231,7 @@ describe("/v1/pulse/* proxy", () => {
 			}),
 		);
 		expect(res.status).toBe(201);
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.id).toBe("sub_xyz");
 
 		expect(captured.length).toBe(1);
@@ -282,7 +282,7 @@ describe("/v1/pulse/* proxy", () => {
 
 		const res = await app.fetch(new Request("http://test/v1/pulse/summary/proj_abc"));
 		expect(res.status).toBe(503);
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.error).toBe("pulse_unreachable");
 	});
 });

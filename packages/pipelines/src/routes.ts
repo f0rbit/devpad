@@ -1018,7 +1018,11 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	const content_length = Number(request.headers.get("content-length") ?? "0");
 	if (content_length > MAX_BLOB_SIZE_BYTES) {
 		return wire_err(
-			{ code: "payload_too_large", message: `body exceeds ${String(MAX_BLOB_SIZE_BYTES)} bytes`, limit: MAX_BLOB_SIZE_BYTES },
+			{
+				code: "payload_too_large",
+				message: `body exceeds ${String(MAX_BLOB_SIZE_BYTES)} bytes`,
+				limit: MAX_BLOB_SIZE_BYTES,
+			},
 			413,
 		);
 	}
@@ -1027,7 +1031,11 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	if (buffer === null) return wire_err({ code: "invalid_body", message: "could not read body" }, 400);
 	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES)
 		return wire_err(
-			{ code: "payload_too_large", message: `body exceeds ${String(MAX_BLOB_SIZE_BYTES)} bytes`, limit: MAX_BLOB_SIZE_BYTES },
+			{
+				code: "payload_too_large",
+				message: `body exceeds ${String(MAX_BLOB_SIZE_BYTES)} bytes`,
+				limit: MAX_BLOB_SIZE_BYTES,
+			},
 			413,
 		);
 

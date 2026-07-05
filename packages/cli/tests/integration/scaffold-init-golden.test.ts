@@ -14,12 +14,7 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, test } from "bun:test";
-import {
-	type BuildShape,
-	type DefaultGateKind,
-	type RolloutMode,
-	scaffold_package,
-} from "../../src/scaffolder/index";
+import { type BuildShape, type DefaultGateKind, type RolloutMode, scaffold_package } from "../../src/scaffolder/index";
 
 const GOLDEN_ROOT = path.resolve(import.meta.dir, "..", "golden");
 const FIXED_NOW = new Date(Date.UTC(2026, 4, 17));

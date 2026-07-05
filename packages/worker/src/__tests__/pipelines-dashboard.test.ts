@@ -118,13 +118,13 @@ const build_app = (
 	const captured: Array<{ url: string; method: string }> = [];
 	const original_fetch = globalThis.fetch;
 	if (opts.pulse_upstream !== undefined) {
-		globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+		globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 			const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
 			const method = init?.method ?? "GET";
 			captured.push({ url, method });
 			if (opts.pulse_upstream === null) throw new Error("pulse unreachable");
 			return opts.pulse_upstream!({ url, method });
-		});
+		};
 	}
 
 	const app = new Hono<AppContext>();
@@ -190,7 +190,7 @@ describe("/v1/pipelines/dashboard", () => {
 		expect(res.status).toBe(200);
 		expect(res.headers.get("cache-control")).toBe("public, max-age=30");
 
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.run_counts.total).toBe(1);
 		expect(body.run_counts.completed).toBe(1);
 		expect(body.latency_p50_ms).toBe(5 * 60_000);
@@ -277,7 +277,7 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.pulse).toBeNull();
 	});
 
@@ -293,7 +293,7 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.pulse).toBeNull();
 		expect(captured.length).toBe(0);
 	});
@@ -308,7 +308,7 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(200);
-		const body = (await res.json());
+		const body = await res.json();
 		expect(body.run_counts.total).toBe(0);
 		expect(body.pulse).toBeNull();
 	});

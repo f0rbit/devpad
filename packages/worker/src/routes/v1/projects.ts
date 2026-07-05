@@ -151,22 +151,19 @@ app.get("/config", requireAuth, async (c) => {
 		.where(eq(tag_config.project_id, project_id));
 
 	const grouped_tags = Object.values(
-		tag_configs.reduce<Record<string, { name: string; color: string | null; match: string[] }>>(
-			(acc, config) => {
-				const tag_id = config.tag_id;
-				if (!(tag_id in acc)) {
-					acc[tag_id] = {
-						name: config.tag_name || "Unknown",
-						color: config.tag_color,
-						match: [config.match],
-					};
-				} else {
-					acc[tag_id].match.push(config.match);
-				}
-				return acc;
-			},
-			{},
-		),
+		tag_configs.reduce<Record<string, { name: string; color: string | null; match: string[] }>>((acc, config) => {
+			const tag_id = config.tag_id;
+			if (!(tag_id in acc)) {
+				acc[tag_id] = {
+					name: config.tag_name || "Unknown",
+					color: config.tag_color,
+					match: [config.match],
+				};
+			} else {
+				acc[tag_id].match.push(config.match);
+			}
+			return acc;
+		}, {}),
 	);
 
 	const ignore_paths = await db

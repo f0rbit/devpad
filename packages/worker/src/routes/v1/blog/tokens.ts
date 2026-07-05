@@ -28,7 +28,7 @@ tokensRouter.post(
 	"/",
 	zValidator("json", AccessKeyCreateSchema),
 	withAuth(async (c, user, ctx) => {
-		const data = (valid(c, "json") as z.infer<typeof AccessKeyCreateSchema>);
+		const data = valid(c, "json") as z.infer<typeof AccessKeyCreateSchema>;
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.create(user.id, data);
 		return response.result(c, result, 201);
@@ -40,8 +40,8 @@ tokensRouter.put(
 	zValidator("param", TokenIdSchema),
 	zValidator("json", AccessKeyUpdateSchema),
 	withAuth(async (c, user, ctx) => {
-		const { id } = (valid(c, "param") as z.infer<typeof TokenIdSchema>);
-		const data = (valid(c, "json") as z.infer<typeof AccessKeyUpdateSchema>);
+		const { id } = valid(c, "param") as z.infer<typeof TokenIdSchema>;
+		const data = valid(c, "json") as z.infer<typeof AccessKeyUpdateSchema>;
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.update(user.id, id, data);
 		return response.result(c, result);
@@ -52,7 +52,7 @@ tokensRouter.delete(
 	"/:id",
 	zValidator("param", TokenIdSchema),
 	withAuth(async (c, user, ctx) => {
-		const { id } = (valid(c, "param") as z.infer<typeof TokenIdSchema>);
+		const { id } = valid(c, "param") as z.infer<typeof TokenIdSchema>;
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.delete(user.id, id);
 		return response.empty(c, result);

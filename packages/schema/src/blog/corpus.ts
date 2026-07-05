@@ -33,7 +33,8 @@ type WithCause = { cause: unknown };
 
 // packages/schema targets lib ES2020, which predates Error.cause (ES2022) —
 // narrow structurally instead of widening the type or reaching for `any`.
-const hasCause = (value: unknown): value is WithCause => typeof value === "object" && value !== null && "cause" in value;
+const hasCause = (value: unknown): value is WithCause =>
+	typeof value === "object" && value !== null && "cause" in value;
 
 export const mapCorpusError = (e: LibCorpusError): PostCorpusError => {
 	if (e.kind === "not_found") {

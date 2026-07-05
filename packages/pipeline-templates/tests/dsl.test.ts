@@ -1,11 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	defaultAtomic,
-	defaultAtomicGates,
-	defaultGradual,
-	defaultGradualGates,
-	extendTemplate,
-} from "../src/index";
+import { defaultAtomic, defaultAtomicGates, defaultGradual, defaultGradualGates, extendTemplate } from "../src/index";
 
 const unwrap_ok = <T>(r: { ok: true; value: T } | { ok: false; error: unknown }): T => {
 	if (!r.ok) throw new Error(`expected ok, got err: ${JSON.stringify(r.error)}`);

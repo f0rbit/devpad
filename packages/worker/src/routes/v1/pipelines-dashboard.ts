@@ -74,7 +74,7 @@ const try_pulse_summary = async (
 	if (!content_type.includes("application/json")) return null;
 
 	try {
-		const body = (await response.json());
+		const body = await response.json();
 		return body;
 	} catch {
 		return null;

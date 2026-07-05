@@ -54,7 +54,9 @@ const read_body = (req: http.IncomingMessage): Promise<Buffer> =>
 	new Promise((resolve, reject) => {
 		const chunks: Buffer[] = [];
 		req.on("data", (c) => chunks.push(c));
-		req.on("end", () => { resolve(Buffer.concat(chunks)); });
+		req.on("end", () => {
+			resolve(Buffer.concat(chunks));
+		});
 		req.on("error", reject);
 	});
 
@@ -157,7 +159,11 @@ const start_test_server = async (): Promise<ServerHandle> => {
 };
 
 const stop_test_server = async (h: ServerHandle): Promise<void> =>
-	new Promise((resolve) => h.server.close(() => { resolve(); }));
+	new Promise((resolve) =>
+		h.server.close(() => {
+			resolve();
+		}),
+	);
 
 const valid_manifest = (overrides: Partial<VersionSetManifest> = {}): VersionSetManifest => ({
 	package: "test-pkg",

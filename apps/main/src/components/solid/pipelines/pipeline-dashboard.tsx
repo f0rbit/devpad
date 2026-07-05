@@ -139,7 +139,10 @@ const VerdictBar = (props: { label: string; verdicts: Verdicts }) => {
 			<div class="row" style={{ gap: "0.75rem" }}>
 				<span class="text-xs" style={{ color: VERDICT_COLORS.pass }}>{`pass ${String(props.verdicts.pass)}`}</span>
 				<span class="text-xs" style={{ color: VERDICT_COLORS.fail }}>{`fail ${String(props.verdicts.fail)}`}</span>
-				<span class="text-xs" style={{ color: VERDICT_COLORS.pending }}>{`pending ${String(props.verdicts.pending)}`}</span>
+				<span
+					class="text-xs"
+					style={{ color: VERDICT_COLORS.pending }}
+				>{`pending ${String(props.verdicts.pending)}`}</span>
 			</div>
 		</div>
 	);

@@ -222,8 +222,7 @@ interface ArtifactsUploadOptions {
 type ResolvedMode = { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined };
 
 const resolve_mode = (options: ArtifactsUploadOptions): ResolvedMode => {
-	const explicit =
-		options.mode === "memory" || options.mode === "cloudflare-http" ? (options.mode) : undefined;
+	const explicit = options.mode === "memory" || options.mode === "cloudflare-http" ? options.mode : undefined;
 	const url = options.orchestratorUrl ?? process.env.DEVPAD_PIPELINES_URL;
 	const token = options.token ?? process.env.DEVPAD_PIPELINES_TOKEN;
 	const mode: CorpusBackendMode =
@@ -992,8 +991,7 @@ export const action_oidc_trust_list =
 		}
 		for (const p of result.value) {
 			const refs_label = p.allowed_refs.length > 0 ? p.allowed_refs.join(",") : chalk.dim("any");
-			const envs_label =
-				p.allowed_environments.length > 0 ? p.allowed_environments.join(",") : chalk.dim("any");
+			const envs_label = p.allowed_environments.length > 0 ? p.allowed_environments.join(",") : chalk.dim("any");
 			const last_used = p.last_used_at ?? chalk.dim("(never)");
 			console.log(`  ${chalk.bold(p.id)}`);
 			console.log(`    owner:        ${chalk.cyan(p.github_owner)}/${p.repo_pattern}`);

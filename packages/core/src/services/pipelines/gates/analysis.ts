@@ -151,7 +151,8 @@ const fetch_snapshot = async (
  */
 const emit_pulse = async (pulse: PulseEmitter, event: PulseEvent): Promise<void> => {
 	const result = await pulse.emit(event);
-	if (!result.ok) console.warn(`analysis gate pulse emit failed (${event.event}): ${result.error.message ?? result.error.kind}`);
+	if (!result.ok)
+		console.warn(`analysis gate pulse emit failed (${event.event}): ${result.error.message ?? result.error.kind}`);
 };
 
 const parse_thresholds_or_fail = (dsl: string): Result<Threshold[], GateError> => {

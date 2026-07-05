@@ -489,20 +489,26 @@ export const createOAuthCallback = <TState extends Record<string, unknown> = Rec
 
 		const result = await pipe(exchangeCodeForTokens(code, redirectUri, clientId, clientSecret, config, stateData))
 			.map_err((e) => toCallbackError(e, "token_failed"))
-			.tap_err((e) => { log.error("Token exchange failed:", e.message); })
+			.tap_err((e) => {
+				log.error("Token exchange failed:", e.message);
+			})
 			.flat_map((tokens) =>
 				pipe(fetchOAuthUserProfile(tokens.access_token, config))
 					.map_err((e) => toCallbackError(e, "user_failed"))
 					.map((user) => ({ tokens, user }))
 					.result(),
 			)
-			.tap_err((e) => { log.error("Failed to get user info:", e.message); })
+			.tap_err((e) => {
+				log.error("Failed to get user info:", e.message);
+			})
 			.flat_map(({ tokens, user }) =>
 				pipe(upsertOAuthAccount(ctx.db, ctx.encryptionKey, stateData.profile_id, config.platform, user, tokens))
 					.map_err((e) => toCallbackError(e, "save_failed"))
 					.result(),
 			)
-			.tap_err((e) => { log.error("Failed to save account:", e.message); })
+			.tap_err((e) => {
+				log.error("Failed to save account:", e.message);
+			})
 			.result();
 
 		if (!result.ok) {

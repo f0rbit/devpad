@@ -43,7 +43,7 @@ const redditOAuthConfig: OAuthCallbackConfig<RedditOAuthState> = {
 			},
 		});
 		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
-		const data = (await response.json());
+		const data = await response.json();
 		return { id: data.id, username: data.name };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.reddit_client_id, clientSecret: secrets.reddit_client_secret }),
@@ -67,7 +67,7 @@ const twitterOAuthConfig: OAuthCallbackConfig<{ code_verifier: string }> = {
 			headers: { Authorization: `Bearer ${accessToken}` },
 		});
 		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
-		const data = (await response.json());
+		const data = await response.json();
 		return { id: data.data.id, username: data.data.username };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.twitter_client_id, clientSecret: secrets.twitter_client_secret }),
@@ -94,7 +94,7 @@ export const githubOAuthConfig: OAuthCallbackConfig = {
 			},
 		});
 		if (!response.ok) throw new Error(`User fetch failed: ${String(response.status)}`);
-		const data = (await response.json());
+		const data = await response.json();
 		return { id: String(data.id), username: data.login };
 	},
 	getSecrets: (secrets) => ({ clientId: secrets.github_client_id, clientSecret: secrets.github_client_secret }),
