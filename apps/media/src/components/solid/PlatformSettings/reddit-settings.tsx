@@ -44,9 +44,13 @@ export default function RedditSettings(props: Props) {
 		setSubredditUpdating(null);
 	};
 
-	const toggleHideComments = () => updateSetting<RedditSettingsData>("hide_comments", !hideComments(), props.settings);
+	const toggleHideComments = () => {
+		void updateSetting<RedditSettingsData>("hide_comments", !hideComments(), props.settings);
+	};
 
-	const toggleHideNsfw = () => updateSetting<RedditSettingsData>("hide_nsfw", !hideNsfw(), props.settings);
+	const toggleHideNsfw = () => {
+		void updateSetting<RedditSettingsData>("hide_nsfw", !hideNsfw(), props.settings);
+	};
 
 	const visibleCount = () => {
 		const allSubreddits = subreddits() ?? [];
@@ -100,7 +104,7 @@ export default function RedditSettings(props: Props) {
 												<div class={`repo-item ${isHidden() ? "repo-hidden" : ""}`}>
 													<Checkbox
 														checked={!isHidden()}
-														onChange={() => toggleSubreddit(subreddit)}
+														onChange={() => void toggleSubreddit(subreddit)}
 														disabled={isUpdating()}
 														label={`r/${subreddit}`}
 													/>

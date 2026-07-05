@@ -15,11 +15,15 @@ export default function DevpadSettings(props: Props) {
 
 	const updateSetting = async (key: string, value: boolean) => {
 		setUpdating(true);
-		await getClient().media.connections.settings.update(props.accountId, {
+		const result = await getClient().media.connections.settings.update(props.accountId, {
 			...props.settings,
 			[key]: value,
 		});
 		setUpdating(false);
+		if (!result.ok) {
+			console.error("[DevpadSettings] Failed to update setting:", result.error);
+			return;
+		}
 		props.onUpdate();
 	};
 
@@ -29,7 +33,7 @@ export default function DevpadSettings(props: Props) {
 			<div class="filter-toggles">
 				<Checkbox
 					checked={allProjects()}
-					onChange={() => updateSetting("all_projects", !allProjects())}
+					onChange={() => void updateSetting("all_projects", !allProjects())}
 					label="Include all projects"
 					disabled={updating()}
 				/>

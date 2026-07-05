@@ -38,7 +38,7 @@ describe("Scanning API Client Integration", () => {
 			expect(updatesResult.error).toBeDefined();
 		} else {
 			expect(Array.isArray(updatesResult.value)).toBe(true);
-			console.log(`Found ${updatesResult.value.length} pending updates for new project`);
+			console.log(`Found ${String(updatesResult.value.length)} pending updates for new project`);
 		}
 	});
 
@@ -107,7 +107,9 @@ describe("Scanning API Client Integration", () => {
 			const reader = stream.getReader();
 
 			const timeoutPromise = new Promise((_, reject) =>
-				setTimeout(() => reject(new Error("Stream read timeout")), 5000),
+				setTimeout(() => {
+					reject(new Error("Stream read timeout"));
+				}, 5000),
 			);
 
 			try {
@@ -139,7 +141,8 @@ describe("Scanning API Client Integration", () => {
 
 		try {
 			// @ts-expect-error - testing runtime parameter validation
-			await scan.updates();
+			const result = await scan.updates();
+			expect(result.ok).toBe(false);
 		} catch (error) {
 			expect(error).toBeDefined();
 		}
@@ -153,7 +156,8 @@ describe("Scanning API Client Integration", () => {
 
 		try {
 			// @ts-expect-error - testing runtime parameter validation
-			await scan.update();
+			const result = await scan.update();
+			expect(result.ok).toBe(false);
 		} catch (error) {
 			expect(error).toBeDefined();
 		}
@@ -179,7 +183,7 @@ describe("Scanning API Client Integration", () => {
 			const reader = stream.getReader();
 			const { value, done } = await reader.read();
 
-			if (value && !done) {
+			if (!done) {
 				console.log("Scan error message from stream:", value);
 				expect(typeof value).toBe("string");
 				expect(value.toLowerCase()).toMatch(/error|repo|github/);

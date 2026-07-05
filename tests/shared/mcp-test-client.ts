@@ -44,7 +44,7 @@ export class MCPTestClient {
 
 		// Handle errors
 		if (response.error) {
-			throw new Error(`MCP Error: ${response.error.message}`);
+			throw new Error(`MCP Error: ${String(response.error.message)}`);
 		}
 
 		return response;

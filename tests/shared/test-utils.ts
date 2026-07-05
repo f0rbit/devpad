@@ -13,6 +13,13 @@ export function log(...args: any[]) {
 	}
 }
 
+/** Build a shallow copy of `obj` with `keys` removed — e.g. stripping server-managed fields before an upsert call. */
+export function omit<T extends Record<string, unknown>, K extends keyof T>(obj: T, keys: readonly K[]): Omit<T, K> {
+	const result = { ...obj };
+	for (const key of keys) Reflect.deleteProperty(result, key);
+	return result;
+}
+
 export async function createTestUser(dbPath: string): Promise<string> {
 	log("👤 Creating test user and API key...");
 
@@ -25,7 +32,7 @@ export async function createTestUser(dbPath: string): Promise<string> {
 			.values({
 				id: TEST_USER_ID,
 				name: "Integration Test User",
-				email: `test-${Date.now()}@devpad.test`,
+				email: `test-${String(Date.now())}@devpad.test`,
 				github_id: null,
 			})
 			.returning();
@@ -61,14 +68,16 @@ export function cleanupTestDatabase(dbPath: string): void {
 
 export async function waitForServer(url: string, maxAttempts = 30): Promise<void> {
 	let attempts = 0;
-	log(`🔄 Waiting for server at ${url} (max ${maxAttempts} attempts)`);
+	log(`🔄 Waiting for server at ${url} (max ${String(maxAttempts)} attempts)`);
 
 	while (attempts < maxAttempts) {
 		try {
-			log(`  Attempt ${attempts + 1}/${maxAttempts}: Checking ${url}...`);
+			log(`  Attempt ${String(attempts + 1)}/${String(maxAttempts)}: Checking ${url}...`);
 
 			const controller = new AbortController();
-			const timeoutId = setTimeout(() => controller.abort(), 3000);
+			const timeoutId = setTimeout(() => {
+				controller.abort();
+			}, 3000);
 
 			const response = await fetch(url, {
 				signal: controller.signal,
@@ -76,15 +85,15 @@ export async function waitForServer(url: string, maxAttempts = 30): Promise<void
 
 			clearTimeout(timeoutId);
 
-			log(`  Response status: ${response.status} ${response.statusText}`);
+			log(`  Response status: ${String(response.status)} ${response.statusText}`);
 
 			if (response.ok) {
 				log("✅ Server started and responding");
 				return;
 			}
-			log(`  Server responded but with error status: ${response.status}`);
+			log(`  Server responded but with error status: ${String(response.status)}`);
 		} catch (error: any) {
-			log(`  Error connecting to server: ${error.name}: ${error.message}`);
+			log(`  Error connecting to server: ${String(error.name)}: ${String(error.message)}`);
 			if (error.name === "AbortError") {
 				log(`  Request timed out after 3 seconds`);
 			} else if (error.code === "ECONNREFUSED") {
@@ -97,5 +106,5 @@ export async function waitForServer(url: string, maxAttempts = 30): Promise<void
 		attempts++;
 	}
 
-	throw new Error(`Server did not start within ${maxAttempts} seconds`);
+	throw new Error(`Server did not start within ${String(maxAttempts)} seconds`);
 }

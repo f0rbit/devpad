@@ -72,7 +72,7 @@ function CommitGroupRow(props: { item: MockTimelineItem }) {
 				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<span class="inline-flex items-baseline">
 						<span class="text-muted font-medium">{props.item.repo}</span>
-						<span class="muted font-medium">{`:${props.item.branch}`}</span>
+						<span class="muted font-medium">{`:${props.item.branch ?? ""}`}</span>
 					</span>
 				</div>
 				<div class="timeline-nested-list">

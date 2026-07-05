@@ -104,7 +104,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 
 		if (result.ok) {
 			setFilterValue("");
-			refetch();
+			await refetch();
 		} else {
 			setError(result.error.message);
 		}
@@ -115,7 +115,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 	const removeFilter = async (filterId: string) => {
 		const result = await getClient().media.profiles.filters.remove(props.profileId, filterId);
 		if (result.ok) {
-			refetch();
+			await refetch();
 		} else {
 			setError(result.error.message);
 		}
@@ -123,7 +123,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 
 	const handleSubmit = (e: Event) => {
 		e.preventDefault();
-		addFilter();
+		void addFilter();
 	};
 
 	return (
@@ -149,7 +149,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 
 						<For each={filters()}>
 							{(filter) => (
-								<FilterItem filter={filter} accounts={props.accounts} onRemove={() => removeFilter(filter.id)} />
+								<FilterItem filter={filter} accounts={props.accounts} onRemove={() => void removeFilter(filter.id)} />
 							)}
 						</For>
 					</div>
@@ -159,7 +159,12 @@ export default function FilterEditor(props: FilterEditorProps) {
 					<h6 class="text-muted font-medium">Add Filter</h6>
 
 					<FormField label="Account">
-						<Select value={accountId()} onChange={(e) => handleAccountChange(e.currentTarget.value)}>
+						<Select
+							value={accountId()}
+							onChange={(e) => {
+								handleAccountChange(e.currentTarget.value);
+							}}
+						>
 							<For each={[...groupedAccounts().entries()]}>
 								{([platform, accounts]) => (
 									<optgroup label={formatPlatformLabel(platform)}>

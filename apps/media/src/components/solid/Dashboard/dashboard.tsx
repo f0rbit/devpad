@@ -27,7 +27,7 @@ export default function Dashboard(props: DashboardProps) {
 	// Check if SSR provided data (even if empty - that's valid SSR data)
 	const hasSSRData = props.initialTimeline !== undefined;
 
-	const [fetchTrigger, setFetchTrigger] = createSignal(0);
+	const [fetchTrigger] = createSignal(0);
 
 	const [data] = createResource(
 		() => {

@@ -1,8 +1,12 @@
 /// <reference types="astro/client" />
 
-declare namespace App {
-	interface Locals {
-		user: import("@devpad/schema/bindings").AuthUser;
-		session: { id: string } | null;
+import type { AuthUser } from "@devpad/schema/bindings";
+
+declare global {
+	namespace App {
+		interface Locals {
+			user: AuthUser;
+			session: { id: string } | null;
+		}
 	}
 }

@@ -65,7 +65,7 @@ describe("task history and save_tags integration", () => {
 		test("should save a single tag", async () => {
 			const tag_data = [
 				{
-					title: `save-tag-${Date.now()}`,
+					title: `save-tag-${String(Date.now())}`,
 					color: "red" as const,
 					owner_id: TEST_USER_ID,
 					render: true,
@@ -82,9 +82,9 @@ describe("task history and save_tags integration", () => {
 
 		test("should save multiple tags at once", async () => {
 			const tag_data = [
-				{ title: `multi-tag-a-${Date.now()}`, color: "blue" as const, owner_id: TEST_USER_ID },
-				{ title: `multi-tag-b-${Date.now()}`, color: "green" as const, owner_id: TEST_USER_ID },
-				{ title: `multi-tag-c-${Date.now()}`, color: "yellow" as const, owner_id: TEST_USER_ID },
+				{ title: `multi-tag-a-${String(Date.now())}`, color: "blue" as const, owner_id: TEST_USER_ID },
+				{ title: `multi-tag-b-${String(Date.now())}`, color: "green" as const, owner_id: TEST_USER_ID },
+				{ title: `multi-tag-c-${String(Date.now())}`, color: "yellow" as const, owner_id: TEST_USER_ID },
 			];
 
 			const result = await t.client.tasks.saveTags(tag_data);
@@ -103,7 +103,7 @@ describe("task history and save_tags integration", () => {
 		test("should reject tag with mismatched owner_id", async () => {
 			const tag_data = [
 				{
-					title: `bad-owner-tag-${Date.now()}`,
+					title: `bad-owner-tag-${String(Date.now())}`,
 					color: "red" as const,
 					owner_id: "some-other-user-id",
 				},

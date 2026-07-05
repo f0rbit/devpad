@@ -9,7 +9,7 @@ const t = setupIntegration();
 
 async function createSimpleTask(project_id: string, task_data?: Partial<UpsertTodo>): Promise<TaskWithDetails> {
 	const default_task_data: UpsertTodo = {
-		title: `Test Task ${Date.now()}`,
+		title: `Test Task ${String(Date.now())}`,
 		description: "Test task for goal linking",
 		project_id,
 		owner_id: TEST_USER_ID,

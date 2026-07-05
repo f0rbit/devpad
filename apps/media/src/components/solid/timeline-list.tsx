@@ -33,7 +33,7 @@ type TimelineListProps = {
 };
 
 export default function TimelineList(props: TimelineListProps) {
-	const [fetchTrigger, setFetchTrigger] = createSignal(0);
+	const [fetchTrigger] = createSignal(0);
 
 	// Check if SSR provided data (even if empty array - that's valid SSR data)
 	const hasSSRData = props.initialGroups !== undefined;
@@ -179,7 +179,7 @@ function CommitGroupRow(props: { group: CommitGroup }) {
 			</div>
 			<div class="stack stack-sm" style={{ gap: "0.25rem", flex: 1, "min-width": 0 }}>
 				<span class="text-xs muted shrink-0" style={{ "white-space": "nowrap" }}>
-					{format.relative(firstCommit()?.timestamp ?? props.group.date)}
+					{format.relative(firstCommit().timestamp)}
 				</span>
 				<div class="row row-between items-start" style={{ gap: "1rem" }}>
 					<span class="inline-flex items-baseline">
@@ -244,7 +244,7 @@ function PullRequestRow(props: { item: TimelineItem }) {
 	const [expanded, setExpanded] = createSignal(false);
 	const githubUsernames = useContext(GithubUsernamesContext);
 	const payload = () => props.item.payload as PullRequestPayload;
-	const commits = () => payload().commits ?? [];
+	const commits = () => payload().commits;
 	const hasCommits = () => commits().length > 0;
 	const displayRepo = () => stripOwnerPrefix(payload().repo, githubUsernames);
 

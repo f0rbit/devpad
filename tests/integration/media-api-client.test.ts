@@ -4,7 +4,7 @@ import { TEST_USER_ID } from "./setup";
 
 const t = setupIntegration();
 
-const uniqueSlug = () => `test-profile-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const uniqueSlug = () => `test-profile-${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("media API client integration", () => {
 	test("should verify media client namespace exists", () => {
@@ -191,7 +191,8 @@ describe("media API client integration", () => {
 				expect(Array.isArray(connections_list)).toBe(true);
 			}
 
-			await t.client.media.profiles.delete(profile_id);
+			const deleteResult = await t.client.media.profiles.delete(profile_id);
+			expect(deleteResult.ok).toBe(true);
 		});
 	});
 

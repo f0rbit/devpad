@@ -57,7 +57,7 @@ export function ResourceState<T>(props: ResourceStateProps<T>) {
 			</Show>
 
 			<Show when={!props.resource.loading && !props.resource.error && props.resource()} keyed>
-				{(data) => props.children(data as NonNullable<T>)}
+				{(data) => props.children(data)}
 			</Show>
 		</>
 	);

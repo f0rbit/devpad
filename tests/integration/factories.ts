@@ -8,7 +8,7 @@ type UpsertProjectOverrides = Partial<UpsertProject>;
 let counter = 0;
 
 function getNextId(): string {
-	return `test-${Date.now()}-${++counter}`;
+	return `test-${String(Date.now())}-${String(++counter)}`;
 }
 
 function createProject(owner_id: string, overrides: UpsertProjectOverrides): Project {

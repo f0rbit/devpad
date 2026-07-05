@@ -20,10 +20,10 @@ export const date = {
 		const diffMonths = Math.floor(diffDays / 30);
 
 		if (diffSeconds < 60) return "just now";
-		if (diffMinutes < 60) return diffMinutes === 1 ? "1 minute ago" : `${diffMinutes} minutes ago`;
-		if (diffHours < 24) return diffHours === 1 ? "1 hour ago" : `${diffHours} hours ago`;
-		if (diffDays < 7) return diffDays === 1 ? "1 day ago" : `${diffDays} days ago`;
-		if (diffWeeks < 4) return diffWeeks === 1 ? "1 week ago" : `${diffWeeks} weeks ago`;
-		return diffMonths === 1 ? "1 month ago" : `${diffMonths} months ago`;
+		if (diffMinutes < 60) return diffMinutes === 1 ? "1 minute ago" : `${String(diffMinutes)} minutes ago`;
+		if (diffHours < 24) return diffHours === 1 ? "1 hour ago" : `${String(diffHours)} hours ago`;
+		if (diffDays < 7) return diffDays === 1 ? "1 day ago" : `${String(diffDays)} days ago`;
+		if (diffWeeks < 4) return diffWeeks === 1 ? "1 week ago" : `${String(diffWeeks)} weeks ago`;
+		return diffMonths === 1 ? "1 month ago" : `${String(diffMonths)} months ago`;
 	},
 };

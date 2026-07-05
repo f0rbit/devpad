@@ -46,7 +46,27 @@ const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
 
 // Cell size + gap = 14px per week (11px cell + 3px gap)
 const WEEK_WIDTH = 14;
-const DAY_LABEL_WIDTH = 28;
+
+const getActivityPreviewTitle = (item: TimelineItem | CommitGroup): string => {
+	if (item.type === "commit_group") {
+		return `${String(item.commits.length)} commits to ${item.repo}`;
+	}
+	return item.title;
+};
+
+const getActivityPreviewTimestamp = (item: TimelineItem | CommitGroup): string => {
+	if (item.type === "commit_group") {
+		return item.commits[0]?.timestamp ?? item.date;
+	}
+	return item.timestamp;
+};
+
+const getActivityPreviewPlatform = (item: TimelineItem | CommitGroup): string => {
+	if (item.type === "commit_group") {
+		return "github";
+	}
+	return item.platform;
+};
 
 export default function ActivityChart(props: ActivityChartProps) {
 	// Get month labels - show each month once, at its first week occurrence (left to right)
@@ -82,7 +102,7 @@ export default function ActivityChart(props: ActivityChartProps) {
 				<div class="activity-grid-months">
 					<For each={monthLabels()}>
 						{(label) => (
-							<span class="activity-month-label" style={{ left: `${label.weekIndex * WEEK_WIDTH}px` }}>
+							<span class="activity-month-label" style={{ left: `${String(label.weekIndex * WEEK_WIDTH)}px` }}>
 								{label.month}
 							</span>
 						)}
@@ -110,8 +130,8 @@ export default function ActivityChart(props: ActivityChartProps) {
 										return (
 											<button
 												type="button"
-												class={`activity-cell activity-cell-${intensity()} ${isSelected() ? "activity-cell-selected" : ""}`}
-												title={`${formatDate(day.date)}: ${day.count} entries`}
+												class={`activity-cell activity-cell-${String(intensity())} ${isSelected() ? "activity-cell-selected" : ""}`}
+												title={`${formatDate(day.date)}: ${String(day.count)} entries`}
 												onClick={() => props.onSelectDate?.(day.date)}
 											/>
 										);
@@ -127,27 +147,6 @@ export default function ActivityChart(props: ActivityChartProps) {
 }
 
 export function ActivityPreview(props: ActivityPreviewProps) {
-	const getTitle = (item: TimelineItem | CommitGroup): string => {
-		if (item.type === "commit_group") {
-			return `${item.commits.length} commits to ${item.repo}`;
-		}
-		return item.title;
-	};
-
-	const getTimestamp = (item: TimelineItem | CommitGroup): string => {
-		if (item.type === "commit_group") {
-			return item.commits[0]?.timestamp ?? item.date;
-		}
-		return item.timestamp;
-	};
-
-	const getPlatform = (item: TimelineItem | CommitGroup): string => {
-		if (item.type === "commit_group") {
-			return "github";
-		}
-		return item.platform;
-	};
-
 	return (
 		<div class="activity-preview">
 			<div class="activity-preview-header">
@@ -160,10 +159,10 @@ export function ActivityPreview(props: ActivityPreviewProps) {
 						{(item) => (
 							<div class="activity-preview-item">
 								<div class="activity-preview-icon">
-									<PlatformIcon platform={getPlatform(item)} size={16} />
+									<PlatformIcon platform={getActivityPreviewPlatform(item)} size={16} />
 								</div>
-								<span class="activity-preview-title">{getTitle(item)}</span>
-								<span class="activity-preview-time">{format.relative(getTimestamp(item))}</span>
+								<span class="activity-preview-title">{getActivityPreviewTitle(item)}</span>
+								<span class="activity-preview-time">{format.relative(getActivityPreviewTimestamp(item))}</span>
 							</div>
 						)}
 					</For>

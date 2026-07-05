@@ -64,11 +64,12 @@ describe("Project Edge Cases Integration", () => {
 				expect(afterCreateResult.value.length).toBe(initialCount + 1);
 			}
 
-			await t.client.projects.update(project.id, { deleted: true });
+			const updateResult = await t.client.projects.update(project.id, { deleted: true });
+			expect(updateResult.ok).toBe(true);
 
 			const afterDeleteResult = await t.client.projects.list();
 			if (afterDeleteResult.ok) {
-				if (afterDeleteResult.value.some((p) => p.id === project.id && p.deleted === true)) {
+				if (afterDeleteResult.value.some((p) => p.id === project.id && p.deleted)) {
 					expect(afterDeleteResult.value.length).toBe(initialCount + 1);
 					const deletedProject = afterDeleteResult.value.find((p) => p.id === project.id);
 					expect(deletedProject!.deleted).toBe(true);
@@ -110,7 +111,7 @@ describe("Project Edge Cases Integration", () => {
 				});
 
 				if (response.ok) {
-					const publicProjects = (await response.json()) as any[];
+					const publicProjects: any[] = await response.json();
 					expect(Array.isArray(publicProjects)).toBe(true);
 					for (const proj of publicProjects) {
 						expect(proj.visibility).toBe("PUBLIC");
@@ -284,7 +285,7 @@ describe("Project Edge Cases Integration", () => {
 				expect(response.status).toBe(400);
 				const errorData = (await response.json()) as any;
 				expect(errorData.error).toContain("repo_url");
-			} catch (error) {
+			} catch {
 				console.warn("Specification fetch endpoint not available");
 			}
 		});

@@ -31,7 +31,7 @@ const fetchAuthAndProfiles = async (initial?: AuthState): Promise<AuthState> => 
 		console.error("[ProfileSelector] Failed to fetch profiles:", result.error);
 		return { authenticated: true, profiles: [] };
 	}
-	return { authenticated: true, profiles: result.value as ProfileSummary[] };
+	return { authenticated: true, profiles: result.value };
 };
 
 const getSlugFromUrl = () => {
@@ -42,6 +42,16 @@ const getSlugFromUrl = () => {
 const buildUrl = (path: string, slug: string | null) => {
 	if (!slug) return path;
 	return `${path}?profile=${encodeURIComponent(slug)}`;
+};
+
+const handleSelect = (slug: string) => {
+	const url = new URL(window.location.href);
+	url.searchParams.set("profile", slug);
+	window.location.href = url.toString();
+};
+
+const handleLogin = () => {
+	window.location.href = "/api/auth/login";
 };
 
 export default function ProfileSelector(props: ProfileSelectorProps) {
@@ -112,7 +122,6 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 				if (currentSlug()) return;
 
 				const firstProfile = list[0];
-				if (!firstProfile) return;
 
 				const url = new URL(window.location.href);
 				url.searchParams.set("profile", firstProfile.slug);
@@ -120,16 +129,6 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 			},
 		),
 	);
-
-	const handleSelect = (slug: string) => {
-		const url = new URL(window.location.href);
-		url.searchParams.set("profile", slug);
-		window.location.href = url.toString();
-	};
-
-	const handleLogin = () => {
-		window.location.href = "/api/auth/login";
-	};
 
 	const handleManageProfiles = () => {
 		window.location.href = buildUrl("/connections", currentSlug());
@@ -166,7 +165,12 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 						<DropdownMenu>
 							<For each={profileList()}>
 								{(profile) => (
-									<DropdownItem active={currentSlug() === profile.slug} onClick={() => handleSelect(profile.slug)}>
+									<DropdownItem
+										active={currentSlug() === profile.slug}
+										onClick={() => {
+											handleSelect(profile.slug);
+										}}
+									>
 										<Show when={currentSlug() === profile.slug}>
 											<Check size={16} />
 										</Show>

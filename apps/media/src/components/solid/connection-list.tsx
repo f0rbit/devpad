@@ -36,7 +36,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 	const currentProfile = () => {
 		const slug = profileSlug();
 		const list = profileList();
-		if (!slug || !list) return null;
+		if (!slug) return null;
 		return list.find((p) => p.slug === slug) ?? null;
 	};
 
@@ -73,12 +73,11 @@ export default function ConnectionList(props: ConnectionListProps) {
 	);
 
 	const getConnection = (platform: Platform): ConnectionWithSettings | null => {
-		return data()?.find((c) => c.platform === platform) ?? null;
+		return data().find((c) => c.platform === platform) ?? null;
 	};
 
 	const sortedPlatforms = () => {
 		const accounts = data();
-		if (!accounts) return PLATFORMS;
 
 		return [...PLATFORMS].toSorted((a, b) => {
 			const connA = accounts.find((c) => c.platform === a);
@@ -119,7 +118,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 											platform={platform}
 											profileId={id}
 											connection={getConnection(platform)}
-											onConnectionChange={refetch}
+											onConnectionChange={() => void refetch()}
 										/>
 									)}
 								</For>

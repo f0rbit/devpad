@@ -17,7 +17,7 @@ export default function PlatformDistribution(props: PlatformDistributionProps) {
 							<span>{platform.platform}</span>
 						</div>
 						<div class="distribution-bar-track">
-							<div class="distribution-bar-fill" style={{ width: `${platform.percentage}%` }} />
+							<div class="distribution-bar-fill" style={{ width: `${String(platform.percentage)}%` }} />
 						</div>
 						<span class="distribution-count">{platform.count}</span>
 					</div>

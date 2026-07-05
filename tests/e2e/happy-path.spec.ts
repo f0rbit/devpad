@@ -140,7 +140,7 @@ test.describe("Happy Path Workflow", () => {
 		// The edit button is within the timeline item (now using generic classes)
 		const milestoneItem = page.locator(".timeline-item").filter({ has: page.locator('h5:has-text("Test Milestone")') });
 		// locate button with title = "Edit milestone"
-		const editButton = milestoneItem.getByTitle("Edit milestone").click();
+		await milestoneItem.getByTitle("Edit milestone").click();
 
 		// Now we're on the milestone edit page, extract the ID from the URL
 		await page.waitForURL(/\/milestone\/.+$/);

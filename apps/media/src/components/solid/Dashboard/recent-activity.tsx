@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For } from "solid-js";
 import { format } from "@/utils/formatters";
 import type { CommitGroup, TimelineItem } from "@/utils/types";
 import PlatformIcon from "../platform-icon";
@@ -9,7 +9,7 @@ type RecentActivityProps = {
 
 const getTitle = (item: TimelineItem | CommitGroup): string => {
 	if (item.type === "commit_group") {
-		return `${item.commits.length} commits to ${item.repo}`;
+		return `${String(item.commits.length)} commits to ${item.repo}`;
 	}
 	return item.title;
 };

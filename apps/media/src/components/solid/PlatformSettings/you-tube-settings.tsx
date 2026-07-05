@@ -16,11 +16,15 @@ export default function YouTubeSettings(props: Props) {
 
 	const updateSetting = async (key: string, value: boolean) => {
 		setUpdating(true);
-		await getClient().media.connections.settings.update(props.accountId, {
+		const result = await getClient().media.connections.settings.update(props.accountId, {
 			...props.settings,
 			[key]: value,
 		});
 		setUpdating(false);
+		if (!result.ok) {
+			console.error("[YouTubeSettings] Failed to update setting:", result.error);
+			return;
+		}
 		props.onUpdate();
 	};
 
@@ -33,13 +37,13 @@ export default function YouTubeSettings(props: Props) {
 			<div class="filter-toggles">
 				<Checkbox
 					checked={includeWatchHistory()}
-					onChange={() => updateSetting("include_watch_history", !includeWatchHistory())}
+					onChange={() => void updateSetting("include_watch_history", !includeWatchHistory())}
 					label="Include watch history"
 					disabled={updating()}
 				/>
 				<Checkbox
 					checked={includeLiked()}
-					onChange={() => updateSetting("include_liked", !includeLiked())}
+					onChange={() => void updateSetting("include_liked", !includeLiked())}
 					label="Include liked videos"
 					disabled={updating()}
 				/>

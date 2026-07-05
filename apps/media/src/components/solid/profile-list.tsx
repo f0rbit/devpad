@@ -43,13 +43,13 @@ const fetchProfiles = async (): Promise<Profile[]> => {
 		console.error("[ProfileList] Failed to fetch profiles:", result.error);
 		throw new Error(result.error.message);
 	}
-	return result.value as Profile[];
+	return result.value;
 };
 
 const createProfile = async (data: { slug: string; name: string; description?: string }): Promise<Profile> => {
 	const result = await getClient().media.profiles.create(data);
 	if (!result.ok) throw new Error(result.error.message);
-	return result.value as Profile;
+	return result.value;
 };
 
 const deleteProfile = async (id: string): Promise<void> => {
@@ -63,7 +63,7 @@ const updateProfile = async (
 ): Promise<Profile> => {
 	const result = await getClient().media.profiles.update(id, data);
 	if (!result.ok) throw new Error(result.error.message);
-	return result.value as Profile;
+	return result.value;
 };
 
 export type ProfileSummary = Profile;
@@ -78,8 +78,14 @@ const getSlugFromUrl = () => {
 	return new URLSearchParams(window.location.search).get("profile");
 };
 
+const getApiEndpoint = (slug: string): string => apiUrls.profiles(`/${slug}/timeline`);
+
+const handleViewTimeline = (slug: string) => {
+	window.location.href = `/timeline?profile=${encodeURIComponent(slug)}`;
+};
+
 export default function ProfileList(props: ProfileListProps) {
-	const [fetchTrigger, setFetchTrigger] = createSignal(0);
+	const [fetchTrigger] = createSignal(0);
 
 	const [profiles, { refetch }] = createResource(
 		() => {
@@ -98,8 +104,6 @@ export default function ProfileList(props: ProfileListProps) {
 	const [showCreateForm, setShowCreateForm] = createSignal(false);
 	const [copiedSlug, setCopiedSlug] = createSignal<string | null>(null);
 
-	const getApiEndpoint = (slug: string): string => `${apiUrls.profiles(`/${slug}/timeline`)}`;
-
 	const handleCopy = async (slug: string) => {
 		const endpoint = getApiEndpoint(slug);
 		await navigator.clipboard.writeText(endpoint);
@@ -110,11 +114,7 @@ export default function ProfileList(props: ProfileListProps) {
 	const handleDelete = async (profile: Profile) => {
 		if (!confirm(`Delete profile "${profile.name}"? This cannot be undone.`)) return;
 		await deleteProfile(profile.id);
-		refetch();
-	};
-
-	const handleViewTimeline = (slug: string) => {
-		window.location.href = `/timeline?profile=${encodeURIComponent(slug)}`;
+		await refetch();
 	};
 
 	return (
@@ -149,14 +149,14 @@ export default function ProfileList(props: ProfileListProps) {
 				<ErrorDisplay prefix="Failed to load profiles" message={profiles.error.message} />
 			</Show>
 
-			<Show when={!profiles.loading && !profiles.error && profiles()?.length === 0}>
+			<Show when={!profiles.loading && !profiles.error && profiles().length === 0}>
 				<Empty
 					title="No profiles yet"
 					description="Create a profile to share a curated timeline with specific platforms visible."
 				/>
 			</Show>
 
-			<Show when={!profiles.loading && !profiles.error && (profiles()?.length ?? 0) > 0}>
+			<Show when={!profiles.loading && !profiles.error && profiles().length > 0}>
 				<For each={profiles()}>
 					{(profile) => (
 						<Show
@@ -165,10 +165,12 @@ export default function ProfileList(props: ProfileListProps) {
 								<ProfileCard
 									profile={profile}
 									isCurrent={currentSlug() === profile.slug}
-									onView={() => handleViewTimeline(profile.slug)}
+									onView={() => {
+										handleViewTimeline(profile.slug);
+									}}
 									onEdit={() => setEditingProfile(profile)}
-									onDelete={() => handleDelete(profile)}
-									onCopy={() => handleCopy(profile.slug)}
+									onDelete={() => void handleDelete(profile)}
+									onCopy={() => void handleCopy(profile.slug)}
 									copied={copiedSlug() === profile.slug}
 								/>
 							}
@@ -177,7 +179,7 @@ export default function ProfileList(props: ProfileListProps) {
 								profile={profile}
 								onSuccess={() => {
 									setEditingProfile(null);
-									refetch();
+									void refetch();
 								}}
 								onCancel={() => setEditingProfile(null)}
 							/>
@@ -303,7 +305,7 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 
 	return (
 		<Card>
-			<form onSubmit={handleSubmit}>
+			<form onSubmit={(e) => void handleSubmit(e)}>
 				<CardHeader>
 					<CardTitle>Create New Profile</CardTitle>
 				</CardHeader>
@@ -313,7 +315,9 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 						<Input
 							id="create-profile-name"
 							value={name()}
-							onInput={(e) => handleNameChange(e.currentTarget.value)}
+							onInput={(e) => {
+								handleNameChange(e.currentTarget.value);
+							}}
 							placeholder="My Public Timeline"
 						/>
 					</FormField>
@@ -395,7 +399,7 @@ function EditProfileForm(props: EditProfileFormProps) {
 
 	return (
 		<Card>
-			<form onSubmit={handleSubmit}>
+			<form onSubmit={(e) => void handleSubmit(e)}>
 				<CardHeader>
 					<CardTitle>Edit Profile</CardTitle>
 				</CardHeader>

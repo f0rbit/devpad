@@ -21,7 +21,7 @@ const fetchProjects = async (): Promise<Project[]> => {
 	if (typeof window === "undefined") return [];
 	const result = await getBrowserClient().projects.list();
 	if (!result.ok) return [];
-	return result.value as Project[];
+	return result.value;
 };
 
 const ProjectSelector = (props: ProjectSelectorProps) => {
@@ -42,14 +42,14 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 	const [refreshing, setRefreshing] = createSignal(false);
 
 	const options = (): MultiSelectOption<string>[] =>
-		(projects() ?? []).map((p) => ({
+		projects().map((p) => ({
 			value: p.id,
 			label: p.name,
 			description: p.description ?? undefined,
 		}));
 
 	const selectedProjects = () => {
-		const all = projects() ?? [];
+		const all = projects();
 		const ids = new Set(props.selectedIds);
 		return all.filter((p) => ids.has(p.id));
 	};
@@ -57,8 +57,10 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 	const handleRefresh = async () => {
 		setRefreshing(true);
 		try {
-			await getBrowserClient().projects.list();
+			unwrap(await getBrowserClient().projects.list());
 			setFetchTrigger((n) => n + 1);
+		} catch (e) {
+			console.error("[ProjectSelector] Failed to refresh projects:", e);
 		} finally {
 			setRefreshing(false);
 		}
@@ -79,7 +81,7 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 				<Button
 					variant="ghost"
 					size="sm"
-					onClick={handleRefresh}
+					onClick={() => void handleRefresh()}
 					disabled={refreshing()}
 					label="Refresh projects from DevPad"
 				>

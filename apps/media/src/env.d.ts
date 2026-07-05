@@ -1,16 +1,20 @@
 /// <reference types="astro/client" />
 
-interface ImportMetaEnv {
-	readonly PUBLIC_API_URL: string;
-}
+import type { AuthUser } from "@devpad/schema/bindings";
 
-interface ImportMeta {
-	readonly env: ImportMetaEnv;
-}
+declare global {
+	interface ImportMetaEnv {
+		readonly PUBLIC_API_URL: string;
+	}
 
-declare namespace App {
-	interface Locals {
-		user: import("@devpad/schema/bindings").AuthUser;
-		session: { id: string } | null;
+	interface ImportMeta {
+		readonly env: ImportMetaEnv;
+	}
+
+	namespace App {
+		interface Locals {
+			user: AuthUser;
+			session: { id: string } | null;
+		}
 	}
 }

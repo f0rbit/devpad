@@ -53,7 +53,7 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 		setError(null);
 
 		try {
-			const url = isEditMode() ? `/api/v1/profiles/${props.profile?.id}` : "/api/v1/profiles";
+			const url = isEditMode() ? `/api/v1/profiles/${props.profile?.id ?? ""}` : "/api/v1/profiles";
 			const method = isEditMode() ? "PATCH" : "POST";
 
 			const res = await fetch(url, {
@@ -88,7 +88,7 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 			</ModalHeader>
 
 			<ModalBody>
-				<form onSubmit={handleSubmit} class="stack gap-md">
+				<form onSubmit={(e) => void handleSubmit(e)} class="stack gap-md">
 					<FormField label="Name" required>
 						<Input
 							value={name()}
@@ -106,7 +106,9 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 					>
 						<Input
 							value={slug()}
-							onInput={(e) => handleSlugInput(e.currentTarget.value)}
+							onInput={(e) => {
+								handleSlugInput(e.currentTarget.value);
+							}}
 							placeholder="my-profile"
 							maxLength={50}
 							error={!!slugError()}
@@ -142,7 +144,7 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 				<Button variant="secondary" onClick={props.onClose} disabled={saving()}>
 					Cancel
 				</Button>
-				<Button onClick={handleSubmit} disabled={!canSubmit()}>
+				<Button onClick={(e) => void handleSubmit(e)} disabled={!canSubmit()}>
 					{saving() ? "Saving..." : isEditMode() ? "Save Changes" : "Create Profile"}
 				</Button>
 			</ModalFooter>

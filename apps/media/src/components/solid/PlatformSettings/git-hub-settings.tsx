@@ -80,7 +80,7 @@ export default function GitHubSettings(props: Props) {
 											<div class="repo-item">
 												<Checkbox
 													checked={!isHidden()}
-													onChange={() => toggleRepo(repo.full_name)}
+													onChange={() => void toggleRepo(repo.full_name)}
 													label={repo.full_name}
 													disabled={isUpdating()}
 													class={`mono text-sm ${isHidden() ? "opacity-50" : ""}`}

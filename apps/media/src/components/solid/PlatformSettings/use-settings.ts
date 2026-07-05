@@ -12,10 +12,14 @@ export function useSettings(accountId: string, onUpdate?: () => void) {
 	) => {
 		setUpdating(true);
 		try {
-			await getClient().media.connections.settings.update(accountId, {
+			const result = await getClient().media.connections.settings.update(accountId, {
 				...currentSettings,
 				[key]: value,
 			});
+			if (!result.ok) {
+				console.error("[useSettings] Failed to update setting:", result.error);
+				return;
+			}
 			onUpdate?.();
 		} finally {
 			setUpdating(false);

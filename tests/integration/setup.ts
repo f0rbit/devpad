@@ -94,7 +94,7 @@ export async function performCleanup(): Promise<void> {
 
 	// Stop Hono server
 	if (honoServer) {
-		honoServer.stop();
+		await honoServer.stop();
 		honoServer = null;
 		log("✅ Hono server stopped");
 	}
@@ -137,11 +137,11 @@ const cleanup = async () => {
 	await performCleanup();
 };
 
-process.on("exit", cleanup);
-process.on("SIGINT", cleanup);
-process.on("SIGTERM", cleanup);
-process.on("uncaughtException", cleanup);
-process.on("unhandledRejection", cleanup);
+process.on("exit", () => void cleanup());
+process.on("SIGINT", () => void cleanup());
+process.on("SIGTERM", () => void cleanup());
+process.on("uncaughtException", () => void cleanup());
+process.on("unhandledRejection", () => void cleanup());
 
 async function startHonoServer(): Promise<void> {
 	log("Starting shared Hono server in-process...");

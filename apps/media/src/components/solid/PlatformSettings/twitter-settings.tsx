@@ -29,19 +29,19 @@ export default function TwitterSettings(props: Props) {
 				<div class="filter-toggles">
 					<Checkbox
 						checked={includeRetweets()}
-						onChange={() => toggle("include_retweets", includeRetweets())}
+						onChange={() => void toggle("include_retweets", includeRetweets())}
 						label="Include retweets in timeline"
 						disabled={updating()}
 					/>
 					<Checkbox
 						checked={includeReplies()}
-						onChange={() => toggle("include_replies", includeReplies())}
+						onChange={() => void toggle("include_replies", includeReplies())}
 						label="Include replies in timeline"
 						disabled={updating()}
 					/>
 					<Checkbox
 						checked={hideSensitive()}
-						onChange={() => toggle("hide_sensitive", hideSensitive())}
+						onChange={() => void toggle("hide_sensitive", hideSensitive())}
 						label="Hide sensitive content"
 						disabled={updating()}
 					/>

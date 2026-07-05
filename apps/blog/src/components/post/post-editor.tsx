@@ -62,16 +62,35 @@ const generateSlug = (title: string): string =>
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-|-$/g, "");
 
-const formatDateForInput = (date: Date | null): string => {
-	if (!date) return "";
-	const pad = (n: number) => n.toString().padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+const pad = (n: number) => n.toString().padStart(2, "0");
+
+const formatDateForInput = (d: Date | null): string => {
+	if (!d) return "";
+	return `${String(d.getFullYear())}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
 type CategoryNode = Category & { children?: CategoryNode[] };
 
 const flattenCategoryTree = (nodes: CategoryNode[]): Category[] =>
 	nodes.flatMap((n) => [{ name: n.name, parent: n.parent }, ...flattenCategoryTree(n.children ?? [])]);
+
+const saveNewPost = async (data: PostFormData) => {
+	const post = unwrap(
+		await getBrowserClient().blog.posts.create({
+			slug: data.slug,
+			title: data.title,
+			content: data.content,
+			description: data.description,
+			format: data.format,
+			category: data.category,
+			tags: data.tags,
+			project_ids: data.project_ids,
+			publish_at: data.publish_at ?? undefined,
+		}),
+	);
+
+	window.location.href = `/posts/${post.slug}`;
+};
 
 const PostEditor: Component<PostEditorProps> = (props) => {
 	const [title, setTitle] = createSignal(props.post?.title ?? "");
@@ -85,7 +104,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 	const [publishAt, setPublishAt] = createSignal<Date | null>(
 		props.post?.publish_at ? new Date(props.post.publish_at) : null,
 	);
-	const [categories, setCategories] = createSignal<Category[]>(props.categories ?? []);
+	const [categories, setCategories] = createSignal<Category[]>(props.categories);
 
 	const formState = form.create();
 	const [activeTab, setActiveTab] = createSignal<"write" | "preview">("write");
@@ -104,7 +123,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 	});
 
 	// Fetch categories on mount if not provided, and notify parent that form is ready
-	onMount(async () => {
+	const initPostEditor = async () => {
 		// Notify parent that form is ready (for external save button)
 		if (props.onFormReady) {
 			props.onFormReady(getFormData);
@@ -115,14 +134,17 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 		}
 
 		// Fetch categories if not provided
-		if (props.categories && props.categories.length > 0) return;
+		if (props.categories.length > 0) return;
 		try {
 			const data = unwrap(await getBrowserClient().blog.categories.tree());
-			const flatCategories = flattenCategoryTree((data.categories ?? []) as CategoryNode[]);
+			const flatCategories = flattenCategoryTree(data.categories);
 			setCategories(flatCategories);
 		} catch (e) {
 			console.error("[PostEditor] Failed to fetch categories:", e);
 		}
+	};
+	onMount(() => {
+		void initPostEditor();
 	});
 
 	const isEditing = () => !!props.post;
@@ -140,24 +162,6 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 		} else {
 			setPublishAt(new Date(value));
 		}
-	};
-
-	const saveNewPost = async (data: PostFormData) => {
-		const post = unwrap(
-			await getBrowserClient().blog.posts.create({
-				slug: data.slug,
-				title: data.title,
-				content: data.content,
-				description: data.description,
-				format: data.format,
-				category: data.category,
-				tags: data.tags,
-				project_ids: data.project_ids,
-				publish_at: data.publish_at ?? undefined,
-			}),
-		);
-
-		window.location.href = `/posts/${post.slug}`;
 	};
 
 	const handleSave = async () => {
@@ -203,7 +207,9 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 					class="post-editor__title-input"
 					placeholder="Post title..."
 					prop:value={title()}
-					onInput={(e) => handleTitleChange(e.currentTarget.value)}
+					onInput={(e) => {
+						handleTitleChange(e.currentTarget.value);
+					}}
 				/>
 
 				{/* Metadata grid */}
@@ -241,7 +247,9 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 						<input
 							type="datetime-local"
 							prop:value={formatDateForInput(publishAt())}
-							onInput={(e) => handlePublishAtChange(e.currentTarget.value)}
+							onInput={(e) => {
+								handlePublishAtChange(e.currentTarget.value);
+							}}
 						/>
 					</div>
 
@@ -277,7 +285,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 					{(updatedAt) => (
 						<div class="post-editor__version-info">
 							<span class="post-editor__last-saved">Last saved {date.relative(updatedAt)}</span>
-							<a href={`/posts/${props.post?.uuid}/versions`} class="post-editor__history-link">
+							<a href={`/posts/${props.post?.uuid ?? ""}/versions`} class="post-editor__history-link">
 								View History →
 							</a>
 						</div>
@@ -289,7 +297,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 					<div class="post-editor__actions">
 						<Button
 							variant="primary"
-							onClick={handleSave}
+							onClick={() => void handleSave()}
 							disabled={formState.submitting()}
 							loading={formState.submitting()}
 						>

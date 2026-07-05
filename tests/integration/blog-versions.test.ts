@@ -3,7 +3,7 @@ import { setupIntegration } from "../shared/base-integration-test";
 
 const t = setupIntegration();
 
-const uniqueSlug = () => `test-version-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const uniqueSlug = () => `test-version-${String(Date.now())}-${Math.random().toString(36).slice(2, 8)}`;
 
 describe("blog post versions integration", () => {
 	describe("version lifecycle", () => {
@@ -113,7 +113,8 @@ describe("blog post versions integration", () => {
 			const result = await t.client.blog.posts.version(post_uuid, "invalid-hash-that-does-not-exist");
 			expect(result.ok).toBe(false);
 
-			await t.client.blog.posts.delete(post_uuid);
+			const deleteResult = await t.client.blog.posts.delete(post_uuid);
+			expect(deleteResult.ok).toBe(true);
 		});
 	});
 });

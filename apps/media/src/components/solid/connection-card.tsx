@@ -25,7 +25,7 @@ export default function ConnectionCard(props: Props) {
 
 		const result = await getClient().media.connections.delete(props.connection.account_id);
 
-		if (result.ok === false) {
+		if (!result.ok) {
 			setError(result.error.message);
 			setDeleting(false);
 			return;
@@ -40,7 +40,7 @@ export default function ConnectionCard(props: Props) {
 
 		const result = await getClient().media.connections.refresh(props.connection.account_id);
 
-		if (result.ok === false) {
+		if (!result.ok) {
 			setError(result.error.message);
 		}
 
@@ -59,10 +59,10 @@ export default function ConnectionCard(props: Props) {
 					</div>
 				</div>
 				<div class="row row-sm">
-					<Button icon variant="ghost" label="Refresh data" onClick={handleRefresh} disabled={refreshing()}>
+					<Button icon variant="ghost" label="Refresh data" onClick={() => void handleRefresh()} disabled={refreshing()}>
 						<RefreshCw size={16} class={refreshing() ? "animate-spin" : ""} />
 					</Button>
-					<Button icon variant="ghost" label="Remove connection" onClick={handleDelete} disabled={deleting()}>
+					<Button icon variant="ghost" label="Remove connection" onClick={() => void handleDelete()} disabled={deleting()}>
 						<Trash2 size={16} />
 					</Button>
 				</div>

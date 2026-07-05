@@ -76,7 +76,7 @@ export default function PlatformSetupForm(props: Props) {
 	};
 
 	return (
-		<form onSubmit={handleSubmit} class="setup-form">
+		<form onSubmit={(e) => void handleSubmit(e)} class="setup-form">
 			<FormField label={config().tokenLabel} id="platform-token" required>
 				<Input
 					id="platform-token"

@@ -16,11 +16,15 @@ export default function BlueskySettings(props: Props) {
 
 	const updateSetting = async (key: string, value: boolean) => {
 		setUpdating(true);
-		await getClient().media.connections.settings.update(props.accountId, {
+		const result = await getClient().media.connections.settings.update(props.accountId, {
 			...props.settings,
 			[key]: value,
 		});
 		setUpdating(false);
+		if (!result.ok) {
+			console.error("[BlueskySettings] Failed to update setting:", result.error);
+			return;
+		}
 		props.onUpdate();
 	};
 
@@ -31,13 +35,13 @@ export default function BlueskySettings(props: Props) {
 				<Checkbox checked={true} onChange={() => {}} label="Include my posts" disabled />
 				<Checkbox
 					checked={includeReplies()}
-					onChange={() => updateSetting("include_replies", !includeReplies())}
+					onChange={() => void updateSetting("include_replies", !includeReplies())}
 					label="Include replies"
 					disabled={updating()}
 				/>
 				<Checkbox
 					checked={includeReposts()}
-					onChange={() => updateSetting("include_reposts", !includeReposts())}
+					onChange={() => void updateSetting("include_reposts", !includeReposts())}
 					label="Include reposts"
 					disabled={updating()}
 				/>
