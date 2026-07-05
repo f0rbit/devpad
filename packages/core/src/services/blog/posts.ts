@@ -162,7 +162,7 @@ export const createPostService = ({ db, corpus }: Deps) => {
 			title: input.title,
 			content: input.content,
 			description: input.description,
-			format: input.format ?? "md",
+			format: input.format,
 		};
 
 		return pipe(postsCorpus.put(corpus, path, content))
@@ -180,7 +180,7 @@ export const createPostService = ({ db, corpus }: Deps) => {
 								author_id: userId,
 								slug: input.slug,
 								corpus_version: hash,
-								category: input.category ?? "root",
+								category: input.category,
 								archived: false,
 								publish_at: publishAt,
 								created_at: now,
@@ -191,9 +191,9 @@ export const createPostService = ({ db, corpus }: Deps) => {
 						if (inserted.length === 0) throw new Error("Insert returned no rows");
 						const row = inserted[0];
 
-						await syncTags(db, row.id, input.tags ?? []);
+						await syncTags(db, row.id, input.tags);
 						await syncProjects(db, row.id, input.project_ids ?? []);
-						return assemblePost(row, content, input.tags ?? [], input.project_ids ?? []);
+						return assemblePost(row, content, input.tags, input.project_ids ?? []);
 					}, toDbError),
 				).result(),
 			)

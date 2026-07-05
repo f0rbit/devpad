@@ -140,6 +140,8 @@ describe("createPostService", () => {
 				title: "New Post",
 				content: "Content here",
 				format: "md",
+				category: "root",
+				tags: [],
 			});
 			expect(result.ok).toBe(true);
 			if (result.ok) {
@@ -159,6 +161,8 @@ describe("createPostService", () => {
 				title: "New Post",
 				content: "Content",
 				format: "md",
+				category: "root",
+				tags: [],
 			});
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
