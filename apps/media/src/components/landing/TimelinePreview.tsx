@@ -77,7 +77,7 @@ function CommitGroupRow(props: { item: MockTimelineItem }) {
 				</div>
 				<div class="timeline-nested-list">
 					<For each={props.item.commits}>
-						{commit => (
+						{(commit) => (
 							<div class="row items-baseline" style={{ padding: "0.125rem 0.5rem", "font-size": "0.8125rem" }}>
 								<code class="text-xs muted font-mono shrink-0">{commit.sha}</code>
 								<span class="text-muted truncate">{commit.message}</span>
@@ -154,7 +154,7 @@ export default function TimelinePreview() {
 	return (
 		<div class="timeline-flat">
 			<For each={mockData}>
-				{item => (
+				{(item) => (
 					<Switch>
 						<Match when={item.type === "commit_group"}>
 							<CommitGroupRow item={item} />

@@ -52,9 +52,15 @@ export const createApi = (options?: ApiOptions) => {
 	app.use(
 		"/api/*",
 		cors({
-			origin: origin => {
+			origin: (origin) => {
 				if (!origin) return origin;
-				const allowed = ["http://localhost:4321", "http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"];
+				const allowed = [
+					"http://localhost:4321",
+					"http://localhost:3000",
+					"http://localhost:3001",
+					"http://localhost:3002",
+					"http://localhost:3003",
+				];
 				if (allowed.includes(origin)) return origin;
 				if (origin.endsWith(".devpad.tools") || origin === "https://devpad.tools") return origin;
 				if (origin.endsWith(".workers.dev") || origin.endsWith(".pages.dev")) return origin;
@@ -63,7 +69,7 @@ export const createApi = (options?: ApiOptions) => {
 			allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 			allowHeaders: ["Content-Type", "Authorization", "Auth-Token"],
 			credentials: true,
-		})
+		}),
 	);
 
 	if (options?.db) {
@@ -145,7 +151,7 @@ export const createApi = (options?: ApiOptions) => {
 		app.use("*", unifiedContextMiddleware);
 	}
 
-	app.get("/health", c => c.json({ status: "ok", timestamp: new Date().toISOString() }));
+	app.get("/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }));
 
 	app.route("/api/auth", authRoutes);
 	app.route("/api/auth/platforms", mediaAuthRoutes);
@@ -193,12 +199,14 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 			github_id: result.value.user.github_id,
 			name: result.value.user.name,
 			task_view: result.value.user.task_view,
-		})
+		}),
 	);
 	headers.set("X-Auth-Session-Id", result.value.session.id);
 
 	const authed = new Request(request, { headers });
-	const session_cookie = result.value.session.fresh ? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT ?? "production")) : undefined;
+	const session_cookie = result.value.session.fresh
+		? createSessionCookie(result.value.session.id, cookieConfig(env.ENVIRONMENT ?? "production"))
+		: undefined;
 
 	console.log(`[resolveAuth] injecting X-Auth-User for user: ${result.value.user.id}`);
 	return { request: authed, session_cookie };
@@ -222,7 +230,11 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			const auth = await resolveAuth(request, env);
 			console.log(`[worker] auth resolved, has X-Auth-User: ${auth.request.headers.has("X-Auth-User")}`);
 
-			const handler = hostname.startsWith("blog.") ? handlers.blog : hostname.startsWith("media.") ? handlers.media : handlers.devpad;
+			const handler = hostname.startsWith("blog.")
+				? handlers.blog
+				: hostname.startsWith("media.")
+					? handlers.media
+					: handlers.devpad;
 
 			let response: Response;
 			try {

@@ -32,7 +32,7 @@ export default function RecentActivity(props: RecentActivityProps) {
 	return (
 		<div class="recent-activity-list">
 			<For each={props.items}>
-				{item => (
+				{(item) => (
 					<div class="recent-activity-item">
 						<div class="recent-activity-icon">
 							<PlatformIcon platform={getPlatform(item)} size={16} />

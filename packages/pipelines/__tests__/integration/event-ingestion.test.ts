@@ -51,7 +51,7 @@ const make_session_token = (cfg: SessionConfig): string => {
 };
 
 const auth_gate: AuthGate<AuthIdentity> = {
-	check: async request => {
+	check: async (request) => {
 		const header = request.headers.get("authorization");
 		const token = parse_bearer_header(header);
 		if (token === null) {
@@ -59,10 +59,23 @@ const auth_gate: AuthGate<AuthIdentity> = {
 		}
 		const session = SESSIONS.get(token);
 		if (session !== undefined) {
-			const oidc: OidcAudit = { sub: "test:sub", repository: "f0rbit/pkg", ref: null, sha: null, run_id: null, actor: null };
+			const oidc: OidcAudit = {
+				sub: "test:sub",
+				repository: "f0rbit/pkg",
+				ref: null,
+				sha: null,
+				run_id: null,
+				actor: null,
+			};
 			return {
 				ok: true as const,
-				value: { kind: "session" as const, scope: session.scope, package_ids: session.package_ids, trust_policy_id: "tp-test", oidc },
+				value: {
+					kind: "session" as const,
+					scope: session.scope,
+					package_ids: session.package_ids,
+					trust_policy_id: "tp-test",
+					oidc,
+				},
 			};
 		}
 		if (is_bearer_valid(header, ADMIN_TOKEN)) {
@@ -116,8 +129,8 @@ async function build_setup(): Promise<Setup> {
 	const deps: RoutesDeps = {
 		db,
 		do_router: {
-			get: run_id => ({
-				fetch: async req => {
+			get: (run_id) => ({
+				fetch: async (req) => {
 					const url = new URL(req.url);
 					do_calls.push({ run_id, path: url.pathname });
 					return new Response(JSON.stringify({ ok: true, value: {} }), { status: 200 });
@@ -133,7 +146,13 @@ async function build_setup(): Promise<Setup> {
 	return { app: make_routes(() => deps), db, do_calls };
 }
 
-const post_event = async (app: ReturnType<typeof make_routes>, run_id: string, body: unknown, auth: string | null, extra_headers: Record<string, string> = {}) => {
+const post_event = async (
+	app: ReturnType<typeof make_routes>,
+	run_id: string,
+	body: unknown,
+	auth: string | null,
+	extra_headers: Record<string, string> = {},
+) => {
 	const headers: Record<string, string> = { "content-type": "application/json", ...extra_headers };
 	if (auth !== null) headers["authorization"] = auth;
 	const res = await app.fetch(
@@ -141,11 +160,15 @@ const post_event = async (app: ReturnType<typeof make_routes>, run_id: string, b
 			method: "POST",
 			headers,
 			body: typeof body === "string" ? body : JSON.stringify(body),
-		})
+		}),
 	);
 	return {
 		status: res.status,
-		body: (await res.json()) as { ok: boolean; value?: { event_id: string; duplicated: boolean }; error?: { code: string } & Record<string, unknown> },
+		body: (await res.json()) as {
+			ok: boolean;
+			value?: { event_id: string; duplicated: boolean };
+			error?: { code: string } & Record<string, unknown>;
+		},
 	};
 };
 
@@ -188,10 +211,18 @@ describe("POST /runs/:id/events — admin bearer", () => {
 
 		// Two requests with same header_key but different body keys should
 		// still dedup because header takes precedence.
-		const first = await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ idempotency_key: VALID_UUID }), auth, { "x-idempotency-key": header_key });
+		const first = await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ idempotency_key: VALID_UUID }), auth, {
+			"x-idempotency-key": header_key,
+		});
 		expect(first.status).toBe(201);
 
-		const second = await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ idempotency_key: "77777777-7777-4777-8777-777777777777" }), auth, { "x-idempotency-key": header_key });
+		const second = await post_event(
+			setup.app,
+			SEEDED_RUN_ID,
+			make_valid_body({ idempotency_key: "77777777-7777-4777-8777-777777777777" }),
+			auth,
+			{ "x-idempotency-key": header_key },
+		);
 		expect(second.status).toBe(200);
 		expect(second.body.value?.event_id).toBe(first.body.value?.event_id);
 	});
@@ -266,8 +297,26 @@ describe("GET /runs/:id/events", () => {
 	test("returns the stored events newest-first", async () => {
 		const setup = await build_setup();
 		const auth = `Bearer ${ADMIN_TOKEN}`;
-		await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ stage_name: "staging", kind: "warning", idempotency_key: "88888888-8888-4888-8888-888888888888" }), auth);
-		await post_event(setup.app, SEEDED_RUN_ID, make_valid_body({ stage_name: "wave1", kind: "deploy_completed", idempotency_key: "99999999-9999-4999-8999-999999999999" }), auth);
+		await post_event(
+			setup.app,
+			SEEDED_RUN_ID,
+			make_valid_body({
+				stage_name: "staging",
+				kind: "warning",
+				idempotency_key: "88888888-8888-4888-8888-888888888888",
+			}),
+			auth,
+		);
+		await post_event(
+			setup.app,
+			SEEDED_RUN_ID,
+			make_valid_body({
+				stage_name: "wave1",
+				kind: "deploy_completed",
+				idempotency_key: "99999999-9999-4999-8999-999999999999",
+			}),
+			auth,
+		);
 
 		const res = await setup.app.fetch(new Request(`http://run.local/runs/${SEEDED_RUN_ID}/events`));
 		expect(res.status).toBe(200);
@@ -277,7 +326,10 @@ describe("GET /runs/:id/events", () => {
 
 		// Confirm the rows landed in the DB (sanity check on the order
 		// invariant doesn't rely on timestamps being distinct in fast tests).
-		const rows = await setup.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, SEEDED_RUN_ID));
+		const rows = await setup.db
+			.select()
+			.from(pipeline_stage_event)
+			.where(eq(pipeline_stage_event.run_id, SEEDED_RUN_ID));
 		expect(rows).toHaveLength(2);
 	});
 

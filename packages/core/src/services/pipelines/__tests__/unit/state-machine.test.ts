@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { Gate, Stage, TransitionKey } from "@devpad/pipeline-templates";
-import { initial_state, type ResolvedPlan, type RunEvent, type RunState, transition, transition_key } from "../../state-machine.js";
+import {
+	initial_state,
+	type ResolvedPlan,
+	type RunEvent,
+	type RunState,
+	transition,
+	transition_key,
+} from "../../state-machine.js";
 
 const stages_gradual: Stage[] = [
 	{ name: "staging", traffic: 0, bake: null },
@@ -101,7 +108,11 @@ describe("state-machine: queued + start", () => {
 	});
 
 	test("non-start event in queued is invalid", () => {
-		for (const ev of [{ kind: "deploy_complete" as const }, { kind: "bake_complete" as const }, { kind: "gate_verdict" as const, verdict: "Pass" as const }]) {
+		for (const ev of [
+			{ kind: "deploy_complete" as const },
+			{ kind: "bake_complete" as const },
+			{ kind: "gate_verdict" as const, verdict: "Pass" as const },
+		]) {
 			const r = transition(initial_state(), ev, plan_gradual());
 			expect(r.ok).toBe(false);
 			if (!r.ok) expect(r.error.code).toBe("invalid_event");
@@ -159,7 +170,11 @@ describe("state-machine: deploying + deploy_complete", () => {
 
 	test("non-deploy events in deploying are invalid", () => {
 		const s: RunState = { status: "deploying", stage_index: 0, last_deployed_index: null };
-		for (const ev of [{ kind: "bake_complete" as const }, { kind: "gate_verdict" as const, verdict: "Pass" as const }, { kind: "start" as const }]) {
+		for (const ev of [
+			{ kind: "bake_complete" as const },
+			{ kind: "gate_verdict" as const, verdict: "Pass" as const },
+			{ kind: "start" as const },
+		]) {
 			const r = transition(s, ev, plan_gradual());
 			expect(r.ok).toBe(false);
 		}
@@ -219,7 +234,11 @@ describe("state-machine: awaiting_approval + gate_verdict", () => {
 
 	test("non-gate-verdict in awaiting_approval is invalid", () => {
 		const s: RunState = { status: "awaiting_approval", stage_index: 0, last_deployed_index: 0 };
-		for (const ev of [{ kind: "deploy_complete" as const }, { kind: "bake_complete" as const }, { kind: "start" as const }]) {
+		for (const ev of [
+			{ kind: "deploy_complete" as const },
+			{ kind: "bake_complete" as const },
+			{ kind: "start" as const },
+		]) {
 			const r = transition(s, ev, plan_gradual());
 			expect(r.ok).toBe(false);
 		}
@@ -302,7 +321,12 @@ describe("state-machine: cancel", () => {
 describe("state-machine: terminal states reject most events", () => {
 	test("completed rejects start / deploy_complete / bake / gate_verdict", () => {
 		const s: RunState = { status: "completed", stage_index: 4, last_deployed_index: 4 };
-		for (const ev of [{ kind: "start" as const }, { kind: "deploy_complete" as const }, { kind: "bake_complete" as const }, { kind: "gate_verdict" as const, verdict: "Pass" as const }]) {
+		for (const ev of [
+			{ kind: "start" as const },
+			{ kind: "deploy_complete" as const },
+			{ kind: "bake_complete" as const },
+			{ kind: "gate_verdict" as const, verdict: "Pass" as const },
+		]) {
 			const r = transition(s, ev, plan_gradual());
 			expect(r.ok).toBe(false);
 			if (!r.ok) expect(r.error.code).toBe("terminal_state");

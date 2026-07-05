@@ -28,7 +28,10 @@ import { defaultGradual, defaultGradualGates } from "./default-gradual.ts";
 import { parse_duration } from "./rollout.ts";
 import type { Duration, Gate, PipelineTemplate, Rollout, TransitionKey } from "./types.ts";
 
-export type DslError = { code: "unknown_stage"; message: string; stage: string } | { code: "unknown_transition"; message: string; transition: string } | { code: "duration_parse"; message: string; input: string };
+export type DslError =
+	| { code: "unknown_stage"; message: string; stage: string }
+	| { code: "unknown_transition"; message: string; transition: string }
+	| { code: "duration_parse"; message: string; input: string };
 
 /** Shorthand the DSL accepts for a bake window — either a parsed `{ ms }` or the `"30m"` string. */
 type DurationInput = Duration | string;
@@ -55,18 +58,22 @@ export type ExtendTemplateOverrides = {
 	gates?: Partial<Record<TransitionKey, Gate>>;
 };
 
-const is_atomic_override = (r: RolloutOverride | undefined): r is AtomicRolloutOverride => r !== undefined && r.type === "atomic";
+const is_atomic_override = (r: RolloutOverride | undefined): r is AtomicRolloutOverride =>
+	r !== undefined && r.type === "atomic";
 
 const normalise_duration = (input: DurationInput): Result<Duration, DslError> => {
 	if (typeof input === "string") return parse_duration(input);
 	return ok(input);
 };
 
-const merge_gradual_stages = (base: Rollout & { type: "gradual" }, overrides: StageOverride[] | undefined): Result<Rollout, DslError> => {
+const merge_gradual_stages = (
+	base: Rollout & { type: "gradual" },
+	overrides: StageOverride[] | undefined,
+): Result<Rollout, DslError> => {
 	if (overrides === undefined || overrides.length === 0) {
-		return ok({ type: "gradual", stages: base.stages.map(s => ({ ...s, bake: { ...s.bake } })) });
+		return ok({ type: "gradual", stages: base.stages.map((s) => ({ ...s, bake: { ...s.bake } })) });
 	}
-	const by_name = new Map(base.stages.map(s => [s.name, s] as const));
+	const by_name = new Map(base.stages.map((s) => [s.name, s] as const));
 	for (const override of overrides) {
 		if (!by_name.has(override.name)) {
 			return err({
@@ -78,7 +85,7 @@ const merge_gradual_stages = (base: Rollout & { type: "gradual" }, overrides: St
 	}
 	const stages: Array<{ name: string; traffic: number; bake: Duration }> = [];
 	for (const stage of base.stages) {
-		const override = overrides.find(o => o.name === stage.name);
+		const override = overrides.find((o) => o.name === stage.name);
 		if (override === undefined) {
 			stages.push({ ...stage, bake: { ...stage.bake } });
 			continue;
@@ -94,7 +101,10 @@ const merge_gradual_stages = (base: Rollout & { type: "gradual" }, overrides: St
 	return ok({ type: "gradual", stages });
 };
 
-const merge_gates = (base: Record<TransitionKey, Gate>, overrides: Partial<Record<TransitionKey, Gate>> | undefined): Result<Record<TransitionKey, Gate>, DslError> => {
+const merge_gates = (
+	base: Record<TransitionKey, Gate>,
+	overrides: Partial<Record<TransitionKey, Gate>> | undefined,
+): Result<Record<TransitionKey, Gate>, DslError> => {
 	const merged: Record<TransitionKey, Gate> = { ...base };
 	if (overrides === undefined) return ok(merged);
 	for (const key of Object.keys(overrides) as TransitionKey[]) {

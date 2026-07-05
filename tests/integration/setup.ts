@@ -7,7 +7,14 @@ import { afterAll, beforeAll } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
 import ApiClient from "@devpad/api";
-import { cleanupTestDatabase, createTestUser, DEBUG_LOGGING, log, TEST_USER_ID, waitForServer } from "../shared/test-utils";
+import {
+	cleanupTestDatabase,
+	createTestUser,
+	DEBUG_LOGGING,
+	log,
+	TEST_USER_ID,
+	waitForServer,
+} from "../shared/test-utils";
 
 export const TEST_BASE_URL = "http://localhost:3001/api/v1";
 export { TEST_USER_ID, DEBUG_LOGGING };

@@ -46,12 +46,7 @@ export default function RollbackButton(props: RollbackButtonProps) {
 							Are you sure you want to roll back this deployment? This will revert to the previous version.
 						</p>
 						<div class="row" style={{ gap: "var(--space-sm)" }}>
-							<Button
-								variant="danger"
-								onClick={handle_rollback}
-								disabled={loading()}
-								style={{ "font-size": "0.9rem" }}
-							>
+							<Button variant="danger" onClick={handle_rollback} disabled={loading()} style={{ "font-size": "0.9rem" }}>
 								{loading() ? "Rolling back..." : "Confirm rollback"}
 							</Button>
 							<Button
@@ -64,9 +59,7 @@ export default function RollbackButton(props: RollbackButtonProps) {
 							</Button>
 						</div>
 						<Show when={error()}>
-							<p style={{ margin: "0", "font-size": "0.85rem", color: "var(--error)" }}>
-								{error()}
-							</p>
+							<p style={{ margin: "0", "font-size": "0.85rem", color: "var(--error)" }}>{error()}</p>
 						</Show>
 					</div>
 				}

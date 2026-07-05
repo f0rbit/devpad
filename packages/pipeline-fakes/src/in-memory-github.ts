@@ -17,9 +17,13 @@ export class InMemoryGithubProvider implements GithubProvider {
 		this.repos.set(key(repo.owner, repo.name), repo);
 	}
 
-	set_run_conclusion(run_id: number, conclusion: WorkflowRun["conclusion"], status: WorkflowRun["status"] = "completed"): void {
+	set_run_conclusion(
+		run_id: number,
+		conclusion: WorkflowRun["conclusion"],
+		status: WorkflowRun["status"] = "completed",
+	): void {
 		for (const list of this.runs.values()) {
-			const found = list.find(r => r.id === run_id);
+			const found = list.find((r) => r.id === run_id);
 			if (found) {
 				found.status = status;
 				found.conclusion = conclusion;
@@ -63,9 +67,13 @@ export class InMemoryGithubProvider implements GithubProvider {
 			},
 		},
 		runs: {
-			list: async (input: { owner: string; repo: string; workflow_id?: string }): Promise<Result<WorkflowRun[], GithubError>> => {
+			list: async (input: {
+				owner: string;
+				repo: string;
+				workflow_id?: string;
+			}): Promise<Result<WorkflowRun[], GithubError>> => {
 				const list = this.runs.get(key(input.owner, input.repo)) ?? [];
-				const filtered = input.workflow_id ? list.filter(r => r.workflow_id === input.workflow_id) : list;
+				const filtered = input.workflow_id ? list.filter((r) => r.workflow_id === input.workflow_id) : list;
 				return ok([...filtered]);
 			},
 		},

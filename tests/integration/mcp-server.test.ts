@@ -83,7 +83,7 @@ describe("MCP Server Integration", () => {
 				description: "Updated via MCP",
 				visibility: "PUBLIC",
 				status: "LIVE",
-			})
+			}),
 		);
 
 		expect(updateResponse.result).toBeDefined();

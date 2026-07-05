@@ -68,7 +68,11 @@ type PostInput = { url: string; headers: Record<string, string>; body: PostBody 
 const post_envelope = async <T>(input: PostInput): Promise<Result<T, CorpusHttpUploadError>> => {
 	let response: Response;
 	try {
-		response = await fetch(input.url, { method: "POST", headers: input.headers, body: input.body as unknown as ArrayBuffer | string });
+		response = await fetch(input.url, {
+			method: "POST",
+			headers: input.headers,
+			body: input.body as unknown as ArrayBuffer | string,
+		});
 	} catch (cause) {
 		return err<CorpusHttpUploadError>({ kind: "network", cause });
 	}
@@ -171,7 +175,8 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 
 		if (meta.store_id === "version-sets") {
 			const parsed = safe_parse_json(new TextDecoder().decode(bytes));
-			if (parsed === null) return err<CorpusError>({ kind: "decode_error", cause: new Error("manifest body is not valid JSON") });
+			if (parsed === null)
+				return err<CorpusError>({ kind: "decode_error", cause: new Error("manifest body is not valid JSON") });
 			const upload = await upload_version_set(input, parsed as VersionSetManifest);
 			if (!upload.ok) return err<CorpusError>(translate_http_error(upload.error, "version_set_put"));
 			// Rewrite local shadow meta with the remote-assigned identifiers
@@ -211,7 +216,10 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 			get: shadow.data.get,
 			delete: shadow.data.delete,
 			exists: shadow.data.exists,
-			put: async (data_key: string, data: ReadableStream<Uint8Array> | Uint8Array): Promise<Result<void, CorpusError>> => {
+			put: async (
+				data_key: string,
+				data: ReadableStream<Uint8Array> | Uint8Array,
+			): Promise<Result<void, CorpusError>> => {
 				const bytes = await to_bytes(data);
 				// Buffer until metadata.put fires the wire call. We have to
 				// wait because we don't know if this is a version-set write
@@ -280,6 +288,11 @@ const to_bytes = async (data: ReadableStream<Uint8Array> | Uint8Array): Promise<
 };
 
 const translate_http_error = (e: CorpusHttpUploadError, operation: string): CorpusError => {
-	const message = e.kind === "http" ? `HTTP ${e.status} ${e.status_text}` : e.kind === "network" ? `network error: ${String(e.cause)}` : `decode error: ${e.message}`;
+	const message =
+		e.kind === "http"
+			? `HTTP ${e.status} ${e.status_text}`
+			: e.kind === "network"
+				? `network error: ${String(e.cause)}`
+				: `decode error: ${e.message}`;
 	return { kind: "storage_error", cause: new Error(message), operation };
 };

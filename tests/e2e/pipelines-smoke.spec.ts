@@ -13,14 +13,14 @@ import { E2E_PROJECT_ID } from "./fixtures/pipeline-ids.ts";
 const inject_test_user = async (context: BrowserContext) => {
 	await context.route(
 		() => true,
-		async route => {
+		async (route) => {
 			await route.continue({
 				headers: {
 					...route.request().headers(),
 					"X-Test-User": "true",
 				},
 			});
-		}
+		},
 	);
 };
 

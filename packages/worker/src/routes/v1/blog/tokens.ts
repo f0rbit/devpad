@@ -20,8 +20,8 @@ tokensRouter.get(
 	withAuth(async (c, user, ctx) => {
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.list(user.id);
-		return response.with(c, result, tokens => ({ tokens }));
-	})
+		return response.with(c, result, (tokens) => ({ tokens }));
+	}),
 );
 
 tokensRouter.post(
@@ -32,7 +32,7 @@ tokensRouter.post(
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.create(user.id, data);
 		return response.result(c, result, 201);
-	})
+	}),
 );
 
 tokensRouter.put(
@@ -45,7 +45,7 @@ tokensRouter.put(
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.update(user.id, id, data);
 		return response.result(c, result);
-	})
+	}),
 );
 
 tokensRouter.delete(
@@ -56,5 +56,5 @@ tokensRouter.delete(
 		const service = createTokenService({ db: ctx.db });
 		const result = await service.delete(user.id, id);
 		return response.empty(c, result);
-	})
+	}),
 );

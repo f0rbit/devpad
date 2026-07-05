@@ -100,7 +100,7 @@ describe("MCP Extended Tools Integration", () => {
 			});
 
 			// Wait for async action recording
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Get project history
 			const history_result = await mcp_client.callTool("devpad_projects_history", {
@@ -297,7 +297,7 @@ describe("MCP Extended Tools Integration", () => {
 			});
 
 			// Wait for async history recording
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise((resolve) => setTimeout(resolve, 100));
 
 			// Get task history
 			const history_result = await mcp_client.callTool("devpad_tasks_history", {

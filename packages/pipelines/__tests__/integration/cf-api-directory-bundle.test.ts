@@ -17,7 +17,10 @@ import type { Server } from "bun";
 import type { AssetUpload, ModuleUpload } from "@devpad/pipeline-fakes";
 import { build_assets_manifest, make_cf_api_provider } from "../../src/providers/cf-api-provider.ts";
 
-type ParsedParts = Record<string, { content_type: string | null; filename: string | null; text: string; bytes: Uint8Array }>;
+type ParsedParts = Record<
+	string,
+	{ content_type: string | null; filename: string | null; text: string; bytes: Uint8Array }
+>;
 
 type RecordedRequest = {
 	method: string;
@@ -69,7 +72,9 @@ const parse_multipart_raw = (raw: Uint8Array, content_type: string): ParsedParts
 		if (header_end >= 0) {
 			const header_text = decode_text(part.subarray(0, header_end));
 			const body_bytes = part.subarray(header_end + 4);
-			const disposition = /Content-Disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]+)")?/i.exec(header_text);
+			const disposition = /Content-Disposition:\s*form-data;\s*name="([^"]+)"(?:;\s*filename="([^"]+)")?/i.exec(
+				header_text,
+			);
 			const content_type_match = /Content-Type:\s*([^\r\n]+)/i.exec(header_text);
 			const name = disposition?.[1] ?? "";
 			const filename = disposition?.[2] ?? null;
@@ -124,7 +129,7 @@ const start_recorder = (): RecorderHandle => {
 				parts,
 			};
 			requests.push(record);
-			const route = routes.find(r => r.matcher(record));
+			const route = routes.find((r) => r.matcher(record));
 			const handler = route?.handler ?? default_handler;
 			const out = handler(record);
 			return new Response(JSON.stringify(out.body), {
@@ -199,8 +204,15 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 
 	test("posts multipart with metadata + one part per module (no assets)", async () => {
 		recorder.route(
-			r => r.pathname.endsWith("/versions"),
-			() => ({ body: { success: true, errors: [], messages: [], result: { id: "ver_dir", number: 7, metadata: { created_on: "2026-05-18T00:00:00Z" } } } }),
+			(r) => r.pathname.endsWith("/versions"),
+			() => ({
+				body: {
+					success: true,
+					errors: [],
+					messages: [],
+					result: { id: "ver_dir", number: 7, metadata: { created_on: "2026-05-18T00:00:00Z" } },
+				},
+			}),
 		);
 		const provider = make_test_provider(recorder);
 
@@ -250,7 +262,7 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 
 	test("opens an assets-upload session BEFORE the versions upload, then stamps the jwt onto metadata.assets", async () => {
 		recorder.route(
-			r => r.pathname.endsWith("/assets-upload-session"),
+			(r) => r.pathname.endsWith("/assets-upload-session"),
 			() => ({
 				body: {
 					success: true,
@@ -264,12 +276,19 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 			}),
 		);
 		recorder.route(
-			r => r.pathname.endsWith("/assets/upload"),
+			(r) => r.pathname.endsWith("/assets/upload"),
 			() => ({ body: { success: true, errors: [], messages: [], result: {} } }),
 		);
 		recorder.route(
-			r => r.pathname.endsWith("/versions"),
-			() => ({ body: { success: true, errors: [], messages: [], result: { id: "ver_dir_assets", number: 8, metadata: { created_on: "2026-05-18T00:00:00Z" } } } }),
+			(r) => r.pathname.endsWith("/versions"),
+			() => ({
+				body: {
+					success: true,
+					errors: [],
+					messages: [],
+					result: { id: "ver_dir_assets", number: 8, metadata: { created_on: "2026-05-18T00:00:00Z" } },
+				},
+			}),
 		);
 		const provider = make_test_provider(recorder);
 
@@ -356,7 +375,13 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 			compatibility_date: "2026-05-01",
 			assets: {
 				assets: [
-					{ path: "/foo.css", hash: "shorthash", size_bytes: 3, mime_type: "text/css", content: new TextEncoder().encode("foo") },
+					{
+						path: "/foo.css",
+						hash: "shorthash",
+						size_bytes: 3,
+						mime_type: "text/css",
+						content: new TextEncoder().encode("foo"),
+					},
 				],
 			},
 		});
@@ -368,7 +393,7 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 
 	test("surfaces an assets/upload failure as assets_upload_failed without uploading the version", async () => {
 		recorder.route(
-			r => r.pathname.endsWith("/assets-upload-session"),
+			(r) => r.pathname.endsWith("/assets-upload-session"),
 			() => ({
 				body: {
 					success: true,
@@ -379,8 +404,11 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 			}),
 		);
 		recorder.route(
-			r => r.pathname.endsWith("/assets/upload"),
-			() => ({ status: 500, body: { success: false, errors: [{ code: 500, message: "boom" }], messages: [], result: null } }),
+			(r) => r.pathname.endsWith("/assets/upload"),
+			() => ({
+				status: 500,
+				body: { success: false, errors: [{ code: 500, message: "boom" }], messages: [], result: null },
+			}),
 		);
 		const provider = make_test_provider(recorder);
 		const result = await provider.versions.upload({
@@ -397,8 +425,8 @@ describe("cf-api-provider — directory_bundle uploads", () => {
 		if (result.ok) return;
 		expect(result.error.code).toBe("assets_upload_failed");
 		// The session POST + the failed bucket POST were captured, but no /versions POST happened.
-		const paths = recorder.requests.map(r => r.pathname);
-		expect(paths.some(p => p.endsWith("/versions"))).toBe(false);
+		const paths = recorder.requests.map((r) => r.pathname);
+		expect(paths.some((p) => p.endsWith("/versions"))).toBe(false);
 	});
 
 	test("build_assets_manifest produces the wire-shape session manifest", () => {

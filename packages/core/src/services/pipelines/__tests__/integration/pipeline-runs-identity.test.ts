@@ -55,8 +55,10 @@ describe("pipeline runs — caller-identity injection", () => {
 	let template: PipelineTemplate;
 	let pkg_id: string;
 
-	const staging_script = () => resolve_script_name({ package: { name: PACKAGE_NAME, script_name_overrides: null }, stage_name: "staging" });
-	const prod_script = () => resolve_script_name({ package: { name: PACKAGE_NAME, script_name_overrides: null }, stage_name: "full" });
+	const staging_script = () =>
+		resolve_script_name({ package: { name: PACKAGE_NAME, script_name_overrides: null }, stage_name: "staging" });
+	const prod_script = () =>
+		resolve_script_name({ package: { name: PACKAGE_NAME, script_name_overrides: null }, stage_name: "full" });
 
 	beforeEach(async () => {
 		db = create_test_db();
@@ -101,7 +103,11 @@ describe("pipeline runs — caller-identity injection", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
@@ -119,7 +125,7 @@ describe("pipeline runs — caller-identity injection", () => {
 		const prod_versions = await deps.cf.versions.list(prod_script());
 		expect(prod_versions.ok).toBe(true);
 		if (!prod_versions.ok) return;
-		const new_prod = prod_versions.value.filter(v => v.annotations?.["workers/tag"] === "vs_v1");
+		const new_prod = prod_versions.value.filter((v) => v.annotations?.["workers/tag"] === "vs_v1");
 		expect(new_prod).toHaveLength(1);
 		expect(collect_vars(new_prod[0].vars)).toEqual(trio_for("production", "vs_v1"));
 
@@ -143,17 +149,21 @@ describe("pipeline runs — caller-identity injection", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "atomic-prod", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "atomic-prod", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 
 		const staging = await deps.cf.versions.list(staging_script());
 		if (!staging.ok) throw new Error("staging list failed");
-		const staging_new = staging.value.filter(v => v.annotations?.["workers/tag"] === "vs_v2");
+		const staging_new = staging.value.filter((v) => v.annotations?.["workers/tag"] === "vs_v2");
 		expect(staging_new).toHaveLength(1);
 		expect(collect_vars(staging_new[0].vars)).toEqual(trio_for("staging", "vs_v2"));
 
 		const prod = await deps.cf.versions.list(prod_script());
 		if (!prod.ok) throw new Error("prod list failed");
-		const prod_new = prod.value.filter(v => v.annotations?.["workers/tag"] === "vs_v2");
+		const prod_new = prod.value.filter((v) => v.annotations?.["workers/tag"] === "vs_v2");
 		expect(prod_new).toHaveLength(1);
 		expect(collect_vars(prod_new[0].vars)).toEqual(trio_for("production", "vs_v2"));
 	});
@@ -170,7 +180,11 @@ describe("pipeline runs — caller-identity injection", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		await tick_bake_complete(deps, run.id, plan);
 
 		const before_rollback = await deps.cf.versions.list(prod_script());
@@ -186,7 +200,7 @@ describe("pipeline runs — caller-identity injection", () => {
 		expect(after_rollback.value).toHaveLength(prod_version_count_before);
 
 		// The vs_v0 version it rolled back to still carries its identity trio.
-		const v0 = after_rollback.value.find(v => v.annotations?.["workers/tag"] === "vs_v0");
+		const v0 = after_rollback.value.find((v) => v.annotations?.["workers/tag"] === "vs_v0");
 		expect(v0).toBeDefined();
 		expect(collect_vars(v0!.vars)).toEqual(trio_for("production", "vs_v0"));
 	});
@@ -203,14 +217,18 @@ describe("pipeline runs — caller-identity injection", () => {
 		const { run, plan } = created.value;
 
 		await advance_run(deps, run.id, { kind: "start" }, plan);
-		await approve_stage(deps, { run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" }, plan);
+		await approve_stage(
+			deps,
+			{ run_id: run.id, stage_name: "onebox", decision: "approved", user_id: "user_test" },
+			plan,
+		);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 
 		const prod_after_run = await deps.cf.versions.list(prod_script());
 		if (!prod_after_run.ok) throw new Error("list failed");
-		const vs_v1_versions = prod_after_run.value.filter(v => v.annotations?.["workers/tag"] === "vs_v1");
+		const vs_v1_versions = prod_after_run.value.filter((v) => v.annotations?.["workers/tag"] === "vs_v1");
 		// Exactly one prod upload across all gradual stages because deploy_stage
 		// is idempotent on (script_name, version_set_id).
 		expect(vs_v1_versions).toHaveLength(1);

@@ -1,4 +1,11 @@
-import { errors, type TimelineItem, type VideoPayload, type YouTubeRaw, YouTubeRawSchema, type YouTubeVideo } from "@devpad/schema/media";
+import {
+	errors,
+	type TimelineItem,
+	type VideoPayload,
+	type YouTubeRaw,
+	YouTubeRawSchema,
+	type YouTubeVideo,
+} from "@devpad/schema/media";
 import { type FetchError, ok, pipe } from "@f0rbit/corpus";
 import { z } from "zod";
 import { BaseMemoryProvider } from "./memory-base";
@@ -23,7 +30,7 @@ const YouTubePlaylistResponseSchema = z.object({
 						url: z.string(),
 						width: z.number().optional(),
 						height: z.number().optional(),
-					})
+					}),
 				),
 				channelTitle: z.string(),
 				playlistId: z.string(),
@@ -39,7 +46,7 @@ const YouTubePlaylistResponseSchema = z.object({
 					videoPublishedAt: z.string(),
 				})
 				.optional(),
-		})
+		}),
 	),
 	nextPageToken: z.string().optional(),
 	pageInfo: z
@@ -57,7 +64,7 @@ export type YouTubeProviderConfig = {
 };
 
 const transformPlaylistToRaw = (playlist: YouTubePlaylistResponse): YouTubeRaw => ({
-	items: playlist.items.map(item => ({
+	items: playlist.items.map((item) => ({
 		kind: item.kind,
 		etag: item.etag,
 		id: {
@@ -111,7 +118,7 @@ export class YouTubeProvider implements Provider<YouTubeRaw> {
 
 		return pipe
 			.fetch<unknown, ProviderError>(url, { headers: { Accept: "application/json" } }, mapYouTubeError)
-			.flat_map(json => {
+			.flat_map((json) => {
 				const parsed = YouTubePlaylistResponseSchema.safeParse(json);
 				if (!parsed.success) {
 					return errors.apiError(200, `Invalid YouTube API response: ${parsed.error.message}`);
@@ -119,7 +126,9 @@ export class YouTubeProvider implements Provider<YouTubeRaw> {
 
 				const transformed = transformPlaylistToRaw(parsed.data);
 				const validated = YouTubeRawSchema.safeParse(transformed);
-				return validated.success ? ok(validated.data) : errors.apiError(200, `Failed to transform YouTube response: ${validated.error.message}`);
+				return validated.success
+					? ok(validated.data)
+					: errors.apiError(200, `Failed to transform YouTube response: ${validated.error.message}`);
 			})
 			.result();
 	}
@@ -131,7 +140,11 @@ const makeVideoId = (videoId: string): string => `youtube:video:${videoId}`;
 
 const makeVideoUrl = (videoId: string): string => `https://youtube.com/watch?v=${videoId}`;
 
-const selectThumbnail = (thumbnails: { default?: { url: string }; medium?: { url: string }; high?: { url: string } }): string | undefined => thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url;
+const selectThumbnail = (thumbnails: {
+	default?: { url: string };
+	medium?: { url: string };
+	high?: { url: string };
+}): string | undefined => thumbnails.high?.url ?? thumbnails.medium?.url ?? thumbnails.default?.url;
 
 export const normalizeYouTube = (raw: YouTubeRaw): TimelineItem[] =>
 	raw.items.map((video): TimelineItem => {

@@ -1,4 +1,10 @@
-import { createBlankSessionCookie, createSessionCookie, getSessionCookieName, keys, validateSession } from "@devpad/core/auth";
+import {
+	createBlankSessionCookie,
+	createSessionCookie,
+	getSessionCookieName,
+	keys,
+	validateSession,
+} from "@devpad/core/auth";
 import { getCookie } from "hono/cookie";
 import { createMiddleware } from "hono/factory";
 import type { AppContext } from "../bindings.js";

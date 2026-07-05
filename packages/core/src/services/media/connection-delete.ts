@@ -1,4 +1,12 @@
-import type { AccountId, DatabaseError, ForbiddenError, NotFoundError, Platform, StoreError, UserId } from "@devpad/schema/media";
+import type {
+	AccountId,
+	DatabaseError,
+	ForbiddenError,
+	NotFoundError,
+	Platform,
+	StoreError,
+	UserId,
+} from "@devpad/schema/media";
 import { accountSettings, accounts, errors, profiles, rateLimits } from "@devpad/schema/media";
 import type { Backend } from "@f0rbit/corpus";
 import { err, ok, pipe, type Result, try_catch_async } from "@f0rbit/corpus";
@@ -24,13 +32,41 @@ export type DeletionAttempt = {
 	error?: string;
 };
 
-export type StoreType = "github_meta" | "github_commits" | "github_prs" | "reddit_meta" | "reddit_posts" | "reddit_comments" | "twitter_meta" | "twitter_tweets" | "bluesky" | "youtube" | "devpad" | "raw";
+export type StoreType =
+	| "github_meta"
+	| "github_commits"
+	| "github_prs"
+	| "reddit_meta"
+	| "reddit_posts"
+	| "reddit_comments"
+	| "twitter_meta"
+	| "twitter_tweets"
+	| "bluesky"
+	| "youtube"
+	| "devpad"
+	| "raw";
 
-const VALID_STORE_TYPES: StoreType[] = ["github_meta", "github_commits", "github_prs", "reddit_meta", "reddit_posts", "reddit_comments", "twitter_meta", "twitter_tweets", "bluesky", "youtube", "devpad", "raw"];
+const VALID_STORE_TYPES: StoreType[] = [
+	"github_meta",
+	"github_commits",
+	"github_prs",
+	"reddit_meta",
+	"reddit_posts",
+	"reddit_comments",
+	"twitter_meta",
+	"twitter_tweets",
+	"bluesky",
+	"youtube",
+	"devpad",
+	"raw",
+];
 
 export const isValidStoreType = (type: string): type is StoreType => VALID_STORE_TYPES.includes(type as StoreType);
 
-export const validateAccountOwnership = <T extends { user_id: string }>(account: T | null, requestingUserId: string): Result<T, DeleteConnectionError> => {
+export const validateAccountOwnership = <T extends { user_id: string }>(
+	account: T | null,
+	requestingUserId: string,
+): Result<T, DeleteConnectionError> => {
 	if (!account) return errors.notFound("account");
 	if (account.user_id !== requestingUserId) {
 		return errors.forbidden("You do not own this account");
@@ -44,7 +80,7 @@ export const summarizeDeletions = (attempts: DeletionAttempt[]): { deleted: numb
 			deleted: acc.deleted + (a.success ? 1 : 0),
 			failed: acc.failed + (a.success ? 0 : 1),
 		}),
-		{ deleted: 0, failed: 0 }
+		{ deleted: 0, failed: 0 },
 	);
 
 type DeleteContext = {
@@ -108,14 +144,22 @@ const deleteStoreSnapshots = async (backend: Backend, storeId: string): Promise<
 				if (deleteResult.ok) {
 					deletedCount++;
 				} else {
-					log.warn("Failed to delete snapshot", { step: "store", version: snapshot.version, error: deleteResult.error });
+					log.warn("Failed to delete snapshot", {
+						step: "store",
+						version: snapshot.version,
+						error: deleteResult.error,
+					});
 				}
 			}
 		},
 		(error): StoreError => {
 			log.info("Store listing failed (store may be empty)", { step: "store", storeId, error: String(error) });
-			return { kind: "store_error", operation: "list", message: `Store listing failed for ${storeId}: ${String(error)}` };
-		}
+			return {
+				kind: "store_error",
+				operation: "list",
+				message: `Store listing failed for ${storeId}: ${String(error)}`,
+			};
+		},
 	);
 
 	if (!listResult.ok) return listResult;
@@ -196,7 +240,12 @@ const deleteCorpusStores = async (backend: Backend, account: AccountInfo): Promi
 };
 
 const getAffectedUsers = async (db: Database, accountId: string): Promise<string[]> => {
-	const account = await db.select({ user_id: profiles.user_id }).from(accounts).innerJoin(profiles, eq(accounts.profile_id, profiles.id)).where(eq(accounts.id, accountId)).get();
+	const account = await db
+		.select({ user_id: profiles.user_id })
+		.from(accounts)
+		.innerJoin(profiles, eq(accounts.profile_id, profiles.id))
+		.where(eq(accounts.id, accountId))
+		.get();
 
 	return account ? [account.user_id] : [];
 };
@@ -206,7 +255,10 @@ type TableDeletion = {
 	execute: () => Promise<unknown>;
 };
 
-const deleteTable = async (deletion: TableDeletion, accountId: string): Promise<Result<void, DeleteConnectionError>> => {
+const deleteTable = async (
+	deletion: TableDeletion,
+	accountId: string,
+): Promise<Result<void, DeleteConnectionError>> => {
 	log.info("Deleting table", { step: "db", table: deletion.name, accountId });
 	return try_catch_async(
 		async () => {
@@ -215,14 +267,17 @@ const deleteTable = async (deletion: TableDeletion, accountId: string): Promise<
 		(e): DeleteConnectionError => {
 			log.error("Failed to delete table", { step: "db", table: deletion.name, error: String(e) });
 			return { kind: "db_error", message: `Failed to delete ${deletion.name}: ${String(e)}` };
-		}
+		},
 	);
 };
 
 const deleteDbRecords = async (db: Database, accountId: string): Promise<Result<void, DeleteConnectionError>> => {
 	const deletions: TableDeletion[] = [
 		{ name: "rate_limits", execute: () => db.delete(rateLimits).where(eq(rateLimits.account_id, accountId)) },
-		{ name: "account_settings", execute: () => db.delete(accountSettings).where(eq(accountSettings.account_id, accountId)) },
+		{
+			name: "account_settings",
+			execute: () => db.delete(accountSettings).where(eq(accountSettings.account_id, accountId)),
+		},
 		{ name: "account", execute: () => db.delete(accounts).where(eq(accounts.id, accountId)) },
 	];
 
@@ -237,11 +292,21 @@ const deleteDbRecords = async (db: Database, accountId: string): Promise<Result<
 
 type AccountWithOwner = { id: string; platform: Platform; user_id: string };
 
-const validateOwnership = (account: AccountWithOwner | null, requestingUserId: string, accountId: string): Result<AccountWithOwner, DeleteConnectionError> => {
+const validateOwnership = (
+	account: AccountWithOwner | null,
+	requestingUserId: string,
+	accountId: string,
+): Result<AccountWithOwner, DeleteConnectionError> => {
 	const result = validateAccountOwnership(account, requestingUserId);
 	if (!result.ok) {
-		const logData = result.error.kind === "not_found" ? { accountId, requestingUserId } : { accountId, requestingUserId, owner: account?.user_id };
-		log.warn(result.error.kind === "not_found" ? "Account not found" : "User does not own account", { step: "auth", ...logData });
+		const logData =
+			result.error.kind === "not_found"
+				? { accountId, requestingUserId }
+				: { accountId, requestingUserId, owner: account?.user_id };
+		log.warn(result.error.kind === "not_found" ? "Account not found" : "User does not own account", {
+			step: "auth",
+			...logData,
+		});
 		return result;
 	}
 	log.info("Authorization check passed", { step: "auth", accountId, requestingUserId });
@@ -268,7 +333,11 @@ type DeletionContext = {
 	deletedStores: string[];
 };
 
-export async function deleteConnection(ctx: DeleteContext, accId: AccountId, requestingUserId: UserId): Promise<Result<DeleteConnectionResult, DeleteConnectionError>> {
+export async function deleteConnection(
+	ctx: DeleteContext,
+	accId: AccountId,
+	requestingUserId: UserId,
+): Promise<Result<DeleteConnectionResult, DeleteConnectionError>> {
 	log.info("Beginning connection deletion", { step: "start", accountId: accId, requestingUserId });
 
 	const account = await fetchAccountWithOwner(ctx.db, accId);
@@ -278,29 +347,38 @@ export async function deleteConnection(ctx: DeleteContext, accId: AccountId, req
 			const affectedUsers = await getAffectedUsers(ctx.db, accId);
 			log.info("Found affected users", { step: "users", count: affectedUsers.length, users: affectedUsers });
 
-			const deletedStores = await deleteCorpusStores(ctx.backend, { id: validatedAccount.id, platform: validatedAccount.platform });
+			const deletedStores = await deleteCorpusStores(ctx.backend, {
+				id: validatedAccount.id,
+				platform: validatedAccount.platform,
+			});
 			log.info("Corpus stores deleted", { step: "corpus", count: deletedStores.length, stores: deletedStores });
 
 			return ok({ account: validatedAccount, affectedUsers, deletedStores });
 		})
-		.flat_map(async ({ account, affectedUsers, deletedStores }): Promise<Result<DeleteConnectionResult, DeleteConnectionError>> => {
-			const dbResult = await deleteDbRecords(ctx.db, accId);
-			if (!dbResult.ok) return dbResult;
+		.flat_map(
+			async ({
+				account,
+				affectedUsers,
+				deletedStores,
+			}): Promise<Result<DeleteConnectionResult, DeleteConnectionError>> => {
+				const dbResult = await deleteDbRecords(ctx.db, accId);
+				if (!dbResult.ok) return dbResult;
 
-			log.info("Connection deletion completed", {
-				step: "complete",
-				accountId: accId,
-				platform: account.platform,
-				deletedStores: deletedStores.length,
-				affectedUsers: affectedUsers.length,
-			});
+				log.info("Connection deletion completed", {
+					step: "complete",
+					accountId: accId,
+					platform: account.platform,
+					deletedStores: deletedStores.length,
+					affectedUsers: affectedUsers.length,
+				});
 
-			return ok({
-				account_id: accId,
-				platform: account.platform,
-				deleted_stores: deletedStores,
-				affected_users: affectedUsers,
-			});
-		})
+				return ok({
+					account_id: accId,
+					platform: account.platform,
+					deleted_stores: deletedStores,
+					affected_users: affectedUsers,
+				});
+			},
+		)
 		.result();
 }

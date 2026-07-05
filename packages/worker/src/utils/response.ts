@@ -48,7 +48,8 @@ const ERROR_NAMES: Record<number, string> = {
 
 const buildMessage = (error: ExtendedError, defaultMessage: string): string => {
 	if (error.message) return error.message;
-	if ("inner" in error && typeof error.inner === "object" && error.inner && "message" in error.inner) return String(error.inner.message);
+	if ("inner" in error && typeof error.inner === "object" && error.inner && "message" in error.inner)
+		return String(error.inner.message);
 	if ("resource" in error && error.resource) return `${defaultMessage}: ${error.resource}`;
 	if ("slug" in error && error.slug) return `${defaultMessage}: ${error.slug}`;
 	return defaultMessage;
@@ -82,7 +83,11 @@ export const mapErrorToResponse = (error: ExtendedError): ErrorResponse => {
 	return { status: mapping.status, body };
 };
 
-export const handleResult = <T>(c: Context, result: Result<T, ServiceError>, successStatus: ContentfulStatusCode = 200): Response => {
+export const handleResult = <T>(
+	c: Context,
+	result: Result<T, ServiceError>,
+	successStatus: ContentfulStatusCode = 200,
+): Response => {
 	if (!result.ok) {
 		const { status, body } = mapErrorToResponse(result.error);
 		return c.json(body, status);
@@ -90,7 +95,12 @@ export const handleResult = <T>(c: Context, result: Result<T, ServiceError>, suc
 	return c.json(result.value as object, successStatus);
 };
 
-export const handleResultWith = <T, R>(c: Context, result: Result<T, ServiceError>, mapper: (value: T) => R, successStatus: ContentfulStatusCode = 200): Response => {
+export const handleResultWith = <T, R>(
+	c: Context,
+	result: Result<T, ServiceError>,
+	mapper: (value: T) => R,
+	successStatus: ContentfulStatusCode = 200,
+): Response => {
 	if (!result.ok) {
 		const { status, body } = mapErrorToResponse(result.error);
 		return c.json(body, status);
@@ -120,8 +130,14 @@ export const conflict = (c: Context, message: string) => httpError(c, 409, messa
 export const serverError = (c: Context, message: string) => httpError(c, 500, message);
 
 export const response = {
-	result: <T>(c: Context, result: Result<T, ServiceError>, successStatus: ContentfulStatusCode = 200): Response => handleResult(c, result, successStatus),
-	with: <T, R>(c: Context, result: Result<T, ServiceError>, mapper: (value: T) => R, successStatus: ContentfulStatusCode = 200): Response => handleResultWith(c, result, mapper, successStatus),
+	result: <T>(c: Context, result: Result<T, ServiceError>, successStatus: ContentfulStatusCode = 200): Response =>
+		handleResult(c, result, successStatus),
+	with: <T, R>(
+		c: Context,
+		result: Result<T, ServiceError>,
+		mapper: (value: T) => R,
+		successStatus: ContentfulStatusCode = 200,
+	): Response => handleResultWith(c, result, mapper, successStatus),
 	empty: <T>(c: Context, result: Result<T, ServiceError>): Response => handleResultNoContent(c, result),
 };
 

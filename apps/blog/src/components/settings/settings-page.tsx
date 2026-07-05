@@ -40,7 +40,7 @@ const integrations: IntegrationDisplay[] = [
 	{ id: "hashnode", name: "Hashnode", connected: false },
 ];
 
-const SettingsPage: Component<SettingsPageProps> = props => {
+const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const [user] = createSignal<User | null>(props.initialUser ?? null);
 
 	const [tokens, setTokens] = createSignal<Token[]>(props.initialTokens ?? []);
@@ -102,7 +102,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 				<h3 class="settings-section__title">Profile</h3>
 				<div class="settings-section__content">
 					<Show when={user()} keyed fallback={<p class="text-muted text-sm">Not signed in</p>}>
-						{userData => (
+						{(userData) => (
 							<>
 								<div class="profile-row">
 									<span class="profile-row__label">Username</span>
@@ -136,7 +136,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 				<h3 class="settings-section__title">Integrations</h3>
 				<div class="settings-section__content">
 					<For each={integrations}>
-						{integration => (
+						{(integration) => (
 							<div class="integration-row">
 								<span class="integration-row__name">{integration.name}</span>
 								<Show
@@ -174,7 +174,14 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 				<h3 class="settings-section__title">API Tokens</h3>
 				<div class="settings-section__content">
 					<Show when={tokensError()}>
-						<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>
+						<div
+							style={{
+								padding: "0.5rem 0.75rem",
+								background: "var(--item-red)",
+								border: "1px solid var(--item-red-border)",
+								"border-radius": "4px",
+							}}
+						>
 							<p class="text-sm">{tokensError()}</p>
 						</div>
 					</Show>
@@ -184,7 +191,7 @@ const SettingsPage: Component<SettingsPageProps> = props => {
 					</Show>
 
 					<Show when={tokens()} keyed>
-						{tokenList => <TokenList tokens={tokenList} onToggle={handleToggle} onDelete={handleDelete} />}
+						{(tokenList) => <TokenList tokens={tokenList} onToggle={handleToggle} onDelete={handleDelete} />}
 					</Show>
 
 					<div class="settings-section__actions">

@@ -7,7 +7,8 @@ export const PlatformSchema = z.enum(PLATFORMS);
 export const MULTI_STORE_PLATFORMS = ["github", "reddit", "twitter"] as const;
 export type MultiStorePlatform = (typeof MULTI_STORE_PLATFORMS)[number];
 
-export const isMultiStorePlatform = (p: Platform): p is MultiStorePlatform => (MULTI_STORE_PLATFORMS as readonly string[]).includes(p);
+export const isMultiStorePlatform = (p: Platform): p is MultiStorePlatform =>
+	(MULTI_STORE_PLATFORMS as readonly string[]).includes(p);
 
 const FetchedAtSchema = z.object({
 	fetched_at: z.string().datetime(),
@@ -91,7 +92,7 @@ export const BlueskyPostSchema = z.object({
 					z.object({
 						thumb: z.string(),
 						fullsize: z.string(),
-					})
+					}),
 				)
 				.optional(),
 		})

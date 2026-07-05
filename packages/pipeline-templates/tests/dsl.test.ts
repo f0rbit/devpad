@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { defaultAtomic, defaultAtomicGates, defaultGradual, defaultGradualGates, extendTemplate } from "../src/index.ts";
+import {
+	defaultAtomic,
+	defaultAtomicGates,
+	defaultGradual,
+	defaultGradualGates,
+	extendTemplate,
+} from "../src/index.ts";
 
 const unwrap_ok = <T, E>(r: { ok: true; value: T } | { ok: false; error: E }): T => {
 	if (!r.ok) throw new Error(`expected ok, got err: ${JSON.stringify(r.error)}`);
@@ -34,18 +40,18 @@ describe("extendTemplate", () => {
 	test("partial stage override — traffic only, keeps default bake", () => {
 		const tpl = unwrap_ok(extendTemplate({ rollout: { stages: [{ name: "onebox", traffic: 5 }] } }));
 		if (tpl.rollout.type !== "gradual") throw new Error("expected gradual");
-		const onebox = tpl.rollout.stages.find(s => s.name === "onebox");
+		const onebox = tpl.rollout.stages.find((s) => s.name === "onebox");
 		expect(onebox?.traffic).toBe(5);
 		expect(onebox?.bake).toEqual({ ms: 30 * 60_000 });
 		// Other stages untouched.
-		const wave1 = tpl.rollout.stages.find(s => s.name === "wave1");
+		const wave1 = tpl.rollout.stages.find((s) => s.name === "wave1");
 		expect(wave1?.traffic).toBe(10);
 	});
 
 	test("partial stage override — bake only as `{ms}`", () => {
 		const tpl = unwrap_ok(extendTemplate({ rollout: { stages: [{ name: "wave1", bake: { ms: 5_000 } }] } }));
 		if (tpl.rollout.type !== "gradual") throw new Error("expected gradual");
-		const wave1 = tpl.rollout.stages.find(s => s.name === "wave1");
+		const wave1 = tpl.rollout.stages.find((s) => s.name === "wave1");
 		expect(wave1?.bake).toEqual({ ms: 5_000 });
 		expect(wave1?.traffic).toBe(10);
 	});
@@ -53,7 +59,7 @@ describe("extendTemplate", () => {
 	test("partial stage override — bake only as duration string", () => {
 		const tpl = unwrap_ok(extendTemplate({ rollout: { stages: [{ name: "wave1", bake: "5m" }] } }));
 		if (tpl.rollout.type !== "gradual") throw new Error("expected gradual");
-		const wave1 = tpl.rollout.stages.find(s => s.name === "wave1");
+		const wave1 = tpl.rollout.stages.find((s) => s.name === "wave1");
 		expect(wave1?.bake).toEqual({ ms: 5 * 60_000 });
 	});
 
@@ -66,13 +72,13 @@ describe("extendTemplate", () => {
 						{ name: "full", bake: "1h" },
 					],
 				},
-			})
+			}),
 		);
 		if (tpl.rollout.type !== "gradual") throw new Error("expected gradual");
-		expect(tpl.rollout.stages.find(s => s.name === "onebox")?.traffic).toBe(5);
-		expect(tpl.rollout.stages.find(s => s.name === "full")?.bake).toEqual({ ms: 3_600_000 });
+		expect(tpl.rollout.stages.find((s) => s.name === "onebox")?.traffic).toBe(5);
+		expect(tpl.rollout.stages.find((s) => s.name === "full")?.bake).toEqual({ ms: 3_600_000 });
 		// Default-only stages preserved.
-		expect(tpl.rollout.stages.find(s => s.name === "wave2")?.traffic).toBe(50);
+		expect(tpl.rollout.stages.find((s) => s.name === "wave2")?.traffic).toBe(50);
 	});
 
 	test("gate override by transition key", () => {
@@ -91,7 +97,7 @@ describe("extendTemplate", () => {
 						template: { template_id: "default-error-rate" },
 					},
 				},
-			})
+			}),
 		);
 		expect(tpl.gates["wave1→wave2"]).toEqual({
 			type: "analysis",
@@ -138,7 +144,7 @@ describe("extendTemplate", () => {
 			extendTemplate({
 				rollout: { type: "atomic" },
 				gates: { "staging→atomic-prod": { type: "auto" } },
-			})
+			}),
 		);
 		expect(tpl.gates["staging→atomic-prod"]).toEqual({ type: "auto" });
 	});
@@ -169,7 +175,7 @@ describe("extendTemplate", () => {
 					"wave1→wave2": { type: "auto" },
 					"wave2→full": { type: "auto" },
 				},
-			})
+			}),
 		);
 		if (tpl.rollout.type !== "gradual") throw new Error("expected gradual");
 		expect(tpl.rollout.stages[0]).toEqual({ name: "onebox", traffic: 2, bake: { ms: 600_000 } });

@@ -45,7 +45,14 @@ import type {
 	upsert_todo,
 } from "./validation.js";
 
-export type { ApprovalDecision, ForcedAtomicReason, PipelineOidcProvider, RolloutShape, RunStatus, StageEventKind } from "./database/schema.js";
+export type {
+	ApprovalDecision,
+	ForcedAtomicReason,
+	PipelineOidcProvider,
+	RolloutShape,
+	RunStatus,
+	StageEventKind,
+} from "./database/schema.js";
 
 // Database table select types (inferred from Drizzle schema)
 export type User = InferSelectModel<typeof user>;

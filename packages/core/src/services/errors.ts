@@ -7,7 +7,7 @@ export const rows = {
 		match(
 			first(rows),
 			(v: T) => ok(v) as Result<T, E>,
-			() => err(errorFn())
+			() => err(errorFn()),
 		),
 	first: <T>(rows: T[]): T | null => to_nullable(first(rows)),
 };

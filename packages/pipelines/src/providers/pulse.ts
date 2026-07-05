@@ -18,7 +18,12 @@
 import type { Fetcher } from "@cloudflare/workers-types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import type { EmitError, PulseEmitter, PulseEvent } from "@devpad/core/services/pipelines/gates";
-import type { MetricSnapshot, PulseSummaryError as PulseError, PulseSummaryProvider, PulseSummaryQuery } from "@devpad/pipeline-fakes";
+import type {
+	MetricSnapshot,
+	PulseSummaryError as PulseError,
+	PulseSummaryProvider,
+	PulseSummaryQuery,
+} from "@devpad/pipeline-fakes";
 
 const PULSE_HOST = "https://pulse.local";
 

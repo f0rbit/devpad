@@ -18,7 +18,9 @@ const build_mock_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant
 	...overrides,
 });
 
-function create_mock_db(responses: { list?: PipelineGrant[]; insert?: PipelineGrant[]; update?: PipelineGrant[] } = {}) {
+function create_mock_db(
+	responses: { list?: PipelineGrant[]; insert?: PipelineGrant[]; update?: PipelineGrant[] } = {},
+) {
 	const chain: any = {
 		select: () => chain,
 		from: () => chain,
@@ -63,7 +65,10 @@ function create_mock_db(responses: { list?: PipelineGrant[]; insert?: PipelineGr
 describe("grants service", () => {
 	describe("list_grants", () => {
 		test("returns list of grants for a package", async () => {
-			const grants = [build_mock_grant({ id: "grant_1" }), build_mock_grant({ id: "grant_2", scope: "github:read:my-org/*" })];
+			const grants = [
+				build_mock_grant({ id: "grant_1" }),
+				build_mock_grant({ id: "grant_2", scope: "github:read:my-org/*" }),
+			];
 			const db = create_mock_db({ list: grants });
 
 			const result = await list_grants(db, "pipeline-package_pkg");

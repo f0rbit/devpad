@@ -18,7 +18,10 @@ export async function getUserMilestones(db: Database, user_id: string): Promise<
 	return ok(result.map((r: any) => r.milestone));
 }
 
-export async function getProjectMilestones(db: Database, project_id: string): Promise<Result<Milestone[], ServiceError>> {
+export async function getProjectMilestones(
+	db: Database,
+	project_id: string,
+): Promise<Result<Milestone[], ServiceError>> {
 	const result = await db
 		.select()
 		.from(milestone)
@@ -33,7 +36,10 @@ export async function getProjectMilestones(db: Database, project_id: string): Pr
 	return ok(sorted);
 }
 
-export async function getMilestone(db: Database, milestone_id: string): Promise<Result<Milestone | null, ServiceError>> {
+export async function getMilestone(
+	db: Database,
+	milestone_id: string,
+): Promise<Result<Milestone | null, ServiceError>> {
 	const result = await db.select().from(milestone).where(eq(milestone.id, milestone_id));
 
 	const record = result[0];
@@ -41,7 +47,12 @@ export async function getMilestone(db: Database, milestone_id: string): Promise<
 	return ok(record);
 }
 
-export async function upsertMilestone(db: Database, data: UpsertMilestone, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<Milestone, ServiceError>> {
+export async function upsertMilestone(
+	db: Database,
+	data: UpsertMilestone,
+	owner_id: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<Milestone, ServiceError>> {
 	const previous_result = data.id ? await getMilestone(db, data.id) : null;
 	const previous = previous_result?.ok ? previous_result.value : null;
 
@@ -54,14 +65,22 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 	}
 
 	if (auth_channel === "api" && previous?.protected && !data.force) {
-		return err({ kind: "protected", entity_id: previous.id, message: `Milestone ${previous.id} is protected. Pass force=true to override.`, modified_by: previous.modified_by, modified_at: previous.updated_at });
+		return err({
+			kind: "protected",
+			entity_id: previous.id,
+			message: `Milestone ${previous.id} is protected. Pass force=true to override.`,
+			modified_by: previous.modified_by,
+			modified_at: previous.updated_at,
+		});
 	}
 
 	const exists = !!previous;
 	const { id: raw_id, force: _force, ...fields } = data;
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
 	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
-	const provenance = exists ? { modified_by: auth_channel, ...protection } : { created_by: auth_channel, modified_by: auth_channel };
+	const provenance = exists
+		? { modified_by: auth_channel, ...protection }
+		: { created_by: auth_channel, modified_by: auth_channel };
 	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), ...provenance };
 
 	let result: Milestone | null = null;
@@ -81,12 +100,25 @@ export async function upsertMilestone(db: Database, data: UpsertMilestone, owner
 
 	const action_type: ActionType = !exists ? "CREATE_MILESTONE" : "UPDATE_MILESTONE";
 	const action_desc = !exists ? "Created milestone" : "Updated milestone";
-	await addMilestoneAction(db, { owner_id, milestone_id: result.id, project_id: data.project_id, name: result.name, type: action_type, description: action_desc, channel: auth_channel });
+	await addMilestoneAction(db, {
+		owner_id,
+		milestone_id: result.id,
+		project_id: data.project_id,
+		name: result.name,
+		type: action_type,
+		description: action_desc,
+		channel: auth_channel,
+	});
 
 	return ok(result);
 }
 
-export async function deleteMilestone(db: Database, milestone_id: string, owner_id: string, auth_channel: "user" | "api" = "user"): Promise<Result<void, ServiceError>> {
+export async function deleteMilestone(
+	db: Database,
+	milestone_id: string,
+	owner_id: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<void, ServiceError>> {
 	const milestone_result = await getMilestone(db, milestone_id);
 	if (!milestone_result.ok) return milestone_result;
 	if (!milestone_result.value) return err({ kind: "not_found", resource: "milestone", id: milestone_id });
@@ -95,16 +127,36 @@ export async function deleteMilestone(db: Database, milestone_id: string, owner_
 	if (!owns_result.ok) return owns_result;
 	if (!owns_result.value) return err({ kind: "forbidden", reason: "User does not own this project" });
 
-	await addMilestoneAction(db, { owner_id, milestone_id, project_id: milestone_result.value.project_id, name: milestone_result.value.name, type: "DELETE_MILESTONE", description: "Deleted milestone", channel: auth_channel });
+	await addMilestoneAction(db, {
+		owner_id,
+		milestone_id,
+		project_id: milestone_result.value.project_id,
+		name: milestone_result.value.name,
+		type: "DELETE_MILESTONE",
+		description: "Deleted milestone",
+		channel: auth_channel,
+	});
 
-	await db.update(goal).set({ deleted: true, updated_at: new Date().toISOString() }).where(eq(goal.milestone_id, milestone_id));
+	await db
+		.update(goal)
+		.set({ deleted: true, updated_at: new Date().toISOString() })
+		.where(eq(goal.milestone_id, milestone_id));
 
-	await db.update(milestone).set({ deleted: true, updated_at: new Date().toISOString() }).where(eq(milestone.id, milestone_id));
+	await db
+		.update(milestone)
+		.set({ deleted: true, updated_at: new Date().toISOString() })
+		.where(eq(milestone.id, milestone_id));
 
 	return ok(undefined);
 }
 
-export async function completeMilestone(db: Database, milestone_id: string, owner_id: string, target_version?: string, auth_channel: "user" | "api" = "user"): Promise<Result<Milestone, ServiceError>> {
+export async function completeMilestone(
+	db: Database,
+	milestone_id: string,
+	owner_id: string,
+	target_version?: string,
+	auth_channel: "user" | "api" = "user",
+): Promise<Result<Milestone, ServiceError>> {
 	const data: Partial<UpsertMilestone> = {
 		id: milestone_id,
 		finished_at: new Date().toISOString(),
@@ -135,7 +187,7 @@ export async function addMilestoneAction(
 		type: ActionType;
 		description: string;
 		channel?: "user" | "api";
-	}
+	},
 ): Promise<Result<boolean, ServiceError>> {
 	await db.insert(action).values({
 		owner_id,

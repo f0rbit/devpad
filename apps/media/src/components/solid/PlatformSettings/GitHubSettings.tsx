@@ -42,7 +42,7 @@ export default function GitHubSettings(props: Props) {
 	const visibleCount = () => {
 		const allRepos = repos() ?? [];
 		const hidden = hiddenRepos();
-		return allRepos.filter(r => !hidden.has(r.full_name)).length;
+		return allRepos.filter((r) => !hidden.has(r.full_name)).length;
 	};
 
 	return (
@@ -59,17 +59,32 @@ export default function GitHubSettings(props: Props) {
 			}
 		>
 			<div class="settings-content">
-				<AsyncState loading={repos.loading} error={repos.error} data={repos()} loadingFallback={<p class="muted text-sm">Loading repositories...</p>} errorPrefix="Failed to load repositories">
-					{repoList => (
-						<Show when={repoList.length > 0} fallback={<p class="muted text-sm">No repositories found yet. Refresh to fetch data.</p>}>
+				<AsyncState
+					loading={repos.loading}
+					error={repos.error}
+					data={repos()}
+					loadingFallback={<p class="muted text-sm">Loading repositories...</p>}
+					errorPrefix="Failed to load repositories"
+				>
+					{(repoList) => (
+						<Show
+							when={repoList.length > 0}
+							fallback={<p class="muted text-sm">No repositories found yet. Refresh to fetch data.</p>}
+						>
 							<div class="repo-list">
 								<For each={repoList}>
-									{repo => {
+									{(repo) => {
 										const isHidden = () => hiddenRepos().has(repo.full_name);
 										const isUpdating = () => repoUpdating() === repo.full_name;
 										return (
 											<div class="repo-item">
-												<Checkbox checked={!isHidden()} onChange={() => toggleRepo(repo.full_name)} label={repo.full_name} disabled={isUpdating()} class={`mono text-sm ${isHidden() ? "opacity-50" : ""}`} />
+												<Checkbox
+													checked={!isHidden()}
+													onChange={() => toggleRepo(repo.full_name)}
+													label={repo.full_name}
+													disabled={isUpdating()}
+													class={`mono text-sm ${isHidden() ? "opacity-50" : ""}`}
+												/>
 												<Show when={repo.is_private}>
 													<span class="repo-private muted text-xs">(private)</span>
 												</Show>

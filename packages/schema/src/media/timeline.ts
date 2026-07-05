@@ -83,7 +83,14 @@ export const CommentPayloadSchema = z.object({
 	is_op: z.boolean().default(false),
 });
 
-export const PayloadSchema = z.discriminatedUnion("type", [CommitPayloadSchema, PostPayloadSchema, VideoPayloadSchema, TaskPayloadSchema, PullRequestPayloadSchema, CommentPayloadSchema]);
+export const PayloadSchema = z.discriminatedUnion("type", [
+	CommitPayloadSchema,
+	PostPayloadSchema,
+	VideoPayloadSchema,
+	TaskPayloadSchema,
+	PullRequestPayloadSchema,
+	CommentPayloadSchema,
+]);
 
 export const TimelineItemSchema = z.object({
 	id: z.string(),

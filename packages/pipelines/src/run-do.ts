@@ -23,7 +23,15 @@
  */
 
 import type { AdvanceError, ResolvedPlan, RunDeps, RunEvent, TransitionOutput } from "@devpad/core/services/pipelines";
-import { advance_run, approve_stage, cancel_run, get_run, is_terminal_status, request_rollback, tick_bake_complete } from "@devpad/core/services/pipelines";
+import {
+	advance_run,
+	approve_stage,
+	cancel_run,
+	get_run,
+	is_terminal_status,
+	request_rollback,
+	tick_bake_complete,
+} from "@devpad/core/services/pipelines";
 import type { ApprovalDecision } from "@devpad/schema";
 import type { Result } from "@f0rbit/corpus";
 import { z } from "zod";
@@ -67,7 +75,11 @@ export type RunDoServices = {
 	now?: () => number;
 };
 
-const json = <T>(value: T, init?: ResponseInit): Response => new Response(JSON.stringify(value), { ...init, headers: { "content-type": "application/json", ...(init?.headers ?? {}) } });
+const json = <T>(value: T, init?: ResponseInit): Response =>
+	new Response(JSON.stringify(value), {
+		...init,
+		headers: { "content-type": "application/json", ...(init?.headers ?? {}) },
+	});
 
 const json_ok = <T>(value: T): Response => json({ ok: true, value });
 
@@ -89,7 +101,8 @@ const to_wire_error = (input: unknown): WireError => {
 	return { code, ...rest };
 };
 
-const json_err = (status: number, error: unknown): Response => json({ ok: false, error: to_wire_error(error) }, { status });
+const json_err = (status: number, error: unknown): Response =>
+	json({ ok: false, error: to_wire_error(error) }, { status });
 
 const STATUS_BY_CODE: Record<string, number> = {
 	not_found: 404,
@@ -173,7 +186,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 				user_id: parsed.data.user_id,
 				reason: parsed.data.reason,
 			},
-			plan
+			plan,
 		);
 		if (result.ok) await schedule_alarm_if_needed(result.value);
 		return result_to_response(result);

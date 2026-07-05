@@ -1,5 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { addGoalAction, completeGoal, deleteGoal, getGoal, getMilestoneGoals, getUserGoals, upsertGoal } from "../goals.js";
+import {
+	addGoalAction,
+	completeGoal,
+	deleteGoal,
+	getGoal,
+	getMilestoneGoals,
+	getUserGoals,
+	upsertGoal,
+} from "../goals.js";
 
 const mockGoal = {
 	id: "goal_1",

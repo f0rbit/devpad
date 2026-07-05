@@ -1,6 +1,17 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { ApiKey } from "@devpad/schema";
-import { Badge, Button, Empty, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
+import {
+	Badge,
+	Button,
+	Empty,
+	FormField,
+	Input,
+	Modal,
+	ModalBody,
+	ModalFooter,
+	ModalHeader,
+	ModalTitle,
+} from "@f0rbit/ui";
 import Check from "lucide-solid/icons/check";
 import Copy from "lucide-solid/icons/copy";
 import Key from "lucide-solid/icons/key";
@@ -73,7 +84,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 		const apiClient = getBrowserClient();
 		const result = await apiClient.auth.keys.revoke(deleteTarget()!.id);
 		if (result.ok) {
-			setKeys(prev => prev.filter(k => k.id !== deleteTarget()!.id));
+			setKeys((prev) => prev.filter((k) => k.id !== deleteTarget()!.id));
 			setDeleteTarget(null);
 			track("api_key_revoked");
 		} else {
@@ -108,10 +119,13 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 				</p>
 			</Show>
 
-			<Show when={keys().length > 0} fallback={<Empty title="No API keys" description="Create an API key to access the devpad API." />}>
+			<Show
+				when={keys().length > 0}
+				fallback={<Empty title="No API keys" description="Create an API key to access the devpad API." />}
+			>
 				<div class="stack stack-sm">
 					<For each={keys()}>
-						{key => (
+						{(key) => (
 							<div
 								class="interactive-row"
 								style={{
@@ -166,12 +180,18 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 				<ModalBody>
 					<div class="stack stack-sm">
 						<FormField label="Name (optional)">
-							<Input placeholder="e.g. CI pipeline, local dev" value={newKeyName()} onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setNewKeyName(e.currentTarget.value)} />
+							<Input
+								placeholder="e.g. CI pipeline, local dev"
+								value={newKeyName()}
+								onInput={(e: InputEvent & { currentTarget: HTMLInputElement }) => setNewKeyName(e.currentTarget.value)}
+							/>
 						</FormField>
 						<FormField label="Scope" description="What this key can do. Defaults to 'all'.">
 							<select
 								value={newKeyScope()}
-								onChange={(e: Event & { currentTarget: HTMLSelectElement }) => setNewKeyScope(e.currentTarget.value as ApiKeyScope)}
+								onChange={(e: Event & { currentTarget: HTMLSelectElement }) =>
+									setNewKeyScope(e.currentTarget.value as ApiKeyScope)
+								}
 								style={{
 									width: "100%",
 									padding: "0.5rem 0.625rem",
@@ -182,7 +202,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 									"border-radius": "var(--radius, 4px)",
 								}}
 							>
-								<For each={SCOPE_OPTIONS}>{opt => <option value={opt.value}>{opt.label}</option>}</For>
+								<For each={SCOPE_OPTIONS}>{(opt) => <option value={opt.value}>{opt.label}</option>}</For>
 							</select>
 						</FormField>
 					</div>
@@ -248,7 +268,8 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 				</ModalHeader>
 				<ModalBody>
 					<p class="text-sm" style={{ margin: "0" }}>
-						Are you sure you want to delete <strong>{deleteTarget()?.name || "this key"}</strong>? Any applications using this key will lose access.
+						Are you sure you want to delete <strong>{deleteTarget()?.name || "this key"}</strong>? Any applications
+						using this key will lose access.
 					</p>
 				</ModalBody>
 				<ModalFooter>

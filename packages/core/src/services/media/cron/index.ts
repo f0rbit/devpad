@@ -11,7 +11,19 @@ import { processRedditAccount } from "./processors/reddit";
 import { processTwitterAccount } from "./processors/twitter";
 import type { CronResult } from "./types";
 
-export { createMerger, defaultStats, formatFetchError, type MergeResult, type PlatformProvider, type ProcessError, type ProcessResult, type StoreConfig, type StoreStats, storeMeta, storeWithMerge } from "./platform-processor";
+export {
+	createMerger,
+	defaultStats,
+	formatFetchError,
+	type MergeResult,
+	type PlatformProvider,
+	type ProcessError,
+	type ProcessResult,
+	type StoreConfig,
+	type StoreStats,
+	storeMeta,
+	storeWithMerge,
+} from "./platform-processor";
 export { type GitHubProcessResult, processGitHubAccount } from "./processors/github";
 export { processRedditAccount, type RedditProcessResult } from "./processors/reddit";
 export { processTwitterAccount, type TwitterProcessResult } from "./processors/twitter";
@@ -32,13 +44,17 @@ const groupAccountsByUser = (accountsWithUsers: AccountWithUser[]): Map<string, 
 	return userAccounts;
 };
 
-const processAccountBatch = async (ctx: AppContext, userAccountsList: AccountWithUser[], result: CronResult): Promise<boolean> => {
+const processAccountBatch = async (
+	ctx: AppContext,
+	userAccountsList: AccountWithUser[],
+	result: CronResult,
+): Promise<boolean> => {
 	const results = await Promise.allSettled(
-		userAccountsList.map(async account => {
+		userAccountsList.map(async (account) => {
 			result.processed_accounts++;
 			const snapshot = await processAccount(ctx, account);
 			return snapshot !== null;
-		})
+		}),
 	);
 
 	let hasUpdates = false;

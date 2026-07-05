@@ -1,7 +1,15 @@
 import type { Database, AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { secrets, uuid } from "@devpad/core/services/media";
 import { createLogger } from "@devpad/core/utils/logger";
-import { accounts, apiKeys, type BadRequestError, errors, type ParseError, type Platform, profiles } from "@devpad/schema/media";
+import {
+	accounts,
+	apiKeys,
+	type BadRequestError,
+	errors,
+	type ParseError,
+	type Platform,
+	profiles,
+} from "@devpad/schema/media";
 import { err, type FetchError, ok, pipe, type Result, to_nullable, try_catch, try_catch_async } from "@f0rbit/corpus";
 import { and, eq, or } from "drizzle-orm";
 import type { Context } from "hono";
@@ -32,18 +40,21 @@ export type ValidatedTokens = {
 	scope?: string;
 };
 
-export const decodeOAuthStateData = <T extends Record<string, unknown>>(state: string | undefined, requiredKeys: (keyof T)[] = []): Result<OAuthState<T>, DecodeStateError> => {
+export const decodeOAuthStateData = <T extends Record<string, unknown>>(
+	state: string | undefined,
+	requiredKeys: (keyof T)[] = [],
+): Result<OAuthState<T>, DecodeStateError> => {
 	if (!state) return errors.badRequest("Missing state parameter");
 
 	const base64Result = try_catch(
 		() => atob(state),
-		(): ParseError => ({ kind: "parse_error", message: "Invalid base64 in OAuth state" })
+		(): ParseError => ({ kind: "parse_error", message: "Invalid base64 in OAuth state" }),
 	);
 	if (!base64Result.ok) return base64Result;
 
 	const jsonResult = try_catch(
 		() => JSON.parse(base64Result.value) as OAuthState<T>,
-		(): ParseError => ({ kind: "parse_error", message: "Invalid JSON in OAuth state" })
+		(): ParseError => ({ kind: "parse_error", message: "Invalid JSON in OAuth state" }),
 	);
 	if (!jsonResult.ok) return jsonResult;
 
@@ -59,7 +70,8 @@ export const decodeOAuthStateData = <T extends Record<string, unknown>>(state: s
 	return ok(stateData);
 };
 
-export const calculateTokenExpiry = (expiresIn: number | undefined, now: Date = new Date()): string | null => (expiresIn ? new Date(now.getTime() + expiresIn * 1000).toISOString() : null);
+export const calculateTokenExpiry = (expiresIn: number | undefined, now: Date = new Date()): string | null =>
+	expiresIn ? new Date(now.getTime() + expiresIn * 1000).toISOString() : null;
 
 export const validateTokenResponse = (response: unknown): Result<ValidatedTokens, TokenValidationError> => {
 	if (typeof response !== "object" || response === null) {
@@ -96,7 +108,11 @@ export type OAuthUser = {
 	username: string;
 };
 
-export type OAuthError = { kind: "token_exchange_failed"; message: string } | { kind: "user_fetch_failed"; message: string } | { kind: "encryption_failed"; message: string } | { kind: "db_error"; message: string };
+export type OAuthError =
+	| { kind: "token_exchange_failed"; message: string }
+	| { kind: "user_fetch_failed"; message: string }
+	| { kind: "encryption_failed"; message: string }
+	| { kind: "db_error"; message: string };
 
 export type PlatformSecrets = { clientId: string | undefined; clientSecret: string | undefined };
 
@@ -105,24 +121,41 @@ export type OAuthCallbackConfig<TState extends Record<string, unknown> = Record<
 	tokenUrl: string;
 	tokenAuthHeader: (clientId: string, clientSecret: string) => string;
 	tokenHeaders?: Record<string, string>;
-	tokenBody: (code: string, redirectUri: string, state: OAuthState<TState>, secrets: { clientId: string; clientSecret: string }) => URLSearchParams;
+	tokenBody: (
+		code: string,
+		redirectUri: string,
+		state: OAuthState<TState>,
+		secrets: { clientId: string; clientSecret: string },
+	) => URLSearchParams;
 	fetchUser: (accessToken: string) => Promise<OAuthUser>;
 	getSecrets: (secrets: OAuthSecrets) => PlatformSecrets;
 	stateKeys?: (keyof TState)[];
-	resolveSecrets?: (ctx: MediaAppContext, state: OAuthState<TState>, envSecrets: PlatformSecrets) => Promise<PlatformSecrets>;
+	resolveSecrets?: (
+		ctx: MediaAppContext,
+		state: OAuthState<TState>,
+		envSecrets: PlatformSecrets,
+	) => Promise<PlatformSecrets>;
 	onSuccess?: (ctx: MediaAppContext, state: OAuthState<TState>) => Promise<void>;
 };
 
 export const getFrontendUrl = (c: HonoContext): string => c.get("config").frontend_url || "http://localhost:4321";
 
-export const validateOAuthQueryKey = async (c: HonoContext, ctx: MediaAppContext, platform: string): Promise<Result<string, Response>> => {
+export const validateOAuthQueryKey = async (
+	c: HonoContext,
+	ctx: MediaAppContext,
+	platform: string,
+): Promise<Result<string, Response>> => {
 	const apiKey = c.req.query("key");
 	if (!apiKey) {
 		return err(c.redirect(`${getFrontendUrl(c)}/connections?error=${platform}_no_auth`));
 	}
 
 	const keyHash = await secrets.key(apiKey);
-	const keyResult = await ctx.db.select({ user_id: apiKeys.user_id }).from(apiKeys).where(eq(apiKeys.key_hash, keyHash)).get();
+	const keyResult = await ctx.db
+		.select({ user_id: apiKeys.user_id })
+		.from(apiKeys)
+		.where(eq(apiKeys.key_hash, keyHash))
+		.get();
 
 	if (!keyResult) {
 		return err(c.redirect(`${getFrontendUrl(c)}/connections?error=${platform}_invalid_auth`));
@@ -133,7 +166,11 @@ export const validateOAuthQueryKey = async (c: HonoContext, ctx: MediaAppContext
 
 export type OAuthKeyAndProfileResult = { user_id: string; profile_id: string };
 
-export const validateOAuthQueryKeyAndProfile = async (c: HonoContext, ctx: MediaAppContext, platform: string): Promise<Result<OAuthKeyAndProfileResult, Response>> => {
+export const validateOAuthQueryKeyAndProfile = async (
+	c: HonoContext,
+	ctx: MediaAppContext,
+	platform: string,
+): Promise<Result<OAuthKeyAndProfileResult, Response>> => {
 	const profileIdOrSlug = c.req.query("profile_id") || c.req.query("profile");
 
 	const apiKey = c.req.query("key");
@@ -143,7 +180,11 @@ export const validateOAuthQueryKeyAndProfile = async (c: HonoContext, ctx: Media
 		}
 
 		const keyHash = await secrets.key(apiKey);
-		const keyResult = await ctx.db.select({ user_id: apiKeys.user_id }).from(apiKeys).where(eq(apiKeys.key_hash, keyHash)).get();
+		const keyResult = await ctx.db
+			.select({ user_id: apiKeys.user_id })
+			.from(apiKeys)
+			.where(eq(apiKeys.key_hash, keyHash))
+			.get();
 
 		if (!keyResult) {
 			return err(c.redirect(`${getFrontendUrl(c)}/connections?error=${platform}_invalid_auth`));
@@ -152,7 +193,12 @@ export const validateOAuthQueryKeyAndProfile = async (c: HonoContext, ctx: Media
 		const profile = await ctx.db
 			.select({ id: profiles.id, user_id: profiles.user_id })
 			.from(profiles)
-			.where(and(eq(profiles.user_id, keyResult.user_id), or(eq(profiles.id, profileIdOrSlug), eq(profiles.slug, profileIdOrSlug))))
+			.where(
+				and(
+					eq(profiles.user_id, keyResult.user_id),
+					or(eq(profiles.id, profileIdOrSlug), eq(profiles.slug, profileIdOrSlug)),
+				),
+			)
 			.get();
 
 		if (!profile) {
@@ -172,7 +218,12 @@ export const validateOAuthQueryKeyAndProfile = async (c: HonoContext, ctx: Media
 		const profile = await ctx.db
 			.select({ id: profiles.id, user_id: profiles.user_id })
 			.from(profiles)
-			.where(and(eq(profiles.user_id, auth.user_id), or(eq(profiles.id, profileIdOrSlug), eq(profiles.slug, profileIdOrSlug))))
+			.where(
+				and(
+					eq(profiles.user_id, auth.user_id),
+					or(eq(profiles.id, profileIdOrSlug), eq(profiles.slug, profileIdOrSlug)),
+				),
+			)
 			.get();
 
 		if (profile) {
@@ -185,11 +236,17 @@ export const validateOAuthQueryKeyAndProfile = async (c: HonoContext, ctx: Media
 	return err(c.redirect(`${getFrontendUrl(c)}/connections?error=${platform}_no_auth`));
 };
 
-export const redirectWithError = (c: HonoContext, platform: Platform, errorCode: string): Response => c.redirect(`${getFrontendUrl(c)}/connections?error=${platform}_${errorCode}`);
+export const redirectWithError = (c: HonoContext, platform: Platform, errorCode: string): Response =>
+	c.redirect(`${getFrontendUrl(c)}/connections?error=${platform}_${errorCode}`);
 
-export const redirectWithSuccess = (c: HonoContext, platform: Platform): Response => c.redirect(`${getFrontendUrl(c)}/connections?success=${platform}`);
+export const redirectWithSuccess = (c: HonoContext, platform: Platform): Response =>
+	c.redirect(`${getFrontendUrl(c)}/connections?success=${platform}`);
 
-export const encodeOAuthState = <T extends Record<string, unknown>>(userId: string, profileId: string, extra?: T): string => {
+export const encodeOAuthState = <T extends Record<string, unknown>>(
+	userId: string,
+	profileId: string,
+	extra?: T,
+): string => {
 	const stateData: OAuthState<T> = {
 		user_id: userId,
 		profile_id: profileId,
@@ -199,7 +256,12 @@ export const encodeOAuthState = <T extends Record<string, unknown>>(userId: stri
 	return btoa(JSON.stringify(stateData));
 };
 
-export const decodeOAuthState = <T extends Record<string, unknown> = Record<string, never>>(c: HonoContext, state: string | undefined, platform: Platform, requiredKeys: (keyof T)[] = []): Result<OAuthState<T>, Response> => {
+export const decodeOAuthState = <T extends Record<string, unknown> = Record<string, never>>(
+	c: HonoContext,
+	state: string | undefined,
+	platform: Platform,
+	requiredKeys: (keyof T)[] = [],
+): Result<OAuthState<T>, Response> => {
 	const result = decodeOAuthStateData<T>(state, requiredKeys);
 
 	if (!result.ok) {
@@ -223,7 +285,11 @@ export type ValidatedOAuthRequest<TState extends Record<string, unknown>> = {
 	clientSecret: string;
 };
 
-export const validateOAuthRequest = async <TState extends Record<string, unknown>>(c: HonoContext, ctx: MediaAppContext, config: OAuthCallbackConfig<TState>): Promise<Result<ValidatedOAuthRequest<TState>, Response>> => {
+export const validateOAuthRequest = async <TState extends Record<string, unknown>>(
+	c: HonoContext,
+	ctx: MediaAppContext,
+	config: OAuthCallbackConfig<TState>,
+): Promise<Result<ValidatedOAuthRequest<TState>, Response>> => {
 	const log = createLogger(`oauth:${config.platform}`);
 	const code = c.req.query("code");
 	const error = c.req.query("error");
@@ -241,7 +307,9 @@ export const validateOAuthRequest = async <TState extends Record<string, unknown
 	if (!stateResult.ok) return err(stateResult.error);
 
 	const envSecrets = config.getSecrets(c.get("oauth_secrets"));
-	const { clientId, clientSecret } = config.resolveSecrets ? await config.resolveSecrets(ctx, stateResult.value, envSecrets) : envSecrets;
+	const { clientId, clientSecret } = config.resolveSecrets
+		? await config.resolveSecrets(ctx, stateResult.value, envSecrets)
+		: envSecrets;
 
 	const redirectUri = `${c.get("config").api_url || "http://localhost:8787"}/api/auth/platforms/${config.platform}/callback`;
 
@@ -263,7 +331,7 @@ export const exchangeCodeForTokens = <TState extends Record<string, unknown>>(
 	clientId: string,
 	clientSecret: string,
 	config: OAuthCallbackConfig<TState>,
-	stateData: OAuthState<TState>
+	stateData: OAuthState<TState>,
 ): Promise<Result<TokenResponse, OAuthError>> =>
 	pipe
 		.fetch<TokenResponse, OAuthError>(
@@ -277,14 +345,17 @@ export const exchangeCodeForTokens = <TState extends Record<string, unknown>>(
 				},
 				body: config.tokenBody(code, redirectUri, stateData, { clientId, clientSecret }),
 			},
-			mapTokenExchangeError
+			mapTokenExchangeError,
 		)
 		.result();
 
-export const fetchOAuthUserProfile = async <TState extends Record<string, unknown>>(accessToken: string, config: OAuthCallbackConfig<TState>): Promise<Result<OAuthUser, OAuthError>> =>
+export const fetchOAuthUserProfile = async <TState extends Record<string, unknown>>(
+	accessToken: string,
+	config: OAuthCallbackConfig<TState>,
+): Promise<Result<OAuthUser, OAuthError>> =>
 	try_catch_async(
 		() => config.fetchUser(accessToken),
-		(e): OAuthError => ({ kind: "user_fetch_failed", message: String(e) })
+		(e): OAuthError => ({ kind: "user_fetch_failed", message: String(e) }),
 	);
 
 type EncryptedTokens = {
@@ -292,16 +363,28 @@ type EncryptedTokens = {
 	encryptedRefreshToken: string | null;
 };
 
-export const encryptTokens = (tokens: TokenResponse, encryptionKey: string): Promise<Result<EncryptedTokens, OAuthError>> =>
+export const encryptTokens = (
+	tokens: TokenResponse,
+	encryptionKey: string,
+): Promise<Result<EncryptedTokens, OAuthError>> =>
 	pipe(secrets.encrypt(tokens.access_token, encryptionKey))
 		.map_err((): OAuthError => ({ kind: "encryption_failed", message: "Failed to encrypt access token" }))
-		.flat_map(async encryptedAccessToken => {
-			const encryptedRefreshToken = tokens.refresh_token ? to_nullable(await secrets.encrypt(tokens.refresh_token, encryptionKey)) : null;
+		.flat_map(async (encryptedAccessToken) => {
+			const encryptedRefreshToken = tokens.refresh_token
+				? to_nullable(await secrets.encrypt(tokens.refresh_token, encryptionKey))
+				: null;
 			return ok({ encryptedAccessToken, encryptedRefreshToken });
 		})
 		.result();
 
-export const upsertOAuthAccount = (db: Database, encryptionKey: string, profileId: string, platform: Platform, user: OAuthUser, tokens: TokenResponse): Promise<Result<string, OAuthError>> =>
+export const upsertOAuthAccount = (
+	db: Database,
+	encryptionKey: string,
+	profileId: string,
+	platform: Platform,
+	user: OAuthUser,
+	tokens: TokenResponse,
+): Promise<Result<string, OAuthError>> =>
 	pipe(encryptTokens(tokens, encryptionKey))
 		.flat_map(async ({ encryptedAccessToken, encryptedRefreshToken }) => {
 			const nowDate = new Date();
@@ -311,18 +394,40 @@ export const upsertOAuthAccount = (db: Database, encryptionKey: string, profileI
 			const existing = await db
 				.select()
 				.from(accounts)
-				.where(and(eq(accounts.profile_id, profileId), eq(accounts.platform, platform), eq(accounts.platform_user_id, user.id)))
+				.where(
+					and(
+						eq(accounts.profile_id, profileId),
+						eq(accounts.platform, platform),
+						eq(accounts.platform_user_id, user.id),
+					),
+				)
 				.get();
 
 			if (existing) {
 				return updateExistingAccount(db, existing.id, encryptedAccessToken, encryptedRefreshToken, tokenExpiresAt, now);
 			}
 
-			return createNewAccount(db, profileId, platform, user, encryptedAccessToken, encryptedRefreshToken, tokenExpiresAt, now);
+			return createNewAccount(
+				db,
+				profileId,
+				platform,
+				user,
+				encryptedAccessToken,
+				encryptedRefreshToken,
+				tokenExpiresAt,
+				now,
+			);
 		})
 		.result();
 
-const updateExistingAccount = async (db: Database, accountId: string, encryptedAccessToken: string, encryptedRefreshToken: string | null, tokenExpiresAt: string | null, now: string): Promise<Result<string, OAuthError>> => {
+const updateExistingAccount = async (
+	db: Database,
+	accountId: string,
+	encryptedAccessToken: string,
+	encryptedRefreshToken: string | null,
+	tokenExpiresAt: string | null,
+	now: string,
+): Promise<Result<string, OAuthError>> => {
 	await db
 		.update(accounts)
 		.set({
@@ -345,7 +450,7 @@ const createNewAccount = async (
 	encryptedAccessToken: string,
 	encryptedRefreshToken: string | null,
 	tokenExpiresAt: string | null,
-	now: string
+	now: string,
 ): Promise<Result<string, OAuthError>> => {
 	const accountId = uuid();
 
@@ -370,7 +475,9 @@ type OAuthCallbackError = OAuthError & { errorCode: string };
 
 const toCallbackError = (error: OAuthError, errorCode: string): OAuthCallbackError => ({ ...error, errorCode });
 
-export const createOAuthCallback = <TState extends Record<string, unknown> = Record<string, never>>(config: OAuthCallbackConfig<TState>) => {
+export const createOAuthCallback = <TState extends Record<string, unknown> = Record<string, never>>(
+	config: OAuthCallbackConfig<TState>,
+) => {
 	return async (c: HonoContext) => {
 		const ctx = getContext(c);
 
@@ -381,21 +488,21 @@ export const createOAuthCallback = <TState extends Record<string, unknown> = Rec
 		const { code, stateData, redirectUri, clientId, clientSecret } = validation.value;
 
 		const result = await pipe(exchangeCodeForTokens(code, redirectUri, clientId, clientSecret, config, stateData))
-			.map_err(e => toCallbackError(e, "token_failed"))
-			.tap_err(e => log.error("Token exchange failed:", e.message))
-			.flat_map(tokens =>
+			.map_err((e) => toCallbackError(e, "token_failed"))
+			.tap_err((e) => log.error("Token exchange failed:", e.message))
+			.flat_map((tokens) =>
 				pipe(fetchOAuthUserProfile(tokens.access_token, config))
-					.map_err(e => toCallbackError(e, "user_failed"))
-					.map(user => ({ tokens, user }))
-					.result()
+					.map_err((e) => toCallbackError(e, "user_failed"))
+					.map((user) => ({ tokens, user }))
+					.result(),
 			)
-			.tap_err(e => log.error("Failed to get user info:", e.message))
+			.tap_err((e) => log.error("Failed to get user info:", e.message))
 			.flat_map(({ tokens, user }) =>
 				pipe(upsertOAuthAccount(ctx.db, ctx.encryptionKey, stateData.profile_id, config.platform, user, tokens))
-					.map_err(e => toCallbackError(e, "save_failed"))
-					.result()
+					.map_err((e) => toCallbackError(e, "save_failed"))
+					.result(),
 			)
-			.tap_err(e => log.error("Failed to save account:", e.message))
+			.tap_err((e) => log.error("Failed to save account:", e.message))
 			.result();
 
 		if (!result.ok) {

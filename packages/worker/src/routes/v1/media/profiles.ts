@@ -13,7 +13,7 @@ const ProfileTimelineQuerySchema = z.object({
 
 export const profileRoutes = new Hono<AppContext>();
 
-profileRoutes.get("/", async c => {
+profileRoutes.get("/", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 
@@ -21,7 +21,7 @@ profileRoutes.get("/", async c => {
 	return handleResult(c, result);
 });
 
-profileRoutes.post("/", async c => {
+profileRoutes.post("/", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 
@@ -36,7 +36,7 @@ profileRoutes.post("/", async c => {
 	return handleResult(c, result, 201);
 });
 
-profileRoutes.get("/:id", async c => {
+profileRoutes.get("/:id", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
@@ -45,7 +45,7 @@ profileRoutes.get("/:id", async c => {
 	return handleResult(c, result);
 });
 
-profileRoutes.patch("/:id", async c => {
+profileRoutes.patch("/:id", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
@@ -61,7 +61,7 @@ profileRoutes.patch("/:id", async c => {
 	return handleResult(c, result);
 });
 
-profileRoutes.delete("/:id", async c => {
+profileRoutes.delete("/:id", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
@@ -70,7 +70,7 @@ profileRoutes.delete("/:id", async c => {
 	return handleResult(c, result);
 });
 
-profileRoutes.get("/:id/filters", async c => {
+profileRoutes.get("/:id/filters", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
@@ -79,7 +79,7 @@ profileRoutes.get("/:id/filters", async c => {
 	return handleResult(c, result);
 });
 
-profileRoutes.post("/:id/filters", async c => {
+profileRoutes.post("/:id/filters", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
@@ -93,7 +93,7 @@ profileRoutes.post("/:id/filters", async c => {
 	return handleResult(c, result, 201);
 });
 
-profileRoutes.delete("/:id/filters/:filter_id", async c => {
+profileRoutes.delete("/:id/filters/:filter_id", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
@@ -103,7 +103,7 @@ profileRoutes.delete("/:id/filters/:filter_id", async c => {
 	return handleResultNoContent(c, result);
 });
 
-profileRoutes.get("/:slug/timeline", async c => {
+profileRoutes.get("/:slug/timeline", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 	const { slug } = c.req.param();

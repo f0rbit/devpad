@@ -74,7 +74,11 @@ export const ProjectCard = (props: Props) => {
 	const { project, pipeline_status } = props;
 
 	return (
-		<a href={`/project/${project.project_id}`} class="card stack stack-sm" style={{ gap: "3px", width: "100%", height: "100%", "text-decoration": "none" }}>
+		<a
+			href={`/project/${project.project_id}`}
+			class="card stack stack-sm"
+			style={{ gap: "3px", width: "100%", height: "100%", "text-decoration": "none" }}
+		>
 			<div class="row row-sm">
 				<span class="task-title">{project.name}</span>
 				<AiProvenance created_by={project.created_by} modified_by={project.modified_by} />
@@ -101,7 +105,7 @@ export const ProjectCard = (props: Props) => {
 				</span>
 
 				<Show when={pipeline_status}>
-					{status => {
+					{(status) => {
 						const run = status().latest_run;
 						const run_status = get_pipeline_status_label(run);
 						const color = PIPELINE_STATUS_COLORS[run_status] || "var(--fg-muted)";
@@ -113,15 +117,18 @@ export const ProjectCard = (props: Props) => {
 								<span class="row row-sm" style={{ color, "font-size": "0.9em" }}>
 									<span>{icon}</span>
 									<span style={{ "margin-left": "4px", "text-transform": "lowercase" }}>{run_status}</span>
-									{relative_time && <span style={{ "margin-left": "auto", color: "var(--fg-faint)" }}>{relative_time}</span>}
+									{relative_time && (
+										<span style={{ "margin-left": "auto", color: "var(--fg-faint)" }}>{relative_time}</span>
+									)}
 								</span>
 
 								<Show when={status().pending_approval_count > 0}>
-									<span class="row row-sm" style={{ color: "color-mix(in srgb, var(--fg-muted) 70%, orange)", "font-size": "0.9em" }}>
+									<span
+										class="row row-sm"
+										style={{ color: "color-mix(in srgb, var(--fg-muted) 70%, orange)", "font-size": "0.9em" }}
+									>
 										<span>→</span>
-										<span style={{ "margin-left": "4px" }}>
-											{status().pending_approval_count} awaiting approval
-										</span>
+										<span style={{ "margin-left": "4px" }}>{status().pending_approval_count} awaiting approval</span>
 									</span>
 								</Show>
 							</div>

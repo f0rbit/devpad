@@ -52,10 +52,12 @@ export function ResourceState<T>(props: ResourceStateProps<T>) {
 		<>
 			<Show when={props.resource.loading}>{props.loadingFallback ?? <Loading message={props.loadingMessage} />}</Show>
 
-			<Show when={props.resource.error}>{err => <ErrorDisplay prefix={props.errorPrefix ?? "Failed to load"} message={err().message} />}</Show>
+			<Show when={props.resource.error}>
+				{(err) => <ErrorDisplay prefix={props.errorPrefix ?? "Failed to load"} message={err().message} />}
+			</Show>
 
 			<Show when={!props.resource.loading && !props.resource.error && props.resource()} keyed>
-				{data => props.children(data as NonNullable<T>)}
+				{(data) => props.children(data as NonNullable<T>)}
 			</Show>
 		</>
 	);
@@ -76,10 +78,12 @@ export function AsyncState<T>(props: AsyncStateProps<T>) {
 		<>
 			<Show when={props.loading}>{props.loadingFallback ?? <Loading message={props.loadingMessage} />}</Show>
 
-			<Show when={props.error}>{err => <ErrorDisplay prefix={props.errorPrefix ?? "Failed to load"} message={err().message} />}</Show>
+			<Show when={props.error}>
+				{(err) => <ErrorDisplay prefix={props.errorPrefix ?? "Failed to load"} message={err().message} />}
+			</Show>
 
 			<Show when={!props.loading && !props.error && props.data} keyed>
-				{data => props.children(data)}
+				{(data) => props.children(data)}
 			</Show>
 		</>
 	);

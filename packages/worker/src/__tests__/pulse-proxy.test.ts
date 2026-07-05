@@ -42,7 +42,10 @@ const authz_header = (h: Record<string, string> | undefined): string | undefined
 	return undefined;
 };
 
-const build_app = (stub: StubContext, upstream: (req: Captured) => Response): { app: Hono<AppContext>; captured: Captured[] } => {
+const build_app = (
+	stub: StubContext,
+	upstream: (req: Captured) => Response,
+): { app: Hono<AppContext>; captured: Captured[] } => {
 	const captured: Captured[] = [];
 	const original_fetch = globalThis.fetch;
 	const fake_fetch: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -140,7 +143,7 @@ describe("/v1/pulse/* proxy", () => {
 				pulse_api_base: "https://pulse.test",
 				pulse_internal_key: "internal_secret",
 			},
-			default_upstream(200, { pageviews: 42 })
+			default_upstream(200, { pageviews: 42 }),
 		);
 		teardown = (app as unknown as { _restore: () => void })._restore;
 
@@ -162,7 +165,7 @@ describe("/v1/pulse/* proxy", () => {
 				pulse_api_base: "https://pulse.test",
 				pulse_internal_key: "internal_secret",
 			},
-			default_upstream()
+			default_upstream(),
 		);
 		teardown = (app as unknown as { _restore: () => void })._restore;
 
@@ -179,7 +182,7 @@ describe("/v1/pulse/* proxy", () => {
 				pulse_api_base: "https://pulse.test",
 				pulse_internal_key: "internal_secret",
 			},
-			default_upstream()
+			default_upstream(),
 		);
 		teardown = (app as unknown as { _restore: () => void })._restore;
 
@@ -209,7 +212,7 @@ describe("/v1/pulse/* proxy", () => {
 				new Response(JSON.stringify({ id: "sub_xyz" }), {
 					status: 201,
 					headers: { "content-type": "application/json" },
-				})
+				}),
 		);
 		teardown = (app as unknown as { _restore: () => void })._restore;
 
@@ -217,8 +220,13 @@ describe("/v1/pulse/* proxy", () => {
 			new Request("http://test/v1/pulse/admin/subs", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ project_id: "proj_abc", name: "x", filter: {}, channel: { kind: "discord", webhook_url: "https://discord.test/x" } }),
-			})
+				body: JSON.stringify({
+					project_id: "proj_abc",
+					name: "x",
+					filter: {},
+					channel: { kind: "discord", webhook_url: "https://discord.test/x" },
+				}),
+			}),
 		);
 		expect(res.status).toBe(201);
 		const body = (await res.json()) as { id: string };
@@ -240,14 +248,14 @@ describe("/v1/pulse/* proxy", () => {
 				pulse_api_base: "https://pulse.test",
 				pulse_internal_key: "internal_secret",
 			},
-			(_: Captured) => new Response(null, { status: 204 })
+			(_: Captured) => new Response(null, { status: 204 }),
 		);
 		teardown = (app as unknown as { _restore: () => void })._restore;
 
 		const res = await app.fetch(
 			new Request("http://test/v1/pulse/admin/keys/pkid_abc?project_id=proj_abc", {
 				method: "DELETE",
-			})
+			}),
 		);
 		expect(res.status).toBe(204);
 		expect(captured[0]?.url).toBe("https://pulse.test/admin/keys/pkid_abc?project_id=proj_abc");
@@ -266,7 +274,7 @@ describe("/v1/pulse/* proxy", () => {
 				new Response(JSON.stringify({ error: "down" }), {
 					status: 503,
 					headers: { "content-type": "application/json" },
-				})
+				}),
 		);
 		teardown = (app as unknown as { _restore: () => void })._restore;
 

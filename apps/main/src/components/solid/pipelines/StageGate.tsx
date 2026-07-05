@@ -42,7 +42,8 @@ export default function StageGate(props: StageGateProps) {
 		return gate?.verdict || null;
 	})();
 
-	const show_actions = () => props.run.status === "awaiting_approval" && gate_type() === "manual" && !gate_verdict() && !!gate_config;
+	const show_actions = () =>
+		props.run.status === "awaiting_approval" && gate_type() === "manual" && !gate_verdict() && !!gate_config;
 
 	const target_stage_name = () => {
 		if (!gate_config) return null;
@@ -81,7 +82,10 @@ export default function StageGate(props: StageGateProps) {
 	return (
 		<div class="stack stack-md">
 			<div class="card card-flat stack stack-md">
-				<Show when={gate_config} fallback={<div class="text-sm text-muted">No gate configured for this stage transition.</div>}>
+				<Show
+					when={gate_config}
+					fallback={<div class="text-sm text-muted">No gate configured for this stage transition.</div>}
+				>
 					<div class="stack stack-sm">
 						<div class="row row-between">
 							<span class="text-sm text-faint">Gate Type</span>
@@ -106,10 +110,20 @@ export default function StageGate(props: StageGateProps) {
 									style={{
 										padding: "0.25rem 0.75rem",
 										"border-radius": "0.25rem",
-										"background-color": gate_verdict() === "approved" ? "var(--success-bg)" : gate_verdict() === "denied" ? "var(--error-bg)" : "var(--info-bg)",
+										"background-color":
+											gate_verdict() === "approved"
+												? "var(--success-bg)"
+												: gate_verdict() === "denied"
+													? "var(--error-bg)"
+													: "var(--info-bg)",
 										"font-size": "0.85rem",
 										"font-weight": "500",
-										color: gate_verdict() === "approved" ? "var(--success)" : gate_verdict() === "denied" ? "var(--error)" : "var(--info)",
+										color:
+											gate_verdict() === "approved"
+												? "var(--success)"
+												: gate_verdict() === "denied"
+													? "var(--error)"
+													: "var(--info)",
 									}}
 								>
 									{gate_verdict()}
@@ -141,10 +155,22 @@ export default function StageGate(props: StageGateProps) {
 			<Show when={show_actions()}>
 				<div class="card card-flat stack stack-sm" data-testid="stage-gate-actions">
 					<div class="row" style={{ gap: "var(--space-sm)", "flex-wrap": "wrap", "align-items": "center" }}>
-						<Button size="sm" variant="primary" disabled={loading() !== null} onClick={() => submit_decision("approved")} data-testid="stage-gate-approve">
+						<Button
+							size="sm"
+							variant="primary"
+							disabled={loading() !== null}
+							onClick={() => submit_decision("approved")}
+							data-testid="stage-gate-approve"
+						>
 							{loading() === "approve" ? "Approving..." : "Approve"}
 						</Button>
-						<Button size="sm" variant="danger" disabled={loading() !== null} onClick={() => submit_decision("denied")} data-testid="stage-gate-deny">
+						<Button
+							size="sm"
+							variant="danger"
+							disabled={loading() !== null}
+							onClick={() => submit_decision("denied")}
+							data-testid="stage-gate-deny"
+						>
 							{loading() === "deny" ? "Denying..." : "Deny"}
 						</Button>
 						<Show
@@ -153,7 +179,15 @@ export default function StageGate(props: StageGateProps) {
 								<button
 									type="button"
 									onClick={() => setShowReason(true)}
-									style={{ "font-size": "0.85rem", color: "var(--text-link)", "text-decoration": "none", background: "none", border: "none", padding: 0, cursor: "pointer" }}
+									style={{
+										"font-size": "0.85rem",
+										color: "var(--text-link)",
+										"text-decoration": "none",
+										background: "none",
+										border: "none",
+										padding: 0,
+										cursor: "pointer",
+									}}
 								>
 									Add reason
 								</button>
@@ -170,7 +204,7 @@ export default function StageGate(props: StageGateProps) {
 					<Show when={showReason()}>
 						<textarea
 							value={reason()}
-							onInput={e => setReason(e.currentTarget.value)}
+							onInput={(e) => setReason(e.currentTarget.value)}
 							placeholder="Why are you approving or denying this stage?"
 							rows={3}
 							disabled={loading() !== null}

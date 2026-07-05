@@ -15,7 +15,13 @@
  * `~/dev/vault/src/index.ts` + `~/dev/vault/src/types.ts`.
  */
 
-import type { D1Database, DurableObjectNamespace, Fetcher, R2Bucket, SecretsStoreSecret } from "@cloudflare/workers-types";
+import type {
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	R2Bucket,
+	SecretsStoreSecret,
+} from "@cloudflare/workers-types";
 
 // ─── Environment type ───────────────────────────────────────────────
 

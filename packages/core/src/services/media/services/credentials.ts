@@ -74,7 +74,11 @@ const save = async (ctx: AppContext, input: CredentialInput): Promise<Result<{ i
 	return ok({ id });
 };
 
-const get = async (ctx: AppContext, profileId: string, platform: Platform): Promise<Result<DecryptedCredentials | null, EncryptionError>> => {
+const get = async (
+	ctx: AppContext,
+	profileId: string,
+	platform: Platform,
+): Promise<Result<DecryptedCredentials | null, EncryptionError>> => {
 	const row = await ctx.db
 		.select()
 		.from(platformCredentials)

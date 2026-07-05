@@ -89,7 +89,7 @@ export class CleanupManager {
 			const cleanup_fns = this.cleanup_functions.get(key) || [];
 			if (cleanup_fns.length > 0) {
 				log(`🧹 Cleaning up ${cleanup_fns.length} ${key}...`);
-				await Promise.all(cleanup_fns.map(fn => fn()));
+				await Promise.all(cleanup_fns.map((fn) => fn()));
 			}
 		}
 
@@ -97,7 +97,7 @@ export class CleanupManager {
 		for (const [key, cleanup_fns] of this.cleanup_functions.entries()) {
 			if (!cleanup_order.includes(key)) {
 				log(`🧹 Cleaning up ${cleanup_fns.length} ${key}...`);
-				await Promise.all(cleanup_fns.map(fn => fn()));
+				await Promise.all(cleanup_fns.map((fn) => fn()));
 			}
 		}
 

@@ -3,6 +3,17 @@
 	"version": "2.0.0",
 	"private": true,
 	"description": "Core business logic and services for Devpad",
+	"keywords": [
+		"business-logic",
+		"core",
+		"devpad",
+		"services"
+	],
+	"license": "MIT",
+	"author": {
+		"name": "f0rbit",
+		"url": "https://github.com/f0rbit"
+	},
 	"type": "module",
 	"exports": {
 		"./services": "./src/services/index.ts",
@@ -65,17 +76,6 @@
 		"lucide-solid": "^0.454.0",
 		"solid-js": "^1.9.0"
 	},
-	"keywords": [
-		"devpad",
-		"core",
-		"business-logic",
-		"services"
-	],
-	"author": {
-		"name": "f0rbit",
-		"url": "https://github.com/f0rbit"
-	},
-	"license": "MIT",
 	"engines": {
 		"node": ">=18.0.0"
 	}

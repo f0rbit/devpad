@@ -61,7 +61,13 @@ export type RunState = {
  * - `rollback_requested` — operator hit POST /rollback.
  * - `cancel` — operator hit POST /cancel.
  */
-export type RunEvent = { kind: "start" } | { kind: "deploy_complete" } | { kind: "bake_complete" } | { kind: "gate_verdict"; verdict: "Pass" | "Fail" | "Pending"; reason?: string } | { kind: "rollback_requested" } | { kind: "cancel" };
+export type RunEvent =
+	| { kind: "start" }
+	| { kind: "deploy_complete" }
+	| { kind: "bake_complete" }
+	| { kind: "gate_verdict"; verdict: "Pass" | "Fail" | "Pending"; reason?: string }
+	| { kind: "rollback_requested" }
+	| { kind: "cancel" };
 
 /**
  * Side-effect commands the wrapper must execute after a transition. The
@@ -186,14 +192,22 @@ const request_gate_eval = (state: RunState, plan: ResolvedPlan): Result<Transiti
  * output. No clock, no random, no IO. Tests cover every (state, event)
  * pair without spinning up Cloudflare or D1.
  */
-export const transition = (state: RunState, event: RunEvent, plan: ResolvedPlan): Result<TransitionResult, TransitionError> => {
+export const transition = (
+	state: RunState,
+	event: RunEvent,
+	plan: ResolvedPlan,
+): Result<TransitionResult, TransitionError> => {
 	if (plan.stages.length === 0) {
 		return err({ code: "empty_plan", message: "resolved plan has no stages" });
 	}
 
 	if (event.kind === "cancel") {
 		if (TERMINAL.has(state.status)) {
-			return err({ code: "terminal_state", message: `cannot cancel from terminal state ${state.status}`, state: state.status });
+			return err({
+				code: "terminal_state",
+				message: `cannot cancel from terminal state ${state.status}`,
+				state: state.status,
+			});
 		}
 		return ok({
 			next: { ...state, status: "cancelled" },
@@ -203,7 +217,11 @@ export const transition = (state: RunState, event: RunEvent, plan: ResolvedPlan)
 
 	if (event.kind === "rollback_requested") {
 		if (TERMINAL.has(state.status)) {
-			return err({ code: "terminal_state", message: `cannot rollback from terminal state ${state.status}`, state: state.status });
+			return err({
+				code: "terminal_state",
+				message: `cannot rollback from terminal state ${state.status}`,
+				state: state.status,
+			});
 		}
 		if (plan.previous_version_set_id === null) {
 			return err({ code: "no_previous_version", message: "no previous version set to roll back to" });
@@ -221,7 +239,12 @@ export const transition = (state: RunState, event: RunEvent, plan: ResolvedPlan)
 	switch (state.status) {
 		case "queued": {
 			if (event.kind !== "start") {
-				return err({ code: "invalid_event", message: `event ${event.kind} invalid in state queued`, state: state.status, event: event.kind });
+				return err({
+					code: "invalid_event",
+					message: `event ${event.kind} invalid in state queued`,
+					state: state.status,
+					event: event.kind,
+				});
 			}
 			return ok(advance_to_deploy(state, plan, 0));
 		}
@@ -230,19 +253,34 @@ export const transition = (state: RunState, event: RunEvent, plan: ResolvedPlan)
 			if (event.kind === "deploy_complete") {
 				return post_deploy_step(state, plan);
 			}
-			return err({ code: "invalid_event", message: `event ${event.kind} invalid in state deploying`, state: state.status, event: event.kind });
+			return err({
+				code: "invalid_event",
+				message: `event ${event.kind} invalid in state deploying`,
+				state: state.status,
+				event: event.kind,
+			});
 		}
 
 		case "baking": {
 			if (event.kind !== "bake_complete") {
-				return err({ code: "invalid_event", message: `event ${event.kind} invalid in state baking`, state: state.status, event: event.kind });
+				return err({
+					code: "invalid_event",
+					message: `event ${event.kind} invalid in state baking`,
+					state: state.status,
+					event: event.kind,
+				});
 			}
 			return request_gate_eval(state, plan);
 		}
 
 		case "awaiting_approval": {
 			if (event.kind !== "gate_verdict") {
-				return err({ code: "invalid_event", message: `event ${event.kind} invalid in state awaiting_approval`, state: state.status, event: event.kind });
+				return err({
+					code: "invalid_event",
+					message: `event ${event.kind} invalid in state awaiting_approval`,
+					state: state.status,
+					event: event.kind,
+				});
 			}
 			if (event.verdict === "Pending") {
 				return ok({ next: state, emit: { kind: "done" } });
@@ -265,7 +303,12 @@ export const transition = (state: RunState, event: RunEvent, plan: ResolvedPlan)
 
 		case "rolling_back": {
 			if (event.kind !== "deploy_complete") {
-				return err({ code: "invalid_event", message: `event ${event.kind} invalid in state rolling_back`, state: state.status, event: event.kind });
+				return err({
+					code: "invalid_event",
+					message: `event ${event.kind} invalid in state rolling_back`,
+					state: state.status,
+					event: event.kind,
+				});
 			}
 			return ok({
 				next: { ...state, status: "rolled_back" },
@@ -274,7 +317,12 @@ export const transition = (state: RunState, event: RunEvent, plan: ResolvedPlan)
 		}
 
 		default: {
-			return err({ code: "invalid_event", message: `unhandled state ${state.status}`, state: state.status, event: event.kind });
+			return err({
+				code: "invalid_event",
+				message: `unhandled state ${state.status}`,
+				state: state.status,
+				event: event.kind,
+			});
 		}
 	}
 };

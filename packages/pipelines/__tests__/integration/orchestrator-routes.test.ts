@@ -3,11 +3,21 @@ import { extendTemplate } from "@devpad/pipeline-templates";
 import { pipeline_package, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
-import { approve, build_harness, type Envelope, get_json, post_json, SCRIPT_NAME_FOR, type TestHarness } from "./helpers.ts";
+import {
+	approve,
+	build_harness,
+	type Envelope,
+	get_json,
+	post_json,
+	SCRIPT_NAME_FOR,
+	type TestHarness,
+} from "./helpers.ts";
 
-const run_status_of = async (db: Database, run_id: string) => (await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0]!;
+const run_status_of = async (db: Database, run_id: string) =>
+	(await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0]!;
 
-const events_of = async (db: Database, run_id: string) => db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
+const events_of = async (db: Database, run_id: string) =>
+	db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
 
 const expect_ok = <T>(body: Envelope<unknown>): T => {
 	if (!body.ok) throw new Error(`expected ok envelope, got error: ${JSON.stringify(body.error)}`);
@@ -88,9 +98,9 @@ describe("orchestrator routes — full gradual run via HTTP", () => {
 		const post_seed = main_list.value.slice(1);
 		// onebox + wave1 + wave2 + full on main script
 		expect(post_seed.length).toBe(4);
-		expect(post_seed[0].strategy.versions.find(v => v.percentage === 1)).toBeDefined();
-		expect(post_seed[1].strategy.versions.find(v => v.percentage === 10)).toBeDefined();
-		expect(post_seed[2].strategy.versions.find(v => v.percentage === 50)).toBeDefined();
+		expect(post_seed[0].strategy.versions.find((v) => v.percentage === 1)).toBeDefined();
+		expect(post_seed[1].strategy.versions.find((v) => v.percentage === 10)).toBeDefined();
+		expect(post_seed[2].strategy.versions.find((v) => v.percentage === 50)).toBeDefined();
 		expect(post_seed[3].strategy.versions[0].percentage).toBe(100);
 		h.deps.cf.assertPercentageSum();
 	});
@@ -136,7 +146,7 @@ describe("orchestrator routes — cancel mid-run", () => {
 		expect(final.status).toBe("cancelled");
 
 		const events = await events_of(h.db, run_id);
-		expect(events.some(e => e.kind === "error" && JSON.stringify(e.payload).includes("cancel"))).toBe(true);
+		expect(events.some((e) => e.kind === "error" && JSON.stringify(e.payload).includes("cancel"))).toBe(true);
 	});
 });
 
@@ -149,9 +159,15 @@ describe("orchestrator routes — rollback", () => {
 		await approve(h.app, run_id, "onebox", "approved");
 		expect((await run_status_of(h.db, run_id)).status).toBe("baking");
 
-		const rb = await post_json<{ run_id: string; kind: string; target_version_set_id: string; source_run_id: string }>(h.app, `/runs/${run_id}/rollback`, {});
+		const rb = await post_json<{ run_id: string; kind: string; target_version_set_id: string; source_run_id: string }>(
+			h.app,
+			`/runs/${run_id}/rollback`,
+			{},
+		);
 		expect(rb.status).toBe(200);
-		const rb_value = expect_ok<{ run_id: string; kind: string; target_version_set_id: string; source_run_id: string }>(rb.body);
+		const rb_value = expect_ok<{ run_id: string; kind: string; target_version_set_id: string; source_run_id: string }>(
+			rb.body,
+		);
 		expect(rb_value.run_id).not.toBe(run_id);
 		expect(rb_value.kind).toBe("rollback");
 		expect(rb_value.target_version_set_id).toBe("vs_v0");
@@ -207,7 +223,10 @@ describe("orchestrator routes — validation + errors", () => {
 
 	test("POST /runs for unknown package returns 404", async () => {
 		const h = await build_harness();
-		const res = await post_json(h.app, "/runs", { package_id: "pipeline-package_does_not_exist", version_set_id: "vs_v1" });
+		const res = await post_json(h.app, "/runs", {
+			package_id: "pipeline-package_does_not_exist",
+			version_set_id: "vs_v1",
+		});
 		expect(res.status).toBe(404);
 	});
 
@@ -227,7 +246,11 @@ describe("orchestrator routes — validation + errors", () => {
 		const h = await build_harness();
 		const create = await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
 		const { run_id } = expect_ok<{ run_id: string }>(create.body);
-		const res = await post_json(h.app, `/runs/${run_id}/approve`, { stage_name: "onebox", decision: "maybe", user_id: "user_test" });
+		const res = await post_json(h.app, `/runs/${run_id}/approve`, {
+			stage_name: "onebox",
+			decision: "maybe",
+			user_id: "user_test",
+		});
 		expect(res.status).toBe(400);
 	});
 
@@ -248,7 +271,10 @@ describe("orchestrator routes — validation + errors", () => {
 describe("orchestrator routes — wire envelope contract (Phase 13.E1)", () => {
 	test("error envelopes are flat: error has top-level `code`, never a nested `ok: false`", async () => {
 		const h = await build_harness();
-		const res = await post_json(h.app, "/runs", { package_id: "pipeline-package_does_not_exist", version_set_id: "vs_v1" });
+		const res = await post_json(h.app, "/runs", {
+			package_id: "pipeline-package_does_not_exist",
+			version_set_id: "vs_v1",
+		});
 		expect(res.status).toBe(404);
 		expect(res.body.ok).toBe(false);
 		const error = res.body.error as Record<string, unknown>;
@@ -298,13 +324,28 @@ describe("orchestrator routes — GET /runs list", () => {
 		// per-statement so a tight loop can collide; pre-seed distinct
 		// created_at timestamps explicitly so the ordering assertion is
 		// deterministic regardless of clock resolution.
-		const r1 = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
-		const r2 = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
-		const r3 = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
+		const r1 = expect_ok<{ run_id: string }>(
+			(await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body,
+		);
+		const r2 = expect_ok<{ run_id: string }>(
+			(await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body,
+		);
+		const r3 = expect_ok<{ run_id: string }>(
+			(await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body,
+		);
 
-		await h.db.update(pipeline_run).set({ created_at: "2026-05-01T00:00:00.000Z" }).where(eq(pipeline_run.id, r1.run_id));
-		await h.db.update(pipeline_run).set({ created_at: "2026-05-02T00:00:00.000Z" }).where(eq(pipeline_run.id, r2.run_id));
-		await h.db.update(pipeline_run).set({ created_at: "2026-05-03T00:00:00.000Z" }).where(eq(pipeline_run.id, r3.run_id));
+		await h.db
+			.update(pipeline_run)
+			.set({ created_at: "2026-05-01T00:00:00.000Z" })
+			.where(eq(pipeline_run.id, r1.run_id));
+		await h.db
+			.update(pipeline_run)
+			.set({ created_at: "2026-05-02T00:00:00.000Z" })
+			.where(eq(pipeline_run.id, r2.run_id));
+		await h.db
+			.update(pipeline_run)
+			.set({ created_at: "2026-05-03T00:00:00.000Z" })
+			.where(eq(pipeline_run.id, r3.run_id));
 
 		const res = await get_json(h.app, "/runs");
 		expect(res.status).toBe(200);
@@ -323,7 +364,7 @@ describe("orchestrator routes — GET /runs list", () => {
 		expect(res.status).toBe(200);
 		const runs = expect_ok<Array<{ package_id: string }>>(res.body);
 		expect(runs.length).toBeGreaterThan(0);
-		runs.forEach(r => expect(r.package_id).toBe(h.pkg.id));
+		runs.forEach((r) => expect(r.package_id).toBe(h.pkg.id));
 
 		const other = await get_json(h.app, "/runs?package_id=pipeline-package_does_not_exist");
 		expect(other.status).toBe(200);
@@ -332,18 +373,20 @@ describe("orchestrator routes — GET /runs list", () => {
 
 	test("filters by status", async () => {
 		const h = await build_harness();
-		const r = expect_ok<{ run_id: string }>((await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body);
+		const r = expect_ok<{ run_id: string }>(
+			(await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" })).body,
+		);
 
 		// Run sits at awaiting_approval after creation.
 		const awaiting = await get_json(h.app, "/runs?status=awaiting_approval");
 		expect(awaiting.status).toBe(200);
 		const awaiting_rows = expect_ok<Array<{ id: string }>>(awaiting.body);
-		expect(awaiting_rows.some(row => row.id === r.run_id)).toBe(true);
+		expect(awaiting_rows.some((row) => row.id === r.run_id)).toBe(true);
 
 		const completed = await get_json(h.app, "/runs?status=completed");
 		expect(completed.status).toBe(200);
 		const completed_rows = expect_ok<Array<{ id: string }>>(completed.body);
-		expect(completed_rows.some(row => row.id === r.run_id)).toBe(false);
+		expect(completed_rows.some((row) => row.id === r.run_id)).toBe(false);
 	});
 
 	test("limit clamps to 200 and rejects invalid values", async () => {
@@ -450,7 +493,9 @@ describe("orchestrator routes — DO alarm idempotency", () => {
 		const events_before = await events_of(h.db, run_id);
 		const pulse_before = h.deps.pulse.emitted.length;
 		const main_script = SCRIPT_NAME_FOR();
-		const deploys_before = (await h.deps.cf.deployments.list(main_script)).ok ? ((await h.deps.cf.deployments.list(main_script)) as { ok: true; value: unknown[] }).value.length : 0;
+		const deploys_before = (await h.deps.cf.deployments.list(main_script)).ok
+			? ((await h.deps.cf.deployments.list(main_script)) as { ok: true; value: unknown[] }).value.length
+			: 0;
 
 		// Fire the alarm — must not error, must not advance, must not emit pulse, must not deploy.
 		await h.fire_alarm(run_id);

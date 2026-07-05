@@ -47,14 +47,16 @@ const buildUrl = (path: string, slug: string | null) => {
 export default function ProfileSelector(props: ProfileSelectorProps) {
 	const initialState = (): AuthState | undefined => {
 		if (props.initialProfiles !== undefined) {
-			return props.isAuthenticated !== false ? { authenticated: true, profiles: props.initialProfiles } : { authenticated: false };
+			return props.isAuthenticated !== false
+				? { authenticated: true, profiles: props.initialProfiles }
+				: { authenticated: false };
 		}
 		return undefined;
 	};
 
 	const [authState] = createResource(
 		() => initialState(),
-		initial => fetchAuthAndProfiles(initial)
+		(initial) => fetchAuthAndProfiles(initial),
 	);
 
 	const currentSlug = () => getSlugFromUrl() ?? props.currentSlug;
@@ -91,7 +93,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 	const currentProfile = () => {
 		const slug = currentSlug();
 		if (!slug) return null;
-		return profileList().find(p => p.slug === slug) ?? null;
+		return profileList().find((p) => p.slug === slug) ?? null;
 	};
 
 	const buttonLabel = () => {
@@ -103,7 +105,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 	createEffect(
 		on(
 			() => authState(),
-			state => {
+			(state) => {
 				if (!state?.authenticated) return;
 				const list = state.profiles;
 				if (list.length === 0) return;
@@ -115,8 +117,8 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 				const url = new URL(window.location.href);
 				url.searchParams.set("profile", firstProfile.slug);
 				window.location.href = url.toString();
-			}
-		)
+			},
+		),
 	);
 
 	const handleSelect = (slug: string) => {
@@ -163,7 +165,7 @@ export default function ProfileSelector(props: ProfileSelectorProps) {
 						</DropdownTrigger>
 						<DropdownMenu>
 							<For each={profileList()}>
-								{profile => (
+								{(profile) => (
 									<DropdownItem active={currentSlug() === profile.slug} onClick={() => handleSelect(profile.slug)}>
 										<Show when={currentSlug() === profile.slug}>
 											<Check size={16} />

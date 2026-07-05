@@ -30,7 +30,16 @@ type SeedRunOpts = {
 	id?: string;
 	package_id?: string;
 	kind?: "deploy" | "rollback";
-	status?: "queued" | "deploying" | "baking" | "awaiting_approval" | "rolling_back" | "completed" | "rolled_back" | "failed" | "cancelled";
+	status?:
+		| "queued"
+		| "deploying"
+		| "baking"
+		| "awaiting_approval"
+		| "rolling_back"
+		| "completed"
+		| "rolled_back"
+		| "failed"
+		| "cancelled";
 	started_at?: string | null;
 	finished_at?: string | null;
 	resolved_gates?: Record<string, unknown>;
@@ -55,7 +64,8 @@ async function seed_run(db: Database, opts: SeedRunOpts = {}): Promise<string> {
 		resolved_gates: (opts.resolved_gates ?? default_resolved_gates()) as never,
 		forced_atomic_reason: null,
 		started_at: opts.started_at === undefined ? new Date(NOW.getTime() - 30 * 60_000).toISOString() : opts.started_at,
-		finished_at: opts.finished_at === undefined ? new Date(NOW.getTime() - 25 * 60_000).toISOString() : opts.finished_at,
+		finished_at:
+			opts.finished_at === undefined ? new Date(NOW.getTime() - 25 * 60_000).toISOString() : opts.finished_at,
 		created_at: now,
 		updated_at: now,
 		created_by: "api",
@@ -155,7 +165,13 @@ describe("count_rollbacks", () => {
 	});
 
 	test("rate = rollbacks/deploys", () => {
-		const out = count_rollbacks([{ kind: "deploy" }, { kind: "deploy" }, { kind: "deploy" }, { kind: "deploy" }, { kind: "rollback" }]);
+		const out = count_rollbacks([
+			{ kind: "deploy" },
+			{ kind: "deploy" },
+			{ kind: "deploy" },
+			{ kind: "deploy" },
+			{ kind: "rollback" },
+		]);
 		expect(out.rate).toBe(0.25);
 	});
 

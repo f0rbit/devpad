@@ -1,4 +1,12 @@
-import { type Category, type CategoryCreate, type DrizzleDB, err, ok, type Result, try_catch_async } from "@devpad/schema/blog";
+import {
+	type Category,
+	type CategoryCreate,
+	type DrizzleDB,
+	err,
+	ok,
+	type Result,
+	try_catch_async,
+} from "@devpad/schema/blog";
 import { blog_categories as categories, blog_posts as posts } from "@devpad/schema/database/blog";
 import { and, eq } from "drizzle-orm";
 import { rows } from "../errors";
@@ -40,7 +48,8 @@ const conflict = (message: string): CategoryServiceError => ({
 	message,
 });
 
-const firstRow = <T>(r: T[], resource: string): Result<T, CategoryServiceError> => rows.firstOr(r, () => notFound(resource));
+const firstRow = <T>(r: T[], resource: string): Result<T, CategoryServiceError> =>
+	rows.firstOr(r, () => notFound(resource));
 
 type CategoryLike = { name: string; parent: string | null };
 
@@ -75,7 +84,8 @@ export const category = {
 };
 
 export const createCategoryService = ({ db }: Deps) => {
-	const list = async (userId: string): Promise<Result<Category[], CategoryServiceError>> => try_catch_async(async () => db.select().from(categories).where(eq(categories.owner_id, userId)), toDbError);
+	const list = async (userId: string): Promise<Result<Category[], CategoryServiceError>> =>
+		try_catch_async(async () => db.select().from(categories).where(eq(categories.owner_id, userId)), toDbError);
 
 	const getTree = async (userId: string): Promise<Result<CategoryNode[], CategoryServiceError>> => {
 		const result = await list(userId);
@@ -141,7 +151,11 @@ export const createCategoryService = ({ db }: Deps) => {
 		}, toDbError);
 	};
 
-	const update = async (userId: string, name: string, input: CategoryUpdate): Promise<Result<Category, CategoryServiceError>> => {
+	const update = async (
+		userId: string,
+		name: string,
+		input: CategoryUpdate,
+	): Promise<Result<Category, CategoryServiceError>> => {
 		const existingResult = await find(userId, name);
 		if (!existingResult.ok) return existingResult;
 

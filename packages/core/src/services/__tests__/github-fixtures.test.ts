@@ -20,7 +20,12 @@ describe("GitHub Service with Octokit Fixtures", () => {
 		const testPlan = {
 			approach: "octokit-fixtures",
 			removed: "msw",
-			benefits: ["Lighter weight than MSW", "Official Octokit support", "Real GitHub API request/response data", "No additional configuration needed"],
+			benefits: [
+				"Lighter weight than MSW",
+				"Official Octokit support",
+				"Real GitHub API request/response data",
+				"No additional configuration needed",
+			],
 			implementation: "Will be added once nock/Bun compatibility issues resolved",
 		};
 

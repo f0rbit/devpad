@@ -48,7 +48,7 @@ describe("blog post versions integration", () => {
 					expect(typeof version.hash).toBe("string");
 					expect(version.created_at).toBeDefined();
 				}
-				version_hashes = result.value.versions.map(v => v.hash);
+				version_hashes = result.value.versions.map((v) => v.hash);
 			}
 		});
 

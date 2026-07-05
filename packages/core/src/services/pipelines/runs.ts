@@ -32,7 +32,13 @@ import type { CloudflareProvider } from "@devpad/pipeline-fakes";
 import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
-import type { ApprovalDecision, PipelineRun, PipelineStageEvent, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
+import type {
+	ApprovalDecision,
+	PipelineRun,
+	PipelineStageEvent,
+	StageEventKind,
+	UpsertPipelineRun,
+} from "@devpad/schema";
 import { pipeline_approval, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
@@ -45,7 +51,14 @@ import type { ApprovalStore, GateError, GateEvaluatorDeps, PulseEmitter } from "
 import { gateEvaluatorFor } from "./gates/index.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
 import { resolve_script_name } from "./script-name.js";
-import { type ResolvedPlan, type RunEvent, type RunState, type TransitionError, type TransitionOutput, transition } from "./state-machine.js";
+import {
+	type ResolvedPlan,
+	type RunEvent,
+	type RunState,
+	type TransitionError,
+	type TransitionOutput,
+	transition,
+} from "./state-machine.js";
 
 export type RunDeps = {
 	db: Database;
@@ -58,10 +71,15 @@ export type RunDeps = {
 	lineage?: (package_id: string) => Promise<Result<VersionSetRef[], ServiceError>>;
 };
 
-export type AdvanceError = ServiceError | DeployError | RollbackError | GateError | TransitionError | { kind: "not_found"; resource: string; id?: string };
+export type AdvanceError =
+	| ServiceError
+	| DeployError
+	| RollbackError
+	| GateError
+	| TransitionError
+	| { kind: "not_found"; resource: string; id?: string };
 
 export type RunRecord = PipelineRun;
-
 
 /**
  * Take the package's declared {@link PipelineTemplate} and the
@@ -78,7 +96,12 @@ export type RunRecord = PipelineRun;
  * corpus lineage) and is what the state machine hands to a
  * `needs_rollback` output.
  */
-export const resolve_run_plan = (input: { template: PipelineTemplate; manifest: VersionSetManifest; version_set_id: string; previous_version_set_id: string | null }): ResolvedPlan => {
+export const resolve_run_plan = (input: {
+	template: PipelineTemplate;
+	manifest: VersionSetManifest;
+	version_set_id: string;
+	previous_version_set_id: string | null;
+}): ResolvedPlan => {
 	const resolved = resolve_rollout(input.template.rollout, input.manifest);
 	const stages = expand_rollout(resolved.rollout);
 	// When the discriminator forced the shape, the package's declared
@@ -86,7 +109,10 @@ export const resolve_run_plan = (input: { template: PipelineTemplate; manifest: 
 	// and will be empty for the new atomic transition. Fall back to
 	// the default atomic gates in that case so the state machine has a
 	// resolvable gate for every transition.
-	const gates_for_resolved: Record<TransitionKey, Gate> = resolved.forced_reason !== null && resolved.rollout.type === "atomic" ? { ...defaultAtomicGates } : input.template.gates;
+	const gates_for_resolved: Record<TransitionKey, Gate> =
+		resolved.forced_reason !== null && resolved.rollout.type === "atomic"
+			? { ...defaultAtomicGates }
+			: input.template.gates;
 	return {
 		stages,
 		gates: gates_for_resolved,
@@ -100,7 +126,9 @@ const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "at
 	if (shape === "atomic") return { type: "atomic" };
 	return {
 		type: "gradual",
-		stages: stages.filter(s => s.name !== "staging").map(s => ({ name: s.name, traffic: s.traffic, bake: s.bake === null ? null : `${s.bake.ms}ms` })),
+		stages: stages
+			.filter((s) => s.name !== "staging")
+			.map((s) => ({ name: s.name, traffic: s.traffic, bake: s.bake === null ? null : `${s.bake.ms}ms` })),
 	};
 };
 
@@ -109,7 +137,8 @@ const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Recor
 	for (const key of Object.keys(gates)) {
 		const g = gates[key as TransitionKey];
 		if (g.type === "analysis") out[key] = { type: "analysis", template: g.template.template_id };
-		else if (g.type === "auto") out[key] = g.afterBake !== undefined ? { type: "auto", afterBake: g.afterBake } : { type: "auto" };
+		else if (g.type === "auto")
+			out[key] = g.afterBake !== undefined ? { type: "auto", afterBake: g.afterBake } : { type: "auto" };
 		else out[key] = { type: "manual" };
 	}
 	return out;
@@ -137,7 +166,7 @@ export const create_run = async (
 		 * (see `/runs/:id/rollback`). Rollback runs are forced atomic — we
 		 * do not gradually roll back. */
 		kind?: "deploy" | "rollback";
-	}
+	},
 ): Promise<Result<{ run: PipelineRun; plan: ResolvedPlan }, ServiceError>> => {
 	const kind = input.kind ?? "deploy";
 	const base_plan = resolve_run_plan({
@@ -161,7 +190,7 @@ export const create_run = async (
 					previous_version_set_id: input.previous_version_set_id ?? null,
 				}
 			: base_plan;
-	const shape = plan.stages.some(s => s.name === "atomic-prod") ? "atomic" : "gradual";
+	const shape = plan.stages.some((s) => s.name === "atomic-prod") ? "atomic" : "gradual";
 
 	const now = new Date().toISOString();
 	const row_id = make_id();
@@ -198,7 +227,11 @@ export const create_run = async (
 			.returning();
 		const row = inserted[0];
 		if (!row) {
-			return err({ kind: "store_error", operation: "insert_pipeline_run", message: "insert returned no row" } as ServiceError);
+			return err({
+				kind: "store_error",
+				operation: "insert_pipeline_run",
+				message: "insert returned no row",
+			} as ServiceError);
 		}
 
 		if (plan.forced_reason !== null) {
@@ -239,7 +272,10 @@ export type ListRunsFilter = {
 	limit?: number;
 };
 
-export const list_runs = async (db: Database, filter: ListRunsFilter = {}): Promise<Result<PipelineRun[], ServiceError>> => {
+export const list_runs = async (
+	db: Database,
+	filter: ListRunsFilter = {},
+): Promise<Result<PipelineRun[], ServiceError>> => {
 	try {
 		const conditions = [];
 		if (filter.package_id !== undefined) conditions.push(eq(pipeline_run.package_id, filter.package_id));
@@ -247,7 +283,12 @@ export const list_runs = async (db: Database, filter: ListRunsFilter = {}): Prom
 
 		const limit = filter.limit ?? 50;
 		const base = db.select().from(pipeline_run);
-		const where = conditions.length === 0 ? base : conditions.length === 1 ? base.where(conditions[0]) : base.where(and(...conditions));
+		const where =
+			conditions.length === 0
+				? base
+				: conditions.length === 1
+					? base.where(conditions[0])
+					: base.where(and(...conditions));
 		const rows = await where.orderBy(desc(pipeline_run.created_at)).limit(limit);
 		return ok(rows);
 	} catch (e) {
@@ -255,9 +296,18 @@ export const list_runs = async (db: Database, filter: ListRunsFilter = {}): Prom
 	}
 };
 
-const update_run_state = async (db: Database, run_id: string, state: RunState, stages: Stage[]): Promise<Result<void, ServiceError>> => {
+const update_run_state = async (
+	db: Database,
+	run_id: string,
+	state: RunState,
+	stages: Stage[],
+): Promise<Result<void, ServiceError>> => {
 	const current_stage_name = stages[state.stage_index]?.name ?? null;
-	const finished = state.status === "completed" || state.status === "rolled_back" || state.status === "failed" || state.status === "cancelled";
+	const finished =
+		state.status === "completed" ||
+		state.status === "rolled_back" ||
+		state.status === "failed" ||
+		state.status === "cancelled";
 	try {
 		await db
 			.update(pipeline_run)
@@ -278,8 +328,8 @@ const update_run_state = async (db: Database, run_id: string, state: RunState, s
 const derive_state_from_row = (row: PipelineRun, plan: ResolvedPlan): RunState => {
 	const stage_index = row.current_stage
 		? Math.max(
-				plan.stages.findIndex(s => s.name === row.current_stage),
-				0
+				plan.stages.findIndex((s) => s.name === row.current_stage),
+				0,
 			)
 		: 0;
 	let last_deployed_index: number | null;
@@ -297,7 +347,10 @@ const derive_state_from_row = (row: PipelineRun, plan: ResolvedPlan): RunState =
 	};
 };
 
-const record_stage_event_row = async (db: Database, input: { run_id: string; stage_name: string; kind: StageEventKind; payload?: unknown }): Promise<Result<PipelineStageEvent, ServiceError>> => {
+const record_stage_event_row = async (
+	db: Database,
+	input: { run_id: string; stage_name: string; kind: StageEventKind; payload?: unknown },
+): Promise<Result<PipelineStageEvent, ServiceError>> => {
 	try {
 		const id = make_event_id();
 		const inserted = await db
@@ -312,7 +365,12 @@ const record_stage_event_row = async (db: Database, input: { run_id: string; sta
 			} as never)
 			.returning();
 		const row = inserted[0];
-		if (!row) return err({ kind: "store_error", operation: "insert_pipeline_stage_event", message: "insert returned no row" } as ServiceError);
+		if (!row)
+			return err({
+				kind: "store_error",
+				operation: "insert_pipeline_stage_event",
+				message: "insert returned no row",
+			} as ServiceError);
 		return ok(row);
 	} catch (e) {
 		return err({ kind: "store_error", operation: "insert_pipeline_stage_event", message: String(e) } as ServiceError);
@@ -321,7 +379,11 @@ const record_stage_event_row = async (db: Database, input: { run_id: string; sta
 
 export const record_stage_event = record_stage_event_row;
 
-export const cancel_run = async (db: Database, run_id: string, plan: ResolvedPlan): Promise<Result<RunState, AdvanceError>> => {
+export const cancel_run = async (
+	db: Database,
+	run_id: string,
+	plan: ResolvedPlan,
+): Promise<Result<RunState, AdvanceError>> => {
 	const row_result = await get_run(db, run_id);
 	if (!row_result.ok) return row_result;
 	const state = derive_state_from_row(row_result.value, plan);
@@ -342,7 +404,11 @@ export const cancel_run = async (db: Database, run_id: string, plan: ResolvedPla
  * Record a manual-gate approval decision. Writes a `pipeline_approval`
  * row and feeds the verdict back through {@link advance_run}.
  */
-export const approve_stage = async (deps: RunDeps, input: { run_id: string; stage_name: string; decision: ApprovalDecision; user_id: string; reason?: string }, plan: ResolvedPlan): Promise<Result<TransitionOutput, AdvanceError>> => {
+export const approve_stage = async (
+	deps: RunDeps,
+	input: { run_id: string; stage_name: string; decision: ApprovalDecision; user_id: string; reason?: string },
+	plan: ResolvedPlan,
+): Promise<Result<TransitionOutput, AdvanceError>> => {
 	const now = new Date().toISOString();
 	try {
 		await deps.db.insert(pipeline_approval).values({
@@ -375,7 +441,12 @@ export const approve_stage = async (deps: RunDeps, input: { run_id: string; stag
 		payload: { type: "manual", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason },
 	});
 
-	return advance_run(deps, input.run_id, { kind: "gate_verdict", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason }, plan);
+	return advance_run(
+		deps,
+		input.run_id,
+		{ kind: "gate_verdict", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason },
+		plan,
+	);
 };
 
 const gate_deps_from = (deps: RunDeps): GateEvaluatorDeps => ({
@@ -390,7 +461,13 @@ const gate_deps_from = (deps: RunDeps): GateEvaluatorDeps => ({
  * Execute the side-effect output produced by a transition. Returns the
  * next event to feed back (or `null` to stop).
  */
-const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan, state: RunState, output: TransitionOutput): Promise<Result<{ output: TransitionOutput; next_event: RunEvent | null }, AdvanceError>> => {
+const execute_output = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+	state: RunState,
+	output: TransitionOutput,
+): Promise<Result<{ output: TransitionOutput; next_event: RunEvent | null }, AdvanceError>> => {
 	if (output.kind === "done") {
 		return ok({ output, next_event: null });
 	}
@@ -456,7 +533,11 @@ const execute_output = async (deps: RunDeps, run_id: string, plan: ResolvedPlan,
 		}
 		return ok({
 			output,
-			next_event: { kind: "gate_verdict", verdict: verdict.value.verdict, reason: verdict.value.verdict === "Pass" || verdict.value.verdict === "Fail" ? verdict.value.reason : undefined },
+			next_event: {
+				kind: "gate_verdict",
+				verdict: verdict.value.verdict,
+				reason: verdict.value.verdict === "Pass" || verdict.value.verdict === "Fail" ? verdict.value.reason : undefined,
+			},
 		});
 	}
 
@@ -532,7 +613,12 @@ const package_script_for_stage = async (
  * `needs_bake_schedule`, or a `Pending` gate verdict — those are the
  * three "wait for external input" boundaries.
  */
-export const advance_run = async (deps: RunDeps, run_id: string, event: RunEvent, plan: ResolvedPlan): Promise<Result<TransitionOutput, AdvanceError>> => {
+export const advance_run = async (
+	deps: RunDeps,
+	run_id: string,
+	event: RunEvent,
+	plan: ResolvedPlan,
+): Promise<Result<TransitionOutput, AdvanceError>> => {
 	const row_result = await get_run(deps.db, run_id);
 	if (!row_result.ok) return row_result;
 	const state = derive_state_from_row(row_result.value, plan);
@@ -555,7 +641,11 @@ export const advance_run = async (deps: RunDeps, run_id: string, event: RunEvent
  * looping until the run hits a halting output. Convenience for tests
  * and the DO wrapper.
  */
-export const drive_run = async (deps: RunDeps, run_id: string, plan: ResolvedPlan): Promise<Result<TransitionOutput, AdvanceError>> => {
+export const drive_run = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+): Promise<Result<TransitionOutput, AdvanceError>> => {
 	return advance_run(deps, run_id, { kind: "start" }, plan);
 };
 
@@ -563,13 +653,21 @@ export const drive_run = async (deps: RunDeps, run_id: string, plan: ResolvedPla
  * Resume a run from `baking` — fed by the DO alarm or by a test that
  * wants to skip the bake window.
  */
-export const tick_bake_complete = async (deps: RunDeps, run_id: string, plan: ResolvedPlan): Promise<Result<TransitionOutput, AdvanceError>> => {
+export const tick_bake_complete = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+): Promise<Result<TransitionOutput, AdvanceError>> => {
 	return advance_run(deps, run_id, { kind: "bake_complete" }, plan);
 };
 
 /**
  * Request a rollback of an in-flight (or recently-completed) run.
  */
-export const request_rollback = async (deps: RunDeps, run_id: string, plan: ResolvedPlan): Promise<Result<TransitionOutput, AdvanceError>> => {
+export const request_rollback = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+): Promise<Result<TransitionOutput, AdvanceError>> => {
 	return advance_run(deps, run_id, { kind: "rollback_requested" }, plan);
 };

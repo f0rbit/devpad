@@ -60,18 +60,25 @@ const validate = (response: unknown): Result<ValidatedTokens, TokenValidationErr
 	});
 };
 
-const expiry = (expiresIn: number | undefined, now: Date = new Date()): string | null => (expiresIn ? new Date(now.getTime() + expiresIn * 1000).toISOString() : null);
+const expiry = (expiresIn: number | undefined, now: Date = new Date()): string | null =>
+	expiresIn ? new Date(now.getTime() + expiresIn * 1000).toISOString() : null;
 
 const encryptPair = (tokens: TokenResponse, encryptionKey: string): Promise<Result<EncryptedTokens, OAuthError>> =>
 	pipe(secrets.encrypt(tokens.access_token, encryptionKey))
 		.map_err((): OAuthError => ({ kind: "encryption_failed", message: "Failed to encrypt access token" }))
-		.flat_map(async encryptedAccessToken => {
-			const encryptedRefreshToken = tokens.refresh_token ? to_nullable(await secrets.encrypt(tokens.refresh_token, encryptionKey)) : null;
+		.flat_map(async (encryptedAccessToken) => {
+			const encryptedRefreshToken = tokens.refresh_token
+				? to_nullable(await secrets.encrypt(tokens.refresh_token, encryptionKey))
+				: null;
 			return ok({ encryptedAccessToken, encryptedRefreshToken });
 		})
 		.result();
 
-const redditRefresh = (refreshToken: string, clientId: string, clientSecret: string): Promise<Result<OAuthTokenResponse, FetchError>> =>
+const redditRefresh = (
+	refreshToken: string,
+	clientId: string,
+	clientSecret: string,
+): Promise<Result<OAuthTokenResponse, FetchError>> =>
 	pipe
 		.fetch<OAuthTokenResponse, FetchError>(
 			"https://www.reddit.com/api/v1/access_token",
@@ -87,11 +94,15 @@ const redditRefresh = (refreshToken: string, clientId: string, clientSecret: str
 					refresh_token: refreshToken,
 				}),
 			},
-			e => e
+			(e) => e,
 		)
 		.result();
 
-const twitterRefresh = (refreshToken: string, clientId: string, clientSecret: string): Promise<Result<OAuthTokenResponse, FetchError>> =>
+const twitterRefresh = (
+	refreshToken: string,
+	clientId: string,
+	clientSecret: string,
+): Promise<Result<OAuthTokenResponse, FetchError>> =>
 	pipe
 		.fetch<OAuthTokenResponse, FetchError>(
 			"https://api.twitter.com/2/oauth2/token",
@@ -107,7 +118,7 @@ const twitterRefresh = (refreshToken: string, clientId: string, clientSecret: st
 					client_id: clientId,
 				}),
 			},
-			e => e
+			(e) => e,
 		)
 		.result();
 
@@ -123,4 +134,10 @@ export const token = {
 	},
 };
 
-export type { ValidatedTokens, TokenValidationError, TokenResponse, EncryptedTokens, OAuthError as TokenEncryptionError };
+export type {
+	ValidatedTokens,
+	TokenValidationError,
+	TokenResponse,
+	EncryptedTokens,
+	OAuthError as TokenEncryptionError,
+};

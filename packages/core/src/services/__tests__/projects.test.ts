@@ -1,5 +1,12 @@
 import { describe, expect, mock, test } from "bun:test";
-import { addProjectAction, doesUserOwnProject, getProject, getProjectById, getUserProjectMap, getUserProjects } from "../projects.js";
+import {
+	addProjectAction,
+	doesUserOwnProject,
+	getProject,
+	getProjectById,
+	getUserProjectMap,
+	getUserProjects,
+} from "../projects.js";
 
 const mockProject = {
 	id: "project_123",

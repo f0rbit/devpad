@@ -27,7 +27,12 @@ export default function DevpadSettings(props: Props) {
 		<div class="settings-section">
 			<h6 class="settings-title tertiary text-sm font-medium">Project Filters</h6>
 			<div class="filter-toggles">
-				<Checkbox checked={allProjects()} onChange={() => updateSetting("all_projects", !allProjects())} label="Include all projects" disabled={updating()} />
+				<Checkbox
+					checked={allProjects()}
+					onChange={() => updateSetting("all_projects", !allProjects())}
+					label="Include all projects"
+					disabled={updating()}
+				/>
 			</div>
 			<p class="muted text-xs">Project-level filtering coming soon.</p>
 		</div>

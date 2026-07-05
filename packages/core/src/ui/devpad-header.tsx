@@ -72,7 +72,7 @@ export function DevpadHeader(props: DevpadHeaderProps) {
 				</a>
 			</div>
 			<nav class="unified-header__apps">
-				{NAV_ITEMS.map(app => (
+				{NAV_ITEMS.map((app) => (
 					<a href={linkHref(app)} class={`unified-header__app${isActive(app) ? " active" : ""}`}>
 						{app}
 					</a>

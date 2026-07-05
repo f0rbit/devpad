@@ -35,7 +35,7 @@ describe("InMemoryDurableObjectState", () => {
 describe("InMemoryDurableObjectNamespace", () => {
 	test("get(id) returns the same instance for the same id", async () => {
 		type Env = { x: number };
-		const ns = new InMemoryDurableObjectNamespace<Env>({ x: 1 }, _ctx => ({
+		const ns = new InMemoryDurableObjectNamespace<Env>({ x: 1 }, (_ctx) => ({
 			fetch: async () => new Response("ok"),
 			alarm: async () => {},
 		}));
@@ -47,7 +47,7 @@ describe("InMemoryDurableObjectNamespace", () => {
 
 	test("get(id) creates fresh instances for different ids", () => {
 		type Env = Record<string, never>;
-		const ns = new InMemoryDurableObjectNamespace<Env>({}, _ctx => ({
+		const ns = new InMemoryDurableObjectNamespace<Env>({}, (_ctx) => ({
 			fetch: async () => new Response("ok"),
 			alarm: async () => {},
 		}));
@@ -59,7 +59,7 @@ describe("InMemoryDurableObjectNamespace", () => {
 	test("manualFireAlarm proxies into the DO instance", async () => {
 		type Env = Record<string, never>;
 		let alarm_fires = 0;
-		const ns = new InMemoryDurableObjectNamespace<Env>({}, _ctx => ({
+		const ns = new InMemoryDurableObjectNamespace<Env>({}, (_ctx) => ({
 			fetch: async () => new Response("ok"),
 			alarm: async () => {
 				alarm_fires += 1;

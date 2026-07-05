@@ -33,7 +33,11 @@ import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/b
 import { create_memory_backend, version_set_store, type VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { make_d1_approval_store } from "../../src/providers/approval-store.ts";
-import { make_corpus_lineage_provider, make_corpus_manifest_provider, make_corpus_template_resolver } from "../../src/providers/corpus-providers.ts";
+import {
+	make_corpus_lineage_provider,
+	make_corpus_manifest_provider,
+	make_corpus_template_resolver,
+} from "../../src/providers/corpus-providers.ts";
 import { make_pulse_emitter, make_pulse_summary_client } from "../../src/providers/pulse.ts";
 import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
 import { InMemoryBundleProvider } from "./helpers.ts";
@@ -92,7 +96,9 @@ const make_fake_pulse_fetcher = () => {
 			const u = typeof url === "string" ? url : url.url;
 			calls.push({ url: u, init });
 			if (u.includes("/summary")) {
-				return new Response(JSON.stringify({ metrics: {}, window_start_ms: 0, window_end_ms: 0, sample_count: 0 }), { status: 200 });
+				return new Response(JSON.stringify({ metrics: {}, window_start_ms: 0, window_end_ms: 0, sample_count: 0 }), {
+					status: 200,
+				});
 			}
 			return new Response("", { status: 204 });
 		},
@@ -126,7 +132,10 @@ describe("deps factory — production wiring shape", () => {
 		const store = version_set_store(backend);
 		const first = await store.put(default_manifest);
 		if (!first.ok) throw new Error("first put failed");
-		const second = await store.put({ ...default_manifest, git_sha: "feedfacefeedfacefeedfacefeedfacefeedface" }, { parents: [{ store_id: "version-sets", version: first.value.version, role: "previous" }] });
+		const second = await store.put(
+			{ ...default_manifest, git_sha: "feedfacefeedfacefeedfacefeedfacefeedface" },
+			{ parents: [{ store_id: "version-sets", version: first.value.version, role: "previous" }] },
+		);
 		if (!second.ok) throw new Error("second put failed");
 
 		const lineage = make_corpus_lineage_provider(backend);
@@ -172,7 +181,12 @@ describe("deps factory — production wiring shape", () => {
 	test("pulse summary client decodes a real response shape", async () => {
 		const { fetcher, calls } = make_fake_pulse_fetcher();
 		const client = make_pulse_summary_client(fetcher);
-		const result = await client.fetch({ package: "factory-pkg", environment: "staging", version_id: "vs_test", window_ms: 60_000 });
+		const result = await client.fetch({
+			package: "factory-pkg",
+			environment: "staging",
+			version_id: "vs_test",
+			window_ms: 60_000,
+		});
 		expect(result.ok).toBe(true);
 		expect(calls).toHaveLength(1);
 		expect(calls[0].url).toContain("/summary");
@@ -200,9 +214,16 @@ describe("deps factory — production wiring shape", () => {
 
 		const cf = new InMemoryCloudflareProvider();
 		const script = `pipeline_${pkg_id}`;
-		const v0 = await cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const v0 = await cf.versions.upload({
+			kind: "single_file",
+			script_name: script,
+			annotations: { "workers/tag": "vs_v0" },
+		});
 		if (!v0.ok) throw new Error("v0 upload failed");
-		await cf.deployments.create({ script_name: script, strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] } });
+		await cf.deployments.create({
+			script_name: script,
+			strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
+		});
 
 		const deps: RunDeps = {
 			db,
@@ -267,7 +288,7 @@ describe("deps factory — production wiring shape", () => {
 		// Mirrors what `make_cf_router` is asked to do in production, via
 		// `InMemoryDurableObjectNamespace` (which exposes `idFromName` +
 		// `get` with the same shape as the real CF namespace).
-		const namespace = new InMemoryDurableObjectNamespace<{ count: number }>({ count: 0 }, ctx => {
+		const namespace = new InMemoryDurableObjectNamespace<{ count: number }>({ count: 0 }, (ctx) => {
 			const handler = {
 				fetch: async (_request: Request) => new Response("ok", { status: 200 }),
 				alarm: async () => undefined,
@@ -289,9 +310,16 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 
 		const cf = new InMemoryCloudflareProvider();
 		const script = `pipeline_${pkg_id}`;
-		const v0 = await cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const v0 = await cf.versions.upload({
+			kind: "single_file",
+			script_name: script,
+			annotations: { "workers/tag": "vs_v0" },
+		});
 		if (!v0.ok) throw new Error("v0 upload failed");
-		await cf.deployments.create({ script_name: script, strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] } });
+		await cf.deployments.create({
+			script_name: script,
+			strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
+		});
 
 		const deps: RunDeps = {
 			db,

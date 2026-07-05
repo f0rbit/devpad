@@ -64,7 +64,9 @@ export const updateOnFailure = (state: RateLimitState, retryAfter?: number): Rat
 	const failures = state.consecutive_failures + 1;
 	const shouldOpenCircuit = failures >= CIRCUIT_BREAKER_THRESHOLD;
 
-	const circuitOpenUntil = shouldOpenCircuit ? new Date(now.getTime() + CIRCUIT_OPEN_DURATION_MS) : state.circuit_open_until;
+	const circuitOpenUntil = shouldOpenCircuit
+		? new Date(now.getTime() + CIRCUIT_OPEN_DURATION_MS)
+		: state.circuit_open_until;
 	const resetAt = retryAfter ? new Date(now.getTime() + retryAfter * 1000) : state.reset_at;
 
 	return {

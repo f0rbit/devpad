@@ -58,7 +58,7 @@ export default function RedditSettings(props: Props) {
 		<>
 			<span class="settings-title tertiary text-sm font-medium">Reddit Settings</span>
 			<Show when={subreddits()?.length} keyed>
-				{count => (
+				{(count) => (
 					<span class="muted text-xs">
 						({visibleCount()}/{count} subreddits visible)
 					</span>
@@ -79,17 +79,31 @@ export default function RedditSettings(props: Props) {
 					<h6 class="tertiary text-xs font-medium" style={{ "margin-top": "8px", "margin-bottom": "4px" }}>
 						Subreddit Visibility
 					</h6>
-					<AsyncState loading={subreddits.loading} error={subreddits.error} data={subreddits()} loadingFallback={<p class="muted text-sm">Loading subreddits...</p>} errorPrefix="Failed to load subreddits">
-						{subredditList => (
-							<Show when={subredditList.length > 0} fallback={<p class="muted text-sm">No subreddits found yet. Refresh to fetch data.</p>}>
+					<AsyncState
+						loading={subreddits.loading}
+						error={subreddits.error}
+						data={subreddits()}
+						loadingFallback={<p class="muted text-sm">Loading subreddits...</p>}
+						errorPrefix="Failed to load subreddits"
+					>
+						{(subredditList) => (
+							<Show
+								when={subredditList.length > 0}
+								fallback={<p class="muted text-sm">No subreddits found yet. Refresh to fetch data.</p>}
+							>
 								<div class="repo-list">
 									<For each={subredditList}>
-										{subreddit => {
+										{(subreddit) => {
 											const isHidden = () => hiddenSubreddits().has(subreddit);
 											const isUpdating = () => subredditUpdating() === subreddit;
 											return (
 												<div class={`repo-item ${isHidden() ? "repo-hidden" : ""}`}>
-													<Checkbox checked={!isHidden()} onChange={() => toggleSubreddit(subreddit)} disabled={isUpdating()} label={`r/${subreddit}`} />
+													<Checkbox
+														checked={!isHidden()}
+														onChange={() => toggleSubreddit(subreddit)}
+														disabled={isUpdating()}
+														label={`r/${subreddit}`}
+													/>
 													<Show when={isHidden()}>
 														<span class="muted text-xs">(hidden)</span>
 													</Show>

@@ -32,18 +32,24 @@ const valid_manifest: VersionSetManifest = {
 
 const PIPELINES_TOKEN = "test-token-AAAAAAAAAA";
 
-const build_routes_deps = (overrides: Partial<RoutesDeps> = {}): { app: ReturnType<typeof make_routes>; backend: Backend; emitted: Array<Record<string, unknown>> } => {
+const build_routes_deps = (
+	overrides: Partial<RoutesDeps> = {},
+): { app: ReturnType<typeof make_routes>; backend: Backend; emitted: Array<Record<string, unknown>> } => {
 	const backend = overrides.backend ?? create_memory_backend();
 	const auth: AuthGate<AuthIdentity> = overrides.auth ?? {
-		check: async request => {
+		check: async (request) => {
 			const header = request.headers.get("authorization");
-			if (!is_bearer_valid(header, PIPELINES_TOKEN)) return { ok: false as const, error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError };
+			if (!is_bearer_valid(header, PIPELINES_TOKEN))
+				return {
+					ok: false as const,
+					error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError,
+				};
 			return { ok: true as const, value: { kind: "admin" as const, reason: "pipelines_token" as const } };
 		},
 	};
 	const emitted: Array<Record<string, unknown>> = [];
 	const pulse: PulseEmitterLite = overrides.pulse ?? {
-		emit: async event => {
+		emit: async (event) => {
 			emitted.push(event as Record<string, unknown>);
 			return undefined;
 		},
@@ -70,7 +76,7 @@ const post_blob = (app: ReturnType<typeof make_routes>, body: Uint8Array | strin
 			method: "POST",
 			headers: { "content-type": "application/octet-stream", ...headers },
 			body,
-		})
+		}),
 	);
 
 const post_manifest = (app: ReturnType<typeof make_routes>, body: unknown, headers: Record<string, string>) =>
@@ -79,7 +85,7 @@ const post_manifest = (app: ReturnType<typeof make_routes>, body: unknown, heade
 			method: "POST",
 			headers: { "content-type": "application/json", ...headers },
 			body: typeof body === "string" ? body : JSON.stringify(body),
-		})
+		}),
 	);
 
 describe("auth helpers", () => {
@@ -114,7 +120,10 @@ describe("POST /artifacts/blob", () => {
 
 	test("rejects wrong token with 401", async () => {
 		const { app } = build_routes_deps();
-		const res = await post_blob(app, new Uint8Array([1, 2, 3]), { authorization: auth_header("wrong-token-AAAAAAAA"), "x-store-id": "worker-bundles" });
+		const res = await post_blob(app, new Uint8Array([1, 2, 3]), {
+			authorization: auth_header("wrong-token-AAAAAAAA"),
+			"x-store-id": "worker-bundles",
+		});
 		expect(res.status).toBe(401);
 	});
 
@@ -128,16 +137,25 @@ describe("POST /artifacts/blob", () => {
 
 	test("rejects malformed x-store-id with 400", async () => {
 		const { app } = build_routes_deps();
-		const res = await post_blob(app, new Uint8Array([1, 2, 3]), { authorization: auth_header(PIPELINES_TOKEN), "x-store-id": "Worker Bundles!" });
+		const res = await post_blob(app, new Uint8Array([1, 2, 3]), {
+			authorization: auth_header(PIPELINES_TOKEN),
+			"x-store-id": "Worker Bundles!",
+		});
 		expect(res.status).toBe(400);
 	});
 
 	test("happy path stores bytes and returns the ref", async () => {
 		const { app, backend, emitted } = build_routes_deps();
 		const payload = new TextEncoder().encode("hello world");
-		const res = await post_blob(app, payload, { authorization: auth_header(PIPELINES_TOKEN), "x-store-id": "worker-bundles" });
+		const res = await post_blob(app, payload, {
+			authorization: auth_header(PIPELINES_TOKEN),
+			"x-store-id": "worker-bundles",
+		});
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { ok: boolean; value: { version: string; content_hash: string; store_id: string; ref: string } };
+		const body = (await res.json()) as {
+			ok: boolean;
+			value: { version: string; content_hash: string; store_id: string; ref: string };
+		};
 		expect(body.ok).toBe(true);
 		expect(body.value.store_id).toBe("worker-bundles");
 		expect(body.value.content_hash).toMatch(/^[a-f0-9]{64}$/);
@@ -172,7 +190,7 @@ describe("POST /artifacts/blob", () => {
 					"content-length": String(30 * 1024 * 1024),
 				},
 				body: new Uint8Array([0]),
-			})
+			}),
 		);
 		expect(res.status).toBe(413);
 	});
@@ -204,7 +222,10 @@ describe("POST /artifacts/version-set", () => {
 		const { app, backend, emitted } = build_routes_deps();
 		const res = await post_manifest(app, valid_manifest, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res.status).toBe(200);
-		const body = (await res.json()) as { ok: boolean; value: { version_set_id: string; content_hash: string; package: string } };
+		const body = (await res.json()) as {
+			ok: boolean;
+			value: { version_set_id: string; content_hash: string; package: string };
+		};
 		expect(body.ok).toBe(true);
 		expect(body.value.package).toBe("test-pkg");
 		expect(body.value.content_hash).toMatch(/^[a-f0-9]{64}$/);
@@ -243,7 +264,7 @@ describe("POST /artifacts/version-set", () => {
 		// Memory backend's created_at comes from Date.now() — a 2ms delay
 		// guarantees B's created_at > A's even on fast machines so the
 		// "latest" lookup picks A as B's parent.
-		await new Promise(r => setTimeout(r, 2));
+		await new Promise((r) => setTimeout(r, 2));
 		const manifest_b: VersionSetManifest = { ...valid_manifest, git_sha: "fedcba9876543210fedcba9876543210fedcba98" };
 		const res_b = await post_manifest(app, manifest_b, { authorization: auth_header(PIPELINES_TOKEN) });
 		expect(res_b.status).toBe(200);
@@ -254,8 +275,8 @@ describe("POST /artifacts/version-set", () => {
 		const chain = await store.lineage(body_b.value.version_set_id);
 		expect(chain.ok).toBe(true);
 		if (!chain.ok) return;
-		expect(chain.value.map(r => r.version)).toEqual([body_b.value.version_set_id, body_a.value.version_set_id]);
-		expect(chain.value.every(r => r.package === "test-pkg")).toBe(true);
+		expect(chain.value.map((r) => r.version)).toEqual([body_b.value.version_set_id, body_a.value.version_set_id]);
+		expect(chain.value.every((r) => r.package === "test-pkg")).toBe(true);
 	});
 
 	test("first put for a fresh package has empty parents (lineage = [self])", async () => {
@@ -276,11 +297,19 @@ describe("POST /artifacts/version-set", () => {
 	test("parent lookup is scoped to the package — uploads for a different package are not picked up as parents", async () => {
 		const { app, backend } = build_routes_deps();
 		// Upload one for pkg-a
-		const a_first = await post_manifest(app, { ...valid_manifest, package: "pkg-a" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const a_first = await post_manifest(
+			app,
+			{ ...valid_manifest, package: "pkg-a" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(a_first.status).toBe(200);
-		await new Promise(r => setTimeout(r, 2));
+		await new Promise((r) => setTimeout(r, 2));
 		// Then an UNRELATED package — should NOT inherit a parent from pkg-a
-		const b_first = await post_manifest(app, { ...valid_manifest, package: "pkg-b" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const b_first = await post_manifest(
+			app,
+			{ ...valid_manifest, package: "pkg-b" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(b_first.status).toBe(200);
 		const body = (await b_first.json()) as { ok: true; value: { version_set_id: string } };
 

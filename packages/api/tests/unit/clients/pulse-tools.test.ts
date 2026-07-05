@@ -56,14 +56,18 @@ describe("pulse MCP tool input schemas", () => {
 
 	it("devpad_pulse_logs accepts optional level + search", () => {
 		const tool = tools.devpad_pulse_logs!;
-		expect(tool.inputSchema.safeParse({ project_id: "p", range: "7d", level: "warn", search: "timeout" }).success).toBe(true);
+		expect(tool.inputSchema.safeParse({ project_id: "p", range: "7d", level: "warn", search: "timeout" }).success).toBe(
+			true,
+		);
 		expect(tool.inputSchema.safeParse({ project_id: "p" }).success).toBe(false);
 	});
 
 	it("devpad_pulse_latency accepts route + percentiles[]", () => {
 		const tool = tools.devpad_pulse_latency!;
 		expect(tool.inputSchema.safeParse({ project_id: "p", range: "24h" }).success).toBe(true);
-		expect(tool.inputSchema.safeParse({ project_id: "p", range: "24h", route: "/api/x", percentiles: [50, 95] }).success).toBe(true);
+		expect(
+			tool.inputSchema.safeParse({ project_id: "p", range: "24h", route: "/api/x", percentiles: [50, 95] }).success,
+		).toBe(true);
 		expect(tool.inputSchema.safeParse({ project_id: "p", range: "24h", percentiles: ["fifty"] }).success).toBe(false);
 	});
 

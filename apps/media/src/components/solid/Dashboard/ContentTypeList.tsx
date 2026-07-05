@@ -33,7 +33,7 @@ export default function ContentTypeList(props: ContentTypeListProps) {
 	return (
 		<div class="content-type-list">
 			<For each={props.types}>
-				{type => {
+				{(type) => {
 					const Icon = typeIcons[type.type] ?? MessageSquare;
 					const label = typeLabels[type.type] ?? type.type;
 

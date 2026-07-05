@@ -36,10 +36,13 @@ const build_setup = async (): Promise<RouteSetup> => {
 	await seed_user(db);
 	const backend = create_memory_backend();
 	const auth: AuthGate<AuthIdentity> = {
-		check: async request => {
+		check: async (request) => {
 			const header = request.headers.get("authorization");
 			if (!is_bearer_valid(header, PIPELINES_TOKEN)) {
-				return { ok: false as const, error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError };
+				return {
+					ok: false as const,
+					error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError,
+				};
 			}
 			return { ok: true as const, value: { kind: "admin" as const, reason: "pipelines_token" as const } };
 		},
@@ -97,31 +100,50 @@ const seed_run_row = async (db: Database, package_id: string, run_id = "pipeline
 	} as never);
 };
 
-const post_json = async (app: ReturnType<typeof make_routes>, path: string, body: unknown, headers: Record<string, string> = {}) => {
+const post_json = async (
+	app: ReturnType<typeof make_routes>,
+	path: string,
+	body: unknown,
+	headers: Record<string, string> = {},
+) => {
 	const res = await app.fetch(
 		new Request(`http://run.local${path}`, {
 			method: "POST",
 			headers: { "content-type": "application/json", ...headers },
 			body: JSON.stringify(body),
-		})
+		}),
 	);
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+	};
 };
 
-const patch_json = async (app: ReturnType<typeof make_routes>, path: string, body: unknown, headers: Record<string, string> = {}) => {
+const patch_json = async (
+	app: ReturnType<typeof make_routes>,
+	path: string,
+	body: unknown,
+	headers: Record<string, string> = {},
+) => {
 	const res = await app.fetch(
 		new Request(`http://run.local${path}`, {
 			method: "PATCH",
 			headers: { "content-type": "application/json", ...headers },
 			body: JSON.stringify(body),
-		})
+		}),
 	);
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+	};
 };
 
 const delete_req = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "DELETE", headers }));
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+	};
 };
 
 const valid_create_body = (overrides: Record<string, unknown> = {}) => ({
@@ -153,14 +175,16 @@ describe("POST /packages", () => {
 
 		// Verify it landed in D1
 		const rows = await db.select().from(pipeline_package);
-		expect(rows.some(r => r.id === "pipeline-package_new")).toBe(true);
+		expect(rows.some((r) => r.id === "pipeline-package_new")).toBe(true);
 	});
 
 	test("duplicate id returns 409 with conflict code", async () => {
 		const { app, db } = await build_setup();
 		await seed_package(db, "user_test", { id: "pipeline-package_dup", name: "dup" });
 
-		const res = await post_json(app, "/packages", valid_create_body({ id: "pipeline-package_dup", name: "dup" }), { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await post_json(app, "/packages", valid_create_body({ id: "pipeline-package_dup", name: "dup" }), {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(409);
 		expect(res.body.ok).toBe(false);
 		expect(res.body.error?.code).toBe("conflict");
@@ -170,7 +194,9 @@ describe("POST /packages", () => {
 
 	test("invalid project_id returns 404 not_found", async () => {
 		const { app } = await build_setup();
-		const res = await post_json(app, "/packages", valid_create_body({ project_id: "project_missing" }), { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await post_json(app, "/packages", valid_create_body({ project_id: "project_missing" }), {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(404);
 		expect(res.body.error?.code).toBe("not_found");
 		expect(res.body.error?.resource).toBe("project");
@@ -180,9 +206,14 @@ describe("POST /packages", () => {
 		const { app, db } = await build_setup();
 		await seed_project_row(db, "project_x");
 
-		const res = await post_json(app, "/packages", valid_create_body({ id: "pipeline-package_linked", name: "linked", project_id: "project_x" }), {
-			authorization: auth_header(PIPELINES_TOKEN),
-		});
+		const res = await post_json(
+			app,
+			"/packages",
+			valid_create_body({ id: "pipeline-package_linked", name: "linked", project_id: "project_x" }),
+			{
+				authorization: auth_header(PIPELINES_TOKEN),
+			},
+		);
 		expect(res.status).toBe(200);
 		const created = res.body.value as { project_id: string | null };
 		expect(created.project_id).toBe("project_x");
@@ -190,7 +221,12 @@ describe("POST /packages", () => {
 
 	test("malformed body returns 400 invalid_body", async () => {
 		const { app } = await build_setup();
-		const res = await post_json(app, "/packages", { name: "missing-id" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await post_json(
+			app,
+			"/packages",
+			{ name: "missing-id" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(res.status).toBe(400);
 		expect(res.body.error?.code).toBe("invalid_body");
 	});
@@ -201,7 +237,12 @@ describe("PATCH /packages/:id", () => {
 		const { app, db } = await build_setup();
 		await seed_package(db, "user_test", { id: "pipeline-package_u", name: "u", repo_url: "https://old.example/x" });
 
-		const res = await patch_json(app, "/packages/pipeline-package_u", { repo_url: "https://new.example/x" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await patch_json(
+			app,
+			"/packages/pipeline-package_u",
+			{ repo_url: "https://new.example/x" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(res.status).toBe(200);
 		const updated = res.body.value as { repo_url: string | null; name: string };
 		expect(updated.repo_url).toBe("https://new.example/x");
@@ -210,7 +251,12 @@ describe("PATCH /packages/:id", () => {
 
 	test("unknown id returns 404 not_found", async () => {
 		const { app } = await build_setup();
-		const res = await patch_json(app, "/packages/pipeline-package_missing", { repo_url: "https://example.com" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await patch_json(
+			app,
+			"/packages/pipeline-package_missing",
+			{ repo_url: "https://example.com" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(res.status).toBe(404);
 		expect(res.body.error?.code).toBe("not_found");
 	});
@@ -227,7 +273,9 @@ describe("DELETE /packages/:id", () => {
 		const { app, db } = await build_setup();
 		await seed_package(db, "user_test", { id: "pipeline-package_del", name: "del" });
 
-		const res = await delete_req(app, "/packages/pipeline-package_del", { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await delete_req(app, "/packages/pipeline-package_del", {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(200);
 		expect(res.body.ok).toBe(true);
 		expect((res.body.value as { deleted: boolean }).deleted).toBe(true);
@@ -239,7 +287,9 @@ describe("DELETE /packages/:id", () => {
 		await seed_run_row(db, "pipeline-package_busy", "pipeline-run_a");
 		await seed_run_row(db, "pipeline-package_busy", "pipeline-run_b");
 
-		const res = await delete_req(app, "/packages/pipeline-package_busy", { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await delete_req(app, "/packages/pipeline-package_busy", {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(409);
 		expect(res.body.error?.code).toBe("conflict");
 		expect(res.body.error?.reason).toBe("active_runs");
@@ -248,7 +298,9 @@ describe("DELETE /packages/:id", () => {
 
 	test("returns 404 not_found for unknown id", async () => {
 		const { app } = await build_setup();
-		const res = await delete_req(app, "/packages/pipeline-package_missing", { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await delete_req(app, "/packages/pipeline-package_missing", {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(404);
 		expect(res.body.error?.code).toBe("not_found");
 	});

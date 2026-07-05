@@ -36,7 +36,11 @@ export interface WalkedBundle {
 	total_size_bytes: number;
 }
 
-export type BundleWalkError = { kind: "not_a_directory"; path: string } | { kind: "io_error"; path: string; reason: string } | { kind: "unsupported_extension"; path: string; extension: string } | { kind: "empty_bundle"; path: string };
+export type BundleWalkError =
+	| { kind: "not_a_directory"; path: string }
+	| { kind: "io_error"; path: string; reason: string }
+	| { kind: "unsupported_extension"; path: string; extension: string }
+	| { kind: "empty_bundle"; path: string };
 
 /**
  * Map a file extension to the Worker-module MIME type CF expects on the

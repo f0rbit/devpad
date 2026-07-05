@@ -31,8 +31,18 @@ export default function YouTubeSettings(props: Props) {
 				<p class="muted text-sm">Channel: {props.settings?.channel_name}</p>
 			</Show>
 			<div class="filter-toggles">
-				<Checkbox checked={includeWatchHistory()} onChange={() => updateSetting("include_watch_history", !includeWatchHistory())} label="Include watch history" disabled={updating()} />
-				<Checkbox checked={includeLiked()} onChange={() => updateSetting("include_liked", !includeLiked())} label="Include liked videos" disabled={updating()} />
+				<Checkbox
+					checked={includeWatchHistory()}
+					onChange={() => updateSetting("include_watch_history", !includeWatchHistory())}
+					label="Include watch history"
+					disabled={updating()}
+				/>
+				<Checkbox
+					checked={includeLiked()}
+					onChange={() => updateSetting("include_liked", !includeLiked())}
+					label="Include liked videos"
+					disabled={updating()}
+				/>
 			</div>
 		</div>
 	);

@@ -45,10 +45,18 @@ const parse_json_error = (): ScannerError => ({
 	message: "failed to parse response json",
 });
 
-export const fetchRepoTree = async (owner: string, repo: string, branch: string, access_token: string): Promise<Result<GitHubTreeEntry[], ScannerError>> => {
+export const fetchRepoTree = async (
+	owner: string,
+	repo: string,
+	branch: string,
+	access_token: string,
+): Promise<Result<GitHubTreeEntry[], ScannerError>> => {
 	const url = `https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`;
 
-	const fetch_result = await try_catch_async(() => fetch(url, { headers: github_headers(access_token) }), network_error);
+	const fetch_result = await try_catch_async(
+		() => fetch(url, { headers: github_headers(access_token) }),
+		network_error,
+	);
 	if (!fetch_result.ok) return fetch_result;
 
 	const response = fetch_result.value;
@@ -58,8 +66,8 @@ export const fetchRepoTree = async (owner: string, repo: string, branch: string,
 	if (!json_result.ok) return json_result;
 
 	const entries: GitHubTreeEntry[] = json_result.value.tree
-		.filter(entry => entry.type === "blob" || entry.type === "tree")
-		.map(entry => ({
+		.filter((entry) => entry.type === "blob" || entry.type === "tree")
+		.map((entry) => ({
 			path: entry.path,
 			type: entry.type as "blob" | "tree",
 			sha: entry.sha,
@@ -69,10 +77,19 @@ export const fetchRepoTree = async (owner: string, repo: string, branch: string,
 	return ok(entries);
 };
 
-export const fetchFileContent = async (owner: string, repo: string, path: string, ref: string, access_token: string): Promise<Result<string, ScannerError>> => {
+export const fetchFileContent = async (
+	owner: string,
+	repo: string,
+	path: string,
+	ref: string,
+	access_token: string,
+): Promise<Result<string, ScannerError>> => {
 	const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${ref}`;
 
-	const fetch_result = await try_catch_async(() => fetch(url, { headers: github_headers(access_token) }), network_error);
+	const fetch_result = await try_catch_async(
+		() => fetch(url, { headers: github_headers(access_token) }),
+		network_error,
+	);
 	if (!fetch_result.ok) return fetch_result;
 
 	const response = fetch_result.value;
@@ -99,19 +116,27 @@ const batch = <T>(items: T[], size: number): T[][] => {
 	return result;
 };
 
-export const scanGitHubRepo = async (owner: string, repo: string, branch: string, access_token: string, config: ScanConfig): Promise<Result<ParsedTask[], ScannerError>> => {
+export const scanGitHubRepo = async (
+	owner: string,
+	repo: string,
+	branch: string,
+	access_token: string,
+	config: ScanConfig,
+): Promise<Result<ParsedTask[], ScannerError>> => {
 	const tree_result = await fetchRepoTree(owner, repo, branch, access_token);
 	if (!tree_result.ok) return tree_result;
 
 	const file_paths = tree_result.value
-		.filter(entry => entry.type === "blob")
-		.filter(entry => !shouldIgnorePath(entry.path, config.ignore))
-		.map(entry => entry.path);
+		.filter((entry) => entry.type === "blob")
+		.filter((entry) => !shouldIgnorePath(entry.path, config.ignore))
+		.map((entry) => entry.path);
 
 	const all_tasks: ParsedTask[] = [];
 
 	for (const file_batch of batch(file_paths, BATCH_SIZE)) {
-		const results = await Promise.all(file_batch.map(path => fetchFileContent(owner, repo, path, branch, access_token)));
+		const results = await Promise.all(
+			file_batch.map((path) => fetchFileContent(owner, repo, path, branch, access_token)),
+		);
 
 		for (let i = 0; i < results.length; i++) {
 			const result = results[i]!;

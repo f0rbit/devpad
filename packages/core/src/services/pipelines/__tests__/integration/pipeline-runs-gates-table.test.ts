@@ -14,7 +14,14 @@ import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { advance_run, approve_stage, create_run, tick_bake_complete } from "../../runs.js";
-import { create_test_db, make_deps, script_name_for, seed_analysis_template, seed_package, seed_user } from "./helpers.js";
+import {
+	create_test_db,
+	make_deps,
+	script_name_for,
+	seed_analysis_template,
+	seed_package,
+	seed_user,
+} from "./helpers.js";
 
 const manifest: VersionSetManifest = {
 	package: "gates-table-pkg",
@@ -52,7 +59,12 @@ const build_template = (rollout: RolloutKind, gate_kind: GateKind): PipelineTemp
 	return built.value;
 };
 
-const drive_until_done = async (deps: ReturnType<typeof make_deps>, run_id: string, plan: Parameters<typeof advance_run>[3], gate_kind: GateKind): Promise<void> => {
+const drive_until_done = async (
+	deps: ReturnType<typeof make_deps>,
+	run_id: string,
+	plan: Parameters<typeof advance_run>[3],
+	gate_kind: GateKind,
+): Promise<void> => {
 	const r0 = await advance_run(deps, run_id, { kind: "start" }, plan);
 	if (!r0.ok) throw new Error(`start failed: ${JSON.stringify(r0.error)}`);
 
@@ -63,16 +75,26 @@ const drive_until_done = async (deps: ReturnType<typeof make_deps>, run_id: stri
 	const max_steps = plan.stages.length * 4 + 4;
 	for (let step = 0; step < max_steps; step++) {
 		const row = (await deps.db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0]!;
-		if (row.status === "completed" || row.status === "failed" || row.status === "rolled_back" || row.status === "cancelled") return;
+		if (
+			row.status === "completed" ||
+			row.status === "failed" ||
+			row.status === "rolled_back" ||
+			row.status === "cancelled"
+		)
+			return;
 
 		if (row.status === "awaiting_approval") {
 			if (gate_kind !== "manual") {
 				throw new Error(`unexpected awaiting_approval for gate_kind=${gate_kind}`);
 			}
-			const stage_index = plan.stages.findIndex(s => s.name === row.current_stage);
+			const stage_index = plan.stages.findIndex((s) => s.name === row.current_stage);
 			const to_stage = plan.stages[stage_index + 1]?.name;
 			if (!to_stage) throw new Error("no next stage to approve");
-			const approve = await approve_stage(deps, { run_id, stage_name: to_stage, decision: "approved", user_id: "user_test" }, plan);
+			const approve = await approve_stage(
+				deps,
+				{ run_id, stage_name: to_stage, decision: "approved", user_id: "user_test" },
+				plan,
+			);
 			if (!approve.ok) throw new Error(`approve ${to_stage} failed: ${JSON.stringify(approve.error)}`);
 			continue;
 		}
@@ -112,7 +134,11 @@ describe("cartesian gate × rollout matrix", () => {
 		// predecessor to ramp down without bootstrapping to 100%.
 		// Seed on the non-staging script — staging deploys to its own.
 		const script = script_name_for();
-		const seed = await deps.cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
+		const seed = await deps.cf.versions.upload({
+			kind: "single_file",
+			script_name: script,
+			annotations: { "workers/tag": "vs_v0" },
+		});
 		if (!seed.ok) throw new Error("seed upload failed");
 		await deps.cf.deployments.create({
 			script_name: script,
@@ -145,7 +171,7 @@ describe("cartesian gate × rollout matrix", () => {
 
 				// Gate verdict events recorded for every transition
 				const events = await db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run.id));
-				const verdict_events = events.filter(e => e.kind === "gate_verdict");
+				const verdict_events = events.filter((e) => e.kind === "gate_verdict");
 				expect(verdict_events.length).toBe(transitions.length);
 				for (const ev of verdict_events) {
 					const payload = ev.payload as { type: string; verdict: string };
@@ -155,11 +181,11 @@ describe("cartesian gate × rollout matrix", () => {
 
 				if (gate_kind === "manual") {
 					// Each transition emits one gate_pending_manual pulse event.
-					const pending = deps.pulse.emitted.filter(e => e.event === "gate_pending_manual");
+					const pending = deps.pulse.emitted.filter((e) => e.event === "gate_pending_manual");
 					expect(pending.length).toBe(transitions.length);
 				}
 				if (gate_kind === "analysis") {
-					const verdicts = deps.pulse.emitted.filter(e => e.event === "gate_analysis_verdict");
+					const verdicts = deps.pulse.emitted.filter((e) => e.event === "gate_analysis_verdict");
 					expect(verdicts.length).toBe(transitions.length);
 				}
 			});

@@ -6,7 +6,7 @@ import { getAuth, getContext } from "./auth-context.js";
 
 export const timelineRoutes = new Hono<AppContext>();
 
-timelineRoutes.get("/:user_id", async c => {
+timelineRoutes.get("/:user_id", async (c) => {
 	const userId = c.req.param("user_id");
 	const auth = getAuth(c);
 	const ctx = getContext(c);
@@ -22,7 +22,7 @@ timelineRoutes.get("/:user_id", async c => {
 	return handleResult(c, result);
 });
 
-timelineRoutes.get("/:user_id/raw/:platform", async c => {
+timelineRoutes.get("/:user_id/raw/:platform", async (c) => {
 	const userId = c.req.param("user_id");
 	const platform = c.req.param("platform");
 	const auth = getAuth(c);

@@ -14,13 +14,13 @@ exclude = ["**/tests/golden/**"]
 # Coverage configuration
 coverageSkipTestFiles = true
 coveragePathIgnorePatterns = [
-  "**/tests/**",
-  "**/node_modules/**",
-  "**/*.config.*",
-  "**/*.test.*",
-  "**/*.spec.*",
-  "tests/shared/**",
-  "tests/integration/**"
+	"**/tests/**",
+	"**/node_modules/**",
+	"**/*.config.*",
+	"**/*.test.*",
+	"**/*.spec.*",
+	"tests/shared/**",
+	"tests/integration/**",
 ]
 coverageReporter = ["text", "lcov"]
 coverageDir = "coverage"

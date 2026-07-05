@@ -22,16 +22,19 @@ import { create_test_db, seed_package, seed_user } from "./helpers.ts";
 
 const BASE_AUDIENCE = "https://devpad-pipelines.dev-818.workers.dev";
 
-const make_fake_oidc_deps = (claims_by_jwt: Map<string, VerifiedOidcClaims>, opts: { sign_fails?: boolean } = {}): OidcDeps & { signed: OidcSessionClaims[] } => {
+const make_fake_oidc_deps = (
+	claims_by_jwt: Map<string, VerifiedOidcClaims>,
+	opts: { sign_fails?: boolean } = {},
+): OidcDeps & { signed: OidcSessionClaims[] } => {
 	const signed: OidcSessionClaims[] = [];
 	return {
 		signed,
-		verify_oidc: async jwt => {
+		verify_oidc: async (jwt) => {
 			const claims = claims_by_jwt.get(jwt);
 			if (claims === undefined) return err({ reason: "unknown jwt" });
 			return ok(claims);
 		},
-		sign_session: async claims => {
+		sign_session: async (claims) => {
 			if (opts.sign_fails) return err({ reason: "OIDC_SESSION_SIGNING_KEY not bound on this Worker" });
 			signed.push(claims);
 			const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
@@ -45,7 +48,14 @@ const make_fake_oidc_deps = (claims_by_jwt: Map<string, VerifiedOidcClaims>, opt
 const seed_trust_policy = async (
 	db: Database,
 	owner_id: string,
-	overrides: Partial<{ id: string; github_owner: string; repo_pattern: string; allowed_refs: string[]; expected_audience: string; allowed_actions: string[] }> = {}
+	overrides: Partial<{
+		id: string;
+		github_owner: string;
+		repo_pattern: string;
+		allowed_refs: string[];
+		expected_audience: string;
+		allowed_actions: string[];
+	}> = {},
 ): Promise<{ id: string }> => {
 	const now = new Date().toISOString();
 	const id = overrides.id ?? "pipeline-oidc-trust_test";
@@ -79,7 +89,9 @@ type Setup = {
 	oidc: ReturnType<typeof make_fake_oidc_deps>;
 };
 
-const build_setup = async (overrides: { sign_fails?: boolean; claims_by_jwt?: Map<string, VerifiedOidcClaims>; omit_oidc?: boolean } = {}): Promise<Setup> => {
+const build_setup = async (
+	overrides: { sign_fails?: boolean; claims_by_jwt?: Map<string, VerifiedOidcClaims>; omit_oidc?: boolean } = {},
+): Promise<Setup> => {
 	const db = create_test_db();
 	const u = await seed_user(db);
 	const backend = create_memory_backend();
@@ -119,9 +131,16 @@ const post_oidc = async (app: ReturnType<typeof make_routes>, body: unknown) => 
 			method: "POST",
 			headers: { "content-type": "application/json" },
 			body: JSON.stringify(body),
-		})
+		}),
 	);
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: Record<string, unknown>; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as {
+			ok: boolean;
+			value?: Record<string, unknown>;
+			error?: { code: string } & Record<string, unknown>;
+		},
+	};
 };
 
 describe("POST /auth/github-oidc — happy path", () => {
@@ -129,12 +148,22 @@ describe("POST /auth/github-oidc — happy path", () => {
 		const claims = make_branch_claims();
 		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
 		await seed_trust_policy(setup.db, setup.owner_id);
-		await seed_package(setup.db, setup.owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 
 		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
 		expect(res.status).toBe(200);
 		expect(res.body.ok).toBe(true);
-		const value = res.body.value as { session_token: string; expires_at: string; scope: string[]; package_ids: string[]; trust_policy_id: string };
+		const value = res.body.value as {
+			session_token: string;
+			expires_at: string;
+			scope: string[];
+			package_ids: string[];
+			trust_policy_id: string;
+		};
 		// Token shape only — NEVER log the actual value
 		expect(value.session_token.split(".")).toHaveLength(3);
 		expect(value.session_token.length).toBeGreaterThan(20);
@@ -149,7 +178,7 @@ describe("POST /auth/github-oidc — happy path", () => {
 		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
 		const events: Array<{ event: string } & Record<string, unknown>> = [];
 		const pulse: PulseEmitterLite = {
-			emit: async event => {
+			emit: async (event) => {
 				events.push(event);
 				return undefined;
 			},
@@ -167,10 +196,14 @@ describe("POST /auth/github-oidc — happy path", () => {
 		};
 		const app = make_routes(() => deps);
 		await seed_trust_policy(setup.db, setup.owner_id);
-		await seed_package(setup.db, setup.owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 
 		await post_oidc(app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
-		const oidc_events = events.filter(e => e.event === "oidc_exchange");
+		const oidc_events = events.filter((e) => e.event === "oidc_exchange");
 		expect(oidc_events).toHaveLength(1);
 		expect(oidc_events[0].status).toBe("ok");
 		expect(oidc_events[0].package_id).toBe("pipeline-package_my-pkg");
@@ -192,7 +225,7 @@ describe("POST /auth/github-oidc — error mapping", () => {
 				method: "POST",
 				headers: { "content-type": "application/json" },
 				body: "not-json{{{",
-			})
+			}),
 		);
 		expect(res.status).toBe(400);
 		const json = (await res.json()) as { ok: boolean; error?: { code: string } };
@@ -237,7 +270,11 @@ describe("POST /auth/github-oidc — error mapping", () => {
 		const claims = make_branch_claims();
 		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
 		await seed_trust_policy(setup.db, setup.owner_id);
-		await seed_package(setup.db, setup.owner_id, { id: "pipeline-package_wrong", name: "wrong", repo_url: "https://github.com/other-org/wrong" });
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_wrong",
+			name: "wrong",
+			repo_url: "https://github.com/other-org/wrong",
+		});
 
 		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_wrong" });
 		expect(res.status).toBe(403);
@@ -257,7 +294,11 @@ describe("POST /auth/github-oidc — error mapping", () => {
 		const claims = make_branch_claims();
 		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]), sign_fails: true });
 		await seed_trust_policy(setup.db, setup.owner_id);
-		await seed_package(setup.db, setup.owner_id, { id: "pipeline-package_my-pkg", name: "my-pkg", repo_url: "https://github.com/f0rbit/my-pkg" });
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
 
 		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
 		expect(res.status).toBe(503);

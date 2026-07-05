@@ -1,4 +1,10 @@
-export { type CategoryNode, type CategoryService, type CategoryUpdate, category, createCategoryService } from "./categories";
+export {
+	type CategoryNode,
+	type CategoryService,
+	type CategoryUpdate,
+	category,
+	createCategoryService,
+} from "./categories";
 export { type AppContext, createContext } from "./context";
 export { corpus } from "./corpus";
 export { createPostService, type PostService } from "./posts";

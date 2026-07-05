@@ -41,10 +41,13 @@ const build_setup = async (): Promise<RouteSetup> => {
 	await seed_user(db, "user_other");
 	const backend = create_memory_backend();
 	const auth: AuthGate<AuthIdentity> = {
-		check: async request => {
+		check: async (request) => {
 			const header = request.headers.get("authorization");
 			if (!is_bearer_valid(header, PIPELINES_TOKEN)) {
-				return { ok: false as const, error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError };
+				return {
+					ok: false as const,
+					error: { code: "unauthorized" as const, message: "bad token" } satisfies AuthError,
+				};
 			}
 			return { ok: true as const, value: { kind: "admin" as const, reason: "pipelines_token" as const } };
 		},
@@ -63,25 +66,40 @@ const build_setup = async (): Promise<RouteSetup> => {
 	return { app: make_routes(() => deps), db, backend };
 };
 
-const send_json = async (app: ReturnType<typeof make_routes>, method: "POST" | "PATCH", path: string, body: unknown, headers: Record<string, string> = {}) => {
+const send_json = async (
+	app: ReturnType<typeof make_routes>,
+	method: "POST" | "PATCH",
+	path: string,
+	body: unknown,
+	headers: Record<string, string> = {},
+) => {
 	const res = await app.fetch(
 		new Request(`http://run.local${path}`, {
 			method,
 			headers: { "content-type": "application/json", ...headers },
 			body: JSON.stringify(body),
-		})
+		}),
 	);
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+	};
 };
 
 const send_get = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "GET", headers }));
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+	};
 };
 
 const send_delete = async (app: ReturnType<typeof make_routes>, path: string, headers: Record<string, string> = {}) => {
 	const res = await app.fetch(new Request(`http://run.local${path}`, { method: "DELETE", headers }));
-	return { status: res.status, body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> } };
+	return {
+		status: res.status,
+		body: (await res.json()) as { ok: boolean; value?: unknown; error?: { code: string } & Record<string, unknown> },
+	};
 };
 
 const valid_create_body = (overrides: Record<string, unknown> = {}) => ({
@@ -91,8 +109,13 @@ const valid_create_body = (overrides: Record<string, unknown> = {}) => ({
 	...overrides,
 });
 
-const create_policy = async (app: ReturnType<typeof make_routes>, body: Record<string, unknown> = {}): Promise<string> => {
-	const res = await send_json(app, "POST", "/oidc-trust", valid_create_body(body), { authorization: auth_header(PIPELINES_TOKEN) });
+const create_policy = async (
+	app: ReturnType<typeof make_routes>,
+	body: Record<string, unknown> = {},
+): Promise<string> => {
+	const res = await send_json(app, "POST", "/oidc-trust", valid_create_body(body), {
+		authorization: auth_header(PIPELINES_TOKEN),
+	});
 	expect(res.status).toBe(200);
 	const value = res.body.value as { id: string };
 	return value.id;
@@ -108,10 +131,17 @@ describe("POST /oidc-trust", () => {
 
 	test("creates a policy with sensible defaults", async () => {
 		const { app } = await build_setup();
-		const res = await send_json(app, "POST", "/oidc-trust", valid_create_body(), { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_json(app, "POST", "/oidc-trust", valid_create_body(), {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(200);
 		expect(res.body.ok).toBe(true);
-		const created = res.body.value as { id: string; github_owner: string; repo_pattern: string; allowed_actions: string[] };
+		const created = res.body.value as {
+			id: string;
+			github_owner: string;
+			repo_pattern: string;
+			allowed_actions: string[];
+		};
 		expect(created.github_owner).toBe("f0rbit");
 		expect(created.repo_pattern).toBe("*");
 		expect(created.allowed_actions).toEqual(["artifacts:upload", "runs:start"]);
@@ -119,14 +149,22 @@ describe("POST /oidc-trust", () => {
 
 	test("malformed body returns 400 invalid_body", async () => {
 		const { app } = await build_setup();
-		const res = await send_json(app, "POST", "/oidc-trust", { owner_id: "user_test" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_json(
+			app,
+			"POST",
+			"/oidc-trust",
+			{ owner_id: "user_test" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(res.status).toBe(400);
 		expect(res.body.error?.code).toBe("invalid_body");
 	});
 
 	test("empty github_owner returns 400 validation", async () => {
 		const { app } = await build_setup();
-		const res = await send_json(app, "POST", "/oidc-trust", valid_create_body({ github_owner: "" }), { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_json(app, "POST", "/oidc-trust", valid_create_body({ github_owner: "" }), {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(400);
 	});
 });
@@ -148,7 +186,7 @@ describe("GET /oidc-trust", () => {
 		expect(res.status).toBe(200);
 		const policies = res.body.value as Array<{ github_owner: string }>;
 		expect(policies).toHaveLength(2);
-		const owners = policies.map(p => p.github_owner).sort();
+		const owners = policies.map((p) => p.github_owner).sort();
 		expect(owners).toEqual(["mine-a", "mine-b"]);
 	});
 
@@ -163,7 +201,9 @@ describe("GET /oidc-trust", () => {
 describe("GET /oidc-trust/:id", () => {
 	test("returns 404 for unknown id", async () => {
 		const { app } = await build_setup();
-		const res = await send_get(app, "/oidc-trust/pipeline-oidc-trust_missing?owner_id=user_test", { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_get(app, "/oidc-trust/pipeline-oidc-trust_missing?owner_id=user_test", {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(404);
 		expect(res.body.error?.code).toBe("not_found");
 	});
@@ -172,7 +212,9 @@ describe("GET /oidc-trust/:id", () => {
 		const { app } = await build_setup();
 		const id = await create_policy(app, { owner_id: "user_other" });
 
-		const res = await send_get(app, `/oidc-trust/${id}?owner_id=user_test`, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_get(app, `/oidc-trust/${id}?owner_id=user_test`, {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(404);
 	});
 
@@ -180,7 +222,9 @@ describe("GET /oidc-trust/:id", () => {
 		const { app } = await build_setup();
 		const id = await create_policy(app);
 
-		const res = await send_get(app, `/oidc-trust/${id}?owner_id=user_test`, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_get(app, `/oidc-trust/${id}?owner_id=user_test`, {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(200);
 		expect((res.body.value as { id: string }).id).toBe(id);
 	});
@@ -191,7 +235,13 @@ describe("PATCH /oidc-trust/:id", () => {
 		const { app } = await build_setup();
 		const id = await create_policy(app, { repo_pattern: "old-*" });
 
-		const res = await send_json(app, "PATCH", `/oidc-trust/${id}`, { owner_id: "user_test", repo_pattern: "new-*" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_json(
+			app,
+			"PATCH",
+			`/oidc-trust/${id}`,
+			{ owner_id: "user_test", repo_pattern: "new-*" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(res.status).toBe(200);
 		const updated = res.body.value as { repo_pattern: string; github_owner: string };
 		expect(updated.repo_pattern).toBe("new-*");
@@ -202,7 +252,13 @@ describe("PATCH /oidc-trust/:id", () => {
 		const { app } = await build_setup();
 		const id = await create_policy(app, { owner_id: "user_other" });
 
-		const res = await send_json(app, "PATCH", `/oidc-trust/${id}`, { owner_id: "user_test", repo_pattern: "evil-*" }, { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_json(
+			app,
+			"PATCH",
+			`/oidc-trust/${id}`,
+			{ owner_id: "user_test", repo_pattern: "evil-*" },
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
 		expect(res.status).toBe(404);
 	});
 
@@ -218,7 +274,9 @@ describe("DELETE /oidc-trust/:id", () => {
 		const { app } = await build_setup();
 		const id = await create_policy(app);
 
-		const del = await send_delete(app, `/oidc-trust/${id}?owner_id=user_test`, { authorization: auth_header(PIPELINES_TOKEN) });
+		const del = await send_delete(app, `/oidc-trust/${id}?owner_id=user_test`, {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(del.status).toBe(200);
 		expect((del.body.value as { deleted: boolean }).deleted).toBe(true);
 
@@ -228,7 +286,9 @@ describe("DELETE /oidc-trust/:id", () => {
 
 	test("404 for unknown id", async () => {
 		const { app } = await build_setup();
-		const res = await send_delete(app, "/oidc-trust/pipeline-oidc-trust_missing?owner_id=user_test", { authorization: auth_header(PIPELINES_TOKEN) });
+		const res = await send_delete(app, "/oidc-trust/pipeline-oidc-trust_missing?owner_id=user_test", {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
 		expect(res.status).toBe(404);
 	});
 });

@@ -90,7 +90,7 @@ describe("blog API client integration", () => {
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value.posts.length).toBeGreaterThanOrEqual(1);
-				const found = result.value.posts.find(p => p.uuid === post_uuid);
+				const found = result.value.posts.find((p) => p.uuid === post_uuid);
 				expect(found).toBeDefined();
 			}
 		});

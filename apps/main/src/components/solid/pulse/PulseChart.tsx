@@ -55,15 +55,37 @@ export default function PulseChart(props: PulseChartProps) {
 	};
 
 	return (
-		<svg width={width()} height={height()} viewBox={`0 0 ${width()} ${height()}`} role="img" aria-label={props["aria-label"] ?? "sparkline"} preserveAspectRatio="none">
+		<svg
+			width={width()}
+			height={height()}
+			viewBox={`0 0 ${width()} ${height()}`}
+			role="img"
+			aria-label={props["aria-label"] ?? "sparkline"}
+			preserveAspectRatio="none"
+		>
 			<Show when={points().length === 0}>
-				<line x1="0" y1={height() / 2} x2={width()} y2={height() / 2} stroke="var(--border)" stroke-width="1" stroke-dasharray="2,2" />
+				<line
+					x1="0"
+					y1={height() / 2}
+					x2={width()}
+					y2={height() / 2}
+					stroke="var(--border)"
+					stroke-width="1"
+					stroke-dasharray="2,2"
+				/>
 			</Show>
 			<Show when={props.fill && points().length > 1}>
 				<path d={areaPath()} fill={color()} fill-opacity="0.15" stroke="none" />
 			</Show>
 			<Show when={points().length > 1}>
-				<path d={linePath()} fill="none" stroke={color()} stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+				<path
+					d={linePath()}
+					fill="none"
+					stroke={color()}
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
 			</Show>
 		</svg>
 	);

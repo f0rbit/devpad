@@ -4,7 +4,10 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { createSession } from "./session.js";
 
-export type OAuthError = { kind: "invalid_state" } | { kind: "github_error"; message: string } | { kind: "db_error"; message: string };
+export type OAuthError =
+	| { kind: "invalid_state" }
+	| { kind: "github_error"; message: string }
+	| { kind: "db_error"; message: string };
 
 export type OAuthEnv = {
 	GITHUB_CLIENT_ID: string;
@@ -68,7 +71,13 @@ export function createGitHubAuthUrl(env: OAuthEnv, params?: OAuthParams): Result
 	return ok({ url, state: encoded_state });
 }
 
-export async function handleGitHubCallback(db: Database, env: OAuthEnv, code: string, state: string, stored_state: string): Promise<Result<OAuthCallbackResult, OAuthError>> {
+export async function handleGitHubCallback(
+	db: Database,
+	env: OAuthEnv,
+	code: string,
+	state: string,
+	stored_state: string,
+): Promise<Result<OAuthCallbackResult, OAuthError>> {
 	if (state !== stored_state) return err({ kind: "invalid_state" });
 
 	const token_response = await fetch("https://github.com/login/oauth/access_token", {
@@ -86,11 +95,13 @@ export async function handleGitHubCallback(db: Database, env: OAuthEnv, code: st
 
 	if (token_response instanceof Error) return err({ kind: "github_error", message: token_response.message });
 
-	if (!token_response.ok) return err({ kind: "github_error", message: `Token exchange failed: ${token_response.status}` });
+	if (!token_response.ok)
+		return err({ kind: "github_error", message: `Token exchange failed: ${token_response.status}` });
 
 	const token_data = (await token_response.json()) as { access_token?: string; error?: string };
 
-	if (token_data.error || !token_data.access_token) return err({ kind: "github_error", message: token_data.error ?? "No access token" });
+	if (token_data.error || !token_data.access_token)
+		return err({ kind: "github_error", message: token_data.error ?? "No access token" });
 
 	const access_token = token_data.access_token;
 
@@ -103,7 +114,8 @@ export async function handleGitHubCallback(db: Database, env: OAuthEnv, code: st
 
 	const db_user = db_user_result.value;
 	const session_result = await createSession(db, db_user.id, access_token);
-	if (!session_result.ok) return err({ kind: "db_error", message: `Session creation failed: ${session_result.error.kind}` });
+	if (!session_result.ok)
+		return err({ kind: "db_error", message: `Session creation failed: ${session_result.error.kind}` });
 
 	return ok({
 		user: db_user,
@@ -138,7 +150,8 @@ async function fetchGitHubUser(access_token: string): Promise<Result<GitHubUser,
 
 	if (response instanceof Error) return err({ kind: "github_error", message: response.message });
 
-	if (!response.ok) return err({ kind: "github_error", message: `GitHub API: ${response.status} ${response.statusText}` });
+	if (!response.ok)
+		return err({ kind: "github_error", message: `GitHub API: ${response.status} ${response.statusText}` });
 
 	const user_data = (await response.json()) as any;
 
@@ -168,11 +181,14 @@ async function fetchGitHubEmail(access_token: string): Promise<Result<string | n
 	if (!response.ok) return ok(null);
 
 	const emails = (await response.json()) as Array<{ email: string; primary: boolean }>;
-	const primary = emails.find(e => e.primary);
+	const primary = emails.find((e) => e.primary);
 	return ok(primary?.email ?? null);
 }
 
-async function createOrUpdateUser(db: Database, github_user: GitHubUser): Promise<Result<OAuthCallbackResult["user"], OAuthError>> {
+async function createOrUpdateUser(
+	db: Database,
+	github_user: GitHubUser,
+): Promise<Result<OAuthCallbackResult["user"], OAuthError>> {
 	const existing = await db
 		.select()
 		.from(user)

@@ -133,7 +133,10 @@ describe("User Preferences & Profile Integration", () => {
 					task_view: "grid",
 				});
 
-				if (!prefResult.ok && (prefResult.error.message.includes("404") || prefResult.error.message.includes("not found"))) {
+				if (
+					!prefResult.ok &&
+					(prefResult.error.message.includes("404") || prefResult.error.message.includes("not found"))
+				) {
 					console.warn("User preferences API client method not implemented");
 					return;
 				}
@@ -154,7 +157,10 @@ describe("User Preferences & Profile Integration", () => {
 			try {
 				const historyResult = await t.client.user.history();
 
-				if (!historyResult.ok && (historyResult.error.message.includes("404") || historyResult.error.message.includes("not found"))) {
+				if (
+					!historyResult.ok &&
+					(historyResult.error.message.includes("404") || historyResult.error.message.includes("not found"))
+				) {
 					console.warn("User activity history endpoint not implemented");
 					return;
 				}
@@ -281,7 +287,7 @@ describe("User Preferences & Profile Integration", () => {
 							id: "test-user-12345",
 							task_view: i % 2 === 0 ? "grid" : "list",
 						}),
-					})
+					}),
 				);
 
 				const responses = await Promise.all(updatePromises);

@@ -24,7 +24,12 @@ export function gateEvaluatorFor(gate: Gate, deps: GateEvaluatorDeps): GateEvalu
 			if (!deps.db || !deps.pulse_summary) {
 				throw new Error("Analysis gate requires `db` and `pulse_summary` in GateEvaluatorDeps");
 			}
-			return new AnalysisGateEvaluator({ db: deps.db, pulse: deps.pulse, pulse_summary: deps.pulse_summary, now: deps.now });
+			return new AnalysisGateEvaluator({
+				db: deps.db,
+				pulse: deps.pulse,
+				pulse_summary: deps.pulse_summary,
+				now: deps.now,
+			});
 		}
 		default: {
 			const _exhaustive: never = gate;

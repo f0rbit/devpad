@@ -10,7 +10,7 @@ export default function PlatformDistribution(props: PlatformDistributionProps) {
 	return (
 		<div class="distribution-list">
 			<For each={props.platforms}>
-				{platform => (
+				{(platform) => (
 					<div class="distribution-row">
 						<div class="distribution-label">
 							<PlatformIcon platform={platform.platform} size={16} />

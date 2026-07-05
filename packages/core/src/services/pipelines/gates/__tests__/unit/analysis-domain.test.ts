@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { build_summary_query, evaluate_metrics_against_thresholds, is_window_open, type MetricSnapshot, parse_threshold_dsl, type Threshold } from "../../analysis-domain.js";
+import {
+	build_summary_query,
+	evaluate_metrics_against_thresholds,
+	is_window_open,
+	type MetricSnapshot,
+	parse_threshold_dsl,
+	type Threshold,
+} from "../../analysis-domain.js";
 
 describe("parse_threshold_dsl", () => {
 	test("parses a single threshold", () => {
@@ -115,14 +122,20 @@ describe("evaluate_metrics_against_thresholds", () => {
 
 	test("multiple thresholds mixed — one fails → Fail", () => {
 		const thresholds = [t({ metric: "error_rate", value: 0.01 }), t({ metric: "p99_latency_ms", op: ">", value: 500 })];
-		const result = evaluate_metrics_against_thresholds(snapshot({ error_rate: 0.005, p99_latency_ms: 1200 }), thresholds);
+		const result = evaluate_metrics_against_thresholds(
+			snapshot({ error_rate: 0.005, p99_latency_ms: 1200 }),
+			thresholds,
+		);
 		expect(result.verdict).toBe("Fail");
 		if (result.verdict === "Fail") expect(result.reason).toContain("p99_latency_ms");
 	});
 
 	test("multiple thresholds all met → Pass", () => {
 		const thresholds = [t({ metric: "error_rate", value: 0.01 }), t({ metric: "p99_latency_ms", op: ">", value: 500 })];
-		const result = evaluate_metrics_against_thresholds(snapshot({ error_rate: 0.005, p99_latency_ms: 200 }), thresholds);
+		const result = evaluate_metrics_against_thresholds(
+			snapshot({ error_rate: 0.005, p99_latency_ms: 200 }),
+			thresholds,
+		);
 		expect(result.verdict).toBe("Pass");
 	});
 
@@ -146,7 +159,10 @@ describe("evaluate_metrics_against_thresholds", () => {
 	});
 
 	test("Pending takes priority over Fail when both apply", () => {
-		const thresholds = [t({ metric: "error_rate", value: 0.01 }), t({ metric: "request_rate", op: "<", value: 10, on_fail: "Pending" })];
+		const thresholds = [
+			t({ metric: "error_rate", value: 0.01 }),
+			t({ metric: "request_rate", op: "<", value: 10, on_fail: "Pending" }),
+		];
 		const result = evaluate_metrics_against_thresholds(snapshot({ error_rate: 0.5, request_rate: 0 }), thresholds);
 		expect(result.verdict).toBe("Pending");
 	});
@@ -166,7 +182,9 @@ describe("evaluate_metrics_against_thresholds", () => {
 			{ op: "=", metric: 2, value: 3, breaches: false },
 		];
 		for (const c of cases) {
-			const result = evaluate_metrics_against_thresholds(snapshot({ m: c.metric }), [t({ metric: "m", op: c.op, value: c.value })]);
+			const result = evaluate_metrics_against_thresholds(snapshot({ m: c.metric }), [
+				t({ metric: "m", op: c.op, value: c.value }),
+			]);
 			expect(result.verdict).toBe(c.breaches ? "Fail" : "Pass");
 		}
 	});

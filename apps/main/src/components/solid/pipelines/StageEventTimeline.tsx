@@ -75,7 +75,7 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 	const [expanded, setExpanded] = createSignal<Set<string>>(new Set());
 
 	const toggle = (id: string) => {
-		setExpanded(prev => {
+		setExpanded((prev) => {
 			const next = new Set(prev);
 			if (next.has(id)) next.delete(id);
 			else next.add(id);
@@ -114,7 +114,7 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 			</Show>
 
 			<For each={events()}>
-				{ev => (
+				{(ev) => (
 					<div
 						style={{
 							display: "flex",
@@ -126,12 +126,23 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 							"background-color": "transparent",
 						}}
 					>
-						<div style={{ display: "flex", "align-items": "center", "justify-content": "space-between", gap: "0.5rem", "flex-wrap": "wrap" }}>
+						<div
+							style={{
+								display: "flex",
+								"align-items": "center",
+								"justify-content": "space-between",
+								gap: "0.5rem",
+								"flex-wrap": "wrap",
+							}}
+						>
 							<div style={{ display: "flex", "align-items": "center", gap: "0.5rem", "flex-wrap": "wrap" }}>
 								<Badge variant={kind_variant(ev.kind)}>{ev.kind}</Badge>
 								<span style={{ "font-size": "0.85rem", opacity: 0.85 }}>{ev.stage_name}</span>
 							</div>
-							<span title={ev.ts} style={{ "font-size": "0.8rem", opacity: 0.6, "font-variant-numeric": "tabular-nums" }}>
+							<span
+								title={ev.ts}
+								style={{ "font-size": "0.8rem", opacity: 0.6, "font-variant-numeric": "tabular-nums" }}
+							>
 								{format_relative(ev.ts)}
 							</span>
 						</div>

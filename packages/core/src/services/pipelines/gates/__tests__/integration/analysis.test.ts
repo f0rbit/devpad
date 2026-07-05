@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { InMemoryPulseSummaryProvider, type MetricSnapshot } from "@devpad/pipeline-fakes";
 import type { StageContext } from "@devpad/pipeline-templates";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
-import { pipeline_analysis_template, pipeline_package, pipeline_run, pipeline_stage_event, user } from "@devpad/schema/database/schema";
+import {
+	pipeline_analysis_template,
+	pipeline_package,
+	pipeline_run,
+	pipeline_stage_event,
+	user,
+} from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { AnalysisGateEvaluator } from "../../analysis.js";
 import { InMemoryPulseEmitter } from "../helpers.js";
@@ -94,7 +100,12 @@ const seed_run = async (db: Database): Promise<void> => {
 	} as never);
 };
 
-const seed_template = async (db: Database, owner_id: string, threshold_dsl: string, window_ms = 600_000): Promise<void> => {
+const seed_template = async (
+	db: Database,
+	owner_id: string,
+	threshold_dsl: string,
+	window_ms = 600_000,
+): Promise<void> => {
 	const now = new Date().toISOString();
 	await db.insert(pipeline_analysis_template).values({
 		id: TEMPLATE_ID,
@@ -162,7 +173,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 	test("window_passed_threshold_met: returns Pass and queries pulse with right dimensions", async () => {
 		await seed_template(db, owner_id, "error_rate > 0.01", 0);
 		await seed_deploy_event(db);
-		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ error_rate: 0.001 }));
+		pulse_summary.set_next_response(
+			{ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID },
+			make_snapshot({ error_rate: 0.001 }),
+		);
 
 		const evaluator = new AnalysisGateEvaluator({ db, pulse, pulse_summary });
 		const result = await evaluator.evaluate(make_ctx());
@@ -180,7 +194,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 	test("window_passed_threshold_missed: returns Fail with reason naming the metric", async () => {
 		await seed_template(db, owner_id, "error_rate > 0.01", 0);
 		await seed_deploy_event(db);
-		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ error_rate: 0.5 }));
+		pulse_summary.set_next_response(
+			{ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID },
+			make_snapshot({ error_rate: 0.5 }),
+		);
 
 		const evaluator = new AnalysisGateEvaluator({ db, pulse, pulse_summary });
 		const result = await evaluator.evaluate(make_ctx());
@@ -195,7 +212,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 	test("multiple thresholds — one breach → Fail with that metric", async () => {
 		await seed_template(db, owner_id, "error_rate > 0.01\np99_latency_ms > 500", 0);
 		await seed_deploy_event(db);
-		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ error_rate: 0.001, p99_latency_ms: 1200 }));
+		pulse_summary.set_next_response(
+			{ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID },
+			make_snapshot({ error_rate: 0.001, p99_latency_ms: 1200 }),
+		);
 
 		const evaluator = new AnalysisGateEvaluator({ db, pulse, pulse_summary });
 		const result = await evaluator.evaluate(make_ctx());
@@ -209,7 +229,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 	test("zero-traffic via pending-tagged threshold → Pending", async () => {
 		await seed_template(db, owner_id, "request_rate < 10 : pending", 0);
 		await seed_deploy_event(db);
-		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ request_rate: 0 }));
+		pulse_summary.set_next_response(
+			{ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID },
+			make_snapshot({ request_rate: 0 }),
+		);
 
 		const evaluator = new AnalysisGateEvaluator({ db, pulse, pulse_summary });
 		const result = await evaluator.evaluate(make_ctx());
@@ -285,7 +308,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 
 		// Inject now() = deploy_ts + 10s → window closed, fetches pulse
 		const now_after = Date.parse(deploy_ts) + 10_000;
-		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ error_rate: 0.0001 }));
+		pulse_summary.set_next_response(
+			{ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID },
+			make_snapshot({ error_rate: 0.0001 }),
+		);
 		const evaluator2 = new AnalysisGateEvaluator({ db, pulse, pulse_summary, now: () => now_after });
 		const r2 = await evaluator2.evaluate(make_ctx());
 		expect(r2.ok && r2.value.verdict).toBe("Pass");
@@ -294,7 +320,10 @@ describe("AnalysisGateEvaluator — real pulse-driven", () => {
 	test("emits gate_analysis_verdict pulse event with verdict and reason", async () => {
 		await seed_template(db, owner_id, "error_rate > 0.01", 0);
 		await seed_deploy_event(db);
-		pulse_summary.set_next_response({ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID }, make_snapshot({ error_rate: 0 }));
+		pulse_summary.set_next_response(
+			{ package: "test-pkg", environment: TO_STAGE, version_id: VERSION_ID },
+			make_snapshot({ error_rate: 0 }),
+		);
 
 		const evaluator = new AnalysisGateEvaluator({ db, pulse, pulse_summary });
 		await evaluator.evaluate(make_ctx());

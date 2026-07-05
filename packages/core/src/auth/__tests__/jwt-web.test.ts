@@ -15,7 +15,7 @@ describe("generateJWT", () => {
 
 		const parts = result.value.split(".");
 		expect(parts.length).toBe(3);
-		expect(parts.every(p => p.length > 0)).toBe(true);
+		expect(parts.every((p) => p.length > 0)).toBe(true);
 	});
 
 	test("includes iat and exp in payload", async () => {
@@ -95,7 +95,10 @@ describe("verifyJWT", () => {
 		const payload_json = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
 		payload_json.exp = Math.floor(Date.now() / 1000) - 3600;
 
-		const tampered_payload = btoa(JSON.stringify(payload_json)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+		const tampered_payload = btoa(JSON.stringify(payload_json))
+			.replace(/\+/g, "-")
+			.replace(/\//g, "_")
+			.replace(/=+$/, "");
 
 		const tampered_token = `${parts[0]}.${tampered_payload}.${parts[2]}`;
 

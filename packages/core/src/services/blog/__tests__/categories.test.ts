@@ -65,8 +65,8 @@ describe("category.tree (pure)", () => {
 		];
 		const tree = category.tree(items);
 		expect(tree).toHaveLength(3);
-		expect(tree.map(n => n.name).sort()).toEqual(["code", "life", "tech"]);
-		expect(tree.every(n => n.children.length === 0)).toBe(true);
+		expect(tree.map((n) => n.name).sort()).toEqual(["code", "life", "tech"]);
+		expect(tree.every((n) => n.children.length === 0)).toBe(true);
 	});
 
 	test("categories with parent='root' are treated as top-level", () => {
@@ -76,7 +76,7 @@ describe("category.tree (pure)", () => {
 		];
 		const tree = category.tree(items);
 		expect(tree).toHaveLength(2);
-		expect(tree.every(n => n.children.length === 0)).toBe(true);
+		expect(tree.every((n) => n.children.length === 0)).toBe(true);
 	});
 
 	test("nested categories have correct parent-child relationships", () => {
@@ -89,11 +89,11 @@ describe("category.tree (pure)", () => {
 		const tree = category.tree(items);
 		expect(tree).toHaveLength(2);
 
-		const tech = tree.find(n => n.name === "tech")!;
+		const tech = tree.find((n) => n.name === "tech")!;
 		expect(tech.children).toHaveLength(2);
-		expect(tech.children.map(c => c.name).sort()).toEqual(["javascript", "python"]);
+		expect(tech.children.map((c) => c.name).sort()).toEqual(["javascript", "python"]);
 
-		const life = tree.find(n => n.name === "life")!;
+		const life = tree.find((n) => n.name === "life")!;
 		expect(life.children).toHaveLength(0);
 	});
 
@@ -278,7 +278,7 @@ describe("createCategoryService", () => {
 			expect(result.ok).toBe(true);
 			if (result.ok) {
 				expect(result.value).toHaveLength(2);
-				const tech = result.value.find(n => n.name === "tech")!;
+				const tech = result.value.find((n) => n.name === "tech")!;
 				expect(tech.children).toHaveLength(1);
 				expect(tech.children[0]!.name).toBe("javascript");
 			}

@@ -33,13 +33,22 @@ export async function getRepos(access_token: string): Promise<Result<any[], Serv
 	return ok(response.data);
 }
 
-export async function getRepoMetadata(owner: string, repo: string, access_token: string): Promise<Result<any, ServiceError>> {
+export async function getRepoMetadata(
+	owner: string,
+	repo: string,
+	access_token: string,
+): Promise<Result<any, ServiceError>> {
 	const octokit = createOctokit(access_token);
 	const response = await octokit.rest.repos.get({ owner, repo });
 	return ok(response.data);
 }
 
-export async function getBranches(db: Database, owner: string, repo: string, access_token: string): Promise<Result<GitHubBranch[], ServiceError>> {
+export async function getBranches(
+	db: Database,
+	owner: string,
+	repo: string,
+	access_token: string,
+): Promise<Result<GitHubBranch[], ServiceError>> {
 	const octokit = createOctokit(access_token);
 
 	const branches_response = await octokit.rest.repos.listBranches({
@@ -56,9 +65,9 @@ export async function getBranches(db: Database, owner: string, repo: string, acc
 	}
 
 	const commit_details = await getCommitDetails(db, owner, repo, commits, access_token);
-	const commit_map = new Map(commit_details.map(c => [c.sha, c]));
+	const commit_map = new Map(commit_details.map((c) => [c.sha, c]));
 
-	const enriched_branches: GitHubBranch[] = branches.map(branch => {
+	const enriched_branches: GitHubBranch[] = branches.map((branch) => {
 		const enriched_commit = commit_map.get(branch.commit.sha) || {
 			sha: branch.commit.sha,
 			url: branch.commit.url,
@@ -82,12 +91,22 @@ export async function getBranches(db: Database, owner: string, repo: string, acc
 	return ok(enriched_branches);
 }
 
-async function getCommitDetails(db: Database, owner: string, repo: string, commit_shas: Set<string>, access_token: string) {
+async function getCommitDetails(
+	db: Database,
+	owner: string,
+	repo: string,
+	commit_shas: Set<string>,
+	access_token: string,
+) {
 	const shas = Array.from(commit_shas);
-	const existing = await batchedQuery(shas, condition => db.select().from(commit_detail).where(condition), commit_detail.sha);
+	const existing = await batchedQuery(
+		shas,
+		(condition) => db.select().from(commit_detail).where(condition),
+		commit_detail.sha,
+	);
 
 	const existing_shas = new Set(existing.map((c: any) => c.sha));
-	const missing_shas = Array.from(shas.filter(sha => !existing_shas.has(sha)));
+	const missing_shas = Array.from(shas.filter((sha) => !existing_shas.has(sha)));
 
 	let commits = [...existing];
 
@@ -95,16 +114,16 @@ async function getCommitDetails(db: Database, owner: string, repo: string, commi
 		const octokit = createOctokit(access_token);
 
 		const fetched = await Promise.all(
-			missing_shas.map(async commit_sha => {
+			missing_shas.map(async (commit_sha) => {
 				const response = await octokit.rest.repos.getCommit({ owner, repo, ref: commit_sha }).catch(() => null);
 				return response?.data ?? null;
-			})
+			}),
 		);
 
 		const valid_commits = fetched.filter((c): c is NonNullable<typeof c> => c !== null);
 
 		if (valid_commits.length > 0) {
-			const values = valid_commits.map(c => ({
+			const values = valid_commits.map((c) => ({
 				sha: c.sha,
 				url: c.url,
 				message: c.commit.message ?? "",
@@ -123,7 +142,11 @@ async function getCommitDetails(db: Database, owner: string, repo: string, commi
 	return commits;
 }
 
-export async function getSpecification(owner: string, repo: string, access_token: string): Promise<Result<string, ServiceError>> {
+export async function getSpecification(
+	owner: string,
+	repo: string,
+	access_token: string,
+): Promise<Result<string, ServiceError>> {
 	if (!access_token) return err({ kind: "github_error", message: "GitHub access token is required" });
 
 	const octokit = createOctokit(access_token);

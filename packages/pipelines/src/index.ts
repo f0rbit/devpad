@@ -39,7 +39,7 @@ export class PipelineRunDO implements PipelineRunDOLike {
 	}
 }
 
-const app = make_routes(env => build_routes_deps_from_env(env as PipelineEnv));
+const app = make_routes((env) => build_routes_deps_from_env(env as PipelineEnv));
 
 export default {
 	fetch: app.fetch,
@@ -53,7 +53,14 @@ export { PipelinesGrantsService } from "./grants-rpc.ts";
 export { PipelinesGrantsEndpoint } from "./grants-rpc-entrypoint.ts";
 export type { AuthError } from "./auth.ts";
 export { is_bearer_valid, parse_bearer_header, require_bearer_token } from "./auth.ts";
-export type { AuthGate, LineageProvider, ManifestProvider, PulseEmitterLite, RoutesDeps, TemplateResolver } from "./routes.ts";
+export type {
+	AuthGate,
+	LineageProvider,
+	ManifestProvider,
+	PulseEmitterLite,
+	RoutesDeps,
+	TemplateResolver,
+} from "./routes.ts";
 export { make_routes } from "./routes.ts";
 export type { DoCtx, RunDoServices } from "./run-do.ts";
 export { make_run_handler } from "./run-do.ts";

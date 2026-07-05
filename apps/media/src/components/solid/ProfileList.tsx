@@ -1,4 +1,16 @@
-import { Badge, Button, Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, Empty, FormField, Input } from "@f0rbit/ui";
+import {
+	Badge,
+	Button,
+	Card,
+	CardContent,
+	CardDescription,
+	CardFooter,
+	CardHeader,
+	CardTitle,
+	Empty,
+	FormField,
+	Input,
+} from "@f0rbit/ui";
 import { Check, Copy, Eye, Pencil, Plus, Trash2 } from "lucide-solid";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
@@ -45,7 +57,10 @@ const deleteProfile = async (id: string): Promise<void> => {
 	if (!result.ok) throw new Error(result.error.message);
 };
 
-const updateProfile = async (id: string, data: { slug?: string; name?: string; description?: string | null }): Promise<Profile> => {
+const updateProfile = async (
+	id: string,
+	data: { slug?: string; name?: string; description?: string | null },
+): Promise<Profile> => {
 	const result = await getClient().media.profiles.update(id, data);
 	if (!result.ok) throw new Error(result.error.message);
 	return result.value as Profile;
@@ -76,7 +91,7 @@ export default function ProfileList(props: ProfileListProps) {
 			return trigger;
 		},
 		fetchProfiles,
-		{ initialValue: props.initialProfiles ?? [] }
+		{ initialValue: props.initialProfiles ?? [] },
 	);
 	const currentSlug = () => getSlugFromUrl();
 	const [editingProfile, setEditingProfile] = createSignal<Profile | null>(null);
@@ -116,7 +131,7 @@ export default function ProfileList(props: ProfileListProps) {
 
 			<Show when={showCreateForm()}>
 				<CreateProfileForm
-					onSuccess={newProfile => {
+					onSuccess={(newProfile) => {
 						setShowCreateForm(false);
 						// Reload page to refresh SSR components (ProfileSelector in header)
 						// Navigate to the new profile
@@ -135,12 +150,15 @@ export default function ProfileList(props: ProfileListProps) {
 			</Show>
 
 			<Show when={!profiles.loading && !profiles.error && profiles()?.length === 0}>
-				<Empty title="No profiles yet" description="Create a profile to share a curated timeline with specific platforms visible." />
+				<Empty
+					title="No profiles yet"
+					description="Create a profile to share a curated timeline with specific platforms visible."
+				/>
 			</Show>
 
 			<Show when={!profiles.loading && !profiles.error && (profiles()?.length ?? 0) > 0}>
 				<For each={profiles()}>
-					{profile => (
+					{(profile) => (
 						<Show
 							when={editingProfile()?.id === profile.id}
 							fallback={
@@ -216,7 +234,16 @@ function ProfileCard(props: ProfileCardProps) {
 			</Show>
 
 			<CardFooter class="row items-center">
-				<code class="text-xs font-mono truncate" style={{ flex: "1", padding: "4px 8px", background: "var(--bg-alt)", "border-radius": "4px", border: "1px solid var(--border)" }}>
+				<code
+					class="text-xs font-mono truncate"
+					style={{
+						flex: "1",
+						padding: "4px 8px",
+						background: "var(--bg-alt)",
+						"border-radius": "4px",
+						border: "1px solid var(--border)",
+					}}
+				>
 					{endpoint}
 				</code>
 				<Button icon variant="ghost" label={props.copied ? "Copied!" : "Copy endpoint"} onClick={props.onCopy}>
@@ -283,15 +310,30 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 
 				<CardContent class="stack stack-sm" style={{ gap: "12px" }}>
 					<FormField label="Name" id="create-profile-name">
-						<Input id="create-profile-name" value={name()} onInput={e => handleNameChange(e.currentTarget.value)} placeholder="My Public Timeline" />
+						<Input
+							id="create-profile-name"
+							value={name()}
+							onInput={(e) => handleNameChange(e.currentTarget.value)}
+							placeholder="My Public Timeline"
+						/>
 					</FormField>
 
 					<FormField label="Slug (URL path)" id="create-profile-slug">
-						<Input id="create-profile-slug" value={slug()} onInput={e => setSlug(e.currentTarget.value)} placeholder="my-public-timeline" />
+						<Input
+							id="create-profile-slug"
+							value={slug()}
+							onInput={(e) => setSlug(e.currentTarget.value)}
+							placeholder="my-public-timeline"
+						/>
 					</FormField>
 
 					<FormField label="Description (optional)" id="create-profile-description">
-						<Input id="create-profile-description" value={description()} onInput={e => setDescription(e.currentTarget.value)} placeholder="A brief description" />
+						<Input
+							id="create-profile-description"
+							value={description()}
+							onInput={(e) => setDescription(e.currentTarget.value)}
+							placeholder="A brief description"
+						/>
 					</FormField>
 
 					<Show when={error()}>
@@ -360,15 +402,30 @@ function EditProfileForm(props: EditProfileFormProps) {
 
 				<CardContent class="stack stack-sm" style={{ gap: "12px" }}>
 					<FormField label="Name" id="edit-profile-name">
-						<Input id="edit-profile-name" value={name()} onInput={e => setName(e.currentTarget.value)} placeholder="My Public Timeline" />
+						<Input
+							id="edit-profile-name"
+							value={name()}
+							onInput={(e) => setName(e.currentTarget.value)}
+							placeholder="My Public Timeline"
+						/>
 					</FormField>
 
 					<FormField label="Slug (URL path)" id="edit-profile-slug">
-						<Input id="edit-profile-slug" value={slug()} onInput={e => setSlug(e.currentTarget.value)} placeholder="my-public-timeline" />
+						<Input
+							id="edit-profile-slug"
+							value={slug()}
+							onInput={(e) => setSlug(e.currentTarget.value)}
+							placeholder="my-public-timeline"
+						/>
 					</FormField>
 
 					<FormField label="Description (optional)" id="edit-profile-description">
-						<Input id="edit-profile-description" value={description()} onInput={e => setDescription(e.currentTarget.value)} placeholder="A brief description" />
+						<Input
+							id="edit-profile-description"
+							value={description()}
+							onInput={(e) => setDescription(e.currentTarget.value)}
+							placeholder="A brief description"
+						/>
 					</FormField>
 
 					<Show when={error()}>

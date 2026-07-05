@@ -1,7 +1,16 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import path from "node:path";
-import { pipeline_analysis_template, pipeline_approval, pipeline_grant, pipeline_oidc_trust, pipeline_package, pipeline_run, pipeline_stage_event, user } from "@devpad/schema";
+import {
+	pipeline_analysis_template,
+	pipeline_approval,
+	pipeline_grant,
+	pipeline_oidc_trust,
+	pipeline_package,
+	pipeline_run,
+	pipeline_stage_event,
+	user,
+} from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
@@ -19,7 +28,10 @@ beforeAll(async () => {
 	migrateBunDatabase(sqlite, migrations_folder);
 	db = createBunDatabase(sqlite);
 
-	const [u] = await db.insert(user).values({ id: `user_pipeline_schema_test`, name: "Pipeline Schema Tester", email: "pipeline-schema@devpad.test" }).returning();
+	const [u] = await db
+		.insert(user)
+		.values({ id: `user_pipeline_schema_test`, name: "Pipeline Schema Tester", email: "pipeline-schema@devpad.test" })
+		.returning();
 	owner_id = u.id;
 });
 
@@ -29,7 +41,10 @@ afterAll(() => {
 
 describe("pipeline schema round-trips", () => {
 	test("inserts and reads a pipeline_package row", async () => {
-		const [pkg] = await db.insert(pipeline_package).values({ owner_id, name: "anthropic-search", repo_url: "https://github.com/example/anthropic-search" }).returning();
+		const [pkg] = await db
+			.insert(pipeline_package)
+			.values({ owner_id, name: "anthropic-search", repo_url: "https://github.com/example/anthropic-search" })
+			.returning();
 
 		expect(pkg.id).toMatch(/^pipeline-package_/);
 		expect(pkg.name).toBe("anthropic-search");
@@ -82,7 +97,10 @@ describe("pipeline schema round-trips", () => {
 
 	test("inserts and reads a pipeline_stage_event row of kind 'gate_verdict'", async () => {
 		const payload = { type: "manual", verdict: "Pass", reason: "approved by tom" };
-		const [event] = await db.insert(pipeline_stage_event).values({ run_id, stage_name: "onebox", kind: "gate_verdict", payload }).returning();
+		const [event] = await db
+			.insert(pipeline_stage_event)
+			.values({ run_id, stage_name: "onebox", kind: "gate_verdict", payload })
+			.returning();
 
 		expect(event.kind).toBe("gate_verdict");
 		expect(event.id).toMatch(/^pipeline-stage-event_/);
@@ -201,7 +219,11 @@ describe("pipeline schema round-trips", () => {
 		expect(template.name).toBe("default-error-rate");
 		expect(template.id).toMatch(/^pipeline-analysis-template_/);
 
-		const fetched = await db.select().from(pipeline_analysis_template).where(eq(pipeline_analysis_template.id, template.id)).all();
+		const fetched = await db
+			.select()
+			.from(pipeline_analysis_template)
+			.where(eq(pipeline_analysis_template.id, template.id))
+			.all();
 		expect(fetched).toHaveLength(1);
 		expect(fetched[0].query_dsl).toEqual(query_dsl);
 		expect(fetched[0].threshold_dsl).toEqual(threshold_dsl);

@@ -32,7 +32,7 @@ export function ProjectCardGrid({ projects, pipeline_status_map }: Props) {
 	return (
 		<ul style={{ display: "grid", "grid-template-columns": "repeat(auto-fill, minmax(300px, 1fr))", gap: "9px" }}>
 			<For each={sorted_projects}>
-				{project => (
+				{(project) => (
 					<li style={{ display: "flex", width: "100%", height: "100%" }}>
 						<ProjectCard project={project} pipeline_status={pipeline_status_map?.get(project.id)} />
 					</li>

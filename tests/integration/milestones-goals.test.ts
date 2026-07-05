@@ -548,7 +548,12 @@ describe("Milestones & Goals Integration Tests", () => {
 				project_id: testProject.id,
 			};
 
-			const taskResults = await Promise.all([t.client.tasks.create(task1Data), t.client.tasks.create(task2Data), t.client.tasks.create(task3Data), t.client.tasks.create(task4Data)]);
+			const taskResults = await Promise.all([
+				t.client.tasks.create(task1Data),
+				t.client.tasks.create(task2Data),
+				t.client.tasks.create(task3Data),
+				t.client.tasks.create(task4Data),
+			]);
 
 			for (const result of taskResults) {
 				expect(result.ok).toBe(true);

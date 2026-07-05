@@ -13,8 +13,10 @@ import type { PipelineEnv } from "../../src/bindings.ts";
 
 describe("authenticate_request", () => {
 	// In-memory fake verifier for tests
-	const make_fake_verifier = (claimsOrError?: OidcSessionClaims | { code: string; message: string }): SessionVerifier => ({
-		verify: async _token => {
+	const make_fake_verifier = (
+		claimsOrError?: OidcSessionClaims | { code: string; message: string },
+	): SessionVerifier => ({
+		verify: async (_token) => {
 			if (claimsOrError === undefined) {
 				return err({ code: "verification_failed", message: "test: no claims configured" });
 			}

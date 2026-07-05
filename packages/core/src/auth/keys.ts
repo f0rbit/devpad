@@ -4,7 +4,10 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 
-export type KeyError = { kind: "not_found"; resource?: string } | { kind: "conflict"; resource?: string; message?: string } | { kind: "db_error"; message?: string };
+export type KeyError =
+	| { kind: "not_found"; resource?: string }
+	| { kind: "conflict"; resource?: string; message?: string }
+	| { kind: "db_error"; message?: string };
 
 type ApiKeyScope = "devpad" | "blog" | "media" | "pulse" | "all";
 
@@ -13,11 +16,15 @@ const hashKey = async (raw_key: string): Promise<string> => {
 	const data = encoder.encode(raw_key);
 	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 	return Array.from(new Uint8Array(hashBuffer))
-		.map(b => b.toString(16).padStart(2, "0"))
+		.map((b) => b.toString(16).padStart(2, "0"))
 		.join("");
 };
 
-export async function getAPIKeys(db: Database, user_id: string, scope?: ApiKeyScope): Promise<Result<ApiKey[], KeyError>> {
+export async function getAPIKeys(
+	db: Database,
+	user_id: string,
+	scope?: ApiKeyScope,
+): Promise<Result<ApiKey[], KeyError>> {
 	const conditions = [eq(api_keys.user_id, user_id), eq(api_keys.deleted, false)];
 	if (scope) conditions.push(eq(api_keys.scope, scope));
 
@@ -68,7 +75,12 @@ export async function getUserByApiKey(db: Database, raw_key: string): Promise<Re
 
 export type CreatedApiKey = { key: ApiKey; raw_key: string };
 
-export async function createApiKey(db: Database, user_id: string, scope: ApiKeyScope = "devpad", name?: string): Promise<Result<CreatedApiKey, KeyError>> {
+export async function createApiKey(
+	db: Database,
+	user_id: string,
+	scope: ApiKeyScope = "devpad",
+	name?: string,
+): Promise<Result<CreatedApiKey, KeyError>> {
 	const raw_key = `devpad_${crypto.randomUUID()}`;
 	const key_hash = await hashKey(raw_key);
 
@@ -105,7 +117,10 @@ export async function deleteApiKey(db: Database, key_id: string): Promise<Result
 	return ok(undefined);
 }
 
-export async function getUserAndScopeByApiKey(db: Database, raw_key: string): Promise<Result<{ user: User; scope: string }, KeyError>> {
+export async function getUserAndScopeByApiKey(
+	db: Database,
+	raw_key: string,
+): Promise<Result<{ user: User; scope: string }, KeyError>> {
 	const key_hash = await hashKey(raw_key);
 
 	const key_rows = await db
@@ -117,7 +132,8 @@ export async function getUserAndScopeByApiKey(db: Database, raw_key: string): Pr
 	if (key_rows instanceof Error) return err({ kind: "db_error", message: key_rows.message });
 
 	if (!key_rows || key_rows.length === 0) return err({ kind: "not_found" });
-	if (key_rows.length > 1) return err({ kind: "conflict", resource: "api_key", message: "Multiple matching keys found" });
+	if (key_rows.length > 1)
+		return err({ kind: "conflict", resource: "api_key", message: "Multiple matching keys found" });
 
 	const api_key = key_rows[0];
 

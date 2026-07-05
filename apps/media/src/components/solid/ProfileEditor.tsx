@@ -90,19 +90,50 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 			<ModalBody>
 				<form onSubmit={handleSubmit} class="stack gap-md">
 					<FormField label="Name" required>
-						<Input value={name()} onInput={e => setName(e.currentTarget.value)} placeholder="My Profile" maxLength={100} />
+						<Input
+							value={name()}
+							onInput={(e) => setName(e.currentTarget.value)}
+							placeholder="My Profile"
+							maxLength={100}
+						/>
 					</FormField>
 
-					<FormField label="Slug" required error={slugError() ?? undefined} description={slugError() ? undefined : "lowercase letters, numbers, and hyphens only"}>
-						<Input value={slug()} onInput={e => handleSlugInput(e.currentTarget.value)} placeholder="my-profile" maxLength={50} error={!!slugError()} />
+					<FormField
+						label="Slug"
+						required
+						error={slugError() ?? undefined}
+						description={slugError() ? undefined : "lowercase letters, numbers, and hyphens only"}
+					>
+						<Input
+							value={slug()}
+							onInput={(e) => handleSlugInput(e.currentTarget.value)}
+							placeholder="my-profile"
+							maxLength={50}
+							error={!!slugError()}
+						/>
 					</FormField>
 
 					<FormField label="Description">
-						<Textarea value={description()} onInput={e => setDescription(e.currentTarget.value)} placeholder="A brief description of this profile..." rows={3} maxLength={500} />
+						<Textarea
+							value={description()}
+							onInput={(e) => setDescription(e.currentTarget.value)}
+							placeholder="A brief description of this profile..."
+							rows={3}
+							maxLength={500}
+						/>
 					</FormField>
 
 					<Show when={error()}>
-						<div style={{ padding: "0.5rem 0.75rem", background: "var(--item-red)", border: "1px solid var(--item-red-border)", "border-radius": "4px" }}>{error()}</div>
+						<div
+							style={{
+								padding: "0.5rem 0.75rem",
+								background: "var(--item-red)",
+								border: "1px solid var(--item-red-border)",
+								"border-radius": "4px",
+							}}
+						>
+							{error()}
+						</div>
 					</Show>
 				</form>
 			</ModalBody>

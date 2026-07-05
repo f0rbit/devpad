@@ -12,7 +12,12 @@ export type BunServerOptions = {
 	migration_paths?: string[];
 };
 
-const DEFAULT_MIGRATION_PATHS = ["./packages/schema/src/database/drizzle", "./packages/schema/dist/database/drizzle", "../schema/src/database/drizzle", "../schema/dist/database/drizzle"];
+const DEFAULT_MIGRATION_PATHS = [
+	"./packages/schema/src/database/drizzle",
+	"./packages/schema/dist/database/drizzle",
+	"../schema/src/database/drizzle",
+	"../schema/dist/database/drizzle",
+];
 
 export function migrateBunDb(options: { database_file: string; migration_paths?: string[] }): void {
 	const sqlite = new Database(options.database_file);

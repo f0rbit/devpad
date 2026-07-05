@@ -22,7 +22,8 @@ type ScriptState = {
 
 const make_id = (prefix: string): string => `${prefix}_${crypto.randomUUID().slice(0, 8)}`;
 
-const sum_percentages = (strategy: DeploymentStrategy): number => strategy.versions.reduce((acc, v) => acc + v.percentage, 0);
+const sum_percentages = (strategy: DeploymentStrategy): number =>
+	strategy.versions.reduce((acc, v) => acc + v.percentage, 0);
 
 const ensure_script = (scripts: Map<string, ScriptState>, name: string): ScriptState => {
 	const existing = scripts.get(name);
@@ -62,11 +63,13 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			throw new Error(`InMemoryCloudflareProvider.assertVersionHasVars: script ${script_name} not found`);
 		}
 		for (const version of state.versions) {
-			const actual = new Map((version.vars ?? []).map(v => [v.name, v.text]));
+			const actual = new Map((version.vars ?? []).map((v) => [v.name, v.text]));
 			for (const [name, text] of Object.entries(expected)) {
 				const got = actual.get(name);
 				if (got !== text) {
-					throw new Error(`InMemoryCloudflareProvider.assertVersionHasVars: script="${script_name}" version="${version.id}" expected ${name}="${text}" got "${got ?? "<missing>"}"`);
+					throw new Error(
+						`InMemoryCloudflareProvider.assertVersionHasVars: script="${script_name}" version="${version.id}" expected ${name}="${text}" got "${got ?? "<missing>"}"`,
+					);
 				}
 			}
 		}
@@ -86,14 +89,20 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 		}
 		const latest = state.versions[state.versions.length - 1];
 		if (latest.bundle === undefined) {
-			throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" latest version did not record a bundle`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" latest version did not record a bundle`,
+			);
 		}
 		if (latest.bundle.length !== expected_bytes.length) {
-			throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle length mismatch: got ${latest.bundle.length}, expected ${expected_bytes.length}`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle length mismatch: got ${latest.bundle.length}, expected ${expected_bytes.length}`,
+			);
 		}
 		for (let i = 0; i < latest.bundle.length; i++) {
 			if (latest.bundle[i] !== expected_bytes[i]) {
-				throw new Error(`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle byte mismatch at index ${i}`);
+				throw new Error(
+					`InMemoryCloudflareProvider.assertLatestVersionBundle: script="${script_name}" bundle byte mismatch at index ${i}`,
+				);
 			}
 		}
 	}
@@ -104,7 +113,7 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 	 * script or version is unknown.
 	 */
 	private find_version(script_name: string, version_id: string): WorkerVersion | undefined {
-		return this.scripts.get(script_name)?.versions.find(v => v.id === version_id);
+		return this.scripts.get(script_name)?.versions.find((v) => v.id === version_id);
 	}
 
 	/**
@@ -115,15 +124,21 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 	assertVersionHasModules(script_name: string, version_id: string, expected_module_names: string[]): void {
 		const version = this.find_version(script_name, version_id);
 		if (!version) {
-			throw new Error(`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} not found`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} not found`,
+			);
 		}
 		if (!version.modules) {
-			throw new Error(`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} has no modules (not a directory_bundle upload?)`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertVersionHasModules: version ${version_id} on script ${script_name} has no modules (not a directory_bundle upload?)`,
+			);
 		}
-		const got = version.modules.map(m => m.name).sort();
+		const got = version.modules.map((m) => m.name).sort();
 		const expected = [...expected_module_names].sort();
 		if (got.length !== expected.length || got.some((name, i) => name !== expected[i])) {
-			throw new Error(`InMemoryCloudflareProvider.assertVersionHasModules: script="${script_name}" version="${version_id}" expected modules ${JSON.stringify(expected)} got ${JSON.stringify(got)}`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertVersionHasModules: script="${script_name}" version="${version_id}" expected modules ${JSON.stringify(expected)} got ${JSON.stringify(got)}`,
+			);
 		}
 	}
 
@@ -135,15 +150,21 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 	assertVersionHasAssets(script_name: string, version_id: string, expected_asset_paths: string[]): void {
 		const version = this.find_version(script_name, version_id);
 		if (!version) {
-			throw new Error(`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} not found`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} not found`,
+			);
 		}
 		if (!version.assets) {
-			throw new Error(`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} has no assets recorded`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertVersionHasAssets: version ${version_id} on script ${script_name} has no assets recorded`,
+			);
 		}
-		const got = version.assets.map(a => a.path).sort();
+		const got = version.assets.map((a) => a.path).sort();
 		const expected = [...expected_asset_paths].sort();
 		if (got.length !== expected.length || got.some((path, i) => path !== expected[i])) {
-			throw new Error(`InMemoryCloudflareProvider.assertVersionHasAssets: script="${script_name}" version="${version_id}" expected assets ${JSON.stringify(expected)} got ${JSON.stringify(got)}`);
+			throw new Error(
+				`InMemoryCloudflareProvider.assertVersionHasAssets: script="${script_name}" version="${version_id}" expected assets ${JSON.stringify(expected)} got ${JSON.stringify(got)}`,
+			);
 		}
 	}
 
@@ -156,7 +177,9 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			for (const deployment of state.deployments) {
 				const total = sum_percentages(deployment.strategy);
 				if (total !== 100) {
-					throw new Error(`InMemoryCloudflareProvider invariant violation: script="${name}" deployment="${deployment.id}" percentages sum to ${total}, expected 100`);
+					throw new Error(
+						`InMemoryCloudflareProvider invariant violation: script="${name}" deployment="${deployment.id}" percentages sum to ${total}, expected 100`,
+					);
 				}
 			}
 		}
@@ -176,7 +199,9 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 		},
 	};
 
-	private async record_single_file(input: Extract<UploadVersionInput, { kind: "single_file" }>): Promise<Result<WorkerVersion, CloudflareError>> {
+	private async record_single_file(
+		input: Extract<UploadVersionInput, { kind: "single_file" }>,
+	): Promise<Result<WorkerVersion, CloudflareError>> {
 		const state = ensure_script(this.scripts, input.script_name);
 		this.version_counter += 1;
 		const version: WorkerVersion = {
@@ -192,8 +217,10 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 		return ok(version);
 	}
 
-	private async record_directory_bundle(input: Extract<UploadVersionInput, { kind: "directory_bundle" }>): Promise<Result<WorkerVersion, CloudflareError>> {
-		const module_names = new Set(input.modules.map(m => m.name));
+	private async record_directory_bundle(
+		input: Extract<UploadVersionInput, { kind: "directory_bundle" }>,
+	): Promise<Result<WorkerVersion, CloudflareError>> {
+		const module_names = new Set(input.modules.map((m) => m.name));
 		if (!module_names.has(input.main_module)) {
 			return err({
 				code: "validation",
@@ -213,19 +240,19 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 
 		const state = ensure_script(this.scripts, input.script_name);
 		this.version_counter += 1;
-		const modules: ModuleUpload[] = input.modules.map(m => ({
+		const modules: ModuleUpload[] = input.modules.map((m) => ({
 			name: m.name,
 			mime_type: m.mime_type,
 			content: m.content,
 		}));
 		const assets: AssetUpload[] | undefined = input.assets
-			? input.assets.assets.map(a => ({
-				path: a.path,
-				hash: a.hash,
-				size_bytes: a.size_bytes,
-				mime_type: a.mime_type,
-				content: a.content,
-			}))
+			? input.assets.assets.map((a) => ({
+					path: a.path,
+					hash: a.hash,
+					size_bytes: a.size_bytes,
+					mime_type: a.mime_type,
+					content: a.content,
+				}))
 			: undefined;
 		const version: WorkerVersion = {
 			id: make_id("version"),
@@ -254,13 +281,16 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 				});
 			}
 
-			const known_ids = new Set(state.versions.map(v => v.id));
+			const known_ids = new Set(state.versions.map((v) => v.id));
 			for (const v of input.strategy.versions) {
 				if (!known_ids.has(v.version_id)) {
 					return err({ code: "not_found", message: `version ${v.version_id} not uploaded` });
 				}
 				if (v.percentage < 0 || v.percentage > 100) {
-					return err({ code: "validation", message: `version ${v.version_id} percentage out of range: ${v.percentage}` });
+					return err({
+						code: "validation",
+						message: `version ${v.version_id} percentage out of range: ${v.percentage}`,
+					});
 				}
 			}
 
@@ -289,7 +319,10 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 		},
 	};
 
-	async assert_version_key_header_routed(input: { script_name: string; version_key: string }): Promise<Result<{ resolved_version_id: string }, CloudflareError>> {
+	async assert_version_key_header_routed(input: {
+		script_name: string;
+		version_key: string;
+	}): Promise<Result<{ resolved_version_id: string }, CloudflareError>> {
 		const state = this.scripts.get(input.script_name);
 		if (!state) return err({ code: "not_found", message: `script ${input.script_name} not found` });
 		const resolved = state.version_keys.get(input.version_key);

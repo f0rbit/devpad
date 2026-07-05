@@ -16,15 +16,15 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS)
 
 ```json
 {
-  "mcpServers": {
-    "devpad": {
-      "command": "bunx",
-      "args": ["@devpad/mcp"],
-      "env": {
-        "DEVPAD_API_KEY": "your-api-key"
-      }
-    }
-  }
+	"mcpServers": {
+		"devpad": {
+			"command": "bunx",
+			"args": ["@devpad/mcp"],
+			"env": {
+				"DEVPAD_API_KEY": "your-api-key"
+			}
+		}
+	}
 }
 ```
 
@@ -34,15 +34,15 @@ Add to `~/.config/opencode/opencode.json`:
 
 ```json
 {
-  "mcp": {
-    "devpad": {
-      "type": "local",
-      "command": ["bunx", "@devpad/mcp"],
-      "environment": {
-        "DEVPAD_API_KEY": "your-api-key"
-      }
-    }
-  }
+	"mcp": {
+		"devpad": {
+			"type": "local",
+			"command": ["bunx", "@devpad/mcp"],
+			"environment": {
+				"DEVPAD_API_KEY": "your-api-key"
+			}
+		}
+	}
 }
 ```
 
@@ -57,21 +57,23 @@ bunx @devpad/mcp
 
 ## Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DEVPAD_API_KEY` | Yes | Your API key from devpad.tools/account |
-| `DEVPAD_BASE_URL` | No | API base URL (default: https://devpad.tools/api/v1) |
+| Variable          | Required | Description                                         |
+| ----------------- | -------- | --------------------------------------------------- |
+| `DEVPAD_API_KEY`  | Yes      | Your API key from devpad.tools/account              |
+| `DEVPAD_BASE_URL` | No       | API base URL (default: https://devpad.tools/api/v1) |
 
 ## Available Tools
 
 The MCP server exposes 46 tools for managing your devpad data:
 
 ### Projects
+
 - `devpad_projects_list` - List all projects
 - `devpad_projects_get` - Get project by ID or name
 - `devpad_projects_upsert` - Create or update a project
 
 ### Tasks
+
 - `devpad_tasks_list` - List tasks with optional filters
 - `devpad_tasks_get` - Get task by ID
 - `devpad_tasks_upsert` - Create or update a task
@@ -79,17 +81,21 @@ The MCP server exposes 46 tools for managing your devpad data:
 - `devpad_tasks_history` - Get task edit history
 
 ### Milestones
+
 - `devpad_milestones_list` - List milestones
 - `devpad_milestones_upsert` - Create or update a milestone
 
 ### Goals
+
 - `devpad_goals_list` - List goals
 - `devpad_goals_upsert` - Create or update a goal
 
 ### Tags
+
 - `devpad_tags_list` - List all tags
 
 ### GitHub Integration
+
 - `devpad_github_repos` - List linked GitHub repositories
 - `devpad_github_branches` - List branches for a repository
 

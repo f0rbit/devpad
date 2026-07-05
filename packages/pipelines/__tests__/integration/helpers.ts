@@ -15,7 +15,11 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import type { BundleFetchError, BundlePayload, BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
 import type { Decision, EmitError, PulseEvent, StoreError } from "@devpad/core/services/pipelines/gates";
-import { InMemoryCloudflareProvider, InMemoryDurableObjectNamespace, type InMemoryDurableObjectState } from "@devpad/pipeline-fakes";
+import {
+	InMemoryCloudflareProvider,
+	InMemoryDurableObjectNamespace,
+	type InMemoryDurableObjectState,
+} from "@devpad/pipeline-fakes";
 import { extendTemplate, type PipelineTemplate } from "@devpad/pipeline-templates";
 import type { ApprovalDecision, PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
@@ -27,7 +31,13 @@ import { eq } from "drizzle-orm";
 // Import from source modules directly (NOT `../../src/index.ts`) so the
 // test bundle skips `grants-rpc-entrypoint.ts`, which pulls in the
 // `cloudflare:workers` runtime-only module that bun can't resolve.
-import { type LineageProvider, type ManifestProvider, make_routes, type RoutesDeps, type TemplateResolver } from "../../src/routes.ts";
+import {
+	type LineageProvider,
+	type ManifestProvider,
+	make_routes,
+	type RoutesDeps,
+	type TemplateResolver,
+} from "../../src/routes.ts";
 import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
 
 /**
@@ -54,7 +64,11 @@ export class InMemoryPulseEmitter {
 export class InMemoryBundleProvider implements BundleProvider {
 	bytes: Uint8Array = new TextEncoder().encode("export default {};");
 	calls: Array<{ version_set_id: string; package_name: string; environment: "staging" | "production" }> = [];
-	async get(input: { version_set_id: string; package_name: string; environment: "staging" | "production" }): Promise<Result<BundlePayload, BundleFetchError>> {
+	async get(input: {
+		version_set_id: string;
+		package_name: string;
+		environment: "staging" | "production";
+	}): Promise<Result<BundlePayload, BundleFetchError>> {
 		this.calls.push(input);
 		return ok({ kind: "single_file", bytes: this.bytes });
 	}
@@ -98,7 +112,11 @@ export const seed_user = async (db: Database, id = "user_test"): Promise<User> =
 	return rows[0]!;
 };
 
-export const seed_package = async (db: Database, owner_id: string, opts: string | Partial<PipelinePackage> = "pipeline-package_test"): Promise<PipelinePackage> => {
+export const seed_package = async (
+	db: Database,
+	owner_id: string,
+	opts: string | Partial<PipelinePackage> = "pipeline-package_test",
+): Promise<PipelinePackage> => {
 	const overrides = typeof opts === "string" ? { id: opts } : opts;
 	const now = new Date().toISOString();
 	const id = overrides.id ?? "pipeline-package_test";
@@ -130,7 +148,14 @@ export const default_manifest: VersionSetManifest = {
 	infra_plan_ref: "r2://infra/v1",
 };
 
-export const make_run_deps = (db: Database): RunDeps & { cf: InMemoryCloudflareProvider; bundles: InMemoryBundleProvider; pulse: InMemoryPulseEmitter; approvals: InMemoryApprovalStore } => {
+export const make_run_deps = (
+	db: Database,
+): RunDeps & {
+	cf: InMemoryCloudflareProvider;
+	bundles: InMemoryBundleProvider;
+	pulse: InMemoryPulseEmitter;
+	approvals: InMemoryApprovalStore;
+} => {
 	const cf = new InMemoryCloudflareProvider();
 	const bundles = new InMemoryBundleProvider();
 	const pulse = new InMemoryPulseEmitter();
@@ -163,7 +188,11 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 	// Pre-seed v0 on the non-staging script — that's where onebox/wave* and
 	// atomic-prod land. Staging deploys to its own `${name}-staging` script.
 	const script = SCRIPT_NAME_FOR();
-	const v0 = await deps.cf.versions.upload({ kind: "single_file", script_name: script, annotations: { "workers/tag": "vs_v0" } });
+	const v0 = await deps.cf.versions.upload({
+		kind: "single_file",
+		script_name: script,
+		annotations: { "workers/tag": "vs_v0" },
+	});
 	if (!v0.ok) throw new Error("v0 upload failed");
 	await deps.cf.deployments.create({
 		script_name: script,
@@ -184,7 +213,7 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 	});
 
 	const templates: TemplateResolver = { resolve: async (_pkg, _vs) => template };
-	const manifests: ManifestProvider = { get: async id => manifest_for.get(id) ?? null };
+	const manifests: ManifestProvider = { get: async (id) => manifest_for.get(id) ?? null };
 	const lineage: LineageProvider = { previous: async (_pkg, vs) => previous_for.get(vs) ?? null };
 	const do_router = {
 		get(run_id: string) {
@@ -205,7 +234,7 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 		previous_for,
 		app,
 		namespace,
-		fire_alarm: async run_id => {
+		fire_alarm: async (run_id) => {
 			const stub = namespace.get(namespace.idFromName(run_id));
 			await stub.manualFireAlarm();
 		},
@@ -214,7 +243,11 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 
 export type Envelope<T> = { ok: boolean; value?: T; error?: unknown };
 
-export const post_json = async <T = unknown>(app: ReturnType<typeof make_routes>, path: string, body: unknown): Promise<{ status: number; body: Envelope<T> }> => {
+export const post_json = async <T = unknown>(
+	app: ReturnType<typeof make_routes>,
+	path: string,
+	body: unknown,
+): Promise<{ status: number; body: Envelope<T> }> => {
 	const req = new Request(`http://run.local${path}`, {
 		method: "POST",
 		headers: { "content-type": "application/json" },
@@ -224,11 +257,20 @@ export const post_json = async <T = unknown>(app: ReturnType<typeof make_routes>
 	return { status: res.status, body: (await res.json()) as Envelope<T> };
 };
 
-export const get_json = async <T = unknown>(app: ReturnType<typeof make_routes>, path: string): Promise<{ status: number; body: Envelope<T> }> => {
+export const get_json = async <T = unknown>(
+	app: ReturnType<typeof make_routes>,
+	path: string,
+): Promise<{ status: number; body: Envelope<T> }> => {
 	const req = new Request(`http://run.local${path}`, { method: "GET" });
 	const res = await app.fetch(req);
 	return { status: res.status, body: (await res.json()) as Envelope<T> };
 };
 
-export const approve = async (app: ReturnType<typeof make_routes>, run_id: string, stage_name: string, decision: ApprovalDecision, user_id = "user_test", reason?: string) =>
-	post_json(app, `/runs/${run_id}/approve`, { stage_name, decision, user_id, reason });
+export const approve = async (
+	app: ReturnType<typeof make_routes>,
+	run_id: string,
+	stage_name: string,
+	decision: ApprovalDecision,
+	user_id = "user_test",
+	reason?: string,
+) => post_json(app, `/runs/${run_id}/approve`, { stage_name, decision, user_id, reason });

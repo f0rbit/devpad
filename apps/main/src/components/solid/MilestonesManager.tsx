@@ -27,7 +27,7 @@ const formatDate = (dateString?: string | null) => {
 function deriveStatus(milestone: Milestone, goals: Goal[]): StepStatus {
 	if (milestone.finished_at) return "completed";
 	if (goals.length === 0) return "upcoming";
-	return goals.every(g => g.finished_at) ? "completed" : "current";
+	return goals.every((g) => g.finished_at) ? "completed" : "current";
 }
 
 function ProgressCircle(props: { percentage: number; size?: number }) {
@@ -40,7 +40,14 @@ function ProgressCircle(props: { percentage: number; size?: number }) {
 	return (
 		<svg width={size()} height={size()} viewBox={`0 0 ${size()} ${size()}`} style={{ "flex-shrink": "0" }}>
 			<title>{`${Math.round(props.percentage)}% complete`}</title>
-			<circle cx={size() / 2} cy={size() / 2} r={radius()} fill="none" stroke="var(--border)" stroke-width={strokeWidth} />
+			<circle
+				cx={size() / 2}
+				cy={size() / 2}
+				r={radius()}
+				fill="none"
+				stroke="var(--border)"
+				stroke-width={strokeWidth}
+			/>
 			<Show when={props.percentage > 0}>
 				<circle
 					cx={size() / 2}
@@ -74,21 +81,39 @@ export default function MilestonesManager(props: Props) {
 
 	return (
 		<div>
-			<Show when={sortedMilestones().length > 0} fallback={<Empty title="No milestones yet" description="Create your first milestone to start tracking project goals." />}>
+			<Show
+				when={sortedMilestones().length > 0}
+				fallback={
+					<Empty title="No milestones yet" description="Create your first milestone to start tracking project goals." />
+				}
+			>
 				<Stepper orientation="vertical">
 					<For each={sortedMilestones()}>
-						{milestone => {
+						{(milestone) => {
 							const goals = goalsFor(milestone.id);
 							const status = deriveStatus(milestone, goals);
 							return (
 								<Step title="" status={status}>
 									<div class="stack stack-sm">
 										<div class="row row-between" style={{ "align-items": "center" }}>
-											<span style={{ display: "flex", "align-items": "center", gap: "0.25rem", "font-size": "1.1rem", "font-weight": "500" }}>
+											<span
+												style={{
+													display: "flex",
+													"align-items": "center",
+													gap: "0.25rem",
+													"font-size": "1.1rem",
+													"font-weight": "500",
+												}}
+											>
 												{milestone.name}
 												<AiProvenance created_by={milestone.created_by} modified_by={milestone.modified_by} />
 											</span>
-											<a href={`/project/${props.projectSlug}/milestone/${milestone.id}`} class="text-muted" title="Edit milestone" style={{ "flex-shrink": "0", "text-decoration": "none" }}>
+											<a
+												href={`/project/${props.projectSlug}/milestone/${milestone.id}`}
+												class="text-muted"
+												title="Edit milestone"
+												style={{ "flex-shrink": "0", "text-decoration": "none" }}
+											>
 												<Edit size={16} />
 											</a>
 										</div>
@@ -101,7 +126,7 @@ export default function MilestonesManager(props: Props) {
 
 										<div class="stack stack-sm" style={{ "margin-top": "0.25rem" }}>
 											<For each={goals}>
-												{goal => {
+												{(goal) => {
 													const counts = () => (props.goalTaskCounts || {})[goal.id];
 													const pct = () => {
 														const c = counts();
@@ -111,7 +136,12 @@ export default function MilestonesManager(props: Props) {
 														<a
 															class="interactive-row"
 															href={`/project/${props.projectSlug}/milestone/${milestone.id}/goal/${goal.id}`}
-															style={{ "text-decoration": "none", display: "flex", "align-items": "center", "justify-content": "space-between" }}
+															style={{
+																"text-decoration": "none",
+																display: "flex",
+																"align-items": "center",
+																"justify-content": "space-between",
+															}}
 														>
 															<div style={{ display: "flex", "align-items": "center", gap: "0.5rem" }}>
 																<Show when={counts() && counts()!.total > 0}>
@@ -141,7 +171,14 @@ export default function MilestonesManager(props: Props) {
 
 										<a
 											href={`/project/${props.projectSlug}/milestone/${milestone.id}/goal/new`}
-											style={{ display: "flex", "align-items": "center", gap: "0.25rem", color: "var(--text-link)", "font-size": "smaller", "text-decoration": "none" }}
+											style={{
+												display: "flex",
+												"align-items": "center",
+												gap: "0.25rem",
+												color: "var(--text-link)",
+												"font-size": "smaller",
+												"text-decoration": "none",
+											}}
 										>
 											<Plus size={16} /> add goal
 										</a>
@@ -153,7 +190,11 @@ export default function MilestonesManager(props: Props) {
 				</Stepper>
 			</Show>
 
-			<a href={`/project/${props.projectSlug}/milestone/new`} class="row text-sm" style={{ gap: "0.25rem", color: "var(--text-link)", "text-decoration": "none", "margin-top": "1rem" }}>
+			<a
+				href={`/project/${props.projectSlug}/milestone/new`}
+				class="row text-sm"
+				style={{ gap: "0.25rem", color: "var(--text-link)", "text-decoration": "none", "margin-top": "1rem" }}
+			>
 				<Plus size={16} /> create milestone
 			</a>
 		</div>

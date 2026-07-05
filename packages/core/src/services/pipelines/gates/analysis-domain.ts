@@ -36,7 +36,10 @@ export type MetricSnapshot = {
 	sample_count: number;
 };
 
-export type AnalysisVerdict = { verdict: "Pass"; reason?: string } | { verdict: "Fail"; reason: string } | { verdict: "Pending"; reason: string };
+export type AnalysisVerdict =
+	| { verdict: "Pass"; reason?: string }
+	| { verdict: "Fail"; reason: string }
+	| { verdict: "Pending"; reason: string };
 
 export type ParseError = {
 	kind: "parse_error";
@@ -51,9 +54,9 @@ const split_lines = (dsl: string): Array<{ line: number; raw: string }> =>
 	dsl
 		.split("\n")
 		.map((raw, i) => ({ line: i + 1, raw: raw.trim() }))
-		.filter(l => l.raw.length > 0 && !l.raw.startsWith("#"));
+		.filter((l) => l.raw.length > 0 && !l.raw.startsWith("#"));
 
-const find_op = (s: string): ThresholdOp | null => OPS.find(op => s.includes(op)) ?? null;
+const find_op = (s: string): ThresholdOp | null => OPS.find((op) => s.includes(op)) ?? null;
 
 const parse_pending_suffix = (rhs: string): { value_part: string; on_fail: "Fail" | "Pending" } => {
 	const idx = rhs.indexOf(":");
@@ -71,7 +74,12 @@ const parse_pending_suffix = (rhs: string): { value_part: string; on_fail: "Fail
 const parse_line = (line: number, raw: string): Result<Threshold, ParseError> => {
 	const op = find_op(raw);
 	if (!op) {
-		return err({ kind: "parse_error", line, raw, message: `no comparison operator (expected one of ${OPS.join(" ")})` });
+		return err({
+			kind: "parse_error",
+			line,
+			raw,
+			message: `no comparison operator (expected one of ${OPS.join(" ")})`,
+		});
 	}
 	const op_idx = raw.indexOf(op);
 	const metric = raw.slice(0, op_idx).trim();
@@ -119,13 +127,15 @@ const compare = (actual: number, op: ThresholdOp, expected: number): boolean => 
 	}
 };
 
-const format_breach = (t: Threshold, actual: number): string => t.reason_template ?? `${t.metric}=${actual} ${t.op} ${t.value}`;
+const format_breach = (t: Threshold, actual: number): string =>
+	t.reason_template ?? `${t.metric}=${actual} ${t.op} ${t.value}`;
 
 /**
  * Determine whether the analysis window has elapsed.
  * Pure: callers pass `now_ms` from outside.
  */
-export const is_window_open = (now_ms: number, started_at_ms: number, window_duration_ms: number): boolean => now_ms - started_at_ms < window_duration_ms;
+export const is_window_open = (now_ms: number, started_at_ms: number, window_duration_ms: number): boolean =>
+	now_ms - started_at_ms < window_duration_ms;
 
 /**
  * Evaluate a metric snapshot against the parsed thresholds. Pure: returns one
@@ -155,11 +165,11 @@ export function evaluate_metrics_against_thresholds(metrics: MetricSnapshot, thr
 	}
 
 	if (pending.length > 0) {
-		const reasons = pending.map(t => `${t.metric} ${t.op} ${t.value}`).join(", ");
+		const reasons = pending.map((t) => `${t.metric} ${t.op} ${t.value}`).join(", ");
 		return { verdict: "Pending", reason: `pending thresholds breached: ${reasons}` };
 	}
 	if (fails.length > 0) {
-		const reasons = fails.map(f => format_breach(f.t, f.actual)).join(", ");
+		const reasons = fails.map((f) => format_breach(f.t, f.actual)).join(", ");
 		return { verdict: "Fail", reason: reasons };
 	}
 	return { verdict: "Pass" };
@@ -177,7 +187,11 @@ export type SummaryQuery = {
  * Pure construction — no IO. `stage_name` doubles as the pulse `environment`
  * dimension (Phase 2 mapping; tighten in Phase 3 if needed).
  */
-export function build_summary_query(template: { window_ms: number }, run: { package: string; version_id: string }, stage: { name: string }): SummaryQuery {
+export function build_summary_query(
+	template: { window_ms: number },
+	run: { package: string; version_id: string },
+	stage: { name: string },
+): SummaryQuery {
 	return {
 		package: run.package,
 		environment: stage.name,

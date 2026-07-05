@@ -14,7 +14,7 @@ import user from "./user.js";
 
 const app = new Hono<AppContext>();
 
-app.get("/", c => c.json({ version: "1", status: "ok" }));
+app.get("/", (c) => c.json({ version: "1", status: "ok" }));
 
 app.route("/projects", projects);
 app.route("/tasks", tasks);

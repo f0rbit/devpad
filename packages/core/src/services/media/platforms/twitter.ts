@@ -1,4 +1,10 @@
-import { errors, type TweetMedia, type TwitterMetaStore, type TwitterTweet, type TwitterTweetsStore } from "@devpad/schema/media";
+import {
+	errors,
+	type TweetMedia,
+	type TwitterMetaStore,
+	type TwitterTweet,
+	type TwitterTweetsStore,
+} from "@devpad/schema/media";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { Client, type ClientConfig } from "@xdevplatform/xdk";
 import { createLogger } from "../../../utils/logger";
@@ -44,7 +50,14 @@ const mapError = (error: unknown): ProviderError => {
 		const message = "message" in error ? String(error.message) : "Unknown error";
 
 		// Twitter XDK may include rateLimit.reset for 429 responses
-		if (status === 429 && "rateLimit" in error && typeof error.rateLimit === "object" && error.rateLimit !== null && "reset" in error.rateLimit && typeof error.rateLimit.reset === "number") {
+		if (
+			status === 429 &&
+			"rateLimit" in error &&
+			typeof error.rateLimit === "object" &&
+			error.rateLimit !== null &&
+			"reset" in error.rateLimit &&
+			typeof error.rateLimit.reset === "number"
+		) {
 			const retryAfter = Math.max(0, error.rateLimit.reset - Math.floor(Date.now() / 1000));
 			return { kind: "rate_limited", retry_after: retryAfter };
 		}
@@ -156,7 +169,7 @@ const parseTweet = (tweet: XDKTweet): TwitterTweet => ({
 	possibly_sensitive: tweet.possibly_sensitive ?? false,
 	lang: tweet.lang,
 	source: tweet.source,
-	referenced_tweets: tweet.referenced_tweets?.map(ref => ({
+	referenced_tweets: tweet.referenced_tweets?.map((ref) => ({
 		type: ref.type,
 		id: ref.id,
 	})),
@@ -168,7 +181,7 @@ const parseTweet = (tweet: XDKTweet): TwitterTweet => ({
 		: undefined,
 	entities: tweet.entities
 		? {
-				urls: tweet.entities.urls?.map(url => ({
+				urls: tweet.entities.urls?.map((url) => ({
 					start: url.start,
 					end: url.end,
 					url: url.url,
@@ -177,13 +190,13 @@ const parseTweet = (tweet: XDKTweet): TwitterTweet => ({
 					title: url.title,
 					description: url.description,
 				})),
-				mentions: tweet.entities.mentions?.map(m => ({
+				mentions: tweet.entities.mentions?.map((m) => ({
 					start: m.start,
 					end: m.end,
 					username: m.username,
 					id: m.id,
 				})),
-				hashtags: tweet.entities.hashtags?.map(h => ({
+				hashtags: tweet.entities.hashtags?.map((h) => ({
 					start: h.start,
 					end: h.end,
 					tag: h.tag,
@@ -269,7 +282,18 @@ export class TwitterProvider {
 	private async fetchUser(client: Client): Promise<Result<{ userId: string; meta: TwitterMetaStore }, ProviderError>> {
 		try {
 			const response = await client.users.getMe({
-				"user.fields": ["created_at", "description", "profile_image_url", "public_metrics", "verified", "verified_type", "protected", "location", "url", "pinned_tweet_id"],
+				"user.fields": [
+					"created_at",
+					"description",
+					"profile_image_url",
+					"public_metrics",
+					"verified",
+					"verified_type",
+					"protected",
+					"location",
+					"url",
+					"pinned_tweet_id",
+				],
 			});
 
 			const user = response.data as XDKUser | undefined;
@@ -289,7 +313,11 @@ export class TwitterProvider {
 		}
 	}
 
-	private async fetchTweets(client: Client, userId: string, username: string): Promise<Result<TwitterTweetsStore, ProviderError>> {
+	private async fetchTweets(
+		client: Client,
+		userId: string,
+		username: string,
+	): Promise<Result<TwitterTweetsStore, ProviderError>> {
 		log.debug("Fetching tweets for user", { userId, username });
 
 		const exclude: string[] = [];
@@ -300,7 +328,18 @@ export class TwitterProvider {
 			const response = await client.users.getPosts(userId, {
 				max_results: this.config.maxTweetsPerPage,
 				exclude: exclude.length > 0 ? (exclude as ["retweets"] | ["replies"] | ["retweets", "replies"]) : undefined,
-				"tweet.fields": ["created_at", "public_metrics", "entities", "attachments", "referenced_tweets", "in_reply_to_user_id", "conversation_id", "possibly_sensitive", "lang", "source"],
+				"tweet.fields": [
+					"created_at",
+					"public_metrics",
+					"entities",
+					"attachments",
+					"referenced_tweets",
+					"in_reply_to_user_id",
+					"conversation_id",
+					"possibly_sensitive",
+					"lang",
+					"source",
+				],
 				"media.fields": ["type", "url", "preview_image_url", "alt_text", "duration_ms", "width", "height"],
 				expansions: ["attachments.media_keys"],
 			});

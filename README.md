@@ -43,10 +43,10 @@ bun dev:all      # All services (main :3000, worker :3001, blog :3002, media :30
 
 ## Published packages
 
-| Package | Description |
-|---------|-------------|
-| [`@devpad/api`](packages/api) | TypeScript API client |
-| [`@devpad/cli`](packages/cli) | Command-line interface |
+| Package                       | Description             |
+| ----------------------------- | ----------------------- |
+| [`@devpad/api`](packages/api) | TypeScript API client   |
+| [`@devpad/cli`](packages/cli) | Command-line interface  |
 | [`@devpad/mcp`](packages/mcp) | MCP server for AI tools |
 
 ## License

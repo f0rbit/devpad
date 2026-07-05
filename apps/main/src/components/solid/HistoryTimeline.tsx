@@ -67,8 +67,12 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 
 		return (
 			<div class="row row-sm">
-				{renderPageNumbers().map(item => (
-					<a role="button" class={item === page() ? "active" : ""} onClick={() => typeof item === "number" && setPage(item)}>
+				{renderPageNumbers().map((item) => (
+					<a
+						role="button"
+						class={item === page() ? "active" : ""}
+						onClick={() => typeof item === "number" && setPage(item)}
+					>
 						{item === "..." ? "..." : item + 1}
 					</a>
 				))}
@@ -79,7 +83,9 @@ export default function HistoryTimeline(props: { actions: HistoryAction[]; view:
 	return (
 		<div class="stack stack-lg">
 			<div class="timeline-container">
-				<For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>{action => <TimelineItem action={action} view={props.view} />}</For>
+				<For each={actions.slice(page() * pageSize(), page() * pageSize() + pageSize())}>
+					{(action) => <TimelineItem action={action} view={props.view} />}
+				</For>
 			</div>
 			<div>
 				<div class="stack stack-lg">

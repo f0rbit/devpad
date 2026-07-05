@@ -2,7 +2,11 @@ import { z } from "zod";
 
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
-export const SlugSchema = z.string().min(3, "Slug must be at least 3 characters").max(50, "Slug must be at most 50 characters").regex(slugRegex, "Slug must be lowercase alphanumeric with hyphens, no leading/trailing hyphens");
+export const SlugSchema = z
+	.string()
+	.min(3, "Slug must be at least 3 characters")
+	.max(50, "Slug must be at most 50 characters")
+	.regex(slugRegex, "Slug must be lowercase alphanumeric with hyphens, no leading/trailing hyphens");
 
 export const CreateProfileSchema = z.object({
 	slug: SlugSchema,

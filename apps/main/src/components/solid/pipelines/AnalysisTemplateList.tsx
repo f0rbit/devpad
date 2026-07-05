@@ -16,8 +16,8 @@ const threshold_line_count = (raw: unknown): number => {
 	const text = typeof raw === "string" ? raw : String(raw ?? "");
 	return text
 		.split("\n")
-		.map(l => l.trim())
-		.filter(l => l.length > 0 && !l.startsWith("#")).length;
+		.map((l) => l.trim())
+		.filter((l) => l.length > 0 && !l.startsWith("#")).length;
 };
 
 export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
@@ -41,8 +41,8 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 	};
 
 	const handleSaved = (saved: PipelineAnalysisTemplate) => {
-		setTemplates(prev => {
-			const idx = prev.findIndex(t => t.id === saved.id);
+		setTemplates((prev) => {
+			const idx = prev.findIndex((t) => t.id === saved.id);
 			if (idx >= 0) {
 				const next = [...prev];
 				next[idx] = saved;
@@ -61,7 +61,7 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 		if (!result.ok) {
 			setError(result.error.message ?? "Failed to delete template");
 		} else {
-			setTemplates(prev => prev.filter(x => x.id !== t.id));
+			setTemplates((prev) => prev.filter((x) => x.id !== t.id));
 		}
 		setDeletingId(null);
 	};
@@ -81,7 +81,15 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 				</p>
 			</Show>
 
-			<Show when={templates().length > 0} fallback={<Empty title="No analysis templates" description="Analysis gates need a template to evaluate metrics. Create one to gate stage transitions on pulse-driven verdicts." />}>
+			<Show
+				when={templates().length > 0}
+				fallback={
+					<Empty
+						title="No analysis templates"
+						description="Analysis gates need a template to evaluate metrics. Create one to gate stage transitions on pulse-driven verdicts."
+					/>
+				}
+			>
 				<div class="stack stack-sm" data-testid="analysis-template-table">
 					<div
 						class="row"
@@ -102,7 +110,7 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 						<span />
 					</div>
 					<For each={templates()}>
-						{t => (
+						{(t) => (
 							<div
 								class="interactive-row"
 								style={{
@@ -123,7 +131,13 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 									<Button size="sm" variant="ghost" onClick={() => openEdit(t)} data-testid="analysis-template-edit">
 										<Pencil size={14} /> edit
 									</Button>
-									<Button size="sm" variant="ghost" disabled={deletingId() === t.id} onClick={() => handleDelete(t)} data-testid="analysis-template-delete">
+									<Button
+										size="sm"
+										variant="ghost"
+										disabled={deletingId() === t.id}
+										onClick={() => handleDelete(t)}
+										data-testid="analysis-template-delete"
+									>
 										<Trash2 size={14} /> {deletingId() === t.id ? "deleting..." : "delete"}
 									</Button>
 								</div>
@@ -133,7 +147,14 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 				</div>
 			</Show>
 
-			<AnalysisTemplateEditor open={editorOpen()} mode={editorMode()} template={editTarget()} owner_id={props.owner_id} onClose={() => setEditorOpen(false)} onSaved={handleSaved} />
+			<AnalysisTemplateEditor
+				open={editorOpen()}
+				mode={editorMode()}
+				template={editTarget()}
+				owner_id={props.owner_id}
+				onClose={() => setEditorOpen(false)}
+				onSaved={handleSaved}
+			/>
 		</div>
 	);
 }

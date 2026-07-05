@@ -1,8 +1,25 @@
 import type { VersionInfo } from "@devpad/schema/blog/corpus";
-import type { AccessKey, Category, CategoryCreate, Post, PostContent, PostCreate, PostListParams, PostsResponse, PostUpdate } from "@devpad/schema/blog/types";
+import type {
+	AccessKey,
+	Category,
+	CategoryCreate,
+	Post,
+	PostContent,
+	PostCreate,
+	PostListParams,
+	PostsResponse,
+	PostUpdate,
+} from "@devpad/schema/blog/types";
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
-import type { Account, AddFilterInput, CreateProfileInput, Profile, ProfileFilter, UpdateProfileInput } from "@devpad/schema/media/types";
+import type {
+	Account,
+	AddFilterInput,
+	CreateProfileInput,
+	Profile,
+	ProfileFilter,
+	UpdateProfileInput,
+} from "@devpad/schema/media/types";
 import type {
 	ApiKey,
 	GetConfigResult,
@@ -67,7 +84,8 @@ export class ApiClient {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
 		this._api_key = options.api_key ?? "";
-		this._auth_mode = options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : options.api_key ? "key" : "cookie");
+		this._auth_mode =
+			options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : options.api_key ? "key" : "cookie");
 
 		const clientOptions = {
 			base_url,
@@ -112,20 +130,26 @@ export class ApiClient {
 					user: any;
 					session: any;
 					scope?: string;
-				}>("/auth/session")
+				}>("/auth/session"),
 			),
 
 		keys: {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
-			create: (input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" }): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
+			create: (
+				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
+			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
 				const body = typeof input === "string" ? { name: input } : (input ?? {});
-				return wrap(() => this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }));
+				return wrap(() =>
+					this.clients.auth.post<{ message: string; key: { key: ApiKey; raw_key: string } }>("/keys", { body }),
+				);
 			},
 
-			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
+			revoke: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> =>
+				wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
 
-			remove: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> => wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
+			remove: (key_id: string): Promise<ApiResult<{ message: string; success: boolean }>> =>
+				wrap(() => this.clients.auth.delete<{ message: string; success: boolean }>(`/keys/${key_id}`)),
 		},
 	};
 
@@ -136,7 +160,8 @@ export class ApiClient {
 		/**
 		 * List projects with optional filtering
 		 */
-		list: (filters?: { private?: boolean }): Promise<ApiResult<Project[]>> => wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects")),
+		list: (filters?: { private?: boolean }): Promise<ApiResult<Project[]>> =>
+			wrap(() => this.clients.projects.get<Project[]>(filters?.private === false ? "/projects/public" : "/projects")),
 
 		/**
 		 * Get project map
@@ -150,34 +175,41 @@ export class ApiClient {
 						acc[project.id] = project;
 						return acc;
 					},
-					{} as Record<string, Project>
+					{} as Record<string, Project>,
 				);
 			}),
 
 		/**
 		 * Get project by ID
 		 */
-		find: (id: string): Promise<ApiResult<Project | null>> => wrap(() => this.clients.projects.get<any>("/projects", { query: { id } })),
+		find: (id: string): Promise<ApiResult<Project | null>> =>
+			wrap(() => this.clients.projects.get<any>("/projects", { query: { id } })),
 
 		/**
 		 * Get project by name
 		 */
-		getByName: (name: string): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.get<Project>("/projects", { query: { name } })),
+		getByName: (name: string): Promise<ApiResult<Project>> =>
+			wrap(() => this.clients.projects.get<Project>("/projects", { query: { name } })),
 
 		/**
 		 * Get project by ID (throws if not found)
 		 */
-		getById: (id: string): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.get<Project>("/projects", { query: { id } })),
+		getById: (id: string): Promise<ApiResult<Project>> =>
+			wrap(() => this.clients.projects.get<Project>("/projects", { query: { id } })),
 
 		/**
 		 * Create a new project
 		 */
-		create: (data: Omit<UpsertProject, "id">): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data })),
+		create: (data: Omit<UpsertProject, "id">): Promise<ApiResult<Project>> =>
+			wrap(() => this.clients.projects.patch<Project>("/projects", { body: data })),
 
 		/**
 		 * Update an existing project
 		 */
-		update: async (idOrData: string | UpsertProject, changes?: Partial<Omit<UpsertProject, "id" | "project_id">>): Promise<ApiResult<Project>> =>
+		update: async (
+			idOrData: string | UpsertProject,
+			changes?: Partial<Omit<UpsertProject, "id" | "project_id">>,
+		): Promise<ApiResult<Project>> =>
 			wrap(async () => {
 				// Handle backward compatibility: update(data)
 				if (typeof idOrData === "object" && idOrData.id) {
@@ -235,7 +267,7 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.projects.get<GetConfigResult>("/projects/config", {
 						query: { project_id },
-					})
+					}),
 				),
 
 			/**
@@ -245,7 +277,7 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.projects.patch<void>("/projects/save_config", {
 						body: request,
-					})
+					}),
 				),
 		},
 
@@ -279,7 +311,7 @@ export class ApiClient {
 						.get<{
 							updates: any[];
 						}>("/projects/updates", { query: { project_id } })
-						.then(response => response.updates)
+						.then((response) => response.updates),
 				),
 
 			/**
@@ -290,19 +322,21 @@ export class ApiClient {
 					this.clients.projects.post<void>("/projects/scan_status", {
 						query: { project_id },
 						body: data,
-					})
+					}),
 				),
 		},
 
 		/**
 		 * Get project history
 		 */
-		history: (project_id: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`)),
+		history: (project_id: string): Promise<ApiResult<any[]>> =>
+			wrap(() => this.clients.projects.get<any[]>(`/projects/${project_id}/history`)),
 
 		/**
 		 * Legacy methods (keeping for compatibility)
 		 */
-		upsert: (data: UpsertProject): Promise<ApiResult<Project>> => wrap(() => this.clients.projects.patch<Project>("/projects", { body: data })),
+		upsert: (data: UpsertProject): Promise<ApiResult<Project>> =>
+			wrap(() => this.clients.projects.patch<Project>("/projects", { body: data })),
 
 		/**
 		 * Fetch project specification from GitHub
@@ -311,7 +345,7 @@ export class ApiClient {
 			wrap(() =>
 				this.clients.projects.get<string>("/projects/fetch_spec", {
 					query: { project_id },
-				})
+				}),
 			),
 
 		/**
@@ -321,7 +355,7 @@ export class ApiClient {
 			wrap(() =>
 				this.clients.projects.patch<void>("/projects", {
 					body: { ...project, deleted: true },
-				})
+				}),
 			),
 	};
 
@@ -337,7 +371,8 @@ export class ApiClient {
 		/**
 		 * Get milestones by project ID
 		 */
-		getByProject: (project_id: string): Promise<ApiResult<Milestone[]>> => wrap(() => this.clients.milestones.get<any[]>(`/projects/${project_id}/milestones`)),
+		getByProject: (project_id: string): Promise<ApiResult<Milestone[]>> =>
+			wrap(() => this.clients.milestones.get<any[]>(`/projects/${project_id}/milestones`)),
 
 		/**
 		 * Get milestone by ID
@@ -354,8 +389,14 @@ export class ApiClient {
 		/**
 		 * Create new milestone
 		 */
-		create: (data: { project_id: string; name: string; description?: string; target_time?: string; target_version?: string; finished_at?: string }): Promise<ApiResult<Milestone>> =>
-			wrap(() => this.clients.milestones.post<any>("/milestones", { body: data })),
+		create: (data: {
+			project_id: string;
+			name: string;
+			description?: string;
+			target_time?: string;
+			target_version?: string;
+			finished_at?: string;
+		}): Promise<ApiResult<Milestone>> => wrap(() => this.clients.milestones.post<any>("/milestones", { body: data })),
 
 		/**
 		 * Update milestone
@@ -368,7 +409,7 @@ export class ApiClient {
 				target_time?: string;
 				target_version?: string;
 				finished_at?: string | null;
-			}
+			},
 		): Promise<ApiResult<Milestone>> =>
 			wrap(async () => {
 				// Fetch the existing milestone to get required fields
@@ -397,12 +438,14 @@ export class ApiClient {
 		/**
 		 * Delete milestone (soft delete)
 		 */
-		delete: (id: string): Promise<ApiResult<{ success: boolean; message: string }>> => wrap(() => this.clients.milestones.delete<{ success: boolean; message: string }>(`/milestones/${id}`)),
+		delete: (id: string): Promise<ApiResult<{ success: boolean; message: string }>> =>
+			wrap(() => this.clients.milestones.delete<{ success: boolean; message: string }>(`/milestones/${id}`)),
 
 		/**
 		 * Get goals for a milestone
 		 */
-		goals: (id: string): Promise<ApiResult<Goal[]>> => wrap(() => this.clients.milestones.get<any[]>(`/milestones/${id}/goals`)),
+		goals: (id: string): Promise<ApiResult<Goal[]>> =>
+			wrap(() => this.clients.milestones.get<any[]>(`/milestones/${id}/goals`)),
 	};
 
 	/**
@@ -422,12 +465,21 @@ export class ApiClient {
 		/**
 		 * Create new goal
 		 */
-		create: (data: { milestone_id: string; name: string; description?: string; target_time?: string; finished_at?: string }): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<any>("/goals", { body: data })),
+		create: (data: {
+			milestone_id: string;
+			name: string;
+			description?: string;
+			target_time?: string;
+			finished_at?: string;
+		}): Promise<ApiResult<Goal>> => wrap(() => this.clients.goals.post<any>("/goals", { body: data })),
 
 		/**
 		 * Update goal
 		 */
-		update: async (id: string, data: { name?: string; description?: string; target_time?: string; finished_at?: string | null }): Promise<ApiResult<Goal>> =>
+		update: async (
+			id: string,
+			data: { name?: string; description?: string; target_time?: string; finished_at?: string | null },
+		): Promise<ApiResult<Goal>> =>
 			wrap(async () => {
 				// Fetch the existing goal to get required fields
 				const result = await this.goals.find(id);
@@ -454,7 +506,8 @@ export class ApiClient {
 		/**
 		 * Delete goal (soft delete)
 		 */
-		delete: (id: string): Promise<ApiResult<{ success: boolean; message: string }>> => wrap(() => this.clients.goals.delete<{ success: boolean; message: string }>(`/goals/${id}`)),
+		delete: (id: string): Promise<ApiResult<{ success: boolean; message: string }>> =>
+			wrap(() => this.clients.goals.delete<{ success: boolean; message: string }>(`/goals/${id}`)),
 	};
 
 	/**
@@ -475,7 +528,8 @@ export class ApiClient {
 		/**
 		 * Get task by ID
 		 */
-		find: (id: string): Promise<ApiResult<TaskWithDetails | null>> => wrap(() => this.clients.tasks.get<any>("/tasks", { query: { id } })),
+		find: (id: string): Promise<ApiResult<TaskWithDetails | null>> =>
+			wrap(() => this.clients.tasks.get<any>("/tasks", { query: { id } })),
 
 		/**
 		 * Get tasks by project ID
@@ -484,18 +538,22 @@ export class ApiClient {
 			wrap(() =>
 				this.clients.tasks.get<TaskWithDetails[]>(`/tasks`, {
 					query: { project: project_id },
-				})
+				}),
 			),
 
 		/**
 		 * Create a new task
 		 */
-		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data })),
+		create: (data: Omit<UpsertTodo, "id"> & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> =>
+			wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data })),
 
 		/**
 		 * Update an existing task
 		 */
-		update: async (id: string, changes: Partial<Omit<UpsertTodo, "id">> & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> =>
+		update: async (
+			id: string,
+			changes: Partial<Omit<UpsertTodo, "id">> & { tags?: UpsertTag[] },
+		): Promise<ApiResult<TaskWithDetails>> =>
 			wrap(async () => {
 				// Fetch existing task to merge changes
 				const result = await this.tasks.find(id);
@@ -527,12 +585,14 @@ export class ApiClient {
 		/**
 		 * Upsert task (create or update)
 		 */
-		upsert: (data: UpsertTodo & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> => wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data })),
+		upsert: (data: UpsertTodo & { tags?: UpsertTag[] }): Promise<ApiResult<TaskWithDetails>> =>
+			wrap(() => this.clients.tasks.patch<TaskWithDetails>("/tasks", { body: data })),
 
 		/**
 		 * Save tags for tasks
 		 */
-		saveTags: (data: any): Promise<ApiResult<void>> => wrap(() => this.clients.tasks.patch<void>("/tasks/save_tags", { body: data })),
+		saveTags: (data: any): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.tasks.patch<void>("/tasks/save_tags", { body: data })),
 
 		/**
 		 * Delete task (soft delete)
@@ -541,7 +601,7 @@ export class ApiClient {
 			wrap(() =>
 				this.clients.tasks.patch<void>("/tasks", {
 					body: { ...task.task, deleted: true },
-				})
+				}),
 			),
 
 		/**
@@ -551,7 +611,8 @@ export class ApiClient {
 			/**
 			 * Get task history by task ID
 			 */
-			get: (task_id: string): Promise<ApiResult<HistoryAction[]>> => wrap(() => this.clients.tasks.get<HistoryAction[]>(`/tasks/history/${task_id}`)),
+			get: (task_id: string): Promise<ApiResult<HistoryAction[]>> =>
+				wrap(() => this.clients.tasks.get<HistoryAction[]>(`/tasks/history/${task_id}`)),
 		},
 	};
 
@@ -562,7 +623,8 @@ export class ApiClient {
 		/**
 		 * List tags for authenticated user
 		 */
-		list: (): Promise<ApiResult<TagWithTypedColor[]>> => wrap(() => this.clients.tags.get<TagWithTypedColor[]>("/tags")),
+		list: (): Promise<ApiResult<TagWithTypedColor[]>> =>
+			wrap(() => this.clients.tags.get<TagWithTypedColor[]>("/tags")),
 	};
 
 	/**
@@ -577,7 +639,8 @@ export class ApiClient {
 		/**
 		 * List branches for a GitHub repository
 		 */
-		branches: (owner: string, repo: string): Promise<ApiResult<any[]>> => wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`)),
+		branches: (owner: string, repo: string): Promise<ApiResult<any[]>> =>
+			wrap(() => this.clients.github.get<any[]>(`/repos/${owner}/${repo}/branches`)),
 	};
 
 	public readonly blog = {
@@ -596,61 +659,79 @@ export class ApiClient {
 					return this.clients.blog.get<PostsResponse>("/blog/posts", Object.keys(query).length ? { query } : {});
 				}),
 
-			getBySlug: (slug: string): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.get<Post>(`/blog/posts/${slug}`)),
+			getBySlug: (slug: string): Promise<ApiResult<Post>> =>
+				wrap(() => this.clients.blog.get<Post>(`/blog/posts/${slug}`)),
 
-			create: (data: PostCreate): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.post<Post>("/blog/posts", { body: data })),
+			create: (data: PostCreate): Promise<ApiResult<Post>> =>
+				wrap(() => this.clients.blog.post<Post>("/blog/posts", { body: data })),
 
-			update: (uuid: string, data: PostUpdate): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.put<Post>(`/blog/posts/${uuid}`, { body: data })),
+			update: (uuid: string, data: PostUpdate): Promise<ApiResult<Post>> =>
+				wrap(() => this.clients.blog.put<Post>(`/blog/posts/${uuid}`, { body: data })),
 
-			delete: (uuid: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.blog.delete<{ success: boolean }>(`/blog/posts/${uuid}`)),
+			delete: (uuid: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() => this.clients.blog.delete<{ success: boolean }>(`/blog/posts/${uuid}`)),
 
-			versions: (uuid: string): Promise<ApiResult<{ versions: VersionInfo[] }>> => wrap(() => this.clients.blog.get<{ versions: VersionInfo[] }>(`/blog/posts/${uuid}/versions`)),
+			versions: (uuid: string): Promise<ApiResult<{ versions: VersionInfo[] }>> =>
+				wrap(() => this.clients.blog.get<{ versions: VersionInfo[] }>(`/blog/posts/${uuid}/versions`)),
 
-			version: (uuid: string, hash: string): Promise<ApiResult<PostContent>> => wrap(() => this.clients.blog.get<PostContent>(`/blog/posts/${uuid}/version/${hash}`)),
+			version: (uuid: string, hash: string): Promise<ApiResult<PostContent>> =>
+				wrap(() => this.clients.blog.get<PostContent>(`/blog/posts/${uuid}/version/${hash}`)),
 
-			restore: (uuid: string, hash: string): Promise<ApiResult<Post>> => wrap(() => this.clients.blog.post<Post>(`/blog/posts/${uuid}/restore/${hash}`)),
+			restore: (uuid: string, hash: string): Promise<ApiResult<Post>> =>
+				wrap(() => this.clients.blog.post<Post>(`/blog/posts/${uuid}/restore/${hash}`)),
 		},
 
 		tags: {
-			list: (): Promise<ApiResult<{ tags: TagWithCount[] }>> => wrap(() => this.clients.blog.get<{ tags: TagWithCount[] }>("/blog/tags")),
+			list: (): Promise<ApiResult<{ tags: TagWithCount[] }>> =>
+				wrap(() => this.clients.blog.get<{ tags: TagWithCount[] }>("/blog/tags")),
 
-			getForPost: (uuid: string): Promise<ApiResult<{ tags: string[] }>> => wrap(() => this.clients.blog.get<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`)),
+			getForPost: (uuid: string): Promise<ApiResult<{ tags: string[] }>> =>
+				wrap(() => this.clients.blog.get<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`)),
 
-			setForPost: (uuid: string, tags: string[]): Promise<ApiResult<{ tags: string[] }>> => wrap(() => this.clients.blog.put<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
+			setForPost: (uuid: string, tags: string[]): Promise<ApiResult<{ tags: string[] }>> =>
+				wrap(() => this.clients.blog.put<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
 
-			addToPost: (uuid: string, tags: string[]): Promise<ApiResult<{ tags: string[] }>> => wrap(() => this.clients.blog.post<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
+			addToPost: (uuid: string, tags: string[]): Promise<ApiResult<{ tags: string[] }>> =>
+				wrap(() => this.clients.blog.post<{ tags: string[] }>(`/blog/tags/posts/${uuid}/tags`, { body: { tags } })),
 
-			removeFromPost: (uuid: string, tag: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete<void>(`/blog/tags/posts/${uuid}/tags/${tag}`)),
+			removeFromPost: (uuid: string, tag: string): Promise<ApiResult<void>> =>
+				wrap(() => this.clients.blog.delete<void>(`/blog/tags/posts/${uuid}/tags/${tag}`)),
 		},
 
 		categories: {
-			tree: (): Promise<ApiResult<{ categories: Category[] }>> => wrap(() => this.clients.blog.get<{ categories: Category[] }>("/blog/categories")),
+			tree: (): Promise<ApiResult<{ categories: Category[] }>> =>
+				wrap(() => this.clients.blog.get<{ categories: Category[] }>("/blog/categories")),
 
-			create: (data: CategoryCreate): Promise<ApiResult<Category>> => wrap(() => this.clients.blog.post<Category>("/blog/categories", { body: data })),
+			create: (data: CategoryCreate): Promise<ApiResult<Category>> =>
+				wrap(() => this.clients.blog.post<Category>("/blog/categories", { body: data })),
 
 			update: (name: string, data: { name: string }): Promise<ApiResult<Category>> =>
 				wrap(() =>
 					this.clients.blog.put<Category>(`/blog/categories/${name}`, {
 						body: data,
-					})
+					}),
 				),
 
-			delete: (name: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete<void>(`/blog/categories/${name}`)),
+			delete: (name: string): Promise<ApiResult<void>> =>
+				wrap(() => this.clients.blog.delete<void>(`/blog/categories/${name}`)),
 		},
 
 		tokens: {
-			list: (): Promise<ApiResult<{ tokens: SanitizedToken[] }>> => wrap(() => this.clients.blog.get<{ tokens: SanitizedToken[] }>("/blog/tokens")),
+			list: (): Promise<ApiResult<{ tokens: SanitizedToken[] }>> =>
+				wrap(() => this.clients.blog.get<{ tokens: SanitizedToken[] }>("/blog/tokens")),
 
-			create: (data: AccessKeyCreate): Promise<ApiResult<CreatedToken>> => wrap(() => this.clients.blog.post<CreatedToken>("/blog/tokens", { body: data })),
+			create: (data: AccessKeyCreate): Promise<ApiResult<CreatedToken>> =>
+				wrap(() => this.clients.blog.post<CreatedToken>("/blog/tokens", { body: data })),
 
 			update: (id: string, data: AccessKeyUpdate): Promise<ApiResult<AccessKey>> =>
 				wrap(() =>
 					this.clients.blog.put<AccessKey>(`/blog/tokens/${id}`, {
 						body: data,
-					})
+					}),
 				),
 
-			delete: (id: string): Promise<ApiResult<void>> => wrap(() => this.clients.blog.delete<void>(`/blog/tokens/${id}`)),
+			delete: (id: string): Promise<ApiResult<void>> =>
+				wrap(() => this.clients.blog.delete<void>(`/blog/tokens/${id}`)),
 		},
 	};
 
@@ -662,13 +743,16 @@ export class ApiClient {
 					return res.profiles;
 				}),
 
-			create: (data: CreateProfileInput): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.post<Profile>("/profiles", { body: data })),
+			create: (data: CreateProfileInput): Promise<ApiResult<Profile>> =>
+				wrap(() => this.clients.media.post<Profile>("/profiles", { body: data })),
 
 			get: (id: string): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.get<Profile>(`/profiles/${id}`)),
 
-			update: (id: string, data: UpdateProfileInput): Promise<ApiResult<Profile>> => wrap(() => this.clients.media.patch<Profile>(`/profiles/${id}`, { body: data })),
+			update: (id: string, data: UpdateProfileInput): Promise<ApiResult<Profile>> =>
+				wrap(() => this.clients.media.patch<Profile>(`/profiles/${id}`, { body: data })),
 
-			delete: (id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/profiles/${id}`)),
+			delete: (id: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() => this.clients.media.delete<{ success: boolean }>(`/profiles/${id}`)),
 
 			filters: {
 				list: (profile_id: string): Promise<ApiResult<ProfileFilter[]>> =>
@@ -679,9 +763,11 @@ export class ApiClient {
 						return res.filters;
 					}),
 
-				add: (profile_id: string, data: AddFilterInput): Promise<ApiResult<ProfileFilter>> => wrap(() => this.clients.media.post<ProfileFilter>(`/profiles/${profile_id}/filters`, { body: data })),
+				add: (profile_id: string, data: AddFilterInput): Promise<ApiResult<ProfileFilter>> =>
+					wrap(() => this.clients.media.post<ProfileFilter>(`/profiles/${profile_id}/filters`, { body: data })),
 
-				remove: (profile_id: string, filter_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.media.delete<void>(`/profiles/${profile_id}/filters/${filter_id}`)),
+				remove: (profile_id: string, filter_id: string): Promise<ApiResult<void>> =>
+					wrap(() => this.clients.media.delete<void>(`/profiles/${profile_id}/filters/${filter_id}`)),
 			},
 
 			timeline: (slug: string, params?: { limit?: number; before?: string }): Promise<ApiResult<Timeline>> =>
@@ -689,7 +775,10 @@ export class ApiClient {
 					const query: Record<string, string> = {};
 					if (params?.limit) query.limit = String(params.limit);
 					if (params?.before) query.before = params.before;
-					return this.clients.media.get<Timeline>(`/profiles/${slug}/timeline`, Object.keys(query).length ? { query } : {});
+					return this.clients.media.get<Timeline>(
+						`/profiles/${slug}/timeline`,
+						Object.keys(query).length ? { query } : {},
+					);
 				}),
 		},
 
@@ -702,12 +791,21 @@ export class ApiClient {
 					return res.accounts;
 				}),
 
-			create: (data: { profile_id: string; platform: string; access_token: string; refresh_token?: string; platform_user_id?: string; platform_username?: string; token_expires_at?: string }): Promise<ApiResult<Account>> =>
-				wrap(() => this.clients.media.post<Account>("/connections", { body: data })),
+			create: (data: {
+				profile_id: string;
+				platform: string;
+				access_token: string;
+				refresh_token?: string;
+				platform_user_id?: string;
+				platform_username?: string;
+				token_expires_at?: string;
+			}): Promise<ApiResult<Account>> => wrap(() => this.clients.media.post<Account>("/connections", { body: data })),
 
-			delete: (account_id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/connections/${account_id}`)),
+			delete: (account_id: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() => this.clients.media.delete<{ success: boolean }>(`/connections/${account_id}`)),
 
-			refresh: (account_id: string): Promise<ApiResult<any>> => wrap(() => this.clients.media.post<any>(`/connections/${account_id}/refresh`)),
+			refresh: (account_id: string): Promise<ApiResult<any>> =>
+				wrap(() => this.clients.media.post<any>(`/connections/${account_id}/refresh`)),
 
 			refreshAll: (): Promise<ApiResult<any>> => wrap(() => this.clients.media.post<any>("/connections/refresh-all")),
 
@@ -715,17 +813,18 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.media.patch<Account>(`/connections/${account_id}`, {
 						body: { is_active },
-					})
+					}),
 				),
 
 			settings: {
-				get: (account_id: string): Promise<ApiResult<PlatformSettings>> => wrap(() => this.clients.media.get<PlatformSettings>(`/connections/${account_id}/settings`)),
+				get: (account_id: string): Promise<ApiResult<PlatformSettings>> =>
+					wrap(() => this.clients.media.get<PlatformSettings>(`/connections/${account_id}/settings`)),
 
 				update: (account_id: string, settings: Record<string, unknown>): Promise<ApiResult<any>> =>
 					wrap(() =>
 						this.clients.media.put<any>(`/connections/${account_id}/settings`, {
 							body: { settings },
-						})
+						}),
 					),
 			},
 
@@ -748,7 +847,7 @@ export class ApiClient {
 		credentials: {
 			check: (
 				platform: string,
-				profile_id: string
+				profile_id: string,
 			): Promise<
 				ApiResult<{
 					exists: boolean;
@@ -761,7 +860,7 @@ export class ApiClient {
 						exists: boolean;
 						isVerified: boolean;
 						clientId: string | null;
-					}>(`/credentials/${platform}`, { query: { profile_id } })
+					}>(`/credentials/${platform}`, { query: { profile_id } }),
 				),
 
 			save: (
@@ -772,10 +871,16 @@ export class ApiClient {
 					client_secret: string;
 					redirect_uri?: string;
 					reddit_username?: string;
-				}
-			): Promise<ApiResult<{ success: boolean; id: string }>> => wrap(() => this.clients.media.post<{ success: boolean; id: string }>(`/credentials/${platform}`, { body: data })),
+				},
+			): Promise<ApiResult<{ success: boolean; id: string }>> =>
+				wrap(() =>
+					this.clients.media.post<{ success: boolean; id: string }>(`/credentials/${platform}`, { body: data }),
+				),
 
-			delete: (platform: string, profile_id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.media.delete<{ success: boolean }>(`/credentials/${platform}`, { query: { profile_id } })),
+			delete: (platform: string, profile_id: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() =>
+					this.clients.media.delete<{ success: boolean }>(`/credentials/${platform}`, { query: { profile_id } }),
+				),
 		},
 
 		timeline: {
@@ -791,7 +896,7 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.media.get<any>(`/timeline/${user_id}/raw/${platform}`, {
 						query: { account_id },
-					})
+					}),
 				),
 		},
 	};
@@ -805,7 +910,10 @@ export class ApiClient {
 				const query: Record<string, string> = {};
 				if (options?.limit) query.limit = String(options.limit);
 				if (options?.since) query.since = options.since;
-				return this.clients.projects.get<{ sessions: any[] }>("/activity/ai", Object.keys(query).length ? { query } : {});
+				return this.clients.projects.get<{ sessions: any[] }>(
+					"/activity/ai",
+					Object.keys(query).length ? { query } : {},
+				);
 			}),
 	};
 
@@ -818,7 +926,8 @@ export class ApiClient {
 		/**
 		 * Update user preferences
 		 */
-		preferences: (data: { id: string; task_view: string }): Promise<ApiResult<any>> => wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data })),
+		preferences: (data: { id: string; task_view: string }): Promise<ApiResult<any>> =>
+			wrap(() => this.clients.auth.patch<any>("/user/preferences", { body: data })),
 	};
 
 	/**
@@ -835,17 +944,32 @@ export class ApiClient {
 		/**
 		 * Get summary analytics for a project
 		 */
-		summary: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number } }): Promise<ApiResult<any>> =>
+		summary: (input: {
+			project_id: string;
+			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
+		}): Promise<ApiResult<any>> =>
 			wrap(() =>
 				this.clients.pulse.get<any>("/summary/:project_id".replace(":project_id", input.project_id), {
-					query: typeof input.range === "string" ? { range: input.range } : { from: String(input.range.from), to: String(input.range.to) },
-				})
+					query:
+						typeof input.range === "string"
+							? { range: input.range }
+							: { from: String(input.range.from), to: String(input.range.to) },
+				}),
 			),
 
 		/**
 		 * List events for a project
 		 */
-		events: (input: { project_id: string; name?: string; level?: string; ts_from?: number; ts_to?: number; search?: string; limit?: number; cursor?: string }): Promise<ApiResult<any>> =>
+		events: (input: {
+			project_id: string;
+			name?: string;
+			level?: string;
+			ts_from?: number;
+			ts_to?: number;
+			search?: string;
+			limit?: number;
+			cursor?: string;
+		}): Promise<ApiResult<any>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (input.name) query.name = input.name;
@@ -861,7 +985,11 @@ export class ApiClient {
 		/**
 		 * List error issues for a project
 		 */
-		errors: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number }; group_by_fingerprint?: boolean }): Promise<ApiResult<any>> =>
+		errors: (input: {
+			project_id: string;
+			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
+			group_by_fingerprint?: boolean;
+		}): Promise<ApiResult<any>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
@@ -877,7 +1005,12 @@ export class ApiClient {
 		/**
 		 * List logs for a project
 		 */
-		logs: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number }; level?: string; search?: string }): Promise<ApiResult<any>> =>
+		logs: (input: {
+			project_id: string;
+			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
+			level?: string;
+			search?: string;
+		}): Promise<ApiResult<any>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
@@ -894,7 +1027,12 @@ export class ApiClient {
 		/**
 		 * Get latency metrics for a project
 		 */
-		latency: (input: { project_id: string; range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number }; route?: string; percentiles?: number[] }): Promise<ApiResult<any>> =>
+		latency: (input: {
+			project_id: string;
+			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
+			route?: string;
+			percentiles?: number[];
+		}): Promise<ApiResult<any>> =>
 			wrap(() => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
@@ -915,12 +1053,19 @@ export class ApiClient {
 			/**
 			 * List subscriptions for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> => wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
+				wrap(() => this.clients.pulse.get<any[]>("/admin/subs", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a subscription
 			 */
-			create: (input: { project_id: string; name: string; filter: any; channel: any; cooldown_seconds?: number }): Promise<ApiResult<{ id: string }>> =>
+			create: (input: {
+				project_id: string;
+				name: string;
+				filter: any;
+				channel: any;
+				cooldown_seconds?: number;
+			}): Promise<ApiResult<{ id: string }>> =>
 				wrap(() =>
 					this.clients.pulse.post<{ id: string }>("/admin/subs", {
 						body: {
@@ -930,7 +1075,7 @@ export class ApiClient {
 							channel: input.channel,
 							cooldown_seconds: input.cooldown_seconds,
 						},
-					})
+					}),
 				),
 
 			/**
@@ -941,12 +1086,16 @@ export class ApiClient {
 			/**
 			 * Update a subscription
 			 */
-			update: (id: string, patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
+			update: (
+				id: string,
+				patch: Partial<{ name: string; filter: any; channel: any; cooldown_seconds: number }>,
+			): Promise<ApiResult<any>> => wrap(() => this.clients.pulse.patch<any>(`/admin/subs/${id}`, { body: patch })),
 
 			/**
 			 * Delete a subscription
 			 */
-			delete: (id: string): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/subs/${id}`)),
+			delete: (id: string): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/subs/${id}`)),
 		},
 
 		/**
@@ -956,12 +1105,17 @@ export class ApiClient {
 			/**
 			 * List ingest keys for a project
 			 */
-			list: (input: { project_id: string }): Promise<ApiResult<any[]>> => wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
+			list: (input: { project_id: string }): Promise<ApiResult<any[]>> =>
+				wrap(() => this.clients.pulse.get<any[]>("/admin/keys", { query: { project_id: input.project_id } })),
 
 			/**
 			 * Create a new ingest key (returns plaintext only once)
 			 */
-			create: (input: { project_id: string; name?: string; rate_limit_per_min?: number }): Promise<ApiResult<{ id: string; plaintext: string; project_id: string }>> =>
+			create: (input: {
+				project_id: string;
+				name?: string;
+				rate_limit_per_min?: number;
+			}): Promise<ApiResult<{ id: string; plaintext: string; project_id: string }>> =>
 				wrap(() =>
 					this.clients.pulse.post<{ id: string; plaintext: string; project_id: string }>("/admin/keys", {
 						body: {
@@ -969,13 +1123,18 @@ export class ApiClient {
 							name: input.name,
 							rate_limit_per_min: input.rate_limit_per_min,
 						},
-					})
+					}),
 				),
 
 			/**
 			 * Delete an ingest key
 			 */
-			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> => wrap(() => this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, { query: { project_id: input.project_id } })),
+			delete: (id: string, input: { project_id: string }): Promise<ApiResult<{ success: boolean }>> =>
+				wrap(() =>
+					this.clients.pulse.delete<{ success: boolean }>(`/admin/keys/${id}`, {
+						query: { project_id: input.project_id },
+					}),
+				),
 		},
 	};
 
@@ -995,10 +1154,18 @@ export class ApiClient {
 		 * Cache: `public, max-age=30`.
 		 */
 		dashboard: {
-			get: (input: { project_id: string; window_ms?: number }): Promise<ApiResult<DashboardResponse & { pulse: Record<string, unknown> | null }>> => {
+			get: (input: {
+				project_id: string;
+				window_ms?: number;
+			}): Promise<ApiResult<DashboardResponse & { pulse: Record<string, unknown> | null }>> => {
 				const query: Record<string, string> = { project_id: input.project_id };
 				if (input.window_ms !== undefined) query.window_ms = String(input.window_ms);
-				return wrap(() => this.clients.pipelines.get<DashboardResponse & { pulse: Record<string, unknown> | null }>("/pipelines/dashboard", { query }));
+				return wrap(() =>
+					this.clients.pipelines.get<DashboardResponse & { pulse: Record<string, unknown> | null }>(
+						"/pipelines/dashboard",
+						{ query },
+					),
+				);
 			},
 		},
 
@@ -1012,43 +1179,54 @@ export class ApiClient {
 			if (filter?.package_id !== undefined) query.package_id = filter.package_id;
 			if (filter?.status !== undefined) query.status = filter.status;
 			if (filter?.limit !== undefined) query.limit = String(filter.limit);
-			return wrap(() => this.clients.pipelines.get<PipelineRun[]>("/runs", Object.keys(query).length > 0 ? { query } : undefined));
+			return wrap(() =>
+				this.clients.pipelines.get<PipelineRun[]>("/runs", Object.keys(query).length > 0 ? { query } : undefined),
+			);
 		},
 
 		/**
 		 * Get a pipeline run by ID
 		 */
-		get: (run_id: string): Promise<ApiResult<PipelineRun>> => wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
+		get: (run_id: string): Promise<ApiResult<PipelineRun>> =>
+			wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
 
 		/**
 		 * Create a new pipeline run
 		 */
-		create: (input: { package_id: string; version_set_id: string }): Promise<ApiResult<{ run_id: string; status: string }>> =>
+		create: (input: {
+			package_id: string;
+			version_set_id: string;
+		}): Promise<ApiResult<{ run_id: string; status: string }>> =>
 			wrap(() =>
 				this.clients.pipelines.post<{ run_id: string; status: string }>("/runs", {
 					body: input,
-				})
+				}),
 			),
 
 		/**
 		 * Approve a stage in a pipeline run
 		 */
-		approve: (run_id: string, input: { stage_name: string; decision: "approved" | "denied"; user_id: string; reason?: string }): Promise<ApiResult<void>> =>
+		approve: (
+			run_id: string,
+			input: { stage_name: string; decision: "approved" | "denied"; user_id: string; reason?: string },
+		): Promise<ApiResult<void>> =>
 			wrap(() =>
 				this.clients.pipelines.post<void>(`/runs/${run_id}/approve`, {
 					body: input,
-				})
+				}),
 			),
 
 		/**
 		 * Cancel a pipeline run
 		 */
-		cancel: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
+		cancel: (run_id: string): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/cancel`, { body: {} })),
 
 		/**
 		 * Rollback a pipeline run
 		 */
-		rollback: (run_id: string): Promise<ApiResult<void>> => wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
+		rollback: (run_id: string): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.pipelines.post<void>(`/runs/${run_id}/rollback`, { body: {} })),
 
 		/**
 		 * Stage-event namespace — Phase 2.C webhook ingestion + read-back.
@@ -1063,10 +1241,18 @@ export class ApiClient {
 		 * `list` is read-only and returns the run's events newest-first.
 		 */
 		events: {
-			ingest: (run_id: string, input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string }): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
-				wrap(() => this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, { body: input })),
+			ingest: (
+				run_id: string,
+				input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string },
+			): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
+				wrap(() =>
+					this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, {
+						body: input,
+					}),
+				),
 
-			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> => wrap(() => this.clients.pipelines.get<PipelineStageEvent[]>(`/runs/${run_id}/events`)),
+			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> =>
+				wrap(() => this.clients.pipelines.get<PipelineStageEvent[]>(`/runs/${run_id}/events`)),
 		},
 
 		/**
@@ -1080,7 +1266,7 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.pipelines.get<PipelineGrant[]>("/grants", {
 						query: package_id ? { package_id } : {},
-					})
+					}),
 				),
 
 			/**
@@ -1090,7 +1276,7 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.pipelines.post<PipelineGrant>(`/grants/${grant_id}/approve`, {
 						body: { user_id },
-					})
+					}),
 				),
 
 			/**
@@ -1100,7 +1286,7 @@ export class ApiClient {
 				wrap(() =>
 					this.clients.pipelines.post<{ success: boolean }>(`/grants/${grant_id}/deny`, {
 						body: { user_id, reason },
-					})
+					}),
 				),
 		},
 
@@ -1117,34 +1303,56 @@ export class ApiClient {
 			list: (filter?: { project_id?: string }): Promise<ApiResult<PipelinePackage[]>> => {
 				const query: Record<string, string> = {};
 				if (filter?.project_id !== undefined) query.project_id = filter.project_id;
-				return wrap(() => this.clients.pipelines.get<PipelinePackage[]>("/packages", Object.keys(query).length > 0 ? { query } : undefined));
+				return wrap(() =>
+					this.clients.pipelines.get<PipelinePackage[]>(
+						"/packages",
+						Object.keys(query).length > 0 ? { query } : undefined,
+					),
+				);
 			},
 
 			/**
 			 * Get a single package by id
 			 */
-			get: (package_id: string): Promise<ApiResult<PipelinePackage>> => wrap(() => this.clients.pipelines.get<PipelinePackage>(`/packages/${package_id}`)),
+			get: (package_id: string): Promise<ApiResult<PipelinePackage>> =>
+				wrap(() => this.clients.pipelines.get<PipelinePackage>(`/packages/${package_id}`)),
 
 			/**
 			 * Register a new pipeline package. `id` is canonically the same as
 			 * `name` per existing convention but is supplied explicitly so the
 			 * orchestrator can disambiguate renames without conflicts.
 			 */
-			create: (input: { id: string; name: string; owner_id: string; repo_url?: string | null; project_id?: string | null; default_template_ref?: string | null }): Promise<ApiResult<PipelinePackage>> =>
+			create: (input: {
+				id: string;
+				name: string;
+				owner_id: string;
+				repo_url?: string | null;
+				project_id?: string | null;
+				default_template_ref?: string | null;
+			}): Promise<ApiResult<PipelinePackage>> =>
 				wrap(() => this.clients.pipelines.post<PipelinePackage>("/packages", { body: input })),
 
 			/**
 			 * Partially update a package row. Missing keys preserve existing
 			 * values; explicit `null` clears the field.
 			 */
-			update: (package_id: string, input: { repo_url?: string | null; project_id?: string | null; default_template_ref?: string | null; script_name_overrides?: Record<string, string> | null }): Promise<ApiResult<PipelinePackage>> =>
+			update: (
+				package_id: string,
+				input: {
+					repo_url?: string | null;
+					project_id?: string | null;
+					default_template_ref?: string | null;
+					script_name_overrides?: Record<string, string> | null;
+				},
+			): Promise<ApiResult<PipelinePackage>> =>
 				wrap(() => this.clients.pipelines.patch<PipelinePackage>(`/packages/${package_id}`, { body: input })),
 
 			/**
 			 * Remove a package. Refuses (409) if pipeline_run rows still
 			 * reference the package — clean up runs first.
 			 */
-			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
+			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> =>
+				wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
 		},
 
 		/**
@@ -1159,14 +1367,23 @@ export class ApiClient {
 			/**
 			 * List templates for an owner.
 			 */
-			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> => wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", { query: { owner_id: input.owner_id } })),
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> =>
+				wrap(() =>
+					this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", {
+						query: { owner_id: input.owner_id },
+					}),
+				),
 
 			/**
 			 * Get a single template by id, scoped to its owner. 404 when
 			 * unknown or owned by a different user.
 			 */
 			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
-				wrap(() => this.clients.pipelines.get<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
+				wrap(() =>
+					this.clients.pipelines.get<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, {
+						query: { owner_id: input.owner_id },
+					}),
+				),
 
 			/**
 			 * Create a new analysis template. `threshold_dsl` is parsed
@@ -1174,7 +1391,13 @@ export class ApiClient {
 			 * with `field: "threshold_dsl"` and a descriptive message.
 			 * `window_ms` defaults to 600_000 (10 min) when omitted.
 			 */
-			create: (input: { owner_id: string; name: string; threshold_dsl: string; query_dsl?: unknown; window_ms?: number }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
+			create: (input: {
+				owner_id: string;
+				name: string;
+				threshold_dsl: string;
+				query_dsl?: unknown;
+				window_ms?: number;
+			}): Promise<ApiResult<PipelineAnalysisTemplate>> =>
 				wrap(() => this.clients.pipelines.post<PipelineAnalysisTemplate>("/analysis-templates", { body: input })),
 
 			/**
@@ -1190,8 +1413,11 @@ export class ApiClient {
 					threshold_dsl?: string;
 					query_dsl?: unknown;
 					window_ms?: number;
-				}
-			): Promise<ApiResult<PipelineAnalysisTemplate>> => wrap(() => this.clients.pipelines.patch<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { body: input })),
+				},
+			): Promise<ApiResult<PipelineAnalysisTemplate>> =>
+				wrap(() =>
+					this.clients.pipelines.patch<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { body: input }),
+				),
 
 			/**
 			 * Hard-delete the template. Does NOT consult
@@ -1199,7 +1425,12 @@ export class ApiClient {
 			 * template at resolve-time, so deletion never orphans
 			 * in-flight runs.
 			 */
-			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, { query: { owner_id: input.owner_id } })),
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> =>
+				wrap(() =>
+					this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, {
+						query: { owner_id: input.owner_id },
+					}),
+				),
 		},
 
 		/**
@@ -1215,13 +1446,19 @@ export class ApiClient {
 			 * matches the trust-matcher resolution order so the management UI
 			 * shows the policy that would be picked first.
 			 */
-			list: (input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust[]>> => wrap(() => this.clients.pipelines.get<PipelineOidcTrust[]>("/oidc-trust", { query: { owner_id: input.owner_id } })),
+			list: (input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust[]>> =>
+				wrap(() =>
+					this.clients.pipelines.get<PipelineOidcTrust[]>("/oidc-trust", { query: { owner_id: input.owner_id } }),
+				),
 
 			/**
 			 * Get a single policy by id, scoped to its owner. 404 when
 			 * unknown, soft-deleted, or owned by a different user.
 			 */
-			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.get<PipelineOidcTrust>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } })),
+			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust>> =>
+				wrap(() =>
+					this.clients.pipelines.get<PipelineOidcTrust>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } }),
+				),
 
 			/**
 			 * Create a new policy. Defaults per plan §I.5: `repo_pattern: "*"`,
@@ -1238,7 +1475,8 @@ export class ApiClient {
 				allowed_environments?: string[];
 				allowed_actions?: string[];
 				session_ttl_seconds?: number;
-			}): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.post<PipelineOidcTrust>("/oidc-trust", { body: input })),
+			}): Promise<ApiResult<PipelineOidcTrust>> =>
+				wrap(() => this.clients.pipelines.post<PipelineOidcTrust>("/oidc-trust", { body: input })),
 
 			/**
 			 * Partial patch — only the supplied fields are touched. Validation
@@ -1255,15 +1493,21 @@ export class ApiClient {
 					allowed_environments?: string[];
 					allowed_actions?: string[];
 					session_ttl_seconds?: number;
-				}
-			): Promise<ApiResult<PipelineOidcTrust>> => wrap(() => this.clients.pipelines.patch<PipelineOidcTrust>(`/oidc-trust/${id}`, { body: input })),
+				},
+			): Promise<ApiResult<PipelineOidcTrust>> =>
+				wrap(() => this.clients.pipelines.patch<PipelineOidcTrust>(`/oidc-trust/${id}`, { body: input })),
 
 			/**
 			 * Soft-delete a policy (sets `deleted = true`; row preserved for
 			 * audit). The matcher and management list both skip soft-deleted
 			 * rows.
 			 */
-			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> => wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } })),
+			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> =>
+				wrap(() =>
+					this.clients.pipelines.delete<{ deleted: true }>(`/oidc-trust/${id}`, {
+						query: { owner_id: input.owner_id },
+					}),
+				),
 		},
 	};
 

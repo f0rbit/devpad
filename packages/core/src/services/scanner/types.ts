@@ -36,7 +36,11 @@ export type DiffResult = {
 	};
 };
 
-export type ScannerError = { kind: "github_api_error"; status: number; message: string } | { kind: "parse_error"; message: string } | { kind: "config_error"; message: string } | { kind: "rate_limited"; retry_after?: number };
+export type ScannerError =
+	| { kind: "github_api_error"; status: number; message: string }
+	| { kind: "parse_error"; message: string }
+	| { kind: "config_error"; message: string }
+	| { kind: "rate_limited"; retry_after?: number };
 
 export type GitHubTreeEntry = {
 	path: string;

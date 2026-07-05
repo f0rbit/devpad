@@ -14,7 +14,7 @@ const scan_status_schema = z.object({
 	approved: z.boolean(),
 });
 
-app.post("/scan", requireAuth, async c => {
+app.post("/scan", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const session = c.get("session");
@@ -26,7 +26,7 @@ app.post("/scan", requireAuth, async c => {
 
 	const log = c.get("log");
 	const span = log?.span("github_scan") ?? { end: () => {} };
-	return stream(c, async s => {
+	return stream(c, async (s) => {
 		try {
 			for await (const chunk of scanning.initiateScan(db, project_id, auth_user.id, session.access_token!)) {
 				await s.write(chunk);
@@ -39,7 +39,7 @@ app.post("/scan", requireAuth, async c => {
 	});
 });
 
-app.get("/updates", requireAuth, async c => {
+app.get("/updates", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const project_id = c.req.query("project_id");
@@ -51,7 +51,7 @@ app.get("/updates", requireAuth, async c => {
 	return c.json({ updates: result.value });
 });
 
-app.post("/scan_status", requireAuth, async c => {
+app.post("/scan_status", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const project_id = c.req.query("project_id");

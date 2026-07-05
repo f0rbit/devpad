@@ -16,7 +16,7 @@ export default function PulseWidget(props: PulseWidgetProps) {
 
 	const pageviewSeries = (): number[] => {
 		const s = series().pageviews;
-		return Array.isArray(s) ? s.map(p => p.count) : [];
+		return Array.isArray(s) ? s.map((p) => p.count) : [];
 	};
 
 	const href = `/project/${props.projectSlug}/pulse`;
@@ -56,10 +56,25 @@ export default function PulseWidget(props: PulseWidgetProps) {
 					</div>
 					<div class="stack stack-xs">
 						<span class="text-sm text-faint">errors</span>
-						<span style={{ "font-size": "1.25rem", "font-weight": 600, color: (totals().errors ?? 0) > 0 ? "var(--item-red)" : undefined }}>{num(totals().errors)}</span>
+						<span
+							style={{
+								"font-size": "1.25rem",
+								"font-weight": 600,
+								color: (totals().errors ?? 0) > 0 ? "var(--item-red)" : undefined,
+							}}
+						>
+							{num(totals().errors)}
+						</span>
 					</div>
 					<div style={{ "margin-left": "auto" }}>
-						<PulseChart data={pageviewSeries()} color="var(--accent)" fill width={140} height={36} aria-label="7-day pageviews" />
+						<PulseChart
+							data={pageviewSeries()}
+							color="var(--accent)"
+							fill
+							width={140}
+							height={36}
+							aria-label="7-day pageviews"
+						/>
 					</div>
 				</div>
 			</Show>

@@ -14,7 +14,13 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { action_oidc_trust_add, action_oidc_trust_list, action_oidc_trust_remove, action_oidc_trust_show, action_workflow_migrate } from "../../src/commands/pipelines";
+import {
+	action_oidc_trust_add,
+	action_oidc_trust_list,
+	action_oidc_trust_remove,
+	action_oidc_trust_show,
+	action_workflow_migrate,
+} from "../../src/commands/pipelines";
 
 type ApiOk<T> = { ok: true; value: T };
 type ApiErr = { ok: false; error: { message: string; status?: number; code?: string } };
@@ -66,21 +72,23 @@ type FakeClient = {
 	auth: { session: () => Promise<ApiResult<{ authenticated: true; user: { id: string } | null; session: null }>> };
 };
 
-const build_fake_client = (opts: { session_user_id?: string | null; policies?: Policy[]; created?: Policy } = {}): FakeClient => {
+const build_fake_client = (
+	opts: { session_user_id?: string | null; policies?: Policy[]; created?: Policy } = {},
+): FakeClient => {
 	const calls: Recorded[] = [];
 	return {
 		calls,
 		pipelines: {
 			oidc_trust: {
-				list: async input => {
+				list: async (input) => {
 					calls.push({ kind: "list", args: [input] });
 					return ok_result(opts.policies ?? []);
 				},
 				get: async (id, input) => {
 					calls.push({ kind: "get", args: [id, input] });
-					return ok_result(opts.policies?.find(p => p.id === id) ?? make_policy({ id }));
+					return ok_result(opts.policies?.find((p) => p.id === id) ?? make_policy({ id }));
 				},
-				create: async input => {
+				create: async (input) => {
 					calls.push({ kind: "create", args: [input] });
 					return ok_result(opts.created ?? make_policy({ ...(input as Partial<Policy>) }));
 				},
@@ -91,7 +99,12 @@ const build_fake_client = (opts: { session_user_id?: string | null; policies?: P
 			},
 		},
 		auth: {
-			session: async () => ok_result({ authenticated: true as const, user: opts.session_user_id === null ? null : { id: opts.session_user_id ?? "user_session" }, session: null }),
+			session: async () =>
+				ok_result({
+					authenticated: true as const,
+					user: opts.session_user_id === null ? null : { id: opts.session_user_id ?? "user_session" },
+					session: null,
+				}),
 		},
 	};
 };
@@ -119,7 +132,7 @@ describe("action_oidc_trust_list", () => {
 	test("resolves owner_id from session when --owner-id absent", async () => {
 		const client = build_fake_client({ session_user_id: "user_session" });
 		await action_oidc_trust_list(() => client as never)({});
-		const list_calls = client.calls.filter(c => c.kind === "list");
+		const list_calls = client.calls.filter((c) => c.kind === "list");
 		expect(list_calls.length).toBe(1);
 		expect(list_calls[0].args[0]).toEqual({ owner_id: "user_session" });
 	});
@@ -127,7 +140,7 @@ describe("action_oidc_trust_list", () => {
 	test("prefers --owner-id over session", async () => {
 		const client = build_fake_client({ session_user_id: "user_session" });
 		await action_oidc_trust_list(() => client as never)({ ownerId: "user_override" });
-		const list_calls = client.calls.filter(c => c.kind === "list");
+		const list_calls = client.calls.filter((c) => c.kind === "list");
 		expect(list_calls[0].args[0]).toEqual({ owner_id: "user_override" });
 	});
 
@@ -141,7 +154,14 @@ describe("action_oidc_trust_list", () => {
 	test("renders policy fields for each row", async () => {
 		const client = build_fake_client({
 			session_user_id: "user_session",
-			policies: [make_policy({ id: "pipeline-oidc-trust_a", github_owner: "f0rbit", repo_pattern: "forbit-*", allowed_refs: ["refs/heads/main"] })],
+			policies: [
+				make_policy({
+					id: "pipeline-oidc-trust_a",
+					github_owner: "f0rbit",
+					repo_pattern: "forbit-*",
+					allowed_refs: ["refs/heads/main"],
+				}),
+			],
 		});
 		await action_oidc_trust_list(() => client as never)({});
 		const joined = log_buffer.join("\n");
@@ -155,7 +175,7 @@ describe("action_oidc_trust_show", () => {
 	test("calls oidc_trust.get with the supplied id", async () => {
 		const client = build_fake_client({ session_user_id: "user_session" });
 		await action_oidc_trust_show(() => client as never)("pipeline-oidc-trust_x", {});
-		const get_calls = client.calls.filter(c => c.kind === "get");
+		const get_calls = client.calls.filter((c) => c.kind === "get");
 		expect(get_calls.length).toBe(1);
 		expect(get_calls[0].args[0]).toBe("pipeline-oidc-trust_x");
 	});
@@ -171,7 +191,7 @@ describe("action_oidc_trust_add", () => {
 			actions: "artifacts:upload,runs:start",
 			ttl: "900",
 		});
-		const create_calls = client.calls.filter(c => c.kind === "create");
+		const create_calls = client.calls.filter((c) => c.kind === "create");
 		expect(create_calls.length).toBe(1);
 		const input = create_calls[0].args[0] as Record<string, unknown>;
 		expect(input.owner_id).toBe("user_session");
@@ -190,7 +210,7 @@ describe("action_oidc_trust_add", () => {
 			refs: "refs/heads/main, refs/heads/release/*",
 			environments: "production, staging",
 		});
-		const create_calls = client.calls.filter(c => c.kind === "create");
+		const create_calls = client.calls.filter((c) => c.kind === "create");
 		const input = create_calls[0].args[0] as Record<string, unknown>;
 		expect(input.allowed_refs).toEqual(["refs/heads/main", "refs/heads/release/*"]);
 		expect(input.allowed_environments).toEqual(["production", "staging"]);
@@ -201,7 +221,7 @@ describe("action_oidc_trust_remove", () => {
 	test("calls oidc_trust.delete when --yes supplied (no confirm)", async () => {
 		const client = build_fake_client({ session_user_id: "user_session" });
 		await action_oidc_trust_remove(() => client as never)("pipeline-oidc-trust_x", { yes: true });
-		const delete_calls = client.calls.filter(c => c.kind === "delete");
+		const delete_calls = client.calls.filter((c) => c.kind === "delete");
 		expect(delete_calls.length).toBe(1);
 		expect(delete_calls[0].args[0]).toBe("pipeline-oidc-trust_x");
 		expect(delete_calls[0].args[1]).toEqual({ owner_id: "user_session" });
@@ -251,7 +271,7 @@ describe("action_workflow_migrate", () => {
 			throw new Error("__exit__");
 		}) as typeof process.exit;
 		try {
-			await action_workflow_migrate(() => client as never)("my-pkg", { cwd: tmp, rollout: "bogus" }).catch(e => {
+			await action_workflow_migrate(() => client as never)("my-pkg", { cwd: tmp, rollout: "bogus" }).catch((e) => {
 				if (e instanceof Error && e.message === "__exit__") return;
 				throw e;
 			});

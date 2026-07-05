@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-	AssetManifest,
-	AssetPart,
-	BundleManifest,
-	ModulePart,
-} from "../src/manifests.ts";
+import { AssetManifest, AssetPart, BundleManifest, ModulePart } from "../src/manifests.ts";
 
 describe("BundleManifest", () => {
 	test("round-trips a directory-bundle worker through parse + JSON", () => {

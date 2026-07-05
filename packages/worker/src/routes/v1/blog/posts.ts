@@ -31,7 +31,7 @@ postsRouter.get(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.list(user.id, params);
 		return response.result(c, result);
-	})
+	}),
 );
 
 postsRouter.get(
@@ -42,7 +42,7 @@ postsRouter.get(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.getBySlug(user.id, slug);
 		return response.result(c, result);
-	})
+	}),
 );
 
 postsRouter.post(
@@ -53,7 +53,7 @@ postsRouter.post(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.create(user.id, input);
 		return response.result(c, result, 201);
-	})
+	}),
 );
 
 postsRouter.put(
@@ -66,7 +66,7 @@ postsRouter.put(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.update(user.id, uuid, input);
 		return response.result(c, result);
-	})
+	}),
 );
 
 postsRouter.delete(
@@ -77,7 +77,7 @@ postsRouter.delete(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.delete(user.id, uuid);
 		return response.with(c, result, () => ({ success: true }));
-	})
+	}),
 );
 
 postsRouter.get(
@@ -87,8 +87,8 @@ postsRouter.get(
 		const { uuid } = valid<z.infer<typeof UuidParamSchema>>(c, "param");
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.listVersions(user.id, uuid);
-		return response.with(c, result, versions => ({ versions }));
-	})
+		return response.with(c, result, (versions) => ({ versions }));
+	}),
 );
 
 postsRouter.get(
@@ -99,7 +99,7 @@ postsRouter.get(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.getVersion(user.id, uuid, hash);
 		return response.result(c, result);
-	})
+	}),
 );
 
 postsRouter.post(
@@ -110,5 +110,5 @@ postsRouter.post(
 		const service = createPostService({ db: ctx.db, corpus: ctx.corpus });
 		const result = await service.restoreVersion(user.id, uuid, hash);
 		return response.result(c, result);
-	})
+	}),
 );

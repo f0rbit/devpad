@@ -16,9 +16,9 @@ import type { TwitterTimelineData } from "../platforms/twitter/timeline";
 import { normalizeTwitter } from "../platforms/twitter/timeline";
 
 export const normalizers: Record<Platform, NormalizeFunction> = {
-	github: data => normalizeGitHub(data as GitHubTimelineData),
+	github: (data) => normalizeGitHub(data as GitHubTimelineData),
 	reddit: (data, username) => normalizeReddit(data as RedditTimelineData, username ?? ""),
-	twitter: data => normalizeTwitter(data as TwitterTimelineData),
+	twitter: (data) => normalizeTwitter(data as TwitterTimelineData),
 	bluesky: () => [],
 	youtube: () => [],
 	devpad: () => [],

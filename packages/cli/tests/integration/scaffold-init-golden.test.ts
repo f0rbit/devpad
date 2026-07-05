@@ -14,7 +14,12 @@ import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, test } from "bun:test";
-import { type BuildShape, type DefaultGateKind, type RolloutMode, scaffold_package } from "../../src/scaffolder/index.ts";
+import {
+	type BuildShape,
+	type DefaultGateKind,
+	type RolloutMode,
+	scaffold_package,
+} from "../../src/scaffolder/index.ts";
 
 const GOLDEN_ROOT = path.resolve(import.meta.dir, "..", "golden");
 const FIXED_NOW = new Date(Date.UTC(2026, 4, 17));
@@ -29,10 +34,34 @@ type Combo = {
 };
 
 const COMBOS: Combo[] = [
-	{ dir_name: "anthropic-search", package_name: "anthropic-search", rollout: "atomic", default_gate: "auto", build_shape: "single-file" },
-	{ dir_name: "gradual-manual", package_name: "gradual-manual", rollout: "gradual", default_gate: "manual", build_shape: "single-file" },
-	{ dir_name: "gradual-analysis", package_name: "gradual-analysis", rollout: "gradual", default_gate: "analysis", build_shape: "single-file" },
-	{ dir_name: "directory-bundle", package_name: "directory-bundle", rollout: "gradual", default_gate: "auto", build_shape: "directory-bundle" },
+	{
+		dir_name: "anthropic-search",
+		package_name: "anthropic-search",
+		rollout: "atomic",
+		default_gate: "auto",
+		build_shape: "single-file",
+	},
+	{
+		dir_name: "gradual-manual",
+		package_name: "gradual-manual",
+		rollout: "gradual",
+		default_gate: "manual",
+		build_shape: "single-file",
+	},
+	{
+		dir_name: "gradual-analysis",
+		package_name: "gradual-analysis",
+		rollout: "gradual",
+		default_gate: "analysis",
+		build_shape: "single-file",
+	},
+	{
+		dir_name: "directory-bundle",
+		package_name: "directory-bundle",
+		rollout: "gradual",
+		default_gate: "auto",
+		build_shape: "directory-bundle",
+	},
 ];
 
 const list_files = async (root: string): Promise<string[]> => {
@@ -89,7 +118,7 @@ describe("scaffold_package — golden tree", () => {
 					skip_install: true,
 					skip_git: true,
 				},
-				{ now: FIXED_NOW }
+				{ now: FIXED_NOW },
 			);
 			expect(result.ok).toBe(true);
 			if (!result.ok) throw new Error(`scaffold failed: ${result.error.message}`);
@@ -136,7 +165,7 @@ describe("scaffold_package — typecheck", () => {
 				skip_install: true,
 				skip_git: true,
 			},
-			{ now: FIXED_NOW }
+			{ now: FIXED_NOW },
 		);
 		expect(result.ok).toBe(true);
 		if (!result.ok) throw new Error(`scaffold failed: ${result.error.message}`);

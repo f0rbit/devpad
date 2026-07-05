@@ -23,7 +23,8 @@ const mockContent = {
 	format: "md" as const,
 };
 
-const createTestCorpus = (): PostsCorpus => create_corpus().with_backend(create_memory_backend()).with_store(postsStoreDefinition).build();
+const createTestCorpus = (): PostsCorpus =>
+	create_corpus().with_backend(create_memory_backend()).with_store(postsStoreDefinition).build();
 
 function createMockDb(opts: { selectResults?: any[][]; returning?: any[] } = {}) {
 	let selectCallIndex = 0;

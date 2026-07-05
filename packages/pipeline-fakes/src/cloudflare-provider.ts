@@ -59,7 +59,10 @@ export type WorkerVersion = {
 	assets?: AssetUpload[];
 };
 
-export type DeploymentStrategy = { strategy: "percentage"; versions: Array<{ version_id: string; percentage: number }> };
+export type DeploymentStrategy = {
+	strategy: "percentage";
+	versions: Array<{ version_id: string; percentage: number }>;
+};
 
 export type WorkerDeployment = {
 	id: string;
@@ -221,5 +224,8 @@ export interface CloudflareProvider {
 	workers: {
 		get(script_name: string): Promise<Result<WorkerMeta, CloudflareError>>;
 	};
-	assert_version_key_header_routed(input: { script_name: string; version_key: string }): Promise<Result<{ resolved_version_id: string }, CloudflareError>>;
+	assert_version_key_header_routed(input: {
+		script_name: string;
+		version_key: string;
+	}): Promise<Result<{ resolved_version_id: string }, CloudflareError>>;
 }

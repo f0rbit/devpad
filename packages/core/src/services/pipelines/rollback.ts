@@ -25,7 +25,10 @@ export type VersionSetRef = {
 	created_at: string;
 };
 
-export type RollbackError = CloudflareError | { code: "no_rollback_target"; message: string } | { code: "no_version_uploaded"; message: string };
+export type RollbackError =
+	| CloudflareError
+	| { code: "no_rollback_target"; message: string }
+	| { code: "no_version_uploaded"; message: string };
 
 export type RollbackResult = {
 	previous_version_set_id: string;
@@ -41,15 +44,21 @@ export type RollbackResult = {
  *
  * Pure — no IO, no clock, no random.
  */
-export const find_rollback_target = (lineage: VersionSetRef[], current_version_set_id: string): Result<VersionSetRef, RollbackError> => {
+export const find_rollback_target = (
+	lineage: VersionSetRef[],
+	current_version_set_id: string,
+): Result<VersionSetRef, RollbackError> => {
 	const candidates = lineage
-		.filter(v => v.version_set_id !== current_version_set_id && v.deployed_successfully)
+		.filter((v) => v.version_set_id !== current_version_set_id && v.deployed_successfully)
 		.slice()
 		.sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
 
 	const target = candidates[0];
 	if (target === undefined) {
-		return err({ code: "no_rollback_target", message: `no deployed predecessor to roll back to from ${current_version_set_id}` });
+		return err({
+			code: "no_rollback_target",
+			message: `no deployed predecessor to roll back to from ${current_version_set_id}`,
+		});
 	}
 	return ok(target);
 };
@@ -59,10 +68,14 @@ export const find_rollback_target = (lineage: VersionSetRef[], current_version_s
 // validation error 10021).
 const VERSION_KEY = "workers/tag";
 
-const find_version_for = async (cf: CloudflareProvider, script_name: string, version_set_id: string): Promise<Result<WorkerVersion, RollbackError>> => {
+const find_version_for = async (
+	cf: CloudflareProvider,
+	script_name: string,
+	version_set_id: string,
+): Promise<Result<WorkerVersion, RollbackError>> => {
 	const list = await cf.versions.list(script_name);
 	if (!list.ok) return list;
-	const match = list.value.find(v => v.annotations?.[VERSION_KEY] === version_set_id);
+	const match = list.value.find((v) => v.annotations?.[VERSION_KEY] === version_set_id);
 	if (!match) {
 		return err({ code: "no_version_uploaded", message: `no worker version uploaded for ${version_set_id}` });
 	}
@@ -75,7 +88,10 @@ const find_version_for = async (cf: CloudflareProvider, script_name: string, ver
  * the resulting pipeline-stage event and pulse emission — this function
  * just talks to Cloudflare.
  */
-export const rollback_run = async (cf: CloudflareProvider, input: { script_name: string; target_version_set_id: string }): Promise<Result<RollbackResult, RollbackError>> => {
+export const rollback_run = async (
+	cf: CloudflareProvider,
+	input: { script_name: string; target_version_set_id: string },
+): Promise<Result<RollbackResult, RollbackError>> => {
 	const version_result = await find_version_for(cf, input.script_name, input.target_version_set_id);
 	if (!version_result.ok) return version_result;
 	const version = version_result.value;

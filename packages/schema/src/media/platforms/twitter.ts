@@ -74,7 +74,7 @@ export const TwitterTweetSchema = z.object({
 			z.object({
 				type: z.enum(["retweeted", "quoted", "replied_to"]),
 				id: z.string(),
-			})
+			}),
 		)
 		.optional(),
 	attachments: z
@@ -93,7 +93,7 @@ export const TwitterTweetSchema = z.object({
 						end: z.number(),
 						username: z.string(),
 						id: z.string(),
-					})
+					}),
 				)
 				.optional(),
 			hashtags: z
@@ -102,7 +102,7 @@ export const TwitterTweetSchema = z.object({
 						start: z.number(),
 						end: z.number(),
 						tag: z.string(),
-					})
+					}),
 				)
 				.optional(),
 		})

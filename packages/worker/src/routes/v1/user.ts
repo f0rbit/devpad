@@ -7,7 +7,7 @@ import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
 
-app.patch("/preferences", requireAuth, zValidator("json", update_user), async c => {
+app.patch("/preferences", requireAuth, zValidator("json", update_user), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 	const data = c.req.valid("json");
@@ -33,7 +33,7 @@ app.patch("/preferences", requireAuth, zValidator("json", update_user), async c 
 	});
 });
 
-app.get("/history", requireAuth, async c => {
+app.get("/history", requireAuth, async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user")!;
 
@@ -42,7 +42,7 @@ app.get("/history", requireAuth, async c => {
 	return c.json(result.value);
 });
 
-app.get("/me", requireAuth, async c => {
+app.get("/me", requireAuth, async (c) => {
 	const user = c.get("user")!;
 	return c.json({
 		id: user.id,

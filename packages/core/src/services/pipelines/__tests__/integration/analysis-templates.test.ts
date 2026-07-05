@@ -13,7 +13,13 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "@devpad/schema/database/types";
-import { create_analysis_template, delete_analysis_template, get_analysis_template, list_analysis_templates, update_analysis_template } from "../../analysis-templates.js";
+import {
+	create_analysis_template,
+	delete_analysis_template,
+	get_analysis_template,
+	list_analysis_templates,
+	update_analysis_template,
+} from "../../analysis-templates.js";
 import { create_test_db, seed_analysis_template, seed_user } from "./helpers.js";
 
 describe("analysis-templates service — list_analysis_templates", () => {
@@ -39,7 +45,10 @@ describe("analysis-templates service — list_analysis_templates", () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value).toHaveLength(2);
-			expect(result.value.map(t => t.id).sort()).toEqual(["pipeline-analysis-template_a", "pipeline-analysis-template_b"]);
+			expect(result.value.map((t) => t.id).sort()).toEqual([
+				"pipeline-analysis-template_a",
+				"pipeline-analysis-template_b",
+			]);
 		}
 	});
 
@@ -123,7 +132,7 @@ describe("analysis-templates service — create_analysis_template", () => {
 
 		const listed = await list_analysis_templates(db, { owner_id: u.id });
 		expect(listed.ok).toBe(true);
-		if (listed.ok) expect(listed.value.map(t => t.id)).toContain("pipeline-analysis-template_new");
+		if (listed.ok) expect(listed.value.map((t) => t.id)).toContain("pipeline-analysis-template_new");
 	});
 
 	test("defaults window_ms to 600_000 when omitted", async () => {
@@ -182,7 +191,11 @@ describe("analysis-templates service — update_analysis_template", () => {
 
 	test("updates only specified fields and preserves the rest", async () => {
 		const u = await seed_user(db);
-		const seeded = await seed_analysis_template(db, u.id, { id: "pipeline-analysis-template_u", name: "u", window_ms: 600_000 });
+		const seeded = await seed_analysis_template(db, u.id, {
+			id: "pipeline-analysis-template_u",
+			name: "u",
+			window_ms: 600_000,
+		});
 
 		const updated = await update_analysis_template(db, { id: seeded.id, owner_id: u.id, name: "renamed" });
 		expect(updated.ok).toBe(true);
@@ -224,7 +237,11 @@ describe("analysis-templates service — update_analysis_template", () => {
 
 	test("returns not_found for unknown id", async () => {
 		const u = await seed_user(db);
-		const result = await update_analysis_template(db, { id: "pipeline-analysis-template_missing", owner_id: u.id, name: "x" });
+		const result = await update_analysis_template(db, {
+			id: "pipeline-analysis-template_missing",
+			owner_id: u.id,
+			name: "x",
+		});
 		expect(result.ok).toBe(false);
 		if (!result.ok) expect((result.error as { kind: string }).kind).toBe("not_found");
 	});

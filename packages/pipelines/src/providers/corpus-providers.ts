@@ -21,7 +21,14 @@ import { AssetManifest, BundleManifest } from "@devpad/pipeline-fakes";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import { extendTemplate, PipelineTemplateSchema } from "@devpad/pipeline-templates";
 import type { Backend, VersionSetManifest } from "@f0rbit/corpus";
-import { err, ok, pipeline_template_store, type Result, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
+import {
+	err,
+	ok,
+	pipeline_template_store,
+	type Result,
+	VersionSetManifestSchema,
+	version_set_store,
+} from "@f0rbit/corpus";
 import { z } from "zod";
 import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes.ts";
 
@@ -230,7 +237,10 @@ const fetch_bytes = async (backend: Backend, ref: string): Promise<Result<Uint8A
 	return ok(bytes);
 };
 
-const load_widened_manifest = async (backend: Backend, version_set_id: string): Promise<Result<VersionSetManifestWithBundle, BundleProviderError>> => {
+const load_widened_manifest = async (
+	backend: Backend,
+	version_set_id: string,
+): Promise<Result<VersionSetManifestWithBundle, BundleProviderError>> => {
 	const meta = await backend.metadata.get("version-sets", version_set_id);
 	if (!meta.ok) {
 		return err({ kind: "version_set_missing", version_set_id });
@@ -298,7 +308,10 @@ const parse_asset_manifest = (ref: string, bytes: Uint8Array): Result<AssetManif
 	return ok(parsed.data);
 };
 
-const hydrate_modules = async (backend: Backend, manifest: BundleManifest): Promise<Result<ModuleUpload[], BundleProviderError>> => {
+const hydrate_modules = async (
+	backend: Backend,
+	manifest: BundleManifest,
+): Promise<Result<ModuleUpload[], BundleProviderError>> => {
 	const out: ModuleUpload[] = [];
 	for (const module of manifest.modules) {
 		const bytes = await fetch_bytes(backend, module.content_artifact_ref);
@@ -310,14 +323,23 @@ const hydrate_modules = async (backend: Backend, manifest: BundleManifest): Prom
 	return ok(out);
 };
 
-const hydrate_assets = async (backend: Backend, manifest: AssetManifest): Promise<Result<AssetUpload[], BundleProviderError>> => {
+const hydrate_assets = async (
+	backend: Backend,
+	manifest: AssetManifest,
+): Promise<Result<AssetUpload[], BundleProviderError>> => {
 	const out: AssetUpload[] = [];
 	for (const asset of manifest.assets) {
 		const bytes = await fetch_bytes(backend, asset.content_artifact_ref);
 		if (!bytes.ok) {
 			return err({ kind: "asset_fetch_failed", ref: asset.content_artifact_ref, reason: bytes.error });
 		}
-		out.push({ path: asset.path, hash: asset.hash, size_bytes: asset.size_bytes, mime_type: asset.mime_type, content: bytes.value });
+		out.push({
+			path: asset.path,
+			hash: asset.hash,
+			size_bytes: asset.size_bytes,
+			mime_type: asset.mime_type,
+			content: bytes.value,
+		});
 	}
 	return ok(out);
 };
@@ -441,7 +463,7 @@ export const make_corpus_bundle_provider = (
 	options: {
 		bindings_for?: (input: { package_name: string; environment: "staging" | "production" }) => VersionBinding[];
 		compatibility_flags?: string[];
-	} = {}
+	} = {},
 ): BundleProvider => {
 	const directory = make_corpus_directory_bundle_provider(backend);
 	return {
@@ -450,7 +472,8 @@ export const make_corpus_bundle_provider = (
 			if (!result.ok) {
 				return err({ code: "bundle_unavailable", message: format_bundle_provider_error(result.error) });
 			}
-			const bindings = options.bindings_for?.({ package_name: input.package_name, environment: input.environment }) ?? [];
+			const bindings =
+				options.bindings_for?.({ package_name: input.package_name, environment: input.environment }) ?? [];
 			if (result.value.kind === "single_file") {
 				return ok({
 					...result.value,

@@ -29,8 +29,18 @@ export default function BlueskySettings(props: Props) {
 			<h6 class="settings-title tertiary text-sm font-medium">Content Filters</h6>
 			<div class="filter-toggles">
 				<Checkbox checked={true} onChange={() => {}} label="Include my posts" disabled />
-				<Checkbox checked={includeReplies()} onChange={() => updateSetting("include_replies", !includeReplies())} label="Include replies" disabled={updating()} />
-				<Checkbox checked={includeReposts()} onChange={() => updateSetting("include_reposts", !includeReposts())} label="Include reposts" disabled={updating()} />
+				<Checkbox
+					checked={includeReplies()}
+					onChange={() => updateSetting("include_replies", !includeReplies())}
+					label="Include replies"
+					disabled={updating()}
+				/>
+				<Checkbox
+					checked={includeReposts()}
+					onChange={() => updateSetting("include_reposts", !includeReposts())}
+					label="Include reposts"
+					disabled={updating()}
+				/>
 			</div>
 		</div>
 	);

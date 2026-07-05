@@ -7,18 +7,25 @@ export type JWTPayload = {
 	exp: number;
 };
 
-export type JWTError = { kind: "expired" } | { kind: "invalid_signature" } | { kind: "malformed" } | { kind: "encoding_error"; message: string };
+export type JWTError =
+	| { kind: "expired" }
+	| { kind: "invalid_signature" }
+	| { kind: "malformed" }
+	| { kind: "encoding_error"; message: string };
 
 const JWT_EXPIRY_SECONDS = 24 * 60 * 60;
 
 async function importKey(secret: string): Promise<CryptoKey> {
 	const encoder = new TextEncoder();
-	return crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
+	return crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, [
+		"sign",
+		"verify",
+	]);
 }
 
 function base64UrlEncode(data: Uint8Array): string {
 	const binary = Array.from(data)
-		.map(b => String.fromCharCode(b))
+		.map((b) => String.fromCharCode(b))
 		.join("");
 	return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -27,7 +34,7 @@ function base64UrlDecode(str: string): Uint8Array {
 	const padded = str.replace(/-/g, "+").replace(/_/g, "/");
 	const pad_length = (4 - (padded.length % 4)) % 4;
 	const binary = atob(padded + "=".repeat(pad_length));
-	return Uint8Array.from(binary, c => c.charCodeAt(0));
+	return Uint8Array.from(binary, (c) => c.charCodeAt(0));
 }
 
 function base64UrlEncodeString(str: string): string {
@@ -40,7 +47,10 @@ function base64UrlDecodeString(str: string): string {
 	return decoder.decode(base64UrlDecode(str));
 }
 
-export async function generateJWT(secret: string, payload: { user_id: string; session_id: string }): Promise<Result<string, JWTError>> {
+export async function generateJWT(
+	secret: string,
+	payload: { user_id: string; session_id: string },
+): Promise<Result<string, JWTError>> {
 	const now = Math.floor(Date.now() / 1000);
 	const header = { alg: "HS256", typ: "JWT" };
 

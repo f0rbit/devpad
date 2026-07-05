@@ -1,4 +1,10 @@
-import { type Backend, create_corpus, type DrizzleDB, type PostsCorpus, postsStoreDefinition } from "@devpad/schema/blog";
+import {
+	type Backend,
+	create_corpus,
+	type DrizzleDB,
+	type PostsCorpus,
+	postsStoreDefinition,
+} from "@devpad/schema/blog";
 
 export type AppContext = {
 	db: DrizzleDB;

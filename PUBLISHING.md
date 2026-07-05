@@ -4,11 +4,11 @@ This guide explains how to publish the devpad npm packages: `@devpad/api`, `@dev
 
 ## 📦 Published Packages
 
-| Package | Description | npm | Usage |
-|---------|-------------|-----|-------|
-| `@devpad/api` | TypeScript API client | [![npm](https://img.shields.io/npm/v/@devpad/api)](https://www.npmjs.com/package/@devpad/api) | `npm install @devpad/api` |
-| `@devpad/cli` | Command-line interface | [![npm](https://img.shields.io/npm/v/@devpad/cli)](https://www.npmjs.com/package/@devpad/cli) | `npm install -g @devpad/cli` |
-| `@devpad/mcp` | Model Context Protocol server | [![npm](https://img.shields.io/npm/v/@devpad/mcp)](https://www.npmjs.com/package/@devpad/mcp) | `npm install @devpad/mcp` |
+| Package       | Description                   | npm                                                                                           | Usage                        |
+| ------------- | ----------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------- |
+| `@devpad/api` | TypeScript API client         | [![npm](https://img.shields.io/npm/v/@devpad/api)](https://www.npmjs.com/package/@devpad/api) | `npm install @devpad/api`    |
+| `@devpad/cli` | Command-line interface        | [![npm](https://img.shields.io/npm/v/@devpad/cli)](https://www.npmjs.com/package/@devpad/cli) | `npm install -g @devpad/cli` |
+| `@devpad/mcp` | Model Context Protocol server | [![npm](https://img.shields.io/npm/v/@devpad/mcp)](https://www.npmjs.com/package/@devpad/mcp) | `npm install @devpad/mcp`    |
 
 ## 🚀 Automatic Publishing
 
@@ -151,25 +151,29 @@ Before publishing, ensure:
 ### Common Issues
 
 #### 1. "Package not found" error
+
 ```bash
 # Ensure package is built
 cd packages/api
 bun run build
 ```
 
-#### 2. "workspace:* not allowed" error
+#### 2. "workspace:\* not allowed" error
+
 ```bash
 # Run prepare-publish script to replace workspace dependencies
 node scripts/prepare-publish.js api 1.2.3
 ```
 
 #### 3. "Version already exists" error
+
 ```bash
 # Bump to next version
 node scripts/sync-versions.js --bump patch
 ```
 
 #### 4. "Permission denied" error
+
 - Check NPM_TOKEN is set in GitHub Secrets
 - Verify you have publish rights to @devpad scope
 
@@ -193,6 +197,7 @@ Each publish creates multiple tags:
 - `@devpad/mcp@1.2.3` - Package-specific tag
 
 To list all tags:
+
 ```bash
 git tag -l "v*"          # List version tags
 git tag -l "@devpad/*"   # List package tags
@@ -229,16 +234,19 @@ npm view @devpad/mcp versions
 ## 📚 Package-Specific Notes
 
 ### @devpad/api
+
 - Main TypeScript API client
 - Includes Result type for error handling
 - Tree-shakeable exports
 
 ### @devpad/cli
+
 - Global CLI tool
 - Executable: `devpad`
 - Requires Node.js 18+
 
 ### @devpad/mcp
+
 - MCP server implementation
 - Executable: `devpad-mcp`
 - Compatible with Claude Desktop and other MCP clients

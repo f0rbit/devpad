@@ -63,7 +63,17 @@ export default function RunProgress(props: RunProgressProps) {
 								}}
 							>
 								{idx() < current_stage_idx ? (
-									<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="20"
+										height="20"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
 										<polyline points="20 6 9 17 4 12" />
 									</svg>
 								) : (
@@ -90,9 +100,7 @@ export default function RunProgress(props: RunProgressProps) {
 				<div class="card card-flat">
 					<div class="stack stack-xs">
 						<div class="text-sm text-faint">Current Stage</div>
-						<div style={{ "font-size": "1.1rem", "font-weight": "500" }}>
-							{props.run.current_stage || "—"}
-						</div>
+						<div style={{ "font-size": "1.1rem", "font-weight": "500" }}>{props.run.current_stage || "—"}</div>
 					</div>
 				</div>
 			</Show>

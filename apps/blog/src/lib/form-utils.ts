@@ -29,13 +29,20 @@ export const form = {
 			}
 		};
 
-		const handleSubmitResult = async <T, E>(fn: () => Promise<Result<T, E>>, formatError?: (e: E) => string): Promise<T | undefined> => {
+		const handleSubmitResult = async <T, E>(
+			fn: () => Promise<Result<T, E>>,
+			formatError?: (e: E) => string,
+		): Promise<T | undefined> => {
 			setSubmitting(true);
 			setError(null);
 			try {
 				const result = await fn();
 				if (!result.ok) {
-					const errorMsg = formatError ? formatError(result.error) : typeof result.error === "object" && result.error !== null && "message" in result.error ? (result.error as { message: string }).message : String(result.error);
+					const errorMsg = formatError
+						? formatError(result.error)
+						: typeof result.error === "object" && result.error !== null && "message" in result.error
+							? (result.error as { message: string }).message
+							: String(result.error);
 					setError(errorMsg);
 					return undefined;
 				}

@@ -10,7 +10,11 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "no
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { type ApiClient, ApiClient as ApiClientCtor } from "@devpad/api";
-import { derive_template_vars, render_template as render_pkg_template, SCAFFOLDER_TEMPLATES } from "@devpad/pipeline-templates";
+import {
+	derive_template_vars,
+	render_template as render_pkg_template,
+	SCAFFOLDER_TEMPLATES,
+} from "@devpad/pipeline-templates";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import chalk from "chalk";
 import type { Command } from "commander";
@@ -40,10 +44,12 @@ const BUILD_SHAPES = ["single-file", "directory-bundle"] as const;
 
 const is_rollout_mode = (s: string): s is RolloutMode => (ROLLOUT_MODES as readonly string[]).includes(s);
 const is_gate_kind = (s: string): s is DefaultGateKind => (GATE_KINDS as readonly string[]).includes(s);
-const is_build_shape = (s: string): s is (typeof BUILD_SHAPES)[number] => (BUILD_SHAPES as readonly string[]).includes(s);
+const is_build_shape = (s: string): s is (typeof BUILD_SHAPES)[number] =>
+	(BUILD_SHAPES as readonly string[]).includes(s);
 
 const format_scaffolder_error = (e: ScaffolderError): string => {
-	if (e.code === "render_failed") return `${e.message}\n  variable: ${e.cause.var}\n  near: ${e.cause.template_snippet}`;
+	if (e.code === "render_failed")
+		return `${e.message}\n  variable: ${e.cause.var}\n  near: ${e.cause.template_snippet}`;
 	if (e.code === "target_exists") return `${e.message}\n  remove it or pass --dir to a fresh path`;
 	return e.message;
 };
@@ -58,16 +64,29 @@ const print_next_steps = (target_dir: string, package_name: string, rollout: Rol
 			{ command: "devpad pipelines runs start       ", comment: `trigger a ${rollout} pipeline run` },
 			{ command: "devpad pipelines approve <run-id> <stage>" },
 		],
-		'Read AGENTS.md for hard rules — esp. "don\'t deploy manually".'
+		'Read AGENTS.md for hard rules — esp. "don\'t deploy manually".',
 	);
 };
 
-export const action_init = async (name: string, options: { rollout: string; defaultGate: string; buildShape: string; dir?: string; skipInstall?: boolean; skipGit?: boolean }): Promise<void> => {
+export const action_init = async (
+	name: string,
+	options: {
+		rollout: string;
+		defaultGate: string;
+		buildShape: string;
+		dir?: string;
+		skipInstall?: boolean;
+		skipGit?: boolean;
+	},
+): Promise<void> => {
 	const spinner = make_spinner(`Scaffolding ${name}...`).start();
 
-	if (!is_rollout_mode(options.rollout)) return fail_with(spinner, `--rollout must be one of ${ROLLOUT_MODES.join(", ")}; got "${options.rollout}"`);
-	if (!is_gate_kind(options.defaultGate)) return fail_with(spinner, `--default-gate must be one of ${GATE_KINDS.join(", ")}; got "${options.defaultGate}"`);
-	if (!is_build_shape(options.buildShape)) return fail_with(spinner, `--build-shape must be one of ${BUILD_SHAPES.join(", ")}; got "${options.buildShape}"`);
+	if (!is_rollout_mode(options.rollout))
+		return fail_with(spinner, `--rollout must be one of ${ROLLOUT_MODES.join(", ")}; got "${options.rollout}"`);
+	if (!is_gate_kind(options.defaultGate))
+		return fail_with(spinner, `--default-gate must be one of ${GATE_KINDS.join(", ")}; got "${options.defaultGate}"`);
+	if (!is_build_shape(options.buildShape))
+		return fail_with(spinner, `--build-shape must be one of ${BUILD_SHAPES.join(", ")}; got "${options.buildShape}"`);
 
 	const target_dir = path.resolve(options.dir ?? path.join(process.cwd(), name));
 
@@ -201,11 +220,15 @@ interface ArtifactsUploadOptions {
 	mode?: string;
 }
 
-const resolve_mode = (options: ArtifactsUploadOptions): { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined } => {
-	const explicit = options.mode === "memory" || options.mode === "cloudflare-http" ? (options.mode as CorpusBackendMode) : undefined;
+const resolve_mode = (
+	options: ArtifactsUploadOptions,
+): { mode: CorpusBackendMode; pipelines_url: string | undefined; pipelines_token: string | undefined } => {
+	const explicit =
+		options.mode === "memory" || options.mode === "cloudflare-http" ? (options.mode as CorpusBackendMode) : undefined;
 	const url = options.orchestratorUrl ?? process.env.DEVPAD_PIPELINES_URL;
 	const token = options.token ?? process.env.DEVPAD_PIPELINES_TOKEN;
-	const mode: CorpusBackendMode = explicit ?? (url !== undefined && url !== "" && token !== undefined && token !== "" ? "cloudflare-http" : "memory");
+	const mode: CorpusBackendMode =
+		explicit ?? (url !== undefined && url !== "" && token !== undefined && token !== "" ? "cloudflare-http" : "memory");
 	return { mode, pipelines_url: url, pipelines_token: token };
 };
 
@@ -255,8 +278,14 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 
 	const resolved = resolve_mode(options);
 
-	if (resolved.mode === "cloudflare-http" && (resolved.pipelines_url === undefined || resolved.pipelines_token === undefined)) {
-		return fail_with(spinner, "cloudflare-http mode requires --orchestrator-url + --token (or DEVPAD_PIPELINES_URL + DEVPAD_PIPELINES_TOKEN)");
+	if (
+		resolved.mode === "cloudflare-http" &&
+		(resolved.pipelines_url === undefined || resolved.pipelines_token === undefined)
+	) {
+		return fail_with(
+			spinner,
+			"cloudflare-http mode requires --orchestrator-url + --token (or DEVPAD_PIPELINES_URL + DEVPAD_PIPELINES_TOKEN)",
+		);
 	}
 
 	// --- Sidecar uploads (env manifest, infra plan, pipeline source, grants) ---
@@ -303,12 +332,19 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 		bundle_total_size_bytes = walk.value.total_size_bytes;
 
 		const main_module = options.mainModule!;
-		const has_main = walk.value.parts.some(p => p.name === main_module);
+		const has_main = walk.value.parts.some((p) => p.name === main_module);
 		if (!has_main) {
-			return fail_with(spinner, `--main-module "${main_module}" not found in bundle dir; parts: ${walk.value.parts.map(p => p.name).join(", ")}`);
+			return fail_with(
+				spinner,
+				`--main-module "${main_module}" not found in bundle dir; parts: ${walk.value.parts.map((p) => p.name).join(", ")}`,
+			);
 		}
 
-		const directory_refs = await upload_bundle_directory(resolved, walk.value, { compatibility_date, compatibility_flags, main_module });
+		const directory_refs = await upload_bundle_directory(resolved, walk.value, {
+			compatibility_date,
+			compatibility_flags,
+			main_module,
+		});
 		if (!directory_refs.ok) return fail_with(spinner, directory_refs.error);
 		bundle_manifest_ref = directory_refs.value;
 	}
@@ -370,7 +406,10 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 		const version_sets = version_set_store(backend);
 		const put_result = await version_sets.put(manifest_result.value as VersionSetManifest);
 		if (!put_result.ok) {
-			const error_msg = put_result.error.kind === "storage_error" ? put_result.error.cause?.message || "Storage error" : "Failed to store manifest";
+			const error_msg =
+				put_result.error.kind === "storage_error"
+					? put_result.error.cause?.message || "Storage error"
+					: "Failed to store manifest";
 			return fail_with(spinner, error_msg);
 		}
 		version_set_id = put_result.value.version;
@@ -387,7 +426,13 @@ export const action_artifacts_upload = async (options: ArtifactsUploadOptions): 
 	console.log(chalk.green(`Version Set ID: ${version_set_id}`));
 };
 
-const format_http_error = (e: { kind: string; status?: number; status_text?: string; cause?: unknown; message?: string }): string => {
+const format_http_error = (e: {
+	kind: string;
+	status?: number;
+	status_text?: string;
+	cause?: unknown;
+	message?: string;
+}): string => {
 	if (e.kind === "http") return `HTTP ${e.status} ${e.status_text}`;
 	if (e.kind === "network") return `network error: ${String(e.cause)}`;
 	return e.message ?? "unknown error";
@@ -421,7 +466,10 @@ type HttpUploadInput = { pipelines_url: string; pipelines_token: string };
 type SidecarInputs = { manifest_text: string; infra_plan: Buffer; pipeline: Buffer; grants: Buffer };
 type SidecarRefs = { manifest_ref: string; infra_plan_ref: string; pipeline_ref: string; grants_ref: string };
 
-const upload_sidecars_http = async (input: HttpUploadInput, blobs: SidecarInputs): Promise<{ ok: true; value: SidecarRefs } | { ok: false; error: string }> => {
+const upload_sidecars_http = async (
+	input: HttpUploadInput,
+	blobs: SidecarInputs,
+): Promise<{ ok: true; value: SidecarRefs } | { ok: false; error: string }> => {
 	const pairs: Array<{ key: keyof SidecarRefs; store: string; bytes: Uint8Array }> = [
 		{ key: "manifest_ref", store: "env-manifests", bytes: new TextEncoder().encode(blobs.manifest_text) },
 		{ key: "infra_plan_ref", store: "infra-plans", bytes: to_u8(blobs.infra_plan) },
@@ -456,14 +504,18 @@ type ResolvedMode = { mode: CorpusBackendMode; pipelines_url: string | undefined
 const upload_bundle_directory = async (
 	resolved: ResolvedMode,
 	walk: WalkedBundle,
-	build: { compatibility_date: string; compatibility_flags: string[]; main_module: string }
+	build: { compatibility_date: string; compatibility_flags: string[]; main_module: string },
 ): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
 	const module_refs: string[] = [];
 	if (resolved.mode === "cloudflare-http") {
 		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
 		for (const part of walk.parts) {
 			const upload = await upload_blob_to_store(http_input, "worker-modules", part.bytes);
-			if (!upload.ok) return { ok: false, error: `worker-modules upload failed for ${part.name}: ${format_http_error(upload.error)}` };
+			if (!upload.ok)
+				return {
+					ok: false,
+					error: `worker-modules upload failed for ${part.name}: ${format_http_error(upload.error)}`,
+				};
 			module_refs.push(upload.value.ref);
 		}
 	} else {
@@ -472,7 +524,13 @@ const upload_bundle_directory = async (
 		}
 	}
 
-	const manifest = build_bundle_manifest_from_walk(walk, module_refs, build.main_module, build.compatibility_date, build.compatibility_flags);
+	const manifest = build_bundle_manifest_from_walk(
+		walk,
+		module_refs,
+		build.main_module,
+		build.compatibility_date,
+		build.compatibility_flags,
+	);
 	if (!manifest.ok) return { ok: false, error: manifest.error.message };
 
 	const manifest_bytes = new TextEncoder().encode(JSON.stringify(manifest.value));
@@ -485,13 +543,18 @@ const upload_bundle_directory = async (
 	return { ok: true, value: `bundle-manifests/${compute_hash(Buffer.from(manifest_bytes)).slice(0, 12)}` };
 };
 
-const upload_assets_directory = async (resolved: ResolvedMode, walk: WalkedAssets, config: object): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
+const upload_assets_directory = async (
+	resolved: ResolvedMode,
+	walk: WalkedAssets,
+	config: object,
+): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
 	const asset_refs: string[] = [];
 	if (resolved.mode === "cloudflare-http") {
 		const http_input = { pipelines_url: resolved.pipelines_url!, pipelines_token: resolved.pipelines_token! };
 		for (const part of walk.parts) {
 			const upload = await upload_blob_to_store(http_input, "asset-files", part.bytes);
-			if (!upload.ok) return { ok: false, error: `asset-files upload failed for ${part.path}: ${format_http_error(upload.error)}` };
+			if (!upload.ok)
+				return { ok: false, error: `asset-files upload failed for ${part.path}: ${format_http_error(upload.error)}` };
 			asset_refs.push(upload.value.ref);
 		}
 	} else {
@@ -580,7 +643,10 @@ const format_compile_error = (e: CompileError): string => {
  * embedded on the version-set manifest as `template_ref` so the
  * orchestrator can rehydrate the typed template at run start.
  */
-const compile_and_upload_template = async (http_input: HttpUploadInput, pipeline_path: string): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
+const compile_and_upload_template = async (
+	http_input: HttpUploadInput,
+	pipeline_path: string,
+): Promise<{ ok: true; value: string } | { ok: false; error: string }> => {
 	const compiled = await compile_pipeline_ts(pipeline_path);
 	if (!compiled.ok) return { ok: false, error: format_compile_error(compiled.error) };
 
@@ -623,9 +689,21 @@ interface EventsIngestOptions {
 	idempotencyKey?: string;
 }
 
-const STAGE_EVENT_KINDS = ["deploy_started", "deploy_completed", "bake_started", "bake_completed", "gate_verdict", "approval_requested", "rollback_started", "rollback_completed", "warning", "error"] as const;
+const STAGE_EVENT_KINDS = [
+	"deploy_started",
+	"deploy_completed",
+	"bake_started",
+	"bake_completed",
+	"gate_verdict",
+	"approval_requested",
+	"rollback_started",
+	"rollback_completed",
+	"warning",
+	"error",
+] as const;
 type StageEventKindLocal = (typeof STAGE_EVENT_KINDS)[number];
-const is_stage_event_kind = (s: string): s is StageEventKindLocal => (STAGE_EVENT_KINDS as readonly string[]).includes(s);
+const is_stage_event_kind = (s: string): s is StageEventKindLocal =>
+	(STAGE_EVENT_KINDS as readonly string[]).includes(s);
 
 const action_runs_events_ingest =
 	(client_factory: ClientFactory) =>
@@ -638,7 +716,8 @@ const action_runs_events_ingest =
 
 		let payload: unknown;
 		if (options.payloadFile !== undefined) {
-			if (!existsSync(options.payloadFile)) return fail_with(spinner, `--payload-file not found: ${options.payloadFile}`);
+			if (!existsSync(options.payloadFile))
+				return fail_with(spinner, `--payload-file not found: ${options.payloadFile}`);
 			const text = readFileSync(options.payloadFile, "utf8");
 			try {
 				payload = JSON.parse(text);
@@ -650,7 +729,11 @@ const action_runs_events_ingest =
 		let idempotency_key = options.idempotencyKey;
 		if (idempotency_key === undefined || idempotency_key === "") {
 			idempotency_key = crypto.randomUUID();
-			console.error(chalk.yellow(`warning: no --idempotency-key supplied; generated ${idempotency_key} (non-replayable across CLI invocations)`));
+			console.error(
+				chalk.yellow(
+					`warning: no --idempotency-key supplied; generated ${idempotency_key} (non-replayable across CLI invocations)`,
+				),
+			);
 		}
 
 		const client = client_factory();
@@ -696,8 +779,10 @@ export const action_packages_list =
 	async (options: PackagesListOptions): Promise<void> => {
 		const spinner = make_spinner("Listing pipeline packages...").start();
 		const client = client_factory();
-		const filter = options.project !== undefined ? { project_id: await resolve_project_id(client, options.project) } : undefined;
-		if (filter !== undefined && filter.project_id === null) return fail_with(spinner, `project "${options.project}" not found`);
+		const filter =
+			options.project !== undefined ? { project_id: await resolve_project_id(client, options.project) } : undefined;
+		if (filter !== undefined && filter.project_id === null)
+			return fail_with(spinner, `project "${options.project}" not found`);
 
 		const result = await client.pipelines.packages.list(filter as { project_id?: string } | undefined);
 		if (!result.ok) return fail_with(spinner, result.error.message);
@@ -788,7 +873,8 @@ export const action_packages_update =
 				return fail_with(spinner, `--script-name-overrides is not valid JSON: ${String(e)}`);
 			}
 		}
-		if (Object.keys(patch).length === 0) return fail_with(spinner, "no updates supplied (pass --project, --repo-url, or --script-name-overrides)");
+		if (Object.keys(patch).length === 0)
+			return fail_with(spinner, "no updates supplied (pass --project, --repo-url, or --script-name-overrides)");
 
 		const result = await client.pipelines.packages.update(id, patch);
 		if (!result.ok) return fail_with(spinner, result.error.message);
@@ -824,8 +910,8 @@ const split_csv = (value: string | undefined): string[] | undefined => {
 	if (value === undefined || value === "") return undefined;
 	return value
 		.split(",")
-		.map(s => s.trim())
-		.filter(s => s.length > 0);
+		.map((s) => s.trim())
+		.filter((s) => s.length > 0);
 };
 
 const prompt_if_tty = async (question: string, fallback?: string): Promise<string> => {
@@ -868,7 +954,10 @@ export const action_oidc_trust_list =
 		}
 		for (const p of result.value) {
 			const refs_label = p.allowed_refs && p.allowed_refs.length > 0 ? p.allowed_refs.join(",") : chalk.dim("any");
-			const envs_label = p.allowed_environments && p.allowed_environments.length > 0 ? p.allowed_environments.join(",") : chalk.dim("any");
+			const envs_label =
+				p.allowed_environments && p.allowed_environments.length > 0
+					? p.allowed_environments.join(",")
+					: chalk.dim("any");
 			const last_used = p.last_used_at ?? chalk.dim("(never)");
 			console.log(`  ${chalk.bold(p.id)}`);
 			console.log(`    owner:        ${chalk.cyan(p.github_owner)}/${p.repo_pattern}`);
@@ -917,7 +1006,9 @@ export const action_oidc_trust_add =
 
 		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
 		if (owner_id === null) {
-			console.error(chalk.red("error: could not resolve owner_id from session; set $DEVPAD_USER_ID or pass --owner-id"));
+			console.error(
+				chalk.red("error: could not resolve owner_id from session; set $DEVPAD_USER_ID or pass --owner-id"),
+			);
 			process.exit(1);
 		}
 
@@ -935,7 +1026,11 @@ export const action_oidc_trust_add =
 		}
 
 		const repo_pattern = options.repoPattern ?? (process.stdin.isTTY ? await prompt_if_tty("Repo pattern", "*") : "*");
-		const actions = split_csv(options.actions) ?? (process.stdin.isTTY ? split_csv(await prompt_if_tty("Allowed actions (comma-sep)", "artifacts:upload,runs:start")) : ["artifacts:upload", "runs:start"]);
+		const actions =
+			split_csv(options.actions) ??
+			(process.stdin.isTTY
+				? split_csv(await prompt_if_tty("Allowed actions (comma-sep)", "artifacts:upload,runs:start"))
+				: ["artifacts:upload", "runs:start"]);
 		const refs = split_csv(options.refs);
 		const environments = split_csv(options.environments);
 		const ttl = options.ttl !== undefined ? Number.parseInt(options.ttl, 10) : undefined;
@@ -976,7 +1071,9 @@ export const action_oidc_trust_remove =
 		const client = client_factory();
 		const owner_id = options.ownerId ?? (await resolve_owner_id(client));
 		if (owner_id === null) {
-			console.error(chalk.red("error: could not resolve owner_id from session; set $DEVPAD_USER_ID or pass --owner-id"));
+			console.error(
+				chalk.red("error: could not resolve owner_id from session; set $DEVPAD_USER_ID or pass --owner-id"),
+			);
 			process.exit(1);
 		}
 
@@ -1076,7 +1173,8 @@ export const action_analysis_templates_create =
 		if (owner_id === null) return fail_with(spinner, "--owner-id required (could not resolve from session)");
 
 		const threshold_file = options.thresholdFile;
-		if (threshold_file === undefined || threshold_file === "") return fail_with(spinner, "--threshold-file <path> is required");
+		if (threshold_file === undefined || threshold_file === "")
+			return fail_with(spinner, "--threshold-file <path> is required");
 		const threshold = read_threshold_file(threshold_file);
 		if (!threshold.ok) return fail_with(spinner, threshold.error);
 
@@ -1085,7 +1183,12 @@ export const action_analysis_templates_create =
 			return fail_with(spinner, `--window-ms must be a positive integer, got "${options.windowMs}"`);
 		}
 
-		const result = await client.pipelines.analysis_templates.create({ owner_id, name, threshold_dsl: threshold.value, window_ms });
+		const result = await client.pipelines.analysis_templates.create({
+			owner_id,
+			name,
+			threshold_dsl: threshold.value,
+			window_ms,
+		});
 		if (!result.ok) return fail_with(spinner, result.error.message);
 		spinner.succeed(`created ${result.value.id}`);
 		console.log(chalk.green(`  id:         ${result.value.id}`));
@@ -1117,7 +1220,8 @@ export const action_analysis_templates_update =
 		}
 		if (options.windowMs !== undefined) {
 			const window_ms = Number.parseInt(options.windowMs, 10);
-			if (!Number.isInteger(window_ms) || window_ms <= 0) return fail_with(spinner, `--window-ms must be a positive integer, got "${options.windowMs}"`);
+			if (!Number.isInteger(window_ms) || window_ms <= 0)
+				return fail_with(spinner, `--window-ms must be a positive integer, got "${options.windowMs}"`);
 			patch.window_ms = window_ms;
 		}
 		if (patch.name === undefined && patch.threshold_dsl === undefined && patch.window_ms === undefined) {
@@ -1180,18 +1284,34 @@ export const action_workflow_migrate =
 		const default_gate = options.defaultGate ?? "auto";
 		const build_shape = options.buildShape ?? "single-file";
 
-		if (!is_rollout_mode(rollout)) return fail_with(spinner, `--rollout must be one of ${ROLLOUT_MODES.join(", ")}; got "${rollout}"`);
-		if (!is_gate_kind(default_gate)) return fail_with(spinner, `--default-gate must be one of ${GATE_KINDS.join(", ")}; got "${default_gate}"`);
-		if (!is_build_shape(build_shape)) return fail_with(spinner, `--build-shape must be one of ${BUILD_SHAPES.join(", ")}; got "${build_shape}"`);
+		if (!is_rollout_mode(rollout))
+			return fail_with(spinner, `--rollout must be one of ${ROLLOUT_MODES.join(", ")}; got "${rollout}"`);
+		if (!is_gate_kind(default_gate))
+			return fail_with(spinner, `--default-gate must be one of ${GATE_KINDS.join(", ")}; got "${default_gate}"`);
+		if (!is_build_shape(build_shape))
+			return fail_with(spinner, `--build-shape must be one of ${BUILD_SHAPES.join(", ")}; got "${build_shape}"`);
 
-		const entry = SCAFFOLDER_TEMPLATES.find(e => e.relative_path === ".github/workflows/deploy.yml");
-		if (entry === undefined) return fail_with(spinner, "scaffolder template manifest missing .github/workflows/deploy.yml — check @devpad/pipeline-templates");
+		const entry = SCAFFOLDER_TEMPLATES.find((e) => e.relative_path === ".github/workflows/deploy.yml");
+		if (entry === undefined)
+			return fail_with(
+				spinner,
+				"scaffolder template manifest missing .github/workflows/deploy.yml — check @devpad/pipeline-templates",
+			);
 
 		// Locate the templates root the same way scaffold_package does — by
 		// resolving against the pipeline-templates package's source tree.
 		// `import.meta.dir` here is `packages/cli/src/commands/`; same depth
 		// as `packages/cli/src/scaffolder/` so 3x `..` lands on `packages/`.
-		const templates_root = path.resolve(import.meta.dir, "..", "..", "..", "pipeline-templates", "src", "scaffolder", "templates");
+		const templates_root = path.resolve(
+			import.meta.dir,
+			"..",
+			"..",
+			"..",
+			"pipeline-templates",
+			"src",
+			"scaffolder",
+			"templates",
+		);
 		const source_path = path.join(templates_root, entry.template_path);
 		if (!existsSync(source_path)) return fail_with(spinner, `scaffolder template not found on disk: ${source_path}`);
 
@@ -1250,7 +1370,7 @@ const resolve_owner_id = async (client: ApiClient): Promise<string | null> => {
 const resolve_project_id = async (client: ApiClient, slug_or_id: string): Promise<string | null> => {
 	const list = await client.projects.list();
 	if (!list.ok) return null;
-	const match = list.value.find(p => p.project_id === slug_or_id || p.id === slug_or_id);
+	const match = list.value.find((p) => p.project_id === slug_or_id || p.id === slug_or_id);
 	return match?.id ?? null;
 };
 
@@ -1260,7 +1380,10 @@ const resolve_project_id = async (client: ApiClient, slug_or_id: string): Promis
  * API key — the client is only built when the run/approve/cancel/rollback
  * subcommands actually fire.
  */
-export const register_pipelines_commands = (program: Command, client_factory: ClientFactory = default_client_factory): Command => {
+export const register_pipelines_commands = (
+	program: Command,
+	client_factory: ClientFactory = default_client_factory,
+): Command => {
 	const pipelines = program.command("pipelines").description("Manage pipeline-managed Worker packages");
 
 	pipelines
@@ -1281,9 +1404,15 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--reason <text>", "Optional approval reason")
 		.action(action_approve(client_factory));
 
-	pipelines.command("cancel <run-id>").description("Cancel an in-flight pipeline run").action(action_cancel(client_factory));
+	pipelines
+		.command("cancel <run-id>")
+		.description("Cancel an in-flight pipeline run")
+		.action(action_cancel(client_factory));
 
-	pipelines.command("rollback <run-id>").description("Roll a run back to its previous production version").action(action_rollback(client_factory));
+	pipelines
+		.command("rollback <run-id>")
+		.description("Roll a run back to its previous production version")
+		.action(action_rollback(client_factory));
 
 	const artifacts = pipelines.command("artifacts").description("Manage pipeline artifacts");
 
@@ -1291,9 +1420,18 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.command("upload")
 		.description("Upload artifacts to corpus")
 		.requiredOption("--package <name>", "Package name")
-		.option("--bundle <path>", "Path to single-file worker bundle (dist/_worker.js). Mutually exclusive with --bundle-dir")
-		.option("--bundle-dir <path>", "Path to directory-bundle worker (e.g. dist/_worker.js/). Mutually exclusive with --bundle")
-		.option("--main-module <name>", "Entrypoint module name inside --bundle-dir (e.g. index.js). Required with --bundle-dir")
+		.option(
+			"--bundle <path>",
+			"Path to single-file worker bundle (dist/_worker.js). Mutually exclusive with --bundle-dir",
+		)
+		.option(
+			"--bundle-dir <path>",
+			"Path to directory-bundle worker (e.g. dist/_worker.js/). Mutually exclusive with --bundle",
+		)
+		.option(
+			"--main-module <name>",
+			"Entrypoint module name inside --bundle-dir (e.g. index.js). Required with --bundle-dir",
+		)
 		.option("--assets-dir <path>", "Path to static-assets directory (e.g. dist/). Files uploaded as CF assets")
 		.option("--asset-config <path-or-json>", "JSON file path OR inline JSON for asset config")
 		.option("--manifest <path>", "Optional path to env manifest (dist/manifest.json). Defaults to empty object")
@@ -1303,7 +1441,11 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.requiredOption("--output <path>", "Output path for version set JSON")
 		.option("--git-sha <sha>", "Git SHA (default: from environment or zeroed)")
 		.option("--compatibility-date <date>", "Compatibility date (default: 2025-05-01)")
-		.option("--compatibility-flag <flag>", "Compatibility flag (repeatable)", (value: string, prev: string[] | undefined): string[] => [...(prev ?? []), value])
+		.option(
+			"--compatibility-flag <flag>",
+			"Compatibility flag (repeatable)",
+			(value: string, prev: string[] | undefined): string[] => [...(prev ?? []), value],
+		)
 		.option("--orchestrator-url <url>", "Orchestrator base URL (default: $DEVPAD_PIPELINES_URL)")
 		.option("--token <token>", "Bearer token (default: $DEVPAD_PIPELINES_TOKEN)")
 		.option("--mode <mode>", "Backend mode: memory | cloudflare-http (default: auto)")
@@ -1311,7 +1453,8 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 
 	const runs = pipelines.command("runs").description("Manage pipeline runs");
 
-	runs.command("start")
+	runs
+		.command("start")
 		.description("Start a pipeline run with an explicit version set")
 		.requiredOption("--package <name>", "Package name")
 		.requiredOption("--version-set-id <id>", "Version set ID from corpus")
@@ -1322,7 +1465,7 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.description(
 			"Manage stage events on a pipeline run (Phase 2.C webhook ingestion).\n" +
 				"CLI uses the admin bearer (PIPELINES_TOKEN via DEVPAD_API_KEY).\n" +
-				"External CI should call POST /runs/:id/events directly with an OIDC session JWT, not via this CLI."
+				"External CI should call POST /runs/:id/events directly with an OIDC session JWT, not via this CLI.",
 		);
 
 	events
@@ -1334,13 +1477,24 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--idempotency-key <uuid>", "UUID idempotency key (defaults to a fresh randomUUID — non-replayable)")
 		.action(action_runs_events_ingest(client_factory));
 
-	events.command("list <run-id>").description("List stored events for a run (newest-first)").action(action_runs_events_list(client_factory));
+	events
+		.command("list <run-id>")
+		.description("List stored events for a run (newest-first)")
+		.action(action_runs_events_list(client_factory));
 
 	const grants = pipelines.command("grants").description("Manage vault grants");
 
-	grants.command("list").description("List vault grants for a package").requiredOption("--package <id>", "Package ID to list grants for").action(action_grants_list(client_factory));
+	grants
+		.command("list")
+		.description("List vault grants for a package")
+		.requiredOption("--package <id>", "Package ID to list grants for")
+		.action(action_grants_list(client_factory));
 
-	grants.command("approve <grant-id>").description("Approve a pending vault grant").option("--user <user-id>", "User ID granting approval (defaults to $DEVPAD_USER_ID)").action(action_grants_approve(client_factory));
+	grants
+		.command("approve <grant-id>")
+		.description("Approve a pending vault grant")
+		.option("--user <user-id>", "User ID granting approval (defaults to $DEVPAD_USER_ID)")
+		.action(action_grants_approve(client_factory));
 
 	grants
 		.command("deny <grant-id>")
@@ -1352,10 +1506,16 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 	const packages = pipelines
 		.command("packages")
 		.description(
-			"Manage pipeline packages.\n" + "Typical flow: `packages create` to register a pipeline-managed package, then in your repo add\n" + "infra.ts, pipeline.ts, grants.ts, and a CI workflow that calls `pipelines artifacts upload`."
+			"Manage pipeline packages.\n" +
+				"Typical flow: `packages create` to register a pipeline-managed package, then in your repo add\n" +
+				"infra.ts, pipeline.ts, grants.ts, and a CI workflow that calls `pipelines artifacts upload`.",
 		);
 
-	packages.command("list").description("List pipeline packages").option("--project <id-or-slug>", "Filter by linked devpad project (accepts project_id or internal id)").action(action_packages_list(client_factory));
+	packages
+		.command("list")
+		.description("List pipeline packages")
+		.option("--project <id-or-slug>", "Filter by linked devpad project (accepts project_id or internal id)")
+		.action(action_packages_list(client_factory));
 
 	packages.command("get <id>").description("Get a pipeline package by id").action(action_packages_get(client_factory));
 
@@ -1382,11 +1542,21 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--force", "Confirmation flag (orchestrator still 409s on active runs; you must clean those up first)")
 		.action(action_packages_delete(client_factory));
 
-	const oidc_trust = pipelines.command("oidc-trust").description("Manage GitHub Actions OIDC trust policies (Phase 15)");
+	const oidc_trust = pipelines
+		.command("oidc-trust")
+		.description("Manage GitHub Actions OIDC trust policies (Phase 15)");
 
-	oidc_trust.command("list").description("List trust policies for the current owner").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_oidc_trust_list(client_factory));
+	oidc_trust
+		.command("list")
+		.description("List trust policies for the current owner")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_oidc_trust_list(client_factory));
 
-	oidc_trust.command("show <id>").description("Show a single trust policy").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_oidc_trust_show(client_factory));
+	oidc_trust
+		.command("show <id>")
+		.description("Show a single trust policy")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_oidc_trust_show(client_factory));
 
 	oidc_trust
 		.command("add")
@@ -1408,15 +1578,27 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 		.option("--yes", "Skip confirmation prompt")
 		.action(action_oidc_trust_remove(client_factory));
 
-	const analysis_templates = pipelines.command("analysis-templates").description("Manage pipeline_analysis_template rows (threshold DSL + window for analysis gates)");
+	const analysis_templates = pipelines
+		.command("analysis-templates")
+		.description("Manage pipeline_analysis_template rows (threshold DSL + window for analysis gates)");
 
-	analysis_templates.command("list").description("List analysis templates for the current owner").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_analysis_templates_list(client_factory));
+	analysis_templates
+		.command("list")
+		.description("List analysis templates for the current owner")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_analysis_templates_list(client_factory));
 
-	analysis_templates.command("get <id>").description("Get a single analysis template").option("--owner-id <id>", "Owner user id (defaults to current session)").action(action_analysis_templates_get(client_factory));
+	analysis_templates
+		.command("get <id>")
+		.description("Get a single analysis template")
+		.option("--owner-id <id>", "Owner user id (defaults to current session)")
+		.action(action_analysis_templates_get(client_factory));
 
 	analysis_templates
 		.command("create")
-		.description("Create a new analysis template. `--threshold-file` is a UTF-8 file whose contents are the threshold DSL.")
+		.description(
+			"Create a new analysis template. `--threshold-file` is a UTF-8 file whose contents are the threshold DSL.",
+		)
 		.requiredOption("--name <name>", "Template name (e.g. default-analysis)")
 		.option("--owner-id <id>", "Owner user id (defaults to current session)")
 		.requiredOption("--threshold-file <path>", "Path to a UTF-8 file containing the threshold DSL")
@@ -1434,7 +1616,9 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 
 	analysis_templates
 		.command("delete <id>")
-		.description("Delete an analysis template. Does not consult pipeline_run.resolved_gates — runs snapshot the template at resolve-time.")
+		.description(
+			"Delete an analysis template. Does not consult pipeline_run.resolved_gates — runs snapshot the template at resolve-time.",
+		)
 		.option("--owner-id <id>", "Owner user id (defaults to current session)")
 		.action(action_analysis_templates_delete(client_factory));
 
@@ -1442,7 +1626,9 @@ export const register_pipelines_commands = (program: Command, client_factory: Cl
 
 	workflow
 		.command("migrate <package>")
-		.description("Re-render .github/workflows/deploy.yml from the current scaffolder template (Phase 15 OIDC migration aid)")
+		.description(
+			"Re-render .github/workflows/deploy.yml from the current scaffolder template (Phase 15 OIDC migration aid)",
+		)
 		.option("--cwd <path>", "Repository root (default: current working directory)")
 		.option("--rollout <mode>", "Rollout mode used in the template: gradual | atomic", "gradual")
 		.option("--default-gate <kind>", "Default gate kind: manual | auto | analysis", "auto")

@@ -1,7 +1,20 @@
-import type { ApiError, AuthExpiredError, BadRequestError, NetworkError, ParseError, RateLimitedError } from "@devpad/schema/media";
+import type {
+	ApiError,
+	AuthExpiredError,
+	BadRequestError,
+	NetworkError,
+	ParseError,
+	RateLimitedError,
+} from "@devpad/schema/media";
 import type { Result } from "@f0rbit/corpus";
 
-export type ProviderError = RateLimitedError | AuthExpiredError | NetworkError | ApiError | ParseError | BadRequestError;
+export type ProviderError =
+	| RateLimitedError
+	| AuthExpiredError
+	| NetworkError
+	| ApiError
+	| ParseError
+	| BadRequestError;
 
 export type FetchResult<T> = Result<T, ProviderError>;
 
@@ -12,7 +25,10 @@ export const toProviderError = (e: unknown): ProviderError => {
 	return { kind: "network_error", cause: e instanceof Error ? e : new Error(String(e)) };
 };
 
-const getHeader = (headers: Headers | Record<string, string | number | undefined> | undefined, key: string): string | null => {
+const getHeader = (
+	headers: Headers | Record<string, string | number | undefined> | undefined,
+	key: string,
+): string | null => {
 	if (!headers) return null;
 	if (headers instanceof Headers) return headers.get(key);
 	const value = headers[key] ?? headers[key.toLowerCase()];
@@ -38,7 +54,11 @@ const parseRateLimitResetSeconds = (headers?: Headers | Record<string, string | 
  * Maps HTTP response to a standardized ProviderError.
  * Handles rate limiting, auth expiry, and general API errors.
  */
-export const mapHttpError = (status: number, statusText: string, headers?: Headers | Record<string, string | number | undefined>): ProviderError => {
+export const mapHttpError = (
+	status: number,
+	statusText: string,
+	headers?: Headers | Record<string, string | number | undefined>,
+): ProviderError => {
 	if (status === 429) {
 		const retryAfter = parseRetryAfterSeconds(headers);
 		return { kind: "rate_limited", retry_after: retryAfter };

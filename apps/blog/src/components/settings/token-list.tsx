@@ -17,14 +17,14 @@ interface TokenListProps {
 	onDelete: (id: number) => void;
 }
 
-const TokenList: Component<TokenListProps> = props => {
+const TokenList: Component<TokenListProps> = (props) => {
 	return (
 		<div class="token-list">
 			<Show when={props.tokens.length === 0}>
 				<Empty title="No API tokens yet" description="Create a token to get started" />
 			</Show>
 			<For each={props.tokens}>
-				{token => (
+				{(token) => (
 					<div class="token-item" classList={{ "card-inactive": !token.enabled }}>
 						<div class="token-item__info">
 							<span class="token-item__name">{token.name}</span>

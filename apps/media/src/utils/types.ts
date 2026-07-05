@@ -1,6 +1,19 @@
 import type { CommitGroup, DateGroup, GitHubRepo, PlatformSettings, TimelineItem } from "@devpad/schema/media";
 
-export type { CommentPayload, CommitGroup, CommitPayload, DateGroup, GitHubRepo, Platform, PlatformSettings, PostPayload, PRCommit, PullRequestPayload, TimelineItem, TimelineType } from "@devpad/schema/media";
+export type {
+	CommentPayload,
+	CommitGroup,
+	CommitPayload,
+	DateGroup,
+	GitHubRepo,
+	Platform,
+	PlatformSettings,
+	PostPayload,
+	PRCommit,
+	PullRequestPayload,
+	TimelineItem,
+	TimelineType,
+} from "@devpad/schema/media";
 
 export type Connection = {
 	account_id: string;
