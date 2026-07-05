@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InMemoryPulseSummaryProvider } from "../src/in-memory-pulse-summary.ts";
+import { InMemoryPulseSummaryProvider } from "../src/in-memory-pulse-summary";
 
 describe("InMemoryPulseSummaryProvider", () => {
 	test("returns empty snapshot when no response is seeded", async () => {

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { defaultAtomic, defaultAtomicGates, defaultGradual, defaultGradualGates } from "../src/index.ts";
+import { defaultAtomic, defaultAtomicGates, defaultGradual, defaultGradualGates } from "../src/index";
 
 describe("defaultGradual", () => {
 	test("has exactly 4 stages in the architecture-spec order", () => {

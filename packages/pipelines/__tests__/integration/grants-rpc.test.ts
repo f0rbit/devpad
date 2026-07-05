@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { pipeline_grant } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { PipelinesGrantsService } from "../../src/grants-rpc.ts";
-import { create_test_db, seed_package, seed_user } from "./helpers.ts";
+import { PipelinesGrantsService } from "../../src/grants-rpc";
+import { create_test_db, seed_package, seed_user } from "./helpers";
 
 const seed_grant = async (
 	db: Database,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { AssetUpload, ModuleUpload } from "../src/cloudflare-provider.ts";
-import { InMemoryCloudflareProvider } from "../src/in-memory-cloudflare.ts";
+import type { AssetUpload, ModuleUpload } from "../src/cloudflare-provider";
+import { InMemoryCloudflareProvider } from "../src/in-memory-cloudflare";
 
 const upload_two = async (cf: InMemoryCloudflareProvider, script: string) => {
 	const v1 = await cf.versions.upload({ kind: "single_file", script_name: script });

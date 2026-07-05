@@ -5,7 +5,7 @@
  * the side-effect `scaffold_package` plus types.
  */
 
-export { resolve_templates_root, scaffold_package, type ScaffoldOptions, SCAFFOLDER_TEMPLATES } from "./scaffold.ts";
+export { resolve_templates_root, scaffold_package, type ScaffoldOptions, SCAFFOLDER_TEMPLATES } from "./scaffold";
 export type {
 	BuildShape,
 	DefaultGateKind,
@@ -14,4 +14,4 @@ export type {
 	ScaffolderError,
 	ScaffoldRequest,
 	ScaffolderInput,
-} from "./types.ts";
+} from "./types";

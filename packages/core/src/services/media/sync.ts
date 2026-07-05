@@ -399,7 +399,7 @@ const normalizeSnapshot = (snapshot: RawSnapshot): Result<TimelineItem[], Normal
 					return normalizeDevpad(devpadParsed);
 				}
 				default: {
-					const _exhaustiveCheck: never = platform;
+					const _: never = platform;
 					logTimeline.warn("Unknown platform in normalizeSnapshot", { platform: snapshot.platform });
 					return [];
 				}

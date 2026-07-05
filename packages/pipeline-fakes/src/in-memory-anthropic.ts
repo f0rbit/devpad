@@ -4,7 +4,7 @@ import type {
 	AnthropicProvider,
 	CreateMessagesInput,
 	CreateMessagesOutput,
-} from "./anthropic-provider.ts";
+} from "./anthropic-provider";
 
 const make_id = (): string => `msg_${crypto.randomUUID().slice(0, 12)}`;
 

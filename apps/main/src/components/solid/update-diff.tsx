@@ -23,8 +23,8 @@ const ACTIONS = {
 } as const;
 
 export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
-	const _items = JSON.parse(JSON.stringify(items)) as UpdateData[];
-	const mapped_items = _items.map((item) => {
+	const deep_copied_items = JSON.parse(JSON.stringify(items)) as UpdateData[];
+	const mapped_items = deep_copied_items.map((item) => {
 		const task = tasks[item.id];
 		return task ? { ...item, task } : item;
 	});

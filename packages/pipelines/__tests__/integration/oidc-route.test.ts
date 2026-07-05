@@ -17,8 +17,8 @@ import { pipeline_oidc_trust } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { Backend, Result } from "@f0rbit/corpus";
 import { create_memory_backend, err, ok } from "@f0rbit/corpus";
-import { make_routes, type OidcDeps, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
-import { create_test_db, seed_package, seed_user } from "./helpers.ts";
+import { make_routes, type OidcDeps, type PulseEmitterLite, type RoutesDeps } from "../../src/routes";
+import { create_test_db, seed_package, seed_user } from "./helpers";
 
 const BASE_AUDIENCE = "https://devpad-pipelines.dev-818.workers.dev";
 

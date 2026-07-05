@@ -15,7 +15,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
 import type { AssetUpload, ModuleUpload } from "@devpad/pipeline-fakes";
-import { build_assets_manifest, make_cf_api_provider } from "../../src/providers/cf-api-provider.ts";
+import { build_assets_manifest, make_cf_api_provider } from "../../src/providers/cf-api-provider";
 
 type ParsedParts = Record<
 	string,

@@ -1,5 +1,5 @@
 import { ok, type Result } from "@f0rbit/corpus";
-import type { MetricSnapshot, PulseError, PulseSummaryProvider, PulseSummaryQuery } from "./pulse-summary-provider.ts";
+import type { MetricSnapshot, PulseError, PulseSummaryProvider, PulseSummaryQuery } from "./pulse-summary-provider";
 
 const query_key = (q: PulseSummaryQuery): string => `${q.package}|${q.environment}|${q.version_id}`;
 

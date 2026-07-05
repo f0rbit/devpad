@@ -12,7 +12,7 @@
  */
 
 import { err, ok, type Result } from "@f0rbit/corpus";
-import type { Duration, Rollout, Stage } from "./types.ts";
+import type { Duration, Rollout, Stage } from "./types";
 
 export type DurationParseError = {
 	code: "duration_parse";

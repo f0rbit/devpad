@@ -31,13 +31,13 @@ import { startSpan, type Span } from "@f0rbit/pulse-client/spans";
 
 type LogLevel = "raw" | "debug" | "info" | "notice" | "warning" | "error" | "critical";
 
-let _pulse: Pulse | null = null;
-let _initialized = false;
-let _handlers_installed = false;
+let pulse_instance: Pulse | null = null;
+let initialized = false;
+let handlers_installed = false;
 
 const ensureInitialized = (): Pulse | null => {
-	if (_initialized) return _pulse;
-	_initialized = true;
+	if (initialized) return pulse_instance;
+	initialized = true;
 
 	if (typeof window === "undefined") return null;
 
@@ -48,7 +48,7 @@ const ensureInitialized = (): Pulse | null => {
 
 	if (!endpoint || !project_id || !ingest_key) return null;
 
-	_pulse = createPulse({
+	pulse_instance = createPulse({
 		project_id,
 		ingest_key,
 		endpoint,
@@ -56,13 +56,13 @@ const ensureInitialized = (): Pulse | null => {
 		release,
 	});
 
-	install_browser_handlers(_pulse);
-	return _pulse;
+	install_browser_handlers(pulse_instance);
+	return pulse_instance;
 };
 
 const install_browser_handlers = (p: Pulse): void => {
-	if (_handlers_installed || typeof window === "undefined") return;
-	_handlers_installed = true;
+	if (handlers_installed || typeof window === "undefined") return;
+	handlers_installed = true;
 
 	window.addEventListener("error", (e: ErrorEvent) => {
 		p.captureError(e.error ?? new Error(e.message), {

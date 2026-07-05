@@ -221,7 +221,7 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			const path = new URL(request.url).pathname;
 			console.log(`[worker] ${request.method} ${hostname}${path}`);
 
-			const enriched_env = { ...env, __api: api };
+			const enriched_env = { ...env, internal_api: api };
 
 			if (isApiRequest(path)) {
 				return api.fetch(request, enriched_env, ctx);

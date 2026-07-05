@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { VersionSetManifest } from "@f0rbit/corpus";
-import { resolve_rollout } from "../src/discriminator.ts";
-import { defaultAtomic, defaultGradual } from "../src/index.ts";
-import type { ForcedAtomicReason, Rollout } from "../src/types.ts";
+import { resolve_rollout } from "../src/discriminator";
+import { defaultAtomic, defaultGradual } from "../src/index";
+import type { ForcedAtomicReason, Rollout } from "../src/types";
 
 const make_manifest = (opts: {
 	has_do_migrations: boolean;

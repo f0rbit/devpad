@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import * as yaml from "js-yaml";
-import { render_template } from "../src/scaffolder/domain.ts";
+import { render_template } from "../src/scaffolder/domain";
 
 describe("github-actions-template", () => {
 	test("template file exists", () => {

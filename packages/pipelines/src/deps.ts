@@ -28,21 +28,21 @@ import { createD1Database } from "@devpad/schema/database/d1";
 import type { Backend } from "@f0rbit/corpus";
 import { err, ok } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
-import { authenticate_request, type AuthIdentity, type SessionVerifier } from "./auth.ts";
-import type { PipelineEnv } from "./bindings.ts";
-import { make_cf_router } from "./do-router.ts";
-import { make_d1_approval_store } from "./providers/approval-store.ts";
-import { make_cf_api_provider } from "./providers/cf-api-provider.ts";
+import { authenticate_request, type AuthIdentity, type SessionVerifier } from "./auth";
+import type { PipelineEnv } from "./bindings";
+import { make_cf_router } from "./do-router";
+import { make_d1_approval_store } from "./providers/approval-store";
+import { make_cf_api_provider } from "./providers/cf-api-provider";
 import {
 	make_corpus_bundle_provider,
 	make_corpus_lineage_provider,
 	make_corpus_manifest_provider,
 	make_corpus_template_resolver,
-} from "./providers/corpus-providers.ts";
-import { make_github_oidc_verifier, type OidcVerifier } from "./providers/oidc-verifier.ts";
-import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse.ts";
-import { make_session_signer, type SessionSigner } from "./providers/session-signer.ts";
-import type { AuthGate, OidcDeps, PulseEmitterLite, RoutesDeps } from "./routes.ts";
+} from "./providers/corpus-providers";
+import { make_github_oidc_verifier, type OidcVerifier } from "./providers/oidc-verifier";
+import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse";
+import { make_session_signer, type SessionSigner } from "./providers/session-signer";
+import type { AuthGate, OidcDeps, PulseEmitterLite, RoutesDeps } from "./routes";
 
 /**
  * Wraps `env.CF_API_TOKEN.get()` so the provider can pull the secret on

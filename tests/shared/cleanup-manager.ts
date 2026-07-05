@@ -1,4 +1,4 @@
-import type ApiClient from "@devpad/api";
+import type { ApiClient } from "@devpad/api";
 import type { Project, Tag, TaskWithDetails } from "@devpad/schema";
 import { log } from "./test-utils";
 

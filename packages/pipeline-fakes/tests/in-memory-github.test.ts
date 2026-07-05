@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InMemoryGithubProvider } from "../src/in-memory-github.ts";
+import { InMemoryGithubProvider } from "../src/in-memory-github";
 
 const sample_repo = { owner: "f0rbit", name: "devpad", default_branch: "main", private: false };
 

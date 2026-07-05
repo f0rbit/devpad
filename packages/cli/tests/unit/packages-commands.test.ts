@@ -74,13 +74,13 @@ const build_fake_client = (
 					return (
 						overrides.create
 							? overrides.create(input)
-							: ok({ ...((input as Record<string, unknown>) ?? {}), id: (input as { id: string }).id })
+							: ok({ ...(input as Record<string, unknown>), id: (input as { id: string }).id })
 					) as Promise<ApiResult<unknown>>;
 				},
 				update: async (id, patch) => {
 					calls.push({ kind: "update", args: [id, patch] });
 					return (
-						overrides.update ? overrides.update(id, patch) : ok({ id, ...((patch as Record<string, unknown>) ?? {}) })
+						overrides.update ? overrides.update(id, patch) : ok({ id, ...(patch as Record<string, unknown>) })
 					) as Promise<ApiResult<unknown>>;
 				},
 				delete: async (id) => {

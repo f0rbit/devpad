@@ -1,5 +1,5 @@
 import { type BrowserContext, expect, test } from "@playwright/test";
-import { E2E_PROJECT_ID } from "./fixtures/pipeline-ids.ts";
+import { E2E_PROJECT_ID } from "./fixtures/pipeline-ids";
 
 /**
  * Phase 1 proof spec — proves the seed substrate lines up end-to-end:

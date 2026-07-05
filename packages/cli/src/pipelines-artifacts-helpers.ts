@@ -11,8 +11,8 @@ import { type PipelineTemplate, PipelineTemplateSchema } from "@devpad/pipeline-
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { createHash } from "crypto";
-import type { WalkedAssets } from "./asset-walker.ts";
-import type { WalkedBundle } from "./bundle-walker.ts";
+import type { WalkedAssets } from "./asset-walker";
+import type { WalkedBundle } from "./bundle-walker";
 
 export interface ArtifactInputs {
 	package_name: string;

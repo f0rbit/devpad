@@ -30,7 +30,7 @@ import {
 	version_set_store,
 } from "@f0rbit/corpus";
 import { z } from "zod";
-import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes.ts";
+import type { LineageProvider, ManifestProvider, TemplateResolver } from "../routes";
 
 /**
  * Read the full {@link VersionSetManifest} body keyed by the corpus

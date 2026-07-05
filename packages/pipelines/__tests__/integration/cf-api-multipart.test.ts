@@ -16,7 +16,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
-import { make_cf_api_provider } from "../../src/providers/cf-api-provider.ts";
+import { make_cf_api_provider } from "../../src/providers/cf-api-provider";
 
 type Captured = {
 	method: string;

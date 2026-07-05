@@ -18,10 +18,10 @@ import {
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import chalk from "chalk";
 import type { Command } from "commander";
-import { type AssetWalkError, type WalkedAssets, walk_assets_dir } from "../asset-walker.ts";
-import { type BundleWalkError, type WalkedBundle, walk_bundle_dir } from "../bundle-walker.ts";
-import { type CorpusBackendMode, selectCorpusBackend } from "../corpus-backend.ts";
-import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend.ts";
+import { type AssetWalkError, type WalkedAssets, walk_assets_dir } from "../asset-walker";
+import { type BundleWalkError, type WalkedBundle, walk_bundle_dir } from "../bundle-walker";
+import { type CorpusBackendMode, selectCorpusBackend } from "../corpus-backend";
+import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend";
 import {
 	type ArtifactInputs,
 	build_asset_manifest_from_walk,
@@ -33,10 +33,10 @@ import {
 	compute_hash,
 	type VersionSetOutput,
 	validate_artifact_paths,
-} from "../pipelines-artifacts-helpers.ts";
-import { fail_with, make_spinner, print_next_steps as print_next_steps_shared } from "../printer.ts";
-import { type ScaffolderError, scaffold_package } from "../scaffolder/index.ts";
-import type { DefaultGateKind, RolloutMode } from "../scaffolder/types.ts";
+} from "../pipelines-artifacts-helpers";
+import { fail_with, make_spinner, print_next_steps as print_next_steps_shared } from "../printer";
+import { type ScaffolderError, scaffold_package } from "../scaffolder/index";
+import type { DefaultGateKind, RolloutMode } from "../scaffolder/types";
 
 const ROLLOUT_MODES = ["gradual", "atomic"] as const;
 const GATE_KINDS = ["manual", "auto", "analysis"] as const;

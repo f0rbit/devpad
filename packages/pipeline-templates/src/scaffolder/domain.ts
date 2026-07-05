@@ -22,7 +22,7 @@ import type {
 	ScaffolderInput,
 	TemplateVars,
 	ValidationError,
-} from "./types.ts";
+} from "./types";
 
 const MAX_PACKAGE_NAME_LENGTH = 40;
 const PACKAGE_NAME_PATTERN = /^[a-z][a-z0-9-]*$/;

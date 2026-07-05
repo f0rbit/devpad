@@ -10,7 +10,7 @@ import type {
 	WorkerDeployment,
 	WorkerMeta,
 	WorkerVersion,
-} from "./cloudflare-provider.ts";
+} from "./cloudflare-provider";
 
 type ScriptState = {
 	versions: WorkerVersion[];

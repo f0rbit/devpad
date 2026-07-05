@@ -6,7 +6,7 @@
 import { afterAll, beforeAll } from "bun:test";
 import fs from "node:fs";
 import path from "node:path";
-import ApiClient from "@devpad/api";
+import { ApiClient } from "@devpad/api";
 import {
 	cleanupTestDatabase,
 	createTestUser,

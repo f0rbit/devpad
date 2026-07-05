@@ -37,8 +37,8 @@ import {
 	make_routes,
 	type RoutesDeps,
 	type TemplateResolver,
-} from "../../src/routes.ts";
-import { type DoCtx, make_run_handler } from "../../src/run-do.ts";
+} from "../../src/routes";
+import { type DoCtx, make_run_handler } from "../../src/run-do";
 
 /**
  * Test helper mirroring `resolve_script_name`'s convention:

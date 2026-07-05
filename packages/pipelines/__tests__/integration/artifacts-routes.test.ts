@@ -16,9 +16,9 @@
 
 import { describe, expect, test } from "bun:test";
 import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
-import type { AuthError, AuthIdentity } from "../../src/auth.ts";
-import { is_bearer_valid, parse_bearer_header } from "../../src/auth.ts";
-import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
+import type { AuthError, AuthIdentity } from "../../src/auth";
+import { is_bearer_valid, parse_bearer_header } from "../../src/auth";
+import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes";
 
 const valid_manifest: VersionSetManifest = {
 	package: "test-pkg",

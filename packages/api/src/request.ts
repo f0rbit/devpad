@@ -10,45 +10,45 @@ export interface BufferedQueue<T> {
 }
 
 export class ArrayBufferedQueue<T> implements BufferedQueue<T> {
-	private _entries: T[] = [];
-	private _head: number = 0;
-	private _tail: number = 0;
-	private _size: number = 0;
+	private entries: T[] = [];
+	private head: number = 0;
+	private tail: number = 0;
+	private count: number = 0;
 
-	constructor(private _capacity: number) {}
+	constructor(private capacity: number) {}
 
 	latest(): T | null {
-		if (this._size === 0) return null;
-		return this._entries[this._tail - 1] ?? null;
+		if (this.count === 0) return null;
+		return this.entries[this.tail - 1] ?? null;
 	}
 
 	list(): T[] {
-		if (this._size === 0) return [];
-		if (this._head < this._tail) {
-			return this._entries.slice(this._head, this._tail);
+		if (this.count === 0) return [];
+		if (this.head < this.tail) {
+			return this.entries.slice(this.head, this.tail);
 		}
-		return this._entries.slice(this._head).concat(this._entries.slice(0, this._tail));
+		return this.entries.slice(this.head).concat(this.entries.slice(0, this.tail));
 	}
 
 	add(item: T): void {
-		if (this._size === this._capacity) {
-			this._head = (this._head + 1) % this._capacity;
+		if (this.count === this.capacity) {
+			this.head = (this.head + 1) % this.capacity;
 		} else {
-			this._size++;
+			this.count++;
 		}
-		this._entries[this._tail] = item;
-		this._tail = (this._tail + 1) % this._capacity;
+		this.entries[this.tail] = item;
+		this.tail = (this.tail + 1) % this.capacity;
 	}
 
 	size(): number {
-		return this._size;
+		return this.count;
 	}
 
 	clear(): void {
-		this._entries = [];
-		this._head = 0;
-		this._tail = 0;
-		this._size = 0;
+		this.entries = [];
+		this.head = 0;
+		this.tail = 0;
+		this.count = 0;
 	}
 }
 

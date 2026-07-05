@@ -69,8 +69,8 @@ export type AuthMode = "session" | "key" | "cookie";
  */
 export class ApiClient {
 	private readonly clients;
-	private _api_key: string;
-	private _auth_mode: AuthMode;
+	private api_key_field: string;
+	private auth_mode_field: AuthMode;
 
 	constructor(options: {
 		base_url?: string;
@@ -83,15 +83,15 @@ export class ApiClient {
 	}) {
 		const base_url = options.base_url || "http://localhost:4321/api/v1";
 
-		this._api_key = options.api_key ?? "";
-		this._auth_mode =
+		this.api_key_field = options.api_key ?? "";
+		this.auth_mode_field =
 			options.auth_mode ?? (options.api_key?.startsWith("jwt:") ? "session" : options.api_key ? "key" : "cookie");
 
 		const clientOptions = {
 			base_url,
 			api_key: options.api_key,
 			max_history_size: options.max_history_size,
-			auth_mode: this._auth_mode,
+			auth_mode: this.auth_mode_field,
 			credentials: options.credentials,
 			default_headers: options.default_headers,
 			custom_fetch: options.custom_fetch,
@@ -1515,13 +1515,13 @@ export class ApiClient {
 	 * Get the API key
 	 */
 	public getApiKey(): string {
-		return this._api_key;
+		return this.api_key_field;
 	}
 
 	/**
 	 * Get the authentication mode
 	 */
 	public getAuthMode(): AuthMode {
-		return this._auth_mode;
+		return this.auth_mode_field;
 	}
 }

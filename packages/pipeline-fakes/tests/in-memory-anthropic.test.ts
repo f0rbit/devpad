@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InMemoryAnthropicProvider } from "../src/in-memory-anthropic.ts";
+import { InMemoryAnthropicProvider } from "../src/in-memory-anthropic";
 
 describe("InMemoryAnthropicProvider", () => {
 	test("echoes the last user message and records the call", async () => {

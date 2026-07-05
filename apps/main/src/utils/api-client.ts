@@ -1,4 +1,4 @@
-import type ApiClient from "@devpad/api";
+import type { ApiClient } from "@devpad/api";
 import type { ApiResultError } from "@devpad/api";
 import { getServerApiClient } from "@devpad/core/ui/api-client";
 import type { Project } from "@devpad/schema";

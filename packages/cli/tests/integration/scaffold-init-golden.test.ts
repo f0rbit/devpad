@@ -19,7 +19,7 @@ import {
 	type DefaultGateKind,
 	type RolloutMode,
 	scaffold_package,
-} from "../../src/scaffolder/index.ts";
+} from "../../src/scaffolder/index";
 
 const GOLDEN_ROOT = path.resolve(import.meta.dir, "..", "golden");
 const FIXED_NOW = new Date(Date.UTC(2026, 4, 17));

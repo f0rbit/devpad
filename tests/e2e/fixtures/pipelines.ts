@@ -47,7 +47,7 @@ import {
 	E2E_SESSION_ID,
 	E2E_TEMPLATE_ID,
 	E2E_USER_ID,
-} from "./pipeline-ids.ts";
+} from "./pipeline-ids";
 
 /**
  * Re-export the fixture ids from the node-safe `./pipeline-ids` module (single

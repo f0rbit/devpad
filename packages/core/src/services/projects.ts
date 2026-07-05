@@ -115,8 +115,8 @@ export async function getRecentUpdate(
 		if (old?.[0]) update.old_data = old[0];
 	}
 	if (update.new_id) {
-		const new_ = await db.select().from(tracker_result).where(eq(tracker_result.id, update.new_id));
-		if (new_?.[0]) update.new_data = new_[0];
+		const next_result = await db.select().from(tracker_result).where(eq(tracker_result.id, update.new_id));
+		if (next_result?.[0]) update.new_data = next_result[0];
 	}
 
 	return ok(update);

@@ -24,10 +24,10 @@ import type { OidcAudit } from "@devpad/core/services/pipelines";
 import { pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
-import type { AuthError, AuthIdentity } from "../../src/auth.ts";
-import { is_bearer_valid, parse_bearer_header } from "../../src/auth.ts";
-import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes.ts";
-import { create_test_db, seed_package, seed_user } from "./helpers.ts";
+import type { AuthError, AuthIdentity } from "../../src/auth";
+import { is_bearer_valid, parse_bearer_header } from "../../src/auth";
+import { type AuthGate, make_routes, type PulseEmitterLite, type RoutesDeps } from "../../src/routes";
+import { create_test_db, seed_package, seed_user } from "./helpers";
 
 const ADMIN_TOKEN = "test-admin-token-AAAAAAAAAA";
 

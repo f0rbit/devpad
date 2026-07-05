@@ -1,4 +1,4 @@
-import ApiClient from "@devpad/api";
+import { ApiClient } from "@devpad/api";
 
 const SESSION_SENTINELS = new Set(["injected", "verified"]);
 
@@ -6,7 +6,7 @@ interface AstroLocals {
 	session: { id: string } | null;
 	runtime?: {
 		env?: {
-			__api?: { fetch: (request: Request, env: any, ctx: any) => Promise<Response> };
+			internal_api?: { fetch: (request: Request, env: any, ctx: any) => Promise<Response> };
 			API_URL?: string;
 			[key: string]: unknown;
 		};
@@ -16,7 +16,7 @@ interface AstroLocals {
 
 export function getServerApiClient(locals: AstroLocals): ApiClient {
 	const runtime = locals.runtime;
-	const api_app = runtime?.env?.__api;
+	const api_app = runtime?.env?.internal_api;
 	const base_url = process.env.PUBLIC_API_SERVER_URL || runtime?.env?.API_URL || "";
 
 	if (!base_url) throw new Error("No API server URL available");

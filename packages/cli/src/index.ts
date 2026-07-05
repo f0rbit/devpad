@@ -4,8 +4,8 @@ import { ApiClient, getTool } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
-import { register_pipelines_commands } from "./commands/pipelines.ts";
-import { make_spinner as createSpinner } from "./printer.ts";
+import { register_pipelines_commands } from "./commands/pipelines";
+import { make_spinner as createSpinner } from "./printer";
 
 // Helper to get API client
 function getApiClient(): ApiClient {

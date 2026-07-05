@@ -24,7 +24,7 @@ import {
 	validate_package_name,
 } from "@devpad/pipeline-templates";
 import { err, format_error, ok, type Result, try_catch_async } from "@f0rbit/corpus";
-import type { ScaffoldedPackage, ScaffolderError, ScaffoldRequest } from "./types.ts";
+import type { ScaffoldedPackage, ScaffolderError, ScaffoldRequest } from "./types";
 
 const TEMPLATES_PACKAGE_ROOT = path.resolve(
 	import.meta.dir,

@@ -45,11 +45,11 @@ import { join } from "node:path";
 // CLI imports are reached via relative path: the `@devpad/cli` workspace
 // package has no `exports` map, so we can't shortcut through its `main`.
 // This intentionally exercises the real CLI source — no test duplicate.
-import { compute_asset_hash } from "../../../cli/src/asset-walker.ts";
-import { action_artifacts_upload } from "../../../cli/src/commands/pipelines.ts";
+import { compute_asset_hash } from "../../../cli/src/asset-walker";
+import { action_artifacts_upload } from "../../../cli/src/commands/pipelines";
 import { AssetManifest, BundleManifest, InMemoryCloudflareProvider } from "@devpad/pipeline-fakes";
 import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
-import { make_corpus_bundle_provider } from "../../src/providers/corpus-providers.ts";
+import { make_corpus_bundle_provider } from "../../src/providers/corpus-providers";
 
 const VALID_TOKEN = "test-e2e-token";
 

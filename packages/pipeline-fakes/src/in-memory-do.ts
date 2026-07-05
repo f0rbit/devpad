@@ -42,41 +42,41 @@ export type StorageFake = {
 export class InMemoryDurableObjectState {
 	readonly id: DurableObjectIdFake;
 	readonly storage: StorageFake;
-	private readonly _kv: Map<string, unknown> = new Map();
-	private _alarm_ms: number | null = null;
-	private _alarm_handler: (() => Promise<void>) | null = null;
+	private readonly kv: Map<string, unknown> = new Map();
+	private alarm_at_ms: number | null = null;
+	private alarm_handler: (() => Promise<void>) | null = null;
 
 	constructor(name: string) {
 		this.id = make_id(name);
 		this.storage = {
-			get: async <T = unknown>(key: string): Promise<T | undefined> => this._kv.get(key) as T | undefined,
+			get: async <T = unknown>(key: string): Promise<T | undefined> => this.kv.get(key) as T | undefined,
 			put: async (key, value) => {
-				this._kv.set(key, value);
+				this.kv.set(key, value);
 			},
-			delete: async (key: string): Promise<boolean> => this._kv.delete(key),
-			list: async <T = unknown>(): Promise<Map<string, T>> => new Map(this._kv) as Map<string, T>,
-			getAlarm: async () => this._alarm_ms,
+			delete: async (key: string): Promise<boolean> => this.kv.delete(key),
+			list: async <T = unknown>(): Promise<Map<string, T>> => new Map(this.kv) as Map<string, T>,
+			getAlarm: async () => this.alarm_at_ms,
 			setAlarm: async (ms) => {
-				this._alarm_ms = ms;
+				this.alarm_at_ms = ms;
 			},
 			deleteAlarm: async () => {
-				this._alarm_ms = null;
+				this.alarm_at_ms = null;
 			},
 		};
 	}
 
 	registerAlarmHandler(handler: () => Promise<void>): void {
-		this._alarm_handler = handler;
+		this.alarm_handler = handler;
 	}
 
 	async manualFireAlarm(): Promise<void> {
-		if (this._alarm_handler === null) return;
-		this._alarm_ms = null;
-		await this._alarm_handler();
+		if (this.alarm_handler === null) return;
+		this.alarm_at_ms = null;
+		await this.alarm_handler();
 	}
 
 	get alarm_ms(): number | null {
-		return this._alarm_ms;
+		return this.alarm_at_ms;
 	}
 }
 

@@ -23,7 +23,7 @@
 
 import type { OidcAudit, OidcSessionClaims } from "@devpad/core/services/pipelines";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import type { PipelineEnv } from "./bindings.ts";
+import type { PipelineEnv } from "./bindings";
 
 export type { OidcAudit, OidcSessionClaims } from "@devpad/core/services/pipelines";
 

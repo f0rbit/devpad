@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { InMemoryDurableObjectNamespace, InMemoryDurableObjectState } from "../src/in-memory-do.ts";
+import { InMemoryDurableObjectNamespace, InMemoryDurableObjectState } from "../src/in-memory-do";
 
 describe("InMemoryDurableObjectState", () => {
 	test("storage round-trips put/get/delete", async () => {

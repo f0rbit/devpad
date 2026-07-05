@@ -92,6 +92,28 @@ export function isNetworkError(error: unknown): error is NetworkError {
 }
 
 /**
+ * Best-effort fallback parse when the raw error message isn't JSON --
+ * extracted from parseZodErrors to keep nesting within the max-depth limit.
+ */
+function tryParseZodErrorString(errorMessage: string): any {
+	const zodErrorMatch = errorMessage.match(/ZodError: (.+)/);
+	if (!zodErrorMatch?.[1]) return null;
+	try {
+		return JSON.parse(zodErrorMatch[1]);
+	} catch {
+		// If still not JSON, try to extract from the message
+		const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
+		if (!issuesMatch?.[1]) return null;
+		try {
+			return { issues: JSON.parse(issuesMatch[1]) };
+		} catch {
+			// Fall back to basic parsing
+			return null;
+		}
+	}
+}
+
+/**
  * Parse Zod validation errors into user-friendly messages
  */
 export function parseZodErrors(errorMessage: string): string {
@@ -102,22 +124,7 @@ export function parseZodErrors(errorMessage: string): string {
 			parsedError = JSON.parse(errorMessage);
 		} catch {
 			// If not JSON, try to extract Zod error details from the error message
-			const zodErrorMatch = errorMessage.match(/ZodError: (.+)/);
-			if (zodErrorMatch && zodErrorMatch[1]) {
-				try {
-					parsedError = JSON.parse(zodErrorMatch[1]);
-				} catch {
-					// If still not JSON, try to extract from the message
-					const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
-					if (issuesMatch && issuesMatch[1]) {
-						try {
-							parsedError = { issues: JSON.parse(issuesMatch[1]) };
-						} catch {
-							// Fall back to basic parsing
-						}
-					}
-				}
-			}
+			parsedError = tryParseZodErrorString(errorMessage);
 		}
 
 		if (parsedError?.issues && Array.isArray(parsedError.issues)) {

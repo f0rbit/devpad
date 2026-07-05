@@ -13,14 +13,14 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Result } from "@f0rbit/corpus";
-import type { PipelineEnv } from "./bindings.ts";
+import type { PipelineEnv } from "./bindings";
 import {
 	type CallerIdentity,
 	type GrantCheckResponse,
 	type GrantRpcError,
 	type PipelinesGrantsRPC,
 	PipelinesGrantsService,
-} from "./grants-rpc.ts";
+} from "./grants-rpc";
 
 export class PipelinesGrantsEndpoint extends WorkerEntrypoint<PipelineEnv> implements PipelinesGrantsRPC {
 	private service_cached: PipelinesGrantsService | null = null;

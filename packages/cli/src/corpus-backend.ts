@@ -19,7 +19,7 @@
 
 import type { Backend } from "@f0rbit/corpus";
 import { create_memory_backend } from "@f0rbit/corpus";
-import { create_corpus_http_backend } from "./corpus-http-backend.ts";
+import { create_corpus_http_backend } from "./corpus-http-backend";
 
 export type CorpusBackendMode = "memory" | "cloudflare-http";
 

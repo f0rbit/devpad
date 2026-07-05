@@ -11,10 +11,10 @@
  * lives in {@link ./deps.ts} — see there for the construction graph.
  */
 
-import type { PipelineEnv } from "./bindings.ts";
-import { build_routes_deps_from_env, build_run_deps_from_env } from "./deps.ts";
-import { make_routes } from "./routes.ts";
-import { type DoCtx, make_run_handler, type PipelineRunDOLike, type RunDoServices } from "./run-do.ts";
+import type { PipelineEnv } from "./bindings";
+import { build_routes_deps_from_env, build_run_deps_from_env } from "./deps";
+import { make_routes } from "./routes";
+import { type DoCtx, make_run_handler, type PipelineRunDOLike, type RunDoServices } from "./run-do";
 
 /**
  * Production Durable Object class. Wrangler binds to this name via
@@ -45,14 +45,14 @@ export default {
 	fetch: app.fetch,
 };
 
-export type { PipelineEnv } from "./bindings.ts";
-export type { DoRouter, DoStub } from "./do-router.ts";
-export { make_cf_router } from "./do-router.ts";
-export type { CallerIdentity, GrantCheckResponse, GrantRpcError, PipelinesGrantsRPC } from "./grants-rpc.ts";
-export { PipelinesGrantsService } from "./grants-rpc.ts";
-export { PipelinesGrantsEndpoint } from "./grants-rpc-entrypoint.ts";
-export type { AuthError } from "./auth.ts";
-export { is_bearer_valid, parse_bearer_header, require_bearer_token } from "./auth.ts";
+export type { PipelineEnv } from "./bindings";
+export type { DoRouter, DoStub } from "./do-router";
+export { make_cf_router } from "./do-router";
+export type { CallerIdentity, GrantCheckResponse, GrantRpcError, PipelinesGrantsRPC } from "./grants-rpc";
+export { PipelinesGrantsService } from "./grants-rpc";
+export { PipelinesGrantsEndpoint } from "./grants-rpc-entrypoint";
+export type { AuthError } from "./auth";
+export { is_bearer_valid, parse_bearer_header, require_bearer_token } from "./auth";
 export type {
 	AuthGate,
 	LineageProvider,
@@ -60,8 +60,8 @@ export type {
 	PulseEmitterLite,
 	RoutesDeps,
 	TemplateResolver,
-} from "./routes.ts";
-export { make_routes } from "./routes.ts";
-export type { DoCtx, RunDoServices } from "./run-do.ts";
-export { make_run_handler } from "./run-do.ts";
-export { build_routes_deps_from_env, build_run_deps_from_env } from "./deps.ts";
+} from "./routes";
+export { make_routes } from "./routes";
+export type { DoCtx, RunDoServices } from "./run-do";
+export { make_run_handler } from "./run-do";
+export { build_routes_deps_from_env, build_run_deps_from_env } from "./deps";

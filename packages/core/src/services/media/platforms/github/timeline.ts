@@ -6,8 +6,8 @@ import { truncate } from "../../utils";
 
 const log = createLogger("platforms:github:timeline");
 
-export type CommitWithRepo = GitHubRepoCommit & { _repo: string };
-export type PRWithRepo = GitHubRepoPR & { _repo: string };
+export type CommitWithRepo = GitHubRepoCommit & { repo_name: string };
+export type PRWithRepo = GitHubRepoPR & { repo_name: string };
 
 export type GitHubTimelineData = {
 	commits: CommitWithRepo[];
@@ -30,7 +30,7 @@ export const loadGitHubData = async (backend: Backend, accountId: string): Promi
 
 			const fullName = `${owner}/${repo}`;
 			for (const commit of snapshotResult.value.data.commits) {
-				commits.push({ ...commit, _repo: fullName });
+				commits.push({ ...commit, repo_name: fullName });
 			}
 		}),
 	);
@@ -47,7 +47,7 @@ export const loadGitHubData = async (backend: Backend, accountId: string): Promi
 
 			const fullName = `${owner}/${repo}`;
 			for (const pr of snapshotResult.value.data.pull_requests) {
-				prs.push({ ...pr, _repo: fullName });
+				prs.push({ ...pr, repo_name: fullName });
 			}
 		}),
 	);
@@ -61,7 +61,7 @@ export const normalizeGitHub = (data: GitHubTimelineData): TimelineItem[] => {
 
 	for (const commit of data.commits) {
 		items.push({
-			id: `github:commit:${commit._repo}:${commit.sha.slice(0, 7)}`,
+			id: `github:commit:${commit.repo_name}:${commit.sha.slice(0, 7)}`,
 			platform: "github",
 			type: "commit",
 			timestamp: commit.author_date,
@@ -71,7 +71,7 @@ export const normalizeGitHub = (data: GitHubTimelineData): TimelineItem[] => {
 				type: "commit",
 				sha: commit.sha,
 				message: commit.message,
-				repo: commit._repo,
+				repo: commit.repo_name,
 				branch: commit.branch,
 				additions: commit.additions,
 				deletions: commit.deletions,
@@ -84,7 +84,7 @@ export const normalizeGitHub = (data: GitHubTimelineData): TimelineItem[] => {
 
 	for (const pr of data.prs) {
 		items.push({
-			id: `github:pr:${pr._repo}:${pr.number}`,
+			id: `github:pr:${pr.repo_name}:${pr.number}`,
 			platform: "github",
 			type: "pull_request",
 			timestamp: pr.merged_at ?? pr.updated_at,
@@ -92,7 +92,7 @@ export const normalizeGitHub = (data: GitHubTimelineData): TimelineItem[] => {
 			url: pr.url,
 			payload: {
 				type: "pull_request",
-				repo: pr._repo,
+				repo: pr.repo_name,
 				number: pr.number,
 				title: pr.title,
 				state: pr.state,

@@ -7,9 +7,9 @@
 
 import { describe, expect, test } from "bun:test";
 import { err, ok } from "@f0rbit/corpus";
-import type { AuthIdentity, OidcSessionClaims, SessionVerifier } from "../../src/auth.ts";
-import { authenticate_request } from "../../src/auth.ts";
-import type { PipelineEnv } from "../../src/bindings.ts";
+import type { AuthIdentity, OidcSessionClaims, SessionVerifier } from "../../src/auth";
+import { authenticate_request } from "../../src/auth";
+import type { PipelineEnv } from "../../src/bindings";
 
 describe("authenticate_request", () => {
 	// In-memory fake verifier for tests

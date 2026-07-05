@@ -11,7 +11,7 @@ import {
 	post_json,
 	SCRIPT_NAME_FOR,
 	type TestHarness,
-} from "./helpers.ts";
+} from "./helpers";
 
 const run_status_of = async (db: Database, run_id: string) =>
 	(await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id)))[0]!;

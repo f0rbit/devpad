@@ -8,7 +8,7 @@
  * or unaffinitised assets make percentage rollouts unsafe.
  */
 
-import type { Gate, Rollout, TransitionKey } from "./types.ts";
+import type { Gate, Rollout, TransitionKey } from "./types";
 
 export const defaultAtomic: Rollout = { type: "atomic" };
 

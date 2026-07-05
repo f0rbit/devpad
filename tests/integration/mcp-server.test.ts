@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import type ApiClient from "@devpad/api";
+import type { ApiClient } from "@devpad/api";
 import { CleanupManager } from "../shared/cleanup-manager";
 import { MCPTestClient } from "../shared/mcp-test-client";
 import { TestDataFactory } from "./factories";

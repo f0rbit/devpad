@@ -61,8 +61,8 @@ import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/co
 import { desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import type { AuthError, AuthIdentity } from "./auth.ts";
-import type { DoRouter } from "./do-router.ts";
+import type { AuthError, AuthIdentity } from "./auth";
+import type { DoRouter } from "./do-router";
 
 export const create_run_body = z.object({
 	package_id: z.string().min(1),

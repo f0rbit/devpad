@@ -118,7 +118,7 @@ const resolveStoreFromId = (backend: Backend, storeId: string) => {
 		case "raw":
 			return store.raw(backend, parsed.value.platform, parsed.value.accountId);
 		default: {
-			const _exhaustiveCheck: never = storeType;
+			const _: never = storeType;
 			return null;
 		}
 	}

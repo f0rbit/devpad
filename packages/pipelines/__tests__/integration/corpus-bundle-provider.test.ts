@@ -24,7 +24,7 @@ import { type Backend, create_memory_backend, type VersionSetManifest, version_s
 import {
 	type BundleProviderError,
 	make_corpus_directory_bundle_provider,
-} from "../../src/providers/corpus-providers.ts";
+} from "../../src/providers/corpus-providers";
 
 // VersionSetManifest is "strict" in the corpus types; the directory provider
 // reads the extra Phase 2.B fields from the JSON-serialised manifest. We cast
