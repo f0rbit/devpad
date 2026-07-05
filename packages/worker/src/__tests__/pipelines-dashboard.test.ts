@@ -38,7 +38,7 @@ const seed_baseline = async (db: Database, opts: { with_runs?: boolean } = {}): 
 		id: USER_ID,
 		name: "tester",
 		email: `${USER_ID}@test.example`,
-		email_verified: true,
+		email_verified: now,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
 		created_at: now,

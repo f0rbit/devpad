@@ -114,7 +114,7 @@ export async function seed_pipeline_fixtures(db: DrizzleDatabase): Promise<void>
 		id: E2E_USER_ID,
 		name: "E2E Test User",
 		email: `${E2E_USER_ID}@test.example`,
-		email_verified: true,
+		email_verified: SEED_NOW,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
 		created_at: SEED_NOW,

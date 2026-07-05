@@ -43,7 +43,7 @@ export async function seed_user(db: Database, id = "user_test"): Promise<User> {
 		id,
 		name: "tester",
 		email: `${id}@test.example`,
-		email_verified: true,
+		email_verified: now,
 		image_url: "https://example.com/x.png",
 		task_view: "list",
 		created_at: now,

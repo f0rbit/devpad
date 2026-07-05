@@ -157,5 +157,29 @@ export default define_lint_config({
 				"import-x/extensions": "off",
 			},
 		},
+		{
+			// The MCP SDK's own JSDoc on `Server` says "Only use `Server` for
+			// advanced use cases" (custom request handlers, dynamic tool list) --
+			// exactly this file's usage (DevpadMCPServer wires up custom
+			// ListTools/CallTool handlers). Migrating to `McpServer.registerTool`
+			// is a real behavioral rewrite, not a mechanical fix -- deferred
+			// rather than done blind during the fix/lint-gate lint pass.
+			files: ["packages/mcp/src/index.ts"],
+			rules: {
+				"@typescript-eslint/no-deprecated": "off",
+			},
+		},
+		{
+			// expect_ok<T>(body): T is a test-only response-unwrapping cast helper
+			// called with an explicit <T> at 20+ sites across this file. T only
+			// appears in the return position structurally, which
+			// no-unnecessary-type-parameters flags, but de-genericizing it would
+			// push an `as T` to every call site -- strictly worse ergonomics for
+			// identical type safety.
+			files: ["packages/pipelines/__tests__/integration/orchestrator-routes.test.ts"],
+			rules: {
+				"@typescript-eslint/no-unnecessary-type-parameters": "off",
+			},
+		},
 	],
 });
