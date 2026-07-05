@@ -51,11 +51,15 @@ const environments = {
 	},
 };
 
-const config = environments[TEST_ENV as keyof typeof environments];
+function isKnownEnv(value: string): value is keyof typeof environments {
+	return value in environments;
+}
 
-if (!config) {
+if (!isKnownEnv(TEST_ENV)) {
 	throw new Error(`Invalid TEST_ENV: ${TEST_ENV}. Must be one of: local, staging`);
 }
+
+const config = environments[TEST_ENV];
 
 export default defineConfig({
 	testDir: "./tests/e2e",
