@@ -6,6 +6,7 @@ import { Command } from "commander";
 import { Table } from "console-table-printer";
 import { register_pipelines_commands } from "./commands/pipelines";
 import { make_spinner as createSpinner } from "./printer";
+import { type TaskUpdateOptions, build_task_update_input } from "./task-update";
 
 // Helper to get API client
 function getApiClient(): ApiClient {
@@ -241,6 +242,34 @@ tasks
 			console.log(chalk.green(`ID: ${String(result.id)}`));
 		} catch (error) {
 			spinner.fail("Failed to create task");
+			handleError(error);
+		}
+	});
+
+tasks
+	.command("update <id>")
+	.description("Update a task (partial — only provided flags change)")
+	.option("--status <status>", "Task status (todo|in_progress|done)")
+	.option("-t, --title <title>", "Task title")
+	.option("-s, --summary <summary>", "Task summary")
+	.option("--priority <priority>", "Task priority (low|medium|high)")
+	.action(async (id, options: TaskUpdateOptions) => {
+		const input = build_task_update_input(id, options);
+		if (!input) {
+			handleError(new Error("No fields to update — pass at least one of --status, --title, --summary, --priority"));
+			return;
+		}
+
+		const spinner = createSpinner("Updating task...").start();
+		try {
+			const tool = getTool("devpad_tasks_upsert");
+			if (!tool) throw new Error("Tool not found");
+
+			const client = getApiClient();
+			const result = await tool.execute(client, input);
+			spinner.succeed(`Task "${String(result.title)}" updated`);
+		} catch (error) {
+			spinner.fail("Failed to update task");
 			handleError(error);
 		}
 	});
