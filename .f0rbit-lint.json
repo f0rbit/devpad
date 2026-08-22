@@ -1,0 +1,21 @@
+{
+	"version": 1,
+	"languages": ["typescript", "shell"],
+	"managed_files": [
+		{
+			"file": ".oxfmtrc.json",
+			"canonical_source": "@f0rbit/oxfmt-config/oxfmtrc.json",
+			"mode": "byte-copy"
+		},
+		{
+			"file": ".oxlintrc.json",
+			"mode": "must-contain",
+			"contains": "@f0rbit/oxlint-config/oxlintrc.json"
+		},
+		{
+			"file": ".shellcheckrc",
+			"canonical_source": "@f0rbit/shellcheck-config/shellcheckrc",
+			"mode": "byte-copy"
+		}
+	]
+}

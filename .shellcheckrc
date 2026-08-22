@@ -1,0 +1,12 @@
+# Canonical f0rbit shellcheck config, distributed via @f0rbit/shellcheck-config
+# and byte-copied into every consumer by `f0rbit-lint init` as `.shellcheckrc`
+# — shellcheckrc has no `source`/`extends` composition mechanism, so drift is
+# caught by exact byte comparison in `f0rbit-lint check`, not by inheritance.
+
+# Follow `source`d scripts so SC1091 doesn't fire on the org's shared shell
+# helpers instead of failing quietly.
+external-sources=true
+
+# Keep style-level findings visible (shellcheck's own default) — explicit
+# here so a local ~/.shellcheckrc can't silently soften it.
+severity=style
