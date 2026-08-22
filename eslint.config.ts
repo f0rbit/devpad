@@ -10,6 +10,25 @@ export default define_lint_config({
 	module_resolution: "bundler",
 	overrides: [
 		{
+			// f0rbit/require-d1-wrapper (0.4.0) targets RPC-entrypoint callers that
+			// must route through createD1Database before touching drizzle.
+			// database/d1.ts IS that wrapper (create_d1_database's own definition --
+			// the rule flags its own implementation); database/bun.ts and
+			// migrate.ts use drizzle-orm/bun-sqlite (local dev/test DB), not D1 at
+			// all -- the rule's "any drizzle-orm-prefixed source" matching is
+			// over-broad. Same false-positive shape hit corpus/pulse in this same
+			// rollout (see their eslint.config.ts overrides).
+			// TODO(lint): scope the rule to drizzle-orm/d1 call sites only and
+			// exempt the file defining createD1Database -- track upstream in
+			// f0rbit/lint.
+			files: [
+				"packages/schema/src/database/d1.ts",
+				"packages/schema/src/database/bun.ts",
+				"packages/schema/src/database/migrate.ts",
+			],
+			rules: { "f0rbit/require-d1-wrapper": "off" },
+		},
+		{
 			// --- Rule tiers (fix/lint-gate PR) ---
 			// devpad is mid-migration from camelCase to snake_case naming (user
 			// decision, phased separately -- see AGENTS.md) and carries substantial
