@@ -19,10 +19,10 @@ describe("build_task_update_input", () => {
 			title: undefined,
 			summary: undefined,
 			priority: undefined,
-			progress: "DONE",
+			progress: "COMPLETED",
 		});
 		expect(build_task_update_input("task_1", { status: "in_progress" })?.progress).toBe("IN_PROGRESS");
-		expect(build_task_update_input("task_1", { status: "todo" })?.progress).toBe("TODO");
+		expect(build_task_update_input("task_1", { status: "todo" })?.progress).toBe("UNSTARTED");
 	});
 
 	test("uppercases priority", () => {
@@ -60,5 +60,9 @@ describe("build_task_update_input", () => {
 			priority: "LOW",
 			progress: "IN_PROGRESS",
 		});
+	});
+
+	test("returns undefined progress for an unrecognised status string", () => {
+		expect(build_task_update_input("task_1", { status: "bogus" })?.progress).toBeUndefined();
 	});
 });

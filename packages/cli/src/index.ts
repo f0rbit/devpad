@@ -6,6 +6,7 @@ import { Command } from "commander";
 import { Table } from "console-table-printer";
 import { register_pipelines_commands } from "./commands/pipelines";
 import { make_spinner as createSpinner } from "./printer";
+import { resolve_owner_id, task_status_to_progress } from "./task-progress";
 import { type TaskUpdateOptions, build_task_update_input } from "./task-update";
 
 // Helper to get API client
@@ -231,12 +232,14 @@ tasks
 			if (!tool) throw new Error("Tool not found");
 
 			const client = getApiClient();
+			const owner_id = await resolve_owner_id(client);
 			const result = await tool.execute(client, {
 				title: options.title,
 				project_id: options.project,
 				summary: options.summary,
 				priority: options.priority.toUpperCase(),
-				progress: options.status === "done" ? "DONE" : options.status === "in_progress" ? "IN_PROGRESS" : "TODO",
+				progress: task_status_to_progress(options.status) ?? "UNSTARTED",
+				owner_id,
 			});
 			spinner.succeed(`Task "${String(result.title)}" created`);
 			console.log(chalk.green(`ID: ${String(result.id)}`));
@@ -266,7 +269,8 @@ tasks
 			if (!tool) throw new Error("Tool not found");
 
 			const client = getApiClient();
-			const result = await tool.execute(client, input);
+			const owner_id = await resolve_owner_id(client);
+			const result = await tool.execute(client, { ...input, owner_id });
 			spinner.succeed(`Task "${String(result.title)}" updated`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
@@ -284,9 +288,11 @@ tasks
 			if (!tool) throw new Error("Tool not found");
 
 			const client = getApiClient();
+			const owner_id = await resolve_owner_id(client);
 			const result = await tool.execute(client, {
 				id,
-				progress: "DONE",
+				owner_id,
+				progress: "COMPLETED",
 			});
 			spinner.succeed(`Task "${String(result.title)}" marked as done`);
 		} catch (error) {
@@ -305,9 +311,11 @@ tasks
 			if (!tool) throw new Error("Tool not found");
 
 			const client = getApiClient();
+			const owner_id = await resolve_owner_id(client);
 			const result = await tool.execute(client, {
 				id,
-				progress: "TODO",
+				owner_id,
+				progress: "UNSTARTED",
 			});
 			spinner.succeed(`Task "${String(result.title)}" marked as todo`);
 		} catch (error) {
