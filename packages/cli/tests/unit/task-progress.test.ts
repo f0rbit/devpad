@@ -36,6 +36,16 @@ describe("resolve_owner_id", () => {
 	test("throws with the API's error message on failure", async () => {
 		const client = fake_client(async () => ({ ok: false, error: { message: "Unauthorized" } }));
 
-		await expect(resolve_owner_id(client)).rejects.toThrow("Failed to resolve current user: Unauthorized");
+		// Not `.rejects.toThrow()` — bun-types declares `.rejects`/`.toThrow()` as
+		// synchronous (`void`), which trips `await-thenable` +
+		// `no-confusing-void-expression` even though the chain is genuinely
+		// async at runtime. A plain try/catch stays honest to the types.
+		let message: string | undefined;
+		try {
+			await resolve_owner_id(client);
+		} catch (error) {
+			message = error instanceof Error ? error.message : undefined;
+		}
+		expect(message).toBe("Failed to resolve current user: Unauthorized");
 	});
 });
