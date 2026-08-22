@@ -38,7 +38,7 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"scripts": {
-		"build": "bun build src/index.ts --outdir dist --target node --packages=bundle",
+		"build": "bun build src/index.ts --outdir dist --target node --packages=bundle --external blake3-wasm",
 		"test": "bun test tests/unit tests/integration",
 		"typecheck": "tsc --noEmit",
 		"prepublishOnly": "bun run build"

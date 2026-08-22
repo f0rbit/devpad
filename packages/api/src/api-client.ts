@@ -952,6 +952,18 @@ export class ApiClient {
 
 	public readonly user = {
 		/**
+		 * Get the authenticated user's identity (id, name, github_id, task_view).
+		 * Single source of truth for resolving `owner_id` on task/milestone/goal
+		 * upserts — the API rejects any owner_id that doesn't match the caller.
+		 */
+		me: (): Promise<ApiResult<{ id: string; name: string | null; github_id: number | null; task_view: string }>> =>
+			wrap(() =>
+				this.clients.auth.get<{ id: string; name: string | null; github_id: number | null; task_view: string }>(
+					"/user/me",
+				),
+			),
+
+		/**
 		 * Get user activity history
 		 */
 		history: (): Promise<ApiResult<HistoryAction[]>> =>

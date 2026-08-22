@@ -351,6 +351,13 @@ export const tools: Record<string, ToolDefinition> = {
 	}),
 
 	// User operations
+	devpad_user_me: define_tool({
+		name: "devpad_user_me",
+		description: "Get the authenticated user's identity (id, name, github_id, task_view)",
+		inputSchema: z.object({}),
+		execute: async (client) => unwrap(await client.user.me()),
+	}),
+
 	devpad_user_history: define_tool({
 		name: "devpad_user_history",
 		description: "Get user activity history",
