@@ -7,6 +7,7 @@ import { Table } from "console-table-printer";
 import { register_pipelines_commands } from "./commands/pipelines";
 import { make_spinner as createSpinner } from "./printer";
 import { resolve_owner_id, task_status_to_progress } from "./task-progress";
+import { parse_task_response } from "./task-response";
 import { type TaskUpdateOptions, build_task_update_input } from "./task-update";
 
 // Helper to get API client
@@ -241,8 +242,9 @@ tasks
 				progress: task_status_to_progress(options.status) ?? "UNSTARTED",
 				owner_id,
 			});
-			spinner.succeed(`Task "${String(result.title)}" created`);
-			console.log(chalk.green(`ID: ${String(result.id)}`));
+			const { task } = parse_task_response(result);
+			spinner.succeed(`Task "${task.title}" created`);
+			console.log(chalk.green(`ID: ${task.id}`));
 		} catch (error) {
 			spinner.fail("Failed to create task");
 			handleError(error);
@@ -271,7 +273,8 @@ tasks
 			const client = getApiClient();
 			const owner_id = await resolve_owner_id(client);
 			const result = await tool.execute(client, { ...input, owner_id });
-			spinner.succeed(`Task "${String(result.title)}" updated`);
+			const { task } = parse_task_response(result);
+			spinner.succeed(`Task "${task.title}" updated`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
 			handleError(error);
@@ -294,7 +297,8 @@ tasks
 				owner_id,
 				progress: "COMPLETED",
 			});
-			spinner.succeed(`Task "${String(result.title)}" marked as done`);
+			const { task } = parse_task_response(result);
+			spinner.succeed(`Task "${task.title}" marked as done`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
 			handleError(error);
@@ -317,7 +321,8 @@ tasks
 				owner_id,
 				progress: "UNSTARTED",
 			});
-			spinner.succeed(`Task "${String(result.title)}" marked as todo`);
+			const { task } = parse_task_response(result);
+			spinner.succeed(`Task "${task.title}" marked as todo`);
 		} catch (error) {
 			spinner.fail("Failed to update task");
 			handleError(error);
