@@ -1,33 +1,22 @@
 import { Badge, Empty, Input, Select } from "@f0rbit/ui";
+import type { PulseEventRow } from "@devpad/api";
 import { createMemo, createSignal, For, Show } from "solid-js";
-
-type LogEntry = {
-	id?: string;
-	ts?: number | string;
-	level?: string;
-	message?: string;
-	name?: string;
-	route?: string;
-	metadata?: Record<string, unknown>;
-};
 
 type PulseLogsProps = {
 	projectId: string;
 	projectSlug: string;
-	logs: LogEntry[] | null;
+	logs: PulseEventRow[] | null;
 	error?: string | null;
 };
 
 const LEVELS = ["all", "fatal", "error", "warn", "info", "debug", "trace"] as const;
 
-const fmtTime = (v: number | string | undefined): string => {
-	if (v == null) return "";
-	const n = typeof v === "number" ? v : Date.parse(v);
-	if (!Number.isFinite(n)) return "";
-	return new Date(n).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+const fmtTime = (ts: number): string => {
+	if (!Number.isFinite(ts)) return "";
+	return new Date(ts).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 };
 
-const levelVariant = (level?: string): "error" | "warning" | "info" | "default" => {
+const levelVariant = (level?: string | null): "error" | "warning" | "info" | "default" => {
 	switch ((level ?? "").toLowerCase()) {
 		case "fatal":
 		case "error":
@@ -42,6 +31,14 @@ const levelVariant = (level?: string): "error" | "warning" | "info" | "default" 
 	}
 };
 
+// `properties.message` is the convention pulse's own subscription channels
+// read for `name=log` events — `properties` itself is free-form JSON, not
+// part of pulse's typed contract.
+const logMessage = (log: PulseEventRow): string => {
+	const message = log.properties?.message;
+	return typeof message === "string" ? message : `log #${String(log.id)}`;
+};
+
 export default function PulseLogs(props: PulseLogsProps) {
 	const [search, setSearch] = createSignal("");
 	const [level, setLevel] = createSignal<string>("all");
@@ -53,7 +50,7 @@ export default function PulseLogs(props: PulseLogsProps) {
 		return all.filter((log) => {
 			if (lv !== "all" && (log.level ?? "").toLowerCase() !== lv) return false;
 			if (!q) return true;
-			const hay = `${log.message ?? ""} ${log.name ?? ""} ${log.route ?? ""}`.toLowerCase();
+			const hay = `${logMessage(log)} ${log.url ?? ""}`.toLowerCase();
 			return hay.includes(q);
 		});
 	});
@@ -97,7 +94,7 @@ export default function PulseLogs(props: PulseLogsProps) {
 					style={{ "font-family": "var(--font-mono, monospace)", "font-size": "0.8rem" }}
 				>
 					<For each={filtered()}>
-						{(log, idx) => (
+						{(log) => (
 							<div
 								class="row"
 								style={{
@@ -111,11 +108,9 @@ export default function PulseLogs(props: PulseLogsProps) {
 									{fmtTime(log.ts)}
 								</span>
 								<Badge variant={levelVariant(log.level)}>{log.level ?? "info"}</Badge>
-								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>
-									{log.message ?? log.name ?? `log #${String(idx() + 1)}`}
-								</span>
-								<Show when={log.route}>
-									<span class="text-faint">{log.route}</span>
+								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>{logMessage(log)}</span>
+								<Show when={log.url}>
+									<span class="text-faint">{log.url}</span>
 								</Show>
 							</div>
 						)}
