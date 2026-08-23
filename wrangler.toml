@@ -25,7 +25,7 @@ ENVIRONMENT = "production"
 API_URL = "https://devpad.tools"
 FRONTEND_URL = "https://devpad.tools"
 PULSE_API_BASE = "https://pulse.devpad.tools"
-DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
+DEVPAD_PROJECT_ID = "project_3f0035e0-8530-4542-a087-75a11a419ac3"
 
 [[d1_databases]]
 binding = "DB"
@@ -56,7 +56,11 @@ FRONTEND_URL = "https://staging.devpad.tools"
 # Stage isolation: staging devpad → staging pulse → staging devpad (validates keys against the right DB).
 # Production keeps the production pulse URL above.
 PULSE_API_BASE = "https://pulse.devpad.tools"
-DEVPAD_PROJECT_ID = ""              # set after registering devpad-as-project — leave empty until then
+# Both envs point at the single production pulse project — pulse is a platform
+# singleton (see AGENTS.md "Platform services are deployed ONCE"), so preview
+# and production instrumentation share this project_id and are distinguished
+# by ENVIRONMENT tagging on emitted events, not by a separate pulse project.
+DEVPAD_PROJECT_ID = "project_3f0035e0-8530-4542-a087-75a11a419ac3"
 
 [[env.preview.d1_databases]]
 binding = "DB"

@@ -1,47 +1,27 @@
 import { Empty, Stat } from "@f0rbit/ui";
-import { For, Show } from "solid-js";
+import type { PulseLatencyResult } from "@devpad/api";
+import { Show } from "solid-js";
 import PulseChart from "./pulse-chart";
-
-type RoutePerf = {
-	route?: string;
-	count?: number;
-	p50?: number;
-	p95?: number;
-	p99?: number;
-	avg?: number;
-};
-
-type SeriesPoint = {
-	t: number;
-	value: number;
-};
-
-export type LatencyData = {
-	overall?: { p50?: number; p95?: number; p99?: number; avg?: number; count?: number };
-	series?: { p50?: SeriesPoint[]; p95?: SeriesPoint[]; p99?: SeriesPoint[] };
-	routes?: RoutePerf[];
-};
 
 type PulseRequestsProps = {
 	projectId: string;
 	projectSlug: string;
-	latency: LatencyData | null;
+	latency: PulseLatencyResult | null;
 	error?: string | null;
 };
 
-const fmtMs = (n: number | undefined): string => (typeof n === "number" ? `${String(Math.round(n))} ms` : "—");
+const fmtMs = (n: number | null | undefined): string => (typeof n === "number" ? `${String(Math.round(n))} ms` : "—");
 
 export default function PulseRequests(props: PulseRequestsProps) {
-	const overall = () => props.latency?.overall ?? {};
-	const series = () => props.latency?.series ?? {};
-	const routes = () => props.latency?.routes ?? [];
+	const percentiles = () => props.latency?.percentiles ?? {};
+	const by_minute = () => props.latency?.by_minute ?? [];
 
-	const seriesValues = (key: "p50" | "p95" | "p99"): number[] => {
-		const s = series()[key];
-		return Array.isArray(s) ? s.map((p) => p.value) : [];
-	};
+	const seriesValues = (key: "p50" | "p95" | "p99"): number[] =>
+		by_minute()
+			.map((b) => b[key])
+			.filter((v): v is number => typeof v === "number");
 
-	const isEmpty = () => routes().length === 0 && !overall().count;
+	const isEmpty = () => by_minute().length === 0;
 
 	return (
 		<div class="stack stack-md">
@@ -61,10 +41,9 @@ export default function PulseRequests(props: PulseRequestsProps) {
 				}
 			>
 				<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
-					<Stat value={(overall().count ?? 0).toLocaleString()} label="requests" />
-					<Stat value={fmtMs(overall().p50)} label="p50" />
-					<Stat value={fmtMs(overall().p95)} label="p95" />
-					<Stat value={fmtMs(overall().p99)} label="p99" />
+					<Stat value={fmtMs(percentiles()["50"])} label="p50" />
+					<Stat value={fmtMs(percentiles()["95"])} label="p95" />
+					<Stat value={fmtMs(percentiles()["99"])} label="p99" />
 				</div>
 
 				<div class="stack stack-sm">
@@ -105,46 +84,6 @@ export default function PulseRequests(props: PulseRequestsProps) {
 						</div>
 					</div>
 				</div>
-
-				<Show when={routes().length > 0}>
-					<div class="stack stack-sm">
-						<h3 style={{ margin: 0 }}>slowest routes</h3>
-						<div class="stack stack-xs" data-testid="pulse-routes-list">
-							<For each={routes().slice(0, 10)}>
-								{(route) => (
-									<div
-										class="row row-between"
-										style={{
-											"align-items": "center",
-											gap: "0.5rem",
-											padding: "0.5rem 0.75rem",
-											border: "1px solid var(--border)",
-											"border-radius": "var(--radius, 4px)",
-										}}
-									>
-										<span
-											class="text-sm"
-											style={{
-												"font-family": "var(--font-mono, monospace)",
-												"min-width": 0,
-												overflow: "hidden",
-												"text-overflow": "ellipsis",
-												"white-space": "nowrap",
-												flex: 1,
-											}}
-										>
-											{route.route ?? "(unknown)"}
-										</span>
-										<div class="row" style={{ gap: "1rem", "flex-shrink": 0 }}>
-											<span class="text-sm text-faint">{(route.count ?? 0).toLocaleString()} req</span>
-											<span class="text-sm">p95 {fmtMs(route.p95)}</span>
-										</div>
-									</div>
-								)}
-							</For>
-						</div>
-					</div>
-				</Show>
 			</Show>
 		</div>
 	);

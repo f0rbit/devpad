@@ -1,6 +1,6 @@
+import type { PulseSummary } from "@devpad/api";
 import { Show } from "solid-js";
 import PulseChart from "../pulse/pulse-chart";
-import type { PulseSummary } from "../pulse/pulse-overview";
 
 type PulseWidgetProps = {
 	projectSlug: string;
@@ -8,16 +8,10 @@ type PulseWidgetProps = {
 	error?: string | null;
 };
 
-const num = (n: number | undefined): string => (typeof n === "number" ? n.toLocaleString() : "0");
+const num = (n: number | undefined | null): string => (typeof n === "number" ? n.toLocaleString() : "0");
 
 export default function PulseWidget(props: PulseWidgetProps) {
-	const totals = () => props.summary?.totals ?? {};
-	const series = () => props.summary?.series ?? {};
-
-	const pageviewSeries = (): number[] => {
-		const s = series().pageviews;
-		return Array.isArray(s) ? s.map((p) => p.count) : [];
-	};
+	const pageviewSeries = (): number[] => (props.summary?.by_day ?? []).map((d) => d.pageviews);
 
 	const href = `/project/${props.projectSlug}/pulse`;
 
@@ -52,7 +46,7 @@ export default function PulseWidget(props: PulseWidgetProps) {
 				<div class="row" style={{ gap: "1rem", "align-items": "center" }}>
 					<div class="stack stack-xs">
 						<span class="text-sm text-faint">pageviews</span>
-						<span style={{ "font-size": "1.25rem", "font-weight": 600 }}>{num(totals().pageviews)}</span>
+						<span style={{ "font-size": "1.25rem", "font-weight": 600 }}>{num(props.summary?.pageviews)}</span>
 					</div>
 					<div class="stack stack-xs">
 						<span class="text-sm text-faint">errors</span>
@@ -60,10 +54,10 @@ export default function PulseWidget(props: PulseWidgetProps) {
 							style={{
 								"font-size": "1.25rem",
 								"font-weight": 600,
-								color: (totals().errors ?? 0) > 0 ? "var(--item-red)" : undefined,
+								color: (props.summary?.errors ?? 0) > 0 ? "var(--item-red)" : undefined,
 							}}
 						>
-							{num(totals().errors)}
+							{num(props.summary?.errors)}
 						</span>
 					</div>
 					<div style={{ "margin-left": "auto" }}>

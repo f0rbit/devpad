@@ -1,4 +1,6 @@
 ---
+import type { PulseErrorIssue, PulseEventRow, PulseLatencyResult, PulseSummary } from "@devpad/api";
+import { pulseSummaryHasData } from "@devpad/api";
 import PulseCreateIngestKey from "@/components/solid/pulse/pulse-create-ingest-key";
 import PulseErrors from "@/components/solid/pulse/pulse-errors";
 import PulseLogs from "@/components/solid/pulse/pulse-logs";
@@ -32,7 +34,7 @@ const tabs: Array<{ name: TabName; label: string }> = [
 const summary_result = await client.pulse.summary({ project_id: project.id, range: "7d" });
 
 let unreachable = false;
-let summary: any = null;
+let summary: PulseSummary | null = null;
 let summary_error: string | null = null;
 if (summary_result.ok) {
 	summary = summary_result.value;
@@ -46,27 +48,26 @@ if (summary_result.ok) {
 }
 
 // Determine "no data yet" state — used to show SDK install instructions.
-const totals = summary?.totals ?? {};
-const has_any_data = Boolean(totals.pageviews || totals.errors || totals.logs || totals.requests);
+const has_any_data = pulseSummaryHasData(summary);
 
 // Fetch tab-specific data only when needed and reachable.
-let errors_data: any = null;
+let errors_list: PulseErrorIssue[] = [];
 let errors_error: string | null = null;
-let logs_data: any = null;
+let logs_list: PulseEventRow[] = [];
 let logs_error: string | null = null;
-let latency_data: any = null;
+let latency_data: PulseLatencyResult | null = null;
 let latency_error: string | null = null;
 let subs_data: any[] = [];
 let subs_error: string | null = null;
 
 if (!unreachable && active_tab === "errors") {
 	const r = await client.pulse.errors({ project_id: project.id, range: "7d", group_by_fingerprint: true });
-	if (r.ok) errors_data = r.value;
+	if (r.ok) errors_list = "issues" in r.value ? r.value.issues : [];
 	else errors_error = r.error?.message ?? "Failed to load errors";
 }
 if (!unreachable && active_tab === "logs") {
 	const r = await client.pulse.logs({ project_id: project.id, range: "24h" });
-	if (r.ok) logs_data = r.value;
+	if (r.ok) logs_list = r.value.logs;
 	else logs_error = r.error?.message ?? "Failed to load logs";
 }
 if (!unreachable && active_tab === "requests") {
@@ -94,10 +95,6 @@ if (!unreachable && !has_any_data && active_tab === "overview") {
 // Public ingest endpoint surfaced to users in the empty-state SDK snippet.
 // Override with PUBLIC_PULSE_INGEST_URL for self-hosted deployments.
 const pulse_ingest_url = import.meta.env.PUBLIC_PULSE_INGEST_URL ?? "https://pulse.devpad.tools";
-
-// Logs (logs are returned wrapped in {events: [...]} or plain — normalise).
-const logs_list = Array.isArray(logs_data) ? logs_data : Array.isArray(logs_data?.events) ? logs_data.events : Array.isArray(logs_data?.logs) ? logs_data.logs : [];
-const errors_list = Array.isArray(errors_data) ? errors_data : Array.isArray(errors_data?.issues) ? errors_data.issues : Array.isArray(errors_data?.errors) ? errors_data.errors : [];
 ---
 
 <PageLayout title={`Pulse - ${project_id}`}>

@@ -12,6 +12,18 @@ import type {
 } from "@devpad/schema/blog/types";
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
+import {
+	type PulseErrorsResult,
+	PulseErrorsResultSchema,
+	type PulseEventsPage,
+	PulseEventsPageSchema,
+	type PulseLatencyResult,
+	PulseLatencyResultSchema,
+	type PulseLogsResult,
+	PulseLogsResultSchema,
+	type PulseSummary,
+	PulseSummarySchema,
+} from "@devpad/schema/pulse";
 import type {
 	Account,
 	AddFilterInput,
@@ -1000,15 +1012,19 @@ export class ApiClient {
 		summary: (input: {
 			project_id: string;
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
-		}): Promise<ApiResult<unknown>> =>
-			wrap(() =>
-				this.clients.pulse.get<unknown>("/summary/:project_id".replace(":project_id", input.project_id), {
-					query:
-						typeof input.range === "string"
-							? { range: input.range }
-							: { from: String(input.range.from), to: String(input.range.to) },
-				}),
-			),
+		}): Promise<ApiResult<PulseSummary>> =>
+			wrap(async () => {
+				const raw = await this.clients.pulse.get<unknown>(
+					"/summary/:project_id".replace(":project_id", input.project_id),
+					{
+						query:
+							typeof input.range === "string"
+								? { range: input.range }
+								: { from: String(input.range.from), to: String(input.range.to) },
+					},
+				);
+				return PulseSummarySchema.parse(raw);
+			}),
 
 		/**
 		 * List events for a project
@@ -1022,8 +1038,8 @@ export class ApiClient {
 			search?: string;
 			limit?: number;
 			cursor?: string;
-		}): Promise<ApiResult<unknown>> =>
-			wrap(() => {
+		}): Promise<ApiResult<PulseEventsPage>> =>
+			wrap(async () => {
 				const query: Record<string, string> = {};
 				if (input.name) query.name = input.name;
 				if (input.level) query.level = input.level;
@@ -1032,9 +1048,13 @@ export class ApiClient {
 				if (input.search) query.search = input.search;
 				if (input.limit) query.limit = String(input.limit);
 				if (input.cursor) query.cursor = input.cursor;
-				return this.clients.pulse.get<unknown>("/events/:project_id".replace(":project_id", input.project_id), {
-					query,
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/events/:project_id".replace(":project_id", input.project_id),
+					{
+						query,
+					},
+				);
+				return PulseEventsPageSchema.parse(raw);
 			}),
 
 		/**
@@ -1044,8 +1064,8 @@ export class ApiClient {
 			project_id: string;
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 			group_by_fingerprint?: boolean;
-		}): Promise<ApiResult<unknown>> =>
-			wrap(() => {
+		}): Promise<ApiResult<PulseErrorsResult>> =>
+			wrap(async () => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
 					query.range = input.range;
@@ -1054,9 +1074,13 @@ export class ApiClient {
 					query.to = String(input.range.to);
 				}
 				if (input.group_by_fingerprint) query.group_by_fingerprint = "true";
-				return this.clients.pulse.get<unknown>("/errors/:project_id".replace(":project_id", input.project_id), {
-					query,
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/errors/:project_id".replace(":project_id", input.project_id),
+					{
+						query,
+					},
+				);
+				return PulseErrorsResultSchema.parse(raw);
 			}),
 
 		/**
@@ -1067,8 +1091,8 @@ export class ApiClient {
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 			level?: string;
 			search?: string;
-		}): Promise<ApiResult<unknown>> =>
-			wrap(() => {
+		}): Promise<ApiResult<PulseLogsResult>> =>
+			wrap(async () => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
 					query.range = input.range;
@@ -1078,7 +1102,11 @@ export class ApiClient {
 				}
 				if (input.level) query.level = input.level;
 				if (input.search) query.search = input.search;
-				return this.clients.pulse.get<unknown>("/logs/:project_id".replace(":project_id", input.project_id), { query });
+				const raw = await this.clients.pulse.get<unknown>(
+					"/logs/:project_id".replace(":project_id", input.project_id),
+					{ query },
+				);
+				return PulseLogsResultSchema.parse(raw);
 			}),
 
 		/**
@@ -1089,8 +1117,8 @@ export class ApiClient {
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 			route?: string;
 			percentiles?: number[];
-		}): Promise<ApiResult<unknown>> =>
-			wrap(() => {
+		}): Promise<ApiResult<PulseLatencyResult>> =>
+			wrap(async () => {
 				const query: Record<string, string> = {};
 				if (typeof input.range === "string") {
 					query.range = input.range;
@@ -1100,9 +1128,13 @@ export class ApiClient {
 				}
 				if (input.route) query.route = input.route;
 				if (input.percentiles && input.percentiles.length > 0) query.percentiles = input.percentiles.join(",");
-				return this.clients.pulse.get<unknown>("/latency/:project_id".replace(":project_id", input.project_id), {
-					query,
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/latency/:project_id".replace(":project_id", input.project_id),
+					{
+						query,
+					},
+				);
+				return PulseLatencyResultSchema.parse(raw);
 			}),
 
 		/**

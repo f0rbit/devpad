@@ -1,35 +1,21 @@
 import { Badge, Empty } from "@f0rbit/ui";
+import type { PulseErrorIssue } from "@devpad/api";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createSignal, For, Show } from "solid-js";
-
-type ErrorIssue = {
-	id?: string;
-	fingerprint?: string;
-	message?: string;
-	type?: string;
-	count?: number;
-	first_seen?: number | string;
-	last_seen?: number | string;
-	level?: string;
-	route?: string;
-	sample?: { stack?: string; metadata?: Record<string, unknown>; ts?: number };
-};
 
 type PulseErrorsProps = {
 	projectId: string;
 	projectSlug: string;
-	issues: ErrorIssue[] | null;
+	issues: PulseErrorIssue[] | null;
 	error?: string | null;
 };
 
-const fmtTime = (v: number | string | undefined): string => {
-	if (v == null) return "—";
-	const n = typeof v === "number" ? v : Date.parse(v);
-	if (!Number.isFinite(n)) return "—";
-	return new Date(n).toLocaleString();
+const fmtTime = (v: number | undefined): string => {
+	if (v == null || !Number.isFinite(v)) return "—";
+	return new Date(v).toLocaleString();
 };
 
-const levelVariant = (level?: string): "error" | "warning" | "info" | "default" => {
+const levelVariant = (level?: string | null): "error" | "warning" | "info" | "default" => {
 	switch ((level ?? "").toLowerCase()) {
 		case "fatal":
 		case "error":
@@ -44,14 +30,34 @@ const levelVariant = (level?: string): "error" | "warning" | "info" | "default" 
 	}
 };
 
-const keyFor = (issue: ErrorIssue, idx: number) => issue.id ?? issue.fingerprint ?? `issue-${String(idx)}`;
+// `sample.properties` is free-form JSON reported by the pulse SDK's caller —
+// not part of pulse's typed contract. `exception.message` / `exception.type`
+// (flat dotted keys) and a nested `exception.stacktrace` are the conventions
+// pulse's own Discord channel formatter reads, so we mirror those here.
+const exceptionMessage = (properties: Record<string, unknown> | null): string => {
+	const message = properties?.["exception.message"];
+	if (typeof message === "string") return message;
+	const type = properties?.["exception.type"];
+	return typeof type === "string" ? type : "(no message)";
+};
+
+const exceptionType = (properties: Record<string, unknown> | null): string | undefined => {
+	const type = properties?.["exception.type"];
+	return typeof type === "string" ? type : undefined;
+};
+
+const exceptionStacktrace = (properties: Record<string, unknown> | null): string | undefined => {
+	const exception = properties?.exception as Record<string, unknown> | undefined;
+	const stacktrace = exception?.stacktrace;
+	return typeof stacktrace === "string" ? stacktrace : undefined;
+};
 
 export default function PulseErrors(props: PulseErrorsProps) {
 	const [expanded, setExpanded] = createSignal<string | null>(null);
 
 	const issues = () => props.issues ?? [];
 
-	const toggle = (id: string) => setExpanded((prev) => (prev === id ? null : id));
+	const toggle = (fingerprint: string) => setExpanded((prev) => (prev === fingerprint ? null : fingerprint));
 
 	return (
 		<div class="stack stack-md">
@@ -72,9 +78,9 @@ export default function PulseErrors(props: PulseErrorsProps) {
 			>
 				<div class="stack stack-sm" data-testid="pulse-errors-list">
 					<For each={issues()}>
-						{(issue, idx) => {
-							const id = keyFor(issue, idx());
-							const isOpen = () => expanded() === id;
+						{(issue) => {
+							const isOpen = () => expanded() === issue.fingerprint;
+							const stacktrace = () => exceptionStacktrace(issue.sample.properties);
 							return (
 								<div
 									class="interactive-row"
@@ -87,11 +93,11 @@ export default function PulseErrors(props: PulseErrorsProps) {
 										"border-radius": "var(--radius, 4px)",
 										cursor: "pointer",
 									}}
-									onClick={() => toggle(id)}
+									onClick={() => toggle(issue.fingerprint)}
 								>
 									<div class="row row-between" style={{ "align-items": "center", gap: "0.5rem" }}>
 										<div class="row" style={{ "align-items": "center", gap: "0.5rem", "min-width": 0, flex: 1 }}>
-											<Badge variant={levelVariant(issue.level)}>{issue.level ?? "error"}</Badge>
+											<Badge variant={levelVariant(issue.sample.level)}>{issue.sample.level ?? "error"}</Badge>
 											<span
 												class="text-sm"
 												style={{
@@ -101,11 +107,11 @@ export default function PulseErrors(props: PulseErrorsProps) {
 													"text-overflow": "ellipsis",
 												}}
 											>
-												{issue.type ?? "Error"}: {issue.message ?? "(no message)"}
+												{exceptionType(issue.sample.properties) ?? "Error"}: {exceptionMessage(issue.sample.properties)}
 											</span>
 										</div>
 										<div class="row" style={{ "align-items": "center", gap: "0.5rem", "flex-shrink": 0 }}>
-											<span class="text-sm text-faint">{issue.count ?? 1} ×</span>
+											<span class="text-sm text-faint">{issue.count} ×</span>
 											<ChevronRight
 												size={14}
 												style={{ transform: isOpen() ? "rotate(90deg)" : "none", transition: "transform 120ms" }}
@@ -117,11 +123,11 @@ export default function PulseErrors(props: PulseErrorsProps) {
 											<div class="row" style={{ gap: "1rem", "flex-wrap": "wrap" }}>
 												<span class="text-faint">first: {fmtTime(issue.first_seen)}</span>
 												<span class="text-faint">last: {fmtTime(issue.last_seen)}</span>
-												<Show when={issue.route}>
-													<span class="text-faint">route: {issue.route}</span>
+												<Show when={issue.sample.url}>
+													<span class="text-faint">url: {issue.sample.url}</span>
 												</Show>
 											</div>
-											<Show when={issue.sample?.stack}>
+											<Show when={stacktrace()}>
 												<pre
 													style={{
 														margin: 0,
@@ -133,7 +139,7 @@ export default function PulseErrors(props: PulseErrorsProps) {
 														"max-height": "240px",
 													}}
 												>
-													{issue.sample?.stack}
+													{stacktrace()}
 												</pre>
 											</Show>
 										</div>

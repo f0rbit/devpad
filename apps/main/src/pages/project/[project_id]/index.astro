@@ -1,4 +1,5 @@
 ---
+import type { PulseSummary } from "@devpad/api";
 import { ProjectContextSetter } from "@/components/solid/project-context-setter";
 import PulseWidget from "@/components/solid/project/pulse-widget";
 import PageLayout from "@/layouts/PageLayout.astro";
@@ -13,7 +14,7 @@ const { client, project } = guard;
 
 // Best-effort pulse summary — page must render even if pulse is unreachable.
 const pulse_result = await client.pulse.summary({ project_id: project.id, range: "7d" });
-let pulse_summary: any = null;
+let pulse_summary: PulseSummary | null = null;
 let pulse_error: string | null = null;
 if (pulse_result.ok) {
 	pulse_summary = pulse_result.value;

@@ -1,32 +1,8 @@
 import { Empty, Stat } from "@f0rbit/ui";
+import type { PulseSummary } from "@devpad/api";
+import { pulseSummaryHasData } from "@devpad/api";
 import { For, Show } from "solid-js";
 import PulseChart from "./pulse-chart";
-
-type SeriesPoint = {
-	t: number;
-	count: number;
-};
-
-type SummarySeries = {
-	pageviews?: SeriesPoint[];
-	errors?: SeriesPoint[];
-	logs?: SeriesPoint[];
-	requests?: SeriesPoint[];
-};
-
-type SummaryTotals = {
-	pageviews?: number;
-	errors?: number;
-	logs?: number;
-	requests?: number;
-	unique_visitors?: number;
-};
-
-export type PulseSummary = {
-	totals?: SummaryTotals;
-	series?: SummarySeries;
-	range?: { from: number; to: number };
-};
 
 type PulseOverviewProps = {
 	projectId: string;
@@ -35,29 +11,19 @@ type PulseOverviewProps = {
 	error?: string | null;
 };
 
-const SPARKS: Array<{ key: keyof SummarySeries; label: string; color: string }> = [
+const SPARKS: Array<{ key: "pageviews" | "sessions" | "errors"; label: string; color: string }> = [
 	{ key: "pageviews", label: "pageviews", color: "var(--item-blue, #4a90e2)" },
-	{ key: "requests", label: "requests", color: "var(--item-green, #6fcf97)" },
+	{ key: "sessions", label: "sessions", color: "var(--item-green, #6fcf97)" },
 	{ key: "errors", label: "errors", color: "var(--item-red, #eb5757)" },
-	{ key: "logs", label: "logs", color: "var(--item-yellow, #f2c94c)" },
 ];
 
-const num = (n: number | undefined): string => (typeof n === "number" ? n.toLocaleString() : "—");
+const num = (n: number | undefined | null): string => (typeof n === "number" ? n.toLocaleString() : "—");
+const ms = (n: number | undefined | null): string => (typeof n === "number" ? `${String(Math.round(n))} ms` : "—");
 
 export default function PulseOverview(props: PulseOverviewProps) {
-	const totals = () => props.summary?.totals ?? {};
-	const series = () => props.summary?.series ?? {};
+	const by_day = () => props.summary?.by_day ?? [];
 
-	const seriesValues = (key: keyof SummarySeries): number[] => {
-		const s = series()[key];
-		return Array.isArray(s) ? s.map((p) => p.count) : [];
-	};
-
-	const isEmpty = () => {
-		if (!props.summary) return true;
-		const t = totals();
-		return !(t.pageviews || t.errors || t.logs || t.requests);
-	};
+	const seriesValues = (key: "pageviews" | "sessions" | "errors"): number[] => by_day().map((d) => d[key]);
 
 	return (
 		<div class="stack stack-md">
@@ -68,7 +34,7 @@ export default function PulseOverview(props: PulseOverviewProps) {
 			</Show>
 
 			<Show
-				when={!isEmpty()}
+				when={pulseSummaryHasData(props.summary)}
 				fallback={
 					<Empty
 						title="No analytics data yet"
@@ -77,11 +43,12 @@ export default function PulseOverview(props: PulseOverviewProps) {
 				}
 			>
 				<div class="row" style={{ gap: "1.25rem", "flex-wrap": "wrap" }}>
-					<Stat value={num(totals().pageviews)} label="pageviews" />
-					<Stat value={num(totals().unique_visitors)} label="unique visitors" />
-					<Stat value={num(totals().requests)} label="requests" />
-					<Stat value={num(totals().errors)} label="errors" />
-					<Stat value={num(totals().logs)} label="log events" />
+					<Stat value={num(props.summary?.pageviews)} label="pageviews" />
+					<Stat value={num(props.summary?.sessions)} label="sessions" />
+					<Stat value={num(props.summary?.events_total)} label="events" />
+					<Stat value={num(props.summary?.errors)} label="errors" />
+					<Stat value={num(props.summary?.request_count)} label="requests" />
+					<Stat value={ms(props.summary?.p95_latency_ms)} label="p95 latency" />
 				</div>
 
 				<div class="stack stack-sm">
