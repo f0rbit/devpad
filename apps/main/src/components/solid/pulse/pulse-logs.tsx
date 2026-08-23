@@ -108,7 +108,9 @@ export default function PulseLogs(props: PulseLogsProps) {
 									{fmtTime(log.ts)}
 								</span>
 								<Badge variant={levelVariant(log.level)}>{log.level ?? "info"}</Badge>
-								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>{logMessage(log)}</span>
+								<span style={{ flex: 1, "white-space": "pre-wrap", "word-break": "break-word" }}>
+									{logMessage(log)}
+								</span>
 								<Show when={log.url}>
 									<span class="text-faint">{log.url}</span>
 								</Show>

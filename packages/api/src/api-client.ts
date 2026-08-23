@@ -1014,12 +1014,15 @@ export class ApiClient {
 			range: "24h" | "7d" | "30d" | "90d" | { from: number; to: number };
 		}): Promise<ApiResult<PulseSummary>> =>
 			wrap(async () => {
-				const raw = await this.clients.pulse.get<unknown>("/summary/:project_id".replace(":project_id", input.project_id), {
-					query:
-						typeof input.range === "string"
-							? { range: input.range }
-							: { from: String(input.range.from), to: String(input.range.to) },
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/summary/:project_id".replace(":project_id", input.project_id),
+					{
+						query:
+							typeof input.range === "string"
+								? { range: input.range }
+								: { from: String(input.range.from), to: String(input.range.to) },
+					},
+				);
 				return PulseSummarySchema.parse(raw);
 			}),
 
@@ -1045,9 +1048,12 @@ export class ApiClient {
 				if (input.search) query.search = input.search;
 				if (input.limit) query.limit = String(input.limit);
 				if (input.cursor) query.cursor = input.cursor;
-				const raw = await this.clients.pulse.get<unknown>("/events/:project_id".replace(":project_id", input.project_id), {
-					query,
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/events/:project_id".replace(":project_id", input.project_id),
+					{
+						query,
+					},
+				);
 				return PulseEventsPageSchema.parse(raw);
 			}),
 
@@ -1068,9 +1074,12 @@ export class ApiClient {
 					query.to = String(input.range.to);
 				}
 				if (input.group_by_fingerprint) query.group_by_fingerprint = "true";
-				const raw = await this.clients.pulse.get<unknown>("/errors/:project_id".replace(":project_id", input.project_id), {
-					query,
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/errors/:project_id".replace(":project_id", input.project_id),
+					{
+						query,
+					},
+				);
 				return PulseErrorsResultSchema.parse(raw);
 			}),
 
@@ -1093,7 +1102,10 @@ export class ApiClient {
 				}
 				if (input.level) query.level = input.level;
 				if (input.search) query.search = input.search;
-				const raw = await this.clients.pulse.get<unknown>("/logs/:project_id".replace(":project_id", input.project_id), { query });
+				const raw = await this.clients.pulse.get<unknown>(
+					"/logs/:project_id".replace(":project_id", input.project_id),
+					{ query },
+				);
 				return PulseLogsResultSchema.parse(raw);
 			}),
 
@@ -1116,9 +1128,12 @@ export class ApiClient {
 				}
 				if (input.route) query.route = input.route;
 				if (input.percentiles && input.percentiles.length > 0) query.percentiles = input.percentiles.join(",");
-				const raw = await this.clients.pulse.get<unknown>("/latency/:project_id".replace(":project_id", input.project_id), {
-					query,
-				});
+				const raw = await this.clients.pulse.get<unknown>(
+					"/latency/:project_id".replace(":project_id", input.project_id),
+					{
+						query,
+					},
+				);
 				return PulseLatencyResultSchema.parse(raw);
 			}),
 

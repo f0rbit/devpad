@@ -87,4 +87,7 @@ export type PulseLatencyResult = z.infer<typeof PulseLatencyResultSchema>;
 
 /** True when the summary carries no meaningful data — drives the "no analytics data yet" empty state. */
 export const pulseSummaryHasData = (summary: PulseSummary | null | undefined): boolean =>
-	Boolean(summary && (summary.pageviews || summary.sessions || summary.events_total || summary.errors || summary.request_count));
+	Boolean(
+		summary &&
+		(summary.pageviews || summary.sessions || summary.events_total || summary.errors || summary.request_count),
+	);
