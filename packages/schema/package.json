@@ -46,6 +46,10 @@
 			"types": "./dist/media/index.d.ts",
 			"import": "./dist/media/index.js"
 		},
+		"./pulse": {
+			"types": "./dist/pulse/index.d.ts",
+			"import": "./dist/pulse/index.js"
+		},
 		"./bindings": {
 			"types": "./dist/bindings.d.ts",
 			"import": "./dist/bindings.js"

@@ -14,6 +14,18 @@ export type {
 } from "@devpad/schema/blog/types";
 export type { PlatformSettings } from "@devpad/schema/media/settings";
 export type { Timeline } from "@devpad/schema/media/timeline";
+export {
+	type PulseErrorIssue,
+	type PulseErrorsResult,
+	type PulseEventRow,
+	type PulseEventsPage,
+	type PulseLatencyByMinute,
+	type PulseLatencyResult,
+	type PulseLogsResult,
+	type PulseSummary,
+	type PulseSummaryByDay,
+	pulseSummaryHasData,
+} from "@devpad/schema/pulse";
 export type {
 	Account,
 	AddFilterInput,
