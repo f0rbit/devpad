@@ -35,7 +35,7 @@ describe("apply — batch create via temp handles", () => {
 		const rows = await db.select().from(task);
 		const children = rows.filter((r) => r.parent_id === parent_id);
 		expect(children).toHaveLength(2);
-		expect(children.map((c) => c.title).sort()).toEqual(["Child A", "Child B"]);
+		expect(children.map((c) => c.title).toSorted()).toEqual(["Child A", "Child B"]);
 	});
 });
 

@@ -400,3 +400,6 @@ export const apply_request = z.object({
 	ops: z.array(apply_op).min(1),
 });
 export type ApplyRequest = z.infer<typeof apply_request>;
+
+export const claim_request = z.object({ actor: z.string().min(1), base_rev: z.number().int() });
+export type ClaimRequest = z.infer<typeof claim_request>;

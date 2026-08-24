@@ -1,11 +1,13 @@
 import { CategoryCreateSchema, PostCreateSchema, PostListParamsSchema, PostUpdateSchema } from "@devpad/schema/blog";
 import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import {
+	apply_request,
 	save_config_request,
 	save_tags_request,
 	upsert_goal,
 	upsert_milestone,
 	upsert_project,
+	upsert_task_link,
 	upsert_todo,
 } from "@devpad/schema/validation";
 import { z } from "zod";
@@ -348,6 +350,76 @@ export const tools: Record<string, ToolDefinition> = {
 			task_id: z.string().describe("Task ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.tasks.history.get(input.task_id)),
+	}),
+
+	// Graph operations (v2.4)
+	devpad_tasks_ready: define_tool({
+		name: "devpad_tasks_ready",
+		description:
+			"List tasks ready to work: not completed, not blocked by an incomplete 'blocks' edge, no incomplete children, start_time null-or-passed",
+		inputSchema: z.object({
+			project_id: z.string().optional().describe("Filter by project ID"),
+			limit: z.number().int().positive().optional().describe("Page size (default 20, max 100)"),
+			cursor: z.string().optional().describe("Pagination cursor from a previous page's next_cursor"),
+		}),
+		execute: async (client, input) => unwrap(await client.tasks.ready(input)),
+	}),
+
+	devpad_tasks_tree: define_tool({
+		name: "devpad_tasks_tree",
+		description: "Get a task and its bounded descendant subtree",
+		inputSchema: z.object({
+			id: z.string().describe("Task ID"),
+			depth: z.number().int().positive().optional().describe("Max hops down (default/cap: GRAPH_DEPTH_CAP)"),
+		}),
+		execute: async (client, input) => unwrap(await client.tasks.tree(input.id, input.depth)),
+	}),
+
+	devpad_tasks_near: define_tool({
+		name: "devpad_tasks_near",
+		description: "Get the depth-2 link neighborhood around a task, including backlinks",
+		inputSchema: z.object({
+			id: z.string().describe("Task ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.tasks.near(input.id)),
+	}),
+
+	devpad_tasks_claim: define_tool({
+		name: "devpad_tasks_claim",
+		description:
+			"Atomically claim a task for an agent (sets claimed_by + IN_PROGRESS); 409 if already claimed or stale base_rev",
+		inputSchema: z.object({
+			id: z.string().describe("Task ID"),
+			actor: z.string().describe("Identifier for the claiming agent"),
+			base_rev: z.number().int().describe("Expected current rev — optimistic concurrency guard"),
+		}),
+		execute: async (client, input) =>
+			unwrap(await client.tasks.claim(input.id, { actor: input.actor, base_rev: input.base_rev })),
+	}),
+
+	devpad_tasks_link: define_tool({
+		name: "devpad_tasks_link",
+		description:
+			"Create a typed edge between two tasks (blocks | relates_to | references | discovered_from | tracks_metric)",
+		inputSchema: upsert_task_link,
+		execute: async (client, input) => unwrap(await client.tasks.link(input)),
+	}),
+
+	devpad_tasks_unlink: define_tool({
+		name: "devpad_tasks_unlink",
+		description: "Remove a typed edge by its own id",
+		inputSchema: z.object({
+			id: z.string().describe("task_link ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.tasks.unlink(input.id)),
+	}),
+
+	devpad_tasks_apply: define_tool({
+		name: "devpad_tasks_apply",
+		description:
+			"Batch apply create/update/reparent/link/unlink/claim/complete ops atomically, with $0/$1… temp handles for subtree creation. Replaying the same idempotency_key returns the prior response verbatim.",
+		inputSchema: apply_request,
+		execute: async (client, input) => unwrap(await client.tasks.apply(input)),
 	}),
 
 	// User operations

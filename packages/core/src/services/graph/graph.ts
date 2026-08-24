@@ -1,8 +1,8 @@
 import type { Task, TaskLink, UpsertTaskLink } from "@devpad/schema";
-import { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP } from "@devpad/schema/database/schema";
+import { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP, task, task_link } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import { errors, type ServiceError } from "../errors.js";
 
 /**
@@ -92,7 +92,7 @@ export async function set_parent(
 		RETURNING *
 	`);
 
-	if (rows.length === 1) return ok(rows[0]!);
+	if (rows.length === 1) return ok(rows[0]);
 
 	const current = await get_task_row(db, id);
 	if (!current || current.deleted) return errors.notFound("task", id);
@@ -136,7 +136,7 @@ export async function claim(
 		RETURNING *
 	`);
 
-	if (rows.length === 1) return ok(rows[0]!);
+	if (rows.length === 1) return ok(rows[0]);
 
 	const current = await get_task_row(db, id);
 	if (!current || current.deleted) return errors.notFound("task", id);
@@ -178,9 +178,7 @@ export async function add_link(db: Database, input: UpsertTaskLink): Promise<Res
 		VALUES (${id}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 'api', 'api', 0, ${src_id}, ${dst_id}, ${kind}, ${ref ? JSON.stringify(ref) : null}, ${note})
 		RETURNING *
 	`);
-	const row = rows[0];
-	if (!row) return errors.dbError("task_link insert failed");
-	return ok(row);
+	return ok(rows[0]);
 }
 
 export async function remove_link(db: Database, id: string): Promise<Result<boolean, GraphError>> {
@@ -256,4 +254,48 @@ export async function ready(
 	const items = has_more ? rows.slice(0, limit) : rows;
 	const next_cursor = has_more ? (items[items.length - 1]?.id ?? null) : null;
 	return ok({ items, next_cursor });
+}
+
+export type NearResult = { links: TaskLink[]; tasks: Task[] };
+
+/** depth-2 link neighborhood around `id`, plus the tasks those edges touch — includes backlinks (edges where `id` is the dst). */
+export async function near(db: Database, id: string): Promise<Result<NearResult, ServiceError>> {
+	const not_deleted = eq(task_link.deleted, false);
+	const touches_id = or(eq(task_link.src_id, id), eq(task_link.dst_id, id));
+
+	const hop1 = await db.select().from(task_link).where(and(not_deleted, touches_id));
+
+	const neighbor_ids = new Set<string>();
+	for (const link of hop1) {
+		if (link.src_id !== id) neighbor_ids.add(link.src_id);
+		if (link.dst_id && link.dst_id !== id) neighbor_ids.add(link.dst_id);
+	}
+
+	const hop2 =
+		neighbor_ids.size > 0
+			? await db
+					.select()
+					.from(task_link)
+					.where(
+						and(
+							not_deleted,
+							or(inArray(task_link.src_id, [...neighbor_ids]), inArray(task_link.dst_id, [...neighbor_ids])),
+						),
+					)
+			: [];
+
+	const links = [...new Map([...hop1, ...hop2].map((link) => [link.id, link])).values()];
+
+	const task_ids = new Set<string>([id]);
+	for (const link of links) {
+		task_ids.add(link.src_id);
+		if (link.dst_id) task_ids.add(link.dst_id);
+	}
+
+	const tasks = await db
+		.select()
+		.from(task)
+		.where(and(eq(task.deleted, false), inArray(task.id, [...task_ids])));
+
+	return ok({ links, tasks });
 }

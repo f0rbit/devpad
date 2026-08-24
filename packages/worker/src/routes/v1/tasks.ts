@@ -1,13 +1,55 @@
-import { action, tags, tasks } from "@devpad/core/services";
-import { save_tags_request, type UpsertTag, upsert_todo } from "@devpad/schema";
-import { tag } from "@devpad/schema/database";
+import { action, graph, tags, tasks } from "@devpad/core/services";
+import {
+	type ApplyOp,
+	apply_request,
+	claim_request,
+	save_tags_request,
+	type UpsertTag,
+	upsert_task_link,
+	upsert_todo,
+} from "@devpad/schema";
+import { GRAPH_DEPTH_CAP } from "@devpad/schema/database/schema";
+import { tag, task, task_link } from "@devpad/schema/database";
 import { zValidator } from "@hono/zod-validator";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
+
+const READY_DEFAULT_LIMIT = 20;
+const READY_MAX_LIMIT = 100;
+
+/** Maps a GraphError to the right HTTP status + body shape — shared across every graph-mutating route. */
+function graph_error_response(c: Context<AppContext>, error: { kind: string; message?: string; [k: string]: unknown }) {
+	if (error.kind === "graph_conflict") return c.json({ error: error.message, current: error.current }, 409);
+	if (error.kind === "cycle_detected" || error.kind === "depth_exceeded" || error.kind === "children_cap_exceeded") {
+		return c.json({ error: error.message }, 422);
+	}
+	if (error.kind === "not_found") return c.json(null, 404);
+	if (error.kind === "forbidden") return c.json({ error: error.message }, 401);
+	return c.json({ error: error.kind }, 500);
+}
+
+const is_handle = (v: string) => v.startsWith("$");
+
+/** Concrete (non-`$N`-handle) task ids referenced anywhere in an apply batch — used to pre-flight ownership. */
+function referenced_task_ids(ops: ApplyOp[]): string[] {
+	const ids: string[] = [];
+	for (const op of ops) {
+		if (op.op === "create") continue;
+		if (op.op === "link") {
+			if (!is_handle(op.link.src_id)) ids.push(op.link.src_id);
+			if (op.link.dst_id && !is_handle(op.link.dst_id)) ids.push(op.link.dst_id);
+			continue;
+		}
+		if (!is_handle(op.id)) ids.push(op.id);
+		if (op.op === "reparent" && op.parent_id && !is_handle(op.parent_id)) ids.push(op.parent_id);
+	}
+	return ids;
+}
 
 app.get("/", requireAuth, async (c) => {
 	const db = c.get("db");
@@ -117,6 +159,138 @@ app.patch("/save_tags", requireAuth, zValidator("json", save_tags_request), asyn
 
 	const full_tags = await db.select().from(tag).where(inArray(tag.id, tag_ids));
 	return c.json(full_tags);
+});
+
+app.get("/ready", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const query = c.req.query();
+
+	const parsed_limit = Number(query.limit);
+	const limit =
+		Number.isFinite(parsed_limit) && parsed_limit > 0 ? Math.min(parsed_limit, READY_MAX_LIMIT) : READY_DEFAULT_LIMIT;
+
+	const result = await graph.ready(db, {
+		owner_id: auth_user.id,
+		project_id: query.project,
+		limit,
+		cursor: query.cursor,
+	});
+	if (!result.ok) return c.json({ error: result.error.kind }, 500);
+	return c.json(result.value);
+});
+
+app.get("/:id/tree", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+
+	const root_result = await tasks.getTask(db, id);
+	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
+	if (!root_result.value) return c.json(null, 404);
+	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+
+	const parsed_depth = Number(c.req.query("depth"));
+	const depth =
+		Number.isFinite(parsed_depth) && parsed_depth > 0 ? Math.min(parsed_depth, GRAPH_DEPTH_CAP) : GRAPH_DEPTH_CAP;
+
+	const result = await graph.subtree(db, id, depth);
+	if (!result.ok) return c.json({ error: result.error.kind }, 500);
+	return c.json({ task: root_result.value.task, descendants: result.value });
+});
+
+app.get("/:id/near", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+
+	const root_result = await tasks.getTask(db, id);
+	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
+	if (!root_result.value) return c.json(null, 404);
+	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+
+	const result = await graph.near(db, id);
+	if (!result.ok) return c.json({ error: result.error.kind }, 500);
+	return c.json(result.value);
+});
+
+app.post("/:id/claim", requireAuth, zValidator("json", claim_request), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+	const data = c.req.valid("json");
+
+	const existing = await tasks.getTask(db, id);
+	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
+	if (!existing.value) return c.json(null, 404);
+	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+
+	const result = await graph.claim(db, { id, actor: data.actor, base_rev: data.base_rev });
+	if (!result.ok) return graph_error_response(c, result.error);
+	return c.json(result.value);
+});
+
+app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const data = c.req.valid("json");
+
+	const src = await tasks.getTask(db, data.src_id);
+	if (!src.ok) return c.json({ error: src.error.kind }, 500);
+	if (!src.value || src.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+
+	const result = await graph.add_link(db, data);
+	if (!result.ok) return graph_error_response(c, result.error);
+	return c.json(result.value);
+});
+
+app.delete("/link/:id", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+
+	const link_rows = await db.select().from(task_link).where(eq(task_link.id, id));
+	if (link_rows.length === 0) return c.json(null, 404);
+	const link = link_rows[0];
+
+	const src = await tasks.getTask(db, link.src_id);
+	if (!src.ok || !src.value || src.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+
+	const result = await graph.remove_link(db, id);
+	if (!result.ok) return graph_error_response(c, result.error);
+	return c.json({ success: true });
+});
+
+app.post("/apply", requireAuth, zValidator("json", apply_request), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const data = c.req.valid("json");
+
+	const ids = referenced_task_ids(data.ops);
+	if (ids.length > 0) {
+		const rows = await db.select({ id: task.id, owner_id: task.owner_id }).from(task).where(inArray(task.id, ids));
+		const foreign = rows.find((r) => r.owner_id !== auth_user.id);
+		if (foreign) return c.json({ error: "Unauthorized: task belongs to another owner" }, 401);
+	}
+
+	const result = await graph.apply(db, data, { owner_id: auth_user.id });
+	if (!result.ok) {
+		if (result.error.kind === "apply_op_failed") {
+			return c.json(
+				{ error: result.error.error.kind, op_index: result.error.op_index, details: result.error.error },
+				409,
+			);
+		}
+		return graph_error_response(c, result.error);
+	}
+	return c.json(result.value);
 });
 
 export default app;

@@ -22,8 +22,8 @@
 const BASE36_DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz";
 const BASE = BASE36_DIGITS.length; // 36, must stay even (self-heading requires it)
 const HALF = BASE / 2;
-const ZERO = BASE36_DIGITS[0]!;
-const LAST_DIGIT = BASE36_DIGITS[BASE - 1]!;
+const ZERO = BASE36_DIGITS.charAt(0);
+const LAST_DIGIT = BASE36_DIGITS.charAt(BASE - 1);
 
 const RANK_PATTERN = /^[0-9a-z]+$/;
 
@@ -45,9 +45,8 @@ const digit_value = (c: string): number => {
 	return v;
 };
 const digit_char = (v: number): string => {
-	const c = BASE36_DIGITS[v];
-	if (c === undefined) throw new Error(`rank: digit value out of range: ${String(v)}`);
-	return c;
+	if (v < 0 || v >= BASE) throw new Error(`rank: digit value out of range: ${String(v)}`);
+	return BASE36_DIGITS.charAt(v);
 };
 
 /** Fractional part between `a` and `b` (both already integer-part-stripped). */
@@ -61,8 +60,8 @@ function midpoint(a: string, b: string | null): string {
 		if (n > 0) return b.slice(0, n) + midpoint(a.slice(n), b.slice(n));
 	}
 
-	const digit_a = a ? digit_value(a[0]!) : 0;
-	const digit_b = b != null ? digit_value(b[0]!) : BASE;
+	const digit_a = a ? digit_value(a.charAt(0)) : 0;
+	const digit_b = b != null ? digit_value(b.charAt(0)) : BASE;
 
 	if (digit_b - digit_a > 1) return digit_char(Math.round(0.5 * (digit_a + digit_b)));
 	if (b && b.length > 1) return b.slice(0, 1);
@@ -75,8 +74,8 @@ function integer_length(head: string): number {
 }
 
 function integer_part(key: string): string {
-	const head = key[0];
-	if (head === undefined) throw new Error("rank: empty order key");
+	if (key.length === 0) throw new Error("rank: empty order key");
+	const head = key.charAt(0);
 	const len = integer_length(head);
 	if (len > key.length) throw new Error(`rank: invalid order key: ${key}`);
 	return key.slice(0, len);
@@ -86,10 +85,10 @@ const SMALLEST_INTEGER = BASE36_DIGITS[0] + ZERO.repeat(HALF);
 const is_smallest_integer = (int_part: string): boolean => int_part === SMALLEST_INTEGER;
 
 function increment_integer(x: string): string | null {
-	const head = x[0]!;
+	const head = x.charAt(0);
 	let trailing = "";
 	for (let i = x.length - 1; i >= 1; i--) {
-		const d = digit_value(x[i]!) + 1;
+		const d = digit_value(x.charAt(i)) + 1;
 		if (d === BASE) trailing = ZERO + trailing;
 		else return head + x.slice(1, i) + digit_char(d) + trailing;
 	}
@@ -101,10 +100,10 @@ function increment_integer(x: string): string | null {
 }
 
 function decrement_integer(x: string): string | null {
-	const head = x[0]!;
+	const head = x.charAt(0);
 	let trailing = "";
 	for (let i = x.length - 1; i >= 1; i--) {
-		const d = digit_value(x[i]!) - 1;
+		const d = digit_value(x.charAt(i)) - 1;
 		if (d === -1) trailing = LAST_DIGIT + trailing;
 		else return head + x.slice(1, i) + digit_char(d) + trailing;
 	}
@@ -135,7 +134,7 @@ export function rank_between(a: string | null, b: string | null): string {
 	if (lo != null && hi != null && lo === hi) throw new Error(`rank: invalid bounds '${lo}' === '${hi}'`);
 
 	if (lo == null) {
-		if (hi == null) return BASE36_DIGITS[HALF] + ZERO; // shortest positive head: "i0"
+		if (hi == null) return BASE36_DIGITS.charAt(HALF) + ZERO; // shortest positive head: "i0"
 
 		const ib = integer_part(hi);
 		const fb = hi.slice(ib.length);

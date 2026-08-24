@@ -25,7 +25,7 @@ describe("set_parent — structural guards", () => {
 
 		const a_subtree = await subtree(db, a.id, GRAPH_DEPTH_CAP);
 		expect(a_subtree.ok).toBe(true);
-		if (a_subtree.ok) expect(a_subtree.value.map((t) => t.id).sort()).toEqual([b.id, c.id].sort());
+		if (a_subtree.ok) expect(a_subtree.value.map((t) => t.id).toSorted()).toEqual([b.id, c.id].toSorted());
 	});
 
 	test("subtree of a nonexistent id is empty", async () => {
@@ -124,7 +124,7 @@ describe("add_link — blocks-cycle guard", () => {
 
 describe("ready", () => {
 	test("excludes blocked, parented-incomplete, deleted, future-start, and completed tasks", async () => {
-		const eligible = await seed_task(db, owner_id, { title: "eligible" });
+		await seed_task(db, owner_id, { title: "eligible" });
 
 		const blocker = await seed_task(db, owner_id, { title: "blocker", progress: "UNSTARTED" });
 		const blocked = await seed_task(db, owner_id, { title: "blocked" });
@@ -148,7 +148,7 @@ describe("ready", () => {
 		expect(result.ok).toBe(true);
 		if (!result.ok) return;
 
-		const titles = result.value.items.map((t) => t.title).sort();
+		const titles = result.value.items.map((t) => t.title).toSorted();
 		expect(titles).toContain("eligible");
 		expect(titles).toContain("blocker");
 		expect(titles).toContain("unblocked");

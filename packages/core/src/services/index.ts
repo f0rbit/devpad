@@ -2,6 +2,7 @@ export * as action from "./action.js";
 export type { ServiceError } from "./errors.js";
 export * as github from "./github.js";
 export * as goals from "./goals.js";
+export * as graph from "./graph/index.js";
 export * as milestones from "./milestones.js";
 export * as pipelines from "./pipelines/index.js";
 export * as projects from "./projects.js";

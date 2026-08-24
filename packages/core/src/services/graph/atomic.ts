@@ -1,7 +1,7 @@
 import type { Database } from "@devpad/schema/database/types";
 import type { Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
-import { errors, type DatabaseError, type ServiceError } from "../errors.js";
+import { errors, type DatabaseError } from "../errors.js";
 
 /**
  * Runs `fn` as one atomic unit against `db`.
@@ -19,7 +19,7 @@ import { errors, type DatabaseError, type ServiceError } from "../errors.js";
  * actually needs it in production). The bun-sqlite path IS fully atomic:
  * a guard failure inside `fn` rolls back everything `fn` already did.
  */
-export async function run_atomic<T, E extends ServiceError>(
+export async function run_atomic<T, E>(
 	db: Database,
 	fn: () => Promise<Result<T, E>>,
 ): Promise<Result<T, E | DatabaseError>> {
@@ -30,7 +30,13 @@ export async function run_atomic<T, E extends ServiceError>(
 	}
 
 	await db.run(sql`BEGIN`);
-	const result = await fn();
+	let result: Result<T, E>;
+	try {
+		result = await fn();
+	} catch (cause) {
+		await db.run(sql`ROLLBACK`);
+		return errors.dbError(cause instanceof Error ? cause.message : "run_atomic: fn() threw");
+	}
 	if (!result.ok) {
 		await db.run(sql`ROLLBACK`);
 		return result;

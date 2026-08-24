@@ -1,10 +1,17 @@
-import type { ApplyOp, ApplyRequest, ExternalRef, UpsertTodo } from "@devpad/schema";
+import type { ApplyOp, ApplyRequest, UpsertTodo } from "@devpad/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
+import { z } from "zod";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
 import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent } from "./graph.js";
+
+const apply_op_result_schema = z.object({
+	op: z.enum(["create", "update", "reparent", "link", "unlink", "claim", "complete"]),
+	id: z.string(),
+});
+const apply_response_schema = z.object({ idempotency_key: z.string(), results: z.array(apply_op_result_schema) });
 
 export type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
@@ -15,6 +22,18 @@ export type ApplyError = ServiceError | GraphError | ApplyOpFailedError;
 function resolve_handle(value: string | null, handles: Map<string, string>): string | null {
 	if (value == null) return null;
 	return handles.get(value) ?? value;
+}
+
+/** Same resolution, typed for a field that's never null in the first place. */
+function resolve_required_handle(value: string, handles: Map<string, string>): string {
+	return handles.get(value) ?? value;
+}
+
+/** Every `create` op's id is pre-assigned before any op runs — this is an internal invariant, not user input. */
+function handle_for_create_op(handles: Map<string, string>, index: number): string {
+	const id = handles.get(`$${String(index)}`);
+	if (!id) throw new Error(`apply: missing pre-assigned id for create op at index ${String(index)}`);
+	return id;
 }
 
 async function insert_task_row(db: Database, id: string, data: UpsertTodo, owner_id: string): Promise<void> {
@@ -83,45 +102,40 @@ async function execute_op(
 ): Promise<Result<ApplyOpResult, GraphError>> {
 	switch (op.op) {
 		case "create": {
-			const id = handles.get(`$${String(index)}`)!;
+			const id = handle_for_create_op(handles, index);
 			const data: UpsertTodo = { ...op.data, parent_id: resolve_handle(op.data.parent_id ?? null, handles) };
 			await insert_task_row(db, id, data, owner_id);
 			return ok({ op: op.op, id });
 		}
 		case "update": {
-			const id = resolve_handle(op.id, handles)!;
+			const id = resolve_required_handle(op.id, handles);
 			const result = await update_task_row(db, id, op.base_rev, op.data);
 			return result.ok ? ok({ op: op.op, id }) : result;
 		}
 		case "reparent": {
-			const id = resolve_handle(op.id, handles)!;
+			const id = resolve_required_handle(op.id, handles);
 			const parent_id = resolve_handle(op.parent_id, handles);
 			const result = await set_parent(db, { id, parent_id, rank: "i0", base_rev: op.base_rev });
 			return result.ok ? ok({ op: op.op, id }) : result;
 		}
 		case "link": {
-			const src_id = resolve_handle(op.link.src_id, handles)!;
+			const src_id = resolve_required_handle(op.link.src_id, handles);
 			const dst_id = resolve_handle(op.link.dst_id ?? null, handles);
-			const result = await add_link(db, {
-				...op.link,
-				src_id,
-				dst_id,
-				ref: op.link.ref as ExternalRef | null | undefined,
-			});
+			const result = await add_link(db, { ...op.link, src_id, dst_id });
 			return result.ok ? ok({ op: op.op, id: result.value.id }) : result;
 		}
 		case "unlink": {
-			const id = resolve_handle(op.id, handles)!;
+			const id = resolve_required_handle(op.id, handles);
 			const result = await remove_link(db, id);
 			return result.ok ? ok({ op: op.op, id }) : result;
 		}
 		case "claim": {
-			const id = resolve_handle(op.id, handles)!;
+			const id = resolve_required_handle(op.id, handles);
 			const result = await claim(db, { id, actor: op.actor, base_rev: op.base_rev });
 			return result.ok ? ok({ op: op.op, id }) : result;
 		}
 		case "complete": {
-			const id = resolve_handle(op.id, handles)!;
+			const id = resolve_required_handle(op.id, handles);
 			const result = await complete_task_row(db, id, op.base_rev);
 			return result.ok ? ok({ op: op.op, id }) : result;
 		}
@@ -145,8 +159,9 @@ export async function apply(
 	const existing = await db.all<{ response: string }>(
 		sql`SELECT response FROM apply_log WHERE idempotency_key = ${input.idempotency_key} AND owner_id = ${ctx.owner_id} LIMIT 1`,
 	);
-	const stored = existing[0];
-	if (stored) return ok(JSON.parse(stored.response) as ApplyResponse);
+	if (existing.length > 0) {
+		return ok(apply_response_schema.parse(JSON.parse(existing[0].response)));
+	}
 
 	const handles = new Map<string, string>();
 	input.ops.forEach((op, i) => {
@@ -158,8 +173,7 @@ export async function apply(
 
 	return run_atomic(db, async (): Promise<Result<ApplyResponse, ApplyError>> => {
 		const results: ApplyOpResult[] = [];
-		for (let i = 0; i < input.ops.length; i++) {
-			const op = input.ops[i]!;
+		for (const [i, op] of input.ops.entries()) {
 			const outcome = await execute_op(db, op, i, ctx.owner_id, handles);
 			if (!outcome.ok) return err({ kind: "apply_op_failed", op_index: i, error: outcome.error });
 			results.push(outcome.value);
