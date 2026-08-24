@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { int, integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, int, integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 export const timestamps = () => ({
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -195,25 +195,98 @@ export const goal = sqliteTable("goal", {
 	finished_at: text("finished_at"),
 });
 
-export const task = sqliteTable("task", {
-	...owned_entity("task"),
-	title: text("title").notNull(),
-	progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] })
+// ---------------------------------------------------------------------------
+// v2.4 graph primitives — hierarchy/ordering/OCC columns on `task`, the
+// single typed edge table, rollup cache, and apply idempotency ledger.
+// ---------------------------------------------------------------------------
+
+export const GRAPH_DEPTH_CAP = 8;
+export const GRAPH_CHILDREN_CAP = 100;
+
+export const TASK_KINDS = ["task", "phase", "approval"] as const;
+export type TaskKind = (typeof TASK_KINDS)[number];
+
+export const COMPLETION_POLICIES = ["manual", "auto_children"] as const;
+export type CompletionPolicy = (typeof COMPLETION_POLICIES)[number];
+
+export const COMPLETED_VIA_VALUES = ["user", "api", "policy"] as const;
+export type CompletedVia = (typeof COMPLETED_VIA_VALUES)[number];
+
+export const TASK_LINK_KINDS = ["blocks", "relates_to", "references", "discovered_from", "tracks_metric"] as const;
+export type TaskLinkKind = (typeof TASK_LINK_KINDS)[number];
+
+export const task = sqliteTable(
+	"task",
+	{
+		...owned_entity("task"),
+		title: text("title").notNull(),
+		progress: text("progress", { enum: ["UNSTARTED", "IN_PROGRESS", "COMPLETED"] })
+			.notNull()
+			.default("UNSTARTED"),
+		visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] })
+			.notNull()
+			.default("PRIVATE"),
+		goal_id: text("goal_id").references(() => goal.id),
+		project_id: text("project_id").references(() => project.id),
+		description: text("description"),
+		start_time: text("start_time"),
+		end_time: text("end_time"),
+		summary: text("summary"),
+		codebase_task_id: text("codebase_task_id").references(() => codebase_tasks.id),
+		priority: text("priority", { enum: ["LOW", "MEDIUM", "HIGH"] })
+			.notNull()
+			.default("LOW"),
+		// graph columns (v2.4) — self-FK omitted deliberately (mirrors
+		// checklist_item.parent_id): guarded writes in the graph service own
+		// the invariant, not a DB-level FK constraint.
+		parent_id: text("parent_id"),
+		rank: text("rank").notNull().default(""),
+		rev: integer("rev").notNull().default(0),
+		kind: text("kind", { enum: TASK_KINDS }).notNull().default("task"),
+		completion_policy: text("completion_policy", { enum: COMPLETION_POLICIES }).notNull().default("manual"),
+		completed_via: text("completed_via", { enum: COMPLETED_VIA_VALUES }),
+		claimed_by: text("claimed_by"),
+		claimed_at: text("claimed_at"),
+	},
+	table => [index("task_parent_id_idx").on(table.parent_id)],
+);
+
+export const task_link = sqliteTable(
+	"task_link",
+	{
+		...entity("link"),
+		src_id: text("src_id")
+			.notNull()
+			.references(() => task.id),
+		dst_id: text("dst_id").references(() => task.id),
+		kind: text("kind", { enum: TASK_LINK_KINDS }).notNull(),
+		ref: text("ref", { mode: "json" }),
+		note: text("note"),
+	},
+	table => [
+		unique("task_link_unique").on(table.src_id, table.dst_id, table.kind),
+		index("task_link_src_id_idx").on(table.src_id),
+		index("task_link_dst_id_idx").on(table.dst_id),
+	],
+);
+
+export const task_rollup = sqliteTable("task_rollup", {
+	task_id: text("task_id")
+		.primaryKey()
+		.references(() => task.id),
+	direct_done: integer("direct_done").notNull().default(0),
+	direct_total: integer("direct_total").notNull().default(0),
+	subtree_done: integer("subtree_done").notNull().default(0),
+	subtree_total: integer("subtree_total").notNull().default(0),
+});
+
+export const apply_log = sqliteTable("apply_log", {
+	idempotency_key: text("idempotency_key").primaryKey(),
+	owner_id: text("owner_id")
 		.notNull()
-		.default("UNSTARTED"),
-	visibility: text("visibility", { enum: ["PUBLIC", "PRIVATE", "HIDDEN", "ARCHIVED", "DRAFT", "DELETED"] })
-		.notNull()
-		.default("PRIVATE"),
-	goal_id: text("goal_id").references(() => goal.id),
-	project_id: text("project_id").references(() => project.id),
-	description: text("description"),
-	start_time: text("start_time"),
-	end_time: text("end_time"),
-	summary: text("summary"),
-	codebase_task_id: text("codebase_task_id").references(() => codebase_tasks.id),
-	priority: text("priority", { enum: ["LOW", "MEDIUM", "HIGH"] })
-		.notNull()
-		.default("LOW"),
+		.references(() => user.id),
+	response: text("response", { mode: "json" }).notNull(),
+	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
 export const checklist = sqliteTable("checklist", {
@@ -475,6 +548,18 @@ export const task_relations = relations(task, ({ one, many }) => ({
 	goal: one(goal, { fields: [task.goal_id], references: [goal.id] }),
 	codebase_task: one(codebase_tasks, { fields: [task.codebase_task_id], references: [codebase_tasks.id] }),
 	checklists: many(checklist),
+	outgoing_links: many(task_link, { relationName: "task_link_src" }),
+	incoming_links: many(task_link, { relationName: "task_link_dst" }),
+	rollup: one(task_rollup, { fields: [task.id], references: [task_rollup.task_id] }),
+}));
+
+export const task_link_relations = relations(task_link, ({ one }) => ({
+	src: one(task, { fields: [task_link.src_id], references: [task.id], relationName: "task_link_src" }),
+	dst: one(task, { fields: [task_link.dst_id], references: [task.id], relationName: "task_link_dst" }),
+}));
+
+export const task_rollup_relations = relations(task_rollup, ({ one }) => ({
+	task: one(task, { fields: [task_rollup.task_id], references: [task.id] }),
 }));
 
 export const checklist_relations = relations(checklist, ({ one, many }) => ({

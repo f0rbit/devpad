@@ -4,6 +4,7 @@ import type {
 	ActionType,
 	action,
 	api_keys,
+	apply_log,
 	codebase_tasks,
 	goal,
 	ignore_path,
@@ -20,6 +21,8 @@ import type {
 	tag,
 	tag_config,
 	task,
+	task_link,
+	task_rollup,
 	task_tag,
 	todo_updates,
 	tracker_result,
@@ -27,6 +30,7 @@ import type {
 } from "./database/schema.js";
 import type {
 	config_schema,
+	external_ref,
 	insert_pipeline_stage_event,
 	project_config,
 	save_config_request,
@@ -42,17 +46,23 @@ import type {
 	upsert_pipeline_run,
 	upsert_project,
 	upsert_tag,
+	upsert_task_link,
 	upsert_todo,
 } from "./validation.js";
 
 export type {
 	ApprovalDecision,
+	CompletedVia,
+	CompletionPolicy,
 	ForcedAtomicReason,
 	PipelineOidcProvider,
 	RolloutShape,
 	RunStatus,
 	StageEventKind,
+	TaskKind,
+	TaskLinkKind,
 } from "./database/schema.js";
+export { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP } from "./database/schema.js";
 
 // Database table select types (inferred from Drizzle schema)
 export type User = InferSelectModel<typeof user>;
@@ -70,6 +80,9 @@ export type TodoUpdate = InferSelectModel<typeof todo_updates>;
 export type TrackerResult = InferSelectModel<typeof tracker_result>;
 export type TagConfig = InferSelectModel<typeof tag_config>;
 export type IgnorePath = InferSelectModel<typeof ignore_path>;
+export type TaskLink = InferSelectModel<typeof task_link>;
+export type TaskRollup = InferSelectModel<typeof task_rollup>;
+export type ApplyLog = InferSelectModel<typeof apply_log>;
 
 // Pipelines
 export type PipelinePackage = InferSelectModel<typeof pipeline_package>;
@@ -94,6 +107,8 @@ export type UpsertTodo = z.infer<typeof upsert_todo>;
 export type UpsertTag = z.infer<typeof upsert_tag>;
 export type UpsertMilestone = z.infer<typeof upsert_milestone>;
 export type UpsertGoal = z.infer<typeof upsert_goal>;
+export type ExternalRef = z.infer<typeof external_ref>;
+export type UpsertTaskLink = z.infer<typeof upsert_task_link>;
 export type UpdateAction = z.infer<typeof update_action>;
 export type ProjectConfig = z.infer<typeof project_config>;
 export type SaveConfigRequest = z.infer<typeof save_config_request>;
