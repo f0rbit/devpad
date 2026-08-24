@@ -385,7 +385,7 @@ export const apply_op = z.discriminatedUnion("op", [
 		handle: z.string().optional().describe("Temp handle (e.g. '$0') other ops in this batch may reference"),
 		data: upsert_todo,
 	}),
-	z.object({ op: z.literal("update"), id: z.string(), data: upsert_todo.partial() }),
+	z.object({ op: z.literal("update"), id: z.string(), base_rev: z.number().int(), data: upsert_todo.partial() }),
 	z.object({ op: z.literal("reparent"), id: z.string(), parent_id: z.string().nullable(), base_rev: z.number().int() }),
 	z.object({ op: z.literal("link"), link: upsert_task_link }),
 	z.object({ op: z.literal("unlink"), id: z.string() }),

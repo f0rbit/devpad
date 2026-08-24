@@ -24,7 +24,7 @@ export type DepthExceededError = { kind: "depth_exceeded"; message: string; max_
 export type ChildrenCapExceededError = { kind: "children_cap_exceeded"; message: string; max_children: number };
 export type GraphError = ServiceError | GraphConflictError | CycleError | DepthExceededError | ChildrenCapExceededError;
 
-async function fetch_task(db: Database, id: string): Promise<Task | null> {
+export async function get_task_row(db: Database, id: string): Promise<Task | null> {
 	const rows = await db.all<Task>(sql`SELECT * FROM task WHERE id = ${id} LIMIT 1`);
 	return rows[0] ?? null;
 }
@@ -94,7 +94,7 @@ export async function set_parent(
 
 	if (rows.length === 1) return ok(rows[0]!);
 
-	const current = await fetch_task(db, id);
+	const current = await get_task_row(db, id);
 	if (!current || current.deleted) return errors.notFound("task", id);
 	if (current.rev !== base_rev) {
 		return err({ kind: "graph_conflict", message: `Task ${id} was modified concurrently`, current });
@@ -138,7 +138,7 @@ export async function claim(
 
 	if (rows.length === 1) return ok(rows[0]!);
 
-	const current = await fetch_task(db, id);
+	const current = await get_task_row(db, id);
 	if (!current || current.deleted) return errors.notFound("task", id);
 	const message =
 		current.claimed_by != null
