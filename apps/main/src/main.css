@@ -1381,3 +1381,85 @@ button.outline-row {
 .lens-milestone-child:hover {
 	color: var(--fg);
 }
+
+/* ── "Waiting on you" — integration atop /todo (task B2.4) ── */
+
+.waiting-on-you {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--border);
+}
+
+.waiting-on-you-head h2 {
+	margin: 0;
+	font-size: 1rem;
+}
+
+.waiting-on-you-error {
+	color: var(--error-fg);
+	font-size: 13px;
+	margin: 0;
+}
+
+.waiting-on-you-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.waiting-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+}
+
+.waiting-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.waiting-card-title {
+	font-size: 14px;
+	font-weight: 500;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.waiting-card-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.waiting-card-link {
+	font-size: 13px;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.waiting-card-link:hover {
+	text-decoration: underline;
+}
+
+/* Mobile-first: the human's role here is latency-critical sign-off from a
+   phone — full-width tap targets, no cramped inline row. */
+@media (max-width: 480px) {
+	.waiting-card-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.waiting-card-actions > button {
+		width: 100%;
+	}
+}

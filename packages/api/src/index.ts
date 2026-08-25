@@ -39,12 +39,14 @@ export type {
 	Project,
 	ProjectConfig,
 	SaveConfigRequest,
+	Signoff,
 	Task,
 	TaskWithDetails,
 	UpsertProject,
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema/types";
+export type { DecideCheckpointRequest, ReviewItem, ReviewItemKind } from "@devpad/schema/validation";
 export type {
 	ApplyResponse,
 	AuthMode,

@@ -1,10 +1,12 @@
 ---
 import { getServerApiClient } from "@devpad/core/ui/api-client";
+import type { ReviewItem } from "@devpad/api";
 import type { Project, TagWithTypedColor, TaskWithDetails } from "@devpad/schema";
 import Plus from "lucide-solid/icons/plus";
 import Tag from "lucide-solid/icons/tag";
 import GithubLogin from "@/components/solid/github-login";
 import { TaskSorter } from "@/components/solid/task-sorter";
+import { WaitingOnYou } from "@/components/solid/waiting-on-you";
 import PageLayout from "@/layouts/PageLayout.astro";
 import { rethrow } from "@/utils/api-client";
 
@@ -13,11 +15,17 @@ const user = Astro.locals.user;
 let project_map: Record<string, Project> = {};
 let tasks: TaskWithDetails[] = [];
 let tags: TagWithTypedColor[] = [];
+let pending_reviews: ReviewItem[] = [];
 
 if (user) {
 	const client = getServerApiClient(Astro.locals);
 
-	const [project_map_result, tasks_result, tags_result] = await Promise.all([client.projects.map(), client.tasks.list(), client.tags.list()]);
+	const [project_map_result, tasks_result, tags_result, pending_result] = await Promise.all([
+		client.projects.map(),
+		client.tasks.list(),
+		client.tags.list(),
+		client.reviews.pending(),
+	]);
 
 	if (!project_map_result.ok) return rethrow(project_map_result.error);
 	if (!tasks_result.ok) return rethrow(tasks_result.error);
@@ -26,6 +34,10 @@ if (user) {
 	project_map = project_map_result.value;
 	tasks = tasks_result.value;
 	tags = tags_result.value;
+	// Non-fatal: "waiting on you" is an integration, not the page's reason to
+	// exist — a failed fetch just means an empty (invisible) section, never
+	// a broken /todo page for the user's own task list.
+	pending_reviews = pending_result.ok ? pending_result.value.items : [];
 }
 
 const keywords = [
@@ -82,6 +94,7 @@ const keywords = [
 						tags
 					</a>
 				</div>
+				<WaitingOnYou client:load items={pending_reviews} />
 				<TaskSorter client:load tasks={tasks} project_map={project_map} defaultOption={"upcoming"} tags={tags} user_id={user.id} defaultView={user.task_view || "list"} />
 				<br />
 				<br />
