@@ -106,6 +106,27 @@ describe("fold backfill migration", () => {
 		expect(row.completion_policy).toBe("auto_children");
 	});
 
+	test("provenance/protected/timestamps are copied verbatim", async () => {
+		const ms_id = await seed_milestone({
+			created_at: "2023-05-01T00:00:00.000Z",
+			updated_at: "2023-05-02T00:00:00.000Z",
+			created_by: "api",
+			modified_by: "api",
+			protected: true,
+			deleted: false,
+		});
+
+		apply_fold_migration(sqlite);
+
+		const rows = await db.select().from(task).where(eq(task.id, ms_id));
+		expect(rows[0]?.created_at).toBe("2023-05-01T00:00:00.000Z");
+		expect(rows[0]?.updated_at).toBe("2023-05-02T00:00:00.000Z");
+		expect(rows[0]?.created_by).toBe("api");
+		expect(rows[0]?.modified_by).toBe("api");
+		expect(rows[0]?.protected).toBe(true);
+		expect(rows[0]?.deleted).toBe(false);
+	});
+
 	test("un-finished milestone folds to UNSTARTED with no completed_via", async () => {
 		const ms_id = await seed_milestone({ finished_at: null });
 		apply_fold_migration(sqlite);
