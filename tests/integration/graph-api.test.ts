@@ -97,6 +97,29 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		expect(near_after.value.links.some((l) => l.id === link.id)).toBe(false);
 	});
 
+	test("GET /tasks/:id/tree works for a kind='milestone' root — the milestone lens' rollup fetch", async () => {
+		const project_result = await t.client.projects.create(TestDataFactory.createRealisticProject());
+		if (!project_result.ok) throw new Error(`project create failed: ${project_result.error.message}`);
+		t.cleanup.registerProject(project_result.value);
+
+		const milestone_result = await t.client.milestones.create({
+			project_id: project_result.value.id,
+			name: `milestone-${String(Date.now())}`,
+		});
+		if (!milestone_result.ok) throw new Error(`milestone create failed: ${milestone_result.error.message}`);
+		const milestone = milestone_result.value;
+		const child = await create_task({
+			title: `milestone-child-${String(Date.now())}`,
+			project_id: project_result.value.id,
+			parent_id: milestone.id,
+		});
+
+		const result = await t.client.tasks.tree(milestone.id);
+		if (!result.ok) throw new Error(`tree failed for a milestone root: ${result.error.message}`);
+		expect(result.value.task.id).toBe(milestone.id);
+		expect(result.value.descendants.map((d) => d.id)).toContain(child.id);
+	});
+
 	test("GET /tasks/:id/near?depth= expands/contracts the BFS frontier — the graph lens' 1/2/3 toggle", async () => {
 		const a = await create_task({ title: `near-depth-a-${String(Date.now())}` });
 		const b = await create_task({ title: `near-depth-b-${String(Date.now())}` });

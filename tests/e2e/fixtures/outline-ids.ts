@@ -28,3 +28,7 @@ export const E2E_TASK_LEAF = "task_e2e-outline-leaf" as const;
  */
 export const E2E_TASK_COMPACT_PARENT = "task_e2e-outline-compact-parent" as const;
 export const E2E_TASK_COMPACT_CHILD = "task_e2e-outline-compact-child" as const;
+
+/** kind='milestone' root + one child task — the milestone lens' seeded fixture. */
+export const E2E_TASK_MILESTONE = "task_e2e-outline-milestone" as const;
+export const E2E_TASK_MILESTONE_CHILD = "task_e2e-outline-milestone-child" as const;

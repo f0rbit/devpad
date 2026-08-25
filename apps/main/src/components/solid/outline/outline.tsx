@@ -14,6 +14,7 @@ import { ZoomHeader } from "./zoom";
 // Lazy — dagre (graph-lens's layout engine) never lands in the initial page
 // bundle; the chunk is fetched only the first time a lens actually opens.
 const GraphLens = lazy(() => import("../lenses/graph-lens"));
+const MilestoneLens = lazy(() => import("../lenses/milestone-lens"));
 
 export type OutlineProps = {
 	project: { id: string; name: string };
@@ -60,7 +61,7 @@ export default function Outline(props: OutlineProps) {
 	const store = createOutlineStore({ ownerId: props.ownerId, projectId: props.project.id, ...props.initial });
 	const [quickAdd, setQuickAdd] = createSignal("");
 	const [quickAddOpen, setQuickAddOpen] = createSignal(false);
-	const [lensOpen, setLensOpen] = createSignal<"graph" | null>(null);
+	const [lensOpen, setLensOpen] = createSignal<"graph" | "milestone" | null>(null);
 	const [lensFocusId, setLensFocusId] = createSignal<string | null>(null);
 	let containerRef: HTMLDivElement | undefined;
 	// Set while replaying a popstate — history already moved, so navigateTo must
@@ -171,6 +172,10 @@ export default function Outline(props: OutlineProps) {
 				setLensFocusId(focus);
 				setLensOpen("graph");
 			}
+			return;
+		}
+		if (e.key === "m") {
+			setLensOpen("milestone");
 			return;
 		}
 		if (e.key === "Enter") {
@@ -296,6 +301,9 @@ export default function Outline(props: OutlineProps) {
 				<span>
 					<b>g</b> graph lens
 				</span>
+				<span>
+					<b>m</b> milestone lens
+				</span>
 			</div>
 
 			<div class="outline-toasts">
@@ -314,6 +322,16 @@ export default function Outline(props: OutlineProps) {
 						<GraphLens focusId={focusId()} onClose={() => setLensOpen(null)} onZoom={(id) => void navigateTo(id)} />
 					</Suspense>
 				)}
+			</Show>
+
+			<Show when={lensOpen() === "milestone"}>
+				<Suspense>
+					<MilestoneLens
+						projectId={props.project.id}
+						onClose={() => setLensOpen(null)}
+						onZoom={(id) => void navigateTo(id)}
+					/>
+				</Suspense>
 			</Show>
 		</div>
 	);

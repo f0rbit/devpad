@@ -35,6 +35,7 @@ export type {
 	UpdateProfileInput,
 } from "@devpad/schema/media/types";
 export type {
+	Milestone,
 	Project,
 	ProjectConfig,
 	SaveConfigRequest,

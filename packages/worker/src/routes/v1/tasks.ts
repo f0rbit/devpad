@@ -200,11 +200,15 @@ app.get("/:id/tree", requireAuth, async (c) => {
 	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 
-	const root_result = await tasks.getTask(db, id);
-	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
-	if (!root_result.value) return c.json(null, 404);
-	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
-	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+	// A graph-primitive route (like ancestors/near below) — deliberately
+	// `graph.get_task_row`, NOT `tasks.getTask`: the latter excludes
+	// kind IN ('milestone','goal') (task A5's fold), which would 404 the
+	// milestone lens's own `tree()` calls. Graph primitives fold milestone/
+	// goal in on purpose (see AGENTS.md's fold notes).
+	const root = await graph.get_task_row(db, id);
+	if (!root || root.deleted) return c.json(null, 404);
+	if (root.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root.project_id)) return projectScopeDeniedResponse(c);
 
 	const parsed_depth = Number(c.req.query("depth"));
 	const depth =
@@ -221,7 +225,7 @@ app.get("/:id/tree", requireAuth, async (c) => {
 	if (!edge_summary_result.ok) return c.json({ error: edge_summary_result.error.kind }, 500);
 
 	return c.json({
-		task: root_result.value.task,
+		task: root,
 		descendants: result.value,
 		rollups: rollups_result.value,
 		edge_summary: edge_summary_result.value,
@@ -235,11 +239,10 @@ app.get("/:id/ancestors", requireAuth, async (c) => {
 	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 
-	const root_result = await tasks.getTask(db, id);
-	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
-	if (!root_result.value) return c.json(null, 404);
-	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
-	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+	const root = await graph.get_task_row(db, id); // graph primitive — see /tree's comment on fold kinds
+	if (!root || root.deleted) return c.json(null, 404);
+	if (root.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.ancestors(db, id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -252,11 +255,10 @@ app.get("/:id/near", requireAuth, async (c) => {
 	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 
-	const root_result = await tasks.getTask(db, id);
-	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
-	if (!root_result.value) return c.json(null, 404);
-	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
-	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+	const root = await graph.get_task_row(db, id); // graph primitive — see /tree's comment on fold kinds
+	if (!root || root.deleted) return c.json(null, 404);
+	if (root.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root.project_id)) return projectScopeDeniedResponse(c);
 
 	const parsed_depth = Number(c.req.query("depth"));
 	const depth = Number.isFinite(parsed_depth) && parsed_depth > 0 ? parsed_depth : undefined;
