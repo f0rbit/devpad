@@ -1,0 +1,1 @@
+ALTER TABLE `api_keys` ADD `project_id` text REFERENCES project(id);

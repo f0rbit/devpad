@@ -317,8 +317,11 @@ export default define_lint_config({
 			// through the raw Worker fetch handler. packages/worker/src/local.ts's
 			// console.error is a bun-native local-dev bootstrap check (fatal
 			// config error before process.exit), the same class as a CLI startup
-			// error, not a Cloudflare-deployed code path.
-			files: ["packages/worker/src/index.ts", "packages/worker/src/local.ts"],
+			// error, not a Cloudflare-deployed code path. packages/worker/src/dev.ts
+			// (task A3.3) is the same class again -- its InMemoryDispatcher consumer
+			// runs outside any Hono request context too, so a failed hook dispatch
+			// during bun dev/tests has nowhere else to surface.
+			files: ["packages/worker/src/index.ts", "packages/worker/src/local.ts", "packages/worker/src/dev.ts"],
 			rules: {
 				"no-console": "off",
 			},

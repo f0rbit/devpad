@@ -41,6 +41,23 @@ bucket_name = "devpad-corpus"
 binding = "MEDIA_CORPUS_BUCKET"
 bucket_name = "devpad-corpus"
 
+# v2.4 hooks queue (task A3.3). Ops prerequisite (one-time, before this ships
+# to production): `wrangler queues create devpad-hooks`. No dead_letter_queue
+# configured — a stubborn transient failure is promoted to a `failed_permanent`
+# hook_delivery row by the app itself once it hits HOOK_ACTION_MAX_TRANSIENT_ATTEMPTS
+# (packages/core/src/services/hooks/dispatch.ts), independent of the queue's
+# own retry exhaustion, so the visible DLQ doesn't depend on provisioning a
+# second queue + consumer.
+[[queues.producers]]
+binding = "HOOKS_QUEUE"
+queue = "devpad-hooks"
+
+[[queues.consumers]]
+queue = "devpad-hooks"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 5
+
 [env.preview]
 name = "devpad-unified-preview"
 routes = [
@@ -76,6 +93,19 @@ bucket_name = "devpad-corpus-staging"
 [[env.preview.r2_buckets]]
 binding = "MEDIA_CORPUS_BUCKET"
 bucket_name = "devpad-corpus-staging"
+
+# Ops prerequisite: `wrangler queues create devpad-hooks-preview`. Separate
+# queue name from production — preview can never enqueue into prod's queue,
+# matching the existing pulse read-only-against-prod isolation above.
+[[env.preview.queues.producers]]
+binding = "HOOKS_QUEUE"
+queue = "devpad-hooks-preview"
+
+[[env.preview.queues.consumers]]
+queue = "devpad-hooks-preview"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 5
 
 [env.preview.observability]
 enabled = true

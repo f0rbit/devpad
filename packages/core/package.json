@@ -22,6 +22,7 @@
 		"./utils/crypto": "./src/utils/crypto.ts",
 		"./utils/logger": "./src/utils/logger.ts",
 		"./services/blog": "./src/services/blog/index.ts",
+		"./services/hooks": "./src/services/hooks/index.ts",
 		"./services/media": "./src/services/media/index.ts",
 		"./services/media/platforms": "./src/services/media/platforms/index.ts",
 		"./services/media/platforms/github": "./src/services/media/platforms/github.ts",

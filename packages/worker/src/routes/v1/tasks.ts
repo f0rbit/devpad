@@ -1,4 +1,4 @@
-import { action, graph, tags, tasks } from "@devpad/core/services";
+import { action, graph, hooks, tags, tasks } from "@devpad/core/services";
 import {
 	type ApplyOp,
 	apply_request,
@@ -17,6 +17,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { isProjectScopeDenied, projectScopeDeniedResponse } from "../../middleware/scope-guard.js";
 
 const app = new Hono<AppContext>();
 
@@ -63,6 +64,7 @@ app.get("/", requireAuth, async (c) => {
 		if (!result.ok) return c.json({ error: result.error.kind }, 500);
 		if (!result.value) return c.json(null, 404);
 		if (result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+		if (isProjectScopeDenied(c, result.value.task.project_id)) return projectScopeDeniedResponse(c);
 		return c.json(result.value);
 	}
 
@@ -95,6 +97,7 @@ app.get("/history/:task_id", requireAuth, async (c) => {
 	if (!task_result.ok) return c.json({ error: task_result.error.kind }, 500);
 	if (!task_result.value) return c.json(null, 404);
 	if (task_result.value.task.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
+	if (isProjectScopeDenied(c, task_result.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await action.getTaskHistory(db, task_id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -111,6 +114,7 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 	if (data.owner_id !== auth_user.id) {
 		return c.json({ error: "Unauthorized: owner_id mismatch" }, 401);
 	}
+	if (isProjectScopeDenied(c, data.project_id ?? null)) return projectScopeDeniedResponse(c);
 
 	let tag_list: UpsertTag[] = [];
 	if (body.tags) {
@@ -192,6 +196,7 @@ app.get("/:id/tree", requireAuth, async (c) => {
 	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
 	if (!root_result.value) return c.json(null, 404);
 	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const parsed_depth = Number(c.req.query("depth"));
 	const depth =
@@ -212,6 +217,7 @@ app.get("/:id/near", requireAuth, async (c) => {
 	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
 	if (!root_result.value) return c.json(null, 404);
 	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.near(db, id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -229,6 +235,7 @@ app.post("/:id/claim", requireAuth, zValidator("json", claim_request), async (c)
 	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
 	if (!existing.value) return c.json(null, 404);
 	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, existing.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.claim(db, { id, actor: data.actor, base_rev: data.base_rev });
 	if (!result.ok) return graph_error_response(c, result.error);
@@ -252,12 +259,24 @@ app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) =
 	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
 	if (!existing.value) return c.json(null, 404);
 	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, existing.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const auth_channel = c.get("auth_channel");
 	const engine = new graph.SqlCompletionEngine(db);
 	const result = await engine.complete(id, auth_channel, data.base_rev);
 	if (!result.ok) return graph_error_response(c, result.error);
-	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired: [] });
+
+	// v2.4 (task A3.4) — force an immediate dispatch attempt for exactly the
+	// events this completion emitted, then report whichever finished
+	// synchronously. See `hooks.hooks_fired_for`'s doc for why this is
+	// best-effort, not a delivery guarantee.
+	const event_ids = result.value.events.map((event) => event.event_id);
+	const dispatch = c.get("dispatch");
+	if (dispatch) await Promise.all(event_ids.map((event_id) => dispatch.send({ event_id })));
+	const fired = await hooks.hooks_fired_for(db, event_ids);
+	const hooks_fired = fired.ok ? fired.value : [];
+
+	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired });
 });
 
 app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) => {
@@ -269,6 +288,7 @@ app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) =
 	const src = await tasks.getTask(db, data.src_id);
 	if (!src.ok) return c.json({ error: src.error.kind }, 500);
 	if (!src.value || src.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, src.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.add_link(db, data);
 	if (!result.ok) return graph_error_response(c, result.error);
@@ -287,6 +307,7 @@ app.delete("/link/:id", requireAuth, async (c) => {
 
 	const src = await tasks.getTask(db, link.src_id);
 	if (!src.ok || !src.value || src.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, src.value.task.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.remove_link(db, id);
 	if (!result.ok) return graph_error_response(c, result.error);
@@ -301,10 +322,19 @@ app.post("/apply", requireAuth, zValidator("json", apply_request), async (c) => 
 
 	const ids = referenced_task_ids(data.ops);
 	if (ids.length > 0) {
-		const rows = await db.select({ id: task.id, owner_id: task.owner_id }).from(task).where(inArray(task.id, ids));
+		const rows = await db
+			.select({ id: task.id, owner_id: task.owner_id, project_id: task.project_id })
+			.from(task)
+			.where(inArray(task.id, ids));
 		const foreign = rows.find((r) => r.owner_id !== auth_user.id);
 		if (foreign) return c.json({ error: "Unauthorized: task belongs to another owner" }, 401);
+		const out_of_scope = rows.find((r) => isProjectScopeDenied(c, r.project_id));
+		if (out_of_scope) return projectScopeDeniedResponse(c);
 	}
+	const creates_out_of_scope = data.ops.some(
+		(op) => op.op === "create" && isProjectScopeDenied(c, op.data.project_id ?? null),
+	);
+	if (creates_out_of_scope) return projectScopeDeniedResponse(c);
 
 	const result = await graph.apply(db, data, { owner_id: auth_user.id });
 	if (!result.ok) {

@@ -560,6 +560,68 @@ github
 		}
 	});
 
+// API keys command group (task A3.1 — per-project scoped keys)
+const keysCmd = program.command("keys").description("Manage API keys");
+
+keysCmd
+	.command("list")
+	.description("List your API keys")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async (options) => {
+		const spinner = createSpinner("Fetching API keys...").start();
+		try {
+			const client = getApiClient();
+			const result = await client.auth.keys.list();
+			if (!result.ok) throw new Error(result.error.message);
+			spinner.succeed("API keys fetched");
+			await formatOutput(result.value, options.format);
+		} catch (error) {
+			spinner.fail("Failed to fetch API keys");
+			handleError(error);
+		}
+	});
+
+keysCmd
+	.command("create")
+	.description("Create a new API key")
+	.option("-n, --name <name>", "Key name")
+	.option("-s, --scope <scope>", "Key scope (devpad|blog|media|pulse|all)", "devpad")
+	.option("-p, --project <id>", "Scope this key to a single project (least privilege — omit for an all-projects key)")
+	.option("-f, --format <format>", "Output format (json|table)", "json")
+	.action(async (options) => {
+		const spinner = createSpinner("Creating API key...").start();
+		try {
+			const client = getApiClient();
+			const result = await client.auth.keys.create({
+				name: options.name,
+				scope: options.scope,
+				project_id: options.project,
+			});
+			if (!result.ok) throw new Error(result.error.message);
+			spinner.succeed("API key created — save the raw key now, it won't be shown again");
+			await formatOutput(result.value, options.format);
+		} catch (error) {
+			spinner.fail("Failed to create API key");
+			handleError(error);
+		}
+	});
+
+keysCmd
+	.command("revoke <id>")
+	.description("Revoke an API key")
+	.action(async (id: string) => {
+		const spinner = createSpinner("Revoking API key...").start();
+		try {
+			const client = getApiClient();
+			const result = await client.auth.keys.revoke(id);
+			if (!result.ok) throw new Error(result.error.message);
+			spinner.succeed("API key revoked");
+		} catch (error) {
+			spinner.fail("Failed to revoke API key");
+			handleError(error);
+		}
+	});
+
 // User command group
 const user = program.command("user").description("User preferences and history");
 

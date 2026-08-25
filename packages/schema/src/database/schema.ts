@@ -76,6 +76,11 @@ export const api_keys = sqliteTable("api_keys", {
 	scope: text("scope", { enum: ["devpad", "blog", "media", "pulse", "all"] })
 		.notNull()
 		.default("all"),
+	// v2.4 (task A3.1): nullable project scope. `null` = legacy all-projects
+	// key, behaves exactly as before. Non-null keys are rejected by the
+	// scope guard (`packages/worker/src/middleware/scope-guard.ts`) on any
+	// resource belonging to a different project.
+	project_id: text("project_id").references(() => project.id),
 	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 	last_used_at: text("last_used_at"),
 	...timestamps(),
@@ -101,6 +106,10 @@ export const project = sqliteTable("project", {
 		.default("PRIVATE"),
 	current_version: text("current_version"),
 	scan_branch: text("scan_branch"),
+	// v2.4 (task A3.6) — per-project opt-in, OFF by default: a merged PR
+	// completes its linked task automatically via the GitHub App inbound
+	// webhook. Diff-linked status because agents are unreliable narrators.
+	github_autoclose: integer("github_autoclose", { mode: "boolean" }).notNull().default(false),
 });
 
 const ACTIONS = [
@@ -335,6 +344,73 @@ export const task_event = sqliteTable(
 		index("task_event_subject_id_idx").on(table.subject_id),
 		index("task_event_dispatch_status_idx").on(table.dispatch_status),
 	],
+);
+
+// ---------------------------------------------------------------------------
+// v2.4 hooks (task A3.2) — project-scoped automation: a `hook` matches a set
+// of task_event kinds (+ optional selector) and fires an action (webhook /
+// vault / pipeline). `hook_delivery` is the idempotency ledger: its PK is a
+// deterministic hash of (event_id, hook_id), so replaying the same queue
+// message twice is a no-op INSERT OR IGNORE rather than app-level dedup.
+// ---------------------------------------------------------------------------
+
+export const hook = sqliteTable(
+	"hook",
+	{
+		...entity("hook"),
+		project_id: text("project_id")
+			.notNull()
+			.references(() => project.id),
+		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+		// HookTrigger: { kinds: TaskEventKind[], selector: { subject_kind?, tag?, ancestor_id? } }
+		trigger: text("trigger", { mode: "json" }).notNull(),
+		// HookAction: { kind: "webhook", url, secret_encrypted? } | { kind: "vault", scope, op, args? } | { kind: "pipeline", package_id }
+		action: text("action", { mode: "json" }).notNull(),
+	},
+	(table) => [index("hook_project_id_idx").on(table.project_id)],
+);
+
+export const HOOK_DELIVERY_STATUSES = ["pending", "delivered", "failed_transient", "failed_permanent"] as const;
+export type HookDeliveryStatus = (typeof HOOK_DELIVERY_STATUSES)[number];
+
+export const hook_delivery = sqliteTable(
+	"hook_delivery",
+	{
+		// PK = sha256(`${event_id}:${hook_id}`) — see hooks/dispatch.ts's
+		// `hook_delivery_id`. Never generated any other way.
+		id: text("id").primaryKey(),
+		hook_id: text("hook_id")
+			.notNull()
+			.references(() => hook.id),
+		event_id: text("event_id").notNull(),
+		status: text("status", { enum: HOOK_DELIVERY_STATUSES }).notNull().default("pending"),
+		attempts: integer("attempts").notNull().default(0),
+		last_error: text("last_error"),
+		...timestamps(),
+	},
+	(table) => [
+		index("hook_delivery_hook_id_idx").on(table.hook_id),
+		index("hook_delivery_status_idx").on(table.status),
+	],
+);
+
+// ---------------------------------------------------------------------------
+// v2.4 GitHub App inbound (task A3.6) — idempotency ledger for the webhook
+// receiver. PK = sha256(`${delivery_guid}:${raw_body}`), copying the
+// pipelines `events.ts` content-hash pattern: GitHub's own delivery GUID
+// dedupes retries of the SAME payload, and the content hash catches the
+// (rare) case of GitHub reusing a GUID with different content.
+// ---------------------------------------------------------------------------
+
+export const github_webhook_event = sqliteTable(
+	"github_webhook_event",
+	{
+		id: text("id").primaryKey(),
+		delivery_guid: text("delivery_guid").notNull(),
+		event_type: text("event_type").notNull(),
+		processed_at: text("processed_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	},
+	(table) => [index("github_webhook_event_delivery_guid_idx").on(table.delivery_guid)],
 );
 
 export const checklist = sqliteTable("checklist", {
@@ -612,6 +688,15 @@ export const task_rollup_relations = relations(task_rollup, ({ one }) => ({
 
 export const task_event_relations = relations(task_event, ({ one }) => ({
 	subject: one(task, { fields: [task_event.subject_id], references: [task.id] }),
+}));
+
+export const hook_relations = relations(hook, ({ one, many }) => ({
+	project: one(project, { fields: [hook.project_id], references: [project.id] }),
+	deliveries: many(hook_delivery),
+}));
+
+export const hook_delivery_relations = relations(hook_delivery, ({ one }) => ({
+	hook: one(hook, { fields: [hook_delivery.hook_id], references: [hook.id] }),
 }));
 
 export const checklist_relations = relations(checklist, ({ one, many }) => ({

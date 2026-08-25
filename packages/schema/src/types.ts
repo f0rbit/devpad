@@ -6,7 +6,10 @@ import type {
 	api_keys,
 	apply_log,
 	codebase_tasks,
+	github_webhook_event,
 	goal,
+	hook,
+	hook_delivery,
 	ignore_path,
 	milestone,
 	pipeline_analysis_template,
@@ -56,6 +59,7 @@ export type {
 	CompletedVia,
 	CompletionPolicy,
 	ForcedAtomicReason,
+	HookDeliveryStatus,
 	PipelineOidcProvider,
 	RolloutShape,
 	RunStatus,
@@ -88,6 +92,9 @@ export type TaskLink = InferSelectModel<typeof task_link>;
 export type TaskRollup = InferSelectModel<typeof task_rollup>;
 export type ApplyLog = InferSelectModel<typeof apply_log>;
 export type TaskEvent = InferSelectModel<typeof task_event>;
+export type Hook = InferSelectModel<typeof hook>;
+export type HookDelivery = InferSelectModel<typeof hook_delivery>;
+export type GithubWebhookEvent = InferSelectModel<typeof github_webhook_event>;
 
 // Pipelines
 export type PipelinePackage = InferSelectModel<typeof pipeline_package>;

@@ -1,4 +1,5 @@
 import { keys } from "@devpad/core/auth";
+import { projects } from "@devpad/core/services";
 import { Hono } from "hono";
 import { z } from "zod";
 import type { AppContext } from "../../bindings.js";
@@ -9,6 +10,7 @@ const app = new Hono<AppContext>();
 const create_key_schema = z.object({
 	name: z.string().min(1).max(100).optional(),
 	scope: z.enum(["devpad", "blog", "media", "pulse", "all"]).optional(),
+	project_id: z.string().optional(),
 });
 
 app.get("/", requireAuth, async (c) => {
@@ -30,10 +32,27 @@ app.post("/", requireAuth, async (c) => {
 	const parsed = create_key_schema.safeParse(body);
 	if (!parsed.success) return c.json({ error: "Invalid request body", details: parsed.error.issues }, 400);
 
-	const result = await keys.createApiKey(db, auth_user.id, parsed.data.scope ?? "devpad", parsed.data.name);
+	if (parsed.data.project_id) {
+		const project_result = await projects.getProjectById(db, parsed.data.project_id);
+		if (!project_result.ok || project_result.value.owner_id !== auth_user.id) {
+			return c.json({ error: "Project not found" }, 404);
+		}
+	}
+
+	const result = await keys.createApiKey(
+		db,
+		auth_user.id,
+		parsed.data.scope ?? "devpad",
+		parsed.data.name,
+		parsed.data.project_id,
+	);
 	if (!result.ok) return c.json({ error: "Failed to create API key" }, 500);
 
-	c.get("log")?.info("api_key_minted", { user_id: auth_user.id, scope: parsed.data.scope ?? "devpad" });
+	c.get("log")?.info("api_key_minted", {
+		user_id: auth_user.id,
+		scope: parsed.data.scope ?? "devpad",
+		project_id: parsed.data.project_id ?? null,
+	});
 	return c.json({ message: "API key created successfully", key: result.value });
 });
 

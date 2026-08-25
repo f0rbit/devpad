@@ -15,6 +15,9 @@ export const configMiddleware = createMiddleware<AppContext>(async (c, next) => 
 		pulse_devpad_ingest_key: env.PULSE_DEVPAD_INGEST_KEY,
 		devpad_project_id: env.DEVPAD_PROJECT_ID,
 		git_sha: env.GIT_SHA,
+		pipelines_api_base: env.PIPELINES_API_BASE,
+		pipelines_token: env.PIPELINES_TOKEN,
+		github_webhook_secret: env.GITHUB_WEBHOOK_SECRET,
 	};
 
 	const oauth_secrets: OAuthSecrets = {

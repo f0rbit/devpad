@@ -1,9 +1,10 @@
-import { scanning } from "@devpad/core/services";
+import { projects, scanning } from "@devpad/core/services";
 import { Hono } from "hono";
 import { stream } from "hono/streaming";
 import { z } from "zod";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { isProjectScopeDenied, projectScopeDeniedResponse } from "../../middleware/scope-guard.js";
 
 const app = new Hono<AppContext>();
 
@@ -25,6 +26,9 @@ app.post("/scan", requireAuth, async (c) => {
 
 	const project_id = c.req.query("project_id");
 	if (!project_id) return c.json({ error: "project_id parameter required" }, 400);
+
+	const scoped_project = await projects.getProject(db, auth_user.id, project_id);
+	if (scoped_project.ok && isProjectScopeDenied(c, scoped_project.value.id)) return projectScopeDeniedResponse(c);
 
 	const log = c.get("log");
 	const span = log.span("github_scan");
@@ -49,6 +53,9 @@ app.get("/updates", requireAuth, async (c) => {
 
 	if (!project_id) return c.json({ error: "project_id required" }, 400);
 
+	const scoped_project = await projects.getProject(db, auth_user.id, project_id);
+	if (scoped_project.ok && isProjectScopeDenied(c, scoped_project.value.id)) return projectScopeDeniedResponse(c);
+
 	const result = await scanning.getPendingUpdates(db, project_id, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json({ updates: result.value });
@@ -61,6 +68,9 @@ app.post("/scan_status", requireAuth, async (c) => {
 	const project_id = c.req.query("project_id");
 
 	if (!project_id) return c.json({ error: "project_id parameter required" }, 400);
+
+	const scoped_project = await projects.getProject(db, auth_user.id, project_id);
+	if (scoped_project.ok && isProjectScopeDenied(c, scoped_project.value.id)) return projectScopeDeniedResponse(c);
 
 	const body = await c.req.json();
 	const parsed = scan_status_schema.safeParse(body);

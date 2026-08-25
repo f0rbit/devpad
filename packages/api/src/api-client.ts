@@ -38,6 +38,9 @@ import type {
 	GetConfigResult,
 	Goal,
 	HistoryAction,
+	Hook,
+	HookDelivery,
+	HookDeliveryStatus,
 	Milestone,
 	PipelineAnalysisTemplate,
 	PipelineGrant,
@@ -58,7 +61,19 @@ import type {
 	UpsertTaskLink,
 	UpsertTodo,
 } from "@devpad/schema/types";
-import type { ApplyOp, ApplyRequest, ClaimRequest, DashboardResponse, DoneRequest } from "@devpad/schema/validation";
+import type {
+	ApplyOp,
+	ApplyRequest,
+	ClaimRequest,
+	DashboardResponse,
+	DoneRequest,
+	HookActionPublic,
+	HookTrigger,
+	UpsertHook,
+} from "@devpad/schema/validation";
+
+/** Wire shape returned by every hooks route — `secret_encrypted` never round-trips (see `packages/core/src/services/hooks/registry.ts`'s `PublicHook`). */
+export type PublicHook = Omit<Hook, "action" | "trigger"> & { trigger: HookTrigger; action: HookActionPublic };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
@@ -172,6 +187,7 @@ export class ApiClient {
 			media: new HttpClient({ ...clientOptions, category: "media" }),
 			pulse: new HttpClient({ ...clientOptions, base_url: `${base_url}/pulse`, category: "pulse" }),
 			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
+			hooks: new HttpClient({ ...clientOptions, category: "hooks" }),
 		} as const;
 	}
 
@@ -195,7 +211,7 @@ export class ApiClient {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
 			create: (
-				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
+				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all"; project_id?: string },
 			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
 				const body = typeof input === "string" ? { name: input } : (input ?? {});
 				return wrap(() =>
@@ -502,6 +518,30 @@ export class ApiClient {
 		 */
 		goals: (id: string): Promise<ApiResult<Goal[]>> =>
 			wrap(() => this.clients.milestones.get<Goal[]>(`/milestones/${id}/goals`)),
+	};
+
+	/**
+	 * Hooks namespace (task A3.2) — automation registry + delivery ledger.
+	 * Webhook secrets are write-only: `secret_encrypted` never round-trips.
+	 */
+	public readonly hooks = {
+		list: (project_id: string): Promise<ApiResult<PublicHook[]>> =>
+			wrap(() => this.clients.hooks.get<PublicHook[]>("/hooks", { query: { project_id } })),
+
+		upsert: (data: UpsertHook): Promise<ApiResult<PublicHook>> =>
+			wrap(() =>
+				data.id
+					? this.clients.hooks.patch<PublicHook>(`/hooks/${data.id}`, { body: data })
+					: this.clients.hooks.post<PublicHook>("/hooks", { body: data }),
+			),
+
+		delete: (id: string): Promise<ApiResult<{ success: boolean }>> =>
+			wrap(() => this.clients.hooks.delete<{ success: boolean }>(`/hooks/${id}`)),
+
+		deliveries: (id: string, status?: HookDeliveryStatus): Promise<ApiResult<HookDelivery[]>> =>
+			wrap(() =>
+				this.clients.hooks.get<HookDelivery[]>(`/hooks/${id}/deliveries`, status ? { query: { status } } : {}),
+			),
 	};
 
 	/**

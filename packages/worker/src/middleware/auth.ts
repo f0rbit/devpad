@@ -16,6 +16,7 @@ const setNullAuth = (c: Context<AppContext>) => {
 	c.set("session", null);
 	c.set("auth_channel", "user");
 	c.set("api_key_scope", null);
+	c.set("api_key_project_id", null);
 };
 
 export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
@@ -37,6 +38,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 			c.set("session", null);
 			c.set("auth_channel", "api");
 			c.set("api_key_scope", key_result.value.scope);
+			c.set("api_key_project_id", key_result.value.project_id);
 			return next();
 		}
 	}
@@ -55,6 +57,7 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 			c.set("session", session_data);
 			c.set("auth_channel", "user");
 			c.set("api_key_scope", null);
+			c.set("api_key_project_id", null);
 
 			if (session_data.fresh) {
 				c.header("Set-Cookie", createSessionCookie(session_data.id, cookieConfig(config.environment)));

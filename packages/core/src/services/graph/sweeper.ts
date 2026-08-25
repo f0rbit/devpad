@@ -24,7 +24,7 @@ const CASCADE_REPAIR_WINDOW_MS = 15 * 60 * 1000;
  * string-compares as always-less-than any native-format timestamp (`' '`
  * sorts below `'T'`), silently matching nothing. Format the cutoff to match.
  */
-function sqlite_utc_cutoff(ms_ago: number): string {
+export function sqlite_utc_cutoff(ms_ago: number): string {
 	return new Date(Date.now() - ms_ago).toISOString().slice(0, 19).replace("T", " ");
 }
 

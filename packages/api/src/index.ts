@@ -44,7 +44,7 @@ export type {
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema/types";
-export type { AuthMode } from "./api-client";
+export type { AuthMode, PublicHook } from "./api-client";
 export { getUserFriendlyErrorMessage, parseZodErrors } from "./error-handlers";
 export type { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
 export type { RequestHistoryEntry, RequestOptions } from "./request";

@@ -56,6 +56,7 @@ const worker = createUnifiedWorker({
 export default {
   fetch: worker.fetch,
   scheduled: worker.scheduled,
+  queue: worker.queue,
 };
 `.trim();
 

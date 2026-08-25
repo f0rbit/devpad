@@ -4,6 +4,8 @@ import {
 	COMPLETION_POLICIES,
 	STAGE_EVENT_KINDS,
 	TASK_EVENT_ACTORS,
+	TASK_EVENT_KINDS,
+	TASK_KINDS,
 	TASK_LINK_KINDS,
 } from "./database/schema.js";
 
@@ -434,3 +436,69 @@ export const task_event_payload = z.discriminatedUnion("kind", [
 	z.object({ kind: z.literal("node.completion_stale"), child_id: z.string() }),
 ]);
 export type TaskEventPayload = z.infer<typeof task_event_payload>;
+
+// ---------------------------------------------------------------------------
+// v2.4 hooks (task A3.2) — trigger/action shapes shared by the CRUD route,
+// the registry service, and the dispatcher's hook-matching logic.
+// ---------------------------------------------------------------------------
+
+export const hook_selector = z.object({
+	subject_kind: z.enum(TASK_KINDS).optional(),
+	tag: z.string().optional(),
+	ancestor_id: z.string().optional(),
+});
+export type HookSelector = z.infer<typeof hook_selector>;
+
+export const hook_trigger = z.object({
+	kinds: z.array(z.enum(TASK_EVENT_KINDS)).min(1),
+	selector: hook_selector.default({}),
+});
+export type HookTrigger = z.infer<typeof hook_trigger>;
+
+/** Write-side action union — callers submit a plaintext `secret`, never `secret_encrypted`. */
+export const hook_action_input = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("webhook"), url: z.string().url(), secret: z.string().min(1).optional() }),
+	z.object({
+		kind: z.literal("vault"),
+		scope: z.string().min(1),
+		op: z.string().min(1),
+		args: z.record(z.string(), z.unknown()).optional(),
+	}),
+	z.object({ kind: z.literal("pipeline"), package_id: z.string().min(1) }),
+]);
+export type HookActionInput = z.infer<typeof hook_action_input>;
+
+/** Storage/dispatch-side action union — what's actually persisted in `hook.action`. */
+export const hook_action_stored = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("webhook"), url: z.string().url(), secret_encrypted: z.string().optional() }),
+	z.object({
+		kind: z.literal("vault"),
+		scope: z.string().min(1),
+		op: z.string().min(1),
+		args: z.record(z.string(), z.unknown()).optional(),
+	}),
+	z.object({ kind: z.literal("pipeline"), package_id: z.string().min(1) }),
+]);
+export type HookActionStored = z.infer<typeof hook_action_stored>;
+
+/** Read-side action union — what routes return. `secret_encrypted` never leaves the registry. */
+export const hook_action_public = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("webhook"), url: z.string().url(), has_secret: z.boolean() }),
+	z.object({
+		kind: z.literal("vault"),
+		scope: z.string().min(1),
+		op: z.string().min(1),
+		args: z.record(z.string(), z.unknown()).optional(),
+	}),
+	z.object({ kind: z.literal("pipeline"), package_id: z.string().min(1) }),
+]);
+export type HookActionPublic = z.infer<typeof hook_action_public>;
+
+export const upsert_hook = z.object({
+	id: z.string().optional(),
+	project_id: z.string(),
+	enabled: z.boolean().default(true),
+	trigger: hook_trigger,
+	action: hook_action_input,
+});
+export type UpsertHook = z.infer<typeof upsert_hook>;

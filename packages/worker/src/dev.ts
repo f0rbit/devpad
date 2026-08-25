@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { createContext as createBlogContext } from "@devpad/core/services/blog";
+import { InMemoryDispatcher, NoopActionExecutor, process_task_event } from "@devpad/core/services/hooks";
 import { createMediaContext, defaultProviderFactory } from "@devpad/core/services/media";
 import { create_memory_backend } from "@devpad/schema/blog";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
@@ -47,6 +48,13 @@ export function createBunApp(options: BunServerOptions) {
 		frontend_url: process.env.FRONTEND_URL ?? "http://localhost:4321",
 		jwt_secret: process.env.JWT_SECRET ?? "dev-jwt-secret",
 		encryption_key: process.env.ENCRYPTION_KEY ?? "dev-encryption-key",
+		pipelines_api_base: process.env.PIPELINES_API_BASE,
+		pipelines_token: process.env.PIPELINES_TOKEN,
+		// Stable dev-only fallback (same pattern as jwt_secret/encryption_key
+		// above) rather than leaving it unset — deterministic regardless of
+		// which integration test file happens to trigger the shared server's
+		// one-time startup first.
+		github_webhook_secret: process.env.GITHUB_WEBHOOK_SECRET ?? "dev-github-webhook-secret",
 	};
 
 	const oauth_secrets: OAuthSecrets = {
@@ -72,12 +80,21 @@ export function createBunApp(options: BunServerOptions) {
 		encryptionKey: config.encryption_key,
 	});
 
+	// v2.4 (task A3.3) — no real Cloudflare Queue in the bun runtime; the
+	// consumer runs synchronously so integration tests observe hook
+	// deliveries deterministically without polling for a real queue.
+	const dispatch = new InMemoryDispatcher(async (message) => {
+		const result = await process_task_event(db, { executor: NoopActionExecutor }, message.event_id);
+		if (!result.ok) console.error("[dev] hook dispatch failed:", result.error);
+	});
+
 	const app = createApi({
 		db,
 		blogContext: blog_context,
 		mediaContext: media_context,
 		config,
 		oauth_secrets,
+		dispatch,
 	});
 
 	const fetch = (request: Request) => app.fetch(request);

@@ -80,6 +80,7 @@ export async function createApiKey(
 	user_id: string,
 	scope: ApiKeyScope = "devpad",
 	name?: string,
+	project_id?: string | null,
 ): Promise<Result<CreatedApiKey, KeyError>> {
 	const raw_key = `devpad_${crypto.randomUUID()}`;
 	const key_hash = await hashKey(raw_key);
@@ -91,6 +92,7 @@ export async function createApiKey(
 			key_hash,
 			name: name ?? null,
 			scope,
+			project_id: project_id ?? null,
 		})
 		.returning()
 		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
@@ -120,7 +122,7 @@ export async function deleteApiKey(db: Database, key_id: string): Promise<Result
 export async function getUserAndScopeByApiKey(
 	db: Database,
 	raw_key: string,
-): Promise<Result<{ user: User; scope: string }, KeyError>> {
+): Promise<Result<{ user: User; scope: string; project_id: string | null }, KeyError>> {
 	const key_hash = await hashKey(raw_key);
 
 	const key_rows = await db
@@ -147,5 +149,5 @@ export async function getUserAndScopeByApiKey(
 
 	if (users.length === 0) return err({ kind: "not_found", resource: "user" });
 
-	return ok({ user: users[0], scope: api_key.scope });
+	return ok({ user: users[0], scope: api_key.scope, project_id: api_key.project_id });
 }
