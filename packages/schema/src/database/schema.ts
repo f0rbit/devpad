@@ -131,6 +131,10 @@ const ACTIONS = [
 	"CREATE_CHECKLIST",
 	"UPDATE_CHECKLIST",
 	"DELETE_CHECKLIST",
+	// v2.4 (task A4.5) — audit row for every stage transition, gated or
+	// overridden. Written regardless of auth_channel so the AI Activity Feed
+	// (`channel` column) can distinguish an agent-driven override.
+	"ADVANCE_STAGE",
 ] as const;
 
 export type ActionType = (typeof ACTIONS)[number];
@@ -224,6 +228,12 @@ export type CompletedVia = (typeof COMPLETED_VIA_VALUES)[number];
 export const TASK_LINK_KINDS = ["blocks", "relates_to", "references", "discovered_from", "tracks_metric"] as const;
 export type TaskLinkKind = (typeof TASK_LINK_KINDS)[number];
 
+// v2.4 (task A4.5) — SDLC stage enum. `null` (the column default) means "not
+// an SDLC-tracked node" — most tasks never opt in. `advance()` in
+// `packages/core/src/services/docs/stage.ts` owns every transition.
+export const SDLC_STAGES = ["ideate", "plan", "build", "review", "deploy", "live"] as const;
+export type SdlcStage = (typeof SDLC_STAGES)[number];
+
 export const task = sqliteTable(
 	"task",
 	{
@@ -256,6 +266,9 @@ export const task = sqliteTable(
 		completed_via: text("completed_via", { enum: COMPLETED_VIA_VALUES }),
 		claimed_by: text("claimed_by"),
 		claimed_at: text("claimed_at"),
+		// v2.4 (task A4.5) — nullable: opting a task into SDLC stage tracking is
+		// per-task, not a blanket migration.
+		stage: text("stage", { enum: SDLC_STAGES }),
 	},
 	table => [index("task_parent_id_idx").on(table.parent_id)],
 );
@@ -314,6 +327,14 @@ export const TASK_EVENT_KINDS = [
 	"node.children_all_done",
 	"policy.fired",
 	"node.completion_stale",
+	// v2.4 (task A4) — docs/annotation/signoff/stage events. Hooks can bind to
+	// any of these exactly like a graph event; no new dispatch machinery.
+	"doc.pushed",
+	"thread.opened",
+	"thread.resolved",
+	"signoff.requested",
+	"signoff.decided",
+	"stage.advanced",
 ] as const;
 export type TaskEventKind = (typeof TASK_EVENT_KINDS)[number];
 
@@ -411,6 +432,100 @@ export const github_webhook_event = sqliteTable(
 		processed_at: text("processed_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	},
 	(table) => [index("github_webhook_event_delivery_guid_idx").on(table.delivery_guid)],
+);
+
+// ---------------------------------------------------------------------------
+// v2.4 docs + annotations + signoff (task A4) — the human-in-the-loop
+// backend. `document` rows are a thin DB-side index over corpus-versioned
+// HTML content (the annotated doc IS the artifact, per the locked decision);
+// `annotation_thread` is a REBUILDABLE cache of the thread markers embedded
+// in the head version's HTML — never a second source of truth, always
+// reconstructible from the doc itself (`packages/core/src/services/docs/threads.ts`);
+// `signoff` is the generalized human-approval ledger a `kind:"approval"`
+// task node projects into the graph.
+// ---------------------------------------------------------------------------
+
+export const DOCUMENT_KINDS = ["plan", "design", "interface"] as const;
+export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
+
+export const DOCUMENT_STATUSES = ["draft", "in_review", "approved"] as const;
+export type DocumentStatus = (typeof DOCUMENT_STATUSES)[number];
+
+export const document = sqliteTable(
+	"document",
+	{
+		...entity("doc"),
+		project_id: text("project_id")
+			.notNull()
+			.references(() => project.id),
+		// Nullable subject node — a doc need not be tied to a specific task
+		// (e.g. a project-level design doc).
+		task_id: text("task_id").references(() => task.id),
+		kind: text("kind", { enum: DOCUMENT_KINDS }).notNull(),
+		title: text("title").notNull(),
+		// Corpus version pointer cache — the DB never stores content, only the
+		// latest corpus snapshot version for this document's dedicated store
+		// (`docStoreId`). Null until the first push.
+		head_version: text("head_version"),
+		status: text("status", { enum: DOCUMENT_STATUSES }).notNull().default("draft"),
+	},
+	table => [index("document_project_id_idx").on(table.project_id), index("document_task_id_idx").on(table.task_id)],
+);
+
+export const THREAD_STATUSES = ["open", "addressed", "resolved", "orphaned"] as const;
+export type ThreadStatus = (typeof THREAD_STATUSES)[number];
+
+export const annotation_thread = sqliteTable(
+	"annotation_thread",
+	{
+		...id("thread"),
+		document_id: text("document_id")
+			.notNull()
+			.references(() => document.id),
+		// The marker's own `id` field (embedded in the doc) — stable across
+		// versions/re-anchoring, distinct from this row's own DB id.
+		thread_id: text("thread_id").notNull(),
+		status: text("status", { enum: THREAD_STATUSES }).notNull().default("open"),
+		blocking: int("blocking", { mode: "boolean" }).notNull().default(false),
+		...timestamps(),
+	},
+	table => [
+		unique("annotation_thread_unique").on(table.document_id, table.thread_id),
+		index("annotation_thread_document_id_idx").on(table.document_id),
+		index("annotation_thread_status_idx").on(table.status),
+	],
+);
+
+export const SIGNOFF_SUBJECT_KINDS = ["doc_version", "stage", "pipeline_gate"] as const;
+export type SignoffSubjectKind = (typeof SIGNOFF_SUBJECT_KINDS)[number];
+
+export const SIGNOFF_CHECKPOINTS = ["plan", "types", "design"] as const;
+export type SignoffCheckpoint = (typeof SIGNOFF_CHECKPOINTS)[number];
+
+export const SIGNOFF_DECISIONS = ["approved", "changes_requested", "auto"] as const;
+export type SignoffDecision = (typeof SIGNOFF_DECISIONS)[number];
+
+export const signoff = sqliteTable(
+	"signoff",
+	{
+		...entity("signoff"),
+		subject_kind: text("subject_kind", { enum: SIGNOFF_SUBJECT_KINDS }).notNull(),
+		subject_id: text("subject_id").notNull(),
+		checkpoint: text("checkpoint", { enum: SIGNOFF_CHECKPOINTS }).notNull(),
+		// The `kind:"approval"` task node this checkpoint projects into the
+		// graph — null only for the brief window before `request_checkpoint`
+		// finishes creating it (never persisted mid-transaction in practice).
+		task_id: text("task_id").references(() => task.id),
+		decision: text("decision", { enum: SIGNOFF_DECISIONS }),
+		decided_by: text("decided_by").references(() => user.id),
+		decided_at: text("decided_at"),
+		reason: text("reason"),
+		content_hash: text("content_hash"),
+	},
+	table => [
+		index("signoff_subject_idx").on(table.subject_kind, table.subject_id),
+		index("signoff_task_id_idx").on(table.task_id),
+	],
 );
 
 export const checklist = sqliteTable("checklist", {
@@ -749,4 +864,19 @@ export const pipeline_analysis_template_relations = relations(pipeline_analysis_
 
 export const pipeline_oidc_trust_relations = relations(pipeline_oidc_trust, ({ one }) => ({
 	owner: one(user, { fields: [pipeline_oidc_trust.owner_id], references: [user.id] }),
+}));
+
+export const document_relations = relations(document, ({ one, many }) => ({
+	project: one(project, { fields: [document.project_id], references: [project.id] }),
+	task: one(task, { fields: [document.task_id], references: [task.id] }),
+	threads: many(annotation_thread),
+}));
+
+export const annotation_thread_relations = relations(annotation_thread, ({ one }) => ({
+	document: one(document, { fields: [annotation_thread.document_id], references: [document.id] }),
+}));
+
+export const signoff_relations = relations(signoff, ({ one }) => ({
+	task: one(task, { fields: [signoff.task_id], references: [task.id] }),
+	decided_by_user: one(user, { fields: [signoff.decided_by], references: [user.id] }),
 }));

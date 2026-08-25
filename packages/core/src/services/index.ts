@@ -1,4 +1,5 @@
 export * as action from "./action.js";
+export * as docs from "./docs/index.js";
 export type { ServiceError } from "./errors.js";
 export * as github from "./github.js";
 export * as goals from "./goals.js";

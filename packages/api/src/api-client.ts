@@ -33,8 +33,10 @@ import type {
 	UpdateProfileInput,
 } from "@devpad/schema/media/types";
 import type {
+	AnnotationThread,
 	ApiKey,
 	CompletedVia,
+	Document,
 	GetConfigResult,
 	Goal,
 	HistoryAction,
@@ -50,6 +52,7 @@ import type {
 	PipelineStageEvent,
 	Project,
 	SaveConfigRequest,
+	Signoff,
 	StageEventKind,
 	TagWithTypedColor,
 	Task,
@@ -62,18 +65,40 @@ import type {
 	UpsertTodo,
 } from "@devpad/schema/types";
 import type {
+	AdvanceStageRequest,
 	ApplyOp,
 	ApplyRequest,
 	ClaimRequest,
+	CreateThreadRequest,
 	DashboardResponse,
+	DecideCheckpointRequest,
 	DoneRequest,
 	HookActionPublic,
 	HookTrigger,
+	InterfaceDiffClass,
+	PushDocRequest,
+	PushInterfaceReportRequest,
+	RequestCheckpointRequest,
+	ReviewItem,
+	ThreadMarker,
 	UpsertHook,
 } from "@devpad/schema/validation";
 
 /** Wire shape returned by every hooks route — `secret_encrypted` never round-trips (see `packages/core/src/services/hooks/registry.ts`'s `PublicHook`). */
 export type PublicHook = Omit<Hook, "action" | "trigger"> & { trigger: HookTrigger; action: HookActionPublic };
+
+// v2.4 (task A4.1) — wire shapes the docs route returns; `content` mirrors
+// `packages/core/src/services/docs/store.ts`'s `DocContent`/`DocVersionInfo`
+// but is defined locally since `@devpad/api` doesn't depend on `@devpad/core`.
+type DocContent = { title: string; html: string };
+type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
+type PullDocResponse = {
+	document: Document;
+	content: DocContent | null;
+	threads: ThreadMarker[];
+	orphaned: ThreadMarker[];
+};
+type PushInterfaceReportResult = { document: Document; classification: InterfaceDiffClass; signoff: Signoff | null };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
@@ -188,6 +213,9 @@ export class ApiClient {
 			pulse: new HttpClient({ ...clientOptions, base_url: `${base_url}/pulse`, category: "pulse" }),
 			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
 			hooks: new HttpClient({ ...clientOptions, category: "hooks" }),
+			docs: new HttpClient({ ...clientOptions, category: "docs" }),
+			signoffs: new HttpClient({ ...clientOptions, category: "signoffs" }),
+			reviews: new HttpClient({ ...clientOptions, category: "reviews" }),
 		} as const;
 	}
 
@@ -749,6 +777,14 @@ export class ApiClient {
 		done: (id: string, data: DoneRequest): Promise<ApiResult<DoneResponse>> =>
 			wrap(() => this.clients.tasks.post<DoneResponse>(`/tasks/${id}/done`, { body: data })),
 
+		/**
+		 * SDLC stage transition (v2.4, task A4.5) — gently enforced: a gated
+		 * hop missing its checkpoint 409s naming what's missing; `override:
+		 * true` always succeeds but audits.
+		 */
+		advanceStage: (id: string, data: AdvanceStageRequest): Promise<ApiResult<Task>> =>
+			wrap(() => this.clients.tasks.post<Task>(`/tasks/${id}/stage`, { body: data })),
+
 		/** Create a typed edge between two tasks (or a task and an external ref). */
 		link: (data: UpsertTaskLink): Promise<ApiResult<TaskLink>> =>
 			wrap(() => this.clients.tasks.post<TaskLink>("/tasks/link", { body: data })),
@@ -776,6 +812,110 @@ export class ApiClient {
 		 */
 		list: (): Promise<ApiResult<TagWithTypedColor[]>> =>
 			wrap(() => this.clients.tags.get<TagWithTypedColor[]>("/tags")),
+	};
+
+	/**
+	 * Docs namespace (v2.4, task A4.1) — corpus-backed doc store. `push`
+	 * creates a new document (omit `document_id`) or a new version on an
+	 * existing one; content is sanitized server-side before it ever reaches
+	 * corpus.
+	 */
+	public readonly docs = {
+		list: (filters: { project_id: string; task_id?: string }): Promise<ApiResult<Document[]>> =>
+			wrap(() => {
+				const query: Record<string, string> = { project_id: filters.project_id };
+				if (filters.task_id) query.task_id = filters.task_id;
+				return this.clients.docs.get<Document[]>("/docs", { query });
+			}),
+
+		push: (data: PushDocRequest): Promise<ApiResult<Document>> =>
+			wrap(() => this.clients.docs.post<Document>("/docs", { body: data })),
+
+		/** Pulls a document's content at `version` (default: head). `content` is null for a document that's never been pushed to. */
+		pull: (id: string, version?: string): Promise<ApiResult<PullDocResponse>> =>
+			wrap(() => this.clients.docs.get<PullDocResponse>(`/docs/${id}`, version ? { query: { version } } : {})),
+
+		/** Full version history, newest first — the lineage walk. */
+		versions: (id: string): Promise<ApiResult<DocVersionInfo[]>> =>
+			wrap(() => this.clients.docs.get<DocVersionInfo[]>(`/docs/${id}/versions`)),
+
+		/**
+		 * Annotation engine (task A4.2) — markers-in-doc threads. Every
+		 * mutation pushes a new corpus version; the doc itself is the thread
+		 * history (locked decision 3).
+		 */
+		createThread: (document_id: string, data: CreateThreadRequest): Promise<ApiResult<Document>> =>
+			wrap(() => this.clients.docs.post<Document>(`/docs/${document_id}/threads`, { body: data })),
+
+		replyThread: (document_id: string, thread_id: string, body: string): Promise<ApiResult<Document>> =>
+			wrap(() =>
+				this.clients.docs.post<Document>(`/docs/${document_id}/threads/${thread_id}/reply`, { body: { body } }),
+			),
+
+		resolveThread: (document_id: string, thread_id: string): Promise<ApiResult<Document>> =>
+			wrap(() => this.clients.docs.post<Document>(`/docs/${document_id}/threads/${thread_id}/resolve`, {})),
+
+		toggleBlocking: (document_id: string, thread_id: string, blocking: boolean): Promise<ApiResult<Document>> =>
+			wrap(() =>
+				this.clients.docs.post<Document>(`/docs/${document_id}/threads/${thread_id}/blocking`, { body: { blocking } }),
+			),
+
+		/** Pending annotation threads (anything not `resolved`) — scope to one document, or every document in a project. */
+		unresolved: (filters: { project_id?: string; document_id?: string }): Promise<ApiResult<AnnotationThread[]>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (filters.project_id) query.project_id = filters.project_id;
+				if (filters.document_id) query.document_id = filters.document_id;
+				return this.clients.docs.get<AnnotationThread[]>("/docs/annotations/unresolved", { query });
+			}),
+
+		/**
+		 * Interface report v1 (task A4.4). `push` submits already-normalized
+		 * declaration text; the server independently recomputes the
+		 * additive-vs-breaking classification against its own stored previous
+		 * content and auto-approves additive diffs against an approved base.
+		 */
+		pushInterfaceReport: (data: PushInterfaceReportRequest): Promise<ApiResult<PushInterfaceReportResult>> =>
+			wrap(() => this.clients.docs.post<PushInterfaceReportResult>("/docs/interface", { body: data })),
+
+		interfaceStatus: (filters: {
+			project_id: string;
+			task_id?: string;
+			title: string;
+		}): Promise<ApiResult<{ document_id: string | null; approved_content_hash: string | null }>> =>
+			wrap(() => {
+				const query: Record<string, string> = { project_id: filters.project_id, title: filters.title };
+				if (filters.task_id) query.task_id = filters.task_id;
+				return this.clients.docs.get<{ document_id: string | null; approved_content_hash: string | null }>(
+					"/docs/interface/status",
+					{ query },
+				);
+			}),
+	};
+
+	/**
+	 * Signoffs namespace (v2.4, task A4.3) — the generalized human-approval
+	 * ledger. `decide` is human-only; an api-channel key gets 403.
+	 */
+	public readonly signoffs = {
+		request: (data: RequestCheckpointRequest): Promise<ApiResult<{ signoff: Signoff; task_id: string }>> =>
+			wrap(() => this.clients.signoffs.post<{ signoff: Signoff; task_id: string }>("/signoffs", { body: data })),
+
+		find: (id: string): Promise<ApiResult<Signoff>> =>
+			wrap(() => this.clients.signoffs.get<Signoff>(`/signoffs/${id}`)),
+
+		decide: (id: string, data: DecideCheckpointRequest): Promise<ApiResult<Signoff>> =>
+			wrap(() => this.clients.signoffs.post<Signoff>(`/signoffs/${id}/decide`, { body: data })),
+	};
+
+	/**
+	 * Reviews namespace (v2.4, task A4.6) — the human's queue: one typed
+	 * aggregate across pending signoffs, open blocking annotation threads,
+	 * pending pipeline manual gates, and pending scanner diffs.
+	 */
+	public readonly reviews = {
+		pending: (): Promise<ApiResult<{ items: ReviewItem[] }>> =>
+			wrap(() => this.clients.reviews.get<{ items: ReviewItem[] }>("/reviews/pending")),
 	};
 
 	/**

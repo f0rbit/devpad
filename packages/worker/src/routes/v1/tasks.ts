@@ -1,5 +1,6 @@
-import { action, graph, hooks, tags, tasks } from "@devpad/core/services";
+import { action, docs, graph, hooks, tags, tasks } from "@devpad/core/services";
 import {
+	advance_stage_request,
 	type ApplyOp,
 	apply_request,
 	claim_request,
@@ -32,6 +33,8 @@ function graph_error_response(c: Context<AppContext>, error: { kind: string; mes
 	}
 	if (error.kind === "not_found") return c.json(null, 404);
 	if (error.kind === "forbidden") return c.json({ error: error.message }, 401);
+	// v2.4 (task A4.3) — approval-kind tasks are human-only completable.
+	if (error.kind === "approval_channel") return c.json({ error: error.message, task_id: error.task_id }, 403);
 	return c.json({ error: error.kind }, 500);
 }
 
@@ -138,6 +141,11 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 				409,
 			);
 		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
+		// v2.4 (task A4.3) — a fresh-complete on an approval-kind task routes
+		// through the same engine as `/done`; approval_channel is 403 here too.
+		if (result.error.kind === "approval_channel") {
+			return c.json({ error: result.error.message, task_id: result.error.task_id }, 403);
+		}
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
@@ -279,6 +287,38 @@ app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) =
 	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired });
 });
 
+/**
+ * v2.4 (task A4.5) — SDLC stage transitions. Gently enforced: a gated hop
+ * missing its checkpoint is a 409 naming what's missing; `override: true`
+ * always succeeds but audits (see `docs.advance`).
+ */
+app.post("/:id/stage", requireAuth, zValidator("json", advance_stage_request), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+	const data = c.req.valid("json");
+
+	const existing = await tasks.getTask(db, id);
+	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
+	if (!existing.value) return c.json(null, 404);
+	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, existing.value.task.project_id)) return projectScopeDeniedResponse(c);
+
+	const auth_channel = c.get("auth_channel");
+	const result = await docs.advance(db, id, data.to, {
+		actor: auth_channel,
+		override: data.override,
+		reason: data.reason,
+	});
+	if (!result.ok) {
+		if (result.error.kind === "not_found") return c.json(null, 404);
+		if (result.error.kind === "conflict") return c.json({ error: result.error.message }, 409);
+		return c.json({ error: result.error.kind }, 500);
+	}
+	return c.json(result.value);
+});
+
 app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user");
@@ -339,6 +379,11 @@ app.post("/apply", requireAuth, zValidator("json", apply_request), async (c) => 
 	const result = await graph.apply(db, data, { owner_id: auth_user.id });
 	if (!result.ok) {
 		if (result.error.kind === "apply_op_failed") {
+			// v2.4 (task A4.3) — an approval-kind task's guard failing inside a
+			// batch is a 403 (human-only), not a generic 409 op conflict.
+			if (result.error.error.kind === "approval_channel") {
+				return c.json({ error: result.error.error.message, task_id: result.error.error.task_id }, 403);
+			}
 			return c.json(
 				{ error: result.error.error.kind, op_index: result.error.op_index, details: result.error.error },
 				409,

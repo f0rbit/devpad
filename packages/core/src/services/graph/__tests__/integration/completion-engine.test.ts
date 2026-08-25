@@ -150,3 +150,36 @@ describe("sticky completion — new open child under a policy-completed parent",
 		expect(parent_events.at(-1)).toBe("node.completion_stale");
 	});
 });
+
+describe("SqlCompletionEngine.complete — approval-kind tasks are human-only completable (task A4.3)", () => {
+	test("rejects an api-channel completion attempt with approval_channel, never completing the task", async () => {
+		const approval = await seed_task(db, owner_id, { kind: "approval" });
+
+		const result = await engine.complete(approval.id, "api", approval.rev);
+
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("approval_channel");
+
+		const rows = await db.select().from(task).where(eq(task.id, approval.id));
+		expect(rows[0]?.progress).not.toBe("COMPLETED");
+	});
+
+	test("a user-channel completion succeeds normally", async () => {
+		const approval = await seed_task(db, owner_id, { kind: "approval" });
+
+		const result = await engine.complete(approval.id, "user", approval.rev);
+
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.completed.progress).toBe("COMPLETED");
+	});
+
+	test("an ordinary (non-approval) task is unaffected by the guard on either channel", async () => {
+		const ordinary = await seed_task(db, owner_id, { kind: "task" });
+
+		const result = await engine.complete(ordinary.id, "api", ordinary.rev);
+
+		expect(result.ok).toBe(true);
+	});
+});

@@ -6,6 +6,10 @@ import { Command } from "commander";
 import { Table } from "console-table-printer";
 import { register_pipelines_commands } from "./commands/pipelines";
 import { register_graph_commands } from "./graph-commands";
+import { register_interface_commands } from "./interface-commands";
+import { register_plans_commands } from "./plans-commands";
+import { register_reviews_commands } from "./reviews-commands";
+import { register_signoff_commands } from "./signoff-commands";
 import { make_spinner as createSpinner } from "./printer";
 import { resolve_owner_id, task_status_to_progress } from "./task-progress";
 import { parse_task_response } from "./task-response";
@@ -670,6 +674,18 @@ user
 
 // v2.4 graph verbs — `ready` (top-level) + `tasks tree|near|claim|link|unlink|apply`.
 register_graph_commands(program, tasks, getApiClient);
+
+// v2.4 docs verbs (task A4.1) — `plans push|pull|versions|list`.
+register_plans_commands(program, getApiClient);
+
+// v2.4 signoff verbs (task A4.3) — `signoffs request|get|decide`.
+register_signoff_commands(program, getApiClient);
+
+// v2.4 interface report verbs (task A4.4) — `interface push|check`.
+register_interface_commands(program, getApiClient);
+
+// v2.4 reviews verb (task A4.6) — `reviews pending`.
+register_reviews_commands(program, getApiClient);
 
 // Pipelines subcommand group — `init` is fully local (no API key);
 // `artifacts upload` runs locally against the corpus backend;

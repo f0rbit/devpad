@@ -2,6 +2,7 @@ import type { SessionData } from "@devpad/core/auth";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { DispatchProvider } from "@devpad/core/services/hooks";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
+import type { Backend } from "@f0rbit/corpus";
 import type { Pulse } from "@f0rbit/pulse-client";
 import type { PulseLog } from "./lib/log.js";
 import type { AuthUser, Bindings } from "@devpad/schema/bindings";
@@ -67,6 +68,10 @@ export type AppVariables = {
 	// hook dispatch attempt — e.g. `/tasks/:id/done`'s `hooks_fired` — read it
 	// via `c.get("dispatch")`. Always set by the time a route handler runs.
 	dispatch?: DispatchProvider;
+	// v2.4 (task A4.1) — injected the same way `dispatch` is for the bun
+	// dev/test path (`dev.ts`), which never has real `c.env` bindings. The
+	// real Workers runtime falls through to `c.env.DOCS_CORPUS_BUCKET`.
+	docsBackend?: Backend;
 };
 
 export type AppContext = {

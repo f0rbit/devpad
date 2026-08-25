@@ -24,6 +24,10 @@ export type UnauthorizedError = BaseError & { kind: "unauthorized" };
 export type ScanError = BaseError & { kind: "scan_error" };
 export type GithubError = BaseError & { kind: "github_error" };
 export type ValidationFieldError = BaseError & { kind: "validation_error"; field: string };
+// v2.4 (task A4.3) — approval-kind tasks are human-only completable; any
+// api-channel attempt to complete/mutate one is rejected with this, mapped
+// to HTTP 403 at the route boundary (`graph_error_response`).
+export type ApprovalChannelError = BaseError & { kind: "approval_channel"; task_id: string };
 
 export type ServiceError =
 	| NotFoundError
@@ -43,7 +47,8 @@ export type ServiceError =
 	| BadRequestError
 	| UnauthorizedError
 	| ScanError
-	| GithubError;
+	| GithubError
+	| ApprovalChannelError;
 
 export type ProviderError = RateLimitedError | AuthExpiredError | NetworkError | ApiError | ParseError;
 export type CronError = StoreError | NetworkError | AuthExpiredError | EncryptionError;
@@ -110,6 +115,7 @@ export const isUnauthorizedError = (e: unknown): e is UnauthorizedError => hasKi
 export const isScanError = (e: unknown): e is ScanError => hasKind(e, "scan_error");
 export const isGithubError = (e: unknown): e is GithubError => hasKind(e, "github_error");
 export const isValidationFieldError = (e: unknown): e is ValidationFieldError => hasKind(e, "validation_error");
+export const isApprovalChannelError = (e: unknown): e is ApprovalChannelError => hasKind(e, "approval_channel");
 export const isServiceError = (e: unknown): e is ServiceError =>
 	isNotFoundError(e) ||
 	isForbiddenError(e) ||
@@ -128,7 +134,8 @@ export const isServiceError = (e: unknown): e is ServiceError =>
 	isBadRequestError(e) ||
 	isUnauthorizedError(e) ||
 	isScanError(e) ||
-	isGithubError(e);
+	isGithubError(e) ||
+	isApprovalChannelError(e);
 export const isRetryableError = (e: unknown): boolean => isRateLimitedError(e) || isNetworkError(e);
 
 export const notFound = (resource: string, id?: string, ctx?: Record<string, unknown>): Result<never, NotFoundError> =>
@@ -207,6 +214,19 @@ export const validationFieldError = (
 	ctx?: Record<string, unknown>,
 ): Result<never, ValidationFieldError> =>
 	logAndReturn({ kind: "validation_error", field, ...(message && { message }) }, ctx);
+export const approvalChannel = (
+	task_id: string,
+	message?: string,
+	ctx?: Record<string, unknown>,
+): Result<never, ApprovalChannelError> =>
+	logAndReturn(
+		{
+			kind: "approval_channel",
+			task_id,
+			message: message ?? `Task ${task_id} is an approval node — only a human (auth_channel=user) may complete it`,
+		},
+		ctx,
+	);
 
 export const errors = {
 	notFound,
@@ -227,6 +247,7 @@ export const errors = {
 	scanError,
 	githubError,
 	validationFieldError,
+	approvalChannel,
 	is: {
 		notFound: isNotFoundError,
 		forbidden: isForbiddenError,
@@ -246,6 +267,7 @@ export const errors = {
 		unauthorized: isUnauthorizedError,
 		scanError: isScanError,
 		githubError: isGithubError,
+		approvalChannel: isApprovalChannelError,
 		serviceError: isServiceError,
 		retryable: isRetryableError,
 	},

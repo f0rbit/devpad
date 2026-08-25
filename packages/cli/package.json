@@ -51,6 +51,7 @@
 	},
 	"devDependencies": {
 		"@devpad/api": "workspace:*",
+		"@devpad/core": "workspace:*",
 		"@devpad/pipeline-fakes": "workspace:*",
 		"@devpad/pipeline-templates": "workspace:*",
 		"@devpad/schema": "workspace:*",

@@ -36,11 +36,25 @@ export type CompletionEngine = {
 
 const via_for = (actor: CompletionActor): CompletedVia => (actor === "user" ? "user" : "api");
 
-async function complete_leaf(db: Database, id: string, base_rev: number, via: CompletedVia): Promise<Task | null> {
+/**
+ * `AND (kind != 'approval' OR ${actor} = 'user')` (task A4.3) — approval-kind
+ * tasks are human-only completable. Lives in the WHERE clause, not a
+ * pre-check, per the graph invariant rule (one SQL statement carries the
+ * full invariant); the diagnostic branch below distinguishes THIS guard
+ * from an ordinary conflict/not-found on a 0-row result.
+ */
+async function complete_leaf(
+	db: Database,
+	id: string,
+	base_rev: number,
+	via: CompletedVia,
+	actor: CompletionActor,
+): Promise<Task | null> {
 	const rows = await db.all<Task>(sql`
 		UPDATE task
 		SET progress = 'COMPLETED', completed_via = ${via}, rev = rev + 1, updated_at = CURRENT_TIMESTAMP
 		WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0 AND progress != 'COMPLETED'
+			AND (kind != 'approval' OR ${actor} = 'user')
 		RETURNING *
 	`);
 	return rows.length === 1 ? rows[0] : null;
@@ -151,10 +165,11 @@ export class SqlCompletionEngine implements CompletionEngine {
 		const db = this.db;
 		return run_atomic(db, async (): Promise<Result<CompleteResult, CompleteError>> => {
 			const via = via_for(actor);
-			const completed = await complete_leaf(db, id, base_rev, via);
+			const completed = await complete_leaf(db, id, base_rev, via, actor);
 			if (!completed) {
 				const current = await get_task_row(db, id);
 				if (!current || current.deleted) return errors.notFound("task", id);
+				if (current.kind === "approval" && actor !== "user") return errors.approvalChannel(id);
 				if (current.progress === "COMPLETED") {
 					return err({ kind: "graph_conflict", message: `Task ${id} is already completed`, current });
 				}

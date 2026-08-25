@@ -2,11 +2,17 @@ import { z } from "zod";
 import {
 	COMPLETED_VIA_VALUES,
 	COMPLETION_POLICIES,
+	DOCUMENT_KINDS,
+	SDLC_STAGES,
+	SIGNOFF_CHECKPOINTS,
+	SIGNOFF_DECISIONS,
+	SIGNOFF_SUBJECT_KINDS,
 	STAGE_EVENT_KINDS,
 	TASK_EVENT_ACTORS,
 	TASK_EVENT_KINDS,
 	TASK_KINDS,
 	TASK_LINK_KINDS,
+	THREAD_STATUSES,
 } from "./database/schema.js";
 
 export const upsert_project = z.object({
@@ -434,8 +440,161 @@ export const task_event_payload = z.discriminatedUnion("kind", [
 	z.object({ kind: z.literal("node.children_all_done") }),
 	z.object({ kind: z.literal("policy.fired"), policy: z.enum(COMPLETION_POLICIES) }),
 	z.object({ kind: z.literal("node.completion_stale"), child_id: z.string() }),
+	z.object({ kind: z.literal("doc.pushed"), document_id: z.string(), version: z.string() }),
+	z.object({ kind: z.literal("thread.opened"), document_id: z.string(), thread_id: z.string() }),
+	z.object({ kind: z.literal("thread.resolved"), document_id: z.string(), thread_id: z.string() }),
+	z.object({
+		kind: z.literal("signoff.requested"),
+		subject_kind: z.enum(SIGNOFF_SUBJECT_KINDS),
+		subject_id: z.string(),
+		checkpoint: z.enum(SIGNOFF_CHECKPOINTS),
+	}),
+	z.object({
+		kind: z.literal("signoff.decided"),
+		subject_kind: z.enum(SIGNOFF_SUBJECT_KINDS),
+		subject_id: z.string(),
+		checkpoint: z.enum(SIGNOFF_CHECKPOINTS),
+		decision: z.enum(SIGNOFF_DECISIONS),
+	}),
+	z.object({
+		kind: z.literal("stage.advanced"),
+		from: z.enum(SDLC_STAGES).nullable(),
+		to: z.enum(SDLC_STAGES),
+		override: z.boolean(),
+	}),
 ]);
 export type TaskEventPayload = z.infer<typeof task_event_payload>;
+
+// ---------------------------------------------------------------------------
+// v2.4 docs + annotations + signoff + stage (task A4)
+// ---------------------------------------------------------------------------
+
+export const document_kind = z.enum(DOCUMENT_KINDS);
+
+/** Pushes a new corpus version. Omit `document_id` to create a new document. */
+export const push_doc_request = z.object({
+	document_id: z.string().optional(),
+	project_id: z.string(),
+	task_id: z.string().nullable().optional(),
+	kind: document_kind,
+	title: z.string().min(1),
+	html: z.string(),
+});
+export type PushDocRequest = z.infer<typeof push_doc_request>;
+
+// The W3C trifecta anchor (locked decision 3 / option C1) — quote + ~32-char
+// prefix/suffix + char offsets, carried redundantly so re-anchoring can
+// verify structurally (offsets) and fall back to fuzzy quote matching.
+export const thread_anchor = z.object({
+	quote: z.string().min(1),
+	prefix: z.string(),
+	suffix: z.string(),
+	start: z.number().int().nonnegative(),
+	end: z.number().int().nonnegative(),
+});
+export type ThreadAnchor = z.infer<typeof thread_anchor>;
+
+export const thread_entry = z.object({
+	author: z.string().min(1),
+	channel: z.enum(["user", "api"]),
+	body: z.string().min(1),
+	at: z.string(),
+});
+export type ThreadEntry = z.infer<typeof thread_entry>;
+
+export const thread_status = z.enum(THREAD_STATUSES);
+
+// The begin-marker's JSON payload — Zod-parsed on every read so a malformed
+// or hostile marker becomes a typed orphan, never a crash or code execution.
+export const thread_marker = z.object({
+	id: z.string().min(1),
+	anchor: thread_anchor,
+	status: thread_status,
+	blocking: z.boolean(),
+	entries: z.array(thread_entry).min(1),
+});
+export type ThreadMarker = z.infer<typeof thread_marker>;
+
+export const create_thread_request = z.object({
+	quote: z.string().min(1),
+	prefix: z.string(),
+	suffix: z.string(),
+	start: z.number().int().nonnegative(),
+	end: z.number().int().nonnegative(),
+	body: z.string().min(1),
+	blocking: z.boolean().optional().default(false),
+});
+export type CreateThreadRequest = z.infer<typeof create_thread_request>;
+
+export const reply_thread_request = z.object({ body: z.string().min(1) });
+export type ReplyThreadRequest = z.infer<typeof reply_thread_request>;
+
+export const toggle_blocking_request = z.object({ blocking: z.boolean() });
+export type ToggleBlockingRequest = z.infer<typeof toggle_blocking_request>;
+
+export const signoff_subject_kind = z.enum(SIGNOFF_SUBJECT_KINDS);
+export const signoff_checkpoint = z.enum(SIGNOFF_CHECKPOINTS);
+
+export const request_checkpoint_request = z.object({
+	project_id: z.string(),
+	subject_kind: signoff_subject_kind,
+	subject_id: z.string(),
+	checkpoint: signoff_checkpoint,
+	// Explicit, not inferred (architecture-decisions) — the caller names the
+	// downstream task ids this checkpoint's approval node blocks.
+	blocks: z.array(z.string()).default([]),
+});
+export type RequestCheckpointRequest = z.infer<typeof request_checkpoint_request>;
+
+export const decide_checkpoint_request = z.object({
+	decision: z.union([z.literal("approved"), z.literal("changes_requested")]),
+	reason: z.string().optional(),
+});
+export type DecideCheckpointRequest = z.infer<typeof decide_checkpoint_request>;
+
+export const sdlc_stage = z.enum(SDLC_STAGES);
+
+export const advance_stage_request = z.object({
+	to: sdlc_stage,
+	override: z.boolean().optional().default(false),
+	reason: z.string().optional(),
+});
+export type AdvanceStageRequest = z.infer<typeof advance_stage_request>;
+
+// Interface report (task A4.4) — the CLI normalizes declaration files
+// locally (a pure transform, `@devpad/core`'s `normalize_declarations`) and
+// submits the result; the server independently recomputes the
+// additive-vs-breaking classification against its OWN stored previous
+// content, so a client can't forge "this diff is additive".
+export const push_interface_report_request = z.object({
+	document_id: z.string().optional(),
+	project_id: z.string(),
+	task_id: z.string().nullable().optional(),
+	title: z.string().min(1),
+	normalized: z.string(),
+});
+export type PushInterfaceReportRequest = z.infer<typeof push_interface_report_request>;
+
+export const INTERFACE_DIFF_CLASSES = ["additive", "breaking", "unchanged"] as const;
+export type InterfaceDiffClass = (typeof INTERFACE_DIFF_CLASSES)[number];
+
+// Reviews-pending aggregate (task A4.6) — one typed shape across all four
+// human-attention sources, each carrying enough to deep-link + sort by age.
+export const REVIEW_ITEM_KINDS = ["signoff", "annotation", "pipeline_gate", "scan_diff"] as const;
+export type ReviewItemKind = (typeof REVIEW_ITEM_KINDS)[number];
+
+export const review_item = z.object({
+	kind: z.enum(REVIEW_ITEM_KINDS),
+	subject_id: z.string(),
+	title: z.string(),
+	project_id: z.string().nullable(),
+	created_at: z.string(),
+	path: z.string(),
+});
+export type ReviewItem = z.infer<typeof review_item>;
+
+export const reviews_pending_response = z.object({ items: z.array(review_item) });
+export type ReviewsPendingResponse = z.infer<typeof reviews_pending_response>;
 
 // ---------------------------------------------------------------------------
 // v2.4 hooks (task A3.2) — trigger/action shapes shared by the CRUD route,

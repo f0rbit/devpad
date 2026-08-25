@@ -46,6 +46,16 @@ async function insert_task_row(
 	data: UpsertTodo,
 	owner_id: string,
 ): Promise<Result<void, ServiceError>> {
+	// Approval-kind tasks are human-only completable (task A4.3). This raw
+	// INSERT is the one create path that bypasses `SqlCompletionEngine`
+	// entirely (unlike `upsertTask`, which always routes a fresh-complete
+	// through the engine) — without this check, `apply`'s `create` op would
+	// let an api-channel caller create an already-COMPLETED approval task
+	// directly, sidestepping the engine's own guard.
+	if (data.kind === "approval" && data.progress === "COMPLETED") {
+		return errors.approvalChannel(id);
+	}
+
 	const target_parent = data.parent_id ? await get_task_row(db, data.parent_id) : null;
 
 	return write_with_event(

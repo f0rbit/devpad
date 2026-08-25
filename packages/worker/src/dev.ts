@@ -95,6 +95,9 @@ export function createBunApp(options: BunServerOptions) {
 		config,
 		oauth_secrets,
 		dispatch,
+		// v2.4 (task A4.1) — no real R2/D1 corpus bucket in the bun runtime;
+		// same pattern as blog/media's memory-backed contexts above.
+		docsBackend: create_memory_backend(),
 	});
 
 	const fetch = (request: Request) => app.fetch(request);

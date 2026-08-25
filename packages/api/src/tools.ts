@@ -1,7 +1,13 @@
 import { CategoryCreateSchema, PostCreateSchema, PostListParamsSchema, PostUpdateSchema } from "@devpad/schema/blog";
 import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import {
+	advance_stage_request,
 	apply_request,
+	create_thread_request,
+	decide_checkpoint_request,
+	push_doc_request,
+	push_interface_report_request,
+	request_checkpoint_request,
 	save_config_request,
 	save_tags_request,
 	upsert_goal,
@@ -471,6 +477,17 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("task_link ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.tasks.unlink(input.id)),
+	}),
+
+	devpad_tasks_advance_stage: define_tool({
+		name: "devpad_tasks_advance_stage",
+		description:
+			"Advance a task's SDLC stage (ideate|plan|build|review|deploy|live). Gated hops (plan->build needs an approved plan checkpoint; review->deploy needs approved types + design when a design doc exists) 409 naming what's missing unless override:true, which always succeeds but is audited.",
+		inputSchema: advance_stage_request.extend({ id: z.string().describe("Task ID") }),
+		execute: async (client, input) => {
+			const { id, ...rest } = input;
+			return unwrap(await client.tasks.advanceStage(id, rest));
+		},
 	}),
 
 	devpad_tasks_apply: define_tool({
@@ -1116,6 +1133,155 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pipelines.oidc_trust.delete(input.id, { owner_id: input.owner_id })),
+	}),
+
+	// Docs (v2.4, task A4.1) — corpus-backed doc store
+	devpad_docs_list: define_tool({
+		name: "devpad_docs_list",
+		description: "List documents for a project (optionally filtered to one task)",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			task_id: z.string().optional().describe("Filter to documents attached to this task"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.list(input)),
+	}),
+
+	devpad_docs_push: define_tool({
+		name: "devpad_docs_push",
+		description:
+			"Push HTML content as a new document (omit document_id) or a new version on an existing one. HTML is sanitized server-side before storage — script/iframe/object/embed/form, event handlers, and javascript:/data: URLs never survive.",
+		inputSchema: push_doc_request,
+		execute: async (client, input) => unwrap(await client.docs.push(input)),
+	}),
+
+	devpad_docs_pull: define_tool({
+		name: "devpad_docs_pull",
+		description: "Pull a document's content at a specific version (default: head)",
+		inputSchema: z.object({
+			id: z.string().describe("Document ID"),
+			version: z.string().optional().describe("Corpus version — defaults to head"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.pull(input.id, input.version)),
+	}),
+
+	devpad_docs_versions: define_tool({
+		name: "devpad_docs_versions",
+		description: "Full version history for a document, newest first (the lineage walk)",
+		inputSchema: z.object({
+			id: z.string().describe("Document ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.versions(input.id)),
+	}),
+
+	// Annotation engine (v2.4, task A4.2) — markers-in-doc threads
+	devpad_annotations_create: define_tool({
+		name: "devpad_annotations_create",
+		description:
+			"Open a new annotation thread on a document, anchored to an exact quote (with prefix/suffix context + char offsets for re-anchoring across edits)",
+		inputSchema: create_thread_request.extend({ document_id: z.string().describe("Document ID") }),
+		execute: async (client, input) => {
+			const { document_id, ...rest } = input;
+			return unwrap(await client.docs.createThread(document_id, rest));
+		},
+	}),
+
+	devpad_annotations_reply: define_tool({
+		name: "devpad_annotations_reply",
+		description: "Reply to an existing annotation thread",
+		inputSchema: z.object({
+			document_id: z.string().describe("Document ID"),
+			thread_id: z.string().describe("Thread ID (from the marker JSON, not the document ID)"),
+			body: z.string().min(1).describe("Reply text"),
+		}),
+		execute: async (client, input) =>
+			unwrap(await client.docs.replyThread(input.document_id, input.thread_id, input.body)),
+	}),
+
+	devpad_annotations_resolve: define_tool({
+		name: "devpad_annotations_resolve",
+		description: "Mark an annotation thread resolved",
+		inputSchema: z.object({
+			document_id: z.string().describe("Document ID"),
+			thread_id: z.string().describe("Thread ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.resolveThread(input.document_id, input.thread_id)),
+	}),
+
+	devpad_annotations_toggle_blocking: define_tool({
+		name: "devpad_annotations_toggle_blocking",
+		description: "Toggle whether an annotation thread blocks approval",
+		inputSchema: z.object({
+			document_id: z.string().describe("Document ID"),
+			thread_id: z.string().describe("Thread ID"),
+			blocking: z.boolean(),
+		}),
+		execute: async (client, input) =>
+			unwrap(await client.docs.toggleBlocking(input.document_id, input.thread_id, input.blocking)),
+	}),
+
+	devpad_interface_push: define_tool({
+		name: "devpad_interface_push",
+		description:
+			"Push already-normalized declaration text as a new interface-doc version. The server independently recomputes additive-vs-breaking against its own stored previous content and auto-approves additive diffs against an approved base.",
+		inputSchema: push_interface_report_request,
+		execute: async (client, input) => unwrap(await client.docs.pushInterfaceReport(input)),
+	}),
+
+	devpad_interface_status: define_tool({
+		name: "devpad_interface_status",
+		description:
+			"Get the approved/auto content_hash for an interface doc, for a client-side hash comparison (the `check` verb)",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			task_id: z.string().optional().describe("Task ID"),
+			title: z.string().describe("The interface document's title (package name)"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.interfaceStatus(input)),
+	}),
+
+	devpad_reviews_pending: define_tool({
+		name: "devpad_reviews_pending",
+		description:
+			"The human's queue — one typed aggregate across pending signoff checkpoints, open blocking annotation threads, pending pipeline manual gates, and pending scanner diffs, scoped to the authenticated user",
+		inputSchema: z.object({}),
+		execute: async (client) => unwrap(await client.reviews.pending()),
+	}),
+
+	devpad_annotations_unresolved: define_tool({
+		name: "devpad_annotations_unresolved",
+		description: "List pending annotation threads (anything not resolved) for a project or a specific document",
+		inputSchema: z.object({
+			project_id: z.string().optional().describe("Project ID"),
+			document_id: z.string().optional().describe("Document ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.unresolved(input)),
+	}),
+
+	// Signoffs (v2.4, task A4.3) — generalized human-approval ledger
+	devpad_signoffs_request: define_tool({
+		name: "devpad_signoffs_request",
+		description:
+			"Request a human signoff checkpoint — creates a pending approval node that blocks the named downstream tasks until decided",
+		inputSchema: request_checkpoint_request,
+		execute: async (client, input) => unwrap(await client.signoffs.request(input)),
+	}),
+
+	devpad_signoffs_get: define_tool({
+		name: "devpad_signoffs_get",
+		description: "Get a signoff checkpoint's current state",
+		inputSchema: z.object({ id: z.string().describe("Signoff ID") }),
+		execute: async (client, input) => unwrap(await client.signoffs.find(input.id)),
+	}),
+
+	devpad_signoffs_decide: define_tool({
+		name: "devpad_signoffs_decide",
+		description:
+			"Decide a signoff checkpoint (approved | changes_requested). Human-only — an api-channel key gets 403. Approving a doc_version subject is vetoed by any open blocking annotation thread.",
+		inputSchema: decide_checkpoint_request.extend({ id: z.string().describe("Signoff ID") }),
+		execute: async (client, input) => {
+			const { id, ...rest } = input;
+			return unwrap(await client.signoffs.decide(id, rest));
+		},
 	}),
 };
 

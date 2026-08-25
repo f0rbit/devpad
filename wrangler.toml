@@ -41,6 +41,13 @@ bucket_name = "devpad-corpus"
 binding = "MEDIA_CORPUS_BUCKET"
 bucket_name = "devpad-corpus"
 
+# v2.4 doc store (task A4.1) — same shared bucket as blog/media above,
+# partitioned by store id prefix (`docs/<document_id>`), not a separate
+# bucket.
+[[r2_buckets]]
+binding = "DOCS_CORPUS_BUCKET"
+bucket_name = "devpad-corpus"
+
 # v2.4 hooks queue (task A3.3). Ops prerequisite (one-time, before this ships
 # to production): `wrangler queues create devpad-hooks`. No dead_letter_queue
 # configured — a stubborn transient failure is promoted to a `failed_permanent`
@@ -92,6 +99,10 @@ bucket_name = "devpad-corpus-staging"
 
 [[env.preview.r2_buckets]]
 binding = "MEDIA_CORPUS_BUCKET"
+bucket_name = "devpad-corpus-staging"
+
+[[env.preview.r2_buckets]]
+binding = "DOCS_CORPUS_BUCKET"
 bucket_name = "devpad-corpus-staging"
 
 # Ops prerequisite: `wrangler queues create devpad-hooks-preview`. Separate

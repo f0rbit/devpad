@@ -127,6 +127,22 @@ export function register_graph_commands(program: Command, tasks: Command, get_cl
 			spinner.succeed("Batch applied");
 			await print_json(result);
 		});
+
+	tasks
+		.command("stage <id> <to>")
+		.description(
+			"Advance a task's SDLC stage (ideate|plan|build|review|deploy|live). Gated hops 409 naming the missing checkpoint unless --override.",
+		)
+		.option("--override", "Bypass the gate — always succeeds but is audited")
+		.option("-r, --reason <reason>", "Reason for the override")
+		.action(async (id: string, to: string, options: { override?: boolean; reason?: string }) => {
+			const spinner = make_spinner("Advancing stage...").start();
+			const tool = getTool("devpad_tasks_advance_stage");
+			if (!tool) return fail_with(spinner, "Tool not found: devpad_tasks_advance_stage");
+			const result = await tool.execute(get_client(), { id, to, override: options.override, reason: options.reason });
+			spinner.succeed(`Task ${id} advanced to ${to}`);
+			await print_json(result);
+		});
 }
 
 function try_json_parse(text: string): unknown {
