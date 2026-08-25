@@ -79,6 +79,7 @@ import type {
 	PushDocRequest,
 	PushInterfaceReportRequest,
 	RequestCheckpointRequest,
+	ReviewItem,
 	ThreadMarker,
 	UpsertHook,
 } from "@devpad/schema/validation";
@@ -905,6 +906,16 @@ export class ApiClient {
 
 		decide: (id: string, data: DecideCheckpointRequest): Promise<ApiResult<Signoff>> =>
 			wrap(() => this.clients.signoffs.post<Signoff>(`/signoffs/${id}/decide`, { body: data })),
+	};
+
+	/**
+	 * Reviews namespace (v2.4, task A4.6) — the human's queue: one typed
+	 * aggregate across pending signoffs, open blocking annotation threads,
+	 * pending pipeline manual gates, and pending scanner diffs.
+	 */
+	public readonly reviews = {
+		pending: (): Promise<ApiResult<{ items: ReviewItem[] }>> =>
+			wrap(() => this.clients.reviews.get<{ items: ReviewItem[] }>("/reviews/pending")),
 	};
 
 	/**

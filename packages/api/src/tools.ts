@@ -1239,6 +1239,14 @@ export const tools: Record<string, ToolDefinition> = {
 		execute: async (client, input) => unwrap(await client.docs.interfaceStatus(input)),
 	}),
 
+	devpad_reviews_pending: define_tool({
+		name: "devpad_reviews_pending",
+		description:
+			"The human's queue — one typed aggregate across pending signoff checkpoints, open blocking annotation threads, pending pipeline manual gates, and pending scanner diffs, scoped to the authenticated user",
+		inputSchema: z.object({}),
+		execute: async (client) => unwrap(await client.reviews.pending()),
+	}),
+
 	devpad_annotations_unresolved: define_tool({
 		name: "devpad_annotations_unresolved",
 		description: "List pending annotation threads (anything not resolved) for a project or a specific document",
