@@ -1,12 +1,33 @@
-import type { TodoUpdate, TrackerResult, UpsertTodo } from "@devpad/schema";
+import type { ScanDiffProposal, TodoUpdate, TrackerResult, UpsertTodo } from "@devpad/schema";
 import { action, codebase_tasks, project, task, todo_updates, tracker_result } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { parseContextToArray } from "../utils/context-parser.js";
 import type { ServiceError } from "./errors.js";
+import { add_link, set_parent } from "./graph/graph.js";
+import { rank_between } from "./graph/rank.js";
 import { getProjectConfig } from "./projects.js";
 import { type DiffResult, generateDiff, type ParsedTask, scanGitHubRepo } from "./scanner/index.js";
+
+/**
+ * v2.4 (task A5.4) — scanner ⇄ graph reconciliation, v1 heuristic: the open
+ * (not deleted, not completed) task whose linked `codebase_task` shares the
+ * new item's file. No match falls back to project root (the pre-A5.4
+ * behavior) with no `discovered_from` edge.
+ */
+async function proposeParent(db: Database, project_id: string, file: string): Promise<ScanDiffProposal> {
+	const rows = await db.all<{ id: string }>(sql`
+		SELECT t.id FROM task t
+		JOIN codebase_tasks ct ON ct.id = t.codebase_task_id
+		WHERE t.project_id = ${project_id} AND t.deleted = 0 AND t.progress != 'COMPLETED' AND ct.file = ${file}
+		ORDER BY t.updated_at DESC
+		LIMIT 1
+	`);
+	if (rows.length === 0) return { parent_id: null, proposing_task_id: null };
+	const match = rows[0];
+	return { parent_id: match.id, proposing_task_id: match.id };
+}
 
 export async function* initiateScan(
 	db: Database,
@@ -110,6 +131,17 @@ export async function* initiateScan(
 	yield "running diff\n";
 	const diff_results = generateDiff(old_tasks, parsed_tasks);
 
+	yield "proposing placement\n";
+	const diff_results_with_proposals: DiffResult[] = [];
+	for (const item of diff_results) {
+		if (item.type !== "NEW" || !item.data.new) {
+			diff_results_with_proposals.push(item);
+			continue;
+		}
+		const proposal = await proposeParent(db, project_id, item.data.new.file);
+		diff_results_with_proposals.push({ ...item, proposal });
+	}
+
 	yield "saving update\n";
 	await db
 		.update(todo_updates)
@@ -120,7 +152,7 @@ export async function* initiateScan(
 		project_id,
 		new_id,
 		old_id: old_result[0]?.id ?? null,
-		data: JSON.stringify(diff_results),
+		data: JSON.stringify(diff_results_with_proposals),
 	});
 
 	yield "done\n";
@@ -171,9 +203,39 @@ async function handleCreateAction(
 	const { upsertTask } = await import("./tasks.js");
 	const task_result = await upsertTask(db, new_task_data, [], user_id);
 	if (!task_result.ok || !task_result.value) return;
+	const new_task = task_result.value.task;
 
 	await upsertCodebaseTask(db, update_item, new_id);
-	await db.update(task).set({ codebase_task_id: update_item.id }).where(eq(task.id, task_result.value.task.id));
+	await db.update(task).set({ codebase_task_id: update_item.id }).where(eq(task.id, new_task.id));
+
+	// Created at project root by `upsertTask` above (unguarded insert); a
+	// proposed parent is applied as a SEPARATE reparent through `set_parent`
+	// so the existing cycle/depth/children-cap guards apply — a proposal that
+	// would violate one is rejected, and the task simply stays at root
+	// (visible, not lost) rather than failing the whole accept operation.
+	const proposal = update_item.proposal;
+	if (proposal?.parent_id) {
+		const siblings = await db
+			.select()
+			.from(task)
+			.where(and(eq(task.parent_id, proposal.parent_id), eq(task.deleted, false)))
+			.orderBy(asc(task.rank));
+		const rank = rank_between(siblings.at(-1)?.rank ?? null, null);
+		const reparent_result = await set_parent(db, {
+			id: new_task.id,
+			parent_id: proposal.parent_id,
+			rank,
+			base_rev: new_task.rev,
+		});
+		if (reparent_result.ok && proposal.proposing_task_id) {
+			const link_result = await add_link(db, {
+				src_id: new_task.id,
+				dst_id: proposal.proposing_task_id,
+				kind: "discovered_from",
+			});
+			if (!link_result.ok) return;
+		}
+	}
 }
 
 async function processScanItem(
