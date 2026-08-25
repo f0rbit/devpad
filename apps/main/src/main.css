@@ -1120,6 +1120,10 @@ button.outline-row {
 	.outline-toast-leaving {
 		animation: none;
 	}
+
+	.doc-version-just-now {
+		animation: none;
+	}
 }
 
 .project-blog__card-meta {
@@ -1586,13 +1590,31 @@ button.outline-row {
 	color: var(--success-fg);
 }
 
+/* Fast-follow #5 — transient save feedback on the freshly-minted head chip. */
+.doc-version-just-now {
+	color: var(--accent);
+	font-weight: 500;
+	animation: doc-version-just-now-pulse 1.6s ease-in-out 2;
+}
+
+@keyframes doc-version-just-now-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+}
+
 .doc-version-diff-link {
-	font-size: 11px;
+	font-size: 13px;
+	line-height: 1;
 	color: var(--fg-faint);
 	background: none;
 	border: none;
 	cursor: pointer;
-	padding: 0;
+	padding: 0 2px;
 }
 
 .doc-version-diff-link:hover {
@@ -1729,6 +1751,7 @@ button.outline-row {
 	font-style: italic;
 	color: var(--fg-muted);
 	margin: 0;
+	cursor: pointer;
 }
 
 .thread-entry {

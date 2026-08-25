@@ -177,4 +177,86 @@ test.describe("AnnotationRail", () => {
 		await expect(orphanSection).toBeVisible();
 		await expect(orphanSection.getByTestId("orphaned-thread-card")).toContainText("orphan seed");
 	});
+
+	test("clicking a thread card's quote scrolls the iframe to its <mark> and flashes it (fast-follow #4)", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		// A pre-embedded, reconcilable marker (see `push_document_annotated`'s
+		// reconcile() — `annotations.spec.ts`'s orphan test above uses the same
+		// direct-push trick) bracketing text pushed FAR below the fold, so a
+		// real scroll has to happen for the assertion to pass.
+		const marker = {
+			id: "thread_e2e-anchor-1",
+			anchor: { quote: "brown fox", prefix: "", suffix: "", start: 0, end: 0 },
+			status: "open",
+			blocking: false,
+			entries: [{ author: "tester", channel: "user", body: "anchor connection check", at: new Date().toISOString() }],
+		};
+		const payload = Buffer.from(JSON.stringify(marker), "utf-8").toString("base64");
+		const filler = Array.from({ length: 80 }, (_, i) => `<p>filler line ${String(i)}</p>`).join("");
+		const html = `<h1>Design</h1>${filler}<p>The quick <!-- devpad:thread:begin ${marker.id} ${payload} -->brown fox<!-- devpad:thread:end ${marker.id} --> jumps over the lazy dog.</p>`;
+		const doc = await pushDoc(context, html);
+		await openDoc(page, context, doc.id);
+
+		const card = page.getByTestId("thread-card").filter({ hasText: "anchor connection check" });
+		await expect(card).toBeVisible();
+
+		const iframeHandle = await page.locator('[data-testid="doc-render-frame"]').elementHandle();
+		const frame = await iframeHandle?.contentFrame();
+		if (!frame) throw new Error("render iframe has no content frame");
+		expect(await frame.evaluate(() => window.scrollY)).toBe(0);
+
+		await card.getByTestId("thread-quote").click();
+
+		await expect.poll(() => frame.evaluate(() => window.scrollY), { timeout: 3000 }).toBeGreaterThan(0);
+		const mark = frame.locator(`mark[data-thread-id="${marker.id}"]`);
+		await expect(mark).toHaveClass(/mark-flash/);
+		// The flash class is timed off after 1.2s (see `annotation-rail.tsx`'s
+		// `scrollToMark`) — it's a transient highlight, not a permanent state.
+		await expect(mark).not.toHaveClass(/mark-flash/, { timeout: 3000 });
+	});
+
+	test("save preserves the iframe's reading position and labels the new head version chip (fast-follow #5)", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		const filler = Array.from({ length: 80 }, (_, i) => `<p>filler line ${String(i)}</p>`).join("");
+		const doc = await pushDoc(context, `<h1>Design</h1>${filler}<p>The quick brown fox jumps over the lazy dog.</p>`);
+		await openDoc(page, context, doc.id);
+
+		const getFrame = async () => {
+			const handle = await page.locator('[data-testid="doc-render-frame"]').elementHandle();
+			const frame = await handle?.contentFrame();
+			if (!frame) throw new Error("render iframe has no content frame");
+			return frame;
+		};
+
+		const frameBefore = await getFrame();
+		await frameBefore.evaluate(() => window.scrollTo(0, 2000));
+		expect(await frameBefore.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+
+		await selectWordInFrame(page, "brown fox");
+		await page.getByTestId("new-thread-button").click();
+		await page.getByTestId("thread-composer").locator("textarea").fill("reading position check");
+		await page.getByTestId("thread-save").click();
+
+		await expect(page.getByTestId("thread-card").filter({ hasText: "reading position check" })).toBeVisible();
+		await expect(page.getByTestId("doc-version-just-now")).toBeVisible();
+
+		// The iframe navigates to the new head version on save — re-fetch the
+		// content frame each poll attempt, since the OLD `Frame` reference is
+		// detached the moment that navigation starts.
+		await expect
+			.poll(
+				async () => {
+					const frame = await getFrame();
+					return frame.evaluate(() => window.scrollY).catch(() => -1);
+				},
+				{ timeout: 5000 },
+			)
+			.toBeGreaterThan(1000);
+	});
 });

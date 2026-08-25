@@ -95,6 +95,49 @@ test.describe("DocViewer", () => {
 		expect(frame_html).not.toContain("<script");
 	});
 
+	test("preserves a real .plans-style doc's class-selector CSS and TOC fragment anchors post-sanitize", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		const plansStyleDoc = [
+			`<style>.hl { color: rgb(255, 0, 0); }</style>`,
+			`<div class="toc">`,
+			`<a href="#overview">Overview</a>`,
+			`<a href="#phase-1">Phase 1</a>`,
+			`<a href="#phase-2">Phase 2</a>`,
+			`</div>`,
+			`<h1 id="overview" class="hl">Overview</h1>`,
+			`<h2 id="phase-1">Phase 1</h2>`,
+			`<h2 id="phase-2">Phase 2</h2>`,
+			`<h3 id="phase-2-tasks">Phase 2 tasks</h3>`,
+			`<h3 id="phase-2-verification">Phase 2 verification</h3>`,
+		].join("\n");
+		const doc = await pushDoc(context, plansStyleDoc, { kind: "design" });
+
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/docs`);
+		await page.waitForLoadState("networkidle");
+		await clickWithRetry(page.locator(`[data-testid="doc-list-item"][data-document-id="${doc.id}"]`), () =>
+			expect(page.getByTestId("doc-viewer")).toBeVisible({ timeout: 3000 }),
+		);
+
+		const frame = page.frameLocator('[data-testid="doc-render-frame"]');
+		// class-selector CSS from the doc's own <style> block actually applies —
+		// not just present in the markup, but matched and painted.
+		await expect(frame.locator("h1")).toHaveCSS("color", "rgb(255, 0, 0)");
+
+		// heading ids are clobber-prefixed (hast-util-sanitize's DOM-clobbering
+		// protection is unchanged)...
+		await expect(frame.locator("h1")).toHaveAttribute("id", "user-content-overview");
+		// ...and the TOC's fragment hrefs are rewritten to match, so clicking a
+		// TOC link still resolves to its heading post-sanitize.
+		const overviewLink = frame.locator('div.toc a[href="#user-content-overview"]');
+		await expect(overviewLink).toHaveCount(1);
+		const phase2Link = frame.locator('div.toc a[href="#user-content-phase-2"]');
+		await expect(phase2Link).toHaveCount(1);
+		await expect(frame.locator("#user-content-phase-2")).toHaveText("Phase 2");
+	});
+
 	test("version picker switches rendered content between versions", async ({ page, context }) => {
 		await inject_test_user(context);
 		const first = await pushDoc(context, "<h1>Version one content</h1>");
@@ -115,5 +158,47 @@ test.describe("DocViewer", () => {
 		await expect(chips).toHaveCount(2);
 		await chips.nth(1).click();
 		await expect(frame.locator("h1")).toHaveText("Version one content");
+	});
+
+	test("adjacent-version diff strips marker comments and reads as text, not a base64 blob (fast-follow #3)", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		const v1 = "<h1>Plan</h1><p>The quick brown fox jumps over the lazy dog.</p>";
+		const first = await pushDoc(context, v1, { kind: "plan" });
+
+		// Simulates what the annotation engine mints on a real select→annotate
+		// (see annotations.spec.ts) — a marker comment pair bracketing "brown
+		// fox", plus a genuine prose edit, in the SAME version bump.
+		const marker = {
+			id: "thread_e2e-diff-1",
+			anchor: { quote: "brown fox", prefix: "", suffix: "", start: 0, end: 0 },
+			status: "open",
+			blocking: false,
+			entries: [{ author: "tester", channel: "user", body: "diff legibility check", at: new Date().toISOString() }],
+		};
+		const payload = Buffer.from(JSON.stringify(marker), "utf-8").toString("base64");
+		const v2 = `<h1>Plan</h1><p>The quick <!-- devpad:thread:begin ${marker.id} ${payload} -->brown fox<!-- devpad:thread:end ${marker.id} --> jumps over the lazy dog. A new line of prose.</p>`;
+		await pushDoc(context, v2, { document_id: first.id, kind: "plan" });
+
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/docs`);
+		await page.waitForLoadState("networkidle");
+		await clickWithRetry(page.locator(`[data-testid="doc-list-item"][data-document-id="${first.id}"]`), () =>
+			expect(page.getByTestId("doc-viewer")).toBeVisible({ timeout: 3000 }),
+		);
+
+		await expect(page.getByTestId("doc-version-chip")).toHaveCount(2);
+		await page.getByTestId("doc-version-diff-link").first().click();
+
+		const panel = page.getByTestId("doc-diff-panel");
+		await expect(panel).toBeVisible();
+		await expect(panel).not.toContainText("Loading diff…");
+		const panelText = await panel.innerText();
+		expect(panelText).not.toContain("devpad:thread");
+		expect(panelText).not.toContain("<!--");
+		expect(panelText).not.toContain("<p>");
+		expect(panelText).toContain("brown fox");
+		expect(panelText).toContain("A new line of prose.");
 	});
 });

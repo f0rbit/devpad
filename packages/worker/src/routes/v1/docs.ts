@@ -183,9 +183,12 @@ app.get("/:id", requireAuth, async (c) => {
  * gap ever let something hostile through, this response's own CSP has no
  * `script-src`/`connect-src`/`frame-src` at all, so nothing it could embed
  * can execute or phone home — independent of whatever the DOM sanitizer did.
- * Marker comments are stripped here (display-only concern; the annotation
- * engine's own anchor math always operates on the corpus-stored content
- * directly, never on this render).
+ *
+ * v2.4 (B3 fast-follow #4, taste/IA critic — "anchor connection") — paired
+ * marker comments are converted to `<mark data-thread-id>` spans (not just
+ * stripped) so the annotation rail has a DOM hook to scroll/flash a thread's
+ * anchored text against. The annotation engine's own anchor math always
+ * operates on the corpus-stored content directly, never on this render.
  */
 app.get("/:id/render", requireAuth, async (c) => {
 	const db = c.get("db");
@@ -205,8 +208,14 @@ app.get("/:id/render", requireAuth, async (c) => {
 	const content_result = await docs.get_version(backend_guard.backend, id, version);
 	if (!content_result.ok) return c.text("Not found", 404);
 
-	const { stripped } = docs.strip_markers(content_result.value.html);
-	const body = `<!doctype html><html><head><meta charset="utf-8"><style>body{font:14px/1.6 system-ui,sans-serif;color:#1a1a1a;margin:16px;overflow-wrap:anywhere}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}</style></head><body>${stripped}</body></html>`;
+	const marked = docs.markers_to_marks(content_result.value.html);
+	// v2.4 (B3 fast-follow #8) — `interface` docs are pushed as escaped plain
+	// text (see `signoff.ts`'s `push_interface_report`), so without
+	// `pre-wrap` a multi-line declaration list collapses to one unreadable
+	// line; other kinds keep normal HTML flow.
+	const white_space = doc_result.value.kind === "interface" ? "white-space:pre-wrap;" : "";
+	const body_style = `body{font:14px/1.6 system-ui,sans-serif;color:#1a1a1a;margin:16px;overflow-wrap:anywhere;${white_space}}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}mark{background:#fff3a3;color:inherit}mark.mark-flash{background:#ffd23f}`;
+	const body = `<!doctype html><html><head><meta charset="utf-8"><style>${body_style}</style></head><body>${marked}</body></html>`;
 
 	c.header(
 		"Content-Security-Policy",

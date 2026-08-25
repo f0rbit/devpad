@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { ThreadMarker } from "@devpad/schema/validation";
-import { begin_comment, embed_marker, parse_markers, replace_marker, strip_markers } from "../../markers.js";
+import {
+	begin_comment,
+	embed_marker,
+	markers_to_marks,
+	parse_markers,
+	replace_marker,
+	strip_markers,
+} from "../../markers.js";
 
 function make_marker(overrides: Partial<ThreadMarker> = {}): ThreadMarker {
 	return {
@@ -91,5 +98,47 @@ describe("markers — parse/embed round-trip (task A4.2)", () => {
 	test("replace_marker returns null for an unknown thread id", () => {
 		const html = "<p>plain</p>";
 		expect(replace_marker(html, "thread_missing", make_marker())).toBeNull();
+	});
+});
+
+describe("markers_to_marks — render-route anchor connection (B3 fast-follow #4)", () => {
+	test("wraps a paired thread's bracketed content in <mark data-thread-id>, dropping the comment syntax", () => {
+		const html = "<p>Hello world, this is a test.</p>";
+		// Raw-HTML offsets (include the leading "<p>"): "world" spans [9, 14).
+		const marker = make_marker({ anchor: { quote: "world", prefix: "Hello ", suffix: ", this", start: 9, end: 14 } });
+		const embedded = embed_marker(html, marker, { start: 9, end: 14 });
+
+		const marked = markers_to_marks(embedded);
+
+		expect(marked).toBe(`<p>Hello <mark data-thread-id="thread_1">world</mark>, this is a test.</p>`);
+	});
+
+	test("two non-overlapping threads both get wrapped, independent of processing order", () => {
+		const html = "<p>Hello world, this is a test.</p>";
+		// Raw-HTML offsets: "Hello" spans [3, 8), "test" spans [26, 30).
+		const first = make_marker({
+			id: "thread_1",
+			anchor: { quote: "Hello", prefix: "<p>", suffix: " world", start: 3, end: 8 },
+		});
+		const second = make_marker({
+			id: "thread_2",
+			anchor: { quote: "test", prefix: "a ", suffix: ".</p>", start: 26, end: 30 },
+		});
+
+		const step1 = embed_marker(html, first, { start: 3, end: 8 });
+		const step2 = embed_marker(step1, second, { start: 26, end: 30 });
+
+		const marked = markers_to_marks(step2);
+
+		expect(marked).toBe(
+			`<p><mark data-thread-id="thread_1">Hello</mark> world, this is a <mark data-thread-id="thread_2">test</mark>.</p>`,
+		);
+	});
+
+	test("an unpaired (orphan) marker has no target range to wrap — it's stripped, same as strip_markers", () => {
+		const marker = make_marker({ id: "thread_orphan" });
+		const dangling = begin_comment(marker) + "<p>some text with no matching end</p>";
+
+		expect(markers_to_marks(dangling)).toBe(strip_markers(dangling).stripped);
 	});
 });

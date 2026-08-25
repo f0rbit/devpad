@@ -3,7 +3,7 @@ import type { DocVersionInfo, PullDocResponse } from "@devpad/api";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { checkpointForDocKind } from "@/utils/checkpoint";
-import { diffLines, type DiffLine } from "@/utils/text-diff";
+import { diffLines, docContentForDiff, type DiffLine } from "@/utils/text-diff";
 import AnnotationRail from "./annotation-rail";
 
 export type DocViewerProps = {
@@ -49,6 +49,14 @@ export default function DocViewer(props: DocViewerProps) {
 	);
 	const [diffData, setDiffData] = createSignal<{ against: string; lines: DiffLine[] } | null>(null);
 	const [diffLoading, setDiffLoading] = createSignal(false);
+	// B3 fast-follow #5 (taste/IA critic — "save feedback + reading
+	// position"): a rail mutation bumps `selectedVersion` to the new head,
+	// which changes `renderUrl()` and forces the iframe to navigate — losing
+	// the reader's scroll position on every save. Captured right before the
+	// navigation, restored on the iframe's own `load` event (the earliest
+	// point its `contentWindow` is valid again).
+	let pendingScrollRestore: number | null = null;
+	const [justSavedVersion, setJustSavedVersion] = createSignal<string | null>(null);
 
 	/** Oldest-first ordinal labels (v1 = oldest) — `versions()` itself is newest-first (the lineage walk). */
 	const versionLabel = (version: string) => {
@@ -65,18 +73,33 @@ export default function DocViewer(props: DocViewerProps) {
 			client.docs.pull(props.documentId, current),
 		]);
 		if (a.ok && b.ok && a.value.content && b.value.content) {
-			setDiffData({ against, lines: diffLines(a.value.content.html, b.value.content.html) });
+			const kind = pulled().document.kind;
+			setDiffData({
+				against,
+				lines: diffLines(docContentForDiff(a.value.content.html, kind), docContentForDiff(b.value.content.html, kind)),
+			});
 		}
 		setDiffLoading(false);
 	}
 
 	/** A rail mutation minted a new corpus version — refresh both the version list and jump the viewer to the new head. */
 	async function handleAnnotationChange(fresh: PullDocResponse): Promise<void> {
+		pendingScrollRestore = iframeRef?.contentWindow?.scrollY ?? 0;
 		setPulled(fresh);
 		setSelectedVersion(fresh.document.head_version ?? undefined);
 		setDiffData(null);
+		if (fresh.document.head_version) {
+			setJustSavedVersion(fresh.document.head_version);
+			setTimeout(() => setJustSavedVersion(null), 4000);
+		}
 		const versions_result = await client.docs.versions(props.documentId);
 		if (versions_result.ok) setVersions(versions_result.value);
+	}
+
+	function onFrameLoad(): void {
+		if (pendingScrollRestore === null) return;
+		iframeRef?.contentWindow?.scrollTo(0, pendingScrollRestore);
+		pendingScrollRestore = null;
 	}
 
 	const renderUrl = createMemo(() => client.docs.renderUrl(props.documentId, selectedVersion()));
@@ -106,6 +129,12 @@ export default function DocViewer(props: DocViewerProps) {
 									}}
 								>
 									v{versionLabel(v.version)}
+									{/* B3 fast-follow #5 — save feedback: the version just minted by a rail mutation gets a transient "· just now" label instead of looking like every other chip. */}
+									<Show when={v.version === justSavedVersion()}>
+										<span class="doc-version-just-now" data-testid="doc-version-just-now">
+											· just now
+										</span>
+									</Show>
 									<Show when={v.tags.includes("approved")}>
 										<span class="doc-version-approved" title="approved">
 											✓
@@ -113,15 +142,18 @@ export default function DocViewer(props: DocViewerProps) {
 									</Show>
 								</button>
 								<Show when={i() < versions().length - 1}>
+									{/* Craft fast-follow #13b — icon-only diff affordance between chips, not a text label crowding the version picker row. */}
 									<button
 										type="button"
 										class="doc-version-diff-link"
 										data-testid="doc-version-diff-link"
+										title="Diff vs previous version"
+										aria-label="Diff vs previous version"
 										onClick={() => {
 											void showDiff(v.version, versions()[i() + 1]?.version ?? v.version);
 										}}
 									>
-										diff vs previous
+										⇆
 									</button>
 								</Show>
 							</span>
@@ -161,6 +193,7 @@ export default function DocViewer(props: DocViewerProps) {
 						title={pulled().document.title}
 						src={renderUrl()}
 						sandbox="allow-same-origin"
+						onLoad={onFrameLoad}
 					/>
 					<Show
 						when={selectedVersion() === pulled().document.head_version}
