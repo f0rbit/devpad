@@ -48,6 +48,7 @@ export async function seed_task(db: Database, owner_id: string, overrides: Parti
 		start_time: overrides.start_time ?? null,
 		end_time: overrides.end_time ?? null,
 		deleted: overrides.deleted ?? false,
+		stage: overrides.stage ?? null,
 	} as never);
 	const rows = await db.select().from(task).where(eq(task.id, id));
 	return rows[0]!;

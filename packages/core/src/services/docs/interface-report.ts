@@ -38,7 +38,7 @@ function canonical_line(line: string): string {
  * machine-dependent, defeating the whole point of hash-comparing it later.
  */
 export function normalize_declarations(files: DeclarationFile[]): string {
-	const sorted = files.toSorted((a, b) => a.path.localeCompare(b.path));
+	const sorted = files.toSorted((a: DeclarationFile, b: DeclarationFile) => a.path.localeCompare(b.path));
 	const sections = sorted.map((file: DeclarationFile) => {
 		const lines = strip_comments(file.content)
 			.split("\n")

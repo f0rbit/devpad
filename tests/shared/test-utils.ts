@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import crypto from "node:crypto";
 import fs from "node:fs";
-import { api_keys, user } from "@devpad/schema";
+import { api_keys, session, user } from "@devpad/schema";
 import { createBunDatabase } from "@devpad/schema/database/bun";
 
 export const TEST_USER_ID = "test-user-12345";
@@ -112,4 +112,25 @@ export async function waitForServer(url: string, maxAttempts = 30): Promise<void
 	}
 
 	throw new Error(`Server did not start within ${String(maxAttempts)} seconds`);
+}
+
+/**
+ * v2.4 (task A4.3) — a session-cookie (`user`-channel) auth helper. Every
+ * other integration test drives the API via `ApiClient`'s Bearer-token
+ * (api-channel) auth; a few v2.4 endpoints (`decide_checkpoint`) are
+ * human-only and need the session-cookie path instead, which no existing
+ * test client speaks. Inserts a session row directly (mirroring
+ * `createSession`'s own logic) for the shared `TEST_USER_ID` fixture user —
+ * callers drive it with a raw `fetch` + `Cookie` header.
+ */
+export async function createUserSessionCookie(dbPath: string): Promise<string> {
+	const sqlite = new Database(dbPath);
+	const db = createBunDatabase(sqlite);
+	const session_id = crypto.randomUUID();
+	const expires_at = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+	await db
+		.insert(session)
+		.values({ id: session_id, userId: TEST_USER_ID, expiresAt: expires_at, access_token: "test-access-token" });
+	sqlite.close();
+	return `auth_session=${session_id}`;
 }

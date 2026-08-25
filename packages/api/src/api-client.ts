@@ -65,6 +65,7 @@ import type {
 	UpsertTodo,
 } from "@devpad/schema/types";
 import type {
+	AdvanceStageRequest,
 	ApplyOp,
 	ApplyRequest,
 	ClaimRequest,
@@ -774,6 +775,14 @@ export class ApiClient {
 		 */
 		done: (id: string, data: DoneRequest): Promise<ApiResult<DoneResponse>> =>
 			wrap(() => this.clients.tasks.post<DoneResponse>(`/tasks/${id}/done`, { body: data })),
+
+		/**
+		 * SDLC stage transition (v2.4, task A4.5) — gently enforced: a gated
+		 * hop missing its checkpoint 409s naming what's missing; `override:
+		 * true` always succeeds but audits.
+		 */
+		advanceStage: (id: string, data: AdvanceStageRequest): Promise<ApiResult<Task>> =>
+			wrap(() => this.clients.tasks.post<Task>(`/tasks/${id}/stage`, { body: data })),
 
 		/** Create a typed edge between two tasks (or a task and an external ref). */
 		link: (data: UpsertTaskLink): Promise<ApiResult<TaskLink>> =>

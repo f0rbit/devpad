@@ -115,7 +115,8 @@ export async function getProjectHistory(
 }
 
 export async function getTaskHistory(db: Database, task_id: string): Promise<Result<HistoryAction[], ServiceError>> {
-	const task_filter: ActionType[] = ["CREATE_TASK", "UPDATE_TASK", "DELETE_TASK"];
+	// v2.4 (task A4.5) — stage-override audit rows are task-scoped history too.
+	const task_filter: ActionType[] = ["CREATE_TASK", "UPDATE_TASK", "DELETE_TASK", "ADVANCE_STAGE"];
 
 	const task_result = await getTask(db, task_id);
 	if (!task_result.ok) return ok([]);

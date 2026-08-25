@@ -5,7 +5,7 @@ import { ApiError, AuthenticationError, NetworkError, ValidationError } from "./
 // narrowed just enough to detect the Zod validation-error envelope the
 // worker's `zValidator` middleware emits.
 type ParsedErrorBody = {
-	error?: { name?: string; issues?: ZodIssue[] };
+	error?: string | { name?: string; issues?: ZodIssue[] };
 	issues?: ZodIssue[];
 };
 
@@ -37,13 +37,14 @@ export function handleHttpResponse(response: Response): void {
 			throw new AuthenticationError("Invalid or expired API key");
 		case HTTP_STATUS.NOT_FOUND:
 			throw new ApiError("Resource not found", { statusCode: HTTP_STATUS.NOT_FOUND });
-		case HTTP_STATUS.BAD_REQUEST:
-			// Will be handled by specific error text parsing
-			break;
 		default:
-			if (!response.ok) {
-				throw new ApiError(`Request failed: ${response.statusText}`, { statusCode: response.status });
-			}
+			// Every other non-2xx status (400, 403, 409, 422, 500, ...) falls
+			// through to `handleResponseError`, which parses the JSON body for
+			// the server's actual `{ error: "..." }` message — short-circuiting
+			// here with a generic `statusText` (task A4.5 found this masking a
+			// 409's "missing checkpoint" detail, a 403's approval_channel
+			// reason, etc.) loses real diagnostic information for no benefit.
+			break;
 	}
 }
 
@@ -63,13 +64,17 @@ export async function handleResponseError(response: Response): Promise<never> {
 		// Not JSON, use raw text
 	}
 
-	if (response.status === HTTP_STATUS.BAD_REQUEST && parsedError?.error?.name === "ZodError") {
+	const structuredError = typeof parsedError?.error === "object" ? parsedError.error : undefined;
+	if (response.status === HTTP_STATUS.BAD_REQUEST && structuredError?.name === "ZodError") {
 		// Enhanced: Create a more detailed ValidationError with the original Zod error info
-		const zodErrorDetails = parsedError.error.issues ? JSON.stringify(parsedError.error) : errorMessage;
+		const zodErrorDetails = structuredError.issues ? JSON.stringify(structuredError) : errorMessage;
 		throw new ValidationError(zodErrorDetails);
 	}
 
-	throw new ApiError(errorMessage, { statusCode: response.status });
+	// Almost every devpad route responds `{ error: "<message>" }` on failure —
+	// surface that string directly instead of the raw (JSON-quoted) body text.
+	const message = typeof parsedError?.error === "string" ? parsedError.error : errorMessage;
+	throw new ApiError(message, { statusCode: response.status });
 }
 
 /**

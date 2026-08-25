@@ -1,5 +1,6 @@
-import { action, graph, hooks, tags, tasks } from "@devpad/core/services";
+import { action, docs, graph, hooks, tags, tasks } from "@devpad/core/services";
 import {
+	advance_stage_request,
 	type ApplyOp,
 	apply_request,
 	claim_request,
@@ -284,6 +285,38 @@ app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) =
 	const hooks_fired = fired.ok ? fired.value : [];
 
 	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired });
+});
+
+/**
+ * v2.4 (task A4.5) — SDLC stage transitions. Gently enforced: a gated hop
+ * missing its checkpoint is a 409 naming what's missing; `override: true`
+ * always succeeds but audits (see `docs.advance`).
+ */
+app.post("/:id/stage", requireAuth, zValidator("json", advance_stage_request), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+	const data = c.req.valid("json");
+
+	const existing = await tasks.getTask(db, id);
+	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
+	if (!existing.value) return c.json(null, 404);
+	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, existing.value.task.project_id)) return projectScopeDeniedResponse(c);
+
+	const auth_channel = c.get("auth_channel");
+	const result = await docs.advance(db, id, data.to, {
+		actor: auth_channel,
+		override: data.override,
+		reason: data.reason,
+	});
+	if (!result.ok) {
+		if (result.error.kind === "not_found") return c.json(null, 404);
+		if (result.error.kind === "conflict") return c.json({ error: result.error.message }, 409);
+		return c.json({ error: result.error.kind }, 500);
+	}
+	return c.json(result.value);
 });
 
 app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) => {

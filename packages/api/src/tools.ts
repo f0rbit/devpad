@@ -1,6 +1,7 @@
 import { CategoryCreateSchema, PostCreateSchema, PostListParamsSchema, PostUpdateSchema } from "@devpad/schema/blog";
 import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import {
+	advance_stage_request,
 	apply_request,
 	create_thread_request,
 	decide_checkpoint_request,
@@ -476,6 +477,17 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("task_link ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.tasks.unlink(input.id)),
+	}),
+
+	devpad_tasks_advance_stage: define_tool({
+		name: "devpad_tasks_advance_stage",
+		description:
+			"Advance a task's SDLC stage (ideate|plan|build|review|deploy|live). Gated hops (plan->build needs an approved plan checkpoint; review->deploy needs approved types + design when a design doc exists) 409 naming what's missing unless override:true, which always succeeds but is audited.",
+		inputSchema: advance_stage_request.extend({ id: z.string().describe("Task ID") }),
+		execute: async (client, input) => {
+			const { id, ...rest } = input;
+			return unwrap(await client.tasks.advanceStage(id, rest));
+		},
 	}),
 
 	devpad_tasks_apply: define_tool({
