@@ -14,6 +14,9 @@ const { client, project } = guard;
 const docs_result = await client.docs.list({ project_id: project.id });
 if (!docs_result.ok) return rethrow(docs_result.error);
 const docs = docs_result.value;
+
+// v2.4 (B3.3) — "Waiting on you" cards deep-link here via `?doc=<id>`.
+const initial_doc_id = Astro.url.searchParams.get("doc");
 ---
 
 <PageLayout title={`Docs - ${project_id}`}>
@@ -23,6 +26,6 @@ const docs = docs_result.value;
 			<SpecificationEditor project_id={project.id} initial={project.specification ?? ""} has_github={project.repo_url != null} client:load />
 		</section>
 
-		<DocsTab docs={docs} client:load />
+		<DocsTab docs={docs} initialDocId={initial_doc_id} client:load />
 	</ProjectLayout>
 </PageLayout>

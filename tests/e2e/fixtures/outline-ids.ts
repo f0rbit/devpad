@@ -56,3 +56,8 @@ export const E2E_TASK_RIPPLE_LEAF = "task_e2e-outline-ripple-leaf" as const;
 /** Single-hop auto_children pair dedicated to the reduced-motion scenario — independent of the 2-hop chain above so the two tests never race each other's completion. */
 export const E2E_TASK_RIPPLE_REDUCED_PARENT = "task_e2e-outline-ripple-reduced-parent" as const;
 export const E2E_TASK_RIPPLE_REDUCED_LEAF = "task_e2e-outline-ripple-reduced-leaf" as const;
+
+/** `stage:"plan"` — the SDLC stepper's gated-advance scenario (plan→build needs an approved "plan" stage checkpoint that's never requested here). */
+export const E2E_TASK_STAGE_PLAN = "task_e2e-outline-stage-plan" as const;
+/** `stage:"review"` — the checkpoint cards' scenario; carries a `tracks_metric` edge for the types card's pulse widget. */
+export const E2E_TASK_STAGE_REVIEW = "task_e2e-outline-stage-review" as const;

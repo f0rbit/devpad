@@ -1,5 +1,7 @@
 import type { Task } from "@devpad/schema";
 import { For, Show } from "solid-js";
+import Checkpoints from "../review/checkpoints";
+import SdlcStepper from "../review/sdlc-stepper";
 import { Ring } from "./ring";
 import type { OutlineStore } from "./store";
 
@@ -97,6 +99,11 @@ export function ZoomHeader(props: ZoomHeaderProps) {
 							</span>
 						</Show>
 					</div>
+
+					<Show when={task().stage}>
+						<SdlcStepper task={task()} onAdvanced={props.store.setZoomTask} />
+						<Checkpoints task={task()} />
+					</Show>
 				</div>
 			)}
 		</Show>

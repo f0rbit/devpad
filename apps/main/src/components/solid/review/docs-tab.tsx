@@ -2,16 +2,16 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { DocVersionInfo, PullDocResponse } from "@devpad/api";
 import type { Document } from "@devpad/schema";
 import { Badge } from "@f0rbit/ui";
-import { createSignal, For, Show } from "solid-js";
+import { createSignal, For, onMount, Show } from "solid-js";
 import DocViewer from "./doc-viewer";
 
-export type DocsTabProps = { docs: Document[] };
+export type DocsTabProps = { docs: Document[]; initialDocId?: string | null };
 
 const STATUS_VARIANT = { draft: "default", in_review: "warning", approved: "success" } as const;
 
 type SelectedDoc = { id: string; initial: PullDocResponse; initialVersions: DocVersionInfo[] };
 
-/** Task B3.1 — the `docs` tab's interactive list: selecting a document renders its DocViewer below, in place (no navigation — lenses/overlays convention extended to this tab). */
+/** Task B3.1/B3.3 — the `docs` tab's interactive list: selecting a document renders its DocViewer below, in place (no navigation — lenses/overlays convention extended to this tab). `initialDocId` (from `?doc=` — see reviews.ts) auto-opens a document on load, so "Waiting on you" cards can deep-link straight to a checkpoint's DocViewer. */
 export default function DocsTab(props: DocsTabProps) {
 	const [selected, setSelected] = createSignal<SelectedDoc | null>(null);
 	const [loadingId, setLoadingId] = createSignal<string | null>(null);
@@ -23,6 +23,10 @@ export default function DocsTab(props: DocsTabProps) {
 		if (pulled.ok && versions.ok) setSelected({ id, initial: pulled.value, initialVersions: versions.value });
 		setLoadingId(null);
 	}
+
+	onMount(() => {
+		if (props.initialDocId) void select(props.initialDocId);
+	});
 
 	return (
 		<section class="docs-list">

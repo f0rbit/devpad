@@ -1779,6 +1779,60 @@ button.outline-row {
 	border-color: var(--warning-fg);
 }
 
+.sdlc-stepper {
+	margin-top: 12px;
+}
+
+.checkpoints {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.checkpoint-card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 260px;
+}
+
+.checkpoint-card h5 {
+	margin: 0;
+}
+
+.checkpoint-doc-link {
+	font-size: 12px;
+}
+
+.checkpoint-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.checkpoint-metric {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.sdlc-stepper-error {
+	margin-top: 6px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--error-fg);
+}
+
+.sdlc-stepper-error p {
+	margin: 0;
+}
+
 .docs-list {
 	margin-top: 24px;
 }

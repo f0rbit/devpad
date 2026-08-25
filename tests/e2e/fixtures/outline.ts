@@ -39,6 +39,8 @@ import {
 	E2E_TASK_RIPPLE_PARENT,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
+	E2E_TASK_STAGE_PLAN,
+	E2E_TASK_STAGE_REVIEW,
 	E2E_USER_ID,
 } from "./outline-ids";
 import { open_test_db } from "./pipelines";
@@ -62,6 +64,8 @@ export {
 	E2E_TASK_RIPPLE_PARENT,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
+	E2E_TASK_STAGE_PLAN,
+	E2E_TASK_STAGE_REVIEW,
 	E2E_USER_ID,
 };
 
@@ -397,6 +401,47 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 		subtree_done: 0,
 		subtree_total: 1,
 	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_STAGE_PLAN,
+		title: "Stage-tracked task (plan)",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		stage: "plan",
+		rank: "i8",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_STAGE_REVIEW,
+		title: "Stage-tracked task (review)",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		stage: "review",
+		rank: "i9",
+	} as never);
+
+	await db.insert(task_link).values({
+		id: `link_${E2E_TASK_STAGE_REVIEW}-tracks_metric`,
+		src_id: E2E_TASK_STAGE_REVIEW,
+		dst_id: null,
+		kind: "tracks_metric",
+		ref: { metric_name: "error_rate" },
+		note: null,
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
 }
 
 async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
@@ -424,6 +469,9 @@ async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_REDUCED_PARENT));
 	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_REDUCED_LEAF));
 	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_REDUCED_PARENT));
+	await db.delete(task_link).where(eq(task_link.id, `link_${E2E_TASK_STAGE_REVIEW}-tracks_metric`));
+	await db.delete(task).where(eq(task.id, E2E_TASK_STAGE_PLAN));
+	await db.delete(task).where(eq(task.id, E2E_TASK_STAGE_REVIEW));
 	await db.delete(project).where(eq(project.id, E2E_OUTLINE_PROJECT_ID));
 	// user/session are shared with the pipelines fixture on the same fixed ids
 	// (see the `onConflictDoNothing` inserts above) — never deleted here.
