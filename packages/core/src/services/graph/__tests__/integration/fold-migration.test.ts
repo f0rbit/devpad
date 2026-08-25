@@ -146,7 +146,7 @@ describe("fold backfill migration", () => {
 		apply_fold_migration(sqlite);
 
 		const rows = await db.select().from(task).where(eq(task.project_id, project_id));
-		const ordered = rows.filter((r) => r.kind === "milestone").sort((a, b) => (a.rank < b.rank ? -1 : 1));
+		const ordered = rows.filter((r) => r.kind === "milestone").toSorted((a, b) => (a.rank < b.rank ? -1 : 1));
 		expect(ordered.map((r) => r.id)).toEqual([ms_a, ms_b, ms_c]);
 	});
 
@@ -158,7 +158,7 @@ describe("fold backfill migration", () => {
 		apply_fold_migration(sqlite);
 
 		const rows = await db.select().from(task).where(eq(task.parent_id, ms_id));
-		const ordered = rows.sort((a, b) => (a.rank < b.rank ? -1 : 1));
+		const ordered = rows.toSorted((a, b) => (a.rank < b.rank ? -1 : 1));
 		expect(ordered.map((r) => r.id)).toEqual([goal_1, goal_2]);
 	});
 
@@ -191,7 +191,7 @@ describe("fold backfill migration", () => {
 
 		const rows = await db.select().from(task).where(eq(task.parent_id, goal_id));
 		expect(rows.length).toBe(2);
-		const ordered = rows.sort((a, b) => (a.rank < b.rank ? -1 : 1));
+		const ordered = rows.toSorted((a, b) => (a.rank < b.rank ? -1 : 1));
 		expect(ordered.map((r) => r.id)).toEqual([t1, t2]);
 	});
 

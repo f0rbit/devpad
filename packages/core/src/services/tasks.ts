@@ -3,7 +3,7 @@ import type { ActionType } from "@devpad/schema/database";
 import { action, codebase_tasks, task, task_tag } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
+import { and, eq, inArray, notInArray, type SQL, sql } from "drizzle-orm";
 import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
 import type { ServiceError } from "./errors.js";
 import { SqlCompletionEngine } from "./graph/completion.js";
@@ -14,6 +14,16 @@ import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
 
+// v2.4 (task A5.2) — milestone/goal-kind rows now live in this same `task`
+// table (the fold). Every pre-fold "list of tasks" read path must keep
+// excluding them, exactly as if they were still in their own frozen tables —
+// a milestone/goal surfacing in a flat task list would be a real compat
+// regression (`phase`/`approval` kinds stay visible; only the two fold kinds
+// are legacy-API-invisible). Graph-level primitives (`ancestors`/`subtree`/
+// `ready`/rollups in `services/graph/*`) intentionally do NOT apply this
+// filter — folding them into the tree for those is the whole point.
+const NOT_FOLD_KIND = notInArray(task.kind, ["milestone", "goal"]);
+
 async function fetchTasksWithDetails(
 	db: Database,
 	where_conditions: (SQL | undefined)[],
@@ -22,7 +32,7 @@ async function fetchTasksWithDetails(
 		.select()
 		.from(task)
 		.leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id))
-		.where(and(...where_conditions));
+		.where(and(NOT_FOLD_KIND, ...where_conditions));
 
 	const tasks: Task[] = fetched_tasks.map((t) => ({
 		task: t.task,
@@ -223,6 +233,24 @@ export async function upsertTask(
 	const project_id = data.project_id ?? previous?.project_id ?? null;
 
 	const { id: raw_id, force: _force, ...fields } = data;
+	// v2.4 (task A5.2) — `goal_id` becomes a `parent_id` alias at this service
+	// boundary: setting it also makes the task a real graph child of the
+	// goal-kind task node (so rollups/bubbling see it), unless the caller
+	// already set `parent_id` explicitly (which always wins). The physical
+	// `goal_id` column is still written (below, via the `fields` spread) for
+	// byte-for-byte read compat with existing consumers of `task.goal_id`.
+	if (!Object.hasOwn(fields, "parent_id")) {
+		if (data.goal_id) {
+			fields.parent_id = data.goal_id;
+		} else if (
+			Object.hasOwn(data, "goal_id") &&
+			data.goal_id == null &&
+			previous &&
+			previous.parent_id === previous.goal_id
+		) {
+			fields.parent_id = null;
+		}
+	}
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
 	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
 	const provenance = exists
