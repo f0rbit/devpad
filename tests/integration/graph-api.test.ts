@@ -86,6 +86,8 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		if (!near_result.ok) throw new Error(`near failed: ${near_result.error.message}`);
 		expect(near_result.value.links.some((l) => l.id === link.id)).toBe(true);
 		expect(near_result.value.tasks.map((task) => task.id)).toContain(b.id);
+		// rollups keyed the same as /tasks/:id/tree — the graph lens' rollup badges' single source of truth.
+		expect(near_result.value.rollups).toBeDefined();
 
 		const unlink_result = await t.client.tasks.unlink(link.id);
 		expect(unlink_result.ok).toBe(true);

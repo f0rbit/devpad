@@ -263,7 +263,14 @@ app.get("/:id/near", requireAuth, async (c) => {
 
 	const result = await graph.near(db, id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
-	return c.json(result.value);
+
+	const rollups_result = await graph.rollups_for(
+		db,
+		result.value.tasks.map((t) => t.id),
+	);
+	if (!rollups_result.ok) return c.json({ error: rollups_result.error.kind }, 500);
+
+	return c.json({ ...result.value, rollups: rollups_result.value });
 });
 
 app.post("/:id/claim", requireAuth, zValidator("json", claim_request), async (c) => {

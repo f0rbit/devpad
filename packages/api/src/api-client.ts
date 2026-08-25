@@ -131,7 +131,7 @@ type TreeResponse = {
 	rollups: Partial<Record<string, RollupCounts>>;
 	edge_summary: Partial<Record<string, EdgeSummary>>;
 };
-type NearResponse = { links: TaskLink[]; tasks: Task[] };
+type NearResponse = { links: TaskLink[]; tasks: Task[]; rollups: Partial<Record<string, RollupCounts>> };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 export type BubbleStep = { task: Task; via: CompletedVia };
