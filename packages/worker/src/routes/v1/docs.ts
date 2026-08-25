@@ -2,6 +2,7 @@ import { docs, projects } from "@devpad/core/services";
 import {
 	create_thread_request,
 	push_doc_request,
+	push_interface_report_request,
 	reply_thread_request,
 	toggle_blocking_request,
 } from "@devpad/schema/validation";
@@ -100,6 +101,48 @@ app.get("/annotations/unresolved", requireAuth, async (c) => {
 		return c.json(result.value.filter((t) => owned_ids.has(t.document_id)));
 	}
 	return c.json(result.value);
+});
+
+app.post("/interface", requireAuth, zValidator("json", push_interface_report_request), async (c) => {
+	const db = c.get("db");
+	const data = c.req.valid("json");
+
+	const guard = await assertProjectOwnership(c, data.project_id);
+	if (!guard.ok) return guard.response;
+
+	const backend_guard = requireDocsBackend(c);
+	if (!backend_guard.ok) return backend_guard.response;
+
+	const auth_channel = c.get("auth_channel");
+	const result = await docs.push_interface_report(db, backend_guard.backend, data, { auth_channel });
+	if (!result.ok) {
+		if (result.error.kind === "not_found")
+			return c.json({ error: `Document ${data.document_id ?? ""} not found` }, 404);
+		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
+		return c.json({ error: result.error.kind }, 500);
+	}
+	return c.json(result.value);
+});
+
+/** `check`'s counterpart to `push` — the approved/auto base's content_hash, if one exists, for a document identified by (project, task, title). */
+app.get("/interface/status", requireAuth, async (c) => {
+	const db = c.get("db");
+	const project_id = c.req.query("project_id");
+	const task_id = c.req.query("task_id");
+	const title = c.req.query("title");
+	if (!project_id || !title) return c.json({ error: "project_id and title required" }, 400);
+
+	const guard = await assertProjectOwnership(c, project_id);
+	if (!guard.ok) return guard.response;
+
+	const listed = await docs.list_documents(db, { project_id, task_id });
+	if (!listed.ok) return c.json({ error: listed.error.kind }, 500);
+	const document = listed.value.find((d) => d.kind === "interface" && d.title === title);
+	if (!document) return c.json({ document_id: null, approved_content_hash: null });
+
+	const latest = await docs.latest_decided_signoff(db, "doc_version", document.id, "types");
+	if (!latest.ok) return c.json({ error: latest.error.kind }, 500);
+	return c.json({ document_id: document.id, approved_content_hash: latest.value?.content_hash ?? null });
 });
 
 app.get("/:id", requireAuth, async (c) => {

@@ -74,7 +74,9 @@ import type {
 	DoneRequest,
 	HookActionPublic,
 	HookTrigger,
+	InterfaceDiffClass,
 	PushDocRequest,
+	PushInterfaceReportRequest,
 	RequestCheckpointRequest,
 	ThreadMarker,
 	UpsertHook,
@@ -94,6 +96,7 @@ type PullDocResponse = {
 	threads: ThreadMarker[];
 	orphaned: ThreadMarker[];
 };
+type PushInterfaceReportResult = { document: Document; classification: InterfaceDiffClass; signoff: Signoff | null };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
@@ -854,6 +857,29 @@ export class ApiClient {
 				if (filters.project_id) query.project_id = filters.project_id;
 				if (filters.document_id) query.document_id = filters.document_id;
 				return this.clients.docs.get<AnnotationThread[]>("/docs/annotations/unresolved", { query });
+			}),
+
+		/**
+		 * Interface report v1 (task A4.4). `push` submits already-normalized
+		 * declaration text; the server independently recomputes the
+		 * additive-vs-breaking classification against its own stored previous
+		 * content and auto-approves additive diffs against an approved base.
+		 */
+		pushInterfaceReport: (data: PushInterfaceReportRequest): Promise<ApiResult<PushInterfaceReportResult>> =>
+			wrap(() => this.clients.docs.post<PushInterfaceReportResult>("/docs/interface", { body: data })),
+
+		interfaceStatus: (filters: {
+			project_id: string;
+			task_id?: string;
+			title: string;
+		}): Promise<ApiResult<{ document_id: string | null; approved_content_hash: string | null }>> =>
+			wrap(() => {
+				const query: Record<string, string> = { project_id: filters.project_id, title: filters.title };
+				if (filters.task_id) query.task_id = filters.task_id;
+				return this.clients.docs.get<{ document_id: string | null; approved_content_hash: string | null }>(
+					"/docs/interface/status",
+					{ query },
+				);
 			}),
 	};
 

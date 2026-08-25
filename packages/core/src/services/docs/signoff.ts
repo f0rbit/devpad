@@ -12,14 +12,15 @@
 import type { DecideCheckpointRequest, RequestCheckpointRequest } from "@devpad/schema/validation";
 import { annotation_thread, signoff, task } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import type { Signoff } from "@devpad/schema/types";
+import type { Document, Signoff, SignoffCheckpoint, SignoffSubjectKind } from "@devpad/schema/types";
 import { type Backend, ok, type Result } from "@f0rbit/corpus";
-import { and, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { errors, type ServiceError } from "../errors.js";
 import { SqlCompletionEngine } from "../graph/completion.js";
 import { add_link, get_task_row, type GraphError } from "../graph/graph.js";
 import { emit_event, type EmitEventInput, write_with_event } from "../graph/outbox.js";
-import { type DocCorpusError, get_document, promote } from "./store.js";
+import { classify_diff, type InterfaceDiffClass } from "./interface-report.js";
+import { type DocCorpusError, get_document, get_version, list_versions, promote, push_document_raw } from "./store.js";
 
 export type SignoffError = ServiceError | GraphError | DocCorpusError;
 
@@ -97,6 +98,73 @@ export async function get_signoff(db: Database, id: string): Promise<Result<Sign
 	const rows = await db.select().from(signoff).where(eq(signoff.id, id));
 	if (rows.length === 0) return errors.notFound("signoff", id);
 	return ok(rows[0]);
+}
+
+/** The most recent decided (approved or auto) signoff for a subject+checkpoint — the interface-report CLI's "is there an approved base" check. */
+export async function latest_decided_signoff(
+	db: Database,
+	subject_kind: SignoffSubjectKind,
+	subject_id: string,
+	checkpoint: SignoffCheckpoint,
+): Promise<Result<Signoff | null, ServiceError>> {
+	const rows = await db
+		.select()
+		.from(signoff)
+		.where(
+			and(
+				eq(signoff.subject_kind, subject_kind),
+				eq(signoff.subject_id, subject_id),
+				eq(signoff.checkpoint, checkpoint),
+				ne(signoff.decision, "changes_requested"),
+			),
+		)
+		.orderBy(desc(signoff.decided_at));
+	const decided = rows.filter((r) => r.decision === "approved" || r.decision === "auto");
+	return ok(decided[0] ?? null);
+}
+
+/**
+ * The Buf-style fast path (task A4.4): a diff classified `additive` against
+ * an already-approved base skips human review entirely — no approval task
+ * node is ever created, only an audit row recording the auto-decision. This
+ * is the one place a signoff can be `decision:"auto"` — never through
+ * `decide_checkpoint`, which is human-only by construction.
+ */
+export async function auto_approve(
+	db: Database,
+	input: { subject_kind: SignoffSubjectKind; subject_id: string; checkpoint: SignoffCheckpoint; content_hash: string },
+): Promise<Result<Signoff, ServiceError>> {
+	const rows = await db
+		.insert(signoff)
+		.values({
+			subject_kind: input.subject_kind,
+			subject_id: input.subject_id,
+			checkpoint: input.checkpoint,
+			decision: "auto",
+			decided_at: new Date().toISOString(),
+			content_hash: input.content_hash,
+			created_by: "api",
+			modified_by: "api",
+		})
+		.returning();
+	const created = rows[0];
+
+	const event = await emit_event(db, {
+		kind: "signoff.decided",
+		subject_id: input.subject_id,
+		project_id: null,
+		actor: "api",
+		payload: {
+			kind: "signoff.decided",
+			subject_kind: input.subject_kind,
+			subject_id: input.subject_id,
+			checkpoint: input.checkpoint,
+			decision: "auto",
+		},
+	});
+	if (!event.ok) return event;
+
+	return ok(created);
 }
 
 /** Open blocking annotation threads on a doc_version subject's head — vetoes approval (architecture-decisions). Not used for other subject kinds. */
@@ -197,4 +265,82 @@ export async function decide_checkpoint(
 	if (!event.ok) return event;
 
 	return ok(updated);
+}
+
+export type PushInterfaceReportResult = {
+	document: Document;
+	classification: InterfaceDiffClass;
+	signoff: Signoff | null;
+};
+
+/**
+ * Interface report v1 push (task A4.4). Pushes via `push_document_raw` (not
+ * `push_document`) — the normalized declaration text isn't agent-authored
+ * HTML, it's `tsc`'s own output, so running it through the HTML sanitizer
+ * would risk mangling meaningful `<`/`>` generic syntax for no safety
+ * benefit. Classification is computed SERVER-SIDE against the previously
+ * approved/auto base (never trusting a client-supplied "this is additive"
+ * claim) — additive fast-paths to `auto_approve`; anything else (including
+ * no prior base at all) leaves `signoff: null` for the caller to
+ * `request_checkpoint` explicitly.
+ */
+export async function push_interface_report(
+	db: Database,
+	backend: Backend,
+	input: { document_id?: string; project_id: string; task_id?: string | null; title: string; normalized: string },
+	ctx: { auth_channel: "user" | "api" },
+): Promise<Result<PushInterfaceReportResult, SignoffError>> {
+	let previous_content: string | null = null;
+	if (input.document_id) {
+		const latest = await latest_decided_signoff(db, "doc_version", input.document_id, "types");
+		if (!latest.ok) return latest;
+		if (latest.value) {
+			const versions = await list_versions(backend, input.document_id);
+			if (!versions.ok) return versions;
+			const match = versions.value.find((v) => v.content_hash === latest.value?.content_hash);
+			if (match) {
+				const content = await get_version(backend, input.document_id, match.version);
+				if (content.ok) previous_content = content.value.html;
+			}
+		}
+	}
+
+	const pushed = await push_document_raw(
+		db,
+		backend,
+		{
+			document_id: input.document_id,
+			project_id: input.project_id,
+			task_id: input.task_id ?? null,
+			kind: "interface",
+			title: input.title,
+			html: input.normalized,
+		},
+		ctx.auth_channel,
+	);
+	if (!pushed.ok) return pushed;
+
+	if (previous_content === null) {
+		return ok({ document: pushed.value, classification: "unchanged", signoff: null });
+	}
+
+	const classification = classify_diff(previous_content, input.normalized);
+	if (classification !== "additive") {
+		return ok({ document: pushed.value, classification, signoff: null });
+	}
+
+	const versions_after = await list_versions(backend, pushed.value.id);
+	if (!versions_after.ok) return versions_after;
+	const head_meta = versions_after.value.find((v) => v.version === pushed.value.head_version);
+	if (!head_meta) return errors.dbError("Pushed interface version missing from corpus listing");
+
+	const auto = await auto_approve(db, {
+		subject_kind: "doc_version",
+		subject_id: pushed.value.id,
+		checkpoint: "types",
+		content_hash: head_meta.content_hash,
+	});
+	if (!auto.ok) return auto;
+
+	return ok({ document: pushed.value, classification: "additive", signoff: auto.value });
 }

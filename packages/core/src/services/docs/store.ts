@@ -63,7 +63,13 @@ function map_corpus_error(e: LibCorpusError, document_id: string): DocCorpusErro
 	return { kind: "io_error", message: `Unknown corpus error: ${e.kind}` };
 }
 
-export type DocVersionInfo = { version: string; parent: string | null; created_at: Date; tags: string[] };
+export type DocVersionInfo = {
+	version: string;
+	parent: string | null;
+	created_at: Date;
+	tags: string[];
+	content_hash: string;
+};
 
 function to_version_info(meta: SnapshotMeta): DocVersionInfo {
 	return {
@@ -71,6 +77,7 @@ function to_version_info(meta: SnapshotMeta): DocVersionInfo {
 		parent: meta.parents[0]?.version ?? null,
 		created_at: meta.created_at,
 		tags: meta.tags ?? [],
+		content_hash: meta.content_hash,
 	};
 }
 
@@ -140,7 +147,7 @@ export async function list_versions(
 		while (cursor && !visited.has(cursor.version)) {
 			visited.add(cursor.version);
 			ordered.push(to_version_info(cursor));
-			const parent_version = cursor.parents[0]?.version;
+			const parent_version: string | undefined = cursor.parents[0]?.version;
 			cursor = parent_version ? by_version.get(parent_version) : undefined;
 		}
 	}

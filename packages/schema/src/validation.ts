@@ -561,12 +561,17 @@ export const advance_stage_request = z.object({
 });
 export type AdvanceStageRequest = z.infer<typeof advance_stage_request>;
 
-// Interface report (task A4.4)
+// Interface report (task A4.4) — the CLI normalizes declaration files
+// locally (a pure transform, `@devpad/core`'s `normalize_declarations`) and
+// submits the result; the server independently recomputes the
+// additive-vs-breaking classification against its OWN stored previous
+// content, so a client can't forge "this diff is additive".
 export const push_interface_report_request = z.object({
+	document_id: z.string().optional(),
 	project_id: z.string(),
 	task_id: z.string().nullable().optional(),
-	package_name: z.string().min(1),
-	declarations: z.string(),
+	title: z.string().min(1),
+	normalized: z.string(),
 });
 export type PushInterfaceReportRequest = z.infer<typeof push_interface_report_request>;
 

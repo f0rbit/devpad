@@ -1,4 +1,5 @@
 export * from "./anchor.js";
+export * from "./interface-report.js";
 export * from "./markers.js";
 export * from "./sanitize.js";
 export * from "./signoff.js";

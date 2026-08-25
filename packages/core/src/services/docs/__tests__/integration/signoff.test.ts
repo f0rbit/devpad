@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "@devpad/schema/database/types";
 import { type Backend, create_memory_backend } from "@f0rbit/corpus";
 import { create_thread } from "../../threads.js";
-import { decide_checkpoint, request_checkpoint } from "../../signoff.js";
+import { decide_checkpoint, latest_decided_signoff, push_interface_report, request_checkpoint } from "../../signoff.js";
 import { push_document } from "../../store.js";
 import { graph } from "../../../index.js";
 import { create_test_db, seed_project, seed_task, seed_user } from "./helpers.js";
@@ -192,5 +192,113 @@ describe("signoff — checkpoint request + human-only decision (task A4.3)", () 
 			{ user_id: owner_id, auth_channel: "user" },
 		);
 		expect(second.ok).toBe(false);
+	});
+});
+
+describe("push_interface_report — server-verified additive/breaking fast path (task A4.4)", () => {
+	let db: Database;
+	let backend: Backend;
+	let owner_id: string;
+	let project_id: string;
+
+	beforeEach(async () => {
+		db = create_test_db();
+		backend = create_memory_backend();
+		const owner = await seed_user(db);
+		owner_id = owner.id;
+		const project = await seed_project(db, owner_id);
+		project_id = project.id;
+	});
+
+	test("a first push has no base to compare against and never auto-approves", async () => {
+		const result = await push_interface_report(
+			db,
+			backend,
+			{ project_id, title: "my-pkg", normalized: "export type A = string;" },
+			{ auth_channel: "api" },
+		);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.classification).toBe("unchanged");
+		expect(result.value.signoff).toBeNull();
+	});
+
+	test("an additive push against an approved base auto-approves without a human", async () => {
+		const first = await push_interface_report(
+			db,
+			backend,
+			{ project_id, title: "my-pkg", normalized: "export type A = string;" },
+			{ auth_channel: "api" },
+		);
+		if (!first.ok) throw new Error("first push failed");
+
+		const requested = await request_checkpoint(
+			db,
+			{ project_id, subject_kind: "doc_version", subject_id: first.value.document.id, checkpoint: "types", blocks: [] },
+			{ owner_id, auth_channel: "api" },
+		);
+		if (!requested.ok) throw new Error("request failed");
+		const decided = await decide_checkpoint(
+			db,
+			backend,
+			requested.value.signoff.id,
+			{ decision: "approved" },
+			{ user_id: owner_id, auth_channel: "user" },
+		);
+		expect(decided.ok).toBe(true);
+
+		const second = await push_interface_report(
+			db,
+			backend,
+			{
+				document_id: first.value.document.id,
+				project_id,
+				title: "my-pkg",
+				normalized: "export type A = string;\nexport type B = number;",
+			},
+			{ auth_channel: "api" },
+		);
+		expect(second.ok).toBe(true);
+		if (!second.ok) return;
+		expect(second.value.classification).toBe("additive");
+		expect(second.value.signoff?.decision).toBe("auto");
+
+		const latest = await latest_decided_signoff(db, "doc_version", first.value.document.id, "types");
+		expect(latest.ok).toBe(true);
+		if (latest.ok) expect(latest.value?.decision).toBe("auto");
+	});
+
+	test("a breaking push against an approved base never auto-approves", async () => {
+		const first = await push_interface_report(
+			db,
+			backend,
+			{ project_id, title: "my-pkg", normalized: "export type A = string;" },
+			{ auth_channel: "api" },
+		);
+		if (!first.ok) throw new Error("first push failed");
+		const requested = await request_checkpoint(
+			db,
+			{ project_id, subject_kind: "doc_version", subject_id: first.value.document.id, checkpoint: "types", blocks: [] },
+			{ owner_id, auth_channel: "api" },
+		);
+		if (!requested.ok) throw new Error("request failed");
+		await decide_checkpoint(
+			db,
+			backend,
+			requested.value.signoff.id,
+			{ decision: "approved" },
+			{ user_id: owner_id, auth_channel: "user" },
+		);
+
+		const second = await push_interface_report(
+			db,
+			backend,
+			{ document_id: first.value.document.id, project_id, title: "my-pkg", normalized: "export type A = number;" },
+			{ auth_channel: "api" },
+		);
+		expect(second.ok).toBe(true);
+		if (!second.ok) return;
+		expect(second.value.classification).toBe("breaking");
+		expect(second.value.signoff).toBeNull();
 	});
 });

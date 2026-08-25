@@ -5,6 +5,7 @@ import {
 	create_thread_request,
 	decide_checkpoint_request,
 	push_doc_request,
+	push_interface_report_request,
 	request_checkpoint_request,
 	save_config_request,
 	save_tags_request,
@@ -1204,6 +1205,26 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.docs.toggleBlocking(input.document_id, input.thread_id, input.blocking)),
+	}),
+
+	devpad_interface_push: define_tool({
+		name: "devpad_interface_push",
+		description:
+			"Push already-normalized declaration text as a new interface-doc version. The server independently recomputes additive-vs-breaking against its own stored previous content and auto-approves additive diffs against an approved base.",
+		inputSchema: push_interface_report_request,
+		execute: async (client, input) => unwrap(await client.docs.pushInterfaceReport(input)),
+	}),
+
+	devpad_interface_status: define_tool({
+		name: "devpad_interface_status",
+		description:
+			"Get the approved/auto content_hash for an interface doc, for a client-side hash comparison (the `check` verb)",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			task_id: z.string().optional().describe("Task ID"),
+			title: z.string().describe("The interface document's title (package name)"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.interfaceStatus(input)),
 	}),
 
 	devpad_annotations_unresolved: define_tool({
