@@ -16,9 +16,14 @@ async function create_task(overrides: Record<string, unknown> = {}): Promise<Tas
 
 describe("graph API — ownership, pagination, guarded writes", () => {
 	test("GET /tasks/ready round-trips through the ApiClient, ownership-scoped", async () => {
-		const eligible = await create_task({ title: `ready-${String(Date.now())}` });
+		const project_result = await t.client.projects.create(TestDataFactory.createRealisticProject());
+		if (!project_result.ok) throw new Error(`project create failed: ${project_result.error.message}`);
+		t.cleanup.registerProject(project_result.value);
+		const project = project_result.value;
 
-		const result = await t.client.tasks.ready({ limit: 5 });
+		const eligible = await create_task({ title: `ready-${String(Date.now())}`, project_id: project.id });
+
+		const result = await t.client.tasks.ready({ project_id: project.id, limit: 5 });
 		if (!result.ok) throw new Error(`ready failed: ${result.error.message}`);
 		const ready = result.value;
 
