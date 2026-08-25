@@ -48,6 +48,13 @@ export function createBunApp(options: BunServerOptions) {
 		frontend_url: process.env.FRONTEND_URL ?? "http://localhost:4321",
 		jwt_secret: process.env.JWT_SECRET ?? "dev-jwt-secret",
 		encryption_key: process.env.ENCRYPTION_KEY ?? "dev-encryption-key",
+		pipelines_api_base: process.env.PIPELINES_API_BASE,
+		pipelines_token: process.env.PIPELINES_TOKEN,
+		// Stable dev-only fallback (same pattern as jwt_secret/encryption_key
+		// above) rather than leaving it unset — deterministic regardless of
+		// which integration test file happens to trigger the shared server's
+		// one-time startup first.
+		github_webhook_secret: process.env.GITHUB_WEBHOOK_SECRET ?? "dev-github-webhook-secret",
 	};
 
 	const oauth_secrets: OAuthSecrets = {

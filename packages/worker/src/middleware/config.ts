@@ -17,6 +17,7 @@ export const configMiddleware = createMiddleware<AppContext>(async (c, next) => 
 		git_sha: env.GIT_SHA,
 		pipelines_api_base: env.PIPELINES_API_BASE,
 		pipelines_token: env.PIPELINES_TOKEN,
+		github_webhook_secret: env.GITHUB_WEBHOOK_SECRET,
 	};
 
 	const oauth_secrets: OAuthSecrets = {

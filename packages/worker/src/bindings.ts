@@ -25,6 +25,7 @@ export type AppConfig = {
 	// orchestrator to call), not a retry loop.
 	pipelines_api_base?: string;
 	pipelines_token?: string;
+	github_webhook_secret?: string;
 };
 
 export type OAuthSecrets = {

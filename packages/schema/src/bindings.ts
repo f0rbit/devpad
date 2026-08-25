@@ -47,6 +47,10 @@ export type Bindings = {
 	VAULT_GITHUB?: GitHubVaultBinding;
 	PIPELINES_API_BASE?: string;
 	PIPELINES_TOKEN?: string;
+	// v2.4 (task A3.6) — GitHub App webhook signing secret. Absent means the
+	// inbound receiver rejects every request with a clean 501, not a crash
+	// (the App itself is a user ops prerequisite, documented in AGENTS.md).
+	GITHUB_WEBHOOK_SECRET?: string;
 	ENVIRONMENT: string;
 	API_URL: string;
 	FRONTEND_URL: string;

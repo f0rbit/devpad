@@ -106,6 +106,10 @@ export const project = sqliteTable("project", {
 		.default("PRIVATE"),
 	current_version: text("current_version"),
 	scan_branch: text("scan_branch"),
+	// v2.4 (task A3.6) — per-project opt-in, OFF by default: a merged PR
+	// completes its linked task automatically via the GitHub App inbound
+	// webhook. Diff-linked status because agents are unreliable narrators.
+	github_autoclose: integer("github_autoclose", { mode: "boolean" }).notNull().default(false),
 });
 
 const ACTIONS = [
@@ -388,6 +392,25 @@ export const hook_delivery = sqliteTable(
 		index("hook_delivery_hook_id_idx").on(table.hook_id),
 		index("hook_delivery_status_idx").on(table.status),
 	],
+);
+
+// ---------------------------------------------------------------------------
+// v2.4 GitHub App inbound (task A3.6) — idempotency ledger for the webhook
+// receiver. PK = sha256(`${delivery_guid}:${raw_body}`), copying the
+// pipelines `events.ts` content-hash pattern: GitHub's own delivery GUID
+// dedupes retries of the SAME payload, and the content hash catches the
+// (rare) case of GitHub reusing a GUID with different content.
+// ---------------------------------------------------------------------------
+
+export const github_webhook_event = sqliteTable(
+	"github_webhook_event",
+	{
+		id: text("id").primaryKey(),
+		delivery_guid: text("delivery_guid").notNull(),
+		event_type: text("event_type").notNull(),
+		processed_at: text("processed_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+	},
+	(table) => [index("github_webhook_event_delivery_guid_idx").on(table.delivery_guid)],
 );
 
 export const checklist = sqliteTable("checklist", {
