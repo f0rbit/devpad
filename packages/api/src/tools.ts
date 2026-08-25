@@ -311,6 +311,15 @@ export const tools: Record<string, ToolDefinition> = {
 		execute: async (client, input) => unwrap(await client.github.branches(input.owner, input.repo)),
 	}),
 
+	// Admin (task A5.3) — v2.4 fold dual-read verification
+	devpad_admin_verify_fold: define_tool({
+		name: "devpad_admin_verify_fold",
+		description:
+			"Compare the frozen milestone/goal tables against their task-row projections (the v2.4 fold) for the authenticated account and report any divergence",
+		inputSchema: z.object({}),
+		execute: async (client) => unwrap(await client.admin.verifyFold()),
+	}),
+
 	// Additional project operations
 	devpad_projects_delete: define_tool({
 		name: "devpad_projects_delete",

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { AppContext } from "../../bindings.js";
 import activity from "./activity.js";
+import admin from "./admin.js";
 import docs from "./docs.js";
 import github from "./github.js";
 import reviews from "./reviews.js";
@@ -21,6 +22,7 @@ const app = new Hono<AppContext>();
 
 app.get("/", (c) => c.json({ version: "1", status: "ok" }));
 
+app.route("/admin", admin);
 app.route("/projects", projects);
 app.route("/tasks", tasks);
 app.route("/milestones", milestones);
