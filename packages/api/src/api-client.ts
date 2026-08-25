@@ -121,7 +121,9 @@ type FoldDiff =
 type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: FoldDiff[]; clean: boolean };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
-type TreeResponse = { task: Task; descendants: Task[] };
+/** `rollups` is keyed by task id — see `packages/core/src/services/graph/rollup.ts`'s `RollupCounts`; a childless task is simply absent. */
+export type RollupCounts = { direct_done: number; direct_total: number; subtree_done: number; subtree_total: number };
+type TreeResponse = { task: Task; descendants: Task[]; rollups: Record<string, RollupCounts> };
 type NearResponse = { links: TaskLink[]; tasks: Task[] };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
@@ -783,6 +785,10 @@ export class ApiClient {
 		/** depth-2 link neighborhood around a task, including backlinks. */
 		near: (id: string): Promise<ApiResult<NearResponse>> =>
 			wrap(() => this.clients.tasks.get<NearResponse>(`/tasks/${id}/near`)),
+
+		/** Immediate-parent-first ancestor chain — feeds the outline's zoom breadcrumbs. */
+		ancestors: (id: string): Promise<ApiResult<Task[]>> =>
+			wrap(() => this.clients.tasks.get<Task[]>(`/tasks/${id}/ancestors`)),
 
 		/** Atomic claim: sets claimed_by/claimed_at + IN_PROGRESS, guarded on claimed_by IS NULL and base_rev. */
 		claim: (id: string, data: ClaimRequest): Promise<ApiResult<Task>> =>

@@ -4,7 +4,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { and, eq } from "drizzle-orm";
 import { SqlCompletionEngine } from "../../completion.js";
 import { set_parent, subtree } from "../../graph.js";
-import { rebuild_rollup, refresh_rollup_chain } from "../../rollup.js";
+import { rebuild_rollup, refresh_rollup_chain, rollups_for } from "../../rollup.js";
 import { create_test_db, seed_task, seed_user } from "./helpers.js";
 
 let db: Database;
@@ -131,5 +131,27 @@ describe("rebuild_rollup — converges an intentionally corrupted cache", () => 
 
 		expect(await cached_rollup(in_scope.id)).not.toBeNull();
 		expect(await cached_rollup(out_of_scope.id)).toBeNull();
+	});
+});
+
+describe("rollups_for — batch read backing the outline's progress rings", () => {
+	test("returns a row per task with a cache entry, omits childless tasks with none", async () => {
+		const parent = await seed_task(db, owner_id, { project_id });
+		const child = await seed_task(db, owner_id, { project_id, parent_id: parent.id });
+		const leaf = await seed_task(db, owner_id, { project_id });
+		await refresh_rollup_chain(db, parent.id);
+
+		const result = await rollups_for(db, [parent.id, child.id, leaf.id]);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value[parent.id]).toEqual({ direct_done: 0, direct_total: 1, subtree_done: 0, subtree_total: 1 });
+		expect(result.value[child.id]).toBeUndefined();
+		expect(result.value[leaf.id]).toBeUndefined();
+	});
+
+	test("empty input returns an empty map without querying", async () => {
+		const result = await rollups_for(db, []);
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.value).toEqual({});
 	});
 });
