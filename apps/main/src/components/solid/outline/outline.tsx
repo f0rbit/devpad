@@ -2,7 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Task } from "@devpad/schema";
 import { Button, Empty, Input, Tree } from "@f0rbit/ui";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, onMount, Show } from "solid-js";
+import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { track } from "@/lib/pulse";
 import { loadOutline } from "@/utils/outline-data";
 import { Rail } from "./rail";
@@ -57,23 +57,39 @@ export default function Outline(props: OutlineProps) {
 	const [quickAdd, setQuickAdd] = createSignal("");
 	const [quickAddOpen, setQuickAddOpen] = createSignal(false);
 	let containerRef: HTMLDivElement | undefined;
+	// Set while replaying a popstate — history already moved, so navigateTo must
+	// not push a duplicate entry on top of it.
+	let suppressPush = false;
 
-	onMount(() => containerRef?.focus());
+	onMount(() => {
+		containerRef?.focus();
+		const onPopState = () => {
+			suppressPush = true;
+			void navigateTo(new URL(window.location.href).searchParams.get("node")).finally(() => {
+				suppressPush = false;
+			});
+		};
+		window.addEventListener("popstate", onPopState);
+		onCleanup(() => {
+			window.removeEventListener("popstate", onPopState);
+		});
+	});
 
-	const navigateTo = async (nodeId: string | null) => {
+	const navigateTo = async (nodeId: string | null, selectAfter: string | null = null) => {
 		const data = await loadOutline(getBrowserClient(), props.project.id, nodeId);
 		if (!data) {
 			store.toast("Couldn't load that node", "error");
 			return;
 		}
-		store.resetView(data);
-		pushNodeParam(nodeId);
+		store.resetView(data, selectAfter);
+		if (!suppressPush) pushNodeParam(nodeId);
 		track("outline_zoomed", { project_id: props.project.id, node_id: nodeId ?? "root" });
 	};
 
+	/** Zooming out keeps context — the node you zoomed out FROM stays selected. */
 	const zoomOut = () => {
 		const ancestors = store.ancestors();
-		void navigateTo(ancestors[0]?.id ?? null);
+		void navigateTo(ancestors[0]?.id ?? null, store.zoomTask()?.id ?? null);
 	};
 
 	const submitQuickAdd = async () => {
@@ -129,7 +145,7 @@ export default function Outline(props: OutlineProps) {
 			return;
 		}
 		if (e.key === "Escape") {
-			zoomOut();
+			if (store.zoomTask()) zoomOut();
 			return;
 		}
 		if (e.key === "o") {
@@ -180,7 +196,11 @@ export default function Outline(props: OutlineProps) {
 
 	return (
 		<div ref={containerRef} class="outline-container" data-testid="outline" tabIndex={0} onKeyDown={onKeyDown}>
-			<ZoomHeader projectName={props.project.name} store={store} onZoomTo={(id) => void navigateTo(id)} />
+			<ZoomHeader
+				projectName={props.project.name}
+				store={store}
+				onZoomTo={(id) => void navigateTo(id, store.zoomTask()?.id ?? null)}
+			/>
 
 			<div class="outline-layout">
 				<div class="outline-main">
@@ -253,7 +273,13 @@ export default function Outline(props: OutlineProps) {
 			</div>
 
 			<div class="outline-toasts">
-				<For each={store.toasts()}>{(t) => <div class={`outline-toast outline-toast-${t.kind}`}>{t.message}</div>}</For>
+				<For each={store.toasts()}>
+					{(t) => (
+						<div class={`outline-toast outline-toast-${t.kind}${t.leaving ? " outline-toast-leaving" : ""}`}>
+							{t.message}
+						</div>
+					)}
+				</For>
 			</div>
 		</div>
 	);

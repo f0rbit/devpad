@@ -79,6 +79,24 @@ test.describe("zoom + breadcrumbs", () => {
 		);
 		await expect(page.locator(`[data-task-id="${E2E_TASK_LEAF}"]`)).toBeVisible();
 	});
+
+	test("browser Back/Forward stays in sync with the zoomed view", async ({ page, context }) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		await clickWithRetry(page.locator(`[data-task-id="${E2E_TASK_PHASE}"] .outline-bullet`), () =>
+			expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_PHASE}`), { timeout: 3000 }),
+		);
+		await expect(page.getByTestId("outline-zoom-title")).toHaveText("Ripple UI");
+
+		await page.goBack();
+		await expect(page).not.toHaveURL(/node=/, { timeout: 3000 });
+		await expect(page.locator(`[data-task-id="${E2E_TASK_LEAF}"]`)).toBeVisible();
+
+		await page.goForward();
+		await expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_PHASE}`), { timeout: 3000 });
+		await expect(page.getByTestId("outline-zoom-title")).toHaveText("Ripple UI");
+	});
 });
 
 test.describe("connections rail", () => {

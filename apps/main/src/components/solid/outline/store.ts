@@ -17,9 +17,10 @@ import * as api from "./mutations";
 const WINDOW_SIZE = 100;
 const RIPPLE_MS = 650;
 const TOAST_MS = 4600;
+const TOAST_EXIT_MS = 220;
 
 export type ToastKind = "info" | "error" | "hook";
-export type Toast = { id: string; message: string; kind: ToastKind };
+export type Toast = { id: string; message: string; kind: ToastKind; leaving: boolean };
 
 export type OutlineStoreInput = {
 	ownerId: string;
@@ -86,8 +87,11 @@ export function createOutlineStore(input: OutlineStoreInput) {
 
 	const toast = (message: string, kind: ToastKind = "info") => {
 		const id = crypto.randomUUID();
-		setToasts((prev) => [...prev, { id, message, kind }]);
-		setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), TOAST_MS);
+		setToasts((prev) => [...prev, { id, message, kind, leaving: false }]);
+		setTimeout(() => {
+			setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+			setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), TOAST_EXIT_MS);
+		}, TOAST_MS);
 	};
 
 	const flash = (id: string) => {
@@ -303,8 +307,13 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		commitRename,
 		addChild,
 		reparent,
-		/** Wholesale swap for a zoom navigation — a fresh `tree()`/`ancestors()` fetch replaces the visible view entirely. */
-		resetView: (data: Omit<OutlineStoreInput, "ownerId" | "projectId">) => {
+		/**
+		 * Wholesale swap for a zoom navigation — a fresh `tree()`/`ancestors()` fetch
+		 * replaces the visible view entirely. `selectAfter` re-selects the node the
+		 * caller zoomed out FROM, so ⇧z / crumb navigation keeps context instead of
+		 * landing with nothing highlighted; zoom-in / direct-URL loads pass `null`.
+		 */
+		resetView: (data: Omit<OutlineStoreInput, "ownerId" | "projectId">, selectAfter: string | null = null) => {
 			setTasks(reconcile(indexById(data.nodes)));
 			setRollups(reconcile({ ...data.rollups }));
 			setZoomTask(data.zoomTask);
@@ -319,7 +328,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 			setExpandedAll(collectIds(fresh));
 			setCompactOpen(new Set<string>());
 			setWindowOpen(new Set<string>());
-			setSelected(null);
+			setSelected(selectAfter);
 		},
 	};
 }
