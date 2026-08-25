@@ -35,6 +35,7 @@ import type {
 import type {
 	ApiKey,
 	CompletedVia,
+	Document,
 	GetConfigResult,
 	Goal,
 	HistoryAction,
@@ -69,11 +70,19 @@ import type {
 	DoneRequest,
 	HookActionPublic,
 	HookTrigger,
+	PushDocRequest,
 	UpsertHook,
 } from "@devpad/schema/validation";
 
 /** Wire shape returned by every hooks route — `secret_encrypted` never round-trips (see `packages/core/src/services/hooks/registry.ts`'s `PublicHook`). */
 export type PublicHook = Omit<Hook, "action" | "trigger"> & { trigger: HookTrigger; action: HookActionPublic };
+
+// v2.4 (task A4.1) — wire shapes the docs route returns; `content` mirrors
+// `packages/core/src/services/docs/store.ts`'s `DocContent`/`DocVersionInfo`
+// but is defined locally since `@devpad/api` doesn't depend on `@devpad/core`.
+type DocContent = { title: string; html: string };
+type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
+type PullDocResponse = { document: Document; content: DocContent | null };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
@@ -188,6 +197,8 @@ export class ApiClient {
 			pulse: new HttpClient({ ...clientOptions, base_url: `${base_url}/pulse`, category: "pulse" }),
 			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
 			hooks: new HttpClient({ ...clientOptions, category: "hooks" }),
+			docs: new HttpClient({ ...clientOptions, category: "docs" }),
+			reviews: new HttpClient({ ...clientOptions, category: "reviews" }),
 		} as const;
 	}
 
@@ -776,6 +787,32 @@ export class ApiClient {
 		 */
 		list: (): Promise<ApiResult<TagWithTypedColor[]>> =>
 			wrap(() => this.clients.tags.get<TagWithTypedColor[]>("/tags")),
+	};
+
+	/**
+	 * Docs namespace (v2.4, task A4.1) — corpus-backed doc store. `push`
+	 * creates a new document (omit `document_id`) or a new version on an
+	 * existing one; content is sanitized server-side before it ever reaches
+	 * corpus.
+	 */
+	public readonly docs = {
+		list: (filters: { project_id: string; task_id?: string }): Promise<ApiResult<Document[]>> =>
+			wrap(() => {
+				const query: Record<string, string> = { project_id: filters.project_id };
+				if (filters.task_id) query.task_id = filters.task_id;
+				return this.clients.docs.get<Document[]>("/docs", { query });
+			}),
+
+		push: (data: PushDocRequest): Promise<ApiResult<Document>> =>
+			wrap(() => this.clients.docs.post<Document>("/docs", { body: data })),
+
+		/** Pulls a document's content at `version` (default: head). `content` is null for a document that's never been pushed to. */
+		pull: (id: string, version?: string): Promise<ApiResult<PullDocResponse>> =>
+			wrap(() => this.clients.docs.get<PullDocResponse>(`/docs/${id}`, version ? { query: { version } } : {})),
+
+		/** Full version history, newest first — the lineage walk. */
+		versions: (id: string): Promise<ApiResult<DocVersionInfo[]>> =>
+			wrap(() => this.clients.docs.get<DocVersionInfo[]>(`/docs/${id}/versions`)),
 	};
 
 	/**

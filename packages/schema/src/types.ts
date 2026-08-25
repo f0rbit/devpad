@@ -3,9 +3,11 @@ import type { z } from "zod";
 import type {
 	ActionType,
 	action,
+	annotation_thread,
 	api_keys,
 	apply_log,
 	codebase_tasks,
+	document,
 	github_webhook_event,
 	goal,
 	hook,
@@ -21,6 +23,7 @@ import type {
 	pipeline_stage_event,
 	project,
 	session,
+	signoff,
 	tag,
 	tag_config,
 	task,
@@ -58,17 +61,24 @@ export type {
 	ApprovalDecision,
 	CompletedVia,
 	CompletionPolicy,
+	DocumentKind,
+	DocumentStatus,
 	ForcedAtomicReason,
 	HookDeliveryStatus,
 	PipelineOidcProvider,
 	RolloutShape,
 	RunStatus,
+	SdlcStage,
+	SignoffCheckpoint,
+	SignoffDecision,
+	SignoffSubjectKind,
 	StageEventKind,
 	TaskEventActor,
 	TaskEventDispatchStatus,
 	TaskEventKind,
 	TaskKind,
 	TaskLinkKind,
+	ThreadStatus,
 } from "./database/schema.js";
 export { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP } from "./database/schema.js";
 
@@ -95,6 +105,9 @@ export type TaskEvent = InferSelectModel<typeof task_event>;
 export type Hook = InferSelectModel<typeof hook>;
 export type HookDelivery = InferSelectModel<typeof hook_delivery>;
 export type GithubWebhookEvent = InferSelectModel<typeof github_webhook_event>;
+export type Document = InferSelectModel<typeof document>;
+export type AnnotationThread = InferSelectModel<typeof annotation_thread>;
+export type Signoff = InferSelectModel<typeof signoff>;
 
 // Pipelines
 export type PipelinePackage = InferSelectModel<typeof pipeline_package>;

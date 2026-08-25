@@ -22,6 +22,7 @@
 		"./utils/crypto": "./src/utils/crypto.ts",
 		"./utils/logger": "./src/utils/logger.ts",
 		"./services/blog": "./src/services/blog/index.ts",
+		"./services/docs": "./src/services/docs/index.ts",
 		"./services/hooks": "./src/services/hooks/index.ts",
 		"./services/media": "./src/services/media/index.ts",
 		"./services/media/platforms": "./src/services/media/platforms/index.ts",
@@ -64,6 +65,9 @@
 		"@paralleldrive/cuid2": "^2.2.2",
 		"@xdevplatform/xdk": "^0.4.0",
 		"drizzle-orm": "^0.44.7",
+		"hast-util-from-html": "^2.0.3",
+		"hast-util-sanitize": "^5.0.2",
+		"hast-util-to-html": "^9.0.5",
 		"octokit": "^5.0.5",
 		"zod": "^3.22.4"
 	},

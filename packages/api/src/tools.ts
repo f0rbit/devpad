@@ -2,6 +2,7 @@ import { CategoryCreateSchema, PostCreateSchema, PostListParamsSchema, PostUpdat
 import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import {
 	apply_request,
+	push_doc_request,
 	save_config_request,
 	save_tags_request,
 	upsert_goal,
@@ -1116,6 +1117,44 @@ export const tools: Record<string, ToolDefinition> = {
 		}),
 		execute: async (client, input) =>
 			unwrap(await client.pipelines.oidc_trust.delete(input.id, { owner_id: input.owner_id })),
+	}),
+
+	// Docs (v2.4, task A4.1) — corpus-backed doc store
+	devpad_docs_list: define_tool({
+		name: "devpad_docs_list",
+		description: "List documents for a project (optionally filtered to one task)",
+		inputSchema: z.object({
+			project_id: z.string().describe("Project ID"),
+			task_id: z.string().optional().describe("Filter to documents attached to this task"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.list(input)),
+	}),
+
+	devpad_docs_push: define_tool({
+		name: "devpad_docs_push",
+		description:
+			"Push HTML content as a new document (omit document_id) or a new version on an existing one. HTML is sanitized server-side before storage — script/iframe/object/embed/form, event handlers, and javascript:/data: URLs never survive.",
+		inputSchema: push_doc_request,
+		execute: async (client, input) => unwrap(await client.docs.push(input)),
+	}),
+
+	devpad_docs_pull: define_tool({
+		name: "devpad_docs_pull",
+		description: "Pull a document's content at a specific version (default: head)",
+		inputSchema: z.object({
+			id: z.string().describe("Document ID"),
+			version: z.string().optional().describe("Corpus version — defaults to head"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.pull(input.id, input.version)),
+	}),
+
+	devpad_docs_versions: define_tool({
+		name: "devpad_docs_versions",
+		description: "Full version history for a document, newest first (the lineage walk)",
+		inputSchema: z.object({
+			id: z.string().describe("Document ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.versions(input.id)),
 	}),
 };
 

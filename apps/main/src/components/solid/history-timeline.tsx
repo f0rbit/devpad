@@ -124,6 +124,7 @@ function ActionIcon({ type }: { type: HistoryAction["type"] }) {
 		case "CREATE_CHECKLIST":
 		case "UPDATE_CHECKLIST":
 		case "DELETE_CHECKLIST":
+		case "ADVANCE_STAGE":
 		default:
 			return <span>?</span>;
 	}
@@ -214,6 +215,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 			case "CREATE_CHECKLIST":
 			case "UPDATE_CHECKLIST":
 			case "DELETE_CHECKLIST":
+			case "ADVANCE_STAGE":
 				break;
 		}
 		return <></>;

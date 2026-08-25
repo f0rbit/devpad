@@ -17,6 +17,7 @@ import { createMediaContext, createProviderFactory, handleCron } from "@devpad/c
 import type { Bindings } from "@devpad/schema/bindings";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Database } from "@devpad/schema/database/types";
+import type { Backend } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { createPulse } from "@f0rbit/pulse-client";
 import { pulseTracing } from "@f0rbit/pulse-client/hono";
@@ -49,6 +50,8 @@ export type ApiOptions = {
 	 * always resolvable instead.
 	 */
 	dispatch?: DispatchProvider;
+	/** v2.4 (task A4.1) — same injection pattern as `dispatch`; see `bindings.ts`. */
+	docsBackend?: Backend;
 };
 
 type AstroHandler = {
@@ -188,6 +191,19 @@ export const createApi = (options?: ApiOptions) => {
 		} catch {
 			await drain_task;
 		}
+	});
+
+	// v2.4 (task A4.1) — resolved once per request, same pattern as `dispatch`
+	// above. `/health` never touches the DB or any binding, so this runs
+	// unconditionally without risking the liveness check.
+	app.use("*", async (c, next) => {
+		const backend =
+			options?.docsBackend ??
+			(c.env.DB && c.env.DOCS_CORPUS_BUCKET
+				? create_cloudflare_backend({ d1: c.env.DB, r2: c.env.DOCS_CORPUS_BUCKET })
+				: undefined);
+		if (backend) c.set("docsBackend", backend);
+		await next();
 	});
 
 	app.use("*", authMiddleware);

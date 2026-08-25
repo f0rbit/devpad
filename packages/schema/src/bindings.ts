@@ -34,6 +34,10 @@ export type Bindings = {
 	DB?: D1Database;
 	BLOG_CORPUS_BUCKET?: R2Bucket;
 	MEDIA_CORPUS_BUCKET?: R2Bucket;
+	// v2.4 (task A4.1) — the doc store's corpus bucket (`devpad-corpus` per
+	// wrangler.toml). Absent in bun dev/tests, where the worker falls back to
+	// `create_memory_backend()` the same way blog/media do.
+	DOCS_CORPUS_BUCKET?: R2Bucket;
 	// v2.4 (task A3.3) — bound in production/preview via wrangler.toml
 	// (`devpad-hooks`/`devpad-hooks-preview`); absent in bun dev/tests, where
 	// the worker falls back to `InMemoryDispatcher` running the consumer
