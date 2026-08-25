@@ -6,6 +6,7 @@ import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { type EmitEventInput, write_with_event } from "./outbox.js";
+import { refresh_rollup_chain } from "./rollup.js";
 
 /**
  * Graph service (task A1.3) — hierarchy/ordering guards, recursive-CTE
@@ -73,12 +74,15 @@ export async function set_parent(
 	// so a post-reparent "the parent is still policy-completed" check can
 	// ride in the SAME atomic write as the guarded UPDATE below — the parent's
 	// own completed_via is untouched by this reparent, so reading it first is
-	// safe under the single-writer model.
+	// safe under the single-writer model. Same reasoning for capturing the
+	// OLD parent up front — its rollup needs refreshing too (task A2.3).
+	const moving = await get_task_row(db, id);
+	const old_parent_id = moving?.parent_id ?? null;
 	const target_parent = parent_id != null ? await get_task_row(db, parent_id) : null;
 
 	const attempt = await write_with_event(
 		db,
-		async (): Promise<Result<Task | null, DatabaseError>> => {
+		async (): Promise<Result<Task | null, ServiceError>> => {
 			const rows = await db.all<Task>(sql`
 				WITH RECURSIVE new_parent_ancestors(id, depth) AS (
 					SELECT id, 0 FROM task WHERE id = ${parent_id} AND deleted = 0
@@ -103,7 +107,14 @@ export async function set_parent(
 					)
 				RETURNING *
 			`);
-			return ok(rows.length === 1 ? rows[0] : null);
+			if (rows.length !== 1) return ok(null);
+			if (old_parent_id !== parent_id) {
+				const old_chain_result = await refresh_rollup_chain(db, old_parent_id);
+				if (!old_chain_result.ok) return old_chain_result;
+				const new_chain_result = await refresh_rollup_chain(db, parent_id);
+				if (!new_chain_result.ok) return new_chain_result;
+			}
+			return ok(rows[0]);
 		},
 		(updated) => {
 			if (!updated) return null;

@@ -3,11 +3,12 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
-import type { DatabaseError, ValidationError } from "../errors.js";
+import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
 import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent } from "./graph.js";
 import { type EmitEventInput, write_with_event } from "./outbox.js";
+import { refresh_rollup_chain } from "./rollup.js";
 
 const apply_op_result_schema = z.object({
 	op: z.enum(["create", "update", "reparent", "link", "unlink", "claim", "complete"]),
@@ -43,12 +44,12 @@ async function insert_task_row(
 	id: string,
 	data: UpsertTodo,
 	owner_id: string,
-): Promise<Result<void, DatabaseError | ValidationError>> {
+): Promise<Result<void, ServiceError>> {
 	const target_parent = data.parent_id ? await get_task_row(db, data.parent_id) : null;
 
 	return write_with_event(
 		db,
-		async (): Promise<Result<void, DatabaseError>> => {
+		async (): Promise<Result<void, ServiceError>> => {
 			const now = new Date().toISOString();
 			await db.run(sql`
 				INSERT INTO task (
@@ -61,6 +62,8 @@ async function insert_task_row(
 					${now}, ${now}, 0, 'api', 'api', 0
 				)
 			`);
+			const rollup_result = await refresh_rollup_chain(db, data.parent_id ?? null);
+			if (!rollup_result.ok) return rollup_result;
 			return ok(undefined);
 		},
 		() => {

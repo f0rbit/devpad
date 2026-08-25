@@ -7,6 +7,7 @@ import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
 import { get_task_row, type GraphConflictError } from "./graph.js";
 import { children_all_done, emit_event } from "./outbox.js";
+import { refresh_rollup_chain } from "./rollup.js";
 
 /**
  * The completion engine (task A2.2) — edge-triggered guarded-UPDATE
@@ -154,6 +155,13 @@ export class SqlCompletionEngine implements CompletionEngine {
 				cursor_parent_id = cascaded.parent_id;
 			}
 
+			// One refresh covers the whole chain (task A2.3): `refresh_rollup_chain`
+			// recomputes every ancestor from the CURRENT `task` table state, so a
+			// single call from the leaf's immediate parent after every cascade
+			// UPDATE has already committed picks up every hop, not just the first.
+			const rollup_result = await refresh_rollup_chain(db, completed.parent_id);
+			if (!rollup_result.ok) return rollup_result;
+
 			return ok({ completed, bubbled, events });
 		});
 	}
@@ -189,6 +197,9 @@ export class SqlCompletionEngine implements CompletionEngine {
 				payload: { kind: "task.reopened", via: "policy" },
 			});
 			if (!event.ok) return event;
+
+			const rollup_result = await refresh_rollup_chain(db, reopened.parent_id);
+			if (!rollup_result.ok) return rollup_result;
 
 			return ok({ reopened, events: [event.value] });
 		});

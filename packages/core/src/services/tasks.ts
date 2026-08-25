@@ -5,10 +5,11 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
-import type { DatabaseError, ServiceError } from "./errors.js";
+import type { ServiceError } from "./errors.js";
 import { SqlCompletionEngine } from "./graph/completion.js";
 import { get_task_row, type GraphConflictError } from "./graph/graph.js";
 import { type EmitEventInput, write_with_event } from "./graph/outbox.js";
+import { refresh_rollup_chain } from "./graph/rollup.js";
 import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
@@ -243,20 +244,32 @@ export async function upsertTask(
 	const write_payload = fresh_complete ? upsert_sans_progress : upsert;
 
 	const target_parent = !exists && data.parent_id ? await get_task_row(db, data.parent_id) : null;
+	const old_parent_id = previous?.parent_id ?? null;
+	const parent_changed = exists && Object.hasOwn(fields, "parent_id") && fields.parent_id !== old_parent_id;
 
 	const write_result = await write_with_event(
 		db,
-		async (): Promise<Result<Task["task"] | null, DatabaseError>> => {
+		async (): Promise<Result<Task["task"] | null, ServiceError>> => {
 			if (exists && id) {
 				const update_result = await db.update(task).set(write_payload).where(eq(task.id, id)).returning();
-				return ok(update_result.length > 0 ? update_result[0] : null);
+				if (update_result.length === 0) return ok(null);
+				if (parent_changed) {
+					const old_chain_result = await refresh_rollup_chain(db, old_parent_id);
+					if (!old_chain_result.ok) return old_chain_result;
+					const new_chain_result = await refresh_rollup_chain(db, update_result[0].parent_id);
+					if (!new_chain_result.ok) return new_chain_result;
+				}
+				return ok(update_result[0]);
 			}
 			const insert_result = await db
 				.insert(task)
 				.values(write_payload)
 				.onConflictDoUpdate({ target: [task.id], set: write_payload })
 				.returning();
-			return ok(insert_result.length > 0 ? insert_result[0] : null);
+			if (insert_result.length === 0) return ok(null);
+			const rollup_result = await refresh_rollup_chain(db, insert_result[0].parent_id);
+			if (!rollup_result.ok) return rollup_result;
+			return ok(insert_result[0]);
 		},
 		(row) => {
 			if (!row) return null;
