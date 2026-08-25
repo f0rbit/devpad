@@ -248,7 +248,7 @@ export default function Outline(props: OutlineProps) {
 					</Show>
 				</div>
 
-				<Rail selectedTask={selectedTask()} />
+				<Rail selectedTask={selectedTask()} rollups={store.rollups} onNavigate={(id) => void navigateTo(id)} />
 			</div>
 
 			<div class="outline-hintbar">

@@ -916,6 +916,10 @@ button.outline-row {
 	color: var(--fg-muted);
 	text-align: left;
 	text-decoration: none;
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-family: inherit;
 }
 
 .outline-railitem:hover {
