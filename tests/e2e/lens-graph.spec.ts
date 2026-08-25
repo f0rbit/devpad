@@ -102,6 +102,29 @@ test.describe("graph lens", () => {
 		await page.keyboard.press("Escape");
 	});
 
+	test("Esc closes the lens and outline keyboard shortcuts still work (j moves selection)", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		await selectChild2(page);
+		const lens = page.getByTestId("lens-overlay");
+		await pressWithRetry(page, "g", () => expect(lens).toBeVisible({ timeout: 5000 }));
+
+		await page.keyboard.press("Escape");
+		await expect(lens).toHaveCount(0);
+
+		const child2Row = page.locator(`[data-task-id="${E2E_TASK_CHILD_2}"]`);
+		await page.keyboard.press("j");
+		// The bug this guards: closing a lens leaves focus parked on <body>, so
+		// j/k/space/g/m silently no-op until the outline is re-clicked. Asserting
+		// the previous selection moved away proves focus actually returned to
+		// `.outline-container` rather than dying at document.body.
+		await expect(child2Row).not.toHaveClass(/outline-row-selected/, { timeout: 3000 });
+	});
+
 	test("double-click a node zooms the outline there and closes the lens", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);

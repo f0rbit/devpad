@@ -113,6 +113,19 @@ export default function Outline(props: OutlineProps) {
 		containerRef?.focus();
 	};
 
+	// Shared by the "g" shortcut and the zoom header's click-equivalent button
+	// (the hintbar that documents shortcuts is hidden on touch/≤480px).
+	const openGraphLens = () => {
+		const selected = store.selected();
+		const focus = (selected && store.tasks[selected]?.id) ?? store.zoomTask()?.id;
+		if (focus) {
+			setLensFocusId(focus);
+			setLensOpen("graph");
+		}
+	};
+
+	const openMilestoneLens = () => setLensOpen("milestone");
+
 	const onKeyDown = (e: KeyboardEvent) => {
 		const target = e.target as HTMLElement;
 		if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
@@ -167,15 +180,11 @@ export default function Outline(props: OutlineProps) {
 			return;
 		}
 		if (e.key === "g") {
-			const focus = (selected && store.tasks[selected]?.id) ?? store.zoomTask()?.id;
-			if (focus) {
-				setLensFocusId(focus);
-				setLensOpen("graph");
-			}
+			openGraphLens();
 			return;
 		}
 		if (e.key === "m") {
-			setLensOpen("milestone");
+			openMilestoneLens();
 			return;
 		}
 		if (e.key === "Enter") {
@@ -187,6 +196,14 @@ export default function Outline(props: OutlineProps) {
 			e.preventDefault();
 			void store.reparent(selected, e.shiftKey ? "out" : "in");
 		}
+	};
+
+	// LensShell focuses its own root on mount; unmounting it on close leaves
+	// focus parked on <body>, silently killing every j/k/space/g/m shortcut
+	// until the outline is re-clicked. Always hand focus back explicitly.
+	const closeLens = () => {
+		setLensOpen(null);
+		containerRef?.focus();
 	};
 
 	const selectedTask = (): Task | null => {
@@ -225,6 +242,8 @@ export default function Outline(props: OutlineProps) {
 				projectName={props.project.name}
 				store={store}
 				onZoomTo={(id) => void navigateTo(id, store.zoomTask()?.id ?? null)}
+				onOpenGraphLens={openGraphLens}
+				onOpenMilestoneLens={openMilestoneLens}
 			/>
 
 			<div class="outline-layout">
@@ -319,18 +338,14 @@ export default function Outline(props: OutlineProps) {
 			<Show when={lensOpen() === "graph" && lensFocusId()}>
 				{(focusId) => (
 					<Suspense>
-						<GraphLens focusId={focusId()} onClose={() => setLensOpen(null)} onZoom={(id) => void navigateTo(id)} />
+						<GraphLens focusId={focusId()} onClose={closeLens} onZoom={(id) => void navigateTo(id)} />
 					</Suspense>
 				)}
 			</Show>
 
 			<Show when={lensOpen() === "milestone"}>
 				<Suspense>
-					<MilestoneLens
-						projectId={props.project.id}
-						onClose={() => setLensOpen(null)}
-						onZoom={(id) => void navigateTo(id)}
-					/>
+					<MilestoneLens projectId={props.project.id} onClose={closeLens} onZoom={(id) => void navigateTo(id)} />
 				</Suspense>
 			</Show>
 		</div>
