@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "@devpad/schema/database/types";
 import { task } from "@devpad/schema/database/schema";
+import { eq } from "drizzle-orm";
 import { apply } from "../../apply.js";
 import { create_test_db, seed_task, seed_user } from "./helpers.js";
 
@@ -149,5 +150,27 @@ describe("apply — approval-kind tasks are human-only completable (task A4.3)",
 		);
 
 		expect(result.ok).toBe(true);
+	});
+
+	test("rejects a complete op targeting an approval-kind task inside a batch — the same engine guard `apply`'s create-op check exists alongside, not instead of", async () => {
+		const approval = await seed_task(db, owner_id, { kind: "approval" });
+
+		const result = await apply(
+			db,
+			{
+				idempotency_key: "idem-approval-bypass-3",
+				ops: [{ op: "complete", id: approval.id, base_rev: approval.rev }],
+			},
+			{ owner_id },
+		);
+
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("apply_op_failed");
+		if (result.error.kind !== "apply_op_failed") return;
+		expect(result.error.error.kind).toBe("approval_channel");
+
+		const rows = await db.select().from(task).where(eq(task.id, approval.id));
+		expect(rows[0]?.progress).not.toBe("COMPLETED");
 	});
 });
