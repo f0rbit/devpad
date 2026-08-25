@@ -3,7 +3,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { type Backend, create_memory_backend } from "@f0rbit/corpus";
 import { create_thread } from "../../threads.js";
 import { decide_checkpoint, latest_decided_signoff, push_interface_report, request_checkpoint } from "../../signoff.js";
-import { push_document } from "../../store.js";
+import { get_version, push_document } from "../../store.js";
 import { graph } from "../../../index.js";
 import { create_test_db, seed_project, seed_task, seed_user } from "./helpers.js";
 
@@ -300,5 +300,29 @@ describe("push_interface_report — server-verified additive/breaking fast path 
 		if (!second.ok) return;
 		expect(second.value.classification).toBe("breaking");
 		expect(second.value.signoff).toBeNull();
+	});
+
+	test("escapes hostile content before storage — a route caller bypassing tsc entirely never lands raw markup in corpus", async () => {
+		const hostile = '<script>alert(1)</script>\nexport type A = "<img src=x onerror=alert(1)>";';
+		const pushed = await push_interface_report(
+			db,
+			backend,
+			{ project_id, title: "my-pkg", normalized: hostile },
+			{ auth_channel: "api" },
+		);
+		expect(pushed.ok).toBe(true);
+		if (!pushed.ok) return;
+		expect(pushed.value.document.head_version).not.toBeNull();
+
+		const stored = await get_version(
+			backend,
+			pushed.value.document.id,
+			pushed.value.document.head_version ?? undefined,
+		);
+		expect(stored.ok).toBe(true);
+		if (!stored.ok) return;
+		expect(stored.value.html).not.toContain("<script");
+		expect(stored.value.html).not.toContain("<img");
+		expect(stored.value.html).toContain("&lt;script&gt;");
 	});
 });

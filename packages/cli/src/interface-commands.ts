@@ -15,7 +15,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { type ApiClient, getTool } from "@devpad/api";
-import { type DeclarationFile, normalize_declarations } from "@devpad/core/services/docs";
+import { type DeclarationFile, normalize_declarations, sanitize_text } from "@devpad/core/services/docs";
 import { compute_hash } from "@f0rbit/corpus";
 import type { Command } from "commander";
 import { z } from "zod";
@@ -36,19 +36,30 @@ async function print_json(data: unknown): Promise<void> {
 
 export type InterfaceContent = { title: string; html: string };
 
-/** Pure — normalizes the collected declaration files under `package_name` as the doc title. */
+/**
+ * Pure — normalizes the collected declaration files under `package_name` as
+ * the doc title. Deliberately NOT escaped here: this is also the shape
+ * submitted on `push` (`normalized` field), and the SERVER (`signoff.ts`'s
+ * `push_interface_report`) is the one that escapes it via `sanitize_text`
+ * before storage — that's the real security boundary (an adversary can hit
+ * the route directly, skipping the CLI entirely, so client-side escaping
+ * alone would be no boundary at all).
+ */
 export function build_interface_content(files: DeclarationFile[], package_name: string): InterfaceContent {
 	return { title: package_name, html: normalize_declarations(files) };
 }
 
 /**
- * Replicates `@f0rbit/corpus`'s `json_codec` content-hash exactly
- * (`compute_hash(TextEncoder().encode(JSON.stringify(value)))`) so `check`
- * can compare against the server's stored `content_hash` without an extra
- * round-trip through corpus itself.
+ * Replicates the server's exact stored bytes for `check`'s hash comparison:
+ * `sanitize_text`-escapes `content.html` (matching `push_interface_report`'s
+ * server-side escape) before hashing, then replicates `@f0rbit/corpus`'s
+ * `json_codec` content-hash (`compute_hash(TextEncoder().encode(JSON.stringify(value)))`)
+ * so `check` can compare against the server's stored `content_hash` without
+ * an extra round-trip through corpus itself.
  */
 export async function compute_local_hash(content: InterfaceContent): Promise<string> {
-	return compute_hash(new TextEncoder().encode(JSON.stringify(content)));
+	const escaped: InterfaceContent = { title: content.title, html: sanitize_text(content.html) };
+	return compute_hash(new TextEncoder().encode(JSON.stringify(escaped)));
 }
 
 /** Pure — the `check` verb's pass/fail decision. No approved base at all is a failure (nothing to be in sync with). */

@@ -20,6 +20,7 @@ import { SqlCompletionEngine } from "../graph/completion.js";
 import { add_link, get_task_row, type GraphError } from "../graph/graph.js";
 import { emit_event, type EmitEventInput, write_with_event } from "../graph/outbox.js";
 import { classify_diff, type InterfaceDiffClass } from "./interface-report.js";
+import { sanitize_text } from "./sanitize.js";
 import { type DocCorpusError, get_document, get_version, list_versions, promote, push_document_raw } from "./store.js";
 
 export type SignoffError = ServiceError | GraphError | DocCorpusError;
@@ -275,10 +276,18 @@ export type PushInterfaceReportResult = {
 
 /**
  * Interface report v1 push (task A4.4). Pushes via `push_document_raw` (not
- * `push_document`) — the normalized declaration text isn't agent-authored
- * HTML, it's `tsc`'s own output, so running it through the HTML sanitizer
- * would risk mangling meaningful `<`/`>` generic syntax for no safety
- * benefit. Classification is computed SERVER-SIDE against the previously
+ * `push_document`) — the normalized declaration text isn't real markup, so
+ * running it through the full HTML sanitizer (which parses tags/attributes)
+ * would mangle meaningful `<`/`>` generic syntax. It's still untrusted
+ * input reaching corpus storage though (adversary checklist: sanitize on
+ * EVERY write path, regardless of caller) — `sanitize_text` HTML-escapes it
+ * as plain text instead, which a future plain-text/`<pre>` render decodes
+ * back to the original characters while a literal `<script>` stays inert.
+ * The CLI (`interface-commands.ts`) applies the SAME escape before hashing
+ * locally, so `check`'s hash comparison stays honest against what the
+ * server actually stored.
+ *
+ * Classification is computed SERVER-SIDE against the previously
  * approved/auto base (never trusting a client-supplied "this is additive"
  * claim) — additive fast-paths to `auto_approve`; anything else (including
  * no prior base at all) leaves `signoff: null` for the caller to
@@ -290,6 +299,8 @@ export async function push_interface_report(
 	input: { document_id?: string; project_id: string; task_id?: string | null; title: string; normalized: string },
 	ctx: { auth_channel: "user" | "api" },
 ): Promise<Result<PushInterfaceReportResult, SignoffError>> {
+	const escaped = sanitize_text(input.normalized);
+
 	let previous_content: string | null = null;
 	if (input.document_id) {
 		const latest = await latest_decided_signoff(db, "doc_version", input.document_id, "types");
@@ -314,7 +325,7 @@ export async function push_interface_report(
 			task_id: input.task_id ?? null,
 			kind: "interface",
 			title: input.title,
-			html: input.normalized,
+			html: escaped,
 		},
 		ctx.auth_channel,
 	);
@@ -324,7 +335,7 @@ export async function push_interface_report(
 		return ok({ document: pushed.value, classification: "unchanged", signoff: null });
 	}
 
-	const classification = classify_diff(previous_content, input.normalized);
+	const classification = classify_diff(previous_content, escaped);
 	if (classification !== "additive") {
 		return ok({ document: pushed.value, classification, signoff: null });
 	}
