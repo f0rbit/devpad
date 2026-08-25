@@ -212,7 +212,29 @@ app.get("/:id/tree", requireAuth, async (c) => {
 
 	const result = await graph.subtree(db, id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
-	return c.json({ task: root_result.value.task, descendants: result.value });
+
+	const rollups_result = await graph.rollups_for(db, [id, ...result.value.map((t) => t.id)]);
+	if (!rollups_result.ok) return c.json({ error: rollups_result.error.kind }, 500);
+
+	return c.json({ task: root_result.value.task, descendants: result.value, rollups: rollups_result.value });
+});
+
+/** Immediate-parent-first ancestor chain — powers the outline's zoom breadcrumbs (v2.4, task B1.3). */
+app.get("/:id/ancestors", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+
+	const root_result = await tasks.getTask(db, id);
+	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
+	if (!root_result.value) return c.json(null, 404);
+	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+
+	const result = await graph.ancestors(db, id);
+	if (!result.ok) return c.json({ error: result.error.kind }, 500);
+	return c.json(result.value);
 });
 
 app.get("/:id/near", requireAuth, async (c) => {

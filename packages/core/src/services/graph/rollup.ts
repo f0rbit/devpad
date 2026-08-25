@@ -1,6 +1,9 @@
+import { task_rollup } from "@devpad/schema/database";
 import type { Database } from "@devpad/schema/database/types";
+import type { TaskRollup } from "@devpad/schema/types";
 import { ok, type Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
+import { batchedQuery } from "../batch.js";
 import type { ServiceError } from "../errors.js";
 import { ancestors } from "./graph.js";
 
@@ -77,4 +80,34 @@ export async function rebuild_rollup(db: Database, project_id: string): Promise<
 		await refresh_one(db, row.id);
 	}
 	return ok(undefined);
+}
+
+export type RollupCounts = Pick<TaskRollup, "direct_done" | "direct_total" | "subtree_done" | "subtree_total">;
+
+/**
+ * Batch-reads cached rollup rows for a set of task ids (one indexed IN
+ * query, D1-param-chunked via `batchedQuery` — never N+1). A task with no
+ * cache row (e.g. genuinely childless — see sweeper.ts's
+ * `project_has_rollup_drift` comment) is simply absent from the result
+ * map; callers treat a missing entry as all-zero.
+ */
+export async function rollups_for(
+	db: Database,
+	task_ids: string[],
+): Promise<Result<Record<string, RollupCounts>, ServiceError>> {
+	const rows = await batchedQuery<TaskRollup>(
+		task_ids,
+		(condition) => db.select().from(task_rollup).where(condition),
+		task_rollup.task_id,
+	);
+	const by_id: Record<string, RollupCounts> = {};
+	for (const row of rows) {
+		by_id[row.task_id] = {
+			direct_done: row.direct_done,
+			direct_total: row.direct_total,
+			subtree_done: row.subtree_done,
+			subtree_total: row.subtree_total,
+		};
+	}
+	return ok(by_id);
 }

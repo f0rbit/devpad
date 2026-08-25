@@ -1,18 +1,8 @@
 ---
-import SpecificationEditor from "@/components/solid/specification-editor";
-import PageLayout from "@/layouts/PageLayout.astro";
-import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { getProject } from "@/utils/api-client";
-
+// v2.4 IA consolidation (task B1.4) — specification folded into docs (the
+// docs tab renders this same editor plus the A4 doc list). Redirects rather
+// than deletes: bookmarks, external links, and in-flight PRs referencing the
+// old URL keep working.
 const project_id = Astro.params.project_id!;
-
-const guard = await getProject(Astro);
-if (guard instanceof Response) return guard;
-const { project } = guard;
+return Astro.redirect(`/project/${project_id}/docs${Astro.url.search}`, 301);
 ---
-
-<PageLayout title={`Specification - ${project_id}`}>
-	<ProjectLayout project_id={project_id}>
-		<SpecificationEditor project_id={project.id} initial={project.specification ?? ""} has_github={project.repo_url != null} client:load />
-	</ProjectLayout>
-</PageLayout>

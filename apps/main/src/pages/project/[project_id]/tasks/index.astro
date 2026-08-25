@@ -1,39 +1,7 @@
 ---
-import type { Project } from "@devpad/schema";
-import { ProjectContextSetter } from "@/components/solid/project-context-setter";
-import { TaskSorter } from "@/components/solid/task-sorter";
-import PageLayout from "@/layouts/PageLayout.astro";
-import ProjectTasksLayout from "@/layouts/ProjectTasksLayout.astro";
-import { getProject, rethrow } from "@/utils/api-client";
-
+// v2.4 IA consolidation (task B1.4) — tasks + goals merged into the work
+// outline. Redirects rather than deletes: bookmarks, external links, and
+// in-flight PRs referencing the old URL keep working.
 const project_id = Astro.params.project_id!;
-
-const guard = await getProject(Astro);
-if (guard instanceof Response) return guard;
-const { client, project, user } = guard;
-
-const project_map = { [project.id]: project } as Record<string, Project>;
-
-const [tasks_result, tags_result] = await Promise.all([client.tasks.getByProject(project.id), client.tags.list()]);
-if (!tasks_result.ok) return rethrow(tasks_result.error);
-const tasks = tasks_result.value;
-
-if (!tags_result.ok) return rethrow(tags_result.error);
-const tags = tags_result.value;
+return Astro.redirect(`/project/${project_id}/work${Astro.url.search}`, 301);
 ---
-
-<PageLayout title={`Tasks - ${project_id}`}>
-	<ProjectTasksLayout project_id={project_id}>
-		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
-		<TaskSorter
-			client:load
-			tasks={tasks}
-			project_map={project_map}
-			defaultOption={"recent"}
-			tags={tags}
-			user_id={user.id}
-			defaultView={user.task_view || "list"}
-			quick_add={{ project_id: project.id, user_id: user.id }}
-		/>
-	</ProjectTasksLayout>
-</PageLayout>
