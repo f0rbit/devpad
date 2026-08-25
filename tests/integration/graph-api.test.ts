@@ -95,6 +95,25 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		expect(near_after.value.links.some((l) => l.id === link.id)).toBe(false);
 	});
 
+	test("GET /tasks/:id/near?depth= expands/contracts the BFS frontier — the graph lens' 1/2/3 toggle", async () => {
+		const a = await create_task({ title: `near-depth-a-${String(Date.now())}` });
+		const b = await create_task({ title: `near-depth-b-${String(Date.now())}` });
+		const c = await create_task({ title: `near-depth-c-${String(Date.now())}` });
+
+		const link_ab = await t.client.tasks.link({ src_id: a.id, dst_id: b.id, kind: "blocks" });
+		if (!link_ab.ok) throw new Error(`link failed: ${link_ab.error.message}`);
+		const link_bc = await t.client.tasks.link({ src_id: b.id, dst_id: c.id, kind: "blocks" });
+		if (!link_bc.ok) throw new Error(`link failed: ${link_bc.error.message}`);
+
+		const depth1 = await t.client.tasks.near(a.id, 1);
+		if (!depth1.ok) throw new Error(`near failed: ${depth1.error.message}`);
+		expect(depth1.value.tasks.map((task) => task.id)).not.toContain(c.id);
+
+		const depth2 = await t.client.tasks.near(a.id, 2);
+		if (!depth2.ok) throw new Error(`near failed: ${depth2.error.message}`);
+		expect(depth2.value.tasks.map((task) => task.id)).toContain(c.id);
+	});
+
 	test("POST /tasks/:id/claim is guarded — a second claim with the original base_rev fails", async () => {
 		const task = await create_task({ title: `claim-${String(Date.now())}` });
 

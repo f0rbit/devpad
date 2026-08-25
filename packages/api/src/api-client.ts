@@ -789,9 +789,11 @@ export class ApiClient {
 				this.clients.tasks.get<TreeResponse>(`/tasks/${id}/tree`, depth ? { query: { depth: String(depth) } } : {}),
 			),
 
-		/** depth-2 link neighborhood around a task, including backlinks. */
-		near: (id: string): Promise<ApiResult<NearResponse>> =>
-			wrap(() => this.clients.tasks.get<NearResponse>(`/tasks/${id}/near`)),
+		/** Link neighborhood around a task (default depth 2, capped server-side at 3 — the graph lens' 1/2/3 toggle), including backlinks. */
+		near: (id: string, depth?: number): Promise<ApiResult<NearResponse>> =>
+			wrap(() =>
+				this.clients.tasks.get<NearResponse>(`/tasks/${id}/near`, depth ? { query: { depth: String(depth) } } : {}),
+			),
 
 		/** Immediate-parent-first ancestor chain — feeds the outline's zoom breadcrumbs. */
 		ancestors: (id: string): Promise<ApiResult<Task[]>> =>

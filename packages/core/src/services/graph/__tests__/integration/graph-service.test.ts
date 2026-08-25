@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { add_link, ancestors, claim, ready, set_parent, subtree } from "../../graph.js";
+import { add_link, ancestors, claim, near, ready, set_parent, subtree } from "../../graph.js";
 import { create_test_db, seed_task, seed_user } from "./helpers.js";
 
 let db: Database;
@@ -210,6 +210,63 @@ describe("ancestors", () => {
 		expect(result.ok).toBe(true);
 		if (result.ok) {
 			expect(result.value.map((t) => t.id)).toEqual([mid.id, root.id]);
+		}
+	});
+});
+
+describe("near — BFS depth toggle (graph lens)", () => {
+	test("depth=1 stops at direct links, depth=2/3 keep expanding the frontier", async () => {
+		// chain: a -blocks-> b -blocks-> c -blocks-> d
+		const a = await seed_task(db, owner_id);
+		const b = await seed_task(db, owner_id);
+		const c = await seed_task(db, owner_id);
+		const d = await seed_task(db, owner_id);
+		await add_link(db, { src_id: a.id, dst_id: b.id, kind: "blocks" });
+		await add_link(db, { src_id: b.id, dst_id: c.id, kind: "blocks" });
+		await add_link(db, { src_id: c.id, dst_id: d.id, kind: "blocks" });
+
+		const depth1 = await near(db, a.id, 1);
+		expect(depth1.ok).toBe(true);
+		if (depth1.ok) expect(depth1.value.tasks.map((t) => t.id).toSorted()).toEqual([a.id, b.id].toSorted());
+
+		const depth2 = await near(db, a.id, 2);
+		expect(depth2.ok).toBe(true);
+		if (depth2.ok) expect(depth2.value.tasks.map((t) => t.id).toSorted()).toEqual([a.id, b.id, c.id].toSorted());
+
+		const depth3 = await near(db, a.id, 3);
+		expect(depth3.ok).toBe(true);
+		if (depth3.ok) {
+			expect(depth3.value.tasks.map((t) => t.id).toSorted()).toEqual([a.id, b.id, c.id, d.id].toSorted());
+		}
+	});
+
+	test("a depth beyond NEAR_MAX_DEPTH is clamped, not unbounded", async () => {
+		const a = await seed_task(db, owner_id);
+		const b = await seed_task(db, owner_id);
+		await add_link(db, { src_id: a.id, dst_id: b.id, kind: "blocks" });
+
+		const uncapped = await near(db, a.id, 999);
+		const capped = await near(db, a.id, 3);
+		expect(uncapped.ok && capped.ok).toBe(true);
+		if (uncapped.ok && capped.ok) {
+			expect(uncapped.value.tasks.map((t) => t.id).toSorted()).toEqual(capped.value.tasks.map((t) => t.id).toSorted());
+		}
+	});
+
+	test("default depth (no argument) matches depth=2, the outline rail's existing behavior", async () => {
+		const a = await seed_task(db, owner_id);
+		const b = await seed_task(db, owner_id);
+		const c = await seed_task(db, owner_id);
+		await add_link(db, { src_id: a.id, dst_id: b.id, kind: "blocks" });
+		await add_link(db, { src_id: b.id, dst_id: c.id, kind: "blocks" });
+
+		const default_result = await near(db, a.id);
+		const explicit_depth2 = await near(db, a.id, 2);
+		expect(default_result.ok && explicit_depth2.ok).toBe(true);
+		if (default_result.ok && explicit_depth2.ok) {
+			expect(default_result.value.tasks.map((t) => t.id).toSorted()).toEqual(
+				explicit_depth2.value.tasks.map((t) => t.id).toSorted(),
+			);
 		}
 	});
 });

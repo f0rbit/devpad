@@ -258,7 +258,10 @@ app.get("/:id/near", requireAuth, async (c) => {
 	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
 	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
 
-	const result = await graph.near(db, id);
+	const parsed_depth = Number(c.req.query("depth"));
+	const depth = Number.isFinite(parsed_depth) && parsed_depth > 0 ? parsed_depth : undefined;
+
+	const result = await graph.near(db, id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });
