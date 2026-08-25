@@ -7,7 +7,7 @@ import type { DatabaseError, ValidationError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
 import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent } from "./graph.js";
-import { write_with_event } from "./outbox.js";
+import { type EmitEventInput, write_with_event } from "./outbox.js";
 
 const apply_op_result_schema = z.object({
 	op: z.enum(["create", "update", "reparent", "link", "unlink", "claim", "complete"]),
@@ -44,6 +44,8 @@ async function insert_task_row(
 	data: UpsertTodo,
 	owner_id: string,
 ): Promise<Result<void, DatabaseError | ValidationError>> {
+	const target_parent = data.parent_id ? await get_task_row(db, data.parent_id) : null;
+
 	return write_with_event(
 		db,
 		async (): Promise<Result<void, DatabaseError>> => {
@@ -61,13 +63,27 @@ async function insert_task_row(
 			`);
 			return ok(undefined);
 		},
-		() => ({
-			kind: "task.created",
-			subject_id: id,
-			project_id: data.project_id ?? null,
-			actor: "api",
-			payload: { kind: "task.created", title: data.title ?? "Untitled" },
-		}),
+		() => {
+			const events: EmitEventInput[] = [
+				{
+					kind: "task.created",
+					subject_id: id,
+					project_id: data.project_id ?? null,
+					actor: "api",
+					payload: { kind: "task.created", title: data.title ?? "Untitled" },
+				},
+			];
+			if (target_parent && target_parent.completed_via === "policy" && (data.progress ?? "UNSTARTED") !== "COMPLETED") {
+				events.push({
+					kind: "node.completion_stale",
+					subject_id: target_parent.id,
+					project_id: target_parent.project_id,
+					actor: "policy",
+					payload: { kind: "node.completion_stale", child_id: id },
+				});
+			}
+			return events;
+		},
 	);
 }
 

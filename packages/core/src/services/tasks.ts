@@ -6,7 +6,9 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
 import type { DatabaseError, ServiceError } from "./errors.js";
-import { children_all_done, emit_event, write_with_event } from "./graph/outbox.js";
+import { SqlCompletionEngine } from "./graph/completion.js";
+import { get_task_row, type GraphConflictError } from "./graph/graph.js";
+import { type EmitEventInput, write_with_event } from "./graph/outbox.js";
 import { getTaskTags, upsertTag } from "./tags.js";
 
 export type Task = TaskWithDetails;
@@ -168,7 +170,7 @@ export async function upsertTask(
 	tags: UpsertTag[],
 	owner_id: string,
 	auth_channel: "user" | "api" = "user",
-): Promise<Result<Task | null, ServiceError>> {
+): Promise<Result<Task | null, ServiceError | GraphConflictError>> {
 	const previous_result = data.id ? await getTask(db, data.id) : null;
 	const previous = previous_result?.ok ? (previous_result.value?.task ?? null) : null;
 
@@ -227,50 +229,67 @@ export async function upsertTask(
 		: { created_by: auth_channel, modified_by: auth_channel };
 	const upsert = { ...fields, ...(id ? { id } : {}), updated_at: new Date().toISOString(), owner_id, ...provenance };
 
+	// progress→COMPLETED is engine-owned (task A2.2, "single completion
+	// entrypoint") — this write never sets progress/completed_via itself
+	// when fresh_complete; it writes every OTHER field, then delegates the
+	// actual transition (+ cascade + outbox events) to SqlCompletionEngine
+	// below. `rev` is untouched by this legacy (non-OCC) path either way, so
+	// `new_todo.rev` read after this write is still the correct base_rev.
 	const fresh_complete = data.progress === "COMPLETED" && previous?.progress !== "COMPLETED";
-	const changed_fields = Object.keys(fields).filter((key) => (fields as Record<string, unknown>)[key] !== undefined);
+	const changed_fields = Object.keys(fields).filter(
+		(key) => (fields as Record<string, unknown>)[key] !== undefined && !(fresh_complete && key === "progress"),
+	);
+	const { progress: _progress_via_engine, ...upsert_sans_progress } = upsert;
+	const write_payload = fresh_complete ? upsert_sans_progress : upsert;
+
+	const target_parent = !exists && data.parent_id ? await get_task_row(db, data.parent_id) : null;
 
 	const write_result = await write_with_event(
 		db,
 		async (): Promise<Result<Task["task"] | null, DatabaseError>> => {
 			if (exists && id) {
-				const update_result = await db.update(task).set(upsert).where(eq(task.id, id)).returning();
+				const update_result = await db.update(task).set(write_payload).where(eq(task.id, id)).returning();
 				return ok(update_result.length > 0 ? update_result[0] : null);
 			}
 			const insert_result = await db
 				.insert(task)
-				.values(upsert)
-				.onConflictDoUpdate({ target: [task.id], set: upsert })
+				.values(write_payload)
+				.onConflictDoUpdate({ target: [task.id], set: write_payload })
 				.returning();
 			return ok(insert_result.length > 0 ? insert_result[0] : null);
 		},
 		(row) => {
 			if (!row) return null;
+			const events: EmitEventInput[] = [];
 			if (!exists) {
-				return {
+				events.push({
 					kind: "task.created",
 					subject_id: row.id,
 					project_id: row.project_id,
 					actor: auth_channel,
 					payload: { kind: "task.created", title: row.title },
-				};
+				});
+				if (target_parent && target_parent.completed_via === "policy" && !fresh_complete) {
+					events.push({
+						kind: "node.completion_stale",
+						subject_id: target_parent.id,
+						project_id: target_parent.project_id,
+						actor: "policy",
+						payload: { kind: "node.completion_stale", child_id: row.id },
+					});
+				}
+				return events;
 			}
-			if (fresh_complete) {
-				return {
-					kind: "task.completed",
+			if (changed_fields.length > 0) {
+				events.push({
+					kind: "task.updated",
 					subject_id: row.id,
 					project_id: row.project_id,
 					actor: auth_channel,
-					payload: { kind: "task.completed", via: auth_channel },
-				};
+					payload: { kind: "task.updated", fields: changed_fields },
+				});
 			}
-			return {
-				kind: "task.updated",
-				subject_id: row.id,
-				project_id: row.project_id,
-				actor: auth_channel,
-				payload: { kind: "task.updated", fields: changed_fields },
-			};
+			return events;
 		},
 	);
 	if (!write_result.ok) return write_result;
@@ -278,26 +297,10 @@ export async function upsertTask(
 
 	const new_todo = write_result.value;
 
-	// Observability signal only (task A2.1) — fires regardless of the
-	// parent's completion_policy and never mutates the parent. Whether to
-	// ALSO cascade-complete an auto_children parent is task A2.2's
-	// CompletionEngine's call, made from its own atomic write.
-	if (fresh_complete && new_todo.parent_id) {
-		const siblings = await db.select().from(task).where(eq(task.parent_id, new_todo.parent_id));
-		if (children_all_done(siblings)) {
-			const parent_rows = await db.select().from(task).where(eq(task.id, new_todo.parent_id));
-			if (parent_rows.length > 0) {
-				const parent = parent_rows[0];
-				const stale_check_result = await emit_event(db, {
-					kind: "node.children_all_done",
-					subject_id: parent.id,
-					project_id: parent.project_id,
-					actor: "policy",
-					payload: { kind: "node.children_all_done" },
-				});
-				if (!stale_check_result.ok) return stale_check_result;
-			}
-		}
+	if (fresh_complete) {
+		const engine = new SqlCompletionEngine(db);
+		const complete_result = await engine.complete(new_todo.id, auth_channel, new_todo.rev);
+		if (!complete_result.ok) return complete_result;
 	}
 
 	const action_type: ActionType = !exists ? "CREATE_TASK" : "UPDATE_TASK";

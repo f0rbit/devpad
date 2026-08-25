@@ -5,7 +5,7 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
-import { write_with_event } from "./outbox.js";
+import { type EmitEventInput, write_with_event } from "./outbox.js";
 
 /**
  * Graph service (task A1.3) — hierarchy/ordering guards, recursive-CTE
@@ -69,6 +69,13 @@ export async function set_parent(
 ): Promise<Result<Task, GraphError>> {
 	const { id, parent_id, rank, base_rev } = input;
 
+	// Sticky completion (task A2.2): read the target parent BEFORE the write
+	// so a post-reparent "the parent is still policy-completed" check can
+	// ride in the SAME atomic write as the guarded UPDATE below — the parent's
+	// own completed_via is untouched by this reparent, so reading it first is
+	// safe under the single-writer model.
+	const target_parent = parent_id != null ? await get_task_row(db, parent_id) : null;
+
 	const attempt = await write_with_event(
 		db,
 		async (): Promise<Result<Task | null, DatabaseError>> => {
@@ -98,14 +105,28 @@ export async function set_parent(
 			`);
 			return ok(rows.length === 1 ? rows[0] : null);
 		},
-		(updated) =>
-			updated && {
-				kind: "task.updated",
-				subject_id: updated.id,
-				project_id: updated.project_id,
-				actor: "api",
-				payload: { kind: "task.updated", fields: ["parent_id", "rank"] },
-			},
+		(updated) => {
+			if (!updated) return null;
+			const events: EmitEventInput[] = [
+				{
+					kind: "task.updated",
+					subject_id: updated.id,
+					project_id: updated.project_id,
+					actor: "api",
+					payload: { kind: "task.updated", fields: ["parent_id", "rank"] },
+				},
+			];
+			if (target_parent && target_parent.completed_via === "policy" && updated.progress !== "COMPLETED") {
+				events.push({
+					kind: "node.completion_stale",
+					subject_id: target_parent.id,
+					project_id: target_parent.project_id,
+					actor: "policy",
+					payload: { kind: "node.completion_stale", child_id: updated.id },
+				});
+			}
+			return events;
+		},
 	);
 
 	if (!attempt.ok) return attempt;
