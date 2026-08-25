@@ -123,10 +123,10 @@ type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: Fo
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 /** `rollups` is keyed by task id — see `packages/core/src/services/graph/rollup.ts`'s `RollupCounts`; a childless task is simply absent. */
 export type RollupCounts = { direct_done: number; direct_total: number; subtree_done: number; subtree_total: number };
-type TreeResponse = { task: Task; descendants: Task[]; rollups: Record<string, RollupCounts> };
+type TreeResponse = { task: Task; descendants: Task[]; rollups: Partial<Record<string, RollupCounts>> };
 type NearResponse = { links: TaskLink[]; tasks: Task[] };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
-type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
+export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 export type BubbleStep = { task: Task; via: CompletedVia };
 export type DoneResponse = { completed: Task; bubbled: BubbleStep[]; hooks_fired: string[] };
 import { ApiClient as HttpClient } from "./request";

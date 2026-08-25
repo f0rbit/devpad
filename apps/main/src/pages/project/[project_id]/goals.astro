@@ -1,49 +1,7 @@
 ---
-import type { Goal } from "@devpad/schema";
-import MilestonesManager from "@/components/solid/milestones-manager";
-import PageLayout from "@/layouts/PageLayout.astro";
-import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { getProject } from "@/utils/api-client";
-
+// v2.4 IA consolidation (task B1.4) — tasks + goals merged into the work
+// outline. Redirects rather than deletes: bookmarks, external links, and
+// in-flight PRs referencing the old URL keep working.
 const project_id = Astro.params.project_id!;
-
-const guard = await getProject(Astro);
-if (guard instanceof Response) return guard;
-const { client, project } = guard;
-
-const [milestones_result, tasks_result] = await Promise.all([client.milestones.getByProject(project.id), client.tasks.getByProject(project.id)]);
-
-const milestones = milestones_result.ok ? milestones_result.value : [];
-const all_tasks = tasks_result.ok ? tasks_result.value : [];
-
-const goals_map: Record<string, Goal[]> = {};
-for (const milestone of milestones) {
-	const goals_result = await client.milestones.goals(milestone.id);
-	goals_map[milestone.id] = goals_result.ok ? goals_result.value : [];
-}
-
-const goal_task_counts: Record<string, { total: number; completed: number }> = {};
-for (const t of all_tasks) {
-	if (t.task.goal_id) {
-		if (!goal_task_counts[t.task.goal_id]) {
-			goal_task_counts[t.task.goal_id] = { total: 0, completed: 0 };
-		}
-		goal_task_counts[t.task.goal_id].total++;
-		if (t.task.progress === "COMPLETED") {
-			goal_task_counts[t.task.goal_id].completed++;
-		}
-	}
-}
+return Astro.redirect(`/project/${project_id}/work${Astro.url.search}`, 301);
 ---
-
-<PageLayout title={`Milestones & Goals - ${project_id}`}>
-	<ProjectLayout project_id={project_id}>
-		<MilestonesManager projectId={project.id} projectSlug={project_id} initialMilestones={milestones ?? undefined} initialGoalsMap={goals_map} goalTaskCounts={goal_task_counts} client:load />
-	</ProjectLayout>
-</PageLayout>
-
-<style>
-	.step-title:empty {
-		display: none;
-	}
-</style>

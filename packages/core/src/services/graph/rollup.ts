@@ -91,8 +91,15 @@ export type RollupCounts = Pick<TaskRollup, "direct_done" | "direct_total" | "su
  * `project_has_rollup_drift` comment) is simply absent from the result
  * map; callers treat a missing entry as all-zero.
  */
-export async function rollups_for(db: Database, task_ids: string[]): Promise<Result<Record<string, RollupCounts>, ServiceError>> {
-	const rows = await batchedQuery<TaskRollup>(task_ids, condition => db.select().from(task_rollup).where(condition), task_rollup.task_id);
+export async function rollups_for(
+	db: Database,
+	task_ids: string[],
+): Promise<Result<Record<string, RollupCounts>, ServiceError>> {
+	const rows = await batchedQuery<TaskRollup>(
+		task_ids,
+		(condition) => db.select().from(task_rollup).where(condition),
+		task_rollup.task_id,
+	);
 	const by_id: Record<string, RollupCounts> = {};
 	for (const row of rows) {
 		by_id[row.task_id] = {
