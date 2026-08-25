@@ -404,6 +404,9 @@ export type ApplyRequest = z.infer<typeof apply_request>;
 export const claim_request = z.object({ actor: z.string().min(1), base_rev: z.number().int() });
 export type ClaimRequest = z.infer<typeof claim_request>;
 
+export const done_request = z.object({ base_rev: z.number().int() });
+export type DoneRequest = z.infer<typeof done_request>;
+
 // ---------------------------------------------------------------------------
 // task_event outbox payload (task A2.1) — one variant per TASK_EVENT_KINDS
 // entry, refined by `kind` so a malformed payload for a given kind is a

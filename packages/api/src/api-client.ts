@@ -34,6 +34,7 @@ import type {
 } from "@devpad/schema/media/types";
 import type {
 	ApiKey,
+	CompletedVia,
 	GetConfigResult,
 	Goal,
 	HistoryAction,
@@ -57,13 +58,15 @@ import type {
 	UpsertTaskLink,
 	UpsertTodo,
 } from "@devpad/schema/types";
-import type { ApplyOp, ApplyRequest, ClaimRequest, DashboardResponse } from "@devpad/schema/validation";
+import type { ApplyOp, ApplyRequest, ClaimRequest, DashboardResponse, DoneRequest } from "@devpad/schema/validation";
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
 type NearResponse = { links: TaskLink[]; tasks: Task[] };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
+export type BubbleStep = { task: Task; via: CompletedVia };
+export type DoneResponse = { completed: Task; bubbled: BubbleStep[]; hooks_fired: string[] };
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -695,6 +698,16 @@ export class ApiClient {
 		/** Atomic claim: sets claimed_by/claimed_at + IN_PROGRESS, guarded on claimed_by IS NULL and base_rev. */
 		claim: (id: string, data: ClaimRequest): Promise<ApiResult<Task>> =>
 			wrap(() => this.clients.tasks.post<Task>(`/tasks/${id}/claim`, { body: data })),
+
+		/**
+		 * Completes a task through the single completion entrypoint
+		 * (CompletionEngine) — the response's `bubbled` chain is the ordered
+		 * list of ancestors an auto_children cascade also completed, exactly
+		 * what a ripple animation would replay. `hooks_fired` is a placeholder
+		 * until phase A3.
+		 */
+		done: (id: string, data: DoneRequest): Promise<ApiResult<DoneResponse>> =>
+			wrap(() => this.clients.tasks.post<DoneResponse>(`/tasks/${id}/done`, { body: data })),
 
 		/** Create a typed edge between two tasks (or a task and an external ref). */
 		link: (data: UpsertTaskLink): Promise<ApiResult<TaskLink>> =>

@@ -1,4 +1,4 @@
-import type { ApplyOp, ApplyRequest, Task, UpsertTodo } from "@devpad/schema";
+import type { ApplyOp, ApplyRequest, UpsertTodo } from "@devpad/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
+import { SqlCompletionEngine } from "./completion.js";
 import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent } from "./graph.js";
 import { type EmitEventInput, write_with_event } from "./outbox.js";
 import { refresh_rollup_chain } from "./rollup.js";
@@ -133,32 +134,12 @@ async function update_task_row(
 	return ok(undefined);
 }
 
+/** Delegates to the single completion entrypoint (task A2.6) — the same engine the /done route and upsertTask use. */
 async function complete_task_row(db: Database, id: string, base_rev: number): Promise<Result<void, GraphError>> {
-	const attempt = await write_with_event(
-		db,
-		async (): Promise<Result<Task | null, DatabaseError>> => {
-			const rows = await db.all<Task>(sql`
-				UPDATE task SET progress = 'COMPLETED', completed_via = 'api', rev = rev + 1, updated_at = CURRENT_TIMESTAMP
-				WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0
-				RETURNING *
-			`);
-			return ok(rows.length === 1 ? rows[0] : null);
-		},
-		(updated) =>
-			updated && {
-				kind: "task.completed",
-				subject_id: updated.id,
-				project_id: updated.project_id,
-				actor: "api",
-				payload: { kind: "task.completed", via: "api" },
-			},
-	);
-	if (!attempt.ok) return attempt;
-	if (attempt.value) return ok(undefined);
-
-	const current = await get_task_row(db, id);
-	if (!current || current.deleted) return errors.notFound("task", id);
-	return err({ kind: "graph_conflict", message: `Task ${id} was modified concurrently`, current });
+	const engine = new SqlCompletionEngine(db);
+	const result = await engine.complete(id, "api", base_rev);
+	if (!result.ok) return result;
+	return ok(undefined);
 }
 
 async function execute_op(

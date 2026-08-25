@@ -3,6 +3,7 @@ import {
 	type ApplyOp,
 	apply_request,
 	claim_request,
+	done_request,
 	save_tags_request,
 	type UpsertTag,
 	upsert_task_link,
@@ -232,6 +233,31 @@ app.post("/:id/claim", requireAuth, zValidator("json", claim_request), async (c)
 	const result = await graph.claim(db, { id, actor: data.actor, base_rev: data.base_rev });
 	if (!result.ok) return graph_error_response(c, result.error);
 	return c.json(result.value);
+});
+
+/**
+ * The single completion entrypoint (task A2.6) — every other completion
+ * path (upsertTask's progress:"COMPLETED", the MCP tool, the CLI) either
+ * calls SqlCompletionEngine directly or routes through this same endpoint.
+ * `hooks_fired` is a placeholder until phase A3 wires real hook dispatch.
+ */
+app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+	const data = c.req.valid("json");
+
+	const existing = await tasks.getTask(db, id);
+	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
+	if (!existing.value) return c.json(null, 404);
+	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+
+	const auth_channel = c.get("auth_channel");
+	const engine = new graph.SqlCompletionEngine(db);
+	const result = await engine.complete(id, auth_channel, data.base_rev);
+	if (!result.ok) return graph_error_response(c, result.error);
+	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired: [] });
 });
 
 app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) => {

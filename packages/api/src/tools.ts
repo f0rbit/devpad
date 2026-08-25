@@ -397,6 +397,17 @@ export const tools: Record<string, ToolDefinition> = {
 			unwrap(await client.tasks.claim(input.id, { actor: input.actor, base_rev: input.base_rev })),
 	}),
 
+	devpad_tasks_done: define_tool({
+		name: "devpad_tasks_done",
+		description:
+			"Complete a task through the single completion entrypoint (CompletionEngine). Returns { completed, bubbled, hooks_fired } — bubbled is the ordered chain of ancestors an auto_children cascade also completed. 409 on stale base_rev or if already completed.",
+		inputSchema: z.object({
+			id: z.string().describe("Task ID"),
+			base_rev: z.number().int().describe("Expected current rev — optimistic concurrency guard"),
+		}),
+		execute: async (client, input) => unwrap(await client.tasks.done(input.id, { base_rev: input.base_rev })),
+	}),
+
 	devpad_tasks_link: define_tool({
 		name: "devpad_tasks_link",
 		description:

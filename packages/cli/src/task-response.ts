@@ -13,7 +13,10 @@ import { z } from "zod";
 
 export const task_mutation_response = z
 	.object({
-		task: z.object({ id: z.string(), title: z.string() }).passthrough(),
+		// `rev` is optional here only for fixture back-compat in existing tests —
+		// every real API response includes it; `devpad tasks done` (task A2.6)
+		// needs it as the CompletionEngine's base_rev OCC guard.
+		task: z.object({ id: z.string(), title: z.string(), rev: z.number().int().optional() }).passthrough(),
 	})
 	.passthrough();
 
