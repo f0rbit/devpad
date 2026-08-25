@@ -653,6 +653,15 @@ button.outline-row {
 	min-width: 0;
 }
 
+@media (max-width: 480px) {
+	/* Claim provenance is the least load-bearing chip at a glance — dropping it
+	   first keeps the priority/policy chips on the title's own line instead of
+	   wrapping the whole group onto an awkward second line. */
+	.outline-chips .badge {
+		display: none;
+	}
+}
+
 .outline-chip {
 	font-size: 10.5px;
 	font-family: var(--font-mono);
