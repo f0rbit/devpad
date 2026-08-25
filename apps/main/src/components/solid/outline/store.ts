@@ -290,6 +290,29 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		if (newParentId) expand(newParentId);
 	};
 
+	/** alt-↑/↓ — swaps rank with the previous/next sibling via `rank_between`, never a hand-constructed string. */
+	const moveSibling = async (id: string, direction: "up" | "down") => {
+		const task = tasks[id];
+		if (!task) return;
+		const siblings = childrenOf(task.parent_id, tasks);
+		const idx = siblings.findIndex((s) => s.id === id);
+		if (idx === -1) return;
+
+		const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+		if (targetIdx < 0 || targetIdx >= siblings.length) return; // already at this edge — no-op
+
+		const lower = direction === "up" ? (siblings[idx - 2]?.rank ?? null) : siblings[idx + 1].rank;
+		const upper = direction === "up" ? siblings[idx - 1].rank : (siblings[idx + 2]?.rank ?? null);
+		const newRank = rank_between(lower, upper);
+
+		const result = await api.reorderTask(id, newRank, input.ownerId);
+		if (!result.ok) {
+			toast(`Couldn't reorder "${task.title}": ${result.error.message}`, "error");
+			return;
+		}
+		setTasks(id, result.value.task);
+	};
+
 	return {
 		tasks,
 		rollups,
@@ -321,6 +344,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		commitRename,
 		addChild,
 		reparent,
+		moveSibling,
 		/**
 		 * Wholesale swap for a zoom navigation — a fresh `tree()`/`ancestors()` fetch
 		 * replaces the visible view entirely. `selectAfter` re-selects the node the

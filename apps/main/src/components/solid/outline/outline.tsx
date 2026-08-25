@@ -112,6 +112,12 @@ export default function Outline(props: OutlineProps) {
 
 		const selected = store.selected();
 
+		if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+			e.preventDefault();
+			if (!selected || !store.tasks[selected]) return;
+			void store.moveSibling(selected, e.key === "ArrowUp" ? "up" : "down");
+			return;
+		}
 		if (e.key === "j" || e.key === "ArrowDown") {
 			e.preventDefault();
 			store.selectDelta(1);
@@ -266,6 +272,9 @@ export default function Outline(props: OutlineProps) {
 				</span>
 				<span>
 					<b>tab</b> nest
+				</span>
+				<span>
+					<b>⌥↑/↓</b> reorder
 				</span>
 				<span>
 					<b>o</b> add child

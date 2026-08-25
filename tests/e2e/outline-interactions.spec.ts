@@ -163,6 +163,40 @@ test.describe("outline row interactions", () => {
 		expect(focused).toBe(true); // landed on something INSIDE the outline, not hijacked out of it entirely either
 	});
 
+	test("alt-↑ moves a sibling up (rank_between) and persists across reload", async ({ page, context }) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		const titleA = `E2E reorder A ${Date.now()}`;
+		const titleB = `E2E reorder B ${Date.now()}`;
+		await quickAdd(page, titleA);
+		const rowB = await quickAdd(page, titleB); // appended after A — B starts below A
+
+		const orderOf = async () => {
+			const titles = await page.locator(".outline-title").allTextContents();
+			return { a: titles.indexOf(titleA), b: titles.indexOf(titleB) };
+		};
+
+		const before = await orderOf();
+		expect(before.a).toBeGreaterThanOrEqual(0);
+		expect(before.b).toBeGreaterThan(before.a);
+
+		await rowB.locator(".outline-title").click();
+		await expect(rowB).toHaveClass(/outline-row-selected/);
+		await page.locator(".outline-container").press("Alt+ArrowUp");
+
+		await expect
+			.poll(async () => {
+				const order = await orderOf();
+				return order.b - order.a;
+			})
+			.toBeLessThan(0);
+
+		await page.reload();
+		const after_reload = await orderOf();
+		expect(after_reload.b).toBeLessThan(after_reload.a);
+	});
+
 	test("a fully-done auto_children subtree compacts into a summary row", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);

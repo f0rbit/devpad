@@ -16,6 +16,11 @@ export function renameTask(id: string, title: string, owner_id: string): Promise
 	return getBrowserClient().tasks.upsert({ id, title, owner_id });
 }
 
+/** Sibling reorder (alt-↑/↓) — a plain field write, same as rename; `rank` never affects graph structure so no reparent guard applies. */
+export function reorderTask(id: string, rank: string, owner_id: string): Promise<ApiResult<TaskWithDetails>> {
+	return getBrowserClient().tasks.upsert({ id, rank, owner_id });
+}
+
 export function createChild(input: {
 	title: string;
 	owner_id: string;
