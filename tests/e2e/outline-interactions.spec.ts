@@ -144,6 +144,25 @@ test.describe("outline row interactions", () => {
 		await expect(page.locator(".outline-title", { hasText: title })).toBeVisible();
 	});
 
+	test("Tab is never hijacked before a row is actively selected — keyboard focus travels normally", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		const container = page.locator(".outline-container");
+		await expect(container).toBeFocused();
+
+		// no j/k selection yet — Tab must NOT be preventDefault-ed into a reparent;
+		// default browser focus traversal moves off the container onto the first
+		// interactive descendant (a row's own bullet/title button).
+		await page.keyboard.press("Tab");
+		await expect(container).not.toBeFocused();
+		const focused = await page.evaluate(() => document.activeElement?.closest(".outline-container") != null);
+		expect(focused).toBe(true); // landed on something INSIDE the outline, not hijacked out of it entirely either
+	});
+
 	test("a fully-done auto_children subtree compacts into a summary row", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
