@@ -7,6 +7,7 @@ import { Table } from "console-table-printer";
 import { register_pipelines_commands } from "./commands/pipelines";
 import { register_graph_commands } from "./graph-commands";
 import { register_plans_commands } from "./plans-commands";
+import { register_signoff_commands } from "./signoff-commands";
 import { make_spinner as createSpinner } from "./printer";
 import { resolve_owner_id, task_status_to_progress } from "./task-progress";
 import { parse_task_response } from "./task-response";
@@ -674,6 +675,9 @@ register_graph_commands(program, tasks, getApiClient);
 
 // v2.4 docs verbs (task A4.1) — `plans push|pull|versions|list`.
 register_plans_commands(program, getApiClient);
+
+// v2.4 signoff verbs (task A4.3) — `signoffs request|get|decide`.
+register_signoff_commands(program, getApiClient);
 
 // Pipelines subcommand group — `init` is fully local (no API key);
 // `artifacts upload` runs locally against the corpus backend;

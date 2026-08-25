@@ -52,6 +52,7 @@ import type {
 	PipelineStageEvent,
 	Project,
 	SaveConfigRequest,
+	Signoff,
 	StageEventKind,
 	TagWithTypedColor,
 	Task,
@@ -69,10 +70,12 @@ import type {
 	ClaimRequest,
 	CreateThreadRequest,
 	DashboardResponse,
+	DecideCheckpointRequest,
 	DoneRequest,
 	HookActionPublic,
 	HookTrigger,
 	PushDocRequest,
+	RequestCheckpointRequest,
 	ThreadMarker,
 	UpsertHook,
 } from "@devpad/schema/validation";
@@ -206,6 +209,7 @@ export class ApiClient {
 			pipelines: new HttpClient({ ...clientOptions, category: "pipelines" }),
 			hooks: new HttpClient({ ...clientOptions, category: "hooks" }),
 			docs: new HttpClient({ ...clientOptions, category: "docs" }),
+			signoffs: new HttpClient({ ...clientOptions, category: "signoffs" }),
 			reviews: new HttpClient({ ...clientOptions, category: "reviews" }),
 		} as const;
 	}
@@ -851,6 +855,21 @@ export class ApiClient {
 				if (filters.document_id) query.document_id = filters.document_id;
 				return this.clients.docs.get<AnnotationThread[]>("/docs/annotations/unresolved", { query });
 			}),
+	};
+
+	/**
+	 * Signoffs namespace (v2.4, task A4.3) — the generalized human-approval
+	 * ledger. `decide` is human-only; an api-channel key gets 403.
+	 */
+	public readonly signoffs = {
+		request: (data: RequestCheckpointRequest): Promise<ApiResult<{ signoff: Signoff; task_id: string }>> =>
+			wrap(() => this.clients.signoffs.post<{ signoff: Signoff; task_id: string }>("/signoffs", { body: data })),
+
+		find: (id: string): Promise<ApiResult<Signoff>> =>
+			wrap(() => this.clients.signoffs.get<Signoff>(`/signoffs/${id}`)),
+
+		decide: (id: string, data: DecideCheckpointRequest): Promise<ApiResult<Signoff>> =>
+			wrap(() => this.clients.signoffs.post<Signoff>(`/signoffs/${id}/decide`, { body: data })),
 	};
 
 	/**

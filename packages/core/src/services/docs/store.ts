@@ -155,13 +155,15 @@ export async function list_versions(
  * Zero-copy approval transition (task A4.3) — mutates the EXISTING version's
  * metadata to add `tag`, via the backend's metadata client directly. No new
  * content write, no new version: promoting a doc never touches `data`.
+ * Returns the version's content hash so `signoff.ts` can stamp the decision
+ * row with exactly what was approved.
  */
 export async function promote(
 	backend: Backend,
 	document_id: string,
 	version: string,
 	tag: string,
-): Promise<Result<void, DocCorpusError>> {
+): Promise<Result<{ content_hash: string }, DocCorpusError>> {
 	const store_id = docStoreId(document_id);
 	const meta_result = await backend.metadata.get(store_id, version);
 	if (!meta_result.ok) return err(map_corpus_error(meta_result.error, document_id));
@@ -169,7 +171,7 @@ export async function promote(
 	tags.add(tag);
 	const put_result = await backend.metadata.put({ ...meta_result.value, tags: [...tags] });
 	if (!put_result.ok) return err(map_corpus_error(put_result.error, document_id));
-	return ok(undefined);
+	return ok({ content_hash: meta_result.value.content_hash });
 }
 
 // ---------------------------------------------------------------------------

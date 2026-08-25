@@ -3,7 +3,9 @@ import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema"
 import {
 	apply_request,
 	create_thread_request,
+	decide_checkpoint_request,
 	push_doc_request,
+	request_checkpoint_request,
 	save_config_request,
 	save_tags_request,
 	upsert_goal,
@@ -1212,6 +1214,33 @@ export const tools: Record<string, ToolDefinition> = {
 			document_id: z.string().optional().describe("Document ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.docs.unresolved(input)),
+	}),
+
+	// Signoffs (v2.4, task A4.3) — generalized human-approval ledger
+	devpad_signoffs_request: define_tool({
+		name: "devpad_signoffs_request",
+		description:
+			"Request a human signoff checkpoint — creates a pending approval node that blocks the named downstream tasks until decided",
+		inputSchema: request_checkpoint_request,
+		execute: async (client, input) => unwrap(await client.signoffs.request(input)),
+	}),
+
+	devpad_signoffs_get: define_tool({
+		name: "devpad_signoffs_get",
+		description: "Get a signoff checkpoint's current state",
+		inputSchema: z.object({ id: z.string().describe("Signoff ID") }),
+		execute: async (client, input) => unwrap(await client.signoffs.find(input.id)),
+	}),
+
+	devpad_signoffs_decide: define_tool({
+		name: "devpad_signoffs_decide",
+		description:
+			"Decide a signoff checkpoint (approved | changes_requested). Human-only — an api-channel key gets 403. Approving a doc_version subject is vetoed by any open blocking annotation thread.",
+		inputSchema: decide_checkpoint_request.extend({ id: z.string().describe("Signoff ID") }),
+		execute: async (client, input) => {
+			const { id, ...rest } = input;
+			return unwrap(await client.signoffs.decide(id, rest));
+		},
 	}),
 };
 

@@ -32,6 +32,8 @@ function graph_error_response(c: Context<AppContext>, error: { kind: string; mes
 	}
 	if (error.kind === "not_found") return c.json(null, 404);
 	if (error.kind === "forbidden") return c.json({ error: error.message }, 401);
+	// v2.4 (task A4.3) — approval-kind tasks are human-only completable.
+	if (error.kind === "approval_channel") return c.json({ error: error.message, task_id: error.task_id }, 403);
 	return c.json({ error: error.kind }, 500);
 }
 
@@ -138,6 +140,11 @@ app.patch("/", requireAuth, zValidator("json", upsert_todo), async (c) => {
 				409,
 			);
 		if (result.error.kind === "bad_request") return c.json({ error: result.error.message }, 400);
+		// v2.4 (task A4.3) — a fresh-complete on an approval-kind task routes
+		// through the same engine as `/done`; approval_channel is 403 here too.
+		if (result.error.kind === "approval_channel") {
+			return c.json({ error: result.error.message, task_id: result.error.task_id }, 403);
+		}
 		return c.json({ error: result.error.kind }, 500);
 	}
 	return c.json(result.value);
@@ -339,6 +346,11 @@ app.post("/apply", requireAuth, zValidator("json", apply_request), async (c) => 
 	const result = await graph.apply(db, data, { owner_id: auth_user.id });
 	if (!result.ok) {
 		if (result.error.kind === "apply_op_failed") {
+			// v2.4 (task A4.3) — an approval-kind task's guard failing inside a
+			// batch is a 403 (human-only), not a generic 409 op conflict.
+			if (result.error.error.kind === "approval_channel") {
+				return c.json({ error: result.error.error.message, task_id: result.error.error.task_id }, 403);
+			}
 			return c.json(
 				{ error: result.error.error.kind, op_index: result.error.op_index, details: result.error.error },
 				409,

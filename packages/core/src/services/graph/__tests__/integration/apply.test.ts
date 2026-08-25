@@ -116,3 +116,38 @@ describe("apply — link and claim ops", () => {
 		expect(blocker.claimed_by).toBe("agent-1");
 	});
 });
+
+describe("apply — approval-kind tasks are human-only completable (task A4.3)", () => {
+	test("rejects a create op that tries to insert a pre-completed approval task, bypassing the completion engine entirely", async () => {
+		const result = await apply(
+			db,
+			{
+				idempotency_key: "idem-approval-bypass-1",
+				ops: [{ op: "create", data: { owner_id, title: "Sneaky approval", kind: "approval", progress: "COMPLETED" } }],
+			},
+			{ owner_id },
+		);
+
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("apply_op_failed");
+		if (result.error.kind !== "apply_op_failed") return;
+		expect(result.error.error.kind).toBe("approval_channel");
+
+		const rows = await db.select().from(task);
+		expect(rows).toHaveLength(0);
+	});
+
+	test("an ordinary task created pre-completed is unaffected by the guard", async () => {
+		const result = await apply(
+			db,
+			{
+				idempotency_key: "idem-approval-bypass-2",
+				ops: [{ op: "create", data: { owner_id, title: "Fine", kind: "task", progress: "COMPLETED" } }],
+			},
+			{ owner_id },
+		);
+
+		expect(result.ok).toBe(true);
+	});
+});

@@ -536,6 +536,7 @@ export const signoff_subject_kind = z.enum(SIGNOFF_SUBJECT_KINDS);
 export const signoff_checkpoint = z.enum(SIGNOFF_CHECKPOINTS);
 
 export const request_checkpoint_request = z.object({
+	project_id: z.string(),
 	subject_kind: signoff_subject_kind,
 	subject_id: z.string(),
 	checkpoint: signoff_checkpoint,
