@@ -216,7 +216,14 @@ export const goal = sqliteTable("goal", {
 export const GRAPH_DEPTH_CAP = 8;
 export const GRAPH_CHILDREN_CAP = 100;
 
-export const TASK_KINDS = ["task", "phase", "approval"] as const;
+// v2.4 (task A5.1) — `milestone`/`goal` are the fold targets: the frozen
+// `milestone`/`goal` tables are backfilled into task rows of these exact
+// kinds so compat projections (`services/milestones.ts`, `services/goals.ts`)
+// can filter by `kind` instead of guessing which `phase`-kind tasks used to
+// be goals. This is a TS-only enum change — the `kind` column has never had
+// a DB-level CHECK constraint (see every prior `ALTER TABLE task ADD kind`
+// migration), so extending it produces a no-op `drizzle-kit generate` diff.
+export const TASK_KINDS = ["task", "phase", "approval", "milestone", "goal"] as const;
 export type TaskKind = (typeof TASK_KINDS)[number];
 
 export const COMPLETION_POLICIES = ["manual", "auto_children"] as const;
