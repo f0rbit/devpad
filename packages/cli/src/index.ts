@@ -5,6 +5,7 @@ import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
 import { register_pipelines_commands } from "./commands/pipelines";
+import { register_graph_commands } from "./graph-commands";
 import { make_spinner as createSpinner } from "./printer";
 import { resolve_owner_id, task_status_to_progress } from "./task-progress";
 import { parse_task_response } from "./task-response";
@@ -591,6 +592,9 @@ user
 			handleError(error);
 		}
 	});
+
+// v2.4 graph verbs — `ready` (top-level) + `tasks tree|near|claim|link|unlink|apply`.
+register_graph_commands(program, tasks, getApiClient);
 
 // Pipelines subcommand group — `init` is fully local (no API key);
 // `artifacts upload` runs locally against the corpus backend;

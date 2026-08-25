@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { STAGE_EVENT_KINDS } from "./database/schema.js";
+import { STAGE_EVENT_KINDS, TASK_LINK_KINDS } from "./database/schema.js";
 
 export const upsert_project = z.object({
 	id: z.string().optional().nullable(),
@@ -61,6 +61,13 @@ export const upsert_todo = z.object({
 	owner_id: z.string(),
 	project_id: z.string().optional().nullable(),
 	goal_id: z.string().optional().nullable(),
+	// v2.4 graph fields. `completed_via` is deliberately absent — it's
+	// engine-owned (CompletionEngine, phase A2) and must never be settable
+	// from client input.
+	parent_id: z.string().optional().nullable(),
+	rank: z.string().optional(),
+	kind: z.union([z.literal("task"), z.literal("phase"), z.literal("approval")]).optional(),
+	completion_policy: z.union([z.literal("manual"), z.literal("auto_children")]).optional(),
 	force: z.boolean().optional().describe("Override protection on user-modified entities"),
 });
 
@@ -344,3 +351,55 @@ export const dashboard_response = z.object({
 	rollback_rate: z.number().min(0).max(1).nullable(),
 });
 export type DashboardResponse = z.infer<typeof dashboard_response>;
+
+// ---------------------------------------------------------------------------
+// v2.4 graph primitives — external refs, task_link, batch apply
+// ---------------------------------------------------------------------------
+
+export const external_ref = z.discriminatedUnion("type", [
+	z.object({ type: z.literal("pr"), url: z.string().min(1) }),
+	z.object({ type: z.literal("commit"), sha: z.string().min(1) }),
+	z.object({ type: z.literal("file"), path: z.string().min(1) }),
+	z.object({ type: z.literal("doc"), doc_id: z.string().min(1) }),
+	z.object({ type: z.literal("metric"), name: z.string().min(1) }),
+	z.object({ type: z.literal("pipeline_run"), run_id: z.string().min(1) }),
+]);
+
+export const task_link_kind = z.enum(TASK_LINK_KINDS);
+
+export const upsert_task_link = z.object({
+	id: z.string().optional().nullable(),
+	src_id: z.string(),
+	dst_id: z.string().nullable().optional(),
+	kind: task_link_kind,
+	ref: external_ref.nullable().optional(),
+	note: z.string().nullable().optional(),
+});
+
+// Batch apply (task A1.4) — a Zod discriminated union of graph operations,
+// with `$0`/`$1`… temp-handle strings letting one call reference a not-yet-
+// created row's id from a later op in the same batch.
+export const apply_op = z.discriminatedUnion("op", [
+	z.object({
+		op: z.literal("create"),
+		handle: z.string().optional().describe("Temp handle (e.g. '$0') other ops in this batch may reference"),
+		data: upsert_todo,
+	}),
+	z.object({ op: z.literal("update"), id: z.string(), base_rev: z.number().int(), data: upsert_todo.partial() }),
+	z.object({ op: z.literal("reparent"), id: z.string(), parent_id: z.string().nullable(), base_rev: z.number().int() }),
+	z.object({ op: z.literal("link"), link: upsert_task_link }),
+	z.object({ op: z.literal("unlink"), id: z.string() }),
+	z.object({ op: z.literal("claim"), id: z.string(), actor: z.string(), base_rev: z.number().int() }),
+	z.object({ op: z.literal("complete"), id: z.string(), base_rev: z.number().int() }),
+]);
+export type ApplyOp = z.infer<typeof apply_op>;
+
+export const apply_request = z.object({
+	idempotency_key: z.string().min(1),
+	base_revs: z.record(z.string(), z.number().int()).optional(),
+	ops: z.array(apply_op).min(1),
+});
+export type ApplyRequest = z.infer<typeof apply_request>;
+
+export const claim_request = z.object({ actor: z.string().min(1), base_rev: z.number().int() });
+export type ClaimRequest = z.infer<typeof claim_request>;

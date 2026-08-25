@@ -48,13 +48,22 @@ import type {
 	SaveConfigRequest,
 	StageEventKind,
 	TagWithTypedColor,
+	Task,
+	TaskLink,
 	TaskWithDetails,
 	TodoUpdate,
 	UpsertProject,
 	UpsertTag,
+	UpsertTaskLink,
 	UpsertTodo,
 } from "@devpad/schema/types";
-import type { DashboardResponse } from "@devpad/schema/validation";
+import type { ApplyOp, ApplyRequest, ClaimRequest, DashboardResponse } from "@devpad/schema/validation";
+
+type ReadyResponse = { items: Task[]; next_cursor: string | null };
+type TreeResponse = { task: Task; descendants: Task[] };
+type NearResponse = { links: TaskLink[]; tasks: Task[] };
+type ApplyOpResult = { op: ApplyOp["op"]; id: string };
+type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
@@ -659,6 +668,50 @@ export class ApiClient {
 			get: (task_id: string): Promise<ApiResult<HistoryAction[]>> =>
 				wrap(() => this.clients.tasks.get<HistoryAction[]>(`/tasks/history/${task_id}`)),
 		},
+
+		/**
+		 * Ready-to-work tasks: not completed, not blocked by an incomplete
+		 * `blocks` edge, no incomplete children, start_time null-or-passed.
+		 */
+		ready: (filters?: { project_id?: string; limit?: number; cursor?: string }): Promise<ApiResult<ReadyResponse>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (filters?.project_id) query.project = filters.project_id;
+				if (filters?.limit) query.limit = String(filters.limit);
+				if (filters?.cursor) query.cursor = filters.cursor;
+				return this.clients.tasks.get<ReadyResponse>("/tasks/ready", Object.keys(query).length > 0 ? { query } : {});
+			}),
+
+		/** Bounded descendant subtree of a task. */
+		tree: (id: string, depth?: number): Promise<ApiResult<TreeResponse>> =>
+			wrap(() =>
+				this.clients.tasks.get<TreeResponse>(`/tasks/${id}/tree`, depth ? { query: { depth: String(depth) } } : {}),
+			),
+
+		/** depth-2 link neighborhood around a task, including backlinks. */
+		near: (id: string): Promise<ApiResult<NearResponse>> =>
+			wrap(() => this.clients.tasks.get<NearResponse>(`/tasks/${id}/near`)),
+
+		/** Atomic claim: sets claimed_by/claimed_at + IN_PROGRESS, guarded on claimed_by IS NULL and base_rev. */
+		claim: (id: string, data: ClaimRequest): Promise<ApiResult<Task>> =>
+			wrap(() => this.clients.tasks.post<Task>(`/tasks/${id}/claim`, { body: data })),
+
+		/** Create a typed edge between two tasks (or a task and an external ref). */
+		link: (data: UpsertTaskLink): Promise<ApiResult<TaskLink>> =>
+			wrap(() => this.clients.tasks.post<TaskLink>("/tasks/link", { body: data })),
+
+		/** Remove a typed edge by its own id. */
+		unlink: (link_id: string): Promise<ApiResult<{ success: boolean }>> =>
+			wrap(() => this.clients.tasks.delete<{ success: boolean }>(`/tasks/link/${link_id}`)),
+
+		/**
+		 * Batch apply — create/update/reparent/link/unlink/claim/complete in one
+		 * atomic call, with `$0`/`$1`… temp handles for subtree creation.
+		 * Replaying the same `idempotency_key` returns the stored response
+		 * verbatim rather than re-executing.
+		 */
+		apply: (data: ApplyRequest): Promise<ApiResult<ApplyResponse>> =>
+			wrap(() => this.clients.tasks.post<ApplyResponse>("/tasks/apply", { body: data })),
 	};
 
 	/**
