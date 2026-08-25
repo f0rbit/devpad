@@ -34,6 +34,16 @@ export const E2E_TASK_MILESTONE = "task_e2e-outline-milestone" as const;
 export const E2E_TASK_MILESTONE_CHILD = "task_e2e-outline-milestone-child" as const;
 
 /**
+ * Second milestone (B3 — B2 critic carry-over), `auto_children` policy,
+ * blocked by the first via a real `blocks` edge — exercises the lens's
+ * real-edge sequencing arrow (never rank adjacency) + policy badge. Its own
+ * child is seeded COMPLETED so the expanded child list has a real done mark
+ * to assert against.
+ */
+export const E2E_TASK_MILESTONE_2 = "task_e2e-outline-milestone-2" as const;
+export const E2E_TASK_MILESTONE_2_CHILD = "task_e2e-outline-milestone-2-child" as const;
+
+/**
  * Two-hop auto_children chain (grandparent -> parent -> leaf), reserved for
  * the ripple spec — completing the leaf bubbles both ancestors, giving a
  * real 2-hop chain to assert choreography/reduced-motion against without

@@ -1,15 +1,16 @@
-import type { Milestone, Task, UpsertMilestone } from "@devpad/schema";
+import type { CompletionPolicy, Milestone, Task, UpsertMilestone } from "@devpad/schema";
 import type { ActionType } from "@devpad/schema/database";
 import { action, project, task } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { SqlCompletionEngine } from "./graph/completion.js";
-import type { GraphConflictError } from "./graph/graph.js";
+import { blocks_edges_among, type GraphConflictError, subtree } from "./graph/graph.js";
+import { edge_summary_for, type EdgeSummary } from "./graph/edge-summary.js";
 import { write_with_event } from "./graph/outbox.js";
 import { rank_between } from "./graph/rank.js";
-import { refresh_rollup_chain } from "./graph/rollup.js";
+import { refresh_rollup_chain, rollups_for, type RollupCounts } from "./graph/rollup.js";
 import { doesUserOwnProject } from "./projects.js";
 
 /**
@@ -370,4 +371,70 @@ export async function addMilestoneAction(
 		channel,
 	});
 	return ok(true);
+}
+
+export type MilestoneLensRow = {
+	milestone: Milestone;
+	completion_policy: CompletionPolicy;
+	rollup: RollupCounts | undefined;
+	edge: EdgeSummary | undefined;
+	descendants: Task[];
+};
+export type MilestoneLens = { rows: MilestoneLensRow[]; blocks: { src_id: string; dst_id: string }[] };
+
+/**
+ * v2.4 (B2 critic carry-over) — the milestone lens's single batched read.
+ * Replaces the lens's original N `GET /tasks/:id/tree` calls (one per
+ * milestone) with ONE call that computes `rollups_for`/`edge_summary_for`
+ * ONCE across the union of every milestone + its descendants, rather than
+ * once PER milestone — the actual N+1 this closes. `subtree` itself is still
+ * one recursive-CTE call per root (inherent to a per-root tree read; there's
+ * no batched-subtree primitive), but that fan-out now happens server-side in
+ * parallel instead of as N sequential client round-trips.
+ */
+export async function getMilestoneLens(
+	db: Database,
+	project_id: string,
+	depth: number,
+): Promise<Result<MilestoneLens, ServiceError>> {
+	const milestones_result = await getProjectMilestones(db, project_id);
+	if (!milestones_result.ok) return milestones_result;
+	const milestones = milestones_result.value;
+	if (milestones.length === 0) return ok({ rows: [], blocks: [] });
+
+	const milestone_ids = milestones.map((m) => m.id);
+	const subtree_results = await Promise.all(milestone_ids.map((id) => subtree(db, id, depth)));
+	const first_error = subtree_results.find((r) => !r.ok);
+	if (first_error && !first_error.ok) return first_error;
+	const descendants_by_id = new Map<string, Task[]>(
+		milestone_ids.map((id, i) => {
+			const result = subtree_results[i];
+			return [id, result?.ok ? result.value : []];
+		}),
+	);
+
+	const all_ids = [...milestone_ids, ...[...descendants_by_id.values()].flat().map((t) => t.id)];
+	const [rollups_result, edge_summary_result, blocks_result, policy_rows] = await Promise.all([
+		rollups_for(db, all_ids),
+		edge_summary_for(db, all_ids),
+		blocks_edges_among(db, milestone_ids),
+		db
+			.select({ id: task.id, completion_policy: task.completion_policy })
+			.from(task)
+			.where(inArray(task.id, milestone_ids)),
+	]);
+	if (!rollups_result.ok) return rollups_result;
+	if (!edge_summary_result.ok) return edge_summary_result;
+	if (!blocks_result.ok) return blocks_result;
+
+	const policy_by_id = new Map(policy_rows.map((r) => [r.id, r.completion_policy]));
+	const rows: MilestoneLensRow[] = milestones.map((m) => ({
+		milestone: m,
+		completion_policy: policy_by_id.get(m.id) ?? "manual",
+		rollup: rollups_result.value[m.id],
+		edge: edge_summary_result.value[m.id],
+		descendants: descendants_by_id.get(m.id) ?? [],
+	}));
+
+	return ok({ rows, blocks: blocks_result.value });
 }

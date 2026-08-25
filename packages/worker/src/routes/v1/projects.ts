@@ -327,6 +327,35 @@ app.get("/:id/milestones", requireAuth, async (c) => {
 	return c.json(result.value);
 });
 
+/**
+ * v2.4 (B2 critic carry-over) — the milestone lens's one batched read:
+ * rollups + edge summaries computed ONCE across every milestone's combined
+ * subtree, plus the real `blocks` edges among the milestones themselves
+ * (never rank adjacency) for the lens's sequencing arrows.
+ */
+app.get("/:id/milestones/lens", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const project_id = c.req.param("id");
+
+	if (!project_id) return c.json({ error: "Missing project ID" }, 400);
+
+	const project_result = await projects.getProjectById(db, project_id);
+	if (!project_result.ok) {
+		if (project_result.error.kind === "not_found") return c.json({ error: "Project not found" }, 404);
+		return c.json({ error: project_result.error.kind }, 500);
+	}
+	if (project_result.value.owner_id !== auth_user.id) return c.json({ error: "Unauthorized" }, 401);
+
+	const parsed_depth = Number(c.req.query("depth"));
+	const depth = Number.isFinite(parsed_depth) && parsed_depth > 0 ? parsed_depth : 2;
+
+	const result = await milestones.getMilestoneLens(db, project_result.value.id, depth);
+	if (!result.ok) return c.json({ error: result.error.kind }, 500);
+	return c.json(result.value);
+});
+
 app.get("/repos", requireAuth, async (c) => {
 	const session = c.get("session");
 	if (!session?.access_token) {

@@ -53,6 +53,8 @@ export type {
 	BubbleStep,
 	DoneResponse,
 	EdgeSummary,
+	MilestoneLensResponse,
+	MilestoneLensRow,
 	PublicHook,
 	RollupCounts,
 } from "./api-client";

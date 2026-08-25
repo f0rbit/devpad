@@ -30,6 +30,8 @@ import {
 	E2E_TASK_COMPACT_PARENT,
 	E2E_TASK_LEAF,
 	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_2,
+	E2E_TASK_MILESTONE_2_CHILD,
 	E2E_TASK_MILESTONE_CHILD,
 	E2E_TASK_PHASE,
 	E2E_TASK_RIPPLE_GRANDPARENT,
@@ -51,6 +53,8 @@ export {
 	E2E_TASK_COMPACT_PARENT,
 	E2E_TASK_LEAF,
 	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_2,
+	E2E_TASK_MILESTONE_2_CHILD,
 	E2E_TASK_MILESTONE_CHILD,
 	E2E_TASK_PHASE,
 	E2E_TASK_RIPPLE_GRANDPARENT,
@@ -264,6 +268,54 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 
 	await db.insert(task).values({
 		...base_task,
+		id: E2E_TASK_MILESTONE_2,
+		title: "Ripple v2",
+		kind: "milestone",
+		completion_policy: "auto_children",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		end_time: "2099-02-01T00:00:00.000Z",
+		rank: "i5a",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_MILESTONE_2_CHILD,
+		title: "Polish the ripple lens",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "COMPLETED",
+		priority: "LOW",
+		parent_id: E2E_TASK_MILESTONE_2,
+		rank: "i0",
+	} as never);
+
+	await db.insert(task_rollup).values({
+		task_id: E2E_TASK_MILESTONE_2,
+		direct_done: 1,
+		direct_total: 1,
+		subtree_done: 1,
+		subtree_total: 1,
+	} as never);
+
+	await db.insert(task_link).values({
+		id: `link_${E2E_TASK_MILESTONE}-blocks-${E2E_TASK_MILESTONE_2}`,
+		src_id: E2E_TASK_MILESTONE,
+		dst_id: E2E_TASK_MILESTONE_2,
+		kind: "blocks",
+		ref: null,
+		note: null,
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
 		id: E2E_TASK_RIPPLE_GRANDPARENT,
 		title: "Ripple grandparent",
 		kind: "phase",
@@ -358,8 +410,12 @@ async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(task).where(eq(task.id, E2E_TASK_COMPACT_CHILD));
 	await db.delete(task).where(eq(task.id, E2E_TASK_COMPACT_PARENT));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_MILESTONE));
+	await db.delete(task_link).where(eq(task_link.id, `link_${E2E_TASK_MILESTONE}-blocks-${E2E_TASK_MILESTONE_2}`));
 	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_CHILD));
 	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE));
+	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_MILESTONE_2));
+	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_2_CHILD));
+	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_2));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_GRANDPARENT));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_PARENT));
 	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_LEAF));

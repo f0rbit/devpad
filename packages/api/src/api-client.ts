@@ -36,6 +36,7 @@ import type {
 	AnnotationThread,
 	ApiKey,
 	CompletedVia,
+	CompletionPolicy,
 	Document,
 	GetConfigResult,
 	Goal,
@@ -133,6 +134,15 @@ type TreeResponse = {
 	edge_summary: Partial<Record<string, EdgeSummary>>;
 };
 type NearResponse = { links: TaskLink[]; tasks: Task[]; rollups: Partial<Record<string, RollupCounts>> };
+/** v2.4 (B2 critic carry-over) — the milestone lens's one batched read; see `packages/core/src/services/milestones.ts`'s `MilestoneLens`. */
+export type MilestoneLensRow = {
+	milestone: Milestone;
+	completion_policy: CompletionPolicy;
+	rollup: RollupCounts | undefined;
+	edge: EdgeSummary | undefined;
+	descendants: Task[];
+};
+export type MilestoneLensResponse = { rows: MilestoneLensRow[]; blocks: { src_id: string; dst_id: string }[] };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 export type BubbleStep = { task: Task; via: CompletedVia };
@@ -503,6 +513,19 @@ export class ApiClient {
 		 */
 		getByProject: (project_id: string): Promise<ApiResult<Milestone[]>> =>
 			wrap(() => this.clients.milestones.get<Milestone[]>(`/projects/${project_id}/milestones`)),
+
+		/**
+		 * v2.4 (B2 critic carry-over) — the milestone lens's one batched read:
+		 * rollups/edge-summaries computed once across every milestone's
+		 * combined subtree, plus the real `blocks` edges between milestones for
+		 * the lens's sequencing arrows. Replaces N `tasks.tree()` calls.
+		 */
+		lens: (project_id: string, depth?: number): Promise<ApiResult<MilestoneLensResponse>> =>
+			wrap(() =>
+				this.clients.milestones.get<MilestoneLensResponse>(`/projects/${project_id}/milestones/lens`, {
+					query: depth ? { depth: String(depth) } : {},
+				}),
+			),
 
 		/**
 		 * Get milestone by ID
