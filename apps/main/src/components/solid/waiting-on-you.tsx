@@ -76,7 +76,7 @@ export function WaitingOnYou(props: WaitingOnYouProps) {
 											Approve
 										</Button>
 										<Button
-											variant="danger"
+											variant="ghost"
 											size="sm"
 											disabled={deciding() === item.subject_id}
 											onClick={() => void decide(item, "changes_requested")}

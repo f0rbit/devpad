@@ -137,9 +137,6 @@ export function OutlineRow(props: OutlineRowProps) {
 				<Show when={task().priority === "HIGH"}>
 					<span class="outline-chip outline-chip-hi">HIGH</span>
 				</Show>
-				<Show when={task().priority === "LOW"}>
-					<span class="outline-chip outline-chip-lo">LOW</span>
-				</Show>
 				<Show when={task().completion_policy === "auto_children" && isChildful()}>
 					<span
 						class="outline-chip outline-chip-auto"

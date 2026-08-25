@@ -7,6 +7,9 @@ type ZoomHeaderProps = {
 	projectName: string;
 	store: OutlineStore;
 	onZoomTo: (id: string | null) => void;
+	/** Click equivalents of the g/m shortcuts — the hintbar that documents them is hidden on touch/≤480px. */
+	onOpenGraphLens: () => void;
+	onOpenMilestoneLens: () => void;
 };
 
 /**
@@ -24,35 +27,46 @@ export function ZoomHeader(props: ZoomHeaderProps) {
 		<Show when={zoomTask()}>
 			{(task) => (
 				<div class="outline-zoomhead">
-					<nav class="outline-crumbs" data-testid="outline-crumbs" aria-label="Breadcrumb">
-						<button
-							type="button"
-							class="outline-crumb"
-							onClick={() => {
-								props.onZoomTo(null);
-							}}
-						>
-							{props.projectName}
-						</button>
-						<For each={chain()}>
-							{(ancestor: Task) => (
-								<>
-									<span class="outline-crumb-sep">›</span>
-									<button
-										type="button"
-										class="outline-crumb"
-										onClick={() => {
-											props.onZoomTo(ancestor.id);
-										}}
-									>
-										{ancestor.title}
-									</button>
-								</>
-							)}
-						</For>
-						<span class="outline-crumb-sep">›</span>
-						<span class="outline-crumb-here">{task().title}</span>
-					</nav>
+					<div class="outline-zoomhead-toprow">
+						<nav class="outline-crumbs" data-testid="outline-crumbs" aria-label="Breadcrumb">
+							<button
+								type="button"
+								class="outline-crumb"
+								onClick={() => {
+									props.onZoomTo(null);
+								}}
+							>
+								{props.projectName}
+							</button>
+							<For each={chain()}>
+								{(ancestor: Task) => (
+									<>
+										<span class="outline-crumb-sep">›</span>
+										<button
+											type="button"
+											class="outline-crumb"
+											onClick={() => {
+												props.onZoomTo(ancestor.id);
+											}}
+										>
+											{ancestor.title}
+										</button>
+									</>
+								)}
+							</For>
+							<span class="outline-crumb-sep">›</span>
+							<span class="outline-crumb-here">{task().title}</span>
+						</nav>
+
+						<div class="outline-lensbtns" data-testid="outline-lensbtns">
+							<button type="button" class="outline-lensbtn" onClick={props.onOpenGraphLens}>
+								graph <kbd class="outline-kbd">g</kbd>
+							</button>
+							<button type="button" class="outline-lensbtn" onClick={props.onOpenMilestoneLens}>
+								milestones <kbd class="outline-kbd">m</kbd>
+							</button>
+						</div>
+					</div>
 
 					<div class="outline-zoom-title-row">
 						<Ring
@@ -68,9 +82,6 @@ export function ZoomHeader(props: ZoomHeaderProps) {
 						<span class="outline-chip">{task().kind}</span>
 						<Show when={task().priority === "HIGH"}>
 							<span class="outline-chip outline-chip-hi">HIGH</span>
-						</Show>
-						<Show when={task().priority === "LOW"}>
-							<span class="outline-chip outline-chip-lo">LOW</span>
 						</Show>
 						<Show when={task().completion_policy === "auto_children"}>
 							<span

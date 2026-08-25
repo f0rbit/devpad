@@ -1,7 +1,7 @@
 import dagre, { type GraphLabel, type NodeLabel } from "@dagrejs/dagre";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { RollupCounts } from "@devpad/api";
-import type { Task, TaskLink } from "@devpad/schema";
+import { TASK_LINK_KINDS, type Task, type TaskLink } from "@devpad/schema";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import { LensShell } from "./lens-shell";
 
@@ -75,6 +75,18 @@ const EDGE_CLASS: Record<TaskLink["kind"], string> = {
 	discovered_from: "lens-edge-discovered",
 	references: "lens-edge-references",
 	tracks_metric: "lens-edge-metric",
+};
+
+/** Every edge kind gets its own arrowhead marker so color-blind users still
+ * get the kind from marker shape/fill, matching `EDGE_CLASS`'s stroke. */
+const arrowIdFor = (kind: TaskLink["kind"]): string => `lens-arrow-${kind.replace(/_/g, "-")}`;
+
+const EDGE_LABEL: Record<TaskLink["kind"], string> = {
+	blocks: "blocks",
+	relates_to: "relates to",
+	discovered_from: "discovered from",
+	references: "references",
+	tracks_metric: "tracks metric",
 };
 
 const pathFor = (points: { x: number; y: number }[]): string =>
@@ -151,10 +163,23 @@ export default function GraphLens(props: GraphLensProps) {
 	const onPointerUp = () => {
 		dragging = false;
 	};
+	// Cursor-anchored zoom — the point under the pointer stays fixed on screen
+	// (compensate x/y for the scale change) rather than pivoting at the
+	// viewport's layout origin, which used to shove the graph sideways on
+	// every scroll tick.
 	const onWheel = (e: WheelEvent) => {
 		e.preventDefault();
+		const rect = viewportRef?.getBoundingClientRect();
+		if (!rect) return;
+		const px = e.clientX - rect.left;
+		const py = e.clientY - rect.top;
 		const delta = -e.deltaY * 0.0012;
-		setTransform((t) => ({ ...t, scale: Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale + delta)) }));
+		setTransform((t) => {
+			const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, t.scale + delta));
+			const worldX = (px - t.x) / t.scale;
+			const worldY = (py - t.y) / t.scale;
+			return { x: px - worldX * nextScale, y: py - worldY * nextScale, scale: nextScale };
+		});
 	};
 
 	const onKey = (e: KeyboardEvent) => {
@@ -218,28 +243,35 @@ export default function GraphLens(props: GraphLensProps) {
 		>
 			<div
 				ref={viewportRef}
-				class="lens-graph-viewport"
+				class={`lens-graph-viewport${loading() && data() ? " lens-graph-viewport-revalidating" : ""}`}
 				onPointerDown={onPointerDown}
 				onPointerMove={onPointerMove}
 				onPointerUp={onPointerUp}
 				onPointerLeave={onPointerUp}
 				onWheel={onWheel}
 			>
-				<Show when={!loading()} fallback={<p class="lens-graph-status">Loading neighborhood…</p>}>
+				{/* A depth toggle or refocus re-fetches — keep the STALE graph on
+				screen while it revalidates instead of blanking to a loading
+				state; only the very first load (no data yet) shows the fallback. */}
+				<Show when={data() !== null} fallback={<p class="lens-graph-status">Loading neighborhood…</p>}>
 					<Show when={layout().nodes.length > 0} fallback={<p class="lens-graph-status">No connections yet.</p>}>
 						<svg class="lens-graph-svg" width="100%" height="100%">
 							<defs>
-								<marker
-									id="lens-arrow"
-									viewBox="0 0 10 10"
-									refX="9"
-									refY="5"
-									markerWidth="7"
-									markerHeight="7"
-									orient="auto-start-reverse"
-								>
-									<path d="M0,0 L10,5 L0,10 z" class="lens-arrowhead" />
-								</marker>
+								<For each={TASK_LINK_KINDS}>
+									{(kind) => (
+										<marker
+											id={arrowIdFor(kind)}
+											viewBox="0 0 10 10"
+											refX="9"
+											refY="5"
+											markerWidth="7"
+											markerHeight="7"
+											orient="auto-start-reverse"
+										>
+											<path d="M0,0 L10,5 L0,10 z" class={`lens-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} />
+										</marker>
+									)}
+								</For>
 							</defs>
 							<g
 								transform={`translate(${String(transform().x)}, ${String(transform().y)}) scale(${String(transform().scale)})`}
@@ -249,7 +281,7 @@ export default function GraphLens(props: GraphLensProps) {
 										<path
 											d={pathFor(edge.points)}
 											class={`lens-edge ${EDGE_CLASS[edge.kind]}`}
-											marker-end="url(#lens-arrow)"
+											marker-end={`url(#${arrowIdFor(edge.kind)})`}
 										/>
 									)}
 								</For>
@@ -283,6 +315,16 @@ export default function GraphLens(props: GraphLensProps) {
 								</For>
 							</g>
 						</svg>
+						<div class="lens-legend" data-testid="lens-legend">
+							<For each={TASK_LINK_KINDS}>
+								{(kind) => (
+									<span class="lens-legend-item">
+										<span class={`lens-legend-sw ${EDGE_CLASS[kind]}-sw`} />
+										{EDGE_LABEL[kind]}
+									</span>
+								)}
+							</For>
+						</div>
 					</Show>
 				</Show>
 			</div>

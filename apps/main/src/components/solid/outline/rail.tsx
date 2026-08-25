@@ -56,6 +56,9 @@ export function Rail(props: RailProps) {
 		void getBrowserClient()
 			.tasks.near(id)
 			.then((result) => {
+				// A fast reselect can land an earlier row's response after a later
+				// one — drop it rather than overwrite the rail with stale data.
+				if (props.selectedTask?.id !== id) return;
 				if (!result.ok) {
 					setNear({ links: [], tasksById: {} });
 					return;
