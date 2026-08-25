@@ -1074,3 +1074,192 @@ button.outline-row {
 	font-size: 0.75rem;
 	color: var(--fg-subtle);
 }
+
+/* ── B2 lenses (graph / milestone) — ephemeral overlays, never routes ── */
+
+.lens-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	background: var(--bg);
+}
+
+.lens-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.lens-title {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.lens-header-extra {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+}
+
+.lens-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--bg-alt);
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.lens-close:hover {
+	color: var(--fg);
+	background: var(--bg);
+}
+
+.lens-depth-toggle {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.lens-depth-btn,
+.lens-fit-btn {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	padding: 3px 9px;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--bg-alt);
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.lens-depth-btn-active {
+	color: var(--accent-fg, var(--fg));
+	border-color: var(--accent);
+	background: color-mix(in oklch, var(--accent) 18%, var(--bg-alt));
+}
+
+.lens-body {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.lens-graph-viewport {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	cursor: grab;
+	touch-action: none;
+}
+
+.lens-graph-viewport:active {
+	cursor: grabbing;
+}
+
+.lens-graph-svg {
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+}
+
+.lens-graph-status {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--fg-faint);
+	font-size: 13px;
+}
+
+.lens-node {
+	cursor: pointer;
+}
+
+.lens-node-rect {
+	fill: var(--bg-alt);
+	stroke: var(--border);
+	stroke-width: 1.5;
+}
+
+.lens-node-doing .lens-node-rect {
+	stroke: var(--warning-fg);
+}
+
+.lens-node-done .lens-node-rect {
+	stroke: var(--success-fg);
+	fill: color-mix(in oklch, var(--success) 40%, var(--bg-alt));
+}
+
+.lens-node-focus .lens-node-rect {
+	stroke-width: 2.5;
+	stroke: var(--accent);
+}
+
+.lens-node-title {
+	font-size: 12px;
+	font-weight: 500;
+	fill: var(--fg);
+}
+
+.lens-node-meta {
+	font-size: 10.5px;
+	font-family: var(--font-mono);
+	fill: var(--fg-faint);
+}
+
+.lens-edge {
+	fill: none;
+	stroke: var(--fg-faint);
+	stroke-width: 1.5;
+}
+
+.lens-edge-blocks {
+	stroke: var(--error-fg);
+}
+
+.lens-edge-discovered {
+	stroke-dasharray: 4 3;
+	stroke: var(--info-fg);
+}
+
+.lens-edge-references {
+	stroke-dasharray: 2 3;
+}
+
+.lens-arrowhead {
+	fill: var(--fg-faint);
+}
+
+.lens-hintbar {
+	display: flex;
+	gap: 18px;
+	justify-content: center;
+	flex-wrap: wrap;
+	padding: 7px 16px;
+	border-top: 1px solid var(--border);
+	font-size: 11.5px;
+	color: var(--fg-faint);
+	font-family: var(--font-mono);
+	flex-shrink: 0;
+}
+
+.lens-hintbar b {
+	color: var(--fg-subtle);
+	font-weight: 600;
+}

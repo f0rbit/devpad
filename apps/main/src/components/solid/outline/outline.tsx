@@ -2,7 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Task } from "@devpad/schema";
 import { Button, Empty, Input, Tree } from "@f0rbit/ui";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { track } from "@/lib/pulse";
 import { loadOutline } from "@/utils/outline-data";
 import { Rail } from "./rail";
@@ -10,6 +10,10 @@ import { OutlineRow } from "./row";
 import { createOutlineStore, type OutlineStoreInput } from "./store";
 import { hasChildren, isCompactSummary, isMoreSummary, type OutlineTreeNode } from "./types";
 import { ZoomHeader } from "./zoom";
+
+// Lazy — dagre (graph-lens's layout engine) never lands in the initial page
+// bundle; the chunk is fetched only the first time a lens actually opens.
+const GraphLens = lazy(() => import("../lenses/graph-lens"));
 
 export type OutlineProps = {
 	project: { id: string; name: string };
@@ -56,6 +60,8 @@ export default function Outline(props: OutlineProps) {
 	const store = createOutlineStore({ ownerId: props.ownerId, projectId: props.project.id, ...props.initial });
 	const [quickAdd, setQuickAdd] = createSignal("");
 	const [quickAddOpen, setQuickAddOpen] = createSignal(false);
+	const [lensOpen, setLensOpen] = createSignal<"graph" | null>(null);
+	const [lensFocusId, setLensFocusId] = createSignal<string | null>(null);
 	let containerRef: HTMLDivElement | undefined;
 	// Set while replaying a popstate — history already moved, so navigateTo must
 	// not push a duplicate entry on top of it.
@@ -157,6 +163,14 @@ export default function Outline(props: OutlineProps) {
 		if (e.key === "o") {
 			e.preventDefault();
 			setQuickAddOpen(true);
+			return;
+		}
+		if (e.key === "g") {
+			const focus = (selected && store.tasks[selected]?.id) ?? store.zoomTask()?.id;
+			if (focus) {
+				setLensFocusId(focus);
+				setLensOpen("graph");
+			}
 			return;
 		}
 		if (e.key === "Enter") {
@@ -279,6 +293,9 @@ export default function Outline(props: OutlineProps) {
 				<span>
 					<b>o</b> add child
 				</span>
+				<span>
+					<b>g</b> graph lens
+				</span>
 			</div>
 
 			<div class="outline-toasts">
@@ -290,6 +307,14 @@ export default function Outline(props: OutlineProps) {
 					)}
 				</For>
 			</div>
+
+			<Show when={lensOpen() === "graph" && lensFocusId()}>
+				{(focusId) => (
+					<Suspense>
+						<GraphLens focusId={focusId()} onClose={() => setLensOpen(null)} onZoom={(id) => void navigateTo(id)} />
+					</Suspense>
+				)}
+			</Show>
 		</div>
 	);
 }
