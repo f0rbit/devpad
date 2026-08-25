@@ -13,6 +13,23 @@ export type AuthUser = z.infer<typeof AuthUserSchema>;
 
 export type HooksQueueMessage = { event_id: string };
 
+// v2.4 (task A3.4/A3.5) — the vault GitHubProxy RPC contract. Defined once
+// here so devpad's caller-side type (worker's VAULT_GITHUB binding + the
+// vault action executor) and vault's `GitHubVault` WorkerEntrypoint
+// implement against the exact same shape.
+export type VaultCallerIdentity = { package_id: string; environment: string };
+export type VaultRpcResult<T> = { ok: true; value: T } | { ok: false; error: { kind: string; message?: string } };
+export type GitHubVaultBinding = {
+	create_release(
+		input: Record<string, unknown>,
+		identity: VaultCallerIdentity,
+	): Promise<VaultRpcResult<{ id: number; html_url: string }>>;
+	get_latest_release(
+		input: Record<string, unknown>,
+		identity: VaultCallerIdentity,
+	): Promise<VaultRpcResult<{ id: number; tag_name: string; html_url: string }>>;
+};
+
 export type Bindings = {
 	DB?: D1Database;
 	BLOG_CORPUS_BUCKET?: R2Bucket;
@@ -22,6 +39,14 @@ export type Bindings = {
 	// the worker falls back to `InMemoryDispatcher` running the consumer
 	// synchronously.
 	HOOKS_QUEUE?: Queue<HooksQueueMessage>;
+	// v2.4 (task A3.4) — service binding to vault's `GitHubVault` entrypoint
+	// (companion PR, `~/dev/vault`). Absent until that PR is deployed and the
+	// binding is wired in wrangler.toml; the vault action executor treats a
+	// missing binding as "vault actions not configured" (permanent failure,
+	// not a retry loop).
+	VAULT_GITHUB?: GitHubVaultBinding;
+	PIPELINES_API_BASE?: string;
+	PIPELINES_TOKEN?: string;
 	ENVIRONMENT: string;
 	API_URL: string;
 	FRONTEND_URL: string;

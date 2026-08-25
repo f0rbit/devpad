@@ -1,11 +1,15 @@
 import { createSessionCookie, getSessionCookieName, validateSession } from "@devpad/core/auth";
 import { graph, hooks } from "@devpad/core/services";
 import {
+	type ActionExecutor,
 	CFQueueProvider,
+	compose_executors,
 	type DispatchProvider,
 	InMemoryDispatcher,
-	NoopActionExecutor,
+	PipelineActionExecutor,
 	process_task_event,
+	VaultActionExecutor,
+	WebhookActionExecutor,
 } from "@devpad/core/services/hooks";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
@@ -153,28 +157,27 @@ export const createApi = (options?: ApiOptions) => {
 		return c.json({ error: "Internal server error" }, 500);
 	});
 
-	// v2.4 (task A3.3) — post-commit outbox drain. `options.dispatch` is only
-	// ever set by the bun dev/test path (`dev.ts`), which has no real `c.env`
-	// bindings — mirrors how `db`/`config` are injected there. The real
-	// Workers runtime always falls through to `c.env.HOOKS_QUEUE`.
-	// `NoopActionExecutor` is a placeholder until task A3.4 wires real
-	// webhook/vault/pipeline executors.
+	// v2.4 (task A3.3/A3.4) — resolve the dispatch provider BEFORE the route
+	// runs (so `/tasks/:id/done` etc. can force an immediate attempt via
+	// `c.get("dispatch")`), then drain every pending outbox row after.
+	// `options.dispatch` is only ever set by the bun dev/test path
+	// (`dev.ts`), which has no real `c.env` bindings — mirrors how
+	// `db`/`config` are injected there. The real Workers runtime always
+	// falls through to `c.env.HOOKS_QUEUE`.
 	app.use("*", async (c, next) => {
-		await next();
 		const db = c.get("db");
-
 		const dispatch =
 			options?.dispatch ??
 			(c.env.HOOKS_QUEUE
 				? new CFQueueProvider(c.env.HOOKS_QUEUE)
 				: new InMemoryDispatcher(async (message) => {
-						const result = await process_task_event(
-							db,
-							{ pulse: c.get("pulse"), executor: NoopActionExecutor },
-							message.event_id,
-						);
+						const executor = buildHookExecutor(c.env, db);
+						const result = await process_task_event(db, { pulse: c.get("pulse"), executor }, message.event_id);
 						if (!result.ok) console.error("[worker] hook dispatch failed:", result.error);
 					}));
+		c.set("dispatch", dispatch);
+
+		await next();
 
 		const drain_task = hooks.drain_pending_events(db, dispatch);
 		try {
@@ -251,6 +254,29 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 		: undefined;
 
 	return { request: authed, session_cookie };
+}
+
+/**
+ * v2.4 (task A3.4) — composes the real webhook/pipeline/vault executors
+ * straight from Cloudflare bindings — usable both from the real Workers
+ * runtime (`c.env`) and the `queue()` handler's own `env` param, which is
+ * why this reads `Bindings` rather than the per-request `AppConfig` (bun
+ * dev/tests never reach this function at all; they use `dev.ts`'s injected
+ * `ApiOptions.dispatch` instead, see `createApi()`). `pipeline`/`vault` are
+ * omitted (permanent-failure, not silently no-op) when their config/binding
+ * isn't present — see each executor's own module doc for why that's the
+ * right failure mode.
+ */
+function buildHookExecutor(env: Bindings, db: Database): ActionExecutor {
+	const webhook = WebhookActionExecutor({ encryption_key: env.ENCRYPTION_KEY });
+	const pipeline =
+		env.PIPELINES_API_BASE && env.PIPELINES_TOKEN
+			? PipelineActionExecutor({ orchestrator_base: env.PIPELINES_API_BASE, token: env.PIPELINES_TOKEN, db })
+			: undefined;
+	const vault = env.VAULT_GITHUB
+		? VaultActionExecutor({ vault_github: env.VAULT_GITHUB, environment: env.ENVIRONMENT })
+		: undefined;
+	return compose_executors({ webhook, pipeline, vault });
 }
 
 function buildPulseForEnv(env: Bindings): ReturnType<typeof createPulse> | undefined {
@@ -361,18 +387,15 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			ctx.waitUntil(handleCron(app_ctx));
 		},
 
-		/**
-		 * v2.4 (task A3.3) — `devpad-hooks`/`devpad-hooks-preview` consumer.
-		 * `NoopActionExecutor` is a placeholder until task A3.4 wires real
-		 * webhook/vault/pipeline executors.
-		 */
+		/** v2.4 (task A3.3/A3.4) — `devpad-hooks`/`devpad-hooks-preview` consumer, real webhook/pipeline/vault executors. */
 		async queue(batch: MessageBatch<{ event_id: string }>, env: Bindings, ctx: ExecutionContext): Promise<void> {
 			if (!env.DB) return;
 			const db = createD1Database(env.DB);
 			const pulse = buildPulseForEnv(env);
+			const executor = buildHookExecutor(env, db);
 
 			for (const message of batch.messages) {
-				const result = await process_task_event(db, { pulse, executor: NoopActionExecutor }, message.body.event_id);
+				const result = await process_task_event(db, { pulse, executor }, message.body.event_id);
 				if (!result.ok) {
 					console.error("[worker] hook dispatch failed:", result.error);
 					message.retry();

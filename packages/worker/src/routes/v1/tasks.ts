@@ -1,4 +1,4 @@
-import { action, graph, tags, tasks } from "@devpad/core/services";
+import { action, graph, hooks, tags, tasks } from "@devpad/core/services";
 import {
 	type ApplyOp,
 	apply_request,
@@ -265,7 +265,18 @@ app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) =
 	const engine = new graph.SqlCompletionEngine(db);
 	const result = await engine.complete(id, auth_channel, data.base_rev);
 	if (!result.ok) return graph_error_response(c, result.error);
-	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired: [] });
+
+	// v2.4 (task A3.4) — force an immediate dispatch attempt for exactly the
+	// events this completion emitted, then report whichever finished
+	// synchronously. See `hooks.hooks_fired_for`'s doc for why this is
+	// best-effort, not a delivery guarantee.
+	const event_ids = result.value.events.map((event) => event.event_id);
+	const dispatch = c.get("dispatch");
+	if (dispatch) await Promise.all(event_ids.map((event_id) => dispatch.send({ event_id })));
+	const fired = await hooks.hooks_fired_for(db, event_ids);
+	const hooks_fired = fired.ok ? fired.value : [];
+
+	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired });
 });
 
 app.post("/link", requireAuth, zValidator("json", upsert_task_link), async (c) => {

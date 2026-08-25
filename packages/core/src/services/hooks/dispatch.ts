@@ -27,7 +27,7 @@ import { hook, hook_delivery, task_event } from "@devpad/schema/database/schema"
 import { hook_action_stored, hook_trigger, type HookActionStored, type HookTrigger } from "@devpad/schema/validation";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
-import { and, asc, eq, lt } from "drizzle-orm";
+import { and, asc, eq, inArray, lt } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
 import { ancestors } from "../graph/graph.js";
 import { sqlite_utc_cutoff } from "../graph/sweeper.js";
@@ -286,4 +286,23 @@ export async function process_task_event(
 		if (outcome.value === "retry") needs_retry = true;
 	}
 	return ok(needs_retry ? "retry" : "ack");
+}
+
+/**
+ * v2.4 (task A3.4) — the `POST /tasks/:id/done` response's `hooks_fired`
+ * field reads this after forcing an immediate dispatch attempt for the
+ * events that completion just emitted. Only ever reflects hooks that
+ * finished (`delivered`) inside that same request — production's
+ * `waitUntil`-based dispatch means a slow webhook/pipeline call can still
+ * be in flight when the response goes out, in which case it simply doesn't
+ * appear here (it's still recorded in `hook_delivery`, just not yet
+ * terminal). This is a best-effort UX signal, not a delivery guarantee.
+ */
+export async function hooks_fired_for(db: Database, event_ids: string[]): Promise<Result<string[], ServiceError>> {
+	if (event_ids.length === 0) return ok([]);
+	const rows = await db
+		.select({ hook_id: hook_delivery.hook_id })
+		.from(hook_delivery)
+		.where(and(inArray(hook_delivery.event_id, event_ids), eq(hook_delivery.status, "delivered")));
+	return ok([...new Set(rows.map((r) => r.hook_id))]);
 }
