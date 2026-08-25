@@ -62,6 +62,18 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		expect(tree.descendants.map((d) => d.id)).toContain(child.id);
 	});
 
+	test("GET /tasks/:id/tree embeds an edge_summary row per node — the outline's ⛓/ready/⚡/stale chips' single source of truth", async () => {
+		const parent = await create_task({ title: `edge-summary-parent-${String(Date.now())}` });
+		const child = await create_task({ title: `edge-summary-child-${String(Date.now())}`, parent_id: parent.id });
+
+		const result = await t.client.tasks.tree(parent.id);
+		if (!result.ok) throw new Error(`tree failed: ${result.error.message}`);
+
+		// parent has an incomplete child — not ready; child is a fresh, unblocked leaf — ready.
+		expect(result.value.edge_summary[parent.id]).toEqual({ blocked_count: 0, ready: false, hook: false, stale: false });
+		expect(result.value.edge_summary[child.id]).toEqual({ blocked_count: 0, ready: true, hook: false, stale: false });
+	});
+
 	test("POST /tasks/link then GET /tasks/:id/near shows the edge, DELETE /tasks/link/:id removes it", async () => {
 		const a = await create_task({ title: `near-a-${String(Date.now())}` });
 		const b = await create_task({ title: `near-b-${String(Date.now())}` });

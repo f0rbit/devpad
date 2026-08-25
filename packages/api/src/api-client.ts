@@ -123,7 +123,14 @@ type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: Fo
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 /** `rollups` is keyed by task id — see `packages/core/src/services/graph/rollup.ts`'s `RollupCounts`; a childless task is simply absent. */
 export type RollupCounts = { direct_done: number; direct_total: number; subtree_done: number; subtree_total: number };
-type TreeResponse = { task: Task; descendants: Task[]; rollups: Partial<Record<string, RollupCounts>> };
+/** Keyed by task id — see `packages/core/src/services/graph/edge-summary.ts`'s `EdgeSummary`; single source of truth for the outline's row-level ⛓/ready/⚡/stale chips. */
+export type EdgeSummary = { blocked_count: number; ready: boolean; hook: boolean; stale: boolean };
+type TreeResponse = {
+	task: Task;
+	descendants: Task[];
+	rollups: Partial<Record<string, RollupCounts>>;
+	edge_summary: Partial<Record<string, EdgeSummary>>;
+};
 type NearResponse = { links: TaskLink[]; tasks: Task[] };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };

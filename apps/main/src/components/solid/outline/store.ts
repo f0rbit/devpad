@@ -6,6 +6,7 @@ import { track } from "@/lib/pulse";
 import {
 	buildOutlineNodes,
 	childrenOf,
+	type EdgeSummary,
 	hasChildren,
 	indexById,
 	type OutlineTreeNode,
@@ -29,6 +30,7 @@ export type OutlineStoreInput = {
 	ancestors: Task[];
 	nodes: Task[];
 	rollups: Partial<Record<string, RollupCounts>>;
+	edgeSummary: Partial<Record<string, EdgeSummary>>;
 };
 
 const collectIds = (nodes: OutlineTreeNode[]): string[] =>
@@ -49,6 +51,7 @@ function flattenVisible(nodes: OutlineTreeNode[], expanded: ReadonlySet<string>)
 export function createOutlineStore(input: OutlineStoreInput) {
 	const [tasks, setTasks] = createStore<TaskById>(indexById(input.nodes));
 	const [rollups, setRollups] = createStore<Partial<Record<string, RollupCounts>>>({ ...input.rollups });
+	const [edgeSummary, setEdgeSummary] = createStore<Partial<Record<string, EdgeSummary>>>({ ...input.edgeSummary });
 
 	/** A completion at `from_id` bumps every ancestor's cached fraction by exactly one — the known delta, not a recount. */
 	const bumpRollupUpChain = (from_id: string) => {
@@ -69,6 +72,14 @@ export function createOutlineStore(input: OutlineStoreInput) {
 			cursor = tasks[cursor]?.parent_id ?? null;
 		}
 	};
+	/** A completed task is never ready — the honest known-delta the same way `bumpRollupUpChain` avoids a full reload. */
+	const markNotReady = (id: string) =>
+		setEdgeSummary(
+			produce((draft: Partial<Record<string, EdgeSummary>>) => {
+				const row = draft[id];
+				if (row) row.ready = false;
+			}),
+		);
 	const [zoomTask, setZoomTask] = createSignal<Task | null>(input.zoomTask);
 	const [ancestors, setAncestors] = createSignal<Task[]>(input.ancestors);
 
@@ -185,6 +196,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 			setTasks(id, result.value.completed);
 			flash(id);
 			bumpRollupUpChain(id);
+			markNotReady(id);
 			track("outline_task_completed", { project_id: input.projectId, task_id: id });
 
 			result.value.bubbled.forEach((step, i) => {
@@ -193,6 +205,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 						setTasks(step.task.id, step.task);
 						flash(step.task.id);
 						bumpRollupUpChain(step.task.id);
+						markNotReady(step.task.id);
 					},
 					240 * (i + 1),
 				);
@@ -280,6 +293,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 	return {
 		tasks,
 		rollups,
+		edgeSummary,
 		zoomTask,
 		setZoomTask,
 		ancestors,
@@ -316,6 +330,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		resetView: (data: Omit<OutlineStoreInput, "ownerId" | "projectId">, selectAfter: string | null = null) => {
 			setTasks(reconcile(indexById(data.nodes)));
 			setRollups(reconcile({ ...data.rollups }));
+			setEdgeSummary(reconcile({ ...data.edgeSummary }));
 			setZoomTask(data.zoomTask);
 			setAncestors(data.ancestors);
 			const fresh = buildOutlineNodes(

@@ -44,7 +44,15 @@ export type {
 	UpsertTag,
 	UpsertTodo,
 } from "@devpad/schema/types";
-export type { ApplyResponse, AuthMode, BubbleStep, DoneResponse, PublicHook, RollupCounts } from "./api-client";
+export type {
+	ApplyResponse,
+	AuthMode,
+	BubbleStep,
+	DoneResponse,
+	EdgeSummary,
+	PublicHook,
+	RollupCounts,
+} from "./api-client";
 export { getUserFriendlyErrorMessage, parseZodErrors } from "./error-handlers";
 export type { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
 export type { RequestHistoryEntry, RequestOptions } from "./request";

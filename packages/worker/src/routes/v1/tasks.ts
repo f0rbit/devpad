@@ -213,10 +213,19 @@ app.get("/:id/tree", requireAuth, async (c) => {
 	const result = await graph.subtree(db, id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 
-	const rollups_result = await graph.rollups_for(db, [id, ...result.value.map((t) => t.id)]);
+	const all_ids = [id, ...result.value.map((t) => t.id)];
+	const rollups_result = await graph.rollups_for(db, all_ids);
 	if (!rollups_result.ok) return c.json({ error: rollups_result.error.kind }, 500);
 
-	return c.json({ task: root_result.value.task, descendants: result.value, rollups: rollups_result.value });
+	const edge_summary_result = await graph.edge_summary_for(db, all_ids);
+	if (!edge_summary_result.ok) return c.json({ error: edge_summary_result.error.kind }, 500);
+
+	return c.json({
+		task: root_result.value.task,
+		descendants: result.value,
+		rollups: rollups_result.value,
+		edge_summary: edge_summary_result.value,
+	});
 });
 
 /** Immediate-parent-first ancestor chain — powers the outline's zoom breadcrumbs (v2.4, task B1.3). */

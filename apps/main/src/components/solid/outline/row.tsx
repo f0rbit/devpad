@@ -35,6 +35,7 @@ export function OutlineRow(props: OutlineRowProps) {
 	const isPending = () => props.store.pending().has(task().id);
 	const isRippling = () => props.store.rippling().has(task().id);
 	const Icon = () => KIND_ICON[task().kind];
+	const edge = () => props.store.edgeSummary[task().id];
 
 	createEffect(() => {
 		if (isRenaming()) setDraft(task().title);
@@ -144,6 +145,27 @@ export function OutlineRow(props: OutlineRowProps) {
 						title="completion_policy: auto_children — completes when all children are done"
 					>
 						auto ⚙
+					</span>
+				</Show>
+				<Show when={(edge()?.blocked_count ?? 0) > 0}>
+					<span class="outline-chip outline-chip-blocked" title="blocked by other open tasks">
+						⛓ {edge()?.blocked_count}
+					</span>
+				</Show>
+				<Show when={edge()?.ready}>
+					<span class="outline-chip outline-chip-ready">ready</span>
+				</Show>
+				<Show when={edge()?.hook}>
+					<span class="outline-chip outline-chip-hook" title="a hook is subscribed to this node's completion">
+						⚡ hook
+					</span>
+				</Show>
+				<Show when={edge()?.stale}>
+					<span
+						class="outline-chip outline-chip-stale"
+						title="an open child was added after this node auto-completed (sticky semantics)"
+					>
+						stale
 					</span>
 				</Show>
 				<Show when={task().claimed_by && task().progress !== "COMPLETED"}>

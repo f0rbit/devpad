@@ -1,6 +1,7 @@
 export * from "./apply.js";
 export * from "./completion-memory.js";
 export * from "./completion.js";
+export * from "./edge-summary.js";
 export * from "./fold-verify.js";
 export * from "./graph.js";
 export * from "./outbox.js";
