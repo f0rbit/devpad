@@ -38,6 +38,10 @@ export type AppVariables = {
 	session: SessionData | null;
 	auth_channel: AuthChannel;
 	api_key_scope: string | null;
+	// v2.4 (task A3.1): non-null only for a project-scoped API key. `null`
+	// covers cookie auth AND legacy all-projects keys — both behave exactly
+	// as before the scope guard existed.
+	api_key_project_id: string | null;
 	// Optional: `unifiedContextMiddleware` skips setting these when the
 	// required Cloudflare bindings (DB/BLOG_CORPUS_BUCKET/MEDIA_CORPUS_BUCKET)
 	// aren't configured — consumers must check for undefined rather than

@@ -76,6 +76,11 @@ export const api_keys = sqliteTable("api_keys", {
 	scope: text("scope", { enum: ["devpad", "blog", "media", "pulse", "all"] })
 		.notNull()
 		.default("all"),
+	// v2.4 (task A3.1): nullable project scope. `null` = legacy all-projects
+	// key, behaves exactly as before. Non-null keys are rejected by the
+	// scope guard (`packages/worker/src/middleware/scope-guard.ts`) on any
+	// resource belonging to a different project.
+	project_id: text("project_id").references(() => project.id),
 	enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 	last_used_at: text("last_used_at"),
 	...timestamps(),

@@ -195,7 +195,7 @@ export class ApiClient {
 			list: (): Promise<ApiResult<ApiKey[]>> => wrap(() => this.clients.auth.get<ApiKey[]>("/keys")),
 
 			create: (
-				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all" },
+				input?: string | { name?: string; scope?: "devpad" | "blog" | "media" | "pulse" | "all"; project_id?: string },
 			): Promise<ApiResult<{ message: string; key: { key: ApiKey; raw_key: string } }>> => {
 				const body = typeof input === "string" ? { name: input } : (input ?? {});
 				return wrap(() =>
