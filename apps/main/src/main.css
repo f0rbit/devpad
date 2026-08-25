@@ -1660,6 +1660,25 @@ button.outline-row {
 	overflow: auto;
 }
 
+/* Taste/IA critic BLOCKER: a fixed 300px rail next to `flex: 1; min-width: 0`
+   collapses the doc iframe to ~2px on narrow viewports (the rail wins the
+   available width first) and overflows the page horizontally. Stack the
+   iframe above the rail, both full-width, below ~720px. */
+@media (max-width: 720px) {
+	.doc-viewer-body {
+		flex-direction: column;
+	}
+
+	.doc-render-frame {
+		height: 50vh;
+	}
+
+	.annotation-rail {
+		width: 100%;
+		max-height: none;
+	}
+}
+
 .verdict-bar {
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
