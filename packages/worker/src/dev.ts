@@ -1,5 +1,6 @@
 import { Database } from "bun:sqlite";
 import { createContext as createBlogContext } from "@devpad/core/services/blog";
+import { InMemoryDispatcher, NoopActionExecutor, process_task_event } from "@devpad/core/services/hooks";
 import { createMediaContext, defaultProviderFactory } from "@devpad/core/services/media";
 import { create_memory_backend } from "@devpad/schema/blog";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
@@ -72,12 +73,21 @@ export function createBunApp(options: BunServerOptions) {
 		encryptionKey: config.encryption_key,
 	});
 
+	// v2.4 (task A3.3) — no real Cloudflare Queue in the bun runtime; the
+	// consumer runs synchronously so integration tests observe hook
+	// deliveries deterministically without polling for a real queue.
+	const dispatch = new InMemoryDispatcher(async (message) => {
+		const result = await process_task_event(db, { executor: NoopActionExecutor }, message.event_id);
+		if (!result.ok) console.error("[dev] hook dispatch failed:", result.error);
+	});
+
 	const app = createApi({
 		db,
 		blogContext: blog_context,
 		mediaContext: media_context,
 		config,
 		oauth_secrets,
+		dispatch,
 	});
 
 	const fetch = (request: Request) => app.fetch(request);

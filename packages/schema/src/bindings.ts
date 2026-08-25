@@ -11,10 +11,17 @@ export const AuthUserSchema = z
 
 export type AuthUser = z.infer<typeof AuthUserSchema>;
 
+export type HooksQueueMessage = { event_id: string };
+
 export type Bindings = {
 	DB?: D1Database;
 	BLOG_CORPUS_BUCKET?: R2Bucket;
 	MEDIA_CORPUS_BUCKET?: R2Bucket;
+	// v2.4 (task A3.3) — bound in production/preview via wrangler.toml
+	// (`devpad-hooks`/`devpad-hooks-preview`); absent in bun dev/tests, where
+	// the worker falls back to `InMemoryDispatcher` running the consumer
+	// synchronously.
+	HOOKS_QUEUE?: Queue<HooksQueueMessage>;
 	ENVIRONMENT: string;
 	API_URL: string;
 	FRONTEND_URL: string;

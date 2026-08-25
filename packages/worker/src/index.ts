@@ -1,5 +1,12 @@
 import { createSessionCookie, getSessionCookieName, validateSession } from "@devpad/core/auth";
-import { graph } from "@devpad/core/services";
+import { graph, hooks } from "@devpad/core/services";
+import {
+	CFQueueProvider,
+	type DispatchProvider,
+	InMemoryDispatcher,
+	NoopActionExecutor,
+	process_task_event,
+} from "@devpad/core/services/hooks";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { createMediaContext, createProviderFactory, handleCron } from "@devpad/core/services/media";
@@ -31,6 +38,13 @@ export type ApiOptions = {
 	mediaContext?: MediaAppContext;
 	config?: AppConfig;
 	oauth_secrets?: OAuthSecrets;
+	/**
+	 * v2.4 (task A3.3) — injected the same way `db`/`config` are for the bun
+	 * dev/test path (`dev.ts`), which never has real `c.env` bindings.
+	 * Undefined in the real Workers runtime, where `c.env.HOOKS_QUEUE` is
+	 * always resolvable instead.
+	 */
+	dispatch?: DispatchProvider;
 };
 
 type AstroHandler = {
@@ -139,6 +153,37 @@ export const createApi = (options?: ApiOptions) => {
 		return c.json({ error: "Internal server error" }, 500);
 	});
 
+	// v2.4 (task A3.3) — post-commit outbox drain. `options.dispatch` is only
+	// ever set by the bun dev/test path (`dev.ts`), which has no real `c.env`
+	// bindings — mirrors how `db`/`config` are injected there. The real
+	// Workers runtime always falls through to `c.env.HOOKS_QUEUE`.
+	// `NoopActionExecutor` is a placeholder until task A3.4 wires real
+	// webhook/vault/pipeline executors.
+	app.use("*", async (c, next) => {
+		await next();
+		const db = c.get("db");
+
+		const dispatch =
+			options?.dispatch ??
+			(c.env.HOOKS_QUEUE
+				? new CFQueueProvider(c.env.HOOKS_QUEUE)
+				: new InMemoryDispatcher(async (message) => {
+						const result = await process_task_event(
+							db,
+							{ pulse: c.get("pulse"), executor: NoopActionExecutor },
+							message.event_id,
+						);
+						if (!result.ok) console.error("[worker] hook dispatch failed:", result.error);
+					}));
+
+		const drain_task = hooks.drain_pending_events(db, dispatch);
+		try {
+			c.executionCtx.waitUntil(drain_task);
+		} catch {
+			await drain_task;
+		}
+	});
+
 	app.use("*", authMiddleware);
 	if (options?.blogContext && options.mediaContext) {
 		const blog_ctx = options.blogContext;
@@ -208,6 +253,27 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 	return { request: authed, session_cookie };
 }
 
+function buildPulseForEnv(env: Bindings): ReturnType<typeof createPulse> | undefined {
+	if (!env.PULSE_API_BASE || !env.PULSE_DEVPAD_INGEST_KEY || !env.DEVPAD_PROJECT_ID) return undefined;
+	return createPulse({
+		project_id: env.DEVPAD_PROJECT_ID,
+		ingest_key: env.PULSE_DEVPAD_INGEST_KEY,
+		endpoint: env.PULSE_API_BASE,
+		release: env.GIT_SHA,
+	});
+}
+
+/** v2.4 (task A3.3) — cron backstop re-enqueueing task_event rows a crashed waitUntil never drained. */
+async function runHookStaleSweep(db: Database, env: Bindings): Promise<void> {
+	if (!env.HOOKS_QUEUE) return;
+	const result = await hooks.drain_stale_events(db, new CFQueueProvider(env.HOOKS_QUEUE));
+	if (!result.ok) {
+		console.error("[worker] hook stale-event sweep failed:", result.error);
+		return;
+	}
+	if (result.value > 0) console.log(`[worker] re-enqueued ${String(result.value)} stale task_event row(s)`);
+}
+
 /** v2.4 graph sweep (task A2.4) — crash repair + invariant verification, on the existing 5-min cron. */
 async function runGraphSweep(db: Database): Promise<void> {
 	const result = await graph.sweep_graph(db);
@@ -272,6 +338,7 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			}
 			const db = createD1Database(env.DB);
 			ctx.waitUntil(runGraphSweep(db));
+			ctx.waitUntil(runHookStaleSweep(db, env));
 
 			if (!env.MEDIA_CORPUS_BUCKET) {
 				return;
@@ -292,6 +359,33 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 				},
 			});
 			ctx.waitUntil(handleCron(app_ctx));
+		},
+
+		/**
+		 * v2.4 (task A3.3) — `devpad-hooks`/`devpad-hooks-preview` consumer.
+		 * `NoopActionExecutor` is a placeholder until task A3.4 wires real
+		 * webhook/vault/pipeline executors.
+		 */
+		async queue(batch: MessageBatch<{ event_id: string }>, env: Bindings, ctx: ExecutionContext): Promise<void> {
+			if (!env.DB) return;
+			const db = createD1Database(env.DB);
+			const pulse = buildPulseForEnv(env);
+
+			for (const message of batch.messages) {
+				const result = await process_task_event(db, { pulse, executor: NoopActionExecutor }, message.body.event_id);
+				if (!result.ok) {
+					console.error("[worker] hook dispatch failed:", result.error);
+					message.retry();
+					continue;
+				}
+				if (result.value === "retry") {
+					message.retry();
+				} else {
+					message.ack();
+				}
+			}
+
+			if (pulse) ctx.waitUntil(pulse.flush());
 		},
 	};
 }
