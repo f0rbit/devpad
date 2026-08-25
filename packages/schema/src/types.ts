@@ -21,6 +21,7 @@ import type {
 	tag,
 	tag_config,
 	task,
+	task_event,
 	task_link,
 	task_rollup,
 	task_tag,
@@ -59,6 +60,9 @@ export type {
 	RolloutShape,
 	RunStatus,
 	StageEventKind,
+	TaskEventActor,
+	TaskEventDispatchStatus,
+	TaskEventKind,
 	TaskKind,
 	TaskLinkKind,
 } from "./database/schema.js";
@@ -83,6 +87,7 @@ export type IgnorePath = InferSelectModel<typeof ignore_path>;
 export type TaskLink = InferSelectModel<typeof task_link>;
 export type TaskRollup = InferSelectModel<typeof task_rollup>;
 export type ApplyLog = InferSelectModel<typeof apply_log>;
+export type TaskEvent = InferSelectModel<typeof task_event>;
 
 // Pipelines
 export type PipelinePackage = InferSelectModel<typeof pipeline_package>;

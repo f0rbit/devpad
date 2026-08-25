@@ -289,6 +289,54 @@ export const apply_log = sqliteTable("apply_log", {
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
+// task_event — the transactional outbox every graph mutation writes through
+// (task A2.1). Every A1 structural/field mutation pairs its state change
+// with exactly one row here, written atomically via `run_atomic` — see
+// `packages/core/src/services/graph/outbox.ts` for the emission helper and
+// AGENTS.md for the D1-atomicity caveat this inherits from `run_atomic`.
+export const TASK_EVENT_KINDS = [
+	"task.created",
+	"task.updated",
+	"task.completed",
+	"task.reopened",
+	"task.claimed",
+	"edge.created",
+	"edge.removed",
+	"node.children_all_done",
+	"policy.fired",
+	"node.completion_stale",
+] as const;
+export type TaskEventKind = (typeof TASK_EVENT_KINDS)[number];
+
+export const TASK_EVENT_ACTORS = ["user", "api", "policy", "github"] as const;
+export type TaskEventActor = (typeof TASK_EVENT_ACTORS)[number];
+
+export const TASK_EVENT_DISPATCH_STATUSES = ["pending", "dispatched"] as const;
+export type TaskEventDispatchStatus = (typeof TASK_EVENT_DISPATCH_STATUSES)[number];
+
+export const task_event = sqliteTable(
+	"task_event",
+	{
+		id: integer("id").primaryKey({ autoIncrement: true }),
+		event_id: text("event_id")
+			.notNull()
+			.unique()
+			.$defaultFn(() => `evt_${crypto.randomUUID()}`),
+		kind: text("kind", { enum: TASK_EVENT_KINDS }).notNull(),
+		subject_id: text("subject_id").notNull(),
+		project_id: text("project_id"),
+		actor: text("actor", { enum: TASK_EVENT_ACTORS }).notNull(),
+		payload: text("payload", { mode: "json" }).notNull(),
+		occurred_at: text("occurred_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+		dispatch_status: text("dispatch_status", { enum: TASK_EVENT_DISPATCH_STATUSES }).notNull().default("pending"),
+		dispatched_at: text("dispatched_at"),
+	},
+	(table) => [
+		index("task_event_subject_id_idx").on(table.subject_id),
+		index("task_event_dispatch_status_idx").on(table.dispatch_status),
+	],
+);
+
 export const checklist = sqliteTable("checklist", {
 	...entity("checklist"),
 	task_id: text("task_id")
@@ -560,6 +608,10 @@ export const task_link_relations = relations(task_link, ({ one }) => ({
 
 export const task_rollup_relations = relations(task_rollup, ({ one }) => ({
 	task: one(task, { fields: [task_rollup.task_id], references: [task.id] }),
+}));
+
+export const task_event_relations = relations(task_event, ({ one }) => ({
+	subject: one(task, { fields: [task_event.subject_id], references: [task.id] }),
 }));
 
 export const checklist_relations = relations(checklist, ({ one, many }) => ({

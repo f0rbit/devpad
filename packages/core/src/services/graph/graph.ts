@@ -3,7 +3,9 @@ import { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP, task, task_link } from "@devpad/sc
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
+import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
+import { write_with_event } from "./outbox.js";
 
 /**
  * Graph service (task A1.3) — hierarchy/ordering guards, recursive-CTE
@@ -67,32 +69,47 @@ export async function set_parent(
 ): Promise<Result<Task, GraphError>> {
 	const { id, parent_id, rank, base_rev } = input;
 
-	const rows = await db.all<Task>(sql`
-		WITH RECURSIVE new_parent_ancestors(id, depth) AS (
-			SELECT id, 0 FROM task WHERE id = ${parent_id} AND deleted = 0
-			UNION ALL
-			SELECT t.parent_id, a.depth + 1
-			FROM task t JOIN new_parent_ancestors a ON t.id = a.id
-			WHERE t.parent_id IS NOT NULL AND t.deleted = 0
-		)
-		UPDATE task
-		SET parent_id = ${parent_id}, rank = ${rank}, rev = rev + 1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ${id}
-			AND rev = ${base_rev}
-			AND deleted = 0
-			AND (
-				${parent_id} IS NULL
-				OR (
-					EXISTS (SELECT 1 FROM new_parent_ancestors)
-					AND NOT EXISTS (SELECT 1 FROM new_parent_ancestors WHERE new_parent_ancestors.id = ${id})
-					AND (SELECT COALESCE(MAX(depth), 0) FROM new_parent_ancestors) + 1 <= ${GRAPH_DEPTH_CAP}
-					AND (SELECT COUNT(*) FROM task WHERE task.parent_id = ${parent_id} AND task.deleted = 0) < ${GRAPH_CHILDREN_CAP}
+	const attempt = await write_with_event(
+		db,
+		async (): Promise<Result<Task | null, DatabaseError>> => {
+			const rows = await db.all<Task>(sql`
+				WITH RECURSIVE new_parent_ancestors(id, depth) AS (
+					SELECT id, 0 FROM task WHERE id = ${parent_id} AND deleted = 0
+					UNION ALL
+					SELECT t.parent_id, a.depth + 1
+					FROM task t JOIN new_parent_ancestors a ON t.id = a.id
+					WHERE t.parent_id IS NOT NULL AND t.deleted = 0
 				)
-			)
-		RETURNING *
-	`);
+				UPDATE task
+				SET parent_id = ${parent_id}, rank = ${rank}, rev = rev + 1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = ${id}
+					AND rev = ${base_rev}
+					AND deleted = 0
+					AND (
+						${parent_id} IS NULL
+						OR (
+							EXISTS (SELECT 1 FROM new_parent_ancestors)
+							AND NOT EXISTS (SELECT 1 FROM new_parent_ancestors WHERE new_parent_ancestors.id = ${id})
+							AND (SELECT COALESCE(MAX(depth), 0) FROM new_parent_ancestors) + 1 <= ${GRAPH_DEPTH_CAP}
+							AND (SELECT COUNT(*) FROM task WHERE task.parent_id = ${parent_id} AND task.deleted = 0) < ${GRAPH_CHILDREN_CAP}
+						)
+					)
+				RETURNING *
+			`);
+			return ok(rows.length === 1 ? rows[0] : null);
+		},
+		(updated) =>
+			updated && {
+				kind: "task.updated",
+				subject_id: updated.id,
+				project_id: updated.project_id,
+				actor: "api",
+				payload: { kind: "task.updated", fields: ["parent_id", "rank"] },
+			},
+	);
 
-	if (rows.length === 1) return ok(rows[0]);
+	if (!attempt.ok) return attempt;
+	if (attempt.value) return ok(attempt.value);
 
 	const current = await get_task_row(db, id);
 	if (!current || current.deleted) return errors.notFound("task", id);
@@ -129,14 +146,29 @@ export async function claim(
 ): Promise<Result<Task, GraphError>> {
 	const { id, actor, base_rev } = input;
 
-	const rows = await db.all<Task>(sql`
-		UPDATE task
-		SET claimed_by = ${actor}, claimed_at = CURRENT_TIMESTAMP, progress = 'IN_PROGRESS', rev = rev + 1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0 AND claimed_by IS NULL
-		RETURNING *
-	`);
+	const attempt = await write_with_event(
+		db,
+		async (): Promise<Result<Task | null, DatabaseError>> => {
+			const rows = await db.all<Task>(sql`
+				UPDATE task
+				SET claimed_by = ${actor}, claimed_at = CURRENT_TIMESTAMP, progress = 'IN_PROGRESS', rev = rev + 1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0 AND claimed_by IS NULL
+				RETURNING *
+			`);
+			return ok(rows.length === 1 ? rows[0] : null);
+		},
+		(updated) =>
+			updated && {
+				kind: "task.claimed",
+				subject_id: updated.id,
+				project_id: updated.project_id,
+				actor: "api",
+				payload: { kind: "task.claimed", actor },
+			},
+	);
 
-	if (rows.length === 1) return ok(rows[0]);
+	if (!attempt.ok) return attempt;
+	if (attempt.value) return ok(attempt.value);
 
 	const current = await get_task_row(db, id);
 	if (!current || current.deleted) return errors.notFound("task", id);
@@ -172,18 +204,48 @@ export async function add_link(db: Database, input: UpsertTaskLink): Promise<Res
 		}
 	}
 
+	const src = await get_task_row(db, src_id);
 	const id = `link_${crypto.randomUUID()}`;
-	const rows = await db.all<TaskLink>(sql`
-		INSERT INTO task_link (id, created_at, updated_at, deleted, created_by, modified_by, protected, src_id, dst_id, kind, ref, note)
-		VALUES (${id}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 'api', 'api', 0, ${src_id}, ${dst_id}, ${kind}, ${ref ? JSON.stringify(ref) : null}, ${note})
-		RETURNING *
-	`);
-	return ok(rows[0]);
+	return write_with_event(
+		db,
+		async (): Promise<Result<TaskLink, DatabaseError>> => {
+			const rows = await db.all<TaskLink>(sql`
+				INSERT INTO task_link (id, created_at, updated_at, deleted, created_by, modified_by, protected, src_id, dst_id, kind, ref, note)
+				VALUES (${id}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0, 'api', 'api', 0, ${src_id}, ${dst_id}, ${kind}, ${ref ? JSON.stringify(ref) : null}, ${note})
+				RETURNING *
+			`);
+			return ok(rows[0]);
+		},
+		(link) => ({
+			kind: "edge.created",
+			subject_id: link.src_id,
+			project_id: src?.project_id ?? null,
+			actor: "api",
+			payload: { kind: "edge.created", link_kind: link.kind, dst_id: link.dst_id },
+		}),
+	);
 }
 
 export async function remove_link(db: Database, id: string): Promise<Result<boolean, GraphError>> {
-	await db.run(sql`UPDATE task_link SET deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ${id}`);
-	return ok(true);
+	const rows = await db.select().from(task_link).where(eq(task_link.id, id));
+	if (rows.length === 0) return ok(true);
+	const existing = rows[0];
+	const src = await get_task_row(db, existing.src_id);
+
+	return write_with_event(
+		db,
+		async (): Promise<Result<boolean, DatabaseError>> => {
+			await db.run(sql`UPDATE task_link SET deleted = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ${id}`);
+			return ok(true);
+		},
+		() => ({
+			kind: "edge.removed",
+			subject_id: existing.src_id,
+			project_id: src?.project_id ?? null,
+			actor: "api",
+			payload: { kind: "edge.removed", link_kind: existing.kind, dst_id: existing.dst_id },
+		}),
+	);
 }
 
 /** Descendants of `id` (excludes `id` itself), bounded by `depth` hops down. */

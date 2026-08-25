@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { STAGE_EVENT_KINDS, TASK_LINK_KINDS } from "./database/schema.js";
+import { COMPLETED_VIA_VALUES, COMPLETION_POLICIES, STAGE_EVENT_KINDS, TASK_EVENT_ACTORS, TASK_LINK_KINDS } from "./database/schema.js";
 
 export const upsert_project = z.object({
 	id: z.string().optional().nullable(),
@@ -403,3 +403,25 @@ export type ApplyRequest = z.infer<typeof apply_request>;
 
 export const claim_request = z.object({ actor: z.string().min(1), base_rev: z.number().int() });
 export type ClaimRequest = z.infer<typeof claim_request>;
+
+// ---------------------------------------------------------------------------
+// task_event outbox payload (task A2.1) — one variant per TASK_EVENT_KINDS
+// entry, refined by `kind` so a malformed payload for a given kind is a
+// schema rejection, not a silent `unknown`.
+// ---------------------------------------------------------------------------
+
+export const task_event_actor = z.enum(TASK_EVENT_ACTORS);
+
+export const task_event_payload = z.discriminatedUnion("kind", [
+	z.object({ kind: z.literal("task.created"), title: z.string() }),
+	z.object({ kind: z.literal("task.updated"), fields: z.array(z.string()) }),
+	z.object({ kind: z.literal("task.completed"), via: z.enum(COMPLETED_VIA_VALUES) }),
+	z.object({ kind: z.literal("task.reopened"), via: z.enum(COMPLETED_VIA_VALUES) }),
+	z.object({ kind: z.literal("task.claimed"), actor: z.string() }),
+	z.object({ kind: z.literal("edge.created"), link_kind: task_link_kind, dst_id: z.string().nullable() }),
+	z.object({ kind: z.literal("edge.removed"), link_kind: task_link_kind, dst_id: z.string().nullable() }),
+	z.object({ kind: z.literal("node.children_all_done") }),
+	z.object({ kind: z.literal("policy.fired"), policy: z.enum(COMPLETION_POLICIES) }),
+	z.object({ kind: z.literal("node.completion_stale"), child_id: z.string() }),
+]);
+export type TaskEventPayload = z.infer<typeof task_event_payload>;
