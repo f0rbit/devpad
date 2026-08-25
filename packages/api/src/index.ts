@@ -51,11 +51,15 @@ export type {
 	ApplyResponse,
 	AuthMode,
 	BubbleStep,
+	DocContent,
+	DocVersionInfo,
 	DoneResponse,
 	EdgeSummary,
 	MilestoneLensResponse,
 	MilestoneLensRow,
 	PublicHook,
+	PullDocResponse,
+	PushInterfaceReportResult,
 	RollupCounts,
 } from "./api-client";
 export { getUserFriendlyErrorMessage, parseZodErrors } from "./error-handlers";

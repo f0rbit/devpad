@@ -1532,6 +1532,141 @@ button.outline-row {
 	color: var(--fg);
 }
 
+/* ── DocViewer + AnnotationRail — v2.4 phase B3 review surfaces ── */
+
+.doc-viewer {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.doc-viewer-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.doc-viewer-title {
+	margin: 0;
+}
+
+.doc-version-picker {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+.doc-version-chip-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.doc-version-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	padding: 3px 8px;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--bg-alt);
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.doc-version-chip-active {
+	border-color: var(--accent);
+	color: var(--fg);
+}
+
+.doc-version-approved {
+	color: var(--success-fg);
+}
+
+.doc-version-diff-link {
+	font-size: 11px;
+	color: var(--fg-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
+.doc-version-diff-link:hover {
+	color: var(--fg-muted);
+}
+
+.doc-diff-panel {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 8px;
+	max-height: 320px;
+	overflow: auto;
+}
+
+.doc-diff-pre {
+	margin: 0;
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.doc-diff-line {
+	padding: 1px 4px;
+}
+
+.doc-diff-add {
+	background: color-mix(in srgb, var(--success) 60%, transparent);
+	color: var(--success-fg);
+}
+
+.doc-diff-remove {
+	background: color-mix(in srgb, var(--error) 60%, transparent);
+	color: var(--error-fg);
+}
+
+.doc-render-frame {
+	flex: 1;
+	min-width: 0;
+	width: 100%;
+	height: 60vh;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: #fff;
+}
+
+.docs-list {
+	margin-top: 24px;
+}
+
+.docs-list__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.docs-list__link {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+}
+
+.docs-list__link:hover .docs-list__title {
+	color: var(--accent);
+}
+
+.docs-list__title {
+	font-weight: 500;
+}
+
 /* ── "Waiting on you" — integration atop /todo (task B2.4) ── */
 
 .waiting-on-you {

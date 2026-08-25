@@ -91,15 +91,19 @@ export type PublicHook = Omit<Hook, "action" | "trigger"> & { trigger: HookTrigg
 // v2.4 (task A4.1) — wire shapes the docs route returns; `content` mirrors
 // `packages/core/src/services/docs/store.ts`'s `DocContent`/`DocVersionInfo`
 // but is defined locally since `@devpad/api` doesn't depend on `@devpad/core`.
-type DocContent = { title: string; html: string };
-type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
-type PullDocResponse = {
+export type DocContent = { title: string; html: string };
+export type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
+export type PullDocResponse = {
 	document: Document;
 	content: DocContent | null;
 	threads: ThreadMarker[];
 	orphaned: ThreadMarker[];
 };
-type PushInterfaceReportResult = { document: Document; classification: InterfaceDiffClass; signoff: Signoff | null };
+export type PushInterfaceReportResult = {
+	document: Document;
+	classification: InterfaceDiffClass;
+	signoff: Signoff | null;
+};
 
 type FoldDiff =
 	| { kind: "missing_row"; entity: "milestone" | "goal"; id: string }
@@ -907,6 +911,18 @@ export class ApiClient {
 		/** Full version history, newest first — the lineage walk. */
 		versions: (id: string): Promise<ApiResult<DocVersionInfo[]>> =>
 			wrap(() => this.clients.docs.get<DocVersionInfo[]>(`/docs/${id}/versions`)),
+
+		/**
+		 * v2.4 (B3.1) — the DocViewer's sandboxed-iframe `src`: a standalone
+		 * HTML document with its own CSP (defense in depth over
+		 * sanitize-on-push), never a JSON payload injected into the main app's
+		 * DOM. Not a `fetch` call — the browser navigates the iframe here
+		 * directly, carrying the same session cookie as any same-origin nav.
+		 */
+		renderUrl: (id: string, version?: string): string => {
+			const query = version ? `?version=${encodeURIComponent(version)}` : "";
+			return `${this.clients.docs.url()}/docs/${id}/render${query}`;
+		},
 
 		/**
 		 * Annotation engine (task A4.2) — markers-in-doc threads. Every
