@@ -284,24 +284,37 @@ tasks
 
 tasks
 	.command("done <id>")
-	.description("Mark a task as done")
-	.action(async (id) => {
+	.description("Mark a task as done through the completion engine (bubbles an auto_children cascade up the tree)")
+	.option("--json", "Print the raw { completed, bubbled, hooks_fired } response as JSON instead of a summary")
+	.action(async (id: string, options: { json?: boolean }) => {
 		const spinner = createSpinner("Marking task as done...").start();
 		try {
-			const tool = getTool("devpad_tasks_upsert");
-			if (!tool) throw new Error("Tool not found");
+			const get_tool = getTool("devpad_tasks_get");
+			const done_tool = getTool("devpad_tasks_done");
+			if (!get_tool || !done_tool) throw new Error("Tool not found");
 
 			const client = getApiClient();
-			const owner_id = await resolve_owner_id(client);
-			const result = await tool.execute(client, {
-				id,
-				owner_id,
-				progress: "COMPLETED",
-			});
-			const { task } = parse_task_response(result);
-			spinner.succeed(`Task "${task.title}" marked as done`);
+			const current = parse_task_response(await get_tool.execute(client, { id }));
+			if (current.task.rev === undefined) throw new Error("Task response is missing rev");
+
+			const result = await done_tool.execute(client, { id, base_rev: current.task.rev });
+
+			if (options.json) {
+				spinner.stop();
+				console.log(JSON.stringify(result, null, 2));
+				return;
+			}
+
+			const bubbled = Array.isArray((result as { bubbled?: unknown }).bubbled)
+				? (result as { bubbled: { task: { title: string } }[] }).bubbled
+				: [];
+			const bubbled_note =
+				bubbled.length > 0
+					? ` (+${String(bubbled.length)} bubbled: ${bubbled.map((b) => b.task.title).join(", ")})`
+					: "";
+			spinner.succeed(`Task "${current.task.title}" marked as done${bubbled_note}`);
 		} catch (error) {
-			spinner.fail("Failed to update task");
+			spinner.fail("Failed to mark task as done");
 			handleError(error);
 		}
 	});

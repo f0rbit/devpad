@@ -1,4 +1,5 @@
 import { createSessionCookie, getSessionCookieName, validateSession } from "@devpad/core/auth";
+import { graph } from "@devpad/core/services";
 import type { AppContext as BlogAppContext } from "@devpad/core/services/blog";
 import type { AppContext as MediaAppContext } from "@devpad/core/services/media";
 import { createMediaContext, createProviderFactory, handleCron } from "@devpad/core/services/media";
@@ -207,6 +208,25 @@ async function resolveAuth(request: Request, env: Bindings): Promise<{ request: 
 	return { request: authed, session_cookie };
 }
 
+/** v2.4 graph sweep (task A2.4) — crash repair + invariant verification, on the existing 5-min cron. */
+async function runGraphSweep(db: Database): Promise<void> {
+	const result = await graph.sweep_graph(db);
+	if (!result.ok) {
+		console.error("[worker] graph sweep failed:", result.error);
+		return;
+	}
+	const report = result.value;
+	if (
+		report.cascades_repaired > 0 ||
+		report.rollups_repaired > 0 ||
+		report.siblings_rebalanced > 0 ||
+		report.cycle_violations > 0 ||
+		report.depth_violations > 0
+	) {
+		console.log("[worker] graph sweep repaired/flagged:", report);
+	}
+}
+
 export function createUnifiedWorker(handlers: UnifiedHandlers) {
 	const api = createApi();
 
@@ -247,10 +267,15 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 		},
 
 		async scheduled(event: ScheduledEvent, env: Bindings, ctx: ExecutionContext): Promise<void> {
-			if (!env.DB || !env.MEDIA_CORPUS_BUCKET) {
+			if (!env.DB) {
 				return;
 			}
 			const db = createD1Database(env.DB);
+			ctx.waitUntil(runGraphSweep(db));
+
+			if (!env.MEDIA_CORPUS_BUCKET) {
+				return;
+			}
 			const media_backend = create_cloudflare_backend({ d1: env.DB, r2: env.MEDIA_CORPUS_BUCKET });
 			const app_ctx = createMediaContext({
 				db,

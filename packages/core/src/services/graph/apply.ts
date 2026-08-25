@@ -3,9 +3,13 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
+import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
+import { SqlCompletionEngine } from "./completion.js";
 import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent } from "./graph.js";
+import { type EmitEventInput, write_with_event } from "./outbox.js";
+import { refresh_rollup_chain } from "./rollup.js";
 
 const apply_op_result_schema = z.object({
 	op: z.enum(["create", "update", "reparent", "link", "unlink", "claim", "complete"]),
@@ -36,19 +40,55 @@ function handle_for_create_op(handles: Map<string, string>, index: number): stri
 	return id;
 }
 
-async function insert_task_row(db: Database, id: string, data: UpsertTodo, owner_id: string): Promise<void> {
-	const now = new Date().toISOString();
-	await db.run(sql`
-		INSERT INTO task (
-			id, owner_id, title, progress, visibility, priority, parent_id, rank, rev,
-			kind, completion_policy, project_id, goal_id, description, start_time, end_time, summary,
-			created_at, updated_at, deleted, created_by, modified_by, protected
-		) VALUES (
-			${id}, ${owner_id}, ${data.title ?? "Untitled"}, ${data.progress ?? "UNSTARTED"}, ${data.visibility ?? "PRIVATE"}, ${data.priority ?? "LOW"}, ${data.parent_id ?? null}, ${data.rank ?? ""}, 0,
-			${data.kind ?? "task"}, ${data.completion_policy ?? "manual"}, ${data.project_id ?? null}, ${data.goal_id ?? null}, ${data.description ?? null}, ${data.start_time ?? null}, ${data.end_time ?? null}, ${data.summary ?? null},
-			${now}, ${now}, 0, 'api', 'api', 0
-		)
-	`);
+async function insert_task_row(
+	db: Database,
+	id: string,
+	data: UpsertTodo,
+	owner_id: string,
+): Promise<Result<void, ServiceError>> {
+	const target_parent = data.parent_id ? await get_task_row(db, data.parent_id) : null;
+
+	return write_with_event(
+		db,
+		async (): Promise<Result<void, ServiceError>> => {
+			const now = new Date().toISOString();
+			await db.run(sql`
+				INSERT INTO task (
+					id, owner_id, title, progress, visibility, priority, parent_id, rank, rev,
+					kind, completion_policy, project_id, goal_id, description, start_time, end_time, summary,
+					created_at, updated_at, deleted, created_by, modified_by, protected
+				) VALUES (
+					${id}, ${owner_id}, ${data.title ?? "Untitled"}, ${data.progress ?? "UNSTARTED"}, ${data.visibility ?? "PRIVATE"}, ${data.priority ?? "LOW"}, ${data.parent_id ?? null}, ${data.rank ?? ""}, 0,
+					${data.kind ?? "task"}, ${data.completion_policy ?? "manual"}, ${data.project_id ?? null}, ${data.goal_id ?? null}, ${data.description ?? null}, ${data.start_time ?? null}, ${data.end_time ?? null}, ${data.summary ?? null},
+					${now}, ${now}, 0, 'api', 'api', 0
+				)
+			`);
+			const rollup_result = await refresh_rollup_chain(db, data.parent_id ?? null);
+			if (!rollup_result.ok) return rollup_result;
+			return ok(undefined);
+		},
+		() => {
+			const events: EmitEventInput[] = [
+				{
+					kind: "task.created",
+					subject_id: id,
+					project_id: data.project_id ?? null,
+					actor: "api",
+					payload: { kind: "task.created", title: data.title ?? "Untitled" },
+				},
+			];
+			if (target_parent && target_parent.completed_via === "policy" && (data.progress ?? "UNSTARTED") !== "COMPLETED") {
+				events.push({
+					kind: "node.completion_stale",
+					subject_id: target_parent.id,
+					project_id: target_parent.project_id,
+					actor: "policy",
+					payload: { kind: "node.completion_stale", child_id: id },
+				});
+			}
+			return events;
+		},
+	);
 }
 
 async function update_task_row(
@@ -63,34 +103,43 @@ async function update_task_row(
 		return err({ kind: "graph_conflict", message: `Task ${id} was modified concurrently`, current });
 	}
 
-	const rows = await db.all<{ id: string }>(sql`
-		UPDATE task SET
-			title = ${data.title ?? current.title},
-			description = ${data.description ?? current.description},
-			summary = ${data.summary ?? current.summary},
-			priority = ${data.priority ?? current.priority},
-			visibility = ${data.visibility ?? current.visibility},
-			rev = rev + 1,
-			updated_at = CURRENT_TIMESTAMP
-		WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0
-		RETURNING id
-	`);
-	if (rows.length !== 1)
-		return err({ kind: "graph_conflict", message: `Task ${id} was modified concurrently`, current });
+	const attempt = await write_with_event(
+		db,
+		async (): Promise<Result<{ id: string } | null, DatabaseError>> => {
+			const rows = await db.all<{ id: string }>(sql`
+				UPDATE task SET
+					title = ${data.title ?? current.title},
+					description = ${data.description ?? current.description},
+					summary = ${data.summary ?? current.summary},
+					priority = ${data.priority ?? current.priority},
+					visibility = ${data.visibility ?? current.visibility},
+					rev = rev + 1,
+					updated_at = CURRENT_TIMESTAMP
+				WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0
+				RETURNING id
+			`);
+			return ok(rows.length === 1 ? rows[0] : null);
+		},
+		(updated) =>
+			updated && {
+				kind: "task.updated",
+				subject_id: id,
+				project_id: current.project_id,
+				actor: "api",
+				payload: { kind: "task.updated", fields: Object.keys(data) },
+			},
+	);
+	if (!attempt.ok) return attempt;
+	if (!attempt.value) return err({ kind: "graph_conflict", message: `Task ${id} was modified concurrently`, current });
 	return ok(undefined);
 }
 
+/** Delegates to the single completion entrypoint (task A2.6) — the same engine the /done route and upsertTask use. */
 async function complete_task_row(db: Database, id: string, base_rev: number): Promise<Result<void, GraphError>> {
-	const rows = await db.all<{ id: string }>(sql`
-		UPDATE task SET progress = 'COMPLETED', completed_via = 'api', rev = rev + 1, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ${id} AND rev = ${base_rev} AND deleted = 0
-		RETURNING id
-	`);
-	if (rows.length === 1) return ok(undefined);
-
-	const current = await get_task_row(db, id);
-	if (!current || current.deleted) return errors.notFound("task", id);
-	return err({ kind: "graph_conflict", message: `Task ${id} was modified concurrently`, current });
+	const engine = new SqlCompletionEngine(db);
+	const result = await engine.complete(id, "api", base_rev);
+	if (!result.ok) return result;
+	return ok(undefined);
 }
 
 async function execute_op(
@@ -104,8 +153,8 @@ async function execute_op(
 		case "create": {
 			const id = handle_for_create_op(handles, index);
 			const data: UpsertTodo = { ...op.data, parent_id: resolve_handle(op.data.parent_id ?? null, handles) };
-			await insert_task_row(db, id, data, owner_id);
-			return ok({ op: op.op, id });
+			const insert_result = await insert_task_row(db, id, data, owner_id);
+			return insert_result.ok ? ok({ op: op.op, id }) : insert_result;
 		}
 		case "update": {
 			const id = resolve_required_handle(op.id, handles);
