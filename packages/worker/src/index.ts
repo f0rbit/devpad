@@ -300,6 +300,19 @@ async function runHookStaleSweep(db: Database, env: Bindings): Promise<void> {
 	if (result.value > 0) console.log(`[worker] re-enqueued ${String(result.value)} stale task_event row(s)`);
 }
 
+/** v2.4 (task A3.7) — retention sweep. `failed_permanent` hook_delivery rows are never touched (the visible DLQ). */
+async function runHookRetentionSweep(db: Database): Promise<void> {
+	const result = await hooks.sweep_retention(db);
+	if (!result.ok) {
+		console.error("[worker] hook retention sweep failed:", result.error);
+		return;
+	}
+	const report = result.value;
+	if (report.task_events_pruned > 0 || report.hook_deliveries_pruned > 0 || report.github_webhook_events_pruned > 0) {
+		console.log("[worker] hook retention sweep pruned:", report);
+	}
+}
+
 /** v2.4 graph sweep (task A2.4) — crash repair + invariant verification, on the existing 5-min cron. */
 async function runGraphSweep(db: Database): Promise<void> {
 	const result = await graph.sweep_graph(db);
@@ -365,6 +378,7 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			const db = createD1Database(env.DB);
 			ctx.waitUntil(runGraphSweep(db));
 			ctx.waitUntil(runHookStaleSweep(db, env));
+			ctx.waitUntil(runHookRetentionSweep(db));
 
 			if (!env.MEDIA_CORPUS_BUCKET) {
 				return;
