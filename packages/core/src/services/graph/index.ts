@@ -5,3 +5,4 @@ export * from "./graph.js";
 export * from "./outbox.js";
 export * from "./rank.js";
 export * from "./rollup.js";
+export * from "./sweeper.js";

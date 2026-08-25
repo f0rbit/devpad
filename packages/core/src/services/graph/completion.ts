@@ -72,6 +72,83 @@ async function try_cascade_parent(db: Database, parent_id: string): Promise<Task
 	return rows.length === 1 ? rows[0] : null;
 }
 
+export type CascadeOutcome = { bubbled: BubbleStep[]; events: TaskEvent[] };
+
+/**
+ * Walks the ancestor chain from `starting_parent_id` up, cascading
+ * auto_children completions. Exported (not just an engine internal) because
+ * the sweeper (task A2.4) re-runs this exact function to repair a
+ * mid-cascade crash — it's idempotent by construction: re-running it against
+ * an already-fully-cascaded chain hits `all_done` on nothing (or the parent
+ * is already COMPLETED, so `try_cascade_parent`'s guard never matches) and
+ * performs zero writes. Callers own wrapping this in `run_atomic` themselves
+ * (the engine wraps one leaf-completion call; the sweeper wraps a whole
+ * sweep of many).
+ */
+export async function cascade_from(
+	db: Database,
+	starting_parent_id: string | null,
+): Promise<Result<CascadeOutcome, CompleteError>> {
+	const bubbled: BubbleStep[] = [];
+	const events: TaskEvent[] = [];
+	let cursor_parent_id = starting_parent_id;
+	let hops = 0;
+
+	while (cursor_parent_id && hops < GRAPH_DEPTH_CAP) {
+		hops++;
+		const parent_rows = await db.all<Task>(sql`SELECT * FROM task WHERE id = ${cursor_parent_id} AND deleted = 0`);
+		if (parent_rows.length === 0) break;
+		const parent = parent_rows[0];
+		if (parent.progress === "COMPLETED") break;
+
+		const sibling_rows = await db.all<{ deleted: number; progress: string }>(
+			sql`SELECT deleted, progress FROM task WHERE parent_id = ${parent.id} AND deleted = 0`,
+		);
+		const all_done = children_all_done(sibling_rows.map((s) => ({ deleted: s.deleted !== 0, progress: s.progress })));
+		if (!all_done) break;
+
+		const stale_check_event = await emit_event(db, {
+			kind: "node.children_all_done",
+			subject_id: parent.id,
+			project_id: parent.project_id,
+			actor: "policy",
+			payload: { kind: "node.children_all_done" },
+		});
+		if (!stale_check_event.ok) return stale_check_event;
+		events.push(stale_check_event.value);
+
+		if (parent.completion_policy !== "auto_children") break;
+
+		const cascaded = await try_cascade_parent(db, parent.id);
+		if (!cascaded) break;
+
+		const policy_event = await emit_event(db, {
+			kind: "policy.fired",
+			subject_id: cascaded.id,
+			project_id: cascaded.project_id,
+			actor: "policy",
+			payload: { kind: "policy.fired", policy: "auto_children" },
+		});
+		if (!policy_event.ok) return policy_event;
+		events.push(policy_event.value);
+
+		const cascaded_completed_event = await emit_event(db, {
+			kind: "task.completed",
+			subject_id: cascaded.id,
+			project_id: cascaded.project_id,
+			actor: "policy",
+			payload: { kind: "task.completed", via: "policy" },
+		});
+		if (!cascaded_completed_event.ok) return cascaded_completed_event;
+		events.push(cascaded_completed_event.value);
+
+		bubbled.push({ task: cascaded, via: "policy" });
+		cursor_parent_id = cascaded.parent_id;
+	}
+
+	return ok({ bubbled, events });
+}
+
 export class SqlCompletionEngine implements CompletionEngine {
 	constructor(private readonly db: Database) {}
 
@@ -100,60 +177,9 @@ export class SqlCompletionEngine implements CompletionEngine {
 			if (!completed_event.ok) return completed_event;
 			events.push(completed_event.value);
 
-			const bubbled: BubbleStep[] = [];
-			let cursor_parent_id = completed.parent_id;
-			let hops = 0;
-
-			while (cursor_parent_id && hops < GRAPH_DEPTH_CAP) {
-				hops++;
-				const parent_rows = await db.all<Task>(sql`SELECT * FROM task WHERE id = ${cursor_parent_id} AND deleted = 0`);
-				if (parent_rows.length === 0) break;
-				const parent = parent_rows[0];
-
-				const sibling_rows = await db.all<{ deleted: number; progress: string }>(
-					sql`SELECT deleted, progress FROM task WHERE parent_id = ${parent.id} AND deleted = 0`,
-				);
-				const all_done = children_all_done(sibling_rows.map((s) => ({ deleted: s.deleted !== 0, progress: s.progress })));
-				if (!all_done) break;
-
-				const stale_check_event = await emit_event(db, {
-					kind: "node.children_all_done",
-					subject_id: parent.id,
-					project_id: parent.project_id,
-					actor: "policy",
-					payload: { kind: "node.children_all_done" },
-				});
-				if (!stale_check_event.ok) return stale_check_event;
-				events.push(stale_check_event.value);
-
-				if (parent.completion_policy !== "auto_children") break;
-
-				const cascaded = await try_cascade_parent(db, parent.id);
-				if (!cascaded) break;
-
-				const policy_event = await emit_event(db, {
-					kind: "policy.fired",
-					subject_id: cascaded.id,
-					project_id: cascaded.project_id,
-					actor: "policy",
-					payload: { kind: "policy.fired", policy: "auto_children" },
-				});
-				if (!policy_event.ok) return policy_event;
-				events.push(policy_event.value);
-
-				const cascaded_completed_event = await emit_event(db, {
-					kind: "task.completed",
-					subject_id: cascaded.id,
-					project_id: cascaded.project_id,
-					actor: "policy",
-					payload: { kind: "task.completed", via: "policy" },
-				});
-				if (!cascaded_completed_event.ok) return cascaded_completed_event;
-				events.push(cascaded_completed_event.value);
-
-				bubbled.push({ task: cascaded, via: "policy" });
-				cursor_parent_id = cascaded.parent_id;
-			}
+			const cascade_result = await cascade_from(db, completed.parent_id);
+			if (!cascade_result.ok) return cascade_result;
+			events.push(...cascade_result.value.events);
 
 			// One refresh covers the whole chain (task A2.3): `refresh_rollup_chain`
 			// recomputes every ancestor from the CURRENT `task` table state, so a
@@ -162,7 +188,7 @@ export class SqlCompletionEngine implements CompletionEngine {
 			const rollup_result = await refresh_rollup_chain(db, completed.parent_id);
 			if (!rollup_result.ok) return rollup_result;
 
-			return ok({ completed, bubbled, events });
+			return ok({ completed, bubbled: cascade_result.value.bubbled, events });
 		});
 	}
 
