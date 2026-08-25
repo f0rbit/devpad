@@ -165,6 +165,9 @@ export const createApi = (options?: ApiOptions) => {
 	// `db`/`config` are injected there. The real Workers runtime always
 	// falls through to `c.env.HOOKS_QUEUE`.
 	app.use("*", async (c, next) => {
+		// Liveness check must stay independent of the DB — no outbox drain here.
+		if (c.req.path === "/health") return next();
+
 		const db = c.get("db");
 		const dispatch =
 			options?.dispatch ??
