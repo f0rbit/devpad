@@ -123,7 +123,9 @@ async function repair_drifted_rollups(db: Database, cutoff_iso: string): Promise
 }
 
 /** Cycle-free + depth ≤ cap, verified (not auto-corrected — there's no safe automatic fix for a cycle). */
-async function verify_structural_invariants(db: Database): Promise<{ cycle_violations: number; depth_violations: number }> {
+async function verify_structural_invariants(
+	db: Database,
+): Promise<{ cycle_violations: number; depth_violations: number }> {
 	const rows = await db.all<{ id: string; parent_id: string | null }>(
 		sql`SELECT id, parent_id FROM task WHERE deleted = 0`,
 	);
@@ -192,7 +194,13 @@ function sibling_group_key(row: { parent_id: string | null; project_id: string |
 }
 
 async function rebalance_stale_sibling_sets(db: Database): Promise<number> {
-	const rows = await db.all<{ id: string; parent_id: string | null; project_id: string | null; rank: string; rev: number }>(
+	const rows = await db.all<{
+		id: string;
+		parent_id: string | null;
+		project_id: string | null;
+		rank: string;
+		rev: number;
+	}>(
 		sql`SELECT id, parent_id, project_id, rank, rev FROM task WHERE deleted = 0 ORDER BY parent_id, project_id, rank ASC`,
 	);
 

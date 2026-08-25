@@ -309,7 +309,9 @@ tasks
 				? (result as { bubbled: { task: { title: string } }[] }).bubbled
 				: [];
 			const bubbled_note =
-				bubbled.length > 0 ? ` (+${String(bubbled.length)} bubbled: ${bubbled.map((b) => b.task.title).join(", ")})` : "";
+				bubbled.length > 0
+					? ` (+${String(bubbled.length)} bubbled: ${bubbled.map((b) => b.task.title).join(", ")})`
+					: "";
 			spinner.succeed(`Task "${current.task.title}" marked as done${bubbled_note}`);
 		} catch (error) {
 			spinner.fail("Failed to mark task as done");

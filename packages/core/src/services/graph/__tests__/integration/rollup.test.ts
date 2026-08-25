@@ -23,7 +23,10 @@ beforeEach(async () => {
  * implementation than rollup.ts's own aggregate queries), plus a plain
  * direct-children select. */
 async function brute_force(id: string) {
-	const direct_children = await db.select().from(task).where(and(eq(task.parent_id, id), eq(task.deleted, false)));
+	const direct_children = await db
+		.select()
+		.from(task)
+		.where(and(eq(task.parent_id, id), eq(task.deleted, false)));
 	const subtree_result = await subtree(db, id, GRAPH_DEPTH_CAP);
 	const subtree_tasks = subtree_result.ok ? subtree_result.value : [];
 	return {
@@ -105,7 +108,9 @@ describe("rebuild_rollup — converges an intentionally corrupted cache", () => 
 		await seed_task(db, owner_id, { project_id, parent_id: parent.id });
 		void child_a;
 
-		await db.insert(task_rollup).values({ task_id: parent.id, direct_done: 99, direct_total: 99, subtree_done: 99, subtree_total: 99 });
+		await db
+			.insert(task_rollup)
+			.values({ task_id: parent.id, direct_done: 99, direct_total: 99, subtree_done: 99, subtree_total: 99 });
 
 		const rebuild_result = await rebuild_rollup(db, project_id);
 		expect(rebuild_result.ok).toBe(true);

@@ -36,12 +36,7 @@ export type CompletionEngine = {
 
 const via_for = (actor: CompletionActor): CompletedVia => (actor === "user" ? "user" : "api");
 
-async function complete_leaf(
-	db: Database,
-	id: string,
-	base_rev: number,
-	via: CompletedVia,
-): Promise<Task | null> {
+async function complete_leaf(db: Database, id: string, base_rev: number, via: CompletedVia): Promise<Task | null> {
 	const rows = await db.all<Task>(sql`
 		UPDATE task
 		SET progress = 'COMPLETED', completed_via = ${via}, rev = rev + 1, updated_at = CURRENT_TIMESTAMP

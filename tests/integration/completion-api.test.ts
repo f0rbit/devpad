@@ -38,7 +38,10 @@ describe("POST /tasks/:id/done — the single completion entrypoint", () => {
 	});
 
 	test("a manual-policy parent's leaf completes but bubbles nothing", async () => {
-		const parent = await create_task({ title: `done-manual-parent-${String(Date.now())}`, completion_policy: "manual" });
+		const parent = await create_task({
+			title: `done-manual-parent-${String(Date.now())}`,
+			completion_policy: "manual",
+		});
 		const leaf = await create_task({ title: `done-manual-leaf-${String(Date.now())}`, parent_id: parent.id });
 
 		const result = await t.client.tasks.done(leaf.id, { base_rev: leaf.rev });

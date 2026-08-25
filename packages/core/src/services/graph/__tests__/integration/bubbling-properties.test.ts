@@ -149,7 +149,10 @@ async function ancestor_chain(db: Database, id: string): Promise<Set<string>> {
 	const chain = new Set<string>();
 	let cursor: string | null = id;
 	while (cursor) {
-		const rows = await db.select({ parent_id: task.parent_id, deleted: task.deleted }).from(task).where(eq(task.id, cursor));
+		const rows = await db
+			.select({ parent_id: task.parent_id, deleted: task.deleted })
+			.from(task)
+			.where(eq(task.id, cursor));
 		if (rows.length === 0 || rows[0].deleted) break;
 		cursor = rows[0].parent_id;
 		if (cursor) chain.add(cursor);
@@ -186,7 +189,10 @@ async function assert_rollup_matches_brute_force(db: Database, nodes: TreeNode[]
 		const cached_rows = await db.select().from(task_rollup).where(eq(task_rollup.task_id, node.id));
 		if (cached_rows.length === 0) continue;
 		const cached = cached_rows[0];
-		const direct_children = await db.select().from(task).where(and(eq(task.parent_id, node.id), eq(task.deleted, false)));
+		const direct_children = await db
+			.select()
+			.from(task)
+			.where(and(eq(task.parent_id, node.id), eq(task.deleted, false)));
 		const subtree_result = await subtree(db, node.id, GRAPH_DEPTH_CAP);
 		const subtree_tasks = subtree_result.ok ? subtree_result.value : [];
 		expect(cached.direct_total).toBe(direct_children.length);
@@ -225,7 +231,10 @@ async function run_random_ops(
 		}
 
 		if (op === "create") {
-			const parent_candidate = pick(rng, nodes.filter((n) => n.depth < GRAPH_DEPTH_CAP - 1));
+			const parent_candidate = pick(
+				rng,
+				nodes.filter((n) => n.depth < GRAPH_DEPTH_CAP - 1),
+			);
 			if (!parent_candidate) continue;
 			const parent_rows = await db.select().from(task).where(eq(task.id, parent_candidate.id));
 			if (parent_rows.length === 0 || parent_rows[0].deleted) continue;
@@ -372,14 +381,8 @@ describe("bubbling property suite — sweeper convergence on injected crash stat
 				// Injected crash: revert BOTH ancestors to open, as if the cascade's
 				// writes never happened, while every leaf stays COMPLETED — the
 				// honest shape of a process crash between guarded UPDATEs.
-				await db
-					.update(task)
-					.set({ progress: "IN_PROGRESS", completed_via: null })
-					.where(eq(task.id, parent.id));
-				await db
-					.update(task)
-					.set({ progress: "IN_PROGRESS", completed_via: null })
-					.where(eq(task.id, grandparent.id));
+				await db.update(task).set({ progress: "IN_PROGRESS", completed_via: null }).where(eq(task.id, parent.id));
+				await db.update(task).set({ progress: "IN_PROGRESS", completed_via: null }).where(eq(task.id, grandparent.id));
 
 				let sweeps = 0;
 				let clean = false;
