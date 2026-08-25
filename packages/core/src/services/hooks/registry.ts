@@ -96,6 +96,29 @@ export async function upsert_hook(
 	return to_public_hook(rows[0]);
 }
 
+/**
+ * v2.4 (B3.4) — the settings panel's enable/disable toggle. A single-column
+ * update, deliberately NOT routed through `upsert_hook`: that path requires
+ * the caller to resubmit `trigger`+`action` in full, and `PublicHook`'s
+ * `action` never carries a webhook's `secret` back out (write-only, per this
+ * module's own doc comment) — round-tripping it through `upsert_hook` would
+ * silently drop `secret_encrypted` the moment a toggle-only caller omits it.
+ */
+export async function set_hook_enabled(
+	db: Database,
+	id: string,
+	project_id: string,
+	enabled: boolean,
+): Promise<Result<PublicHook, ServiceError>> {
+	const rows = await db
+		.update(hook)
+		.set({ enabled, updated_at: new Date().toISOString() })
+		.where(and(eq(hook.id, id), eq(hook.project_id, project_id)))
+		.returning();
+	if (rows.length === 0) return err({ kind: "not_found", resource: "hook", id });
+	return to_public_hook(rows[0]);
+}
+
 export async function delete_hook(db: Database, id: string): Promise<Result<void, ServiceError>> {
 	const rows = await db.update(hook).set({ deleted: true }).where(eq(hook.id, id)).returning();
 	if (rows.length === 0) return err({ kind: "not_found", resource: "hook", id });

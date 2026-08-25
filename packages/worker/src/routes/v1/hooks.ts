@@ -1,5 +1,5 @@
 import { hooks, projects } from "@devpad/core/services";
-import { upsert_hook } from "@devpad/schema/validation";
+import { toggle_hook_enabled, upsert_hook } from "@devpad/schema/validation";
 import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -59,6 +59,26 @@ app.patch("/:id", requireAuth, zValidator("json", upsert_hook), async (c) => {
 	if (!guard.ok) return guard.response;
 
 	const result = await hooks.upsert_hook(db, config.encryption_key, { ...data, id });
+	if (!result.ok) {
+		if (result.error.kind === "not_found") return c.json({ error: "Hook not found" }, 404);
+		return c.json({ error: result.error.kind }, 500);
+	}
+	return c.json(result.value);
+});
+
+/** v2.4 (B3.4) — the settings panel's enable/disable toggle; never touches `trigger`/`action` (see `set_hook_enabled`'s doc comment on why this can't route through the general upsert). */
+app.patch("/:id/enabled", requireAuth, zValidator("json", toggle_hook_enabled), async (c) => {
+	const db = c.get("db");
+	const id = c.req.param("id");
+	const data = c.req.valid("json");
+
+	const existing = await hooks.get_hook(db, id);
+	if (!existing.ok) return c.json({ error: "Hook not found" }, 404);
+
+	const guard = await assertProjectOwnership(c, existing.value.project_id);
+	if (!guard.ok) return guard.response;
+
+	const result = await hooks.set_hook_enabled(db, id, existing.value.project_id, data.enabled);
 	if (!result.ok) {
 		if (result.error.kind === "not_found") return c.json({ error: "Hook not found" }, 404);
 		return c.json({ error: result.error.kind }, 500);

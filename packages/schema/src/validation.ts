@@ -674,3 +674,7 @@ export const upsert_hook = z.object({
 	action: hook_action_input,
 });
 export type UpsertHook = z.infer<typeof upsert_hook>;
+
+/** v2.4 (B3.4) — the settings panel's enable/disable toggle; deliberately NOT `upsert_hook` (see `registry.ts`'s `set_hook_enabled`). */
+export const toggle_hook_enabled = z.object({ enabled: z.boolean() });
+export type ToggleHookEnabled = z.infer<typeof toggle_hook_enabled>;

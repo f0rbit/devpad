@@ -624,6 +624,10 @@ export class ApiClient {
 		delete: (id: string): Promise<ApiResult<{ success: boolean }>> =>
 			wrap(() => this.clients.hooks.delete<{ success: boolean }>(`/hooks/${id}`)),
 
+		/** v2.4 (B3.4) — settings panel enable/disable toggle; never touches trigger/action (see registry.ts's `set_hook_enabled`). */
+		setEnabled: (id: string, enabled: boolean): Promise<ApiResult<PublicHook>> =>
+			wrap(() => this.clients.hooks.patch<PublicHook>(`/hooks/${id}/enabled`, { body: { enabled } })),
+
 		deliveries: (id: string, status?: HookDeliveryStatus): Promise<ApiResult<HookDelivery[]>> =>
 			wrap(() =>
 				this.clients.hooks.get<HookDelivery[]>(`/hooks/${id}/deliveries`, status ? { query: { status } } : {}),

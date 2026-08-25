@@ -18,7 +18,16 @@
  * the outline's progress ring renders a real fraction rather than 0/0.
  */
 
-import { project, session, task, task_link, task_rollup, user } from "@devpad/schema/database/schema";
+import {
+	hook,
+	hook_delivery,
+	project,
+	session,
+	task,
+	task_link,
+	task_rollup,
+	user,
+} from "@devpad/schema/database/schema";
 import type { Database as DrizzleDatabase } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
 import {
@@ -37,6 +46,8 @@ import {
 	E2E_TASK_RIPPLE_GRANDPARENT,
 	E2E_TASK_RIPPLE_LEAF,
 	E2E_TASK_RIPPLE_PARENT,
+	E2E_HOOK_DELIVERY_DLQ_ID,
+	E2E_HOOK_ID,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
 	E2E_TASK_STAGE_PLAN,
@@ -62,6 +73,8 @@ export {
 	E2E_TASK_RIPPLE_GRANDPARENT,
 	E2E_TASK_RIPPLE_LEAF,
 	E2E_TASK_RIPPLE_PARENT,
+	E2E_HOOK_DELIVERY_DLQ_ID,
+	E2E_HOOK_ID,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
 	E2E_TASK_STAGE_PLAN,
@@ -442,6 +455,34 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 		protected: false,
 		deleted: false,
 	} as never);
+
+	await db.insert(hook).values({
+		id: E2E_HOOK_ID,
+		project_id: E2E_OUTLINE_PROJECT_ID,
+		enabled: true,
+		trigger: { kinds: ["task.completed"], selector: {} },
+		action: { kind: "webhook", url: "https://example.com/e2e-hook" },
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	// No API can fabricate a `hook_delivery` row directly (only the dispatch
+	// system ever creates one) — this is the one part of the settings
+	// fixture that has to be seeded at the SQL level.
+	await db.insert(hook_delivery).values({
+		id: E2E_HOOK_DELIVERY_DLQ_ID,
+		hook_id: E2E_HOOK_ID,
+		event_id: "event_e2e-dlq-sample",
+		status: "failed_permanent",
+		attempts: 3,
+		last_error: "connect ECONNREFUSED 127.0.0.1:9999",
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+	} as never);
 }
 
 async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
@@ -472,6 +513,8 @@ async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(task_link).where(eq(task_link.id, `link_${E2E_TASK_STAGE_REVIEW}-tracks_metric`));
 	await db.delete(task).where(eq(task.id, E2E_TASK_STAGE_PLAN));
 	await db.delete(task).where(eq(task.id, E2E_TASK_STAGE_REVIEW));
+	await db.delete(hook_delivery).where(eq(hook_delivery.id, E2E_HOOK_DELIVERY_DLQ_ID));
+	await db.delete(hook).where(eq(hook.id, E2E_HOOK_ID));
 	await db.delete(project).where(eq(project.id, E2E_OUTLINE_PROJECT_ID));
 	// user/session are shared with the pipelines fixture on the same fixed ids
 	// (see the `onConflictDoNothing` inserts above) — never deleted here.

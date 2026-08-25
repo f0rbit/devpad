@@ -61,3 +61,7 @@ export const E2E_TASK_RIPPLE_REDUCED_LEAF = "task_e2e-outline-ripple-reduced-lea
 export const E2E_TASK_STAGE_PLAN = "task_e2e-outline-stage-plan" as const;
 /** `stage:"review"` — the checkpoint cards' scenario; carries a `tracks_metric` edge for the types card's pulse widget. */
 export const E2E_TASK_STAGE_REVIEW = "task_e2e-outline-stage-review" as const;
+
+/** Settings panel (task B3.4) — a hook + one `failed_permanent` delivery (the visible DLQ). No API can fabricate a delivery row directly (deliveries are only ever created by the dispatch system), so this is a SQL-seeded fixture. */
+export const E2E_HOOK_ID = "hook_e2e-outline-settings" as const;
+export const E2E_HOOK_DELIVERY_DLQ_ID = "hookdelivery_e2e-outline-settings-dlq" as const;

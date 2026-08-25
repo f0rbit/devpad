@@ -38,6 +38,15 @@ async function requestCheckpoint(context: BrowserContext, document_id: string) {
 	return response.json() as Promise<{ signoff: { id: string }; task_id: string }>;
 }
 
+/** `request_checkpoint` creates a real pending signoff owned by the SHARED e2e test user, surfaced globally by the "reviews pending" aggregate — waiting-on-you.spec.ts's "collapses to nothing" test asserts exactly zero of these exist. Called via `finally` so a mid-test assertion failure (or a flaky retry) still decides it, rather than leaking across spec files in a full-suite run. */
+async function decideCheckpoint(
+	context: BrowserContext,
+	signoff_id: string,
+	decision: "approved" | "changes_requested",
+) {
+	await context.request.post(`/api/v1/signoffs/${signoff_id}/decide`, { data: { decision } });
+}
+
 async function openDoc(page: Page, context: BrowserContext, documentId: string) {
 	await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/docs`);
 	await page.waitForLoadState("networkidle");
@@ -113,25 +122,37 @@ test.describe("AnnotationRail", () => {
 	test("a blocking thread disables approve and lists itself; resolving re-enables it", async ({ page, context }) => {
 		await inject_test_user(context);
 		const doc = await pushDoc(context, "<h1>Design</h1><p>The quick brown fox jumps over the lazy dog.</p>");
-		await requestCheckpoint(context, doc.id);
-		await openDoc(page, context, doc.id);
+		const requested = await requestCheckpoint(context, doc.id);
 
-		await expect(page.getByTestId("verdict-bar")).toBeVisible();
-		await expect(page.getByTestId("verdict-approve")).toBeEnabled();
+		try {
+			await openDoc(page, context, doc.id);
 
-		await selectWordInFrame(page, "lazy dog");
-		await page.getByTestId("new-thread-button").click();
-		await page.getByTestId("thread-composer").locator("textarea").fill("blocking note");
-		await page.getByTestId("thread-composer").locator('input[type="checkbox"]').check();
-		await page.getByTestId("thread-save").click();
+			await expect(page.getByTestId("verdict-bar")).toBeVisible();
+			await expect(page.getByTestId("verdict-approve")).toBeEnabled();
 
-		await expect(page.getByTestId("verdict-blocked-note")).toContainText("lazy dog");
-		await expect(page.getByTestId("verdict-approve")).toBeDisabled();
+			await selectWordInFrame(page, "lazy dog");
+			await page.getByTestId("new-thread-button").click();
+			await page.getByTestId("thread-composer").locator("textarea").fill("blocking note");
+			await page.getByTestId("thread-composer").locator('input[type="checkbox"]').check();
+			await page.getByTestId("thread-save").click();
 
-		const card = page.getByTestId("thread-card").filter({ hasText: "blocking note" });
-		await card.getByTestId("thread-resolve").click();
-		await expect(card).toContainText("resolved");
-		await expect(page.getByTestId("verdict-approve")).toBeEnabled();
+			await expect(page.getByTestId("verdict-blocked-note")).toContainText("lazy dog");
+			await expect(page.getByTestId("verdict-approve")).toBeDisabled();
+
+			const card = page.getByTestId("thread-card").filter({ hasText: "blocking note" });
+			await card.getByTestId("thread-resolve").click();
+			await expect(card).toContainText("resolved");
+			await expect(page.getByTestId("verdict-approve")).toBeEnabled();
+
+			await page.getByTestId("verdict-approve").click();
+			await expect(page.getByTestId("verdict-bar")).toHaveCount(0);
+		} finally {
+			// Runs even on a mid-test assertion failure (a flaky retry attempt
+			// included) — see `decideCheckpoint`'s doc comment on why an
+			// undecided signoff here leaks into an unrelated spec file's
+			// "zero pending reviews" assertion in a full-suite run.
+			await decideCheckpoint(context, requested.signoff.id, "approved");
+		}
 	});
 
 	test("an orphaned thread (anchor not found) renders in its own always-visible section", async ({ page, context }) => {

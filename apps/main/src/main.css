@@ -1820,6 +1820,60 @@ button.outline-row {
 	gap: 4px;
 }
 
+.scoped-keys,
+.hook-deliveries {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-width: 480px;
+}
+
+.scoped-key-reveal {
+	border: 1px solid var(--warning-fg);
+	border-radius: var(--radius);
+	background: var(--warning);
+	padding: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.scoped-key-reveal code {
+	word-break: break-all;
+}
+
+.scoped-key-create {
+	align-items: center;
+}
+
+.scoped-key-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.hook-delivery-group {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 8px;
+}
+
+.hook-delivery-head {
+	align-items: center;
+}
+
+.hook-delivery-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.hook-delivery-item-dlq {
+	border-left: 2px solid var(--error-fg);
+	padding-left: 6px;
+}
+
 .sdlc-stepper-error {
 	margin-top: 6px;
 	display: flex;
