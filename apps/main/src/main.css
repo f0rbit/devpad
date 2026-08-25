@@ -1629,6 +1629,12 @@ button.outline-row {
 	color: var(--error-fg);
 }
 
+.doc-viewer-body {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+}
+
 .doc-render-frame {
 	flex: 1;
 	min-width: 0;
@@ -1637,6 +1643,140 @@ button.outline-row {
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
 	background: #fff;
+}
+
+.doc-viewer-not-head-note {
+	flex: 1;
+	padding: 12px;
+}
+
+.annotation-rail {
+	width: 300px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-height: 60vh;
+	overflow: auto;
+}
+
+.verdict-bar {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.verdict-blocked-note {
+	font-size: 12px;
+	color: var(--error-fg);
+	margin: 0;
+}
+
+.verdict-reason {
+	width: 100%;
+	font-size: 12px;
+	min-height: 40px;
+	resize: vertical;
+}
+
+.verdict-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.annotation-rail-header {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.thread-composer,
+.thread-card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.thread-quote {
+	font-size: 12px;
+	font-style: italic;
+	color: var(--fg-muted);
+	margin: 0;
+}
+
+.thread-entry {
+	font-size: 12px;
+	margin: 0;
+}
+
+.thread-meta {
+	display: flex;
+	gap: 4px;
+}
+
+.thread-blocking-label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+}
+
+.thread-composer-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.thread-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.thread-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.thread-action-link {
+	font-size: 11px;
+	color: var(--fg-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
+.thread-action-link:hover {
+	color: var(--fg-muted);
+}
+
+.thread-reply-box {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.thread-reply-box textarea {
+	font-size: 12px;
+	min-height: 40px;
+}
+
+.thread-list-orphaned {
+	border-top: 1px dashed var(--warning-fg);
+	padding-top: 8px;
+}
+
+.thread-card-orphaned {
+	border-style: dashed;
+	border-color: var(--warning-fg);
 }
 
 .docs-list {

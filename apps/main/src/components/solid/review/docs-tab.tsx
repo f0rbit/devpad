@@ -61,10 +61,14 @@ export default function DocsTab(props: DocsTabProps) {
 			<Show when={loadingId()}>
 				<p class="text-sm text-faint">Loading document…</p>
 			</Show>
-			<Show when={selected()}>
-				{(data) => (
-					<DocViewer documentId={data().id} initial={data().initial} initialVersions={data().initialVersions} />
-				)}
+			{/* `keyed` — a plain `Show` only re-runs its callback on falsy→truthy
+			transitions; selecting a SECOND, different document would otherwise
+			leave DocViewer's own once-initialized signals (selectedVersion etc.)
+			pointed at the FIRST document. `keyed` disposes + remounts whenever
+			`selected()` resolves to a new object, giving each selection a clean
+			DocViewer instance. */}
+			<Show when={selected()} keyed>
+				{(data) => <DocViewer documentId={data.id} initial={data.initial} initialVersions={data.initialVersions} />}
 			</Show>
 		</section>
 	);

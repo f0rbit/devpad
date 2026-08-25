@@ -989,6 +989,14 @@ export class ApiClient {
 		find: (id: string): Promise<ApiResult<Signoff>> =>
 			wrap(() => this.clients.signoffs.get<Signoff>(`/signoffs/${id}`)),
 
+		/** v2.4 (B3) — the pending (undecided) signoff for a subject+checkpoint, or `null` if none has been requested yet. */
+		findPending: (filters: {
+			subject_kind: "doc_version" | "stage";
+			subject_id: string;
+			checkpoint: "plan" | "types" | "design";
+		}): Promise<ApiResult<Signoff | null>> =>
+			wrap(() => this.clients.signoffs.get<Signoff | null>("/signoffs", { query: filters })),
+
 		decide: (id: string, data: DecideCheckpointRequest): Promise<ApiResult<Signoff>> =>
 			wrap(() => this.clients.signoffs.post<Signoff>(`/signoffs/${id}/decide`, { body: data })),
 	};

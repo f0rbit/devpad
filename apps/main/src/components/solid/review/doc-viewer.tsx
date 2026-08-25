@@ -2,7 +2,9 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { DocVersionInfo, PullDocResponse } from "@devpad/api";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createMemo, createSignal, For, Show } from "solid-js";
+import { checkpointForDocKind } from "@/utils/checkpoint";
 import { diffLines, type DiffLine } from "@/utils/text-diff";
+import AnnotationRail from "./annotation-rail";
 
 export type DocViewerProps = {
 	documentId: string;
@@ -14,20 +16,23 @@ export type DocViewerProps = {
 const STATUS_VARIANT = { draft: "default", in_review: "warning", approved: "success" } as const;
 
 /**
- * Task B3.1 — DocViewer: renders the corpus-stored, already-sanitized doc
- * content inline in the `docs` tab, via a sandboxed script-disabled iframe
- * hitting `GET /docs/:id/render` (its own CSP — defense in depth over
- * sanitize-on-push, per gap 7). Version picker walks corpus lineage (vN
- * chips + an `approved` tag badge), with a diff link between adjacent
- * versions.
+ * Task B3.1/B3.2 — DocViewer: renders the corpus-stored, already-sanitized
+ * doc content inline in the `docs` tab, via a sandboxed script-disabled
+ * iframe hitting `GET /docs/:id/render` (its own CSP — defense in depth
+ * over sanitize-on-push, per gap 7). Version picker walks corpus lineage
+ * (vN chips + an `approved` tag badge), with a diff link between adjacent
+ * versions, and the AnnotationRail alongside it shares the same live
+ * `pulled` state (threads/orphans) — every rail mutation mints a new corpus
+ * version, so the rail hands the fresh pull straight back here to refresh
+ * both the version list and the rendered iframe.
  *
  * `iframe sandbox="allow-same-origin"` (no `allow-scripts`) is the load-
  * bearing combination: it gives the PARENT frame's own trusted JS a live,
  * readable `contentDocument`/`contentWindow.getSelection()` for the
- * AnnotationRail (task B3.2) to build selections against, while any
- * `<script>` or inline event handler that ever slipped past ingest
- * sanitization stays completely inert — script execution is gated by
- * `allow-scripts` alone, independent of same-origin access.
+ * AnnotationRail to build selections against, while any `<script>` or
+ * inline event handler that ever slipped past ingest sanitization stays
+ * completely inert — script execution is gated by `allow-scripts` alone,
+ * independent of same-origin access.
  *
  * Plain signals + explicit async functions (not `createResource`) — matches
  * every other Solid component in this codebase (`milestone-lens.tsx` etc);
@@ -35,13 +40,16 @@ const STATUS_VARIANT = { draft: "default", in_review: "warning", approved: "succ
  */
 export default function DocViewer(props: DocViewerProps) {
 	const client = getBrowserClient();
+	let iframeRef: HTMLIFrameElement | undefined;
+
+	const [pulled, setPulled] = createSignal<PullDocResponse>(props.initial);
+	const [versions, setVersions] = createSignal<DocVersionInfo[]>(props.initialVersions);
 	const [selectedVersion, setSelectedVersion] = createSignal<string | undefined>(
 		props.initial.document.head_version ?? undefined,
 	);
 	const [diffData, setDiffData] = createSignal<{ against: string; lines: DiffLine[] } | null>(null);
 	const [diffLoading, setDiffLoading] = createSignal(false);
 
-	const versions = createMemo(() => props.initialVersions);
 	/** Oldest-first ordinal labels (v1 = oldest) — `versions()` itself is newest-first (the lineage walk). */
 	const versionLabel = (version: string) => {
 		const list = versions();
@@ -62,14 +70,24 @@ export default function DocViewer(props: DocViewerProps) {
 		setDiffLoading(false);
 	}
 
+	/** A rail mutation minted a new corpus version — refresh both the version list and jump the viewer to the new head. */
+	async function handleAnnotationChange(fresh: PullDocResponse): Promise<void> {
+		setPulled(fresh);
+		setSelectedVersion(fresh.document.head_version ?? undefined);
+		setDiffData(null);
+		const versions_result = await client.docs.versions(props.documentId);
+		if (versions_result.ok) setVersions(versions_result.value);
+	}
+
 	const renderUrl = createMemo(() => client.docs.renderUrl(props.documentId, selectedVersion()));
+	const checkpoint = createMemo(() => checkpointForDocKind(pulled().document.kind));
 
 	return (
 		<div class="doc-viewer" data-testid="doc-viewer">
 			<div class="doc-viewer-header">
-				<h4 class="doc-viewer-title">{props.initial.document.title}</h4>
-				<Badge variant={STATUS_VARIANT[props.initial.document.status]}>{props.initial.document.status}</Badge>
-				<span class="outline-chip">{props.initial.document.kind}</span>
+				<h4 class="doc-viewer-title">{pulled().document.title}</h4>
+				<Badge variant={STATUS_VARIANT[pulled().document.status]}>{pulled().document.status}</Badge>
+				<span class="outline-chip">{pulled().document.kind}</span>
 			</div>
 
 			<Show when={versions().length > 0}>
@@ -131,18 +149,39 @@ export default function DocViewer(props: DocViewerProps) {
 				</div>
 			</Show>
 
-			<Show
-				when={props.initial.document.head_version}
-				fallback={<Empty title="No content yet" description="This document hasn't been pushed to." />}
-			>
-				<iframe
-					class="doc-render-frame"
-					data-testid="doc-render-frame"
-					title={props.initial.document.title}
-					src={renderUrl()}
-					sandbox="allow-same-origin"
-				/>
-			</Show>
+			<div class="doc-viewer-body">
+				<Show
+					when={pulled().document.head_version}
+					fallback={<Empty title="No content yet" description="This document hasn't been pushed to." />}
+				>
+					<iframe
+						ref={iframeRef}
+						class="doc-render-frame"
+						data-testid="doc-render-frame"
+						title={pulled().document.title}
+						src={renderUrl()}
+						sandbox="allow-same-origin"
+					/>
+					<Show
+						when={selectedVersion() === pulled().document.head_version}
+						fallback={
+							<p class="text-sm text-faint doc-viewer-not-head-note">
+								Viewing an older version — switch to the latest version to annotate or decide.
+							</p>
+						}
+					>
+						<AnnotationRail
+							documentId={props.documentId}
+							pulled={pulled()}
+							checkpoint={checkpoint()}
+							getIframe={() => iframeRef}
+							onChanged={(fresh) => {
+								void handleAnnotationChange(fresh);
+							}}
+						/>
+					</Show>
+				</Show>
+			</div>
 		</div>
 	);
 }
