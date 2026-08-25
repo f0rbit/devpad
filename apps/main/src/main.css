@@ -471,6 +471,13 @@ details[open] .down-arrow {
 	--outline-ring-track: color-mix(in oklch, var(--fg-faint) 35%, transparent);
 	outline: none;
 	padding-bottom: 56px;
+	border-radius: var(--radius-lg);
+	box-shadow: inset 0 0 0 1.5px transparent;
+	transition: box-shadow 120ms ease;
+}
+
+.outline-container:focus-within {
+	box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
 .outline-layout {
@@ -507,7 +514,12 @@ button.outline-row {
 	cursor: pointer;
 }
 
-.tree-node:hover .outline-row,
+@media (hover: hover) and (pointer: fine) {
+	.tree-node:hover .outline-row {
+		background: var(--bg-alt);
+	}
+}
+
 .outline-compact-row:hover {
 	background: var(--bg-alt);
 }
@@ -535,10 +547,15 @@ button.outline-row {
 	border: none;
 	cursor: pointer;
 	color: var(--fg-subtle);
+	transition: transform 120ms ease-out;
 }
 
 .outline-bullet:hover {
 	background: var(--border);
+}
+
+.outline-bullet:active {
+	transform: scale(0.94);
 }
 
 .outline-dot {
@@ -654,10 +671,19 @@ button.outline-row {
 }
 
 @media (max-width: 480px) {
-	/* Claim provenance is the least load-bearing chip at a glance — dropping it
-	   first keeps the priority/policy chips on the title's own line instead of
-	   wrapping the whole group onto an awkward second line. */
+	/* At 360-480px there's no room to wrap onto a second line without the row
+	   height jumping per-node — clip instead, dropping the least load-bearing
+	   chips first: claim provenance, then LOW priority, keeping HIGH + auto ⚙. */
+	.outline-chips {
+		flex-wrap: nowrap;
+		overflow: hidden;
+	}
+
 	.outline-chips .badge {
+		display: none;
+	}
+
+	.outline-chips .outline-chip-lo {
 		display: none;
 	}
 }
@@ -671,7 +697,7 @@ button.outline-row {
 	white-space: nowrap;
 	border: 1px solid var(--border);
 	color: var(--fg-faint);
-	background: var(--surface, var(--bg-alt));
+	background: var(--bg-alt);
 }
 
 .outline-chip-hi {
@@ -916,11 +942,34 @@ button.outline-row {
 	font-size: 11.5px;
 	color: var(--fg-faint);
 	font-family: var(--font-mono);
+	opacity: 0.55;
+	transition: opacity 120ms ease;
+}
+
+.outline-container:focus-within .outline-hintbar {
+	opacity: 1;
 }
 
 .outline-hintbar b {
 	color: var(--fg-subtle);
 	font-weight: 600;
+}
+
+/* It's a keyboard-shortcut reference — pointless on touch, and the desktop
+   two-row wrap it falls back to would waste vertical space there anyway. */
+@media (hover: none), (max-width: 480px) {
+	.outline-hintbar {
+		display: none;
+	}
+}
+
+/* Reserve room below the footer for the fixed bar so it never overlays the
+   final scroll position's footer text. Scoped to when the bar can actually
+   render (desktop, pointer capable) to avoid reserving dead space on touch. */
+@media (hover: hover) and (pointer: fine) and (min-width: 481px) {
+	body:has(.outline-hintbar) {
+		padding-bottom: 44px;
+	}
 }
 
 .outline-toasts {
@@ -954,6 +1003,10 @@ button.outline-row {
 	border-color: var(--warning-fg);
 }
 
+.outline-toast-leaving {
+	animation: outline-toast-out 220ms ease forwards;
+}
+
 @keyframes outline-toast-in {
 	from {
 		opacity: 0;
@@ -965,8 +1018,23 @@ button.outline-row {
 	}
 }
 
+@keyframes outline-toast-out {
+	from {
+		opacity: 1;
+		transform: none;
+	}
+	to {
+		opacity: 0;
+		transform: translateY(4px);
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.outline-toast {
+		animation: none;
+	}
+
+	.outline-toast-leaving {
 		animation: none;
 	}
 }

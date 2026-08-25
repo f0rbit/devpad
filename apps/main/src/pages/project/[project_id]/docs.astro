@@ -20,7 +20,10 @@ const statusVariant = { draft: "default", in_review: "warning", approved: "succe
 
 <PageLayout title={`Docs - ${project_id}`}>
 	<ProjectLayout project_id={project_id}>
-		<SpecificationEditor project_id={project.id} initial={project.specification ?? ""} has_github={project.repo_url != null} client:load />
+		<section class="docs-list">
+			<h5>specification</h5>
+			<SpecificationEditor project_id={project.id} initial={project.specification ?? ""} has_github={project.repo_url != null} client:load />
+		</section>
 
 		<section class="docs-list">
 			<h5>project documents</h5>
