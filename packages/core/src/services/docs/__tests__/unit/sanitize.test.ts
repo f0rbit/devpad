@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { sanitize_html, sanitize_text } from "../../sanitize.js";
+import { rewrite_fragment_hrefs, sanitize_html, sanitize_text } from "../../sanitize.js";
 
 describe("sanitize_html — XSS corpus", () => {
 	test("neutralizes script tags, event handlers, javascript: hrefs, svg onload, and nested payloads", () => {
@@ -84,6 +84,88 @@ describe("sanitize_html — XSS corpus", () => {
 		expect(output).toContain(".foo { color: red; }");
 		expect(output).toContain(".baz { font-weight: bold; }");
 		expect(output).not.toContain("evil.example");
+	});
+});
+
+describe("sanitize_html — preserves legitimate plan/design doc styling (taste/IA critic BLOCKER)", () => {
+	test("real .plans-style doc: inline <style> class selectors, a TOC with fragment links, 5+ headings all survive and keep working", () => {
+		const doc = `
+			<style>
+				.callout { color: red; }
+				.badge-done { background: green; }
+			</style>
+			<nav class="toc">
+				<a href="#overview">Overview</a>
+				<a href="#phase-1">Phase 1</a>
+				<a href="#phase-2">Phase 2</a>
+			</nav>
+			<h1 id="overview" class="callout">Overview</h1>
+			<h2 id="phase-1">Phase 1</h2>
+			<p class="badge-done">done</p>
+			<h2 id="phase-2">Phase 2</h2>
+			<h3 id="phase-2-tasks">Phase 2 tasks</h3>
+			<h3 id="phase-2-verification">Phase 2 verification</h3>
+		`;
+
+		const output = sanitize_html(doc);
+
+		// class-selector CSS from the <style> block survives...
+		expect(output).toContain(".callout { color: red; }");
+		expect(output).toContain(".badge-done { background: green; }");
+		// ...and actually matches: the class values on real elements are kept.
+		expect(output).toContain('class="callout"');
+		expect(output).toContain('class="badge-done"');
+		// heading ids get clobber-prefixed (hast-util-sanitize's own
+		// DOM-clobbering protection, unchanged)...
+		expect(output).toContain('id="user-content-overview"');
+		expect(output).toContain('id="user-content-phase-1"');
+		expect(output).toContain('id="user-content-phase-2"');
+		expect(output).toContain('id="user-content-phase-2-tasks"');
+		expect(output).toContain('id="user-content-phase-2-verification"');
+		// ...and the TOC's fragment hrefs are rewritten to match, so anchor
+		// navigation still resolves post-sanitize.
+		expect(output).toContain('href="#user-content-overview"');
+		expect(output).toContain('href="#user-content-phase-1"');
+		expect(output).toContain('href="#user-content-phase-2"');
+	});
+
+	test("does not rewrite full-URL hrefs that happen to carry a fragment", () => {
+		const output = sanitize_html(`<a href="https://example.com/docs#section">external</a>`);
+		expect(output).toContain('href="https://example.com/docs#section"');
+	});
+
+	test("rewrite_fragment_hrefs is idempotent — an already-clobber-prefixed href is left alone", () => {
+		const once = rewrite_fragment_hrefs(`<a href="#foo">x</a>`);
+		expect(rewrite_fragment_hrefs(once)).toBe(once);
+	});
+
+	test("the XSS corpus still fully passes with className + anchor allowances in place", () => {
+		const hostile = [
+			`<script>alert(1)</script>`,
+			`<img src="x" onerror="alert(1)" class="evil">`,
+			`<a href="javascript:alert(1)" class="link">click</a>`,
+			`<a href="data:text/html,<script>alert(1)</script>">click</a>`,
+			`<svg onload="alert(1)"><circle /></svg>`,
+			`<iframe src="https://evil.example"></iframe>`,
+			`<div class="foo" onclick="alert(1)">nested <script>alert(2)</script> payload</div>`,
+		].join("\n");
+
+		const output = sanitize_html(hostile);
+
+		expect(output).not.toContain("<script");
+		expect(output).not.toContain("onerror");
+		expect(output).not.toContain("onload");
+		expect(output).not.toContain("onclick");
+		expect(output).not.toContain("javascript:");
+		expect(output).not.toContain("data:text/html");
+		expect(output).not.toContain("<iframe");
+		expect(output).not.toContain("alert(1)");
+		expect(output).not.toContain("alert(2)");
+		// class values are now preserved (the fix), but that's inert — no
+		// class name can execute anything.
+		expect(output).toContain('class="evil"');
+		expect(output).toContain('class="link"');
+		expect(output).toContain('class="foo"');
 	});
 });
 
