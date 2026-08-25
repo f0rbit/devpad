@@ -1,4 +1,4 @@
-import { graph } from "@devpad/core/services";
+import { docs, graph } from "@devpad/core/services";
 import { Hono } from "hono";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
@@ -24,6 +24,27 @@ app.get("/verify-fold", requireAuth, async (c) => {
 	if (isProjectScopeDenied(c, null)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.verify_fold(db, auth_user.id);
+	if (!result.ok) return c.json({ error: result.error.kind }, 500);
+	return c.json(result.value);
+});
+
+/**
+ * v2.4 (B3, CSS-exfil fix) — repairs docs pushed before `sanitize.ts` learned
+ * to scrub `<style>` blocks. Scoped to the calling user's own projects, same
+ * as `verify-fold` — a per-account repair, not a public admin surface. POST
+ * (not GET) since it mutates: a doc with a live exfil vector gets a fresh
+ * corpus version pushed.
+ */
+app.post("/reconcile-docs-css", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	if (isProjectScopeDenied(c, null)) return projectScopeDeniedResponse(c);
+
+	const backend = c.get("docsBackend");
+	if (!backend) return c.json({ error: "Docs corpus backend not configured" }, 503);
+
+	const result = await docs.reconcile_docs_css(db, backend, auth_user.id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
 });

