@@ -47,7 +47,7 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 		const trees = await Promise.all(milestones.map((m) => client.tasks.tree(m.id, 2)));
 		const built: MilestoneRow[] = milestones.map((m, i) => {
 			const tree = trees[i];
-			if (!tree?.ok) return { milestone: m, rollup: undefined, edge: undefined, descendants: [] };
+			if (!tree.ok) return { milestone: m, rollup: undefined, edge: undefined, descendants: [] };
 			return {
 				milestone: m,
 				rollup: tree.value.rollups[m.id],
@@ -87,7 +87,13 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 											</span>
 										</Show>
 										<div class="lens-milestone-card" data-testid="lens-milestone-card" data-task-id={row.milestone.id}>
-											<button type="button" class="lens-milestone-head" onClick={() => goto(row.milestone.id)}>
+											<button
+												type="button"
+												class="lens-milestone-head"
+												onClick={() => {
+													goto(row.milestone.id);
+												}}
+											>
 												<Ring rollup={row.rollup} size={26} auto={false} rippling={false} />
 												<span class="lens-milestone-title">{row.milestone.name}</span>
 											</button>
@@ -108,15 +114,27 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 												</Show>
 											</div>
 											<Show when={row.descendants.length > 0}>
-												<button type="button" class="lens-milestone-expand" onClick={() => toggle(row.milestone.id)}>
-													{expanded().has(row.milestone.id) ? "collapse" : `expand (${row.descendants.length})`}
+												<button
+													type="button"
+													class="lens-milestone-expand"
+													onClick={() => {
+														toggle(row.milestone.id);
+													}}
+												>
+													{expanded().has(row.milestone.id) ? "collapse" : `expand (${String(row.descendants.length)})`}
 												</button>
 												<Show when={expanded().has(row.milestone.id)}>
 													<ul class="lens-milestone-children">
 														<For each={row.descendants}>
 															{(child) => (
 																<li>
-																	<button type="button" class="lens-milestone-child" onClick={() => goto(child.id)}>
+																	<button
+																		type="button"
+																		class="lens-milestone-child"
+																		onClick={() => {
+																			goto(child.id);
+																		}}
+																	>
 																		{child.title}
 																	</button>
 																</li>

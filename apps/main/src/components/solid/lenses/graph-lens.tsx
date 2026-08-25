@@ -171,7 +171,9 @@ export default function GraphLens(props: GraphLensProps) {
 	const DOUBLE_CLICK_MS = 300;
 	let pendingId: string | null = null;
 	let pendingTimer: ReturnType<typeof setTimeout> | undefined;
-	onCleanup(() => clearTimeout(pendingTimer));
+	onCleanup(() => {
+		clearTimeout(pendingTimer);
+	});
 
 	const onNodeClick = (id: string) => {
 		if (pendingId === id && pendingTimer) {
@@ -260,7 +262,9 @@ export default function GraphLens(props: GraphLensProps) {
 												data-testid="lens-graph-node"
 												data-task-id={node.task.id}
 												transform={`translate(${String(node.x - NODE_W / 2)}, ${String(node.y - NODE_H / 2)})`}
-												onClick={() => onNodeClick(node.task.id)}
+												onClick={() => {
+													onNodeClick(node.task.id);
+												}}
 											>
 												<rect width={NODE_W} height={NODE_H} rx={8} class="lens-node-rect" />
 												<text x={10} y={18} class="lens-node-title">

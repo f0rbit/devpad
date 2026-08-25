@@ -76,13 +76,14 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		}
 	};
 	/** A completed task is never ready — the honest known-delta the same way `bumpRollupUpChain` avoids a full reload. */
-	const markNotReady = (id: string) =>
+	const markNotReady = (id: string) => {
 		setEdgeSummary(
 			produce((draft: Partial<Record<string, EdgeSummary>>) => {
 				const row = draft[id];
 				if (row) row.ready = false;
 			}),
 		);
+	};
 	const [zoomTask, setZoomTask] = createSignal<Task | null>(input.zoomTask);
 	const [ancestors, setAncestors] = createSignal<Task[]>(input.ancestors);
 

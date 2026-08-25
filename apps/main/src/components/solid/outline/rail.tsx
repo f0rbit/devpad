@@ -154,7 +154,13 @@ function RailSection(props: {
 					{(item) => {
 						const rollup = () => props.rollups[item.id];
 						return (
-							<button type="button" class="outline-railitem" onClick={() => props.onNavigate(item.id)}>
+							<button
+								type="button"
+								class="outline-railitem"
+								onClick={() => {
+									props.onNavigate(item.id);
+								}}
+							>
 								<Show
 									when={(rollup()?.subtree_total ?? 0) > 0}
 									fallback={
