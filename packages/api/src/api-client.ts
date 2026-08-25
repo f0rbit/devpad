@@ -123,8 +123,15 @@ type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: Fo
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 /** `rollups` is keyed by task id — see `packages/core/src/services/graph/rollup.ts`'s `RollupCounts`; a childless task is simply absent. */
 export type RollupCounts = { direct_done: number; direct_total: number; subtree_done: number; subtree_total: number };
-type TreeResponse = { task: Task; descendants: Task[]; rollups: Partial<Record<string, RollupCounts>> };
-type NearResponse = { links: TaskLink[]; tasks: Task[] };
+/** Keyed by task id — see `packages/core/src/services/graph/edge-summary.ts`'s `EdgeSummary`; single source of truth for the outline's row-level ⛓/ready/⚡/stale chips. */
+export type EdgeSummary = { blocked_count: number; ready: boolean; hook: boolean; stale: boolean };
+type TreeResponse = {
+	task: Task;
+	descendants: Task[];
+	rollups: Partial<Record<string, RollupCounts>>;
+	edge_summary: Partial<Record<string, EdgeSummary>>;
+};
+type NearResponse = { links: TaskLink[]; tasks: Task[]; rollups: Partial<Record<string, RollupCounts>> };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 export type BubbleStep = { task: Task; via: CompletedVia };
@@ -782,9 +789,11 @@ export class ApiClient {
 				this.clients.tasks.get<TreeResponse>(`/tasks/${id}/tree`, depth ? { query: { depth: String(depth) } } : {}),
 			),
 
-		/** depth-2 link neighborhood around a task, including backlinks. */
-		near: (id: string): Promise<ApiResult<NearResponse>> =>
-			wrap(() => this.clients.tasks.get<NearResponse>(`/tasks/${id}/near`)),
+		/** Link neighborhood around a task (default depth 2, capped server-side at 3 — the graph lens' 1/2/3 toggle), including backlinks. */
+		near: (id: string, depth?: number): Promise<ApiResult<NearResponse>> =>
+			wrap(() =>
+				this.clients.tasks.get<NearResponse>(`/tasks/${id}/near`, depth ? { query: { depth: String(depth) } } : {}),
+			),
 
 		/** Immediate-parent-first ancestor chain — feeds the outline's zoom breadcrumbs. */
 		ancestors: (id: string): Promise<ApiResult<Task[]>> =>
@@ -803,6 +812,15 @@ export class ApiClient {
 		 */
 		done: (id: string, data: DoneRequest): Promise<ApiResult<DoneResponse>> =>
 			wrap(() => this.clients.tasks.post<DoneResponse>(`/tasks/${id}/done`, { body: data })),
+
+		/**
+		 * Policy-only reopen (v2.4 B2) — the server (`SqlCompletionEngine.reopen`)
+		 * is the sole enforcement point: a task whose `completed_via` isn't
+		 * `'policy'` 409s. No request body — the actor comes from the caller's
+		 * own auth channel.
+		 */
+		reopen: (id: string): Promise<ApiResult<{ reopened: Task }>> =>
+			wrap(() => this.clients.tasks.post<{ reopened: Task }>(`/tasks/${id}/reopen`)),
 
 		/**
 		 * SDLC stage transition (v2.4, task A4.5) — gently enforced: a gated

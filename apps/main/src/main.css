@@ -673,17 +673,13 @@ button.outline-row {
 @media (max-width: 480px) {
 	/* At 360-480px there's no room to wrap onto a second line without the row
 	   height jumping per-node — clip instead, dropping the least load-bearing
-	   chips first: claim provenance, then LOW priority, keeping HIGH + auto ⚙. */
+	   chip first: claim provenance, keeping HIGH + auto ⚙. */
 	.outline-chips {
 		flex-wrap: nowrap;
 		overflow: hidden;
 	}
 
 	.outline-chips .badge {
-		display: none;
-	}
-
-	.outline-chips .outline-chip-lo {
 		display: none;
 	}
 }
@@ -716,6 +712,54 @@ button.outline-row {
 
 .outline-chip-ref {
 	color: var(--info-fg);
+}
+
+.outline-chip-blocked {
+	color: var(--error-fg);
+	border-color: transparent;
+	background: var(--error);
+}
+
+.outline-chip-ready {
+	color: var(--success-fg);
+	border-color: transparent;
+	background: var(--success);
+}
+
+.outline-chip-hook {
+	color: var(--warning-fg);
+	border-color: transparent;
+	background: var(--warning);
+}
+
+.outline-chip-stale {
+	color: var(--warning-fg);
+	border-style: dashed;
+	border-color: var(--warning-fg);
+	background: transparent;
+}
+
+.outline-reopen {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 10.5px;
+	font-family: var(--font-mono);
+	color: var(--warning-fg);
+	background: none;
+	border: 1px solid var(--warning-fg);
+	border-radius: 999px;
+	padding: 1px 7px;
+	cursor: pointer;
+}
+
+.outline-reopen:hover {
+	background: var(--warning);
+}
+
+.outline-reopen:disabled {
+	opacity: 0.5;
+	cursor: default;
 }
 
 .outline-rollup-label {
@@ -770,12 +814,47 @@ button.outline-row {
 	margin-bottom: var(--space-sm);
 }
 
+.outline-zoomhead-toprow {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-bottom: var(--space-sm);
+}
+
 .outline-crumbs {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 	flex-wrap: wrap;
-	margin-bottom: var(--space-sm);
+	flex: 1;
+	min-width: 0;
+}
+
+/* Click equivalents of g/m — the keyboard hintbar that documents them is
+   hidden on touch/≤480px, so lenses need a mouse/touch-discoverable path too. */
+.outline-lensbtns {
+	display: flex;
+	gap: 6px;
+	margin-left: auto;
+	flex-shrink: 0;
+}
+
+.outline-lensbtn {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 4px 10px;
+	font-size: 12.5px;
+	color: var(--fg-subtle);
+	background: var(--bg-alt);
+}
+
+.outline-lensbtn:hover {
+	border-color: var(--fg-faint);
+	color: var(--fg);
 }
 
 .outline-crumb {
@@ -891,6 +970,10 @@ button.outline-row {
 	color: var(--fg-muted);
 	text-align: left;
 	text-decoration: none;
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-family: inherit;
 }
 
 .outline-railitem:hover {
@@ -1044,4 +1127,510 @@ button.outline-row {
 	gap: 12px;
 	font-size: 0.75rem;
 	color: var(--fg-subtle);
+}
+
+/* ── B2 lenses (graph / milestone) — ephemeral overlays, never routes ── */
+
+.lens-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	background: var(--overlay);
+}
+
+/* Inset panel, not edge-to-edge — the dimmed outline stays visible behind
+   the scrim, so a lens reads as "floating over" rather than "a route". */
+.lens-panel {
+	margin: 26px;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	background: var(--bg);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-lg);
+	overflow: hidden;
+}
+
+@media (max-width: 480px) {
+	.lens-panel {
+		margin: 10px;
+	}
+}
+
+.lens-header {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.lens-title {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 0;
+}
+
+.lens-header-extra {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+}
+
+.lens-close {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 26px;
+	height: 26px;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--bg-alt);
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.lens-close:hover {
+	color: var(--fg);
+	background: var(--bg);
+}
+
+.lens-depth-toggle {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.lens-depth-btn,
+.lens-fit-btn {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	padding: 3px 9px;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--bg-alt);
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.lens-depth-btn-active {
+	color: var(--fg);
+	font-weight: 600;
+	border-color: var(--accent);
+	background: color-mix(in oklch, var(--accent) 18%, var(--bg-alt));
+}
+
+.lens-body {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.lens-graph-viewport {
+	position: relative;
+	flex: 1;
+	min-height: 0;
+	overflow: hidden;
+	cursor: grab;
+	touch-action: none;
+}
+
+.lens-graph-viewport:active {
+	cursor: grabbing;
+}
+
+.lens-graph-viewport-revalidating {
+	opacity: 0.65;
+	transition: opacity 120ms ease;
+}
+
+.lens-graph-svg {
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+}
+
+.lens-graph-status {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--fg-faint);
+	font-size: 13px;
+}
+
+.lens-node {
+	cursor: pointer;
+}
+
+.lens-node-rect {
+	fill: var(--bg-alt);
+	stroke: var(--border);
+	stroke-width: 1.5;
+}
+
+.lens-node-doing .lens-node-rect {
+	stroke: var(--warning-fg);
+}
+
+.lens-node-done .lens-node-rect {
+	stroke: var(--success-fg);
+	fill: color-mix(in oklch, var(--success) 40%, var(--bg-alt));
+}
+
+.lens-node-focus .lens-node-rect {
+	stroke-width: 2.5;
+	stroke: var(--accent);
+}
+
+.lens-node-title {
+	font-size: 12px;
+	font-weight: 500;
+	fill: var(--fg);
+}
+
+.lens-node-meta {
+	font-size: 10.5px;
+	font-family: var(--font-mono);
+	fill: var(--fg-faint);
+}
+
+/* Edge-kind grammar: every kind gets its OWN stroke-dasharray, not just a
+   color — shape carries the meaning so it survives color-blindness / print. */
+.lens-edge {
+	fill: none;
+	stroke: var(--fg-faint);
+	stroke-width: 1.5;
+}
+
+.lens-edge-blocks {
+	stroke: var(--error-fg);
+	stroke-dasharray: 6 4;
+}
+
+.lens-edge-relates {
+	stroke: var(--accent);
+	stroke-dasharray: 10 3;
+}
+
+.lens-edge-discovered {
+	stroke-dasharray: 4 3;
+	stroke: var(--info-fg);
+}
+
+.lens-edge-references {
+	stroke-dasharray: 2 3;
+}
+
+.lens-edge-metric {
+	stroke: var(--warning-fg);
+	stroke-dasharray: 8 2 2 2;
+}
+
+.lens-arrowhead {
+	fill: var(--fg-faint);
+}
+
+.lens-edge-blocks-arrowhead {
+	fill: var(--error-fg);
+}
+
+.lens-edge-relates-arrowhead {
+	fill: var(--accent);
+}
+
+.lens-edge-discovered-arrowhead {
+	fill: var(--info-fg);
+}
+
+.lens-edge-metric-arrowhead {
+	fill: var(--warning-fg);
+}
+
+.lens-legend {
+	position: absolute;
+	left: 14px;
+	bottom: 12px;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 14px;
+	background: var(--bg-alt);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	padding: 6px 13px;
+	font-size: 11px;
+	color: var(--fg-faint);
+	pointer-events: none;
+}
+
+.lens-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.lens-legend-sw {
+	display: inline-block;
+	width: 20px;
+	height: 0;
+	border-top: 2px solid var(--fg-faint);
+}
+
+.lens-edge-blocks-sw {
+	border-top-style: dashed;
+	border-top-color: var(--error-fg);
+}
+
+.lens-edge-relates-sw {
+	border-top-style: dashed;
+	border-top-color: var(--accent);
+}
+
+.lens-edge-discovered-sw {
+	border-top-style: dotted;
+	border-top-color: var(--info-fg);
+}
+
+.lens-edge-references-sw {
+	border-top-style: dotted;
+}
+
+.lens-edge-metric-sw {
+	border-top-style: dashed;
+	border-top-color: var(--warning-fg);
+}
+
+@media (max-width: 480px) {
+	.lens-legend {
+		display: none;
+	}
+}
+
+.lens-hintbar {
+	display: flex;
+	gap: 18px;
+	justify-content: center;
+	flex-wrap: wrap;
+	padding: 7px 16px;
+	border-top: 1px solid var(--border);
+	font-size: 11.5px;
+	color: var(--fg-faint);
+	font-family: var(--font-mono);
+	flex-shrink: 0;
+}
+
+.lens-hintbar b {
+	color: var(--fg-subtle);
+	font-weight: 600;
+}
+
+.lens-milestones {
+	flex: 1;
+	min-height: 0;
+	overflow: auto;
+	padding: 24px;
+}
+
+.lens-milestone-track {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	flex-wrap: wrap;
+}
+
+.lens-milestone-arrow {
+	color: var(--fg-faint);
+	font-size: 18px;
+	align-self: center;
+}
+
+.lens-milestone-card {
+	width: 220px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 12px;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.lens-milestone-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+	padding: 0;
+}
+
+.lens-milestone-title {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.lens-milestone-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+
+.lens-milestone-expand {
+	font-size: 11px;
+	color: var(--fg-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	text-align: left;
+}
+
+.lens-milestone-expand:hover {
+	color: var(--fg-muted);
+}
+
+.lens-milestone-children {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	border-top: 1px solid var(--border);
+	padding-top: 6px;
+}
+
+.lens-milestone-child {
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: none;
+	cursor: pointer;
+	font-size: 12px;
+	color: var(--fg-muted);
+	padding: 2px 0;
+}
+
+.lens-milestone-child:hover {
+	color: var(--fg);
+}
+
+/* ── "Waiting on you" — integration atop /todo (task B2.4) ── */
+
+.waiting-on-you {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--border);
+}
+
+.waiting-on-you-head h2 {
+	margin: 0;
+	font-size: 1rem;
+}
+
+.waiting-on-you-error {
+	color: var(--error-fg);
+	font-size: 13px;
+	margin: 0;
+}
+
+.waiting-on-you-cards {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.waiting-card {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 10px 14px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+}
+
+.waiting-card-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.waiting-card-title {
+	font-size: 14px;
+	font-weight: 500;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.waiting-card-actions {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+/* App-level emphasis override — Approve is the expected, loudest action;
+   Request-changes must never outshine it (unlayered rules always win over
+   @f0rbit/ui's `@layer components` .btn* defaults, regardless of specificity). */
+.waiting-card-actions .btn {
+	background: var(--accent);
+	color: var(--accent-fg);
+	border-color: var(--accent);
+}
+
+.waiting-card-actions .btn:hover:not(:disabled) {
+	filter: var(--hover-filter);
+}
+
+.waiting-card-actions .btn-ghost {
+	background: transparent;
+	color: var(--error-fg);
+	border-color: transparent;
+}
+
+.waiting-card-actions .btn-ghost:hover:not(:disabled) {
+	background: var(--error);
+	border-color: transparent;
+}
+
+.waiting-card-link {
+	font-size: 13px;
+	color: var(--accent);
+	text-decoration: none;
+}
+
+.waiting-card-link:hover {
+	text-decoration: underline;
+}
+
+/* Mobile-first: the human's role here is latency-critical sign-off from a
+   phone — full-width tap targets, no cramped inline row. */
+@media (max-width: 480px) {
+	.waiting-card-actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.waiting-card-actions > button {
+		width: 100%;
+	}
 }

@@ -111,4 +111,21 @@ test.describe("connections rail", () => {
 		await expect(rail).toContainText("blocked by");
 		await expect(rail).toContainText("Standalone leaf task");
 	});
+
+	test("clicking a rail item travels in-place — zooms the outline, never navigates away", async ({ page, context }) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		const rail = page.getByTestId("outline-rail");
+		await clickWithRetry(page.locator(`[data-task-id="${E2E_TASK_CHILD_2}"]`), () =>
+			expect(rail).toContainText("Standalone leaf task", { timeout: 3000 }),
+		);
+
+		await clickWithRetry(rail.getByRole("button", { name: "Standalone leaf task" }), () =>
+			expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_LEAF}`), { timeout: 3000 }),
+		);
+		// still on the same page (in-place travel) — only the ?node= param + zoom header changed.
+		await expect(page).toHaveURL(new RegExp(`/project/${E2E_OUTLINE_PROJECT_ID}/work`));
+		await expect(page.getByTestId("outline-zoom-title")).toHaveText("Standalone leaf task");
+	});
 });

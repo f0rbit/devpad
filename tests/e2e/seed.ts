@@ -1,7 +1,9 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { E2E_DENSITY_PROJECT_ID, seed_density_fixtures } from "./fixtures/density";
 import { E2E_OUTLINE_PROJECT_ID, seed_outline_fixtures } from "./fixtures/outline";
 import { E2E_PROJECT_ID, open_test_db, seed_pipeline_fixtures } from "./fixtures/pipelines";
+import { seed_waiting_on_you_fixtures } from "./fixtures/waiting-on-you";
 
 /**
  * Standalone bun seed entrypoint — seeds the pipelines E2E fixture into the
@@ -32,6 +34,10 @@ export async function seed(): Promise<void> {
 		console.log(`[e2e seed] seeded pipelines fixtures into ${db_file} (project=${E2E_PROJECT_ID})`);
 		await seed_outline_fixtures(db);
 		console.log(`[e2e seed] seeded outline fixtures into ${db_file} (project=${E2E_OUTLINE_PROJECT_ID})`);
+		await seed_waiting_on_you_fixtures(db);
+		console.log(`[e2e seed] seeded waiting-on-you fixtures into ${db_file}`);
+		await seed_density_fixtures(db);
+		console.log(`[e2e seed] seeded graph-lens density fixtures into ${db_file} (project=${E2E_DENSITY_PROJECT_ID})`);
 	} finally {
 		sqlite.close();
 	}

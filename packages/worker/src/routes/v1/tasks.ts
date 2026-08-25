@@ -200,11 +200,15 @@ app.get("/:id/tree", requireAuth, async (c) => {
 	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 
-	const root_result = await tasks.getTask(db, id);
-	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
-	if (!root_result.value) return c.json(null, 404);
-	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
-	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+	// A graph-primitive route (like ancestors/near below) — deliberately
+	// `graph.get_task_row`, NOT `tasks.getTask`: the latter excludes
+	// kind IN ('milestone','goal') (task A5's fold), which would 404 the
+	// milestone lens's own `tree()` calls. Graph primitives fold milestone/
+	// goal in on purpose (see AGENTS.md's fold notes).
+	const root = await graph.get_task_row(db, id);
+	if (!root || root.deleted) return c.json(null, 404);
+	if (root.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root.project_id)) return projectScopeDeniedResponse(c);
 
 	const parsed_depth = Number(c.req.query("depth"));
 	const depth =
@@ -213,10 +217,19 @@ app.get("/:id/tree", requireAuth, async (c) => {
 	const result = await graph.subtree(db, id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 
-	const rollups_result = await graph.rollups_for(db, [id, ...result.value.map((t) => t.id)]);
+	const all_ids = [id, ...result.value.map((t) => t.id)];
+	const rollups_result = await graph.rollups_for(db, all_ids);
 	if (!rollups_result.ok) return c.json({ error: rollups_result.error.kind }, 500);
 
-	return c.json({ task: root_result.value.task, descendants: result.value, rollups: rollups_result.value });
+	const edge_summary_result = await graph.edge_summary_for(db, all_ids);
+	if (!edge_summary_result.ok) return c.json({ error: edge_summary_result.error.kind }, 500);
+
+	return c.json({
+		task: root,
+		descendants: result.value,
+		rollups: rollups_result.value,
+		edge_summary: edge_summary_result.value,
+	});
 });
 
 /** Immediate-parent-first ancestor chain — powers the outline's zoom breadcrumbs (v2.4, task B1.3). */
@@ -226,11 +239,10 @@ app.get("/:id/ancestors", requireAuth, async (c) => {
 	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 
-	const root_result = await tasks.getTask(db, id);
-	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
-	if (!root_result.value) return c.json(null, 404);
-	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
-	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+	const root = await graph.get_task_row(db, id); // graph primitive — see /tree's comment on fold kinds
+	if (!root || root.deleted) return c.json(null, 404);
+	if (root.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root.project_id)) return projectScopeDeniedResponse(c);
 
 	const result = await graph.ancestors(db, id);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
@@ -243,15 +255,24 @@ app.get("/:id/near", requireAuth, async (c) => {
 	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
 	const id = c.req.param("id");
 
-	const root_result = await tasks.getTask(db, id);
-	if (!root_result.ok) return c.json({ error: root_result.error.kind }, 500);
-	if (!root_result.value) return c.json(null, 404);
-	if (root_result.value.task.owner_id !== auth_user.id) return c.json(null, 401);
-	if (isProjectScopeDenied(c, root_result.value.task.project_id)) return projectScopeDeniedResponse(c);
+	const root = await graph.get_task_row(db, id); // graph primitive — see /tree's comment on fold kinds
+	if (!root || root.deleted) return c.json(null, 404);
+	if (root.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, root.project_id)) return projectScopeDeniedResponse(c);
 
-	const result = await graph.near(db, id);
+	const parsed_depth = Number(c.req.query("depth"));
+	const depth = Number.isFinite(parsed_depth) && parsed_depth > 0 ? parsed_depth : undefined;
+
+	const result = await graph.near(db, id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
-	return c.json(result.value);
+
+	const rollups_result = await graph.rollups_for(
+		db,
+		result.value.tasks.map((t) => t.id),
+	);
+	if (!rollups_result.ok) return c.json({ error: rollups_result.error.kind }, 500);
+
+	return c.json({ ...result.value, rollups: rollups_result.value });
 });
 
 app.post("/:id/claim", requireAuth, zValidator("json", claim_request), async (c) => {
@@ -307,6 +328,35 @@ app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) =
 	const hooks_fired = fired.ok ? fired.value : [];
 
 	return c.json({ completed: result.value.completed, bubbled: result.value.bubbled, hooks_fired });
+});
+
+/**
+ * v2.4 B2 — the outline's policy-only reopen affordance. The engine itself
+ * (`SqlCompletionEngine.reopen`) is the sole enforcement point for "only a
+ * `completed_via='policy'` task can be reopened this way" — this route adds
+ * no extra check, it just maps `reopen_rejected` to a 409.
+ */
+app.post("/:id/reopen", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+
+	const existing = await tasks.getTask(db, id);
+	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
+	if (!existing.value) return c.json(null, 404);
+	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, existing.value.task.project_id)) return projectScopeDeniedResponse(c);
+
+	const auth_channel = c.get("auth_channel");
+	const engine = new graph.SqlCompletionEngine(db);
+	const result = await engine.reopen(id, auth_channel);
+	if (!result.ok) {
+		if (result.error.kind === "reopen_rejected") return c.json({ error: result.error.message }, 409);
+		return graph_error_response(c, result.error);
+	}
+
+	return c.json({ reopened: result.value.reopened });
 });
 
 /**

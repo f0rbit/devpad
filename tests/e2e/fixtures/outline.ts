@@ -29,7 +29,14 @@ import {
 	E2E_TASK_COMPACT_CHILD,
 	E2E_TASK_COMPACT_PARENT,
 	E2E_TASK_LEAF,
+	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_CHILD,
 	E2E_TASK_PHASE,
+	E2E_TASK_RIPPLE_GRANDPARENT,
+	E2E_TASK_RIPPLE_LEAF,
+	E2E_TASK_RIPPLE_PARENT,
+	E2E_TASK_RIPPLE_REDUCED_LEAF,
+	E2E_TASK_RIPPLE_REDUCED_PARENT,
 	E2E_USER_ID,
 } from "./outline-ids";
 import { open_test_db } from "./pipelines";
@@ -43,7 +50,14 @@ export {
 	E2E_TASK_COMPACT_CHILD,
 	E2E_TASK_COMPACT_PARENT,
 	E2E_TASK_LEAF,
+	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_CHILD,
 	E2E_TASK_PHASE,
+	E2E_TASK_RIPPLE_GRANDPARENT,
+	E2E_TASK_RIPPLE_LEAF,
+	E2E_TASK_RIPPLE_PARENT,
+	E2E_TASK_RIPPLE_REDUCED_LEAF,
+	E2E_TASK_RIPPLE_REDUCED_PARENT,
 	E2E_USER_ID,
 };
 
@@ -214,6 +228,123 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 		subtree_done: 0,
 		subtree_total: 2,
 	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_MILESTONE,
+		title: "Ripple v1",
+		kind: "milestone",
+		completion_policy: "manual",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		end_time: "2099-01-01T00:00:00.000Z",
+		rank: "i5",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_MILESTONE_CHILD,
+		title: "Ship the ripple lens",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: E2E_TASK_MILESTONE,
+		rank: "i0",
+	} as never);
+
+	await db.insert(task_rollup).values({
+		task_id: E2E_TASK_MILESTONE,
+		direct_done: 0,
+		direct_total: 1,
+		subtree_done: 0,
+		subtree_total: 1,
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_RIPPLE_GRANDPARENT,
+		title: "Ripple grandparent",
+		kind: "phase",
+		completion_policy: "auto_children",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		rank: "i6",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_RIPPLE_PARENT,
+		title: "Ripple parent",
+		kind: "phase",
+		completion_policy: "auto_children",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: E2E_TASK_RIPPLE_GRANDPARENT,
+		rank: "i0",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_RIPPLE_LEAF,
+		title: "Ripple leaf",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "IN_PROGRESS",
+		priority: "LOW",
+		parent_id: E2E_TASK_RIPPLE_PARENT,
+		rank: "i0",
+	} as never);
+
+	await db.insert(task_rollup).values({
+		task_id: E2E_TASK_RIPPLE_GRANDPARENT,
+		direct_done: 0,
+		direct_total: 1,
+		subtree_done: 0,
+		subtree_total: 1,
+	} as never);
+
+	await db.insert(task_rollup).values({
+		task_id: E2E_TASK_RIPPLE_PARENT,
+		direct_done: 0,
+		direct_total: 1,
+		subtree_done: 0,
+		subtree_total: 1,
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_RIPPLE_REDUCED_PARENT,
+		title: "Ripple reduced-motion parent",
+		kind: "phase",
+		completion_policy: "auto_children",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		rank: "i7",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_RIPPLE_REDUCED_LEAF,
+		title: "Ripple reduced-motion leaf",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "IN_PROGRESS",
+		priority: "LOW",
+		parent_id: E2E_TASK_RIPPLE_REDUCED_PARENT,
+		rank: "i0",
+	} as never);
+
+	await db.insert(task_rollup).values({
+		task_id: E2E_TASK_RIPPLE_REDUCED_PARENT,
+		direct_done: 0,
+		direct_total: 1,
+		subtree_done: 0,
+		subtree_total: 1,
+	} as never);
 }
 
 async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
@@ -226,6 +357,17 @@ async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(task).where(eq(task.id, E2E_TASK_PHASE));
 	await db.delete(task).where(eq(task.id, E2E_TASK_COMPACT_CHILD));
 	await db.delete(task).where(eq(task.id, E2E_TASK_COMPACT_PARENT));
+	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_MILESTONE));
+	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_CHILD));
+	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE));
+	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_GRANDPARENT));
+	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_PARENT));
+	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_LEAF));
+	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_PARENT));
+	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_GRANDPARENT));
+	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_REDUCED_PARENT));
+	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_REDUCED_LEAF));
+	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_REDUCED_PARENT));
 	await db.delete(project).where(eq(project.id, E2E_OUTLINE_PROJECT_ID));
 	// user/session are shared with the pipelines fixture on the same fixed ids
 	// (see the `onConflictDoNothing` inserts above) — never deleted here.

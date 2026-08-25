@@ -17,6 +17,9 @@ body {
 	--item-green: oklch(0.95 0.05 150);
 	--item-red-border: color-mix(in srgb, var(--item-red) 90%, var(--fg) 10%);
 	--item-green-border: color-mix(in srgb, var(--item-green) 90%, var(--fg) 10%);
+	/* Scrim behind an inset overlay panel (B2 lenses) — always a dark tint
+	   regardless of theme, so the dimmed outline stays legible behind it. */
+	--overlay: oklch(20% 0.02 290 / 0.45);
 	font-family: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
 }
 
@@ -28,6 +31,7 @@ body {
 		--input-focus: var(--text-link);
 		--item-red: oklch(0.35 0.05 20);
 		--item-green: oklch(0.35 0.05 150);
+		--overlay: oklch(10% 0.01 280 / 0.6);
 	}
 }
 

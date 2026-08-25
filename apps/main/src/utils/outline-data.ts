@@ -1,4 +1,4 @@
-import type { ApiClient, RollupCounts } from "@devpad/api";
+import type { ApiClient, EdgeSummary, RollupCounts } from "@devpad/api";
 import type { Task } from "@devpad/schema";
 
 /**
@@ -18,6 +18,7 @@ export type OutlineData = {
 	/** Flat pool of every visible node below the zoom point (or every root's subtree, unzoomed). */
 	nodes: Task[];
 	rollups: Partial<Record<string, RollupCounts>>;
+	edgeSummary: Partial<Record<string, EdgeSummary>>;
 };
 
 /**
@@ -39,6 +40,7 @@ async function load_zoomed(client: ApiClient, project_id: string, zoom_id: strin
 		ancestors: ancestors_result.ok ? ancestors_result.value : [],
 		nodes: tree_result.value.descendants,
 		rollups: tree_result.value.rollups,
+		edgeSummary: tree_result.value.edge_summary,
 	};
 }
 
@@ -54,17 +56,19 @@ async function load_root(client: ApiClient, project_id: string): Promise<Outline
 		? list_result.value.filter((t) => t.task.parent_id == null).map((t) => t.task.id)
 		: [];
 
-	if (root_ids.length === 0) return { zoomTask: null, ancestors: [], nodes: [], rollups: {} };
+	if (root_ids.length === 0) return { zoomTask: null, ancestors: [], nodes: [], rollups: {}, edgeSummary: {} };
 
 	const trees = await Promise.all(root_ids.map((id) => client.tasks.tree(id, OUTLINE_DEPTH)));
 	const nodes: Task[] = [];
 	const rollups: Partial<Record<string, RollupCounts>> = {};
+	const edgeSummary: Partial<Record<string, EdgeSummary>> = {};
 	for (const result of trees) {
 		if (!result.ok) continue;
 		nodes.push(result.value.task, ...result.value.descendants);
 		Object.assign(rollups, result.value.rollups);
+		Object.assign(edgeSummary, result.value.edge_summary);
 	}
-	return { zoomTask: null, ancestors: [], nodes, rollups };
+	return { zoomTask: null, ancestors: [], nodes, rollups, edgeSummary };
 }
 
 export function loadOutline(

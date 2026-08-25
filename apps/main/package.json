@@ -18,6 +18,7 @@
 		"@astrojs/cloudflare": "^12.6.12",
 		"@astrojs/sitemap": "^3.2.1",
 		"@astrojs/solid-js": "5.0.4",
+		"@dagrejs/dagre": "^3.1.1",
 		"@devpad/api": "workspace:*",
 		"@devpad/core": "workspace:*",
 		"@devpad/schema": "workspace:*",

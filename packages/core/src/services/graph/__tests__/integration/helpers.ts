@@ -113,6 +113,7 @@ export async function seed_task(db: Database, owner_id: string, overrides: Parti
 		rev: overrides.rev ?? 0,
 		kind: overrides.kind ?? "task",
 		completion_policy: overrides.completion_policy ?? "manual",
+		completed_via: overrides.completed_via ?? null,
 		project_id: overrides.project_id ?? null,
 		goal_id: overrides.goal_id ?? null,
 		start_time: overrides.start_time ?? null,

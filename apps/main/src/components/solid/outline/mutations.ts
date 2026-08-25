@@ -1,6 +1,6 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { ApiResult, ApplyResponse, DoneResponse } from "@devpad/api";
-import type { TaskWithDetails } from "@devpad/schema";
+import type { Task, TaskWithDetails } from "@devpad/schema";
 
 /** UNSTARTED → IN_PROGRESS is the plain (non-OCC) field write — no completion cascade involved. */
 export function startTask(id: string, owner_id: string): Promise<ApiResult<TaskWithDetails>> {
@@ -14,6 +14,11 @@ export function completeTask(id: string, base_rev: number): Promise<ApiResult<Do
 
 export function renameTask(id: string, title: string, owner_id: string): Promise<ApiResult<TaskWithDetails>> {
 	return getBrowserClient().tasks.upsert({ id, title, owner_id });
+}
+
+/** Sibling reorder (alt-↑/↓) — a plain field write, same as rename; `rank` never affects graph structure so no reparent guard applies. */
+export function reorderTask(id: string, rank: string, owner_id: string): Promise<ApiResult<TaskWithDetails>> {
+	return getBrowserClient().tasks.upsert({ id, rank, owner_id });
 }
 
 export function createChild(input: {
@@ -40,4 +45,9 @@ export function reparentTask(
 
 export function reloadTask(id: string): Promise<ApiResult<TaskWithDetails | null>> {
 	return getBrowserClient().tasks.find(id);
+}
+
+/** Policy-only reopen — the server rejects anything but a completed_via='policy' task. */
+export function reopenTask(id: string): Promise<ApiResult<{ reopened: Task }>> {
+	return getBrowserClient().tasks.reopen(id);
 }

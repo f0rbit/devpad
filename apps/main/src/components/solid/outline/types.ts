@@ -1,4 +1,4 @@
-import type { RollupCounts } from "@devpad/api";
+import type { EdgeSummary, RollupCounts } from "@devpad/api";
 import type { Task } from "@devpad/schema";
 import type { TreeNode } from "@f0rbit/ui";
 
@@ -100,4 +100,4 @@ export function buildOutlineNodes(
 
 export const indexById = (tasks: Task[]): TaskById => Object.fromEntries(tasks.map((t) => [t.id, t]));
 
-export type { RollupCounts };
+export type { EdgeSummary, RollupCounts };

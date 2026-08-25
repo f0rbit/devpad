@@ -62,6 +62,18 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		expect(tree.descendants.map((d) => d.id)).toContain(child.id);
 	});
 
+	test("GET /tasks/:id/tree embeds an edge_summary row per node — the outline's ⛓/ready/⚡/stale chips' single source of truth", async () => {
+		const parent = await create_task({ title: `edge-summary-parent-${String(Date.now())}` });
+		const child = await create_task({ title: `edge-summary-child-${String(Date.now())}`, parent_id: parent.id });
+
+		const result = await t.client.tasks.tree(parent.id);
+		if (!result.ok) throw new Error(`tree failed: ${result.error.message}`);
+
+		// parent has an incomplete child — not ready; child is a fresh, unblocked leaf — ready.
+		expect(result.value.edge_summary[parent.id]).toEqual({ blocked_count: 0, ready: false, hook: false, stale: false });
+		expect(result.value.edge_summary[child.id]).toEqual({ blocked_count: 0, ready: true, hook: false, stale: false });
+	});
+
 	test("POST /tasks/link then GET /tasks/:id/near shows the edge, DELETE /tasks/link/:id removes it", async () => {
 		const a = await create_task({ title: `near-a-${String(Date.now())}` });
 		const b = await create_task({ title: `near-b-${String(Date.now())}` });
@@ -74,6 +86,8 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		if (!near_result.ok) throw new Error(`near failed: ${near_result.error.message}`);
 		expect(near_result.value.links.some((l) => l.id === link.id)).toBe(true);
 		expect(near_result.value.tasks.map((task) => task.id)).toContain(b.id);
+		// rollups keyed the same as /tasks/:id/tree — the graph lens' rollup badges' single source of truth.
+		expect(near_result.value.rollups).toBeDefined();
 
 		const unlink_result = await t.client.tasks.unlink(link.id);
 		expect(unlink_result.ok).toBe(true);
@@ -81,6 +95,48 @@ describe("graph API — ownership, pagination, guarded writes", () => {
 		const near_after = await t.client.tasks.near(a.id);
 		if (!near_after.ok) throw new Error(`near failed: ${near_after.error.message}`);
 		expect(near_after.value.links.some((l) => l.id === link.id)).toBe(false);
+	});
+
+	test("GET /tasks/:id/tree works for a kind='milestone' root — the milestone lens' rollup fetch", async () => {
+		const project_result = await t.client.projects.create(TestDataFactory.createRealisticProject());
+		if (!project_result.ok) throw new Error(`project create failed: ${project_result.error.message}`);
+		t.cleanup.registerProject(project_result.value);
+
+		const milestone_result = await t.client.milestones.create({
+			project_id: project_result.value.id,
+			name: `milestone-${String(Date.now())}`,
+		});
+		if (!milestone_result.ok) throw new Error(`milestone create failed: ${milestone_result.error.message}`);
+		const milestone = milestone_result.value;
+		const child = await create_task({
+			title: `milestone-child-${String(Date.now())}`,
+			project_id: project_result.value.id,
+			parent_id: milestone.id,
+		});
+
+		const result = await t.client.tasks.tree(milestone.id);
+		if (!result.ok) throw new Error(`tree failed for a milestone root: ${result.error.message}`);
+		expect(result.value.task.id).toBe(milestone.id);
+		expect(result.value.descendants.map((d) => d.id)).toContain(child.id);
+	});
+
+	test("GET /tasks/:id/near?depth= expands/contracts the BFS frontier — the graph lens' 1/2/3 toggle", async () => {
+		const a = await create_task({ title: `near-depth-a-${String(Date.now())}` });
+		const b = await create_task({ title: `near-depth-b-${String(Date.now())}` });
+		const c = await create_task({ title: `near-depth-c-${String(Date.now())}` });
+
+		const link_ab = await t.client.tasks.link({ src_id: a.id, dst_id: b.id, kind: "blocks" });
+		if (!link_ab.ok) throw new Error(`link failed: ${link_ab.error.message}`);
+		const link_bc = await t.client.tasks.link({ src_id: b.id, dst_id: c.id, kind: "blocks" });
+		if (!link_bc.ok) throw new Error(`link failed: ${link_bc.error.message}`);
+
+		const depth1 = await t.client.tasks.near(a.id, 1);
+		if (!depth1.ok) throw new Error(`near failed: ${depth1.error.message}`);
+		expect(depth1.value.tasks.map((task) => task.id)).not.toContain(c.id);
+
+		const depth2 = await t.client.tasks.near(a.id, 2);
+		if (!depth2.ok) throw new Error(`near failed: ${depth2.error.message}`);
+		expect(depth2.value.tasks.map((task) => task.id)).toContain(c.id);
 	});
 
 	test("POST /tasks/:id/claim is guarded — a second claim with the original base_rev fails", async () => {

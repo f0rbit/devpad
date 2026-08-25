@@ -144,6 +144,59 @@ test.describe("outline row interactions", () => {
 		await expect(page.locator(".outline-title", { hasText: title })).toBeVisible();
 	});
 
+	test("Tab is never hijacked before a row is actively selected — keyboard focus travels normally", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		const container = page.locator(".outline-container");
+		await expect(container).toBeFocused();
+
+		// no j/k selection yet — Tab must NOT be preventDefault-ed into a reparent;
+		// default browser focus traversal moves off the container onto the first
+		// interactive descendant (a row's own bullet/title button).
+		await page.keyboard.press("Tab");
+		await expect(container).not.toBeFocused();
+		const focused = await page.evaluate(() => document.activeElement?.closest(".outline-container") != null);
+		expect(focused).toBe(true); // landed on something INSIDE the outline, not hijacked out of it entirely either
+	});
+
+	test("alt-↑ moves a sibling up (rank_between) and persists across reload", async ({ page, context }) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		const titleA = `E2E reorder A ${Date.now()}`;
+		const titleB = `E2E reorder B ${Date.now()}`;
+		await quickAdd(page, titleA);
+		const rowB = await quickAdd(page, titleB); // appended after A — B starts below A
+
+		const orderOf = async () => {
+			const titles = await page.locator(".outline-title").allTextContents();
+			return { a: titles.indexOf(titleA), b: titles.indexOf(titleB) };
+		};
+
+		const before = await orderOf();
+		expect(before.a).toBeGreaterThanOrEqual(0);
+		expect(before.b).toBeGreaterThan(before.a);
+
+		await rowB.locator(".outline-title").click();
+		await expect(rowB).toHaveClass(/outline-row-selected/);
+		await page.locator(".outline-container").press("Alt+ArrowUp");
+
+		await expect
+			.poll(async () => {
+				const order = await orderOf();
+				return order.b - order.a;
+			})
+			.toBeLessThan(0);
+
+		await page.reload();
+		const after_reload = await orderOf();
+		expect(after_reload.b).toBeLessThan(after_reload.a);
+	});
+
 	test("a fully-done auto_children subtree compacts into a summary row", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
@@ -159,11 +212,20 @@ test.describe("outline row interactions", () => {
 		// update) adds real latency on top of the click's own request — give it
 		// more room than the default 5s under a cold/contended dev server.
 		await expect(parentRow).toHaveClass(/outline-row-done/, { timeout: 15000 });
-		await expect(page.locator(".outline-compact-row")).toContainText("compacted");
+
+		// Scoped via DOM proximity (the next `.outline-compact-row` after this
+		// row's own, in document order) rather than a bare page-wide selector —
+		// ripple.spec.ts's own auto_children fixtures can ALSO be mid-compaction
+		// concurrently under full parallelism, so more than one compact row can
+		// legitimately exist on the page at once.
+		const compactRow = parentRow.locator(
+			"xpath=following::*[contains(concat(' ', normalize-space(@class), ' '), ' outline-compact-row ')][1]",
+		);
+		await expect(compactRow).toContainText("compacted");
 		await expect(page.locator(`[data-task-id="${E2E_TASK_COMPACT_CHILD}"]`)).toHaveCount(0);
 
 		// expand affordance restores the real child row.
-		await page.locator(".outline-compact-row").click();
+		await compactRow.click();
 		await expect(page.locator(`[data-task-id="${E2E_TASK_COMPACT_CHILD}"]`)).toBeVisible();
 	});
 });

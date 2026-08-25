@@ -352,44 +352,46 @@ export async function ready(
 
 export type NearResult = { links: TaskLink[]; tasks: Task[] };
 
-/** depth-2 link neighborhood around `id`, plus the tasks those edges touch — includes backlinks (edges where `id` is the dst). */
-export async function near(db: Database, id: string): Promise<Result<NearResult, ServiceError>> {
+/** Hard ceiling on `near()`'s `depth` — the graph lens' 1/2/3 toggle tops out here; an untrusted client-supplied depth is never taken past it. */
+export const NEAR_MAX_DEPTH = 3;
+
+/**
+ * BFS link neighborhood around `id` out to `depth` hops (default 2, capped
+ * at `NEAR_MAX_DEPTH`), plus the tasks those edges touch — includes
+ * backlinks (edges where a frontier node is the dst). One query per hop,
+ * never per-edge; a node already seen at an earlier hop is never
+ * re-expanded, so a densely linked graph can't blow up the query count.
+ */
+export async function near(db: Database, id: string, depth: number = 2): Promise<Result<NearResult, ServiceError>> {
 	const not_deleted = eq(task_link.deleted, false);
-	const touches_id = or(eq(task_link.src_id, id), eq(task_link.dst_id, id));
+	const capped_depth = Math.min(Math.max(depth, 1), NEAR_MAX_DEPTH);
 
-	const hop1 = await db.select().from(task_link).where(and(not_deleted, touches_id));
+	const seen_ids = new Set<string>([id]);
+	const link_by_id = new Map<string, TaskLink>();
+	let frontier = new Set<string>([id]);
 
-	const neighbor_ids = new Set<string>();
-	for (const link of hop1) {
-		if (link.src_id !== id) neighbor_ids.add(link.src_id);
-		if (link.dst_id && link.dst_id !== id) neighbor_ids.add(link.dst_id);
+	for (let hop = 0; hop < capped_depth && frontier.size > 0; hop++) {
+		const frontier_ids = [...frontier];
+		const rows = await db
+			.select()
+			.from(task_link)
+			.where(and(not_deleted, or(inArray(task_link.src_id, frontier_ids), inArray(task_link.dst_id, frontier_ids))));
+
+		const next_frontier = new Set<string>();
+		for (const link of rows) {
+			link_by_id.set(link.id, link);
+			if (!seen_ids.has(link.src_id)) next_frontier.add(link.src_id);
+			if (link.dst_id && !seen_ids.has(link.dst_id)) next_frontier.add(link.dst_id);
+		}
+		for (const next_id of next_frontier) seen_ids.add(next_id);
+		frontier = next_frontier;
 	}
 
-	const hop2 =
-		neighbor_ids.size > 0
-			? await db
-					.select()
-					.from(task_link)
-					.where(
-						and(
-							not_deleted,
-							or(inArray(task_link.src_id, [...neighbor_ids]), inArray(task_link.dst_id, [...neighbor_ids])),
-						),
-					)
-			: [];
-
-	const links = [...new Map([...hop1, ...hop2].map((link) => [link.id, link])).values()];
-
-	const task_ids = new Set<string>([id]);
-	for (const link of links) {
-		task_ids.add(link.src_id);
-		if (link.dst_id) task_ids.add(link.dst_id);
-	}
-
+	const links = [...link_by_id.values()];
 	const tasks = await db
 		.select()
 		.from(task)
-		.where(and(eq(task.deleted, false), inArray(task.id, [...task_ids])));
+		.where(and(eq(task.deleted, false), inArray(task.id, [...seen_ids])));
 
 	return ok({ links, tasks });
 }

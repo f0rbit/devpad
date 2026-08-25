@@ -6,6 +6,7 @@ import { track } from "@/lib/pulse";
 import {
 	buildOutlineNodes,
 	childrenOf,
+	type EdgeSummary,
 	hasChildren,
 	indexById,
 	type OutlineTreeNode,
@@ -19,6 +20,9 @@ const RIPPLE_MS = 650;
 const TOAST_MS = 4600;
 const TOAST_EXIT_MS = 220;
 
+const prefersReducedMotion = (): boolean =>
+	typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export type ToastKind = "info" | "error" | "hook";
 export type Toast = { id: string; message: string; kind: ToastKind; leaving: boolean };
 
@@ -29,6 +33,7 @@ export type OutlineStoreInput = {
 	ancestors: Task[];
 	nodes: Task[];
 	rollups: Partial<Record<string, RollupCounts>>;
+	edgeSummary: Partial<Record<string, EdgeSummary>>;
 };
 
 const collectIds = (nodes: OutlineTreeNode[]): string[] =>
@@ -49,6 +54,7 @@ function flattenVisible(nodes: OutlineTreeNode[], expanded: ReadonlySet<string>)
 export function createOutlineStore(input: OutlineStoreInput) {
 	const [tasks, setTasks] = createStore<TaskById>(indexById(input.nodes));
 	const [rollups, setRollups] = createStore<Partial<Record<string, RollupCounts>>>({ ...input.rollups });
+	const [edgeSummary, setEdgeSummary] = createStore<Partial<Record<string, EdgeSummary>>>({ ...input.edgeSummary });
 
 	/** A completion at `from_id` bumps every ancestor's cached fraction by exactly one — the known delta, not a recount. */
 	const bumpRollupUpChain = (from_id: string) => {
@@ -68,6 +74,15 @@ export function createOutlineStore(input: OutlineStoreInput) {
 			first = false;
 			cursor = tasks[cursor]?.parent_id ?? null;
 		}
+	};
+	/** A completed task is never ready — the honest known-delta the same way `bumpRollupUpChain` avoids a full reload. */
+	const markNotReady = (id: string) => {
+		setEdgeSummary(
+			produce((draft: Partial<Record<string, EdgeSummary>>) => {
+				const row = draft[id];
+				if (row) row.ready = false;
+			}),
+		);
 	};
 	const [zoomTask, setZoomTask] = createSignal<Task | null>(input.zoomTask);
 	const [ancestors, setAncestors] = createSignal<Task[]>(input.ancestors);
@@ -185,23 +200,54 @@ export function createOutlineStore(input: OutlineStoreInput) {
 			setTasks(id, result.value.completed);
 			flash(id);
 			bumpRollupUpChain(id);
+			markNotReady(id);
 			track("outline_task_completed", { project_id: input.projectId, task_id: id });
 
-			result.value.bubbled.forEach((step, i) => {
-				setTimeout(
-					() => {
-						setTasks(step.task.id, step.task);
-						flash(step.task.id);
-						bumpRollupUpChain(step.task.id);
-					},
-					240 * (i + 1),
-				);
-			});
+			// Ripple choreography replays the API's ACTUAL bubble chain, one hop
+			// per beat — never a client-side guess of what "should" have
+			// bubbled. `prefers-reduced-motion` bypasses the stagger/pulse
+			// entirely (not just hiding the CSS animation): every ancestor
+			// updates instantly, with one summary toast instead of a beat per hop.
+			if (prefersReducedMotion()) {
+				result.value.bubbled.forEach((step) => {
+					setTasks(step.task.id, step.task);
+					bumpRollupUpChain(step.task.id);
+					markNotReady(step.task.id);
+				});
+				if (result.value.bubbled.length > 0) {
+					const n = result.value.bubbled.length;
+					toast(`completed ${String(n)} ancestor${n > 1 ? "s" : ""}`);
+				}
+			} else {
+				result.value.bubbled.forEach((step, i) => {
+					setTimeout(
+						() => {
+							setTasks(step.task.id, step.task);
+							flash(step.task.id);
+							bumpRollupUpChain(step.task.id);
+							markNotReady(step.task.id);
+						},
+						240 * (i + 1),
+					);
+				});
+			}
 
 			if (result.value.hooks_fired.length > 0) {
 				toast(`⚡ ${result.value.hooks_fired.join(", ")} fired`, "hook");
 			}
 		}
+	};
+
+	/** Policy-only reopen affordance — the server is the sole enforcement point; a rejection here is always surfaced, never silently swallowed. */
+	const reopen = async (id: string) => {
+		const task = tasks[id];
+		if (!task || pending().has(id)) return;
+		const result = await withPending(id, () => api.reopenTask(id));
+		if (!result.ok) {
+			toast(`Couldn't reopen "${task.title}": ${result.error.message}`, "error");
+			return;
+		}
+		setTasks(id, result.value.reopened);
 	};
 
 	const startRename = (id: string) => setRenamingId(id);
@@ -277,9 +323,33 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		if (newParentId) expand(newParentId);
 	};
 
+	/** alt-↑/↓ — swaps rank with the previous/next sibling via `rank_between`, never a hand-constructed string. */
+	const moveSibling = async (id: string, direction: "up" | "down") => {
+		const task = tasks[id];
+		if (!task) return;
+		const siblings = childrenOf(task.parent_id, tasks);
+		const idx = siblings.findIndex((s) => s.id === id);
+		if (idx === -1) return;
+
+		const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+		if (targetIdx < 0 || targetIdx >= siblings.length) return; // already at this edge — no-op
+
+		const lower = direction === "up" ? (siblings[idx - 2]?.rank ?? null) : siblings[idx + 1].rank;
+		const upper = direction === "up" ? siblings[idx - 1].rank : (siblings[idx + 2]?.rank ?? null);
+		const newRank = rank_between(lower, upper);
+
+		const result = await api.reorderTask(id, newRank, input.ownerId);
+		if (!result.ok) {
+			toast(`Couldn't reorder "${task.title}": ${result.error.message}`, "error");
+			return;
+		}
+		setTasks(id, result.value.task);
+	};
+
 	return {
 		tasks,
 		rollups,
+		edgeSummary,
 		zoomTask,
 		setZoomTask,
 		ancestors,
@@ -307,6 +377,8 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		commitRename,
 		addChild,
 		reparent,
+		moveSibling,
+		reopen,
 		/**
 		 * Wholesale swap for a zoom navigation — a fresh `tree()`/`ancestors()` fetch
 		 * replaces the visible view entirely. `selectAfter` re-selects the node the
@@ -316,6 +388,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		resetView: (data: Omit<OutlineStoreInput, "ownerId" | "projectId">, selectAfter: string | null = null) => {
 			setTasks(reconcile(indexById(data.nodes)));
 			setRollups(reconcile({ ...data.rollups }));
+			setEdgeSummary(reconcile({ ...data.edgeSummary }));
 			setZoomTask(data.zoomTask);
 			setAncestors(data.ancestors);
 			const fresh = buildOutlineNodes(

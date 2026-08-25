@@ -2,7 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { Task } from "@devpad/schema";
 import { Button, Empty, Input, Tree } from "@f0rbit/ui";
 import Plus from "lucide-solid/icons/plus";
-import { createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { track } from "@/lib/pulse";
 import { loadOutline } from "@/utils/outline-data";
 import { Rail } from "./rail";
@@ -10,6 +10,11 @@ import { OutlineRow } from "./row";
 import { createOutlineStore, type OutlineStoreInput } from "./store";
 import { hasChildren, isCompactSummary, isMoreSummary, type OutlineTreeNode } from "./types";
 import { ZoomHeader } from "./zoom";
+
+// Lazy — dagre (graph-lens's layout engine) never lands in the initial page
+// bundle; the chunk is fetched only the first time a lens actually opens.
+const GraphLens = lazy(() => import("../lenses/graph-lens"));
+const MilestoneLens = lazy(() => import("../lenses/milestone-lens"));
 
 export type OutlineProps = {
 	project: { id: string; name: string };
@@ -56,6 +61,8 @@ export default function Outline(props: OutlineProps) {
 	const store = createOutlineStore({ ownerId: props.ownerId, projectId: props.project.id, ...props.initial });
 	const [quickAdd, setQuickAdd] = createSignal("");
 	const [quickAddOpen, setQuickAddOpen] = createSignal(false);
+	const [lensOpen, setLensOpen] = createSignal<"graph" | "milestone" | null>(null);
+	const [lensFocusId, setLensFocusId] = createSignal<string | null>(null);
 	let containerRef: HTMLDivElement | undefined;
 	// Set while replaying a popstate — history already moved, so navigateTo must
 	// not push a duplicate entry on top of it.
@@ -106,12 +113,31 @@ export default function Outline(props: OutlineProps) {
 		containerRef?.focus();
 	};
 
+	// Shared by the "g" shortcut and the zoom header's click-equivalent button
+	// (the hintbar that documents shortcuts is hidden on touch/≤480px).
+	const openGraphLens = () => {
+		const selected = store.selected();
+		const focus = (selected && store.tasks[selected]?.id) ?? store.zoomTask()?.id;
+		if (focus) {
+			setLensFocusId(focus);
+			setLensOpen("graph");
+		}
+	};
+
+	const openMilestoneLens = () => setLensOpen("milestone");
+
 	const onKeyDown = (e: KeyboardEvent) => {
 		const target = e.target as HTMLElement;
 		if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
 
 		const selected = store.selected();
 
+		if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+			e.preventDefault();
+			if (!selected || !store.tasks[selected]) return;
+			void store.moveSibling(selected, e.key === "ArrowUp" ? "up" : "down");
+			return;
+		}
 		if (e.key === "j" || e.key === "ArrowDown") {
 			e.preventDefault();
 			store.selectDelta(1);
@@ -153,6 +179,14 @@ export default function Outline(props: OutlineProps) {
 			setQuickAddOpen(true);
 			return;
 		}
+		if (e.key === "g") {
+			openGraphLens();
+			return;
+		}
+		if (e.key === "m") {
+			openMilestoneLens();
+			return;
+		}
 		if (e.key === "Enter") {
 			if (selected && store.tasks[selected]) store.startRename(selected);
 			return;
@@ -162,6 +196,14 @@ export default function Outline(props: OutlineProps) {
 			e.preventDefault();
 			void store.reparent(selected, e.shiftKey ? "out" : "in");
 		}
+	};
+
+	// LensShell focuses its own root on mount; unmounting it on close leaves
+	// focus parked on <body>, silently killing every j/k/space/g/m shortcut
+	// until the outline is re-clicked. Always hand focus back explicitly.
+	const closeLens = () => {
+		setLensOpen(null);
+		containerRef?.focus();
 	};
 
 	const selectedTask = (): Task | null => {
@@ -200,6 +242,8 @@ export default function Outline(props: OutlineProps) {
 				projectName={props.project.name}
 				store={store}
 				onZoomTo={(id) => void navigateTo(id, store.zoomTask()?.id ?? null)}
+				onOpenGraphLens={openGraphLens}
+				onOpenMilestoneLens={openMilestoneLens}
 			/>
 
 			<div class="outline-layout">
@@ -248,7 +292,7 @@ export default function Outline(props: OutlineProps) {
 					</Show>
 				</div>
 
-				<Rail selectedTask={selectedTask()} />
+				<Rail selectedTask={selectedTask()} rollups={store.rollups} onNavigate={(id) => void navigateTo(id)} />
 			</div>
 
 			<div class="outline-hintbar">
@@ -268,7 +312,16 @@ export default function Outline(props: OutlineProps) {
 					<b>tab</b> nest
 				</span>
 				<span>
+					<b>⌥↑/↓</b> reorder
+				</span>
+				<span>
 					<b>o</b> add child
+				</span>
+				<span>
+					<b>g</b> graph lens
+				</span>
+				<span>
+					<b>m</b> milestone lens
 				</span>
 			</div>
 
@@ -281,6 +334,20 @@ export default function Outline(props: OutlineProps) {
 					)}
 				</For>
 			</div>
+
+			<Show when={lensOpen() === "graph" && lensFocusId()}>
+				{(focusId) => (
+					<Suspense>
+						<GraphLens focusId={focusId()} onClose={closeLens} onZoom={(id) => void navigateTo(id)} />
+					</Suspense>
+				)}
+			</Show>
+
+			<Show when={lensOpen() === "milestone"}>
+				<Suspense>
+					<MilestoneLens projectId={props.project.id} onClose={closeLens} onZoom={(id) => void navigateTo(id)} />
+				</Suspense>
+			</Show>
 		</div>
 	);
 }
