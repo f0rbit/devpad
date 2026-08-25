@@ -1,0 +1,60 @@
+---
+import { Badge } from "@f0rbit/ui";
+import SpecificationEditor from "@/components/solid/specification-editor";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getProject, rethrow } from "@/utils/api-client";
+
+const project_id = Astro.params.project_id!;
+
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
+
+const docs_result = await client.docs.list({ project_id: project.id });
+if (!docs_result.ok) return rethrow(docs_result.error);
+const docs = docs_result.value;
+
+const statusVariant = { draft: "default", in_review: "warning", approved: "success" } as const;
+---
+
+<PageLayout title={`Docs - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<SpecificationEditor project_id={project.id} initial={project.specification ?? ""} has_github={project.repo_url != null} client:load />
+
+		<section class="docs-list">
+			<h5>project documents</h5>
+			{
+				docs.length === 0 ? (
+					<p class="text-sm text-faint">No documents pushed yet — plans, design docs, and interface reports land here as they're generated.</p>
+				) : (
+					<ul class="list">
+						{docs.map(doc => (
+							<li class="docs-list__item">
+								<span class="docs-list__title">{doc.title}</span>
+								<Badge variant={statusVariant[doc.status]}>{doc.status}</Badge>
+								<span class="text-xs text-faint">{doc.kind}</span>
+							</li>
+						))}
+					</ul>
+				)
+			}
+		</section>
+	</ProjectLayout>
+</PageLayout>
+
+<style>
+	.docs-list {
+		margin-top: 24px;
+	}
+
+	.docs-list__item {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+	}
+
+	.docs-list__title {
+		font-weight: 500;
+	}
+</style>
