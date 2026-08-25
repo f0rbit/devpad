@@ -5,6 +5,7 @@ import {
 	save_config_request,
 	save_tags_request,
 	upsert_goal,
+	upsert_hook,
 	upsert_milestone,
 	upsert_project,
 	upsert_task_link,
@@ -51,6 +52,22 @@ export const milestone_by_id = z.object({
 
 export const goal_by_id = z.object({
 	id: z.string().describe("Goal ID"),
+});
+
+export const hook_filters = z.object({
+	project_id: z.string().describe("Project ID to list hooks for"),
+});
+
+export const hook_by_id = z.object({
+	id: z.string().describe("Hook ID"),
+});
+
+export const hook_deliveries_input = z.object({
+	id: z.string().describe("Hook ID"),
+	status: z
+		.enum(["pending", "delivered", "failed_transient", "failed_permanent"])
+		.optional()
+		.describe("Filter by delivery status — use failed_permanent to see the DLQ"),
 });
 
 export const github_branches = z.object({
@@ -194,6 +211,37 @@ export const tools: Record<string, ToolDefinition> = {
 							finished_at: input.finished_at,
 						}),
 			),
+	}),
+
+	// Hooks (task A3.2) — project-scoped automation registry + delivery ledger
+	devpad_hooks_list: define_tool({
+		name: "devpad_hooks_list",
+		description: "List hooks configured for a project",
+		inputSchema: hook_filters,
+		execute: async (client, input) => unwrap(await client.hooks.list(input.project_id)),
+	}),
+
+	devpad_hooks_upsert: define_tool({
+		name: "devpad_hooks_upsert",
+		description:
+			"Create or update a hook (webhook/vault/pipeline action fired on matching task_event kinds). Pass 'id' to update.",
+		inputSchema: upsert_hook,
+		execute: async (client, input) => unwrap(await client.hooks.upsert(input)),
+	}),
+
+	devpad_hooks_delete: define_tool({
+		name: "devpad_hooks_delete",
+		description: "Delete a hook",
+		inputSchema: hook_by_id,
+		execute: async (client, input) => unwrap(await client.hooks.delete(input.id)),
+	}),
+
+	devpad_hooks_deliveries: define_tool({
+		name: "devpad_hooks_deliveries",
+		description:
+			"List delivery attempts for a hook, optionally filtered by status (the DLQ is status=failed_permanent)",
+		inputSchema: hook_deliveries_input,
+		execute: async (client, input) => unwrap(await client.hooks.deliveries(input.id, input.status)),
 	}),
 
 	// Goals

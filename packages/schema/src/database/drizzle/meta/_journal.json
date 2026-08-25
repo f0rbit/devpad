@@ -127,6 +127,13 @@
       "when": 1787624031829,
       "tag": "0017_tiny_daredevil",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1787624707762,
+      "tag": "0018_wild_johnny_blaze",
+      "breakpoints": true
     }
   ]
 }
