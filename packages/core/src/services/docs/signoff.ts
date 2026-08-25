@@ -14,7 +14,7 @@ import { annotation_thread, signoff, task } from "@devpad/schema/database/schema
 import type { Database } from "@devpad/schema/database/types";
 import type { Document, Signoff, SignoffCheckpoint, SignoffSubjectKind } from "@devpad/schema/types";
 import { type Backend, ok, type Result } from "@f0rbit/corpus";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { errors, type ServiceError } from "../errors.js";
 import { SqlCompletionEngine } from "../graph/completion.js";
 import { add_link, get_task_row, type GraphError } from "../graph/graph.js";
@@ -119,7 +119,11 @@ export async function latest_decided_signoff(
 				ne(signoff.decision, "changes_requested"),
 			),
 		)
-		.orderBy(desc(signoff.decided_at));
+		// `decided_at` is millisecond-resolution wall-clock time (`new Date().toISOString()`);
+		// a manual decision followed immediately by an auto-approve (same push) can tie on it,
+		// so `rowid` (monotonic insertion order, SQLite's implicit tiebreaker) breaks ties —
+		// same lesson as `list_versions` walking `parents` instead of sorting by `created_at`.
+		.orderBy(desc(signoff.decided_at), desc(sql`rowid`));
 	const decided = rows.filter((r) => r.decision === "approved" || r.decision === "auto");
 	return ok(decided[0] ?? null);
 }
