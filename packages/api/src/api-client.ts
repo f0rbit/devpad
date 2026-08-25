@@ -33,6 +33,7 @@ import type {
 	UpdateProfileInput,
 } from "@devpad/schema/media/types";
 import type {
+	AnnotationThread,
 	ApiKey,
 	CompletedVia,
 	Document,
@@ -66,11 +67,13 @@ import type {
 	ApplyOp,
 	ApplyRequest,
 	ClaimRequest,
+	CreateThreadRequest,
 	DashboardResponse,
 	DoneRequest,
 	HookActionPublic,
 	HookTrigger,
 	PushDocRequest,
+	ThreadMarker,
 	UpsertHook,
 } from "@devpad/schema/validation";
 
@@ -82,7 +85,12 @@ export type PublicHook = Omit<Hook, "action" | "trigger"> & { trigger: HookTrigg
 // but is defined locally since `@devpad/api` doesn't depend on `@devpad/core`.
 type DocContent = { title: string; html: string };
 type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
-type PullDocResponse = { document: Document; content: DocContent | null };
+type PullDocResponse = {
+	document: Document;
+	content: DocContent | null;
+	threads: ThreadMarker[];
+	orphaned: ThreadMarker[];
+};
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
@@ -813,6 +821,36 @@ export class ApiClient {
 		/** Full version history, newest first — the lineage walk. */
 		versions: (id: string): Promise<ApiResult<DocVersionInfo[]>> =>
 			wrap(() => this.clients.docs.get<DocVersionInfo[]>(`/docs/${id}/versions`)),
+
+		/**
+		 * Annotation engine (task A4.2) — markers-in-doc threads. Every
+		 * mutation pushes a new corpus version; the doc itself is the thread
+		 * history (locked decision 3).
+		 */
+		createThread: (document_id: string, data: CreateThreadRequest): Promise<ApiResult<Document>> =>
+			wrap(() => this.clients.docs.post<Document>(`/docs/${document_id}/threads`, { body: data })),
+
+		replyThread: (document_id: string, thread_id: string, body: string): Promise<ApiResult<Document>> =>
+			wrap(() =>
+				this.clients.docs.post<Document>(`/docs/${document_id}/threads/${thread_id}/reply`, { body: { body } }),
+			),
+
+		resolveThread: (document_id: string, thread_id: string): Promise<ApiResult<Document>> =>
+			wrap(() => this.clients.docs.post<Document>(`/docs/${document_id}/threads/${thread_id}/resolve`, {})),
+
+		toggleBlocking: (document_id: string, thread_id: string, blocking: boolean): Promise<ApiResult<Document>> =>
+			wrap(() =>
+				this.clients.docs.post<Document>(`/docs/${document_id}/threads/${thread_id}/blocking`, { body: { blocking } }),
+			),
+
+		/** Pending annotation threads (anything not `resolved`) — scope to one document, or every document in a project. */
+		unresolved: (filters: { project_id?: string; document_id?: string }): Promise<ApiResult<AnnotationThread[]>> =>
+			wrap(() => {
+				const query: Record<string, string> = {};
+				if (filters.project_id) query.project_id = filters.project_id;
+				if (filters.document_id) query.document_id = filters.document_id;
+				return this.clients.docs.get<AnnotationThread[]>("/docs/annotations/unresolved", { query });
+			}),
 	};
 
 	/**

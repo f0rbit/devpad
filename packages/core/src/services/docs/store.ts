@@ -202,23 +202,30 @@ export async function list_documents(
 export type PushDocError = ServiceError | DocCorpusError;
 
 /**
- * Sanitizes the incoming HTML, pushes it as a new corpus version (stamping
- * `parents` from the current head for lineage), then updates (or creates)
- * the `document` index row and emits the `doc.pushed` outbox event.
+ * Pushes `input.html` AS-IS (the caller is responsible for it being safe)
+ * as a new corpus version (stamping `parents` from the current head for
+ * lineage), then updates (or creates) the `document` index row and emits
+ * the `doc.pushed` outbox event.
  *
  * Corpus is pushed FIRST (it's the source of truth); the DB-side index
  * update + event emission happen together via `write_with_event`. A crash
  * between the two leaves an extra, unreferenced corpus version — harmless
  * and recoverable (a future reconciliation pass can always resync
  * `head_version` from `list_versions`), never a lost or corrupted document.
+ *
+ * Exported (not just an internal of `push_document`) so `threads.ts`'s
+ * annotated push path (task A4.2) can push already-reconciled content
+ * (sanitized, with marker comments freshly embedded) without a second
+ * sanitize pass stripping the markers it just added — `sanitize_html`
+ * strips ALL comments unconditionally, including well-formed ones.
  */
-export async function push_document(
+export async function push_document_raw(
 	db: Database,
 	backend: Backend,
 	input: PushDocRequest,
 	auth_channel: "user" | "api",
 ): Promise<Result<Document, PushDocError>> {
-	const clean_html = sanitize_html(input.html);
+	const clean_html = input.html;
 
 	if (input.document_id) {
 		const existing = await get_document(db, input.document_id);
@@ -297,4 +304,14 @@ export async function push_document(
 			payload: { kind: "doc.pushed", document_id: row.id, version: pushed.value.version },
 		}),
 	);
+}
+
+/** Sanitizes `input.html` (killing hostile content — see `sanitize.ts`) then delegates to `push_document_raw`. The route-level entrypoint for a plain content push. */
+export async function push_document(
+	db: Database,
+	backend: Backend,
+	input: PushDocRequest,
+	auth_channel: "user" | "api",
+): Promise<Result<Document, PushDocError>> {
+	return push_document_raw(db, backend, { ...input, html: sanitize_html(input.html) }, auth_channel);
 }

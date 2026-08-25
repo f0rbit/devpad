@@ -2,6 +2,7 @@ import { CategoryCreateSchema, PostCreateSchema, PostListParamsSchema, PostUpdat
 import { RUN_STATUSES, STAGE_EVENT_KINDS } from "@devpad/schema/database/schema";
 import {
 	apply_request,
+	create_thread_request,
 	push_doc_request,
 	save_config_request,
 	save_tags_request,
@@ -1155,6 +1156,62 @@ export const tools: Record<string, ToolDefinition> = {
 			id: z.string().describe("Document ID"),
 		}),
 		execute: async (client, input) => unwrap(await client.docs.versions(input.id)),
+	}),
+
+	// Annotation engine (v2.4, task A4.2) — markers-in-doc threads
+	devpad_annotations_create: define_tool({
+		name: "devpad_annotations_create",
+		description:
+			"Open a new annotation thread on a document, anchored to an exact quote (with prefix/suffix context + char offsets for re-anchoring across edits)",
+		inputSchema: create_thread_request.extend({ document_id: z.string().describe("Document ID") }),
+		execute: async (client, input) => {
+			const { document_id, ...rest } = input;
+			return unwrap(await client.docs.createThread(document_id, rest));
+		},
+	}),
+
+	devpad_annotations_reply: define_tool({
+		name: "devpad_annotations_reply",
+		description: "Reply to an existing annotation thread",
+		inputSchema: z.object({
+			document_id: z.string().describe("Document ID"),
+			thread_id: z.string().describe("Thread ID (from the marker JSON, not the document ID)"),
+			body: z.string().min(1).describe("Reply text"),
+		}),
+		execute: async (client, input) =>
+			unwrap(await client.docs.replyThread(input.document_id, input.thread_id, input.body)),
+	}),
+
+	devpad_annotations_resolve: define_tool({
+		name: "devpad_annotations_resolve",
+		description: "Mark an annotation thread resolved",
+		inputSchema: z.object({
+			document_id: z.string().describe("Document ID"),
+			thread_id: z.string().describe("Thread ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.resolveThread(input.document_id, input.thread_id)),
+	}),
+
+	devpad_annotations_toggle_blocking: define_tool({
+		name: "devpad_annotations_toggle_blocking",
+		description: "Toggle whether an annotation thread blocks approval",
+		inputSchema: z.object({
+			document_id: z.string().describe("Document ID"),
+			thread_id: z.string().describe("Thread ID"),
+			blocking: z.boolean(),
+		}),
+		execute: async (client, input) =>
+			unwrap(await client.docs.toggleBlocking(input.document_id, input.thread_id, input.blocking)),
+	}),
+
+	devpad_annotations_unresolved: define_tool({
+		name: "devpad_annotations_unresolved",
+		description: "List pending annotation threads (anything not resolved) for a project or a specific document",
+		inputSchema: z.object({
+			project_id: z.string().optional().describe("Project ID"),
+			document_id: z.string().optional().describe("Document ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.docs.unresolved(input)),
 	}),
 };
 
