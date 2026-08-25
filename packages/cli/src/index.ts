@@ -4,6 +4,7 @@ import { ApiClient, getTool } from "@devpad/api";
 import chalk from "chalk";
 import { Command } from "commander";
 import { Table } from "console-table-printer";
+import { register_admin_commands } from "./admin-commands";
 import { register_pipelines_commands } from "./commands/pipelines";
 import { register_graph_commands } from "./graph-commands";
 import { register_interface_commands } from "./interface-commands";
@@ -674,6 +675,9 @@ user
 
 // v2.4 graph verbs — `ready` (top-level) + `tasks tree|near|claim|link|unlink|apply`.
 register_graph_commands(program, tasks, getApiClient);
+
+// v2.4 fold verification (task A5.3) — `admin verify-fold`.
+register_admin_commands(program, getApiClient);
 
 // v2.4 docs verbs (task A4.1) — `plans push|pull|versions|list`.
 register_plans_commands(program, getApiClient);

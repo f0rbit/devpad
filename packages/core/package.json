@@ -33,6 +33,7 @@
 		"./services/media/cron": "./src/services/media/cron/index.ts",
 		"./services/media/storage": "./src/services/media/storage.ts",
 		"./services/media/sync": "./src/services/media/sync.ts",
+		"./services/scanner": "./src/services/scanner/index.ts",
 		"./services/pipelines": "./src/services/pipelines/index.ts",
 		"./services/pipelines/analysis-templates": "./src/services/pipelines/analysis-templates.ts",
 		"./services/pipelines/gates": "./src/services/pipelines/gates/index.ts",

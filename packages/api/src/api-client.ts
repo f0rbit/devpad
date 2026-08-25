@@ -100,6 +100,26 @@ type PullDocResponse = {
 };
 type PushInterfaceReportResult = { document: Document; classification: InterfaceDiffClass; signoff: Signoff | null };
 
+type FoldDiff =
+	| { kind: "missing_row"; entity: "milestone" | "goal"; id: string }
+	| {
+			kind: "field_mismatch";
+			entity: "milestone" | "goal";
+			id: string;
+			field: string;
+			expected: unknown;
+			actual: unknown;
+	  }
+	| {
+			kind: "completion_mismatch";
+			entity: "milestone" | "goal";
+			id: string;
+			expected_finished: boolean;
+			actual_completed: boolean;
+	  }
+	| { kind: "ordering_violation"; entity: "milestone"; id: string; after_id: string };
+type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: FoldDiff[]; clean: boolean };
+
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 type TreeResponse = { task: Task; descendants: Task[] };
 type NearResponse = { links: TaskLink[]; tasks: Task[] };
@@ -216,6 +236,7 @@ export class ApiClient {
 			docs: new HttpClient({ ...clientOptions, category: "docs" }),
 			signoffs: new HttpClient({ ...clientOptions, category: "signoffs" }),
 			reviews: new HttpClient({ ...clientOptions, category: "reviews" }),
+			admin: new HttpClient({ ...clientOptions, category: "admin" }),
 		} as const;
 	}
 
@@ -1206,6 +1227,12 @@ export class ApiClient {
 					Object.keys(query).length ? { query } : {},
 				);
 			}),
+	};
+
+	/** v2.4 (task A5.3) — the fold's dual-read verification verb. */
+	public readonly admin = {
+		verifyFold: (): Promise<ApiResult<FoldVerifyReport>> =>
+			wrap(() => this.clients.admin.get<FoldVerifyReport>("/admin/verify-fold")),
 	};
 
 	public readonly user = {

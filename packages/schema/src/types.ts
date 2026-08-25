@@ -41,6 +41,7 @@ import type {
 	insert_pipeline_stage_event,
 	project_config,
 	save_config_request,
+	scan_diff_proposal,
 	update_action,
 	update_user,
 	upsert_goal,
@@ -137,6 +138,7 @@ export type UpsertTaskLink = z.infer<typeof upsert_task_link>;
 export type UpdateAction = z.infer<typeof update_action>;
 export type ProjectConfig = z.infer<typeof project_config>;
 export type SaveConfigRequest = z.infer<typeof save_config_request>;
+export type ScanDiffProposal = z.infer<typeof scan_diff_proposal>;
 
 // Utility/combination types for API responses and complex data structures
 export type TaskWithDetails = {

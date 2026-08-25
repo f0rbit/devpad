@@ -390,6 +390,19 @@ export const upsert_task_link = z.object({
 	note: z.string().nullable().optional(),
 });
 
+// v2.4 (task A5.4) — scanner ⇄ graph reconciliation. A scan-diff CREATE
+// action's placement proposal: `parent_id` null means "fall back to project
+// root" (no same-file match found); `proposing_task_id` is the existing task
+// whose codebase_task shares the new item's file — the accept path draws a
+// `discovered_from` edge from the new task to it. Attached to a `DiffResult`
+// (`packages/core/src/services/scanner/types.ts`) as `proposal`, not nested
+// under `data`, since it's about the NEW item's placement, orthogonal to the
+// old/new diff info.
+export const scan_diff_proposal = z.object({
+	parent_id: z.string().nullable(),
+	proposing_task_id: z.string().nullable(),
+});
+
 // Batch apply (task A1.4) — a Zod discriminated union of graph operations,
 // with `$0`/`$1`… temp-handle strings letting one call reference a not-yet-
 // created row's id from a later op in the same batch.

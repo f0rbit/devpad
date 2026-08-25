@@ -1,4 +1,17 @@
+import { Database as BunSqlite } from "bun:sqlite";
 import { describe, expect, mock, test } from "bun:test";
+import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
+import { project, user } from "@devpad/schema/database/schema";
+import type { Database } from "@devpad/schema/database/types";
+
+/**
+ * v2.4 (task A5.4) — rewritten against a real in-memory SQLite db instead of
+ * the pre-fold hand-rolled mock-db, which didn't (and couldn't easily) fake
+ * `db.all(sql\`...\`)` — the raw-SQL query the scanner ⇄ graph reconciliation
+ * heuristic (`proposeParent`) needs. `scanGitHubRepo`/`generateDiff` stay
+ * `mock.module()`-mocked: that's the correct boundary (a real GitHub API
+ * call isn't unit-testable), not something a real DB changes.
+ */
 
 mock.module("../scanner/index.js", () => ({
 	scanGitHubRepo: async () => ({
@@ -26,95 +39,58 @@ mock.module("../scanner/index.js", () => ({
 
 const { initiateScan, getPendingUpdates, getScanHistory } = await import("../scanning.js");
 
-const mockProjectRow = {
-	id: "project_123",
-	project_id: "my-project",
-	name: "Test Project",
-	repo_url: "https://github.com/owner/repo",
-	repo_id: 12345,
-	scan_branch: "main",
-	owner_id: "user_abc",
-	status: "DEVELOPMENT",
-	visibility: "PRIVATE",
-	created_at: "2024-01-01",
-	updated_at: "2024-01-01",
-	deleted: false,
-};
+function create_test_db(): Database {
+	const sqlite = new BunSqlite(":memory:");
+	migrateBunDatabase(sqlite);
+	return createBunDatabase(sqlite);
+}
 
-function createScanMockDb(overrides: Record<string, any> = {}) {
-	let call_count = 0;
-	const select_results = overrides.select_sequence ?? [];
+async function seed_user_row(db: Database): Promise<string> {
+	const id = `user_scan_unit_${crypto.randomUUID()}`;
+	await db.insert(user).values({
+		id,
+		name: "tester",
+		email: `${id}@test.example`,
+		task_view: "list",
+	});
+	return id;
+}
 
-	const resolve = () => {
-		const result = select_results[call_count] ?? [];
-		call_count++;
-		return result;
-	};
-
-	const make_result_chain = (): any => {
-		let resolved: any[] | null = null;
-		const get_resolved = () => {
-			if (resolved === null) resolved = resolve();
-			return resolved;
-		};
-
-		const self: any = {
-			select: () => make_result_chain(),
-			from: () => self,
-			where: () => make_result_chain(),
-			orderBy: () => self,
-			limit: () => make_result_chain(),
-			innerJoin: () => self,
-			leftJoin: () => self,
-			groupBy: () => make_result_chain(),
-			then: (onFulfilled: any, onRejected?: any) => Promise.resolve(get_resolved()).then(onFulfilled, onRejected),
-			map: (...args: any[]) => get_resolved().map(...args),
-			filter: (...args: any[]) => get_resolved().filter(...args),
-			length: 0,
-			[Symbol.iterator]: () => get_resolved()[Symbol.iterator](),
-			get [0]() {
-				return get_resolved()[0];
-			},
-		};
-
-		Object.defineProperty(self, "length", { get: () => get_resolved().length });
-
-		return self;
-	};
-
-	return {
-		select: () => make_result_chain(),
-		insert: () => ({
-			values: (_: any) => ({
-				returning: () => overrides.insert_returning ?? [{ id: 1 }],
-				onConflictDoUpdate: () => ({
-					returning: () => overrides.insert_returning ?? [{ id: 1 }],
-				}),
-			}),
-		}),
-		update: () => ({
-			set: () => ({
-				where: () => ({}),
-			}),
-		}),
-	};
+async function seed_project_row(
+	db: Database,
+	owner_id: string,
+	overrides: Partial<typeof project.$inferInsert> = {},
+): Promise<string> {
+	const id = overrides.id ?? `project_scan_unit_${crypto.randomUUID()}`;
+	await db.insert(project).values({
+		id,
+		owner_id,
+		project_id: id,
+		name: "Test Project",
+		status: "DEVELOPMENT",
+		visibility: "PRIVATE",
+		repo_url: "https://github.com/owner/repo",
+		repo_id: 12345,
+		scan_branch: "main",
+		...overrides,
+	});
+	return id;
 }
 
 describe("scanning", () => {
 	describe("initiateScan", () => {
 		test("is an async generator", () => {
-			const db = createScanMockDb();
+			const db = create_test_db();
 			const generator = initiateScan(db, "project_123", "user_abc", "token_abc");
 			expect(generator[Symbol.asyncIterator]).toBeDefined();
 		});
 
 		test("yields error for missing project", async () => {
-			const db = createScanMockDb({
-				select_sequence: [[]],
-			});
+			const db = create_test_db();
+			const owner_id = await seed_user_row(db);
 
 			const messages: string[] = [];
-			for await (const msg of initiateScan(db, "project_123", "user_abc", "token_abc")) {
+			for await (const msg of initiateScan(db, "project_missing", owner_id, "token_abc")) {
 				messages.push(msg);
 			}
 
@@ -123,13 +99,12 @@ describe("scanning", () => {
 		});
 
 		test("yields error for project without repo", async () => {
-			const project_no_repo = { ...mockProjectRow, repo_url: null };
-			const db = createScanMockDb({
-				select_sequence: [[project_no_repo]],
-			});
+			const db = create_test_db();
+			const owner_id = await seed_user_row(db);
+			const project_id = await seed_project_row(db, owner_id, { repo_url: null });
 
 			const messages: string[] = [];
-			for await (const msg of initiateScan(db, "project_123", "user_abc", "token_abc")) {
+			for await (const msg of initiateScan(db, project_id, owner_id, "token_abc")) {
 				messages.push(msg);
 			}
 
@@ -138,31 +113,28 @@ describe("scanning", () => {
 		});
 
 		test("yields progress messages for successful scan", async () => {
-			const db = createScanMockDb({
-				select_sequence: [
-					[mockProjectRow],
-					[mockProjectRow],
-					[{ id: "tag_1", title: "todo", matches: '["TODO"]' }],
-					[],
-					[],
-				],
-				insert_returning: [{ id: 1 }],
-			});
+			const db = create_test_db();
+			const owner_id = await seed_user_row(db);
+			const project_id = await seed_project_row(db, owner_id);
 
 			const messages: string[] = [];
-			for await (const msg of initiateScan(db, "project_123", "user_abc", "token_abc")) {
+			for await (const msg of initiateScan(db, project_id, owner_id, "token_abc")) {
 				messages.push(msg);
 			}
 
 			expect(messages).toContain("starting\n");
 			expect(messages.some((m) => m.includes("scanning repo") || m.includes("loading config"))).toBe(true);
+			expect(messages).toContain("done\n");
 		});
 	});
 
 	describe("getPendingUpdates", () => {
 		test("returns not_found for non-owned project", async () => {
-			const db = createScanMockDb({ select_sequence: [[]] });
-			const result = await getPendingUpdates(db, "project_123", "user_wrong");
+			const db = create_test_db();
+			const owner_id = await seed_user_row(db);
+			const project_id = await seed_project_row(db, owner_id);
+
+			const result = await getPendingUpdates(db, project_id, "user_wrong");
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.kind).toBe("not_found");
@@ -172,8 +144,11 @@ describe("scanning", () => {
 
 	describe("getScanHistory", () => {
 		test("returns not_found for non-owned project", async () => {
-			const db = createScanMockDb({ select_sequence: [[]] });
-			const result = await getScanHistory(db, "project_123", "user_wrong");
+			const db = create_test_db();
+			const owner_id = await seed_user_row(db);
+			const project_id = await seed_project_row(db, owner_id);
+
+			const result = await getScanHistory(db, project_id, "user_wrong");
 			expect(result.ok).toBe(false);
 			if (!result.ok) {
 				expect(result.error.kind).toBe("not_found");

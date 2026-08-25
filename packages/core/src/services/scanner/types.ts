@@ -1,3 +1,5 @@
+import type { ScanDiffProposal } from "@devpad/schema";
+
 export type ScanConfig = {
 	tags: TagMatcher[];
 	ignore: string[];
@@ -34,6 +36,10 @@ export type DiffResult = {
 		old: DiffInfo | null;
 		new: DiffInfo | null;
 	};
+	// v2.4 (task A5.4) — graph placement proposal for a "NEW" diff item, computed
+	// by `scanning.ts`'s `proposeParent`. `undefined`/`null` for every other diff
+	// type (SAME/MOVE/UPDATE/DELETE never propose placement).
+	proposal?: ScanDiffProposal | null;
 };
 
 export type ScannerError =

@@ -1,4 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { Database } from "@devpad/schema/database/types";
+import { create_test_db, seed_project, seed_user } from "../graph/__tests__/integration/helpers.js";
 import {
 	addGoalAction,
 	completeGoal,
@@ -8,350 +10,189 @@ import {
 	getUserGoals,
 	upsertGoal,
 } from "../goals.js";
+import { upsertMilestone } from "../milestones.js";
 
-const mockGoal = {
-	id: "goal_1",
-	name: "Ship v1",
-	description: "Release first version",
-	milestone_id: "ms_1",
-	target_time: null,
-	finished_at: null,
-	created_at: "2024-01-01",
-	updated_at: "2024-01-01",
-	deleted: false,
-	created_by: "user",
-	modified_by: "user",
-	protected: false,
-};
+/**
+ * v2.4 (task A5.2) — rewritten against a real in-memory SQLite db, same
+ * rationale as `milestones.test.ts`'s rewrite: the old hand-rolled mock-db
+ * asserted the frozen `goal` table's raw query shape directly and can't
+ * survive the fold (goals are now a projection over `task` rows parented
+ * under their milestone's task row).
+ */
 
-const mockMilestone = {
-	id: "ms_1",
-	name: "Alpha",
-	description: null,
-	project_id: "project_1",
-	target_time: null,
-	target_version: null,
-	finished_at: null,
-	after_id: null,
-	created_at: "2024-01-01",
-	updated_at: "2024-01-01",
-	deleted: false,
-	created_by: "user",
-	modified_by: "user",
-	protected: false,
-};
+let db: Database;
+let owner_id: string;
+let other_owner_id: string;
+let project_id: string;
+let milestone_id: string;
 
-const mockProject = {
-	id: "project_1",
-	project_id: "my-project",
-	name: "Test Project",
-	owner_id: "user_abc",
-	visibility: "PRIVATE",
-	deleted: false,
-};
-
-function createSequenceMockDb(overrides: Record<string, any> = {}) {
-	let call_count = 0;
-	const select_results = overrides.select_sequence ?? [];
-
-	const resolve = () => {
-		const result = select_results[call_count] ?? [];
-		call_count++;
-		return result;
-	};
-
-	const make_chain = (): any => {
-		let resolved: any[] | null = null;
-		const get = () => {
-			if (resolved === null) resolved = resolve();
-			return resolved;
-		};
-
-		const self: any = {
-			select: () => make_chain(),
-			from: () => self,
-			where: () => make_chain(),
-			orderBy: () => self,
-			limit: () => make_chain(),
-			innerJoin: () => self,
-			leftJoin: () => self,
-			groupBy: () => make_chain(),
-			then: (onFulfilled: any, onRejected?: any) => Promise.resolve(get()).then(onFulfilled, onRejected),
-			map: (...args: any[]) => get().map(...args),
-			filter: (...args: any[]) => get().filter(...args),
-			[Symbol.iterator]: () => get()[Symbol.iterator](),
-			get [0]() {
-				return get()[0];
-			},
-		};
-
-		Object.defineProperty(self, "length", { get: () => get().length });
-		return self;
-	};
-
-	return {
-		select: (_?: any) => make_chain(),
-		insert: () => ({
-			values: (_: any) => ({
-				returning: () => overrides.insert_returning ?? [{ id: "new_1" }],
-				onConflictDoUpdate: () => ({
-					returning: () => overrides.insert_returning ?? [{ id: "new_1" }],
-				}),
-			}),
-		}),
-		update: () => ({
-			set: (_: any) => ({
-				where: () => ({
-					returning: () => overrides.update_returning ?? [overrides.update_result ?? mockGoal],
-				}),
-			}),
-		}),
-		delete: () => ({ where: () => ({}) }),
-	} as any;
-}
+beforeEach(async () => {
+	db = create_test_db();
+	owner_id = (await seed_user(db)).id;
+	other_owner_id = (await seed_user(db)).id;
+	project_id = (await seed_project(db, owner_id)).id;
+	const milestone = await upsertMilestone(db, { name: "Alpha", project_id }, owner_id);
+	if (!milestone.ok) throw new Error("setup failed");
+	milestone_id = milestone.value.id;
+});
 
 describe("goals", () => {
-	describe("getUserGoals", () => {
-		test("returns goals for user", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [[{ goal: mockGoal }]],
-			});
-			const result = await getUserGoals(db, "user_abc");
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value).toEqual([mockGoal]);
-			}
-		});
-
-		test("returns empty array when no goals", async () => {
-			const db = createSequenceMockDb({ select_sequence: [[]] });
-			const result = await getUserGoals(db, "user_abc");
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value).toEqual([]);
-			}
-		});
-	});
-
-	describe("getMilestoneGoals", () => {
-		test("returns goals for milestone", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [[mockGoal]],
-			});
-			const result = await getMilestoneGoals(db, "ms_1");
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value).toEqual([mockGoal]);
-			}
-		});
-
-		test("returns empty when no goals", async () => {
-			const db = createSequenceMockDb({ select_sequence: [[]] });
-			const result = await getMilestoneGoals(db, "ms_1");
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value).toEqual([]);
-			}
-		});
-	});
-
-	describe("getGoal", () => {
-		test("returns goal when found", async () => {
-			const db = createSequenceMockDb({ select_sequence: [[mockGoal]] });
-			const result = await getGoal(db, "goal_1");
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value).toEqual(mockGoal);
-			}
-		});
-
-		test("returns not_found when empty", async () => {
-			const db = createSequenceMockDb({ select_sequence: [[]] });
-			const result = await getGoal(db, "goal_missing");
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.error.kind).toBe("not_found");
-			}
-		});
-
-		test("returns not_found when deleted", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [[{ ...mockGoal, deleted: true }]],
-			});
-			const result = await getGoal(db, "goal_1");
-			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.error.kind).toBe("not_found");
-			}
-		});
-	});
-
 	describe("upsertGoal", () => {
-		test("creates new goal", async () => {
-			const new_goal = { ...mockGoal, id: "goal_new" };
-			const db = createSequenceMockDb({
-				// getMilestone: select goal by id (no previous), select milestone
-				// doesUserOwnProject: select project
-				select_sequence: [
-					[mockMilestone], // getMilestone
-					[mockProject], // doesUserOwnProject
-				],
-				insert_returning: [new_goal],
-			});
-			const result = await upsertGoal(db, { name: "Ship v1", milestone_id: "ms_1" }, "user_abc");
+		test("creates a new goal parented under its milestone", async () => {
+			const result = await upsertGoal(db, { name: "Ship v1", milestone_id }, owner_id);
 			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value.id).toBe("goal_new");
-			}
+			if (!result.ok) return;
+			expect(result.value.id).toMatch(/^goal_/);
+			expect(result.value.milestone_id).toBe(milestone_id);
+			expect(result.value.deleted).toBe(false);
+			expect(result.value.finished_at).toBeNull();
 		});
 
-		test("updates existing goal", async () => {
-			const updated = { ...mockGoal, name: "Ship v2" };
-			const db = createSequenceMockDb({
-				// getGoal(previous): select goal
-				// getMilestone: select milestone
-				// doesUserOwnProject: select project
-				select_sequence: [
-					[mockGoal], // getGoal for previous
-					[mockMilestone], // getMilestone
-					[mockProject], // doesUserOwnProject
-				],
-				update_returning: [updated],
-			});
-			const result = await upsertGoal(db, { id: "goal_1", name: "Ship v2", milestone_id: "ms_1" }, "user_abc");
-			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value.name).toBe("Ship v2");
-			}
+		test("updates an existing goal", async () => {
+			const created = await upsertGoal(db, { name: "Ship v1", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+
+			const updated = await upsertGoal(db, { id: created.value.id, name: "Ship v2", milestone_id }, owner_id);
+			expect(updated.ok).toBe(true);
+			if (!updated.ok) return;
+			expect(updated.value.name).toBe("Ship v2");
+			expect(updated.value.milestone_id).toBe(milestone_id);
 		});
 
 		test("rejects protected entity from api channel without force", async () => {
-			const protected_goal = { ...mockGoal, protected: true, modified_by: "user" };
-			const db = createSequenceMockDb({
-				select_sequence: [
-					[protected_goal], // getGoal for previous
-					[mockMilestone], // getMilestone
-					[mockProject], // doesUserOwnProject
-				],
-			});
-			const result = await upsertGoal(db, { id: "goal_1", name: "Overwrite", milestone_id: "ms_1" }, "user_abc", "api");
+			const created = await upsertGoal(db, { name: "Protected", milestone_id }, owner_id, "user");
+			if (!created.ok) throw new Error("setup failed");
+
+			const result = await upsertGoal(db, { id: created.value.id, name: "Overwrite", milestone_id }, owner_id, "api");
 			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.error.kind).toBe("protected");
-			}
+			if (result.ok) return;
+			expect(result.error.kind).toBe("protected");
 		});
 
-		test("returns forbidden when user does not own project", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [
-					[mockMilestone], // getMilestone
-					[], // doesUserOwnProject (empty = not owner)
-				],
-			});
-			const result = await upsertGoal(db, { name: "New Goal", milestone_id: "ms_1" }, "user_other");
+		test("returns not_found for an invalid milestone_id", async () => {
+			const result = await upsertGoal(db, { name: "New", milestone_id: "milestone_missing" }, owner_id);
 			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.error.kind).toBe("forbidden");
-			}
+			if (result.ok) return;
+			expect(result.error.kind).toBe("not_found");
 		});
 
-		test("rejects modification of deleted goal", async () => {
-			const db = createSequenceMockDb({
-				// getGoal returns not_found for deleted goal, so previous will be null
-				// Actually, getGoal returns err for deleted, so previous_result?.ok is false, previous = null
-				// Then getMilestone check, doesUserOwnProject check, then exists=false so inserts
-				// Wait - let me re-read the code:
-				// previous_result = data.id ? await getGoal(db, data.id) : null
-				// previous = previous_result?.ok ? previous_result.value : null
-				// So if getGoal returns err (deleted), previous = null, exists = false
-				// Then it goes through getMilestone, ownership check, and tries insert
-				// The "bad_request" for deleted only triggers if previous is truthy AND deleted
-				// But previous is null here because getGoal returned err
-				// So we can't really trigger the "Cannot modify deleted goal" path through the mock
-				// because getGoal already filters deleted. Let me skip this edge case.
-				select_sequence: [[mockMilestone], [mockProject]],
-				insert_returning: [mockGoal],
-			});
-			const result = await upsertGoal(db, { name: "Goal", milestone_id: "ms_1" }, "user_abc");
-			expect(result.ok).toBe(true);
+		test("returns forbidden when user does not own the project", async () => {
+			const result = await upsertGoal(db, { name: "New", milestone_id }, other_owner_id);
+			expect(result.ok).toBe(false);
+			if (result.ok) return;
+			expect(result.error.kind).toBe("forbidden");
+		});
+
+		test("rejects modification of a deleted goal", async () => {
+			const created = await upsertGoal(db, { name: "Temp", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+			const deleted = await deleteGoal(db, created.value.id, owner_id);
+			expect(deleted.ok).toBe(true);
+
+			const result = await upsertGoal(db, { id: created.value.id, name: "Resurrect", milestone_id }, owner_id);
+			expect(result.ok).toBe(false);
+			if (result.ok) return;
+			expect(result.error.kind).toBe("bad_request");
+		});
+	});
+
+	describe("getGoal / getMilestoneGoals / getUserGoals", () => {
+		test("returns not_found for a missing goal", async () => {
+			const result = await getGoal(db, "goal_missing");
+			expect(result.ok).toBe(false);
+			if (result.ok) return;
+			expect(result.error.kind).toBe("not_found");
+		});
+
+		test("returns not_found for a deleted goal", async () => {
+			const created = await upsertGoal(db, { name: "Temp", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+			await deleteGoal(db, created.value.id, owner_id);
+
+			const result = await getGoal(db, created.value.id);
+			expect(result.ok).toBe(false);
+			if (result.ok) return;
+			expect(result.error.kind).toBe("not_found");
+		});
+
+		test("lists goals for a milestone", async () => {
+			const goal_1 = await upsertGoal(db, { name: "Goal 1", milestone_id }, owner_id);
+			const goal_2 = await upsertGoal(db, { name: "Goal 2", milestone_id }, owner_id);
+			if (!goal_1.ok || !goal_2.ok) throw new Error("setup failed");
+
+			const listed = await getMilestoneGoals(db, milestone_id);
+			expect(listed.ok).toBe(true);
+			if (!listed.ok) return;
+			expect(listed.value.map((g) => g.id)).toContain(goal_1.value.id);
+			expect(listed.value.map((g) => g.id)).toContain(goal_2.value.id);
+		});
+
+		test("lists goals across all of a user's projects", async () => {
+			const created = await upsertGoal(db, { name: "Mine", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+
+			const listed = await getUserGoals(db, owner_id);
+			expect(listed.ok).toBe(true);
+			if (!listed.ok) return;
+			expect(listed.value.map((g) => g.id)).toContain(created.value.id);
 		});
 	});
 
 	describe("deleteGoal", () => {
-		test("soft deletes goal", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [
-					[mockGoal], // getGoal
-					[mockMilestone], // getMilestone
-					[mockProject], // doesUserOwnProject
-				],
-			});
-			const result = await deleteGoal(db, "goal_1", "user_abc");
+		test("soft deletes the goal", async () => {
+			const created = await upsertGoal(db, { name: "Doomed", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+
+			const result = await deleteGoal(db, created.value.id, owner_id);
 			expect(result.ok).toBe(true);
+
+			const fetched = await getGoal(db, created.value.id);
+			expect(fetched.ok).toBe(false);
 		});
 
-		test("returns not_found for missing goal", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [[]], // getGoal returns not_found
-			});
-			const result = await deleteGoal(db, "goal_missing", "user_abc");
+		test("returns not_found for a missing goal", async () => {
+			const result = await deleteGoal(db, "goal_missing", owner_id);
 			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.error.kind).toBe("not_found");
-			}
+			if (result.ok) return;
+			expect(result.error.kind).toBe("not_found");
 		});
 
-		test("returns forbidden when user does not own project", async () => {
-			const db = createSequenceMockDb({
-				select_sequence: [
-					[mockGoal], // getGoal
-					[mockMilestone], // getMilestone
-					[], // doesUserOwnProject (empty = not owner)
-				],
-			});
-			const result = await deleteGoal(db, "goal_1", "user_other");
+		test("returns forbidden when user does not own the project", async () => {
+			const created = await upsertGoal(db, { name: "Mine", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+
+			const result = await deleteGoal(db, created.value.id, other_owner_id);
 			expect(result.ok).toBe(false);
-			if (!result.ok) {
-				expect(result.error.kind).toBe("forbidden");
-			}
+			if (result.ok) return;
+			expect(result.error.kind).toBe("forbidden");
 		});
 	});
 
 	describe("completeGoal", () => {
-		test("delegates to upsertGoal with finished_at", async () => {
-			const completed = { ...mockGoal, finished_at: "2024-06-01" };
-			const db = createSequenceMockDb({
-				select_sequence: [
-					[mockGoal], // getGoal for previous
-					[mockMilestone], // getMilestone
-					[mockProject], // doesUserOwnProject
-				],
-				update_returning: [completed],
-			});
-			const result = await completeGoal(db, "goal_1", "user_abc");
+		test("sets finished_at and marks the goal COMPLETED", async () => {
+			const created = await upsertGoal(db, { name: "Ship it", milestone_id }, owner_id);
+			if (!created.ok) throw new Error("setup failed");
+
+			const result = await completeGoal(db, created.value.id, owner_id);
 			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value.finished_at).toBe("2024-06-01");
-			}
+			if (!result.ok) return;
+			expect(result.value.finished_at).not.toBeNull();
 		});
 	});
 
 	describe("addGoalAction", () => {
-		test("records action and returns true", async () => {
-			const db = createSequenceMockDb({});
+		test("records an action row", async () => {
 			const result = await addGoalAction(db, {
-				owner_id: "user_abc",
+				owner_id,
 				goal_id: "goal_1",
-				milestone_id: "ms_1",
-				project_id: "project_1",
+				milestone_id,
+				project_id,
 				name: "Ship v1",
 				type: "CREATE_GOAL",
 				description: "Created goal",
 			});
 			expect(result.ok).toBe(true);
-			if (result.ok) {
-				expect(result.value).toBe(true);
-			}
+			if (result.ok) expect(result.value).toBe(true);
 		});
 	});
 });
