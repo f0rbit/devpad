@@ -331,6 +331,35 @@ app.post("/:id/done", requireAuth, zValidator("json", done_request), async (c) =
 });
 
 /**
+ * v2.4 B2 — the outline's policy-only reopen affordance. The engine itself
+ * (`SqlCompletionEngine.reopen`) is the sole enforcement point for "only a
+ * `completed_via='policy'` task can be reopened this way" — this route adds
+ * no extra check, it just maps `reopen_rejected` to a 409.
+ */
+app.post("/:id/reopen", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const id = c.req.param("id");
+
+	const existing = await tasks.getTask(db, id);
+	if (!existing.ok) return c.json({ error: existing.error.kind }, 500);
+	if (!existing.value) return c.json(null, 404);
+	if (existing.value.task.owner_id !== auth_user.id) return c.json(null, 401);
+	if (isProjectScopeDenied(c, existing.value.task.project_id)) return projectScopeDeniedResponse(c);
+
+	const auth_channel = c.get("auth_channel");
+	const engine = new graph.SqlCompletionEngine(db);
+	const result = await engine.reopen(id, auth_channel);
+	if (!result.ok) {
+		if (result.error.kind === "reopen_rejected") return c.json({ error: result.error.message }, 409);
+		return graph_error_response(c, result.error);
+	}
+
+	return c.json({ reopened: result.value.reopened });
+});
+
+/**
  * v2.4 (task A4.5) — SDLC stage transitions. Gently enforced: a gated hop
  * missing its checkpoint is a 409 naming what's missing; `override: true`
  * always succeeds but audits (see `docs.advance`).

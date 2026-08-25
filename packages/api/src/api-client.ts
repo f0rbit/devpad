@@ -814,6 +814,15 @@ export class ApiClient {
 			wrap(() => this.clients.tasks.post<DoneResponse>(`/tasks/${id}/done`, { body: data })),
 
 		/**
+		 * Policy-only reopen (v2.4 B2) — the server (`SqlCompletionEngine.reopen`)
+		 * is the sole enforcement point: a task whose `completed_via` isn't
+		 * `'policy'` 409s. No request body — the actor comes from the caller's
+		 * own auth channel.
+		 */
+		reopen: (id: string): Promise<ApiResult<{ reopened: Task }>> =>
+			wrap(() => this.clients.tasks.post<{ reopened: Task }>(`/tasks/${id}/reopen`)),
+
+		/**
 		 * SDLC stage transition (v2.4, task A4.5) — gently enforced: a gated
 		 * hop missing its checkpoint 409s naming what's missing; `override:
 		 * true` always succeeds but audits.

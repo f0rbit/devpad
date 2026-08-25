@@ -63,3 +63,38 @@ describe("POST /tasks/:id/done — the single completion entrypoint", () => {
 		expect(result.ok).toBe(false);
 	});
 });
+
+describe("POST /tasks/:id/reopen — policy-only reopen", () => {
+	test("a policy-completed parent can be reopened, and re-cascades to done once fixed", async () => {
+		const parent = await create_task({
+			title: `reopen-parent-${String(Date.now())}`,
+			completion_policy: "auto_children",
+		});
+		const leaf = await create_task({ title: `reopen-leaf-${String(Date.now())}`, parent_id: parent.id });
+
+		const done_result = await t.client.tasks.done(leaf.id, { base_rev: leaf.rev });
+		if (!done_result.ok) throw new Error(`done failed: ${done_result.error.message}`);
+		expect(done_result.value.bubbled.map((b) => b.task.id)).toEqual([parent.id]);
+
+		const reopen_result = await t.client.tasks.reopen(parent.id);
+		if (!reopen_result.ok) throw new Error(`reopen failed: ${reopen_result.error.message}`);
+		expect(reopen_result.value.reopened.progress).toBe("IN_PROGRESS");
+		expect(reopen_result.value.reopened.completed_via).toBeNull();
+	});
+
+	test("a directly-completed (non-policy) task is rejected — only completed_via='policy' can be reopened this way", async () => {
+		const leaf = await create_task({ title: `reopen-direct-done-${String(Date.now())}` });
+		const done_result = await t.client.tasks.done(leaf.id, { base_rev: leaf.rev });
+		if (!done_result.ok) throw new Error(`done failed: ${done_result.error.message}`);
+		expect(done_result.value.completed.completed_via).not.toBe("policy");
+
+		const reopen_result = await t.client.tasks.reopen(leaf.id);
+		expect(reopen_result.ok).toBe(false);
+	});
+
+	test("a never-completed task is rejected", async () => {
+		const leaf = await create_task({ title: `reopen-never-done-${String(Date.now())}` });
+		const reopen_result = await t.client.tasks.reopen(leaf.id);
+		expect(reopen_result.ok).toBe(false);
+	});
+});

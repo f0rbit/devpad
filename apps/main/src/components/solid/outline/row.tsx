@@ -3,6 +3,7 @@ import { Badge } from "@f0rbit/ui";
 import Layers from "lucide-solid/icons/layers";
 import MilestoneIcon from "lucide-solid/icons/milestone";
 import PenLine from "lucide-solid/icons/pen-line";
+import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Target from "lucide-solid/icons/target";
 import { type Component, createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
@@ -167,6 +168,21 @@ export function OutlineRow(props: OutlineRowProps) {
 					>
 						stale
 					</span>
+				</Show>
+				<Show when={task().completed_via === "policy"}>
+					<button
+						type="button"
+						class="outline-reopen"
+						disabled={isPending()}
+						title="Reopen — this was auto-completed by policy, not by you"
+						aria-label={`Reopen ${task().title}`}
+						onClick={(e) => {
+							e.stopPropagation();
+							void props.store.reopen(task().id);
+						}}
+					>
+						<RotateCcw size={11} /> reopen
+					</button>
 				</Show>
 				<Show when={task().claimed_by && task().progress !== "COMPLETED"}>
 					<Badge variant="info">claimed · {task().claimed_by}</Badge>

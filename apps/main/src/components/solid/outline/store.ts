@@ -20,6 +20,9 @@ const RIPPLE_MS = 650;
 const TOAST_MS = 4600;
 const TOAST_EXIT_MS = 220;
 
+const prefersReducedMotion = (): boolean =>
+	typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 export type ToastKind = "info" | "error" | "hook";
 export type Toast = { id: string; message: string; kind: ToastKind; leaving: boolean };
 
@@ -199,22 +202,51 @@ export function createOutlineStore(input: OutlineStoreInput) {
 			markNotReady(id);
 			track("outline_task_completed", { project_id: input.projectId, task_id: id });
 
-			result.value.bubbled.forEach((step, i) => {
-				setTimeout(
-					() => {
-						setTasks(step.task.id, step.task);
-						flash(step.task.id);
-						bumpRollupUpChain(step.task.id);
-						markNotReady(step.task.id);
-					},
-					240 * (i + 1),
-				);
-			});
+			// Ripple choreography replays the API's ACTUAL bubble chain, one hop
+			// per beat — never a client-side guess of what "should" have
+			// bubbled. `prefers-reduced-motion` bypasses the stagger/pulse
+			// entirely (not just hiding the CSS animation): every ancestor
+			// updates instantly, with one summary toast instead of a beat per hop.
+			if (prefersReducedMotion()) {
+				result.value.bubbled.forEach((step) => {
+					setTasks(step.task.id, step.task);
+					bumpRollupUpChain(step.task.id);
+					markNotReady(step.task.id);
+				});
+				if (result.value.bubbled.length > 0) {
+					const n = result.value.bubbled.length;
+					toast(`completed ${String(n)} ancestor${n > 1 ? "s" : ""}`);
+				}
+			} else {
+				result.value.bubbled.forEach((step, i) => {
+					setTimeout(
+						() => {
+							setTasks(step.task.id, step.task);
+							flash(step.task.id);
+							bumpRollupUpChain(step.task.id);
+							markNotReady(step.task.id);
+						},
+						240 * (i + 1),
+					);
+				});
+			}
 
 			if (result.value.hooks_fired.length > 0) {
 				toast(`⚡ ${result.value.hooks_fired.join(", ")} fired`, "hook");
 			}
 		}
+	};
+
+	/** Policy-only reopen affordance — the server is the sole enforcement point; a rejection here is always surfaced, never silently swallowed. */
+	const reopen = async (id: string) => {
+		const task = tasks[id];
+		if (!task || pending().has(id)) return;
+		const result = await withPending(id, () => api.reopenTask(id));
+		if (!result.ok) {
+			toast(`Couldn't reopen "${task.title}": ${result.error.message}`, "error");
+			return;
+		}
+		setTasks(id, result.value.reopened);
 	};
 
 	const startRename = (id: string) => setRenamingId(id);
@@ -345,6 +377,7 @@ export function createOutlineStore(input: OutlineStoreInput) {
 		addChild,
 		reparent,
 		moveSibling,
+		reopen,
 		/**
 		 * Wholesale swap for a zoom navigation — a fresh `tree()`/`ancestors()` fetch
 		 * replaces the visible view entirely. `selectAfter` re-selects the node the

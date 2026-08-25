@@ -40,6 +40,13 @@ const selectChild2 = async (page: import("@playwright/test").Page) => {
 };
 
 test.describe("graph lens", () => {
+	// Serial, matching outline-interactions.spec.ts's own rationale: every test
+	// here is the FIRST navigation of a fresh browser context against the
+	// shared dev server — under full parallelism, several simultaneous
+	// first-navigations can outrun a cold Vite compile badly enough that the
+	// documented single-retry cold-boot-hydration allowance isn't enough.
+	test.describe.configure({ mode: "serial" });
+
 	test("g opens the seeded neighborhood, Esc closes it, no route change", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);

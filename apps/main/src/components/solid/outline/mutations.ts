@@ -1,6 +1,6 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { ApiResult, ApplyResponse, DoneResponse } from "@devpad/api";
-import type { TaskWithDetails } from "@devpad/schema";
+import type { Task, TaskWithDetails } from "@devpad/schema";
 
 /** UNSTARTED → IN_PROGRESS is the plain (non-OCC) field write — no completion cascade involved. */
 export function startTask(id: string, owner_id: string): Promise<ApiResult<TaskWithDetails>> {
@@ -45,4 +45,9 @@ export function reparentTask(
 
 export function reloadTask(id: string): Promise<ApiResult<TaskWithDetails | null>> {
 	return getBrowserClient().tasks.find(id);
+}
+
+/** Policy-only reopen — the server rejects anything but a completed_via='policy' task. */
+export function reopenTask(id: string): Promise<ApiResult<{ reopened: Task }>> {
+	return getBrowserClient().tasks.reopen(id);
 }

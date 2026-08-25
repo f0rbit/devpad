@@ -32,3 +32,17 @@ export const E2E_TASK_COMPACT_CHILD = "task_e2e-outline-compact-child" as const;
 /** kind='milestone' root + one child task — the milestone lens' seeded fixture. */
 export const E2E_TASK_MILESTONE = "task_e2e-outline-milestone" as const;
 export const E2E_TASK_MILESTONE_CHILD = "task_e2e-outline-milestone-child" as const;
+
+/**
+ * Two-hop auto_children chain (grandparent -> parent -> leaf), reserved for
+ * the ripple spec — completing the leaf bubbles both ancestors, giving a
+ * real 2-hop chain to assert choreography/reduced-motion against without
+ * racing the other specs' shared fixture rows.
+ */
+export const E2E_TASK_RIPPLE_GRANDPARENT = "task_e2e-outline-ripple-grandparent" as const;
+export const E2E_TASK_RIPPLE_PARENT = "task_e2e-outline-ripple-parent" as const;
+export const E2E_TASK_RIPPLE_LEAF = "task_e2e-outline-ripple-leaf" as const;
+
+/** Single-hop auto_children pair dedicated to the reduced-motion scenario — independent of the 2-hop chain above so the two tests never race each other's completion. */
+export const E2E_TASK_RIPPLE_REDUCED_PARENT = "task_e2e-outline-ripple-reduced-parent" as const;
+export const E2E_TASK_RIPPLE_REDUCED_LEAF = "task_e2e-outline-ripple-reduced-leaf" as const;

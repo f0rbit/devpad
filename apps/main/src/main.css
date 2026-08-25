@@ -743,6 +743,29 @@ button.outline-row {
 	background: transparent;
 }
 
+.outline-reopen {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 10.5px;
+	font-family: var(--font-mono);
+	color: var(--warning-fg);
+	background: none;
+	border: 1px solid var(--warning-fg);
+	border-radius: 999px;
+	padding: 1px 7px;
+	cursor: pointer;
+}
+
+.outline-reopen:hover {
+	background: var(--warning);
+}
+
+.outline-reopen:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
 .outline-rollup-label {
 	font-size: 11px;
 	font-family: var(--font-mono);

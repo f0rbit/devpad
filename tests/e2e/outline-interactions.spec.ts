@@ -212,11 +212,20 @@ test.describe("outline row interactions", () => {
 		// update) adds real latency on top of the click's own request — give it
 		// more room than the default 5s under a cold/contended dev server.
 		await expect(parentRow).toHaveClass(/outline-row-done/, { timeout: 15000 });
-		await expect(page.locator(".outline-compact-row")).toContainText("compacted");
+
+		// Scoped via DOM proximity (the next `.outline-compact-row` after this
+		// row's own, in document order) rather than a bare page-wide selector —
+		// ripple.spec.ts's own auto_children fixtures can ALSO be mid-compaction
+		// concurrently under full parallelism, so more than one compact row can
+		// legitimately exist on the page at once.
+		const compactRow = parentRow.locator(
+			"xpath=following::*[contains(concat(' ', normalize-space(@class), ' '), ' outline-compact-row ')][1]",
+		);
+		await expect(compactRow).toContainText("compacted");
 		await expect(page.locator(`[data-task-id="${E2E_TASK_COMPACT_CHILD}"]`)).toHaveCount(0);
 
 		// expand affordance restores the real child row.
-		await page.locator(".outline-compact-row").click();
+		await compactRow.click();
 		await expect(page.locator(`[data-task-id="${E2E_TASK_COMPACT_CHILD}"]`)).toBeVisible();
 	});
 });

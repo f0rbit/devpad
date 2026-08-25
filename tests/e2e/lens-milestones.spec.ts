@@ -32,6 +32,10 @@ const pressWithRetry = async (page: import("@playwright/test").Page, key: string
 };
 
 test.describe("milestone lens", () => {
+	// Serial — see lens-graph.spec.ts's comment: cold-boot compile contention
+	// under parallel first-navigations, not mutation contention.
+	test.describe.configure({ mode: "serial" });
+
 	test("m opens milestone cards with seeded rollup counts, Esc dismisses", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
