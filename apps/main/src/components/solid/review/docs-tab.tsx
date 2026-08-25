@@ -15,12 +15,18 @@ type SelectedDoc = { id: string; initial: PullDocResponse; initialVersions: DocV
 export default function DocsTab(props: DocsTabProps) {
 	const [selected, setSelected] = createSignal<SelectedDoc | null>(null);
 	const [loadingId, setLoadingId] = createSignal<string | null>(null);
+	const [loadError, setLoadError] = createSignal<string | null>(null);
 
 	async function select(id: string): Promise<void> {
 		setLoadingId(id);
+		setLoadError(null);
 		const client = getBrowserClient();
 		const [pulled, versions] = await Promise.all([client.docs.pull(id), client.docs.versions(id)]);
-		if (pulled.ok && versions.ok) setSelected({ id, initial: pulled.value, initialVersions: versions.value });
+		if (pulled.ok && versions.ok) {
+			setSelected({ id, initial: pulled.value, initialVersions: versions.value });
+		} else {
+			setLoadError(!pulled.ok ? pulled.error.message : !versions.ok ? versions.error.message : "Unknown error");
+		}
 		setLoadingId(null);
 	}
 
@@ -64,6 +70,11 @@ export default function DocsTab(props: DocsTabProps) {
 
 			<Show when={loadingId()}>
 				<p class="text-sm text-faint">Loading document…</p>
+			</Show>
+			<Show when={loadError()}>
+				<p class="text-sm" style={{ color: "var(--error-fg)" }} data-testid="docs-tab-load-error">
+					Couldn't load that document: {loadError()}
+				</p>
 			</Show>
 			{/* `keyed` — a plain `Show` only re-runs its callback on falsy→truthy
 			transitions; selecting a SECOND, different document would otherwise

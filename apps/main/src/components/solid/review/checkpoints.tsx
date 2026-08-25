@@ -52,6 +52,7 @@ function useStageDecision(task: Task, checkpoint: "plan" | "types") {
 	const [pending, setPending] = createSignal<Signoff | null>(null);
 	const [reason, setReason] = createSignal("");
 	const [submitting, setSubmitting] = createSignal(false);
+	const [error, setError] = createSignal<string | null>(null);
 
 	onMount(async () => {
 		const result = await client.signoffs.findPending({ subject_kind: "stage", subject_id: task.id, checkpoint });
@@ -62,17 +63,22 @@ function useStageDecision(task: Task, checkpoint: "plan" | "types") {
 		const signoff = pending();
 		if (!signoff) return;
 		setSubmitting(true);
+		setError(null);
 		const result = await client.signoffs.decide(signoff.id, { decision, reason: reason().trim() || undefined });
 		setSubmitting(false);
-		if (result.ok) setPending(null);
+		if (!result.ok) {
+			setError(result.error.message);
+			return;
+		}
+		setPending(null);
 	}
 
-	return { pending, reason, setReason, submitting, decide };
+	return { pending, reason, setReason, submitting, error, decide };
 }
 
 function PlanCheckpointCard(props: { task: Task }) {
 	const doc = useDocForTask(props.task, "plan");
-	const { pending, reason, setReason, submitting, decide } = useStageDecision(props.task, "plan");
+	const { pending, reason, setReason, submitting, error, decide } = useStageDecision(props.task, "plan");
 
 	return (
 		<div class="checkpoint-card" data-testid="checkpoint-card-plan">
@@ -83,6 +89,11 @@ function PlanCheckpointCard(props: { task: Task }) {
 						View plan doc →
 					</a>
 				)}
+			</Show>
+			<Show when={error()}>
+				<p class="text-xs" style={{ color: "var(--error-fg)" }} data-testid="checkpoint-error-plan">
+					{error()}
+				</p>
 			</Show>
 			<Show when={pending()} fallback={<p class="text-xs text-faint">No pending plan checkpoint request.</p>}>
 				<textarea
@@ -120,7 +131,7 @@ function PlanCheckpointCard(props: { task: Task }) {
 function TypesCheckpointCard(props: { task: Task }) {
 	const client = getBrowserClient();
 	const doc = useDocForTask(props.task, "interface");
-	const { pending, reason, setReason, submitting, decide } = useStageDecision(props.task, "types");
+	const { pending, reason, setReason, submitting, error, decide } = useStageDecision(props.task, "types");
 	const [classification, setClassification] = createSignal<Classification | null>(null);
 	const [pulse, setPulse] = createSignal<PulseSummary | null>(null);
 	const [pulseError, setPulseError] = createSignal(false);
@@ -205,6 +216,11 @@ function TypesCheckpointCard(props: { task: Task }) {
 						</Show>
 					</div>
 				)}
+			</Show>
+			<Show when={error()}>
+				<p class="text-xs" style={{ color: "var(--error-fg)" }} data-testid="checkpoint-error-types">
+					{error()}
+				</p>
 			</Show>
 			<Show when={pending()} fallback={<p class="text-xs text-faint">No pending types checkpoint request.</p>}>
 				<textarea

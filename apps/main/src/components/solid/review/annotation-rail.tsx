@@ -47,6 +47,7 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 	const [selectionHint, setSelectionHint] = createSignal<string | null>(null);
 	const [pendingSignoff, setPendingSignoff] = createSignal<Signoff | null>(null);
 	const [verdictReason, setVerdictReason] = createSignal("");
+	const [mutationError, setMutationError] = createSignal<string | null>(null);
 
 	async function loadPendingSignoff(): Promise<void> {
 		const result = await client.signoffs.findPending({
@@ -75,46 +76,69 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 		setPendingAnchor(anchor);
 	}
 
+	/** Re-pulls after a mutation succeeds; a failed pull still surfaces (the mutation itself landed, but the rail's view of it can't refresh) rather than leaving the UI silently stale. */
+	async function refreshAfterMutation(): Promise<void> {
+		const fresh = await client.docs.pull(props.documentId);
+		if (fresh.ok) props.onChanged(fresh.value);
+		else setMutationError(`Saved, but couldn't refresh: ${fresh.error.message}`);
+	}
+
 	async function saveThread(): Promise<void> {
 		const anchor = pendingAnchor();
 		const body = composerBody().trim();
 		if (!anchor || !body) return;
 		setSaving(true);
+		setMutationError(null);
+		// A concurrent edit to this document between selecting the text and
+		// saving (another reviewer, or an agent pushing a new version) can make
+		// this create fail server-side — surfaced here, never a silent no-op
+		// that leaves the user thinking their note was saved.
 		const result = await client.docs.createThread(props.documentId, { ...anchor, body, blocking: composerBlocking() });
 		setSaving(false);
-		if (!result.ok) return;
+		if (!result.ok) {
+			setMutationError(`Couldn't save the thread: ${result.error.message}`);
+			return;
+		}
 		setPendingAnchor(null);
 		setComposerBody("");
 		setComposerBlocking(false);
-		const fresh = await client.docs.pull(props.documentId);
-		if (fresh.ok) props.onChanged(fresh.value);
+		await refreshAfterMutation();
 	}
 
 	async function sendReply(thread_id: string): Promise<void> {
 		const body = replyBody().trim();
 		if (!body) return;
 		setSaving(true);
+		setMutationError(null);
 		const result = await client.docs.replyThread(props.documentId, thread_id, body);
 		setSaving(false);
-		if (!result.ok) return;
+		if (!result.ok) {
+			setMutationError(`Couldn't send the reply: ${result.error.message}`);
+			return;
+		}
 		setReplyingTo(null);
 		setReplyBody("");
-		const fresh = await client.docs.pull(props.documentId);
-		if (fresh.ok) props.onChanged(fresh.value);
+		await refreshAfterMutation();
 	}
 
 	async function resolveThread(thread_id: string): Promise<void> {
+		setMutationError(null);
 		const result = await client.docs.resolveThread(props.documentId, thread_id);
-		if (!result.ok) return;
-		const fresh = await client.docs.pull(props.documentId);
-		if (fresh.ok) props.onChanged(fresh.value);
+		if (!result.ok) {
+			setMutationError(`Couldn't resolve the thread: ${result.error.message}`);
+			return;
+		}
+		await refreshAfterMutation();
 	}
 
 	async function toggleBlocking(thread_id: string, blocking: boolean): Promise<void> {
+		setMutationError(null);
 		const result = await client.docs.toggleBlocking(props.documentId, thread_id, blocking);
-		if (!result.ok) return;
-		const fresh = await client.docs.pull(props.documentId);
-		if (fresh.ok) props.onChanged(fresh.value);
+		if (!result.ok) {
+			setMutationError(`Couldn't update blocking: ${result.error.message}`);
+			return;
+		}
+		await refreshAfterMutation();
 	}
 
 	const blockingOpenThreads = () =>
@@ -124,15 +148,24 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 		const signoff = pendingSignoff();
 		if (!signoff) return;
 		setSaving(true);
+		setMutationError(null);
 		const result = await client.signoffs.decide(signoff.id, { decision, reason: verdictReason().trim() || undefined });
 		setSaving(false);
-		if (!result.ok) return;
+		if (!result.ok) {
+			setMutationError(`Couldn't record the decision: ${result.error.message}`);
+			return;
+		}
 		setVerdictReason("");
 		await loadPendingSignoff();
 	}
 
 	return (
 		<div class="annotation-rail" data-testid="annotation-rail">
+			<Show when={mutationError()}>
+				<p class="verdict-blocked-note" data-testid="annotation-mutation-error">
+					{mutationError()}
+				</p>
+			</Show>
 			<Show when={pendingSignoff()}>
 				<div class="verdict-bar" data-testid="verdict-bar">
 					<Show when={blockingOpenThreads().length > 0}>

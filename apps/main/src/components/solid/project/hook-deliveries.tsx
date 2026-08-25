@@ -26,6 +26,7 @@ export default function HookDeliveries(props: HookDeliveriesProps) {
 	const [hooks, setHooks] = createSignal<PublicHook[]>([]);
 	const [deliveriesByHook, setDeliveriesByHook] = createSignal<Record<string, HookDelivery[]>>({});
 	const [statusFilter, setStatusFilter] = createSignal<HookDeliveryStatus | "all">("failed_permanent");
+	const [toggleError, setToggleError] = createSignal<string | null>(null);
 
 	async function loadDeliveries(hookList: PublicHook[], status: HookDeliveryStatus | "all"): Promise<void> {
 		const entries = await Promise.all(
@@ -51,8 +52,13 @@ export default function HookDeliveries(props: HookDeliveriesProps) {
 	}
 
 	async function toggle(hook: PublicHook): Promise<void> {
+		setToggleError(null);
 		const result = await client.hooks.setEnabled(hook.id, !hook.enabled);
-		if (result.ok) setHooks((prev) => prev.map((h) => (h.id === hook.id ? result.value : h)));
+		if (!result.ok) {
+			setToggleError(`Couldn't update "${hook.trigger.kinds.join(", ")}": ${result.error.message}`);
+			return;
+		}
+		setHooks((prev) => prev.map((h) => (h.id === hook.id ? result.value : h)));
 	}
 
 	return (
@@ -75,6 +81,11 @@ export default function HookDeliveries(props: HookDeliveriesProps) {
 
 			<Show when={hooks().length === 0}>
 				<p class="text-sm text-faint">No hooks configured for this project yet.</p>
+			</Show>
+			<Show when={toggleError()}>
+				<p class="text-sm" style={{ color: "var(--error-fg)" }} data-testid="hook-toggle-error">
+					{toggleError()}
+				</p>
 			</Show>
 
 			<For each={hooks()}>

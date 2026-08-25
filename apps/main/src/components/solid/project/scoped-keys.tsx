@@ -45,8 +45,13 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 	}
 
 	async function revoke(id: string): Promise<void> {
+		setError(null);
 		const result = await client.auth.keys.revoke(id);
-		if (result.ok) await load();
+		if (!result.ok) {
+			setError(`Couldn't revoke the key: ${result.error.message}`);
+			return;
+		}
+		await load();
 	}
 
 	return (
