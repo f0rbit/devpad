@@ -1862,6 +1862,14 @@ button.outline-row {
 	gap: 4px;
 }
 
+/* Craft fast-follow #13a — `.checkpoint-card` is a column flex container;
+   without `align-self`, a bare `.outline-chip` (an inline `<span>` that
+   still becomes a full-stretch flex item) reads as a full-width banner
+   instead of a chip. */
+.checkpoint-card [data-testid="interface-classification-chip"] {
+	align-self: flex-start;
+}
+
 .scoped-keys,
 .hook-deliveries {
 	display: flex;
@@ -1893,6 +1901,12 @@ button.outline-row {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+}
+
+.scoped-key-revoke-confirm {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 }
 
 .hook-delivery-group {
@@ -1937,6 +1951,13 @@ button.outline-row {
 	display: flex;
 	align-items: center;
 	gap: 8px;
+	padding: 4px 8px;
+	margin: 0 -8px;
+	border-radius: var(--radius);
+}
+
+.docs-list__item[aria-current="true"] {
+	background: var(--bg-alt);
 }
 
 .docs-list__link {
@@ -1955,6 +1976,21 @@ button.outline-row {
 
 .docs-list__title {
 	font-weight: 500;
+}
+
+.docs-list__updated {
+	margin-left: auto;
+}
+
+/* Fast-follow #9 — once a doc is open, the rest of the list shrinks to a
+   compact title-only strip so the DocViewer gets the room. */
+.docs-list--compact .docs-list__item:not([aria-current="true"]) {
+	gap: 6px;
+	padding: 2px 8px;
+}
+
+.docs-list--compact .docs-list__item:not([aria-current="true"]) .docs-list__updated {
+	display: none;
 }
 
 /* ── "Waiting on you" — integration atop /todo (task B2.4) ── */

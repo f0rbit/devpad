@@ -3,6 +3,7 @@ import type { DocVersionInfo, PullDocResponse } from "@devpad/api";
 import type { Document } from "@devpad/schema";
 import { Badge } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { formatRelativeTime } from "@/utils/time-utils";
 import DocViewer from "./doc-viewer";
 
 export type DocsTabProps = { docs: Document[]; initialDocId?: string | null };
@@ -45,25 +46,35 @@ export default function DocsTab(props: DocsTabProps) {
 					</p>
 				}
 			>
-				<ul class="list">
+				{/* Fast-follow #9 (taste/IA critic) — once a doc is open below, the
+				list collapses to a compact strip: the open row stays legible, the
+				rest shrink to title-only so the DocViewer (the thing being worked
+				on) gets the vertical space instead of a full-height list beside it. */}
+				<ul class={`list${selected() ? " docs-list--compact" : ""}`}>
 					<For each={props.docs}>
-						{(doc) => (
-							<li class="docs-list__item">
-								<button
-									type="button"
-									class="docs-list__link"
-									data-testid="doc-list-item"
-									data-document-id={doc.id}
-									onClick={() => {
-										void select(doc.id);
-									}}
-								>
-									<span class="docs-list__title">{doc.title}</span>
-								</button>
-								<Badge variant={STATUS_VARIANT[doc.status]}>{doc.status}</Badge>
-								<span class="text-xs text-faint">{doc.kind}</span>
-							</li>
-						)}
+						{(doc) => {
+							const isActive = () => selected()?.id === doc.id;
+							return (
+								<li class="docs-list__item" aria-current={isActive() ? "true" : undefined}>
+									<button
+										type="button"
+										class="docs-list__link"
+										data-testid="doc-list-item"
+										data-document-id={doc.id}
+										onClick={() => {
+											void select(doc.id);
+										}}
+									>
+										<span class="docs-list__title">{doc.title}</span>
+									</button>
+									<Badge variant={STATUS_VARIANT[doc.status]}>{doc.status}</Badge>
+									<span class="text-xs text-faint">{doc.kind}</span>
+									<span class="text-xs text-faint docs-list__updated">
+										updated {formatRelativeTime(new Date(doc.updated_at))}
+									</span>
+								</li>
+							);
+						}}
 					</For>
 				</ul>
 			</Show>

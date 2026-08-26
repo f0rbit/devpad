@@ -9,6 +9,13 @@ export type CheckpointsProps = { task: Task };
 
 type Classification = "additive" | "breaking" | "unchanged" | "single-version";
 
+/** B3 fast-follow #12 (taste/IA critic) — the exact from→to hop each checkpoint gates (see `stage.ts`'s `missing_checkpoints`, the single source of truth this mirrors for display only). Static: every gate here is a fixed pair, never derived per-task. */
+const CHECKPOINT_GATE_LABEL: Record<"plan" | "types" | "design", string> = {
+	plan: "gates Plan → Build",
+	types: "gates Review → Deploy",
+	design: "gates Review → Deploy",
+};
+
 /**
  * Task B3.3 — checkpoint cards paired with the SDLC stepper. Two different
  * signoff shapes are genuinely in play here (see `stage.ts`'s
@@ -83,6 +90,9 @@ function PlanCheckpointCard(props: { task: Task }) {
 	return (
 		<div class="checkpoint-card" data-testid="checkpoint-card-plan">
 			<h5>plan checkpoint</h5>
+			<p class="text-xs text-faint checkpoint-gate-label" data-testid="checkpoint-gate-label-plan">
+				{CHECKPOINT_GATE_LABEL.plan}
+			</p>
 			<Show when={doc()}>
 				{(d) => (
 					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id}/docs?doc=${d().id}`}>
@@ -105,6 +115,7 @@ function PlanCheckpointCard(props: { task: Task }) {
 				/>
 				<div class="checkpoint-actions">
 					<Button
+						variant="primary"
 						data-testid="checkpoint-approve-plan"
 						disabled={submitting()}
 						onClick={() => {
@@ -114,7 +125,7 @@ function PlanCheckpointCard(props: { task: Task }) {
 						Approve
 					</Button>
 					<Button
-						variant="secondary"
+						variant="ghost"
 						disabled={submitting()}
 						onClick={() => {
 							void decide("changes_requested");
@@ -178,6 +189,9 @@ function TypesCheckpointCard(props: { task: Task }) {
 	return (
 		<div class="checkpoint-card" data-testid="checkpoint-card-types">
 			<h5>types checkpoint</h5>
+			<p class="text-xs text-faint checkpoint-gate-label" data-testid="checkpoint-gate-label-types">
+				{CHECKPOINT_GATE_LABEL.types}
+			</p>
 			<Show when={doc()}>
 				{(d) => (
 					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id}/docs?doc=${d().id}`}>
@@ -232,6 +246,7 @@ function TypesCheckpointCard(props: { task: Task }) {
 				/>
 				<div class="checkpoint-actions">
 					<Button
+						variant="primary"
 						data-testid="checkpoint-approve-types"
 						disabled={submitting()}
 						onClick={() => {
@@ -241,7 +256,7 @@ function TypesCheckpointCard(props: { task: Task }) {
 						Approve
 					</Button>
 					<Button
-						variant="secondary"
+						variant="ghost"
 						disabled={submitting()}
 						onClick={() => {
 							void decide("changes_requested");
@@ -262,6 +277,9 @@ function DesignCheckpointCard(props: { task: Task }) {
 			{(d) => (
 				<div class="checkpoint-card" data-testid="checkpoint-card-design">
 					<h5>design checkpoint</h5>
+					<p class="text-xs text-faint checkpoint-gate-label" data-testid="checkpoint-gate-label-design">
+						{CHECKPOINT_GATE_LABEL.design}
+					</p>
 					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id}/docs?doc=${d().id}`}>
 						View design doc →
 					</a>

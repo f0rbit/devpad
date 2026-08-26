@@ -22,6 +22,7 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 	const [revealedKey, setRevealedKey] = createSignal<string | null>(null);
 	const [creating, setCreating] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
+	const [confirmingRevoke, setConfirmingRevoke] = createSignal<string | null>(null);
 
 	async function load(): Promise<void> {
 		const result = await client.auth.keys.list();
@@ -44,9 +45,11 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 		await load();
 	}
 
+	/** Craft fast-follow #13d (taste/IA critic) — revoking is destructive and irreversible (the key stops working immediately), so a bare one-click link isn't enough; a second inline "confirm?" click is the smallest step that still catches a stray click. */
 	async function revoke(id: string): Promise<void> {
 		setError(null);
 		const result = await client.auth.keys.revoke(id);
+		setConfirmingRevoke(null);
 		if (!result.ok) {
 			setError(`Couldn't revoke the key: ${result.error.message}`);
 			return;
@@ -106,16 +109,43 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 							<li class="scoped-key-item" data-testid="scoped-key-item" data-key-id={key.id}>
 								<span>{key.name ?? "(unnamed)"}</span>
 								<span class="text-xs text-faint">{key.enabled ? "enabled" : "disabled"}</span>
-								<button
-									type="button"
-									class="thread-action-link"
-									data-testid="scoped-key-revoke"
-									onClick={() => {
-										void revoke(key.id);
-									}}
+								<Show
+									when={confirmingRevoke() === key.id}
+									fallback={
+										<button
+											type="button"
+											class="thread-action-link"
+											data-testid="scoped-key-revoke"
+											onClick={() => {
+												setConfirmingRevoke(key.id);
+											}}
+										>
+											revoke
+										</button>
+									}
 								>
-									revoke
-								</button>
+									<span class="scoped-key-revoke-confirm">
+										<button
+											type="button"
+											class="thread-action-link"
+											data-testid="scoped-key-revoke-confirm"
+											onClick={() => {
+												void revoke(key.id);
+											}}
+										>
+											confirm?
+										</button>
+										<button
+											type="button"
+											class="thread-action-link"
+											onClick={() => {
+												setConfirmingRevoke(null);
+											}}
+										>
+											cancel
+										</button>
+									</span>
+								</Show>
 							</li>
 						)}
 					</For>
