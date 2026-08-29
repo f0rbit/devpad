@@ -5,7 +5,6 @@ import {
 	E2E_TASK_CHILD_1,
 	E2E_TASK_RIPPLE_GRANDPARENT,
 	E2E_TASK_RIPPLE_LEAF,
-	E2E_TASK_RIPPLE_PARENT,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
 } from "./fixtures/outline-ids";
@@ -48,10 +47,9 @@ test.describe("ripple choreography + stale + reopen", () => {
 		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
 
 		const leafBullet = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_LEAF}"] .outline-bullet`);
-		const parentRow = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_PARENT}"]`);
 		const grandparentRow = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_GRANDPARENT}"]`);
 
-		await clickWithRetry(leafBullet, () => expect(parentRow).toHaveClass(/outline-row-done/, { timeout: 15000 }));
+		await clickWithRetry(leafBullet, () => expect(grandparentRow).toHaveClass(/outline-row-done/, { timeout: 15000 }));
 		await expect(grandparentRow).toHaveClass(/outline-row-done/, { timeout: 15000 });
 
 		// Both ancestors are policy-completed — but the parent's own row is now

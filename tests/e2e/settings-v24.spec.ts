@@ -45,6 +45,7 @@ test.describe("Settings — v2.4 panels", () => {
 		await expect(page.locator(`text=${rawKey}`)).toHaveCount(0);
 
 		await item.getByTestId("scoped-key-revoke").click();
+		await item.getByTestId("scoped-key-revoke-confirm").click();
 		await expect(page.getByTestId("scoped-key-item").filter({ hasText: "e2e-test-key" })).toHaveCount(0);
 	});
 

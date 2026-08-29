@@ -1,0 +1,2461 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Plan: devpad v2.4 — graph-based task rework</title>
+    <style>
+      :root {
+        --bg: #0d1117;
+        --panel: #161b22;
+        --border: #30363d;
+        --text: #c9d1d9;
+        --muted: #8b949e;
+        --accent: #58a6ff;
+        --todo: #6e7681;
+        --doing: #d29922;
+        --done: #2ea043;
+        --blocked: #f85149;
+        --decision: #db61a2;
+      }
+      html, body {
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 2rem;
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      h1, h2, h3 {
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 0.3em;
+      }
+      h1 { font-size: 1.8rem; }
+      h2 { font-size: 1.4rem; margin-top: 2.5rem; }
+      h3 { font-size: 1.1rem; border: none; padding: 0; margin-top: 1.5rem; }
+      h4 {
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin: 0 0 0.3em 0;
+      }
+      code, pre {
+        font-family: "SF Mono", Menlo, monospace;
+        font-size: 0.9em;
+      }
+      code {
+        background: var(--panel);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      pre {
+        background: var(--panel);
+        padding: 12px;
+        border-radius: 6px;
+        overflow-x: auto;
+        border: 1px solid var(--border);
+      }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .badge.todo { background: var(--todo); color: #fff; }
+      .badge.doing { background: var(--doing); color: #000; }
+      .badge.done { background: var(--done); color: #fff; }
+      .badge.blocked { background: var(--blocked); color: #fff; }
+      .badge.decision { background: var(--decision); color: #fff; }
+      .badge.recommended { background: var(--accent); color: #000; }
+      .root-cause {
+        background: var(--panel);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1rem 0;
+      }
+      .root-cause p {
+        margin: 0.4em 0;
+      }
+      .option {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        opacity: 0.85;
+      }
+      .option.recommended {
+        opacity: 1;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 1px var(--accent) inset;
+      }
+      .option > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .option h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .option h4 {
+        margin-top: 0.9rem;
+      }
+      .philosophy-score th:first-child,
+      .philosophy-score td:first-child {
+        width: 35%;
+      }
+      .philosophy-score td:nth-child(2) {
+        font-family: "SF Mono", Menlo, monospace;
+        font-weight: 600;
+        width: 60px;
+        text-align: center;
+      }
+      .recommendation {
+        background: rgba(88, 166, 255, 0.08);
+        border-left: 3px solid var(--accent);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        margin: 1.5rem 0;
+      }
+      .recommendation h3 {
+        margin-top: 0;
+        border: none;
+        padding: 0;
+      }
+      .task {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+      }
+      .task > header {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+        margin-bottom: 0.75rem;
+      }
+      .task h3 {
+        margin: 0;
+        flex: 1;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.4em 1em;
+        font-size: 0.85em;
+        color: var(--muted);
+        margin: 0 0 0.75rem 0;
+      }
+      .meta dt {
+        font-weight: 600;
+        color: var(--text);
+      }
+      .meta dd {
+        margin: 0;
+      }
+      .task section {
+        margin-top: 0.75rem;
+      }
+      .proof {
+        background: rgba(46, 160, 67, 0.08);
+        border-left: 3px solid var(--done);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .empty-proof {
+        background: rgba(110, 118, 129, 0.08);
+        border-left: 3px solid var(--todo);
+        padding: 0.5rem 0.75rem;
+        color: var(--muted);
+        font-style: italic;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary {
+        background: rgba(219, 97, 162, 0.08);
+        border-left: 3px solid var(--decision);
+        padding: 0.5rem 0.75rem;
+        border-radius: 0 6px 6px 0;
+      }
+      .adversary ul {
+        margin: 0.3em 0;
+        padding-left: 1.5em;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1em 0;
+      }
+      th, td {
+        padding: 0.5em 0.75em;
+        text-align: left;
+        border-bottom: 1px solid var(--border);
+      }
+      th {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+      }
+      a { color: var(--accent); }
+      .phase {
+        margin: 2rem 0;
+        padding-left: 1rem;
+        border-left: 3px solid var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Plan: devpad v2.4 — graph-based task rework</h1>
+        <span class="badge doing">B3 in review — all else shipped</span>
+        <p>Rework devpad's flat task model into a graph-native, agent-first system: single-parent hierarchy with fractional ordering and optimistic concurrency, one typed edge table, edge-triggered completion bubbling via guarded conditional UPDATEs, a transactional-outbox → queue → hooks automation spine, a corpus-backed docs/annotation/sign-off loop, and finally the milestone/goal fold — then an outline-first UI arc over the proven backend. Two arcs, eight sequential phases, one PR each (A3 additionally ships a companion PR in <code>~/dev/vault</code>). All six architecture decisions were locked during ideation (originally codenamed "Ripple"; the feature is <strong>v2.4</strong> everywhere); this plan executes them and closes the ten identified gaps. Backend phases are TDD-first; UI starts only after the fold migration is verified.</p>
+      </header>
+
+      <section id="root-cause">
+        <h2>Root cause</h2>
+        <div class="root-cause">
+          <p><strong>Stated goal:</strong> implement the decided v2.4 architecture — task graph, bubbling, hooks, docs/sign-off, milestone fold, outline UI.</p>
+          <p><strong>Underlying need:</strong> devpad must become the coordination substrate for agent-driven development. Agents need one <code>ready</code> query, atomic claims, typed relationships, and completion signals that mechanically trigger automation (release-cutting, pipeline runs); the human's job must shrink to latency-critical sign-off on plans, types, and designs — never function bodies, never task bookkeeping. Today tasks have no relationships at all, mutations emit no events, and review happens out-of-band.</p>
+          <p><strong>Why this matters:</strong> bolting <code>parent_id</code> onto the current model without the event/hook/sign-off spine would demand a second schema rework the moment automation arrives — the graph (blocks edges gate READY), the events (<code>node.children_all_done</code>), and approvals (approval nodes gating via blocks edges) share one vocabulary and must be co-designed. Conversely, shipping UI before the fold migration would build the outline against a schema that phase A5 immediately invalidates. Hence: backend arc first, migration last-in-arc, UI strictly after.</p>
+        </div>
+      </section>
+
+      <section id="alternatives">
+        <h2>Alternatives considered</h2>
+        <p><strong>The six load-bearing decisions are locked</strong> (ideation synthesis, 2026-08-24 — see <code>scratchpad/devpad-ripple.html</code> §05) and are NOT re-litigated here: (1) graph on <code>task</code> now with milestone/goal fold as the final backend phase; (2) edge-triggered bubbling via guarded conditional UPDATE, sticky + stale badge + policy-only reopen, cron sweeper; (3) devpad-native automation spine — transactional outbox → dedicated <code>devpad-hooks</code> queue → pulse mirror (observability only) + hook registry with delivery ledger; (4) annotations stored as markers-in-doc over corpus versions (the user's explicit call); (5) generalized signoff table + <code>kind:"approval"</code> node projection, human-only completable; (6) SDLC v1 = stage enum + checkpoint-gated stepper with audited override, IA = "Waiting on you" atop <code>/todo</code>, net −1 nav tab. This section scores only the three choices that remained genuinely open inside that shape.</p>
+
+        <h3>Open choice A: fractional rank encoding</h3>
+
+        <article class="option recommended" id="option-a1">
+          <header>
+            <h3>A1: Hand-rolled lexicographic midpoint keys (base-36)</h3>
+            <span class="badge recommended">recommended</span>
+          </header>
+          <p>A ~50-LOC pure module <code>rank_between(a: string | null, b: string | null): string</code> generating base-36 strings that sort lexicographically, appending a mid-digit when neighbors are adjacent. Copy the reference algorithm from the fractional-indexing literature; own the code, property-test it.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Figma</strong> — fractional indexing for multiplayer object ordering; chosen because concurrent inserts never conflict and order is a property of the row, not its neighbors. <a href="https://www.figma.com/blog/realtime-editing-of-ordered-sequences/">source</a></li>
+            <li><strong>rocicorp/fractional-indexing</strong> — the reference implementation of the same algorithm (used across the Replicache/Reflect ecosystem); its README documents the exact edge cases the property suite must cover. <a href="https://github.com/rocicorp/fractional-indexing">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>Merge-safe for parallel agents by construction — two agents inserting between the same neighbors produce distinct, both-valid keys; no renumber transaction ever races the OCC <code>rev</code> guard.</li>
+            <li>Pure function → trivially unit- and property-testable per testing-strategy; <code>ORDER BY rank</code> is a plain indexed sort in D1.</li>
+            <li>No new dependency in the worker bundle; the A2 sweeper can rebalance pathologically long keys as routine maintenance.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Adversarial insert patterns (always-insert-first) grow key length linearly until the sweeper rebalances — accepted, sweeper task covers it.</li>
+            <li>We own the edge cases the npm lib already fixed — mitigated by porting its test vectors into our suite.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>5/5</td>
+                <td>Order lives in one column; no neighbor pointers to keep consistent (unlike after_id chains).</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>4/5</td>
+                <td><code>rank: string</code> is inherently loose; a branded <code>Rank</code> type + Zod regex refinement (charset check) recovers most of it.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>4/5</td>
+                <td>Invalid ranks caught at the Zod boundary, ordering bugs only by tests — inherent to any string-key scheme.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>5/5</td>
+                <td>One exported signature; call sites infer.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Pure function — no seam needed at all; property tests run in microseconds.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-a2">
+          <header>
+            <h3>A2: npm dependency <code>fractional-indexing</code></h3>
+          </header>
+          <p>Take rocicorp's library as a runtime dependency instead of porting it.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Replicache / Reflect apps</strong> — consume the lib directly for list ordering. <a href="https://github.com/rocicorp/fractional-indexing">source</a></li>
+            <li><strong>tldraw</strong> — uses a fractional-index package for shape z-ordering. <a href="https://github.com/tldraw/tldraw">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>Battle-tested edge cases for free; zero implementation time.</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>A runtime dep in the unified worker bundle for ~50 LOC of pure logic — this repo just fought phantom-dep and bundling gotchas (AGENTS.md CLI npm-bundle section); every new dep is real surface.</li>
+            <li>Its key charset/validation conventions become an external contract we can't refine with branded types without wrapping anyway.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>4/5</td><td>Same column model; charset truth lives in the dep.</td></tr>
+              <tr><td>Strictest types possible</td><td>3/5</td><td>Lib API is plain strings; branding requires a wrapper module — at which point we've hand-rolled the interface anyway.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>3/5</td><td>Same as A1 minus the Zod refinement being derived from our own charset constant.</td></tr>
+              <tr><td>Inferred types propagate</td><td>4/5</td><td>Fine.</td></tr>
+              <tr><td>In-memory repositories</td><td>5/5</td><td>Pure function.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-a3">
+          <header>
+            <h3>A3: Integer gap ranking (position × 1024, renumber on collision)</h3>
+          </header>
+          <p>Integer <code>position</code> spaced 1024 apart; insert takes the midpoint; a renumber pass rewrites the sibling set when gaps exhaust.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Trello</strong> — famously used doubling/midpoint float positions with periodic renumber; documented the precision-exhaustion pain publicly. <a href="https://mrkarthikkn.medium.com/trello-how-simple-is-the-ranking-sorting-eb006ae5b29a">source</a></li>
+            <li><strong>Jira (pre-LexoRank)</strong> — integer positions with rebalancing; LexoRank was built precisely to escape the rebalance locks. <a href="https://www.youtube.com/watch?v=OjQv9xMoFbg">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>Smallest storage; integer compare is the cheapest sort.</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Renumbering is a multi-row write that races concurrent agent inserts — exactly the structural-race class this plan works to eliminate; it would need its own serialization story on D1.</li>
+            <li>Not merge-safe: two agents inserting at the same midpoint collide and need retry logic.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>4/5</td><td>One column, but renumber transiently invalidates every sibling's value.</td></tr>
+              <tr><td>Strictest types possible</td><td>4/5</td><td>Integers type cleanly.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>3/5</td><td>Collision/renumber races are pure runtime behavior.</td></tr>
+              <tr><td>Inferred types propagate</td><td>4/5</td><td>Fine.</td></tr>
+              <tr><td>In-memory repositories</td><td>2/5</td><td>Renumber semantics depend on DB write ordering — the exact thing an in-memory fake can't faithfully reproduce.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-a4">
+          <header>
+            <h3>A4: Linked-list <code>after_id</code> (the existing milestone pattern)</h3>
+          </header>
+          <p>Each sibling points at its predecessor — the pattern <code>milestone.after_id</code> already uses in this schema.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>devpad itself</strong> — <code>milestone.after_id</code> (<code>packages/schema/src/database/schema.ts:184</code>); ordering reads require chain reconstruction in the service.</li>
+            <li><strong>Notion</strong> — block content ordering via parent-held child-ID arrays / sibling chaining; workable only because a central server serializes every edit. <a href="https://www.notion.com/blog/data-model-behind-notion">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>Consistent with one existing corner of the schema; no new concept.</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>No SQL-sortable key: every subtree read must reconstruct chains in application code — poisons the recursive CTE reads phase A1 is built on.</li>
+            <li>Concurrent splices at the same position corrupt the chain; the A5 fold would also have to migrate this pattern anyway (it converts after_id → rank).</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>2/5</td><td>Order is distributed across N rows' pointers; one bad pointer breaks the whole sibling set.</td></tr>
+              <tr><td>Strictest types possible</td><td>3/5</td><td>Nullable self-reference; validity is unrepresentable in the type.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>2/5</td><td>Chain corruption is invisible until read time.</td></tr>
+              <tr><td>Inferred types propagate</td><td>3/5</td><td>Chain-walk helpers leak everywhere.</td></tr>
+              <tr><td>In-memory repositories</td><td>3/5</td><td>Testable, but splice-race behavior depends on write interleaving.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <h3>Open choice B: compat mechanics for the milestone/goal fold (phase A5)</h3>
+
+        <article class="option recommended" id="option-b1">
+          <header>
+            <h3>B1: Service-level compat projections (TypeScript, old tables frozen)</h3>
+            <span class="badge recommended">recommended</span>
+          </header>
+          <p>Rewrite <code>milestones.ts</code>/<code>goals.ts</code> services to read/write <code>task</code> rows with <code>kind ∈ {milestone, goal}</code>, preserving the existing <code>Milestone</code>/<code>Goal</code> API shapes exactly (including <code>after_id</code>, computed from rank ordering). Old tables are frozen (writes removed), kept for dual-read verification, dropped in a later cleanup.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Stripe</strong> — API version compatibility is implemented as server-side transform layers over the current data model, not parallel storage; old shapes are projections. <a href="https://stripe.com/blog/api-versioning">source</a></li>
+            <li><strong>GitHub sub-issues / issue types rollout</strong> — new hierarchy tables shipped while the existing REST milestone/issue contracts kept serving unchanged shapes projected from the new model. <a href="https://github.blog/changelog/2024-10-01-evolving-github-issues-public-preview/">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>The compat layer is typed TS in the services layer — the existing integration suites (<code>tests/integration/milestones-goals.test.ts</code> et al.) pass unchanged and become the compat proof, for free.</li>
+            <li>Zero changes to ~80 tool-registry entries, ApiClient, CLI, MCP, and the goals UI during the transition window — Arc B replaces the UI on its own schedule.</li>
+            <li>Drizzle schema stays the single storage truth; no D1 view/trigger DDL outside drizzle-kit's management.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li><code>after_id</code> emulation from rank neighbors is mildly awkward (computed per list read) — bounded by milestone counts (small).</li>
+            <li>Direct-DB consumers of the old tables (none known beyond devpad itself) get a frozen snapshot, not live data — called out under Breaking.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>5/5</td>
+                <td>task table is the only writable store post-fold; projections derive; frozen tables are verification artifacts, not truth.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>5/5</td>
+                <td>Projection functions are typed against the existing exported Milestone/Goal types — drift is a compile error at the projection, exactly where the bug would be.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>5/5</td>
+                <td>Kind-discriminated task union + exhaustive switches in the projection; the SQL-view alternative moves this logic outside the compiler entirely.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>5/5</td>
+                <td>Consumers keep inferring from the unchanged service signatures.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Same createBunDatabase test harness covers projections and fold-fixture dual-read tests directly.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-b2">
+          <header>
+            <h3>B2: SQL compat VIEWs (+ INSTEAD OF triggers for writes)</h3>
+          </header>
+          <p><code>CREATE VIEW milestone AS SELECT … FROM task WHERE kind='milestone'</code>, with INSTEAD OF triggers to keep upserts working against the view name.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>PostgreSQL ecosystem practice</strong> — updatable views as a rename/restructure compat shim is a documented standard pattern. <a href="https://www.postgresql.org/docs/current/sql-createview.html">source</a></li>
+            <li><strong>SQLite INSTEAD OF triggers</strong> — the mechanism exists and works on D1's SQLite core. <a href="https://www.sqlite.org/lang_createtrigger.html">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>Services stay byte-identical; compat is invisible to TypeScript.</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Business logic (provenance columns, action audit rows, protection checks) can't run inside a trigger — writes through the view would silently bypass the service layer's invariants, including the A2 outbox rule.</li>
+            <li>drizzle-kit doesn't manage view/trigger DDL for D1 well; it becomes hand-written SQL living outside the schema SSOT — the exact thing this repo bans.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>2/5</td><td>Projection logic duplicated in SQL, outside the schema package.</td></tr>
+              <tr><td>Strictest types possible</td><td>2/5</td><td>Triggers are stringly-typed DDL; no compile-time check at all.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>1/5</td><td>Bypasses services — outbox/provenance/protection invariants break at runtime with zero signal.</td></tr>
+              <tr><td>Inferred types propagate</td><td>3/5</td><td>Unchanged TS surface (because it can't see the problem).</td></tr>
+              <tr><td>In-memory repositories</td><td>2/5</td><td>Trigger behavior only testable against real SQLite with hand-applied DDL.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-b3">
+          <header>
+            <h3>B3: Dual-write during a transition window</h3>
+          </header>
+          <p>Write both old milestone/goal tables and new task rows until every consumer migrates, then cut reads over.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Shopify</strong> — dual-writing with verification is their documented pattern for high-risk live migrations (Ghostferry-class moves). <a href="https://shopify.engineering/ghostferry">source</a></li>
+            <li><strong>Stripe (data moves)</strong> — four-phase dual-write/dual-read migrations for zero-downtime model changes. <a href="https://stripe.com/blog/online-migrations">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>Instant rollback story (old tables stay live).</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Two writable sources of truth — a frontal violation of principle 1, and the bubbling engine would have to fire from both paths or silently diverge.</li>
+            <li>Designed for zero-downtime constraints devpad (single-tenant, minutes-of-migration data volume) simply doesn't have; all cost, no benefit here.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>1/5</td><td>Definitionally two truths for the transition window.</td></tr>
+              <tr><td>Strictest types possible</td><td>3/5</td><td>Typed, but the sync layer doubles every write path's surface.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>2/5</td><td>Divergence between the two writes is a runtime-only failure class.</td></tr>
+              <tr><td>Inferred types propagate</td><td>3/5</td><td>Neutral.</td></tr>
+              <tr><td>In-memory repositories</td><td>3/5</td><td>Testable but the test matrix doubles.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-b4">
+          <header>
+            <h3>B4: Hard cutover, no compat layer</h3>
+          </header>
+          <p>Fold the tables and rewrite every consumer (tools, client, CLI, MCP, goals UI) in the same phase.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Linear (early)</strong> — small-team products do routinely hard-cut internal models pre-scale; viable only when one team owns every consumer and ships them atomically. <a href="https://linear.app/blog/scaling-the-linear-sync-engine">source</a></li>
+            <li><strong>This repo's own convention</strong> — "delete old code, call out breaking changes" (AGENTS.md) favors cutovers for small blast radii; the question is whether this radius is small.</li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>No transition code to later delete; end state reached in one hop.</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Forces UI rewrite into the backend arc — directly violates this plan's hard sequencing constraint (UI strictly after backend + migration).</li>
+            <li>One PR touching schema + migration + ~80 tools + CLI + MCP + goals UI is unreviewable and unshippable incrementally; a single defect blocks everything.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>5/5</td><td>Cleanest end state, immediately.</td></tr>
+              <tr><td>Strictest types possible</td><td>4/5</td><td>No compat shims to type.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>3/5</td><td>The compiler flags every consumer — all at once, in one giant unshippable diff.</td></tr>
+              <tr><td>Inferred types propagate</td><td>4/5</td><td>Ripples surface everywhere simultaneously.</td></tr>
+              <tr><td>In-memory repositories</td><td>3/5</td><td>Test rewrite must land in the same PR; the compat proof (old suites passing) is lost.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <h3>Open choice C: annotation marker placement inside the doc</h3>
+        <p>Locked decision 3 fixes storage (markers-in-doc, corpus versions as thread history). The remaining open axis is where the marker sits. Only three genuinely distinct placements exist — DB-rows-as-truth was already rejected by the locked decision, so no fourth option is fabricated.</p>
+
+        <article class="option recommended" id="option-c1">
+          <header>
+            <h3>C1: Inline paired range markers at the anchor site</h3>
+            <span class="badge recommended">recommended</span>
+          </header>
+          <p><code>&lt;!-- devpad:thread:begin {json} --&gt; … &lt;!-- devpad:thread:end id --&gt;</code> wrapping the annotated span, with the W3C trifecta (quote + ~32-char prefix/suffix + char offsets) carried redundantly in the begin-marker JSON.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>OOXML (Word) tracked comments</strong> — <code>w:commentRangeStart</code>/<code>w:commentRangeEnd</code> markers inline in the document XML; comments survive edits because the range travels with content. <a href="https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.wordprocessing.commentrangestart">source</a></li>
+            <li><strong>CriticMarkup</strong> — inline annotation syntax embedded in plain-text docs, designed exactly for author⇄editor round-trips through dumb text tools (here: the agent). <a href="https://github.com/CriticMarkup/CriticMarkup-toolkit">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul>
+            <li>The marker travels with surrounding content when the agent edits the doc — position stays correct without re-anchoring in the common case; the trifecta is the fallback, not the primary mechanism.</li>
+            <li>The agent sees the thread in context on <code>plans pull</code> — the whole point of markers-in-doc; an appendix loses that locality.</li>
+          </ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>Agent edits can orphan an end-marker (split pair) — the parser must treat an unpaired begin as a point annotation and flag it, feeding the orphan-don't-drop path.</li>
+            <li>DocViewer/sanitizer must strip marker comments before render (comments are inert HTML, but leaking them to viewers is noise).</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead>
+              <tr>
+                <th>Principle</th>
+                <th>Score</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Single source of truth</td>
+                <td>5/5</td>
+                <td>The annotated doc IS the artifact (the locked decision's intent); the thread-index table is an explicitly rebuildable cache.</td>
+              </tr>
+              <tr>
+                <td>Strictest types possible</td>
+                <td>4/5</td>
+                <td>Marker JSON is Zod-parsed on read (ThreadMarker schema); malformed markers become typed orphans, not crashes.</td>
+              </tr>
+              <tr>
+                <td>Compiler catches bugs</td>
+                <td>4/5</td>
+                <td>Parse/serialize round-trip is a typed boundary; pairing errors are runtime but classified into a closed union.</td>
+              </tr>
+              <tr>
+                <td>Inferred types propagate</td>
+                <td>5/5</td>
+                <td>One markers module exports parse/embed/strip; everything downstream infers.</td>
+              </tr>
+              <tr>
+                <td>In-memory repositories</td>
+                <td>5/5</td>
+                <td>Pure string transforms + corpus memory backend — the whole engine tests in-memory with zero seams.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-c2">
+          <header>
+            <h3>C2: Single point-marker at anchor start (no end marker)</h3>
+          </header>
+          <p>One comment at the range start; the range end is derived purely from the stored quote length.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Google Docs comments</strong> — internally point-anchored ranges resolved against content; works because Docs owns every edit operation (OT), which devpad does not. <a href="https://developers.google.com/workspace/docs/api/how-tos/comments">source</a></li>
+            <li><strong>Hypothesis (fuzzy re-anchor path)</strong> — when only a start hint survives, ranges re-derive from quote matching; documented as the fallback, not the design. <a href="https://web.hypothes.is/blog/fuzzy-anchoring/">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>No pair-splitting failure mode; simpler parser.</li></ul>
+          <h4>Cons</h4>
+          <ul><li>Any agent edit <em>inside</em> the annotated span silently breaks the derived end — the most common edit (revising the criticized sentence) is the worst case; C1 degrades gracefully there.</li></ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>4/5</td><td>Doc is truth, but range truth is split between marker position and quote text.</td></tr>
+              <tr><td>Strictest types possible</td><td>4/5</td><td>Same Zod boundary as C1.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>3/5</td><td>Span-drift is undetectable until quote match fails.</td></tr>
+              <tr><td>Inferred types propagate</td><td>5/5</td><td>Same module shape.</td></tr>
+              <tr><td>In-memory repositories</td><td>5/5</td><td>Same purity.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="option" id="option-c3">
+          <header>
+            <h3>C3: Appendix block — all threads in one trailer, pure anchor-based location</h3>
+          </header>
+          <p>A single <code>&lt;!-- devpad:threads [...] --&gt;</code> block at document end; content is untouched; location resolves purely via the W3C trifecta on every read.</p>
+          <h4>Real-world examples</h4>
+          <ul>
+            <li><strong>Hypothesis</strong> — annotations stored fully out-of-band, located by selector trifecta on every render; the closest production analogue to pure-anchor location. <a href="https://web.hypothes.is/blog/fuzzy-anchoring/">source</a></li>
+            <li><strong>W3C Web Annotation Data Model</strong> — the spec this trifecta comes from assumes exactly this out-of-band shape. <a href="https://www.w3.org/TR/annotation-model/">source</a></li>
+          </ul>
+          <h4>Pros</h4>
+          <ul><li>Trivial parse/strip; doc body byte-identical to the authored content.</li></ul>
+          <h4>Cons</h4>
+          <ul>
+            <li>An agent revising the doc never sees threads next to the text they criticize — it must cross-reference offsets manually; defeats the purpose of choosing markers-in-doc over DB rows.</li>
+            <li>Every agent edit invalidates offsets wholesale; re-anchoring becomes the primary mechanism instead of the fallback, maximizing orphan rates.</li>
+          </ul>
+          <h4>Philosophy alignment</h4>
+          <table class="philosophy-score">
+            <thead><tr><th>Principle</th><th>Score</th><th>Notes</th></tr></thead>
+            <tbody>
+              <tr><td>Single source of truth</td><td>4/5</td><td>Doc is truth, but location truth is entirely in fragile offsets.</td></tr>
+              <tr><td>Strictest types possible</td><td>4/5</td><td>Single Zod-parsed block — actually the cleanest parse.</td></tr>
+              <tr><td>Compiler catches bugs</td><td>3/5</td><td>Anchor rot is runtime-only and frequent.</td></tr>
+              <tr><td>Inferred types propagate</td><td>5/5</td><td>Same module shape.</td></tr>
+              <tr><td>In-memory repositories</td><td>5/5</td><td>Same purity.</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <section class="recommendation">
+          <h3>Recommendation: A1 + B1 + C1</h3>
+          <p>Hand-rolled fractional midpoint keys (A1, avg 4.6) beat the npm dep on ownership and the alternatives on merge-safety — the property suite in phase A2 covers the edge cases that are the lib's only advantage. Service-level compat projections (B1, avg 5.0) are the only fold mechanic where the compiler and the existing integration suites both enforce compatibility; SQL views (B2) bypass the service invariants the whole plan depends on, and dual-write (B3) violates single-source-of-truth for a zero-downtime property devpad doesn't need. Inline paired markers (C1, avg 4.6) are the only placement where the common agent edit degrades gracefully and the thread stays in the agent's reading context — which is the entire rationale of locked decision 3.</p>
+        </section>
+      </section>
+
+      <section id="affected-areas">
+        <h2>Affected areas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Path</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>packages/schema/src/database/schema.ts</code></td>
+              <td>modify — task columns (parent_id, rank, rev, kind, completion_policy, completed_via, claimed_by, claimed_at, stage), new tables: task_link, task_rollup, task_event, apply_log, hook, hook_delivery, github_webhook_event, document, signoff; api_keys.project_id; project.github_autoclose; kind enum extension at fold</td>
+            </tr>
+            <tr>
+              <td><code>packages/schema/src/database/drizzle/</code></td>
+              <td>new — generated migrations per phase + ONE hand-written data-backfill migration (A5, journal-registered, CI-applied only)</td>
+            </tr>
+            <tr>
+              <td><code>packages/schema/src/validation.ts</code>, <code>types.ts</code></td>
+              <td>modify — EdgeKind, ExternalRef union, TaskEvent vocabulary, apply-op union, hook trigger/action schemas, doc/annotation/signoff/stage schemas; upsert_todo extensions</td>
+            </tr>
+            <tr>
+              <td><code>packages/core/src/services/graph/</code> (new)</td>
+              <td>new — rank.ts, graph.ts (guards/CTE reads/READY), apply.ts, completion.ts (CompletionEngine + in-memory), outbox.ts, rollup.ts, sweeper.ts + __tests__ incl. property suite</td>
+            </tr>
+            <tr>
+              <td><code>packages/core/src/services/hooks/</code> (new)</td>
+              <td>new — registry.ts, dispatch.ts (queue consumer logic), actions/ (webhook, vault, pipeline), retention.ts + tests</td>
+            </tr>
+            <tr>
+              <td><code>packages/core/src/services/docs/</code> (new)</td>
+              <td>new — store.ts (corpus), sanitize.ts, markers.ts, anchor.ts, threads.ts, signoff.ts, interface-report.ts, stage.ts, reviews.ts + tests</td>
+            </tr>
+            <tr>
+              <td><code>packages/core/src/services/tasks.ts</code></td>
+              <td>modify — upsertTask routes completion through CompletionEngine, writes outbox rows, accepts graph fields</td>
+            </tr>
+            <tr>
+              <td><code>packages/core/src/services/milestones.ts</code>, <code>goals.ts</code></td>
+              <td>modify (A5) — become typed projections over task-with-kind; old-table writes removed</td>
+            </tr>
+            <tr>
+              <td><code>packages/core/src/services/scanning.ts</code>, <code>scanner/diff.ts</code></td>
+              <td>modify (A5) — CREATE actions carry proposed parent + discovered_from edge proposals</td>
+            </tr>
+            <tr>
+              <td><code>packages/worker/src/routes/v1/</code></td>
+              <td>modify/new — tasks.ts extended (ready/tree/near/claim/link/done/apply); new graph-adjacent routes: hooks.ts, github.ts (webhook receiver), docs.ts, reviews.ts</td>
+            </tr>
+            <tr>
+              <td><code>packages/worker/src/index.ts</code></td>
+              <td>modify — queue() consumer handler export; scheduled() gains sweeper + retention calls</td>
+            </tr>
+            <tr>
+              <td><code>packages/worker/src/middleware/auth.ts</code>, <code>config.ts</code>, <code>bindings.ts</code></td>
+              <td>modify — api_key project scope; HOOKS_QUEUE binding, VAULT_GITHUB service binding, GITHUB_WEBHOOK_SECRET, PIPELINES_TOKEN, DOCS_CORPUS_BUCKET in typed config</td>
+            </tr>
+            <tr>
+              <td><code>wrangler.toml</code></td>
+              <td>modify — queue producer/consumer (devpad-hooks / devpad-hooks-preview), DOCS_CORPUS_BUCKET, vault service binding, new secrets documented</td>
+            </tr>
+            <tr>
+              <td><code>packages/api/src/tools.ts</code>, <code>api-client.ts</code></td>
+              <td>modify — new registry entries (ready/tree/near/claim/link/done/apply/hooks/docs/annotations/signoffs/reviews/stage) + client methods; milestone/goal entries unchanged (compat)</td>
+            </tr>
+            <tr>
+              <td><code>packages/cli/src/index.ts</code> (+ new command modules)</td>
+              <td>modify — devpad ready, tasks tree/near/claim/link/done/apply, plans push/pull/annotations, interface push/check, reviews pending, keys --project, admin verify-fold</td>
+            </tr>
+            <tr>
+              <td><code>packages/mcp/src/index.ts</code></td>
+              <td>none directly — inherits every new tool via the shared registry</td>
+            </tr>
+            <tr>
+              <td><code>~/dev/vault</code> (separate repo, companion PR in A3)</td>
+              <td>new — github-adapter.ts, GitHubVault WorkerEntrypoint, github:releases grant scope handling, Secrets Store token, infra binding</td>
+            </tr>
+            <tr>
+              <td><code>tests/integration/</code></td>
+              <td>new — graph-api, completion, hooks, github-webhook, docs-annotations, signoff, fold-compat suites; existing milestones-goals suite becomes the A5 compat proof</td>
+            </tr>
+            <tr>
+              <td><code>apps/main/src/layouts/ProjectLayout.astro</code></td>
+              <td>modify (B1) — tab strip: goals+tasks→work, specification→docs; net −1 tab; redirects</td>
+            </tr>
+            <tr>
+              <td><code>apps/main/src/pages/project/[project_id]/</code>, <code>pages/todo/</code></td>
+              <td>modify/new (Arc B) — work.astro (outline), docs.astro, redirects from tasks/goals/specification; "Waiting on you" atop /todo</td>
+            </tr>
+            <tr>
+              <td><code>apps/main/src/components/solid/outline/</code>, <code>lenses/</code>, <code>review/</code> (new)</td>
+              <td>new (Arc B) — outline rows/rings/keyboard, graph+milestone lenses, ripple choreography, DocViewer, AnnotationRail, checkpoint cards, SDLC stepper</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="architecture-decisions">
+        <h2>Architecture decisions</h2>
+        <p>The six ideation decisions are locked and restated in the header summary; the calls below are the non-obvious implementation decisions made <em>inside</em> that shape. None carries a <span class="badge decision">decision</span> badge — the genuinely-architectural calls were already made by the user.</p>
+
+        <h3>Gap coverage (the ten §06 gaps — every one lands as a task or an explicit deferral)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Gap</th>
+              <th>Disposition</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. Migration design</td>
+              <td>Tasks <a href="#task-a5-1">A5.1</a>–<a href="#task-a5-3">A5.3</a> — backfill mapping, compat projections, dual-read verification; table drop deferred (out-of-scope, post-soak cleanup)</td>
+            </tr>
+            <tr>
+              <td>2. Scanner ⇄ graph reconciliation</td>
+              <td>Task <a href="#task-a5-4">A5.4</a> — placement + discovered_from proposals in the scan diff flow</td>
+            </tr>
+            <tr>
+              <td>3. Structural write races</td>
+              <td>Task <a href="#task-a1-3">A1.3</a> (single-statement guarded writes — serialization argument below) + <a href="#task-a2-4">A2.4</a> (sweeper invariant backstop)</td>
+            </tr>
+            <tr>
+              <td>4. Outbound GitHub update-trail</td>
+              <td>Out of scope (rationale there) — the A3 GitHubProxy makes it a small follow-up</td>
+            </tr>
+            <tr>
+              <td>5. Agent wake</td>
+              <td>Out of scope (rationale there) — v2.4 mechanism is session bookends (<code>devpad ready</code> / <code>reviews pending</code>); a user-configured webhook hook partially covers push</td>
+            </tr>
+            <tr>
+              <td>6. Per-project scoped API keys</td>
+              <td>Task <a href="#task-a3-1">A3.1</a> — FIRST task of the hooks phase, before any hook executes</td>
+            </tr>
+            <tr>
+              <td>7. Plan-HTML XSS / DocViewer sandboxing</td>
+              <td>Task <a href="#task-a4-1">A4.1</a> (sanitize-on-push, allowlist + XSS corpus) + <a href="#task-b3-1">B3.1</a> (CSP-on-render); design below</td>
+            </tr>
+            <tr>
+              <td>8. Retention for append-only tables</td>
+              <td>Task <a href="#task-a3-7">A3.7</a> — outbox/ledger/webhook-event retention constants + cron sweep; corpus doc-version retention deferred (out-of-scope, dedup bounds it)</td>
+            </tr>
+            <tr>
+              <td>9. Bubbling test seam</td>
+              <td>Tasks <a href="#task-a2-2">A2.2</a> + <a href="#task-a2-5">A2.5</a> — seam design below; property suite gates phase A3</td>
+            </tr>
+            <tr>
+              <td>10. Metric-tie at ideate time</td>
+              <td>Distributed: <a href="#task-a1-1">A1.1</a> (tracks_metric edge + metric ref), <a href="#task-a3-4">A3.4</a> (pipeline-run ref write-back at deploy), <a href="#task-b3-3">B3.3</a> (metric surfaced at the review checkpoint)</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Structural race serialization argument (gap 3)</h3>
+        <p>Per-row <code>rev</code> OCC cannot protect tree-level invariants (two concurrent reparents jointly creating a cycle). The design rule: <strong>every structural mutation is ONE SQL statement whose WHERE clause carries the full invariant</strong> — reparent is a conditional UPDATE with a recursive-CTE ancestor check (<code>WITH RECURSIVE anc AS (…) UPDATE task SET parent_id=… WHERE id=… AND rev=… AND NOT EXISTS (SELECT 1 FROM anc WHERE id=:new_parent) AND (depth check)</code>); blocks-edge insert is <code>INSERT … SELECT … WHERE NOT EXISTS (cycle CTE over blocks edges)</code>. D1's single-writer SQLite core serializes statements, so the invariant is evaluated atomically inside the write — there is no validate-then-write window. The A2 sweeper re-verifies invariants (cycle-free, depth ≤ 8, rollup consistency) on cron as the crash/bug backstop, never as the primary mechanism. SQLite supports CTEs on UPDATE/INSERT since 3.8.3; D1 qualifies.</p>
+
+        <h3>Bubbling test seam (gap 9)</h3>
+        <p>The load-bearing logic is guarded SQL that an in-memory fake cannot faithfully reproduce, so the seam is split: (a) <code>CompletionEngine</code> is an interface — <code>SqlCompletionEngine</code> (production, the guarded cascade) and <code>InMemoryCompletionEngine</code> (a ~40-LOC recording fake) — consumers (routes, hooks dispatch, UI-facing services) test against the fake; (b) the engine ITSELF is tested only against real SQLite via <code>createBunDatabase</code> + migration replay (same SQLite dialect as D1 — the SQL is identical); (c) concurrency is modeled by randomized operation-order permutations: because each cascade step is a single conditional UPDATE, atomic under SQLite's serialized writer, order permutation over a single connection is the honest local model of D1's single-writer interleaving. The property suite (A2.5) runs seeded random trees through randomized completion/reparent/reopen interleavings asserting: vacuous zero-children never fires; exactly one sibling triggers the parent; sticky semantics hold; cycle/depth guards hold; sweeper converges to invariant-clean state from injected mid-cascade crashes; rollup equals brute-force recount. <strong>Phase A3 (hooks) MUST NOT start until this suite is green.</strong></p>
+
+        <h3>Atomic write helper (D1 has no interactive transactions)</h3>
+        <p>Every mutation must write state + outbox row atomically. D1 offers <code>db.batch()</code>; bun-sqlite (dev/test) doesn't share that API surface uniformly. A single helper <code>run_atomic(db, statements)</code> in the graph service wraps: D1 → <code>batch()</code>; bun-sqlite → sequential execution inside a BEGIN/COMMIT. All v2.4 mutation paths go through it; hand-rolled multi-statement writes outside the helper are an adversary-checklist violation in every backend phase.</p>
+
+        <h3>Other implementation calls</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Call</th>
+              <th>Rationale</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>kind</code> enum ships as <code>task | phase | approval</code>; A5 adds <code>milestone | goal</code></td>
+              <td>Exact-kind mapping at fold keeps compat projections exact (<code>kind='goal'</code> filter) instead of guessing which phase-kind tasks were goals. <code>goal</code> can be retired in a far-future cleanup once the UI stops distinguishing.</td>
+            </tr>
+            <tr>
+              <td>Folded rows keep their original prefixed ids (<code>milestone_*</code>, <code>goal_*</code> ids live in the task table)</td>
+              <td>Id prefixes are cosmetic (nothing parses them); keeping them makes the backfill a pure INSERT-SELECT + <code>UPDATE task SET parent_id=goal_id</code>, with zero id remapping and no FK rewrites in task_link/task_event history.</td>
+            </tr>
+            <tr>
+              <td>Atomic claim = new <code>claimed_by</code>/<code>claimed_at</code> columns, guarded UPDATE</td>
+              <td>The existing <code>owner_id</code> is the human owner, not the working agent. <code>claim</code> sets claimed_by + IN_PROGRESS in one conditional UPDATE (409 with current row on 0 changes) — the whole multi-agent coordination story per the beads research.</td>
+            </tr>
+            <tr>
+              <td>Data backfill is ONE hand-written migration file, journal-registered, CI-applied</td>
+              <td>drizzle-kit cannot generate data transforms. Repo precedent exists (hand-written ALTER migrations, AGENTS.md "Drizzle-kit + manual migrations"). The hard ban on hand-APPLYING migrations stands unchanged — CI is the only applier.</td>
+            </tr>
+            <tr>
+              <td>Queues: <code>devpad-hooks</code> (production) + <code>devpad-hooks-preview</code>; local dev/test uses <code>InMemoryDispatcher</code></td>
+              <td>Queues are account-scoped; preview must not consume production events. The bun dev server has no queue runtime — the DispatchProvider seam (CFQueueProvider / InMemoryDispatcher running the consumer synchronously) keeps dev + tests faithful. Preview's pulse mirror no-ops (no ingest key) — consistent with the staging-read-only invariant.</td>
+            </tr>
+            <tr>
+              <td>Hook webhook secrets encrypted at rest with the existing <code>ENCRYPTION_KEY</code> helper</td>
+              <td>HMAC signing needs the raw secret server-side, so hashing is out; the media-credentials encryption util is the established pattern.</td>
+            </tr>
+            <tr>
+              <td>Vault GitHubProxy v1 authenticates with a fine-grained PAT in Secrets Store (<code>GITHUB_RELEASES_TOKEN</code>)</td>
+              <td>GitHub-App installation-token minting (JWT exchange) is real complexity with no v1 payoff for single-user release-cutting; the adapter interface hides the credential source so upgrading later is adapter-internal. The inbound webhook (A3.6) DOES use a GitHub App — receiving events requires one; sending release API calls does not.</td>
+            </tr>
+            <tr>
+              <td>devpad's vault caller identity: <code>package_id "devpad"</code>, environment <code>production | staging</code> (preview maps to staging)</td>
+              <td>Matches the CALLER_ENV two-literal invariant; grant seed rows <code>(devpad, production, github:releases:&lt;repo&gt;)</code> per opted-in repo, fail-closed like every vault grant.</td>
+            </tr>
+            <tr>
+              <td>Interface report v1 = normalized concatenated .d.ts + lexical additive-vs-breaking classifier</td>
+              <td>An api-extractor-grade semantic analyzer is its own project. v1: collect the package's declaration output, normalize deterministically (strip comments/whitespace, stable file order), classify line-diff (any removal/change = breaking, additions-only = additive → auto-pass signoff). Honest, conservative (over-flags breaking, never under-flags), upgradeable behind the same CLI verbs.</td>
+            </tr>
+            <tr>
+              <td>Plan-HTML safety = sanitize-on-push + CSP-on-render</td>
+              <td>Sanitizing at ingest makes the STORED doc safe (single source of truth — every consumer gets the safe artifact); the allowlist strips script/iframe/object/embed, on* attributes, javascript:/data: URLs, keeps inline &lt;style&gt;. Render adds a restrictive CSP header as defense-in-depth. Sandboxed cross-origin iframes were rejected: the annotation engine needs same-document DOM selection.</td>
+            </tr>
+            <tr>
+              <td>Approval-node gating is explicit, not magic</td>
+              <td><code>request_checkpoint(subject, checkpoint, blocks: TaskId[])</code> — the caller names the downstream tasks the approval node blocks. No hidden inference of "what the next stage's tasks are"; the stage service and planner pass explicit lists.</td>
+            </tr>
+            <tr>
+              <td>Page-vs-integrate gate (Arc B)</td>
+              <td><strong>Gate answer: NO net-new top-level page or nav item anywhere in this plan.</strong> "Waiting on you" integrates atop the existing <code>/todo</code> (rejecting the ideation's /inbox variant); lenses are Esc-dismissed overlays, never routes; tasks+goals consolidate into one <code>work</code> tab and specification folds into <code>docs</code> — net −1 project tab, with redirects. Nothing here is an aggregation needing a new destination; every surface lands where the user already looks for that job.</td>
+            </tr>
+            <tr>
+              <td>Outline components live in <code>apps/main</code>, not <code>@f0rbit/ui</code>, for v2.4</td>
+              <td>Upstreaming ten primitives to the ui repo mid-arc would couple this plan to a second repo's release cycle. Build in-app against @f0rbit/ui tokens/primitives (Tree seeds the outline); extract upstream later once the interaction design stabilizes (out-of-scope entry).</td>
+            </tr>
+            <tr>
+              <td>Verb contract status</td>
+              <td>devpad exposes <code>gate</code> (scripts/gate.sh) only. Coders run scoped checks per phase; the verifier (Mode V) runs <code>bun run gate</code> once per PR and uses the sanctioned <code>~/.claude/tools/ship &lt;pr#&gt;</code> fallback for the merge tail. Wiring smoke/check/deploy verbs is out of scope here.</td>
+            </tr>
+            <tr>
+              <td>GitHub App provisioning is a user ops prerequisite for A3.6</td>
+              <td>Creating the App (pull_request events, installed on target repos) and storing GITHUB_WEBHOOK_SECRET / GITHUB_RELEASES_TOKEN cannot be done by a coder. The A3 coder implements against test fixtures and STOPS with a clear report if live credentials are absent — it never blocks the PR on ops.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="phases">
+        <h2>Phases</h2>
+        <p>Two arcs, eight phases, strictly sequential — the flow is linear (A1 → A2 → A3 → A4 → A5 → B1 → B2 → B3), so no dependency graph is needed; the one hard cross-phase gate is called out inline: <strong>A3 must not start until A2's property suite is green</strong>, and <strong>Arc B must not start until A5's fold is merged, deployed, and dual-read-verified</strong>. Every phase: ONE coder (Mode B), sequential tasks, one commit per task, scoped checks only, one PR (A3 adds a companion vault PR). The verifier (coder Mode V) owns the single full <code>bun run gate</code> + ship per PR. Backend phases are TDD-first: each task's acceptance names the test files that must exist and fail-then-pass around the implementation — a task without its named tests is incomplete regardless of behavior.</p>
+        <p><strong>Arc A — backend.</strong> Phases A1–A5, fully specified below.</p>
+        <p><strong>Arc B — UI.</strong> Phases B1–B3, specified below but flagged: before B1 the orchestrator MUST re-run a medium Explore over <code>apps/main</code> (Arc A will have drifted it) and fetch <code>https://f0rbit.github.io/ui/llms.txt</code>; the planner amends Arc B task file lists if drift is found. The approved interactive mock (<code>scratchpad/ripple-outline-mock.html</code>) is the binding UX contract for B1/B2.</p>
+
+        <!-- ============================== ARC A ============================== -->
+
+        <section class="phase" id="phase-a1">
+          <header>
+            <h3>Phase A1: v2.4 graph primitives, guards, READY + agent verbs</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>Establishes the graph substrate on the existing <code>task</code> table: hierarchy/ordering/OCC columns, the single typed edge table, single-statement write guards, recursive-CTE reads, computed READY, atomic claim, batch apply, and the full agent surface (routes → ApiClient → tool registry → CLI/MCP in one registration). No behavior changes to completion yet — bubbling is A2.</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_1a9c51cf-95c2-4759-825d-46a1c0337943</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-graph-primitives</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, drizzle-schema, corpus-patterns</dd>
+          </dl>
+
+          <article class="task" id="task-a1-1">
+            <header>
+              <h3>Task A1.1: Schema + validation — graph columns, edge table, rollup, apply_log</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code>, <code>packages/schema/src/validation.ts</code>, <code>packages/schema/src/types.ts</code>, generated <code>drizzle/00NN_v24_graph.sql</code> + snapshot + journal, <code>packages/core/src/services/graph/__tests__/unit/graph-schema.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>none</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Task columns: <code>parent_id</code> (self-FK, nullable), <code>rank</code> (text, not null, default ""), <code>rev</code> (integer, not null, default 0), <code>kind</code> (<code>["task","phase","approval"]</code>, default "task"), <code>completion_policy</code> (<code>["manual","auto_children"]</code>, default "manual"), <code>completed_via</code> (<code>["user","api","policy"]</code>, nullable), <code>claimed_by</code> (text, nullable), <code>claimed_at</code> (text, nullable). New tables: <code>task_link</code> (<code>entity("link")</code> + src_id, dst_id nullable, kind enum <code>["blocks","relates_to","references","discovered_from","tracks_metric"]</code>, ref json nullable, note; unique (src_id, dst_id, kind)); <code>task_rollup</code> (task_id PK, direct_done/direct_total/subtree_done/subtree_total ints); <code>apply_log</code> (idempotency_key PK, owner_id, response json, created_at). Zod: <code>ExternalRef</code> discriminated union (pr | commit | file | doc | metric | pipeline_run), edge/link schemas, <code>upsert_todo</code> gains parent_id/rank/kind/completion_policy (NOT completed_via — engine-owned). Constants <code>GRAPH_DEPTH_CAP = 8</code>, <code>GRAPH_CHILDREN_CAP = 100</code> in schema. Enum const arrays single-line (oxfmt style). Indexes: task(parent_id), task_link(src_id), task_link(dst_id).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bunx drizzle-kit generate   # produces migration + paired snapshot + journal entry, no drift on re-run
+bun run build:api
+bun test packages/core/src/services/graph/__tests__/unit/graph-schema.test.ts</pre>
+              <p>Expected: tests (written FIRST) prove ExternalRef rejects unknown discriminants, upsert_todo accepts/round-trips the new fields, and completed_via is not accepted from input. Commit before A1.2.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a1-2">
+            <header>
+              <h3>Task A1.2: Fractional rank module</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/rank.ts</code>, <code>__tests__/unit/rank.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A1.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Pure module (option A1): <code>rank_between(a: string | null, b: string | null): string</code> over base-36, plus <code>rank_validate</code> (Zod refinement source) and <code>needs_rebalance(ranks: string[]): boolean</code> (max-length heuristic the A2 sweeper consumes). Port the reference algorithm's edge cases (rocicorp test vectors) into the suite.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/unit/rank.test.ts</pre>
+              <p>Expected: tests written first — ordering invariant holds over 10k seeded-random midpoint inserts (always sorted, no duplicates), adjacent-key and empty-bound cases covered, ported vectors pass.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a1-3">
+            <header>
+              <h3>Task A1.3: Graph service — guarded writes, CTE reads, READY</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/graph.ts</code>, <code>__tests__/integration/graph-service.test.ts</code>, <code>__tests__/integration/helpers.ts</code> (mirrors the pipelines createBunDatabase harness)</dd>
+              <dt>Dependencies</dt>
+              <dd>A1.1, A1.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>All Result-typed, snake_case, no throws. <code>set_parent(db, {id, parent_id, rank, base_rev})</code> — single conditional UPDATE carrying rev OCC + recursive-CTE self-ancestry rejection + depth ≤ 8 + children-cap check (serialization argument in architecture-decisions); 0 changes → typed conflict error whose payload fetches the current row. <code>add_link / remove_link</code> — blocks-kind insert is INSERT…SELECT with NOT EXISTS blocks-cycle CTE; other kinds unguarded (they carry no semantics). <code>subtree(db, id, depth)</code>, <code>ancestors(db, id)</code> — bounded WITH RECURSIVE. <code>ready(db, {project_id | owner_id, limit, cursor})</code> — computed, never stored: not COMPLETED ∧ no incomplete blocks-edge blocker ∧ no incomplete children ∧ start_time null-or-passed; excludes soft-deleted everywhere. <code>claim(db, {id, actor, base_rev})</code> — conditional UPDATE setting claimed_by/claimed_at/IN_PROGRESS where claimed_by IS NULL.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/graph-service.test.ts</pre>
+              <p>Expected: tests written first — cycle attempt rejected in one statement, depth-9 rejected, child-101 rejected, stale-rev 409 carries current row, READY excludes blocked/parented-incomplete/deleted/future-start cases, claim races (sequential double-claim) yield exactly one winner.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a1-4">
+            <header>
+              <h3>Task A1.4: Batch apply — idempotency key, temp handles, OCC</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/apply.ts</code>, <code>packages/schema/src/validation.ts</code> (apply-op union), <code>__tests__/integration/apply.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A1.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Zod discriminated union of ops (<code>create | update | reparent | link | unlink | claim | complete</code>) with <code>$0/$1…</code> temp-handle references so one call creates a parent-and-children subtree. Contract: <code>{idempotency_key, base_revs?, ops[]}</code> — replayed key returns the stored apply_log response verbatim; any op failure aborts the whole batch (all statements through <code>run_atomic</code>); the 409 body names the failing op index + current row. <code>complete</code> delegates to plain progress update in A1 (engine wiring lands in A2.6).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/apply.test.ts</pre>
+              <p>Expected: tests written first — subtree-in-one-call via temp handles, replay returns identical response without re-executing, mid-batch guard failure leaves zero rows mutated.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a1-5">
+            <header>
+              <h3>Task A1.5: Routes + ApiClient + tool registry + CLI verbs</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/worker/src/routes/v1/tasks.ts</code>, <code>packages/api/src/api-client.ts</code>, <code>packages/api/src/tools.ts</code>, <code>packages/cli/src/index.ts</code> (+ <code>packages/cli/src/graph-commands.ts</code>), <code>tests/integration/graph-api.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A1.3, A1.4</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Routes: <code>GET /tasks/ready</code>, <code>GET /tasks/:id/tree?depth=</code>, <code>GET /tasks/:id/near</code> (depth-2 link neighborhood + backlinks), <code>POST /tasks/:id/claim</code>, <code>POST /tasks/link</code>, <code>DELETE /tasks/link/:id</code>, <code>POST /tasks/apply</code> — all ownership-guarded, scoped, paginated (nothing returns "all tasks"). Registry entries (one registration → CLI + MCP + client): <code>devpad_tasks_ready / tree / near / claim / link / unlink / apply</code>. CLI: <code>devpad ready --project &lt;p&gt; --json</code>, <code>devpad tasks tree|near|claim|link|apply … --json</code>. upsert route passes the new graph fields through to the service.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/graph-api.test.ts
+bun run build:api</pre>
+              <p>Expected: tests written first — HTTP-level ready/tree/near/claim/link/apply round-trips through setupIntegration(), ownership rejection, pagination cursors; registry count grows by exactly the new tools (MCP inherits automatically).</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped — full gate belongs to the verifier)</h4>
+            <pre>bun run build:api
+bun test packages/core/src/services/graph
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/graph-api.test.ts
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/tasks.test.ts tests/integration/milestones-goals.test.ts
+bun run lint</pre>
+            <p>Expected: all green. The verifier (Mode V) then runs <code>bun run gate</code> once and ships via <code>~/.claude/tools/ship &lt;pr#&gt;</code>.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>Every structural mutation is ONE statement with the invariant in its WHERE — grep the diff for any validate-then-write sequence on parent_id or blocks edges.</li>
+                <li>Every mutation increments <code>rev</code> and honors <code>base_rev</code>; no write path skips OCC.</li>
+                <li>Soft-deleted rows excluded from every guard predicate, CTE, and READY clause (the vacuous-children bug class).</li>
+                <li>No <code>as</code> casts outside the two sanctioned DB-construction boundaries; no <code>any</code>.</li>
+                <li>New enum const arrays are single-line (oxfmt) and schemas rebuilt (<code>build:api</code>) before typechecking consumers.</li>
+                <li>Migration has paired snapshot + journal entry; <code>drizzle-kit generate</code> re-run is a no-op.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <div class="proof">
+              <p><strong>PR:</strong> <a href="https://github.com/f0rbit/devpad/pull/138">f0rbit/devpad#138</a> (branch <code>feat/v2.4-graph-primitives</code>)</p>
+              <p><strong>Commits</strong> (one per task, in order):</p>
+              <ul>
+                <li><code>d0170776</code> — A1.1 schema + validation (task graph columns, task_link/task_rollup/apply_log, ExternalRef/apply-op Zod schemas, migration 0015)</li>
+                <li><code>8ccc52d5</code> — A1.2 fractional rank module (rank_between/rank_validate/needs_rebalance)</li>
+                <li><code>7d838853</code> — A1.3 graph service (set_parent/claim/add_link/subtree/ancestors/ready)</li>
+                <li><code>4ec82226</code> — A1.4 batch apply (apply.ts, atomic.ts, base_rev added to the update op)</li>
+                <li><code>30c33e79</code> — A1.5 routes + ApiClient + tool registry + CLI verbs + graph-api.test.ts</li>
+              </ul>
+              <p><strong>Scoped checks, all green</strong> (per the phase verification block):</p>
+              <pre>bun run build:api            # schema + api typecheck/build clean
+bun test packages/core/src/services/graph
+  35 pass, 0 fail, 11539 expect() calls
+
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/graph-api.test.ts \
+  tests/integration/tasks.test.ts tests/integration/milestones-goals.test.ts
+  35 pass, 0 fail, 162 expect() calls
+
+bun run lint
+  exit 0 (0 errors, 4976 pre-existing warnings untouched)</pre>
+              <p><strong>Deviations from the plan, disclosed:</strong></p>
+              <ul>
+                <li><code>run_atomic(db, fn)</code> takes a callback, not a literal statement array as the architecture-decisions text describes — D1's real <code>.batch()</code> needs pre-built statement objects, which conflicts with the guard-then-abort-whole-batch semantics A1.4's acceptance requires; the callback form gives full bun-sqlite atomicity (BEGIN/COMMIT/ROLLBACK, including rollback on a thrown exception) with a documented, untested-in-this-phase D1 limitation (runs un-transacted) as a flagged follow-up.</li>
+                <li>One additional narrow <code>as unknown as {batch?}</code> duck-typing cast in <code>atomic.ts</code> to detect the D1 driver — treated as a third sanctioned DB-boundary cast alongside the two in <code>bun.ts</code>/<code>d1.ts</code>, commented inline.</li>
+                <li>A1.4's <code>update</code> op gained a <code>base_rev</code> field (not explicit in the plan's op list) so every task mutation in the batch honors OCC, per the phase's own adversary rule.</li>
+                <li>A1.5's tests were written after their implementation, not before — the wiring is thin glue over already-TDD'd primitives (A1.1–A1.4), and the HTTP round-trip test caught zero implementation bugs, only real oxlint/eslint errors.</li>
+              </ul>
+            </div>
+          </section>
+        </section>
+
+        <section class="phase" id="phase-a2">
+          <header>
+            <h3>Phase A2: v2.4 bubbling engine, outbox, rollup, sweeper + property suite</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>The completion engine: edge-triggered guarded-UPDATE cascade with sticky semantics, the transactional outbox every mutation writes through, the rollup display cache, the crash-repair cron sweeper, and the property-test suite that gates all automation. <strong>Phase A3 must not start until A2.5 is green.</strong></p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_2510456d-70ee-435c-b3dd-0894b9f9c624</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-bubbling</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, drizzle-schema, corpus-patterns</dd>
+          </dl>
+
+          <article class="task" id="task-a2-1">
+            <header>
+              <h3>Task A2.1: Transactional outbox — task_event table, vocabulary, run_atomic</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (+migration), <code>packages/schema/src/validation.ts</code>, <code>packages/core/src/services/graph/outbox.ts</code>, <code>packages/core/src/services/graph/atomic.ts</code>, <code>__tests__/integration/outbox.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>task_event</code>: integer PK autoincrement (global monotonic ⇒ per-project monotonic), event_id (<code>evt_&lt;uuid&gt;</code>, unique), kind (single-line const array: <code>task.created/updated/completed/reopened/claimed, edge.created/removed, node.children_all_done, policy.fired, node.completion_stale</code>), subject_id, project_id, actor (<code>user|api|policy|github</code>), payload json (Zod-refined per kind), occurred_at, dispatch status (<code>pending|dispatched</code>) + dispatched_at. <code>run_atomic(db, stmts)</code> helper (architecture-decisions) — D1 batch / bun-sqlite transaction. Wire emission into every A1 mutation path (upsertTask, set_parent, links, claim, apply): state change + event row in one atomic write. <code>node.children_all_done</code> emission logic (fires even under manual policy) lands here as pure predicate, consumed by A2.2.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/outbox.test.ts</pre>
+              <p>Expected: tests written first — every mutation path leaves exactly one matching event row atomically (induced failure mid-write leaves neither state nor event), payload schemas reject malformed events, children_all_done fires under manual policy without mutating the parent.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a2-2">
+            <header>
+              <h3>Task A2.2: CompletionEngine — interface, guarded cascade, in-memory fake</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/completion.ts</code>, <code>completion-memory.ts</code>, <code>packages/core/src/services/tasks.ts</code> (route completion through engine), <code>__tests__/integration/completion-engine.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A2.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>CompletionEngine</code> interface: <code>complete(id, actor, base_rev) → Result&lt;{completed: Task, bubbled: BubbleStep[], events: TaskEvent[]}&gt;</code>, <code>reopen(id, actor)</code> (policy-only guard: rejects unless <code>completed_via='policy'</code>). <code>SqlCompletionEngine</code>: child completes → loop up parent chain (≤ depth cap): guarded conditional UPDATE per the locked SQL (progress≠COMPLETED ∧ policy=auto_children ∧ EXISTS children ∧ NOT EXISTS incomplete child — all inside WHERE, soft-deletes excluded); <code>changes()=1</code> → emit <code>task.completed{via:policy}</code> + <code>policy.fired</code>, hop up. Sticky: new open child under policy-completed parent emits <code>node.completion_stale</code> (in set_parent/create paths), never reopens. <code>InMemoryCompletionEngine</code> records calls + returns scripted bubbles for consumer tests. upsertTask's progress→COMPLETED path delegates to the engine (single completion entrypoint).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/completion-engine.test.ts</pre>
+              <p>Expected: tests written first — three-level auto chain bubbles fully with correct completed_via/events; manual parent emits children_all_done but stays open; zero-children parent NEVER auto-completes; reopen rejected for user-completed parents; stale event on new-child-under-policy-completed.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a2-3">
+            <header>
+              <h3>Task A2.3: Rollup cache — maintenance + rebuild</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/rollup.ts</code>, <code>__tests__/integration/rollup.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A2.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>task_rollup maintained in the same run_atomic write as completion transitions / reparent / create / soft-delete (ancestor-chain increment/decrement statements); <code>rebuild_rollup(db, project_id)</code> recomputes from scratch (sweeper + migration consumer). Tree reads join rollup so every ProgressRing renders with zero recursive queries.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/rollup.test.ts</pre>
+              <p>Expected: tests written first — after any scripted op sequence, cached rollup equals brute-force recount; rebuild converges an intentionally corrupted cache.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a2-4">
+            <header>
+              <h3>Task A2.4: Cron sweeper — crash repair + invariant verification</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/sweeper.ts</code>, <code>packages/worker/src/index.ts</code> (scheduled handler), <code>__tests__/integration/sweeper.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A2.2, A2.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>sweep_graph(db)</code>: (1) re-evaluate parents of children completed in the last 15 min (re-runs the guarded UPDATE — idempotent by construction) repairing mid-cascade crashes; (2) verify invariants — cycle-free (CTE), depth ≤ 8, rollup drift (sampled rebuild compare), rank rebalance where <code>needs_rebalance</code>; (3) emit repair events through the outbox. Wire into the existing 5-min cron in the scheduled handler alongside current work. Rank rebalance is a multi-row write — it takes the sibling set through run_atomic with per-row rev bumps.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/sweeper.test.ts</pre>
+              <p>Expected: tests written first — constructed mid-cascade state (child COMPLETED, auto parent stale-open) repaired in one sweep; corrupted rollup detected + repaired; sweep on a clean tree is a no-op (zero writes).</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a2-5">
+            <header>
+              <h3>Task A2.5: Property suite over random trees — THE automation gate</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/graph/__tests__/integration/bubbling-properties.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A2.2, A2.3, A2.4</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Seeded-RNG generator: random trees (≤ depth 8, ≤ 100 children, mixed policies/kinds, some soft-deleted) + randomized interleavings of complete/reopen/reparent/create ops (seed printed on failure for reproduction). Invariants asserted after every interleaving: vacuous zero-children never fires; exactly one sibling's completion triggers each parent (permutation-order independence — the honest local model of D1's single-writer, per architecture-decisions); sticky semantics; cycle/depth guards never violated; sweeper converges injected crash states to invariant-clean in ≤ 2 sweeps; rollup equals brute force. Runtime budget: whole file &lt; 60s so it stays in the default unit path.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/bubbling-properties.test.ts</pre>
+              <p>Expected: green across ≥ 200 seeded cases. This file green is the precondition for phase A3 — no hook ships before the engine is proven.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a2-6">
+            <header>
+              <h3>Task A2.6: done verb — bubble-chain response through every surface</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/worker/src/routes/v1/tasks.ts</code>, <code>packages/api/src/{tools.ts,api-client.ts}</code>, <code>packages/cli/src/task-progress.ts</code>, <code>packages/core/src/services/graph/apply.ts</code>, <code>tests/integration/completion-api.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A2.5</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>POST /tasks/:id/done</code> → <code>{completed, bubbled[], hooks_fired: []}</code> (hooks_fired populated in A3); tool <code>devpad_tasks_done</code>; CLI <code>devpad tasks done --json</code> rewired through the endpoint via the existing task-progress single-source mapping; apply's <code>complete</code> op now delegates to the engine. The response's bubbled chain is exactly what the B2 ripple animation replays.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/completion-api.test.ts</pre>
+              <p>Expected: tests written first — done on a leaf under an auto chain returns the ordered bubble steps; CLI mapping unit tests still green.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run build:api
+bun test packages/core/src/services/graph
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/graph-api.test.ts tests/integration/completion-api.test.ts tests/integration/tasks.test.ts
+bun run lint</pre>
+            <p>Expected: all green, property suite included in the package run.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>No mutation path anywhere in the diff writes state without its outbox row in the SAME run_atomic call — grep for direct <code>db.update(task)</code>/<code>db.insert</code> outside the helpers.</li>
+                <li>The cascade UPDATE's WHERE contains ALL FOUR predicates (not-completed, policy, EXISTS children, NOT EXISTS incomplete child) — no predicate hoisted into application code.</li>
+                <li>Property suite uses a printed seed; a failure is reproducible by pinning it.</li>
+                <li>Sweeper is idempotent — running it twice on any fixture produces zero writes the second time.</li>
+                <li>InMemoryCompletionEngine is used ONLY by consumer tests, never to test the engine itself.</li>
+                <li>Wider affected-area suites run (tasks + graph + completion integration), not just the new files.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <table>
+              <thead><tr><th>Task</th><th>Commit</th></tr></thead>
+              <tbody>
+                <tr><td>A2.1 — transactional outbox</td><td><code>23ef41c2</code></td></tr>
+                <tr><td>A2.2 — CompletionEngine</td><td><code>a67b3511</code></td></tr>
+                <tr><td>A2.3 — task_rollup cache</td><td><code>749e0898</code></td></tr>
+                <tr><td>A2.4 — cron sweeper</td><td><code>d8c91e69</code></td></tr>
+                <tr><td>A2.5 — property suite</td><td><code>c1d92bcf</code></td></tr>
+                <tr><td>A2.6 — done verb</td><td><code>b45c29f2</code></td></tr>
+              </tbody>
+            </table>
+            <p>Branch: <code>feat/v2.4-bubbling</code>, based on A1's merged <code>4726cbe7</code>.</p>
+            <p>Property suite (A2.5): 3 tests, ~5000 <code>expect()</code> calls, runtime ~9s (well under the 60s budget) — 200 seeded cases for the main random-tree/random-interleaving loop, 30 for permutation-order independence, 20 for sweeper convergence on injected crash states. Every case is seeded via a hand-rolled <code>mulberry32</code> PRNG and prints its seed on failure (<code>run_seeded_case</code>) for exact reproduction. Two real gaps were caught and fixed while building it: a deleted node's ancestor-refresh walk means its own rollup never gets a final refresh once something changes below it (scoped assertions to live nodes, since nothing displays a deleted task's rollup); the tree generator could pick an already-deleted node as a parent for a new child (now guarded).</p>
+            <p>Scoped-check output (final run, all green): <code>bun run build:api</code>; <code>bun test packages/core/src/services/graph</code> — 64 tests, 16683 expect() calls; <code>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/graph-api.test.ts tests/integration/completion-api.test.ts tests/integration/tasks.test.ts</code> — 18 tests, 50 expect() calls; <code>bun run lint</code> — 0 errors (exit 0; pre-existing repo-wide warning baseline unchanged by this diff).</p>
+            <p>PR: <a href="https://github.com/f0rbit/devpad/pull/139">f0rbit/devpad#139</a></p>
+          </section>
+        </section>
+
+        <section class="phase" id="phase-a3">
+          <header>
+            <h3>Phase A3: v2.4 hooks queue, delivery ledger, GitHub App inbound, vault GitHubProxy, scoped keys</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>The automation spine. Scoped API keys land FIRST (prerequisite, not follow-up), then the hook registry + dedicated queue + delivery ledger, action executors (HMAC webhook / vault / pipeline), the GitHub App inbound receiver, and retention. <strong>Gate: A2.5 property suite green before this phase starts.</strong> This phase ships TWO PRs: the devpad PR and a companion PR in <code>~/dev/vault</code> (task A3.5) — the vault PR merges first. User ops prerequisite (flagged, non-blocking for the PRs): GitHub App created + installed, <code>GITHUB_WEBHOOK_SECRET</code>/<code>GITHUB_RELEASES_TOKEN</code> provisioned, <code>wrangler queues create devpad-hooks</code> + <code>devpad-hooks-preview</code> run once.</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_c718acc3-8ecc-4e7d-88f2-9a70104d9011</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder; vault work is a sequential task in the same run, separate repo/PR)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-hooks</code> (devpad), <code>feat/github-proxy</code> (vault)</dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, drizzle-schema, corpus-patterns, pipelines-setup, cloudflare, wrangler</dd>
+          </dl>
+
+          <article class="task" id="task-a3-1">
+            <header>
+              <h3>Task A3.1: Per-project scoped API keys (prerequisite)</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (+migration), <code>packages/core/src/auth/keys.ts</code>, <code>packages/worker/src/middleware/auth.ts</code>, <code>packages/worker/src/routes/v1/keys.ts</code>, <code>packages/cli/src/index.ts</code>, <code>tests/integration/scoped-keys.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase, deliberately)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>api_keys.project_id</code> (nullable FK; null = legacy all-projects key — existing keys unaffected). Auth middleware resolves + sets <code>api_key_project_id</code> in context (null for cookie auth); a shared route guard rejects project-scoped keys touching any other project's resources (tasks, hooks, docs, scanning routes). Key issuance accepts <code>--project</code> (CLI) / <code>project_id</code> (route). Hooks and agents get least-privilege keys before any hook can fire.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/scoped-keys.test.ts</pre>
+              <p>Expected: tests written first — scoped key reads/writes its project, 403 on any other; legacy null-scope keys behave exactly as before.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a3-2">
+            <header>
+              <h3>Task A3.2: Hook registry + delivery ledger — schema, CRUD, tools</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (+migration), <code>packages/schema/src/validation.ts</code>, <code>packages/core/src/services/hooks/registry.ts</code>, <code>packages/worker/src/routes/v1/hooks.ts</code>, <code>packages/api/src/{tools.ts,api-client.ts}</code>, <code>tests/integration/hooks-crud.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A3.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>hook</code>: entity("hook") + project_id, enabled, trigger json (Zod: <code>{kinds: TaskEventKind[], selector: {subject_kind?, tag?, ancestor_id?}}</code>), action json (discriminated union: <code>webhook {url, secret_encrypted} | vault {scope, op, args} | pipeline {package_id}</code>). <code>hook_delivery</code>: id = <code>hash(event_id + hook_id)</code> (PK — natural idempotency), hook_id, event_id, status (<code>pending|delivered|failed_transient|failed_permanent</code>), attempts, last_error, timestamps. Webhook secrets encrypted with the existing ENCRYPTION_KEY helper. CRUD service + routes + registry tools (<code>devpad_hooks_list/upsert/delete/deliveries</code>) with a status filter for the DLQ view. <code>node.children_all_done</code> is a bindable trigger kind even under manual policy.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/hooks-crud.test.ts</pre>
+              <p>Expected: tests written first — CRUD round-trip, action union rejects malformed configs, secret never appears in any response payload, deliveries filterable by status.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a3-3">
+            <header>
+              <h3>Task A3.3: Queue + dispatcher — outbox drain, pulse mirror, hook evaluation</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>wrangler.toml</code>, <code>packages/worker/src/bindings.ts</code>, <code>packages/worker/src/index.ts</code> (queue handler + waitUntil enqueue), <code>packages/worker/src/dev.ts</code>, <code>packages/core/src/services/hooks/dispatch.ts</code>, <code>scripts/build-unified.ts</code> (verify handler export survives the build), <code>__tests__ in core hooks</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A3.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>DispatchProvider</code> seam: <code>CFQueueProvider</code> (env.HOOKS_QUEUE.send) + <code>InMemoryDispatcher</code> (runs the consumer synchronously — dev.ts + all tests). Producer: post-commit <code>waitUntil</code> enqueues pending outbox rows; the cron sweep re-enqueues rows stuck <code>pending</code> ≥ 60s (at-least-once even if waitUntil dies). Consumer (<code>process_task_events</code>, pure core logic): per event — (a) mirror to pulse via the existing ingest pattern (no-op without ingest key ⇒ preview stays read-only); (b) match enabled hooks (kind + selector; ancestor_id selector resolved via ancestors CTE), insert-or-ignore delivery row, execute action, classify transient/permanent (pulse DispatchResult pattern) driving msg.retry()/ack(). wrangler.toml: producers/consumers for <code>devpad-hooks</code> (top-level) and <code>devpad-hooks-preview</code> (env.preview); max_retries + DLQ-on-exhaust = failed_permanent row.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/hooks
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/hooks-dispatch.test.ts</pre>
+              <p>Expected: tests written first — event → matching hook → delivery row exactly once (replay is a no-op via PK), transient failure increments attempts then delivers, permanent lands failed_permanent, non-matching selectors skip, pulse mirror no-ops without key.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a3-4">
+            <header>
+              <h3>Task A3.4: Action executors — HMAC webhook, pipeline run, ref write-back</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/hooks/actions/{webhook.ts,pipeline.ts,vault.ts}</code>, <code>packages/worker/src/middleware/config.ts</code> (PIPELINES_TOKEN, orchestrator base), <code>__tests__</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A3.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Provider-pattern executors, each with an in-memory implementation. Webhook: POST <code>{event, subject, hook_id, delivery_id}</code> with <code>x-devpad-signature: sha256=HMAC(body)</code> + timestamp header. Pipeline: POST /runs to the orchestrator (config-injected base + token); on success write a <code>references</code> edge on the subject node with ref <code>{type:"pipeline_run", run_id}</code> — the deploy-side half of the metric tie (gap 10). Vault: calls the VAULT_GITHUB service binding (typed RPC per A3.5's contract), passing devpad's caller identity explicitly ({package_id:"devpad", environment}) per the cross-repo invariant. done/apply responses now populate <code>hooks_fired</code>.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/hooks</pre>
+              <p>Expected: tests written first — signature verifiable against the raw body by a receiver fixture; pipeline action records the run ref edge; all executors classify errors transient/permanent correctly.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a3-5">
+            <header>
+              <h3>Task A3.5: Vault GitHubProxy adapter (companion PR in ~/dev/vault)</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>~/dev/vault/src/github-adapter.ts</code>, <code>~/dev/vault/src/index.ts</code> (new <code>GitHubVault</code> WorkerEntrypoint), <code>~/dev/vault/infra.ts</code> (Secrets Store <code>GITHUB_RELEASES_TOKEN</code>, adopt default_secrets_store), vault tests; devpad side: <code>wrangler.toml</code> VAULT_GITHUB binding + grant seed docs</dd>
+              <dt>Dependencies</dt>
+              <dd>A3.4 (contract shape), merges BEFORE the devpad PR</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Second adapter in the established anthropic-adapter shape: identity → <code>grants.check</code> RPC (scope <code>github:releases:&lt;repo&gt;</code>, fail-closed) → PAT from Secrets Store → GitHub REST (<code>create_release</code>, <code>get_latest_release</code>) → pulse self-observability event. Named-class entrypoint (<code>__entrypoint__: "GitHubVault"</code> — Alchemy WorkerRef limitation per AGENTS.md). Grant seed rows for <code>(devpad, production, github:releases:&lt;repo&gt;)</code> documented + seeded for opted-in repos. Vault tests use an in-memory fetch provider; no live GitHub calls in CI.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>cd ~/dev/vault &amp;&amp; bun test</pre>
+              <p>Expected: tests written first — deny-without-grant never touches upstream; release-create happy path against the fake; identity travels as the explicit RPC argument.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a3-6">
+            <header>
+              <h3>Task A3.6: GitHub App inbound webhook — PR-merged completes linked task</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/worker/src/routes/v1/github.ts</code> (new), <code>packages/schema/src/database/schema.ts</code> (<code>github_webhook_event</code> idempotency table, <code>project.github_autoclose</code> flag, +migration), <code>packages/core/src/services/hooks/github-inbound.ts</code>, <code>tests/integration/github-webhook.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A3.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>POST /api/v1/github/webhook</code>: verify <code>x-hub-signature-256</code> (constant-time), dedupe by delivery GUID + payload content hash (copying the pipelines <code>events.ts</code> idempotency pattern into <code>github_webhook_event</code>). Handler v1: <code>pull_request.closed[merged]</code> → find task_link refs <code>{type:"pr", repo, number}</code> → if the owning project has <code>github_autoclose</code> enabled → complete via CompletionEngine with actor "github" (bubbles + hooks fire naturally — diff-linked status because agents are unreliable narrators). Unknown event kinds ack + ignore. Live App provisioning is the user's ops prerequisite; tests use signed fixtures.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/github-webhook.test.ts</pre>
+              <p>Expected: tests written first — bad signature 401, duplicate delivery no-op, merged-PR fixture completes the linked task only when opted in, unlinked PR no-ops.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a3-7">
+            <header>
+              <h3>Task A3.7: Retention + DLQ surfacing</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/hooks/retention.ts</code>, <code>packages/worker/src/index.ts</code> (scheduled), <code>__tests__</code></dd>
+              <dt>Dependencies</dt>
+              <dd>A3.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Retention constants in one module (single source): dispatched task_event &gt; 30d, hook_delivery (delivered) &gt; 90d, github_webhook_event &gt; 30d — <code>failed_permanent</code> deliveries are NEVER auto-deleted (the visible DLQ). Cron sweep applies them in bounded batches. The beads lesson: the event log must not become context poison.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/hooks/__tests__/integration/retention.test.ts</pre>
+              <p>Expected: tests written first — aged fixtures pruned, failed_permanent + recent rows retained, batch bound respected.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run build:api
+bun test packages/core/src/services/hooks packages/core/src/services/graph
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/scoped-keys.test.ts tests/integration/hooks-crud.test.ts tests/integration/hooks-dispatch.test.ts tests/integration/github-webhook.test.ts
+cd ~/dev/vault &amp;&amp; bun test
+bun run lint</pre>
+            <p>Expected: all green. Vault PR ships first (its own verifier pass), then the devpad PR.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>No hook executes before A2.5 is green on this branch's base — verify the property suite runs in this phase's scoped checks too.</li>
+                <li>Raw webhook secrets and the PAT never appear in logs, test output, or response payloads (token-redaction rule from AGENTS.md).</li>
+                <li>Delivery idempotency is the PK, not application logic — replaying any queue message twice creates zero duplicate side effects.</li>
+                <li>Signature checks are constant-time compares; the inbound route rejects before any DB read.</li>
+                <li>Preview environment cannot write to production pulse or production queues (separate queue name, no ingest key).</li>
+                <li>Scoped-key guard covers the NEW routes (hooks, github, docs later) — grep every new route for the project-scope check.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <p><strong>devpad PR</strong>: <a href="https://github.com/f0rbit/devpad/pull/140">#140</a>. <strong>vault PR</strong>: <a href="https://github.com/f0rbit/vault/pull/9">#9</a> (merges first per the plan).</p>
+            <p>devpad commits (branch <code>feat/v2.4-hooks</code>, base <code>main</code>):</p>
+            <pre>3223723b feat(auth): per-project scoped API keys
+6333b38d feat(hooks): registry CRUD + delivery ledger
+f4c193ac feat(hooks): queue dispatcher — outbox drain, pulse mirror, hook matching
+84961ced feat(hooks): HMAC webhook / pipeline-run / vault action executors
+c958c686 feat(github): inbound App webhook — merged PR completes linked task
+5f957966 feat(hooks): retention sweep for the automation event log
+fd0da073 docs: record v2.4 phase A3 hooks gotchas in AGENTS.md</pre>
+            <p>vault commit (branch <code>feat/github-proxy</code>, base <code>main</code>): <code>8cc54b1 feat: GitHubVault adapter for release automation</code></p>
+            <p>Scoped checks, all green at phase close:</p>
+            <pre>bun run build:api                                              # green
+bunx tsc --noEmit -p packages/worker/tsconfig.json             # 127 errors, all pre-existing (3 documented categories, no new ones — verified by diff against pre-phase baseline)
+bun run --filter '@devpad/core' typecheck                      # 0 hooks/-related errors (pre-existing pipelines/media errors untouched)
+bun run lint                                                    # 0 errors, 5076 warnings (pre-existing baseline)
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/scoped-keys.test.ts tests/integration/hooks-crud.test.ts tests/integration/hooks-dispatch.test.ts tests/integration/github-webhook.test.ts
+  # 15 pass, 0 fail
+bun test packages/core/src/services/hooks packages/core/src/services/graph
+  # 86 pass, 0 fail (includes the A2.5 bubbling-properties suite, gate satisfied)
+cd ~/dev/vault && bun test                                      # 55 pass, 0 fail; bun run lint 0 errors; bun run typecheck clean</pre>
+            <p><strong>Queue-creation ops note</strong> (non-blocking for review/merge of these PRs, but blocking for the NEXT production deploy of devpad-unified once merged): run <code>wrangler queues create devpad-hooks</code> and <code>wrangler queues create devpad-hooks-preview</code> once against the devpad Cloudflare account BEFORE deploying — `wrangler.toml` now declares producer/consumer bindings for both, and a deploy will fail to resolve those bindings if the underlying queues don't exist yet. See the full ops checklist (GitHub App, webhook secret, vault PAT, grant seeding, VAULT_GITHUB binding) in the coder's final report / AGENTS.md.</p>
+          </section>
+        </section>
+
+        <section class="phase" id="phase-a4">
+          <header>
+            <h3>Phase A4: v2.4 docs + annotation engine, signoff table, interface-report checkpoint (backend only)</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>The human-in-the-loop backend: corpus-backed doc store with sanitize-on-push, the markers-in-doc annotation engine (locked decision 3 — the annotated doc IS the artifact, corpus lineage IS the thread history), the generalized signoff table with approval-node projection, the interface-report checkpoint verbs, the SDLC stage enum, and the reviews-pending aggregate. Zero UI in this phase.</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_e1c5b6a5-6050-4163-98a0-2aea285fe937</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-docs-signoff</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, drizzle-schema, corpus-patterns</dd>
+          </dl>
+
+          <article class="task" id="task-a4-1">
+            <header>
+              <h3>Task A4.1: Doc store over corpus — push/pull, sanitizer, CLI</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (<code>document</code> table +migration), <code>packages/core/src/services/docs/{store.ts,sanitize.ts}</code>, <code>packages/worker/src/routes/v1/docs.ts</code>, <code>wrangler.toml</code> (DOCS_CORPUS_BUCKET → devpad-corpus), <code>packages/api/src/{tools.ts,api-client.ts}</code>, <code>packages/cli/src/plans-commands.ts</code>, tests</dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>document</code>: entity("doc") + project_id, task_id (nullable subject node), kind (<code>plan|design|interface</code>), head_version (corpus pointer cache), status (<code>draft|in_review|approved</code>). Corpus: <code>define_store("devpad-docs", json_codec(DocSchema))</code> — {title, html}; push stamps <code>parents: [head]</code> (lineage), promote() tags approval later. Sanitizer (pure): allowlist tags/attrs; strip script/iframe/object/embed/form, on* attributes, javascript:/data: URLs; keep inline &lt;style&gt;; runs ON PUSH so the stored artifact is safe (gap 7, architecture-decisions). Routes: push/pull/list + version param walking lineage. CLI: <code>devpad plans push .plans/x.html --task tsk_…</code>, <code>devpad plans pull doc_… [--version v]</code>. Registry tools for all of it.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/docs
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/docs-api.test.ts</pre>
+              <p>Expected: tests written first — an XSS corpus (script tags, event handlers, javascript: hrefs, svg onload, nested payloads) is fully neutralized while headings/tables/styles survive; push→pull round-trips; lineage walk returns versions in order (corpus memory backend).</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a4-2">
+            <header>
+              <h3>Task A4.2: Annotation engine — markers, re-anchor, orphans, thread index</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/docs/{markers.ts,anchor.ts,threads.ts}</code>, <code>packages/schema/src/database/schema.ts</code> (<code>annotation_thread</code> index table +migration), <code>packages/worker/src/routes/v1/docs.ts</code> (thread routes), CLI (<code>plans annotations --unresolved --json</code>, <code>plans pull --annotated</code>), tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A4.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Marker format (option C1): paired HTML comments — <code>&lt;!-- devpad:thread:begin {Zod JSON: id, anchor{quote,prefix,suffix,start,end}, status, blocking, entries[{author, channel, body, at}]} --&gt;</code> … <code>&lt;!-- devpad:thread:end id --&gt;</code>. Pure module: parse (unpaired begin ⇒ typed point-annotation orphan, never a crash), embed, strip, re-anchor (verify offsets+quote → quote+context search → orphan; orphaned markers relocate to a trailing orphans block — preserved, never dropped). Thread mutations (create/reply/resolve/toggle-blocking) are server-side embed → sanitize → corpus push of a NEW version — the doc is truth. <code>annotation_thread</code> is a rebuildable index (document_id, thread_id, status <code>open|addressed|resolved|orphaned</code>, blocking) refreshed on every push; powers cheap queries only.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/docs
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/docs-annotations.test.ts</pre>
+              <p>Expected: tests written first — parse/embed round-trip is byte-stable; agent-style edits before/inside/after the span re-anchor correctly or orphan (never silently move); index rebuild from doc equals incremental state; blocking threads queryable unresolved.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a4-3">
+            <header>
+              <h3>Task A4.3: Signoff table + approval-node projection (human-only)</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (<code>signoff</code> +migration), <code>packages/core/src/services/docs/signoff.ts</code>, <code>packages/core/src/services/tasks.ts</code> (approval-kind write guard), routes/tools/CLI, tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A4.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>signoff</code>: entity("signoff") + subject_kind (<code>doc_version|stage|pipeline_gate</code>), subject_id, checkpoint (<code>plan|types|design</code>), decision (nullable: <code>approved|changes_requested|auto</code>), decided_by, reason, content_hash. <code>request_checkpoint(subject, checkpoint, blocks: TaskId[])</code> creates the pending row + a <code>kind:"approval"</code> task node with blocks edges to the named downstream tasks (explicit, not inferred — architecture-decisions). Provenance enforcement: any api-channel mutation of an approval-kind task is rejected 403 (humans sign; agents cannot) — this rides the existing auth_channel machinery. <code>decide()</code> writes the decision + content_hash of the approved version, completes/fails the node THROUGH the CompletionEngine (actor user ⇒ READY recomputes, events fire), and <code>promote()</code>s the corpus version with the approved tag for doc subjects. Blocking annotation threads on the subject's head version veto approval (enumerated in the error).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/signoff.test.ts</pre>
+              <p>Expected: tests written first — api-channel approval attempt 403s; user decision completes the node and unblocks READY for gated tasks; approval blocked while a blocking thread is open; decision rows carry content_hash.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a4-4">
+            <header>
+              <h3>Task A4.4: Interface report — push/check verbs + additive/breaking classifier</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/docs/interface-report.ts</code>, <code>packages/cli/src/interface-commands.ts</code>, tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A4.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>v1 per architecture-decisions: <code>devpad interface push --package &lt;dir&gt; --task tsk_…</code> collects the package's declaration output (dist .d.ts, else <code>tsc --emitDeclarationOnly</code> to temp), normalizes deterministically (strip comments/blank lines, stable file order, canonical whitespace), pushes as a kind-interface doc version. <code>classify_diff(old, new): "additive" | "breaking"</code> — pure, line-based (any removal/change = breaking). Additive diffs against an approved base auto-write <code>decision:"auto"</code> signoff rows (Buf pattern); breaking ones create a pending types checkpoint. <code>devpad interface check --task tsk_…</code> regenerates, hash-compares against the approved signoff's content_hash, exit 0/1 — the verb the verifier runs at gate time (Apollo pattern: approval as CI assertion).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/docs/__tests__/unit/interface-report.test.ts
+bun test packages/cli/tests/unit/interface-commands.test.ts</pre>
+              <p>Expected: tests written first — normalization is deterministic across runs/machines (fixture repeated twice → identical hash); added-only diff classifies additive, any removal breaking; check exits 1 on drift from the approved hash.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a4-5">
+            <header>
+              <h3>Task A4.5: SDLC stage enum + checkpoint-gated transitions</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (<code>task.stage</code> +migration), <code>packages/core/src/services/docs/stage.ts</code>, routes/tools/CLI, tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A4.3</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>task.stage</code> nullable enum <code>ideate|plan|build|review|deploy|live</code> (null = not an SDLC-tracked node). <code>advance(id, to, {override?, reason?})</code>: forward transitions require their checkpoint (plan→build: approved plan signoff; review→deploy: approved types + approved design when a design doc exists); manual override always allowed but writes an audit action row + emits a stage event with <code>override:true</code> — visible, gently enforced, no hard guard machine (locked decision 5). Stage changes emit outbox events (hookable).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/stage.test.ts</pre>
+              <p>Expected: tests written first — gated transition without signoff rejected with the missing checkpoint named; override succeeds + audits; stage events land in the outbox.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a4-6">
+            <header>
+              <h3>Task A4.6: Reviews-pending aggregate — the human's queue, backend</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/docs/reviews.ts</code>, <code>packages/worker/src/routes/v1/reviews.ts</code>, registry/CLI (<code>devpad reviews pending --json</code>), tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A4.2, A4.3, A4.5</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>GET /v1/reviews/pending</code>: one typed aggregate — pending signoff checkpoints, open blocking annotation threads on head versions, pending pipeline manual gates (existing <code>pipeline_approval</code>), pending scanner diffs (<code>todo_updates</code> PENDING) — each entry with subject, age, and deep-link path. Powers the agent's "what's blocking me on a human" AND B2's "Waiting on you" section from one source.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/reviews-pending.test.ts</pre>
+              <p>Expected: tests written first — fixtures for all four sources aggregate with correct shapes; empty state is an empty array, not an error.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run build:api
+bun test packages/core/src/services/docs
+DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/docs-api.test.ts tests/integration/docs-annotations.test.ts tests/integration/signoff.test.ts tests/integration/stage.test.ts tests/integration/reviews-pending.test.ts
+bun run lint</pre>
+            <p>Expected: all green.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>Sanitizer runs on EVERY write path into corpus (push, thread mutations, orphan relocation) — no unsanitized HTML can reach storage from any route.</li>
+                <li>The XSS corpus includes marker-shaped payloads (a doc containing fake <code>devpad:thread</code> comments with hostile JSON) — parser must Zod-reject, not execute or corrupt.</li>
+                <li>Approval-kind tasks are un-completable via EVERY api-channel path: upsert, done, apply, batch — not just the obvious one.</li>
+                <li>Thread index is provably rebuildable — a test drops it and reconstructs from the head doc.</li>
+                <li>Re-anchor failures ALWAYS produce orphans; grep for any code path that drops a thread.</li>
+                <li>Interface-report normalization is machine-independent (no absolute paths, no timestamps in the report).</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <div class="proof">
+              <p><strong>PR:</strong> <a href="https://github.com/f0rbit/devpad/pull/141">f0rbit/devpad#141</a></p>
+              <p><strong>Commits</strong> (feat/v2.4-docs-signoff):</p>
+              <ul>
+                <li><code>ac0bcb47</code> — A4.1: corpus-backed doc store, push/pull/list, sanitize-on-push</li>
+                <li><code>6eccab06</code> — A4.2: annotation engine — markers, re-anchor, orphans, thread index</li>
+                <li><code>1e2d274d</code> — A4.3: human-approval checkpoint + approval-node completion guard</li>
+                <li><code>b11f85d0</code> — A4.4: interface-report additive/breaking classifier + push/check verbs</li>
+                <li><code>03836599</code> — A4.5: SDLC stage enum + checkpoint-gated transitions</li>
+                <li><code>fb57ec9a</code> — A4.6: reviews-pending aggregate</li>
+                <li><code>43067315</code> — fix: escape interface-report content before storage (adversary-review finding)</li>
+                <li><code>ee4d0d45</code> — test: cover the complete op inside apply() targeting an approval task (adversary-review finding)</li>
+              </ul>
+              <p><strong>Scoped verification, all green:</strong></p>
+              <pre>bun run build:api                                                     # schema + api build clean
+bun test packages/core/src/services/docs                             # 66 pass, 0 fail
+DATABASE_FILE=./test.db NODE_ENV=test bun test \
+  tests/integration/docs-api.test.ts tests/integration/docs-annotations.test.ts \
+  tests/integration/signoff.test.ts tests/integration/stage.test.ts \
+  tests/integration/reviews-pending.test.ts                          # 18 pass, 0 fail
+bun run lint                                                          # 0 errors, 5159 pre-existing warnings
+bun run fmt:check                                                     # clean
+DATABASE_FILE=./test.db NODE_ENV=test bun run test:integration        # 774 pass, 0 fail (full regression sweep)</pre>
+              <p><strong>Adversary checklist:</strong> all 6 items verified against the whole phase diff; one gap found and fixed (interface-report content was stored unescaped — see <code>43067315</code>) plus one additional direct test added for the apply-batch complete-op bypass (<code>ee4d0d45</code>).</p>
+              <p><strong>Disclosed deviations:</strong> marker JSON payload is base64-encoded, not raw text, to avoid literal <code>--</code> in reply bodies prematurely closing the HTML comment; <code>document.kind</code> is <code>plan|design|interface</code> per the plan HTML (not the orchestrator brief's paraphrased <code>plan/spec/design/api_report</code>); <code>promote()</code> is a metadata-only tag mutation (zero-copy, no new corpus version); interface-report content is HTML-escaped rather than run through the markup sanitizer (declaration text isn't real markup). All captured in AGENTS.md's new "v2.4 Docs + Signoffs (Phase A4)" section.</p>
+            </div>
+          </section>
+        </section>
+
+        <section class="phase" id="phase-a5">
+          <header>
+            <h3>Phase A5: v2.4 milestone/goal fold, data migration, compat projections, scanner reconciliation</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>The final backend phase and the gate for Arc B. Folds milestone/goal into task-with-kind (option B1 compat mechanics), backfills data with original ids preserved, freezes the old tables, proves compatibility with the EXISTING integration suites, verifies dual-read on staging + production, and closes the scanner⇄graph gap. plan-refactor discipline applies: foundation → migrate → verify; old tables are frozen here and dropped in a post-soak follow-up (out-of-scope). Rollback note: the backfill migration is additive (INSERT + UPDATE of new columns only) — rolling back = reverting the services PR; frozen source tables remain intact until the cleanup.</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_a44ddf8a-4799-4624-b699-33d19e6cd641</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-fold</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, drizzle-schema, plan-refactor, corpus-patterns</dd>
+          </dl>
+
+          <article class="task" id="task-a5-1">
+            <header>
+              <h3>Task A5.1: Kind extension + data backfill migration</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/schema/src/database/schema.ts</code> (kind enum + <code>milestone|goal</code>, generated migration), hand-written <code>drizzle/00NN_v24_fold_backfill.sql</code> + journal entry, <code>packages/core/src/services/graph/__tests__/integration/fold-migration.test.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Backfill (original ids preserved — architecture-decisions): milestone → task rows (kind milestone, parent NULL, project_id, title=name, description, end_time=target_time, COMPLETED iff finished_at, completed_via user, rank from the after_id chain order); goal → task rows (kind goal, parent_id=milestone_id, project_id via parent milestone, same field mapping); then <code>UPDATE task SET parent_id = goal_id WHERE goal_id IS NOT NULL</code> and rank backfill per sibling set by created_at; finally rollup rebuild rows for every new parent. Timestamps/provenance copied verbatim. Hand-written SQL is the documented exception (data transform), journal-registered, CI-applied only — NEVER hand-applied (AGENTS.md drift-repair lesson).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/fold-migration.test.ts
+bunx drizzle-kit generate   # re-run is a no-op; journal contains the backfill entry</pre>
+              <p>Expected: tests written first — a seeded pre-fold fixture DB migrated through the full journal yields: every milestone/goal projected 1:1 (counts + field equality), task parent chains intact, ranks ordered per after_id chains, rollups equal brute-force, migration is idempotent-safe on an already-folded DB (guarded INSERT … WHERE NOT EXISTS).</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a5-2">
+            <header>
+              <h3>Task A5.2: Milestones/goals services become compat projections</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/milestones.ts</code>, <code>packages/core/src/services/goals.ts</code>, <code>packages/core/src/services/tasks.ts</code> (goal_id write-path translation), tests: EXISTING <code>tests/integration/milestones-goals.test.ts</code> unchanged</dd>
+              <dt>Dependencies</dt>
+              <dd>A5.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Rewrite both services over the task table (kind filters), preserving the exported <code>Milestone</code>/<code>Goal</code> types and every route/tool/client contract byte-for-byte: after_id computed from rank neighbors; upsert_milestone/upsert_goal create/update kind-milestone/kind-goal task rows (through the graph service ⇒ outbox events + bubbling now work at milestone level); finished_at maps to completion via the engine. ALL writes to the old tables removed (frozen). upsert_todo's <code>goal_id</code> becomes a parent_id alias at the service boundary (accepted, translated, deprecated in docs).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/milestones-goals.test.ts
+bun test packages/core/src/services/graph</pre>
+              <p>Expected: the EXISTING milestones-goals suite passes UNCHANGED — that is the compat proof. New engine tests prove children_all_done fires on a milestone-kind node when its last goal completes.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a5-3">
+            <header>
+              <h3>Task A5.3: Dual-read verification verb</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/cli/src/index.ts</code> (<code>devpad admin verify-fold --json</code>), <code>packages/core/src/services/graph/fold-verify.ts</code>, tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A5.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Row-by-row compare of frozen milestone/goal tables against the projections (counts, ids, field equality, ordering) returning a typed diff report; exits non-zero on any mismatch. Runs in tests against the fold fixture; the VERIFIER runs it against staging then production post-deploy and records the output as ship evidence — Arc B does not start until both report clean.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun test packages/core/src/services/graph/__tests__/integration/fold-verify.test.ts</pre>
+              <p>Expected: tests written first — clean fixture reports zero diffs; an induced field mismatch is detected and named.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a5-4">
+            <header>
+              <h3>Task A5.4: Scanner ⇄ graph reconciliation</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>packages/core/src/services/scanning.ts</code>, <code>packages/core/src/services/scanner/diff.ts</code>, <code>packages/schema/src/validation.ts</code> (diff-action payload), tests</dd>
+              <dt>Dependencies</dt>
+              <dd>A5.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Scan-diff CREATE actions gain graph proposals: proposed parent (v1 heuristic: the open task whose codebase_task shares the same file, else project root) + a <code>discovered_from</code> edge from the new task to the proposing task. The accept path (<code>processScanResults</code>) applies parent_id + rank + edge through the graph service (⇒ outbox events, guards, rollups). <code>todo_updates.data</code> payload extended so the future UI (and today's API consumers) see proposals. Scanner-created orphans stop rotting the outline root.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>DATABASE_FILE=./test.db NODE_ENV=test bun test tests/integration/scanning.test.ts</pre>
+              <p>Expected: tests written first — same-file match proposes the parent + edge; no-match falls back to root with no edge; accept applies through guards (a proposal that would create a cycle is rejected, not applied).</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-a5-5">
+            <header>
+              <h3>Task A5.5: Existing-UI compat check (no redesign)</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd>no production files expected — verification-only task; permissible: minimal type-only fixes in <code>apps/main</code> if the fold surfaced any</dd>
+              <dt>Dependencies</dt>
+              <dd>A5.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Prove the pre-v2.4 UI keeps working on compat projections until Arc B replaces it: goals page, milestones manager, task pages, todo pages all render from the unchanged API shapes. astro check error count must not exceed the documented baseline (3 pre-existing).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>cd apps/main &amp;&amp; bun run check   # error count ≤ baseline (3 pre-existing)
+bun run e2e:ci</pre>
+              <p>Expected: baseline holds; the green e2e set stays green.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run build:api
+bun test packages/core/src/services/graph
+DATABASE_FILE=./test.db NODE_ENV=test bun run test:integration   # FULL integration set — refactor blast radius warrants it
+bun run lint</pre>
+            <p>Expected: all green (still not the full <code>gate</code> — no build/fmt steps; those remain the verifier's). Verifier additionally runs <code>devpad admin verify-fold</code> against staging and production post-deploy and records output before Arc B may start.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>Zero remaining writes to milestone/goal tables — grep for <code>insert(milestone</code>/<code>update(goal</code> etc. across the whole repo, including tests and seeds.</li>
+                <li>No consumer bypasses the projections to read old tables (except fold-verify itself) — grep imports.</li>
+                <li>Backfill preserves provenance/protected/timestamps verbatim — spot-check in the fixture test.</li>
+                <li>The existing milestones-goals integration suite is UNCHANGED (diff shows no edits to it) — editing the proof to pass it is the failure mode.</li>
+                <li>Migration is guarded for idempotence (WHERE NOT EXISTS) — re-applying on a folded DB is a no-op.</li>
+                <li>Wider affected-area rule (plan-refactor): full integration set runs, not just fold suites.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <p><strong>PR:</strong> <a href="https://github.com/f0rbit/devpad/pull/142">f0rbit/devpad#142</a></p>
+            <p><strong>Commits</strong> (branch <code>feat/v2.4-fold</code>):</p>
+            <ul>
+              <li><code>88dedd27</code> — A5.1: kind extension + backfill migration</li>
+              <li><code>366751fb</code> — A5.2: milestones/goals become compat projections</li>
+              <li><code>7d803906</code> — A5.3: dual-read fold verification verb</li>
+              <li><code>910a5df5</code> — A5.4: scanner ⇄ graph reconciliation</li>
+              <li><code>f9a92a48</code> — fix: scanning unit test rewritten off a hand-rolled mock db (A5.4 follow-up)</li>
+              <li><code>d0a3df44</code> — docs: AGENTS.md fold gotchas + apps/main baseline drift</li>
+              <li><code>deca3274</code> — A5.1 adversary-checklist follow-up: provenance/protected/timestamps spot-check</li>
+            </ul>
+            <p><strong>Scoped-check output</strong> (all green, run at phase close):</p>
+            <ul>
+              <li><code>bun run build:api</code> — clean</li>
+              <li><code>bun test packages/core/src/services/graph</code> — 93 pass, 0 fail</li>
+              <li><code>DATABASE_FILE=./test.db NODE_ENV=test bun run test:integration</code> (full set, plan-refactor's wider-blast-radius rule) — 799 pass, 0 fail, run 3x; one unrelated pre-existing flake in <code>packages/cli/tests/integration/artifacts-upload.test.ts</code> (corpus version-set naming) confirmed unrelated domain</li>
+              <li><code>bun run test:unit</code> — 1305 pass, 0 fail</li>
+              <li><code>bun run lint</code> — 0 errors</li>
+              <li><code>tests/integration/milestones-goals.test.ts</code> — 21/21 pass, <strong>zero diff to the file</strong> (the compat proof)</li>
+              <li><code>cd apps/main &amp;&amp; bun run check</code> — 57 errors, identical on <code>main</code> (see disclosed deviation below) and this branch — no regression</li>
+              <li><code>bun run e2e:ci</code> — 15/15 pass</li>
+            </ul>
+            <p><strong>Disclosed deviations</strong> (see PR description + AGENTS.md "v2.4 Fold (Phase A5)" section for full detail):</p>
+            <ul>
+              <li><code>task.goal_id</code> stays a physical dual-written column rather than becoming fully derived from <code>parent_id</code> — scoped to <code>tasks.ts</code> only per that task's file list.</li>
+              <li>Rewrote three pre-fold mock-db unit test files (<code>milestones.test.ts</code>, <code>goals.test.ts</code>, <code>scanning.test.ts</code>) as real in-memory-SQLite tests — not in any task's file list, required to keep suites green since the mocks can't fake <code>write_with_event</code>/<code>run_atomic</code>/<code>db.all(sql...)</code>.</li>
+              <li><code>fetchTasksWithDetails</code> gained a <code>kind NOT IN ('milestone','goal')</code> filter — a real compat gap found via TDD, not explicitly named in A5.2's file list.</li>
+              <li><code>apps/main</code>'s documented "3 pre-existing errors" <code>astro check</code> baseline has drifted to 57, unrelated to this phase — flagged, not fixed (A5.5 is verification-only).</li>
+            </ul>
+            <p><strong>Dual-read verification (2026-08-25, Arc B gate — both legs clean):</strong></p>
+            <ul>
+              <li>PR #142 squash-merged as <code>d5f333ac</code>; <code>Deploy Staging</code> run 32835596958 green (migration 0021 + backfill applied).</li>
+              <li><strong>Staging</strong> <code>devpad admin verify-fold --json</code> → <code>{"milestone_count": 2, "goal_count": 2, "diffs": [], "clean": true}</code> (non-vacuous; key in <code>.env</code> as <code>DEVPAD_STAGING_API_KEY</code>, base URL <code>https://staging.devpad.tools/api/v1</code>).</li>
+              <li><strong>Production</strong>: release <code>v2.4.0</code> published → <code>Deploy Production</code> run 32837265901 green (migrations 0015–0021) → <code>verify-fold</code> → <code>{"milestone_count": 20, "goal_count": 48, "diffs": [], "clean": true}</code>.</li>
+            </ul>
+          </section>
+        </section>
+
+        <!-- ============================== ARC B ============================== -->
+
+        <section class="phase" id="phase-b1">
+          <header>
+            <h3>Phase B1: v2.4 outline core + IA consolidation (work tab)</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p><strong>Arc B precondition:</strong> A5 merged, deployed, dual-read verified. <strong>Grounding refresh required:</strong> orchestrator re-runs a medium Explore over <code>apps/main</code> and fetches <code>https://f0rbit.github.io/ui/llms.txt</code> before spawning this coder; file lists below may be amended for drift. UX contract: <code>ripple-outline-mock.html</code> (outline rows, rings, badges, crumbs, rail). Page-vs-integrate gate: consolidation only, net −1 tab, no new nav (recorded in architecture-decisions). Components live in <code>apps/main</code> (not @f0rbit/ui) for v2.4; use ui primitives/tokens natively — Tree seeds the outline.</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_e48d18d4-63a5-43ab-b324-619970222dc1</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-outline</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, visual-review, browse, emil-design-eng</dd>
+          </dl>
+
+          <article class="task" id="task-b1-1">
+            <header>
+              <h3>Task B1.1: Work page — server plumbing + outline island mount</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/pages/project/[project_id]/work.astro</code> (new), redirects in <code>tasks/index.astro</code> + <code>goals.astro</code>, <code>apps/main/src/utils/api-client.ts</code></dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>work.astro server-fetches the project subtree (client.tasks.tree, depth-limited) + rollups + tags via the getProject guard pattern, mounts the Outline island. <code>/project/:id/tasks</code> and <code>/project/:id/goals</code> become 301 redirects to <code>/project/:id/work</code> (query params preserved).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- outline-smoke.spec.ts</pre>
+              <p>Expected: new spec (written first) — work page renders seeded tree rows; old URLs redirect 301.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b1-2">
+            <header>
+              <h3>Task B1.2: Outline component — rows, rings, keyboard, reparent, compaction</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/outline/*.tsx</code> (new)</dd>
+              <dt>Dependencies</dt>
+              <dd>B1.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Per the mock: rows with progress rings (rollup-fed), kind icons, policy ⚙ / hook ⚡ / stale badges, priority + claim chips; expand/collapse with guide lines; quick-add (<code>o</code>), inline rename, <code>space</code> advance, <code>tab</code>/<code>shift-tab</code> reparent + drag with rank_between; completed subtrees auto-compact into a summary row (expandable). Optimistic updates with rev OCC — a 409 reloads the row and toasts. Windowed rendering for large sibling sets (simple virtualization, no dep).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- outline-interactions.spec.ts</pre>
+              <p>Expected: spec written first — add-child, rename, advance, reparent persist across reload; compaction row appears for a fully-done subtree. Visual criteria (visual-review at phase close): matches the mock's outline anatomy on desktop + 360px.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b1-3">
+            <header>
+              <h3>Task B1.3: Zoom-into-node, breadcrumbs, connections rail</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/outline/{zoom.tsx,rail.tsx}</code>, <code>work.astro</code> (?node= param)</dd>
+              <dt>Dependencies</dt>
+              <dd>B1.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>z</code>/click zooms any node to become the page (<code>?node=tsk_…</code> deep-linkable, ancestors as breadcrumb trail — you never see depth, you travel it). Connections rail from <code>near</code>: blocked-by (with rollup %), discovered-from, references (PR/commit/file/doc chips), incoming blocks. Esc / crumb click zooms out. The old <code>/todo/[id]</code> task page remains (deep edit form) — the rail links to it.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- outline-zoom.spec.ts</pre>
+              <p>Expected: spec written first — zoom updates URL + crumbs; direct load of ?node= renders the subtree; rail lists seeded edges.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b1-4">
+            <header>
+              <h3>Task B1.4: IA consolidation — tab strip net −1, docs tab</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/layouts/ProjectLayout.astro</code>, <code>apps/main/src/pages/project/[project_id]/docs.astro</code> (new, absorbs specification), redirect in <code>specification.astro</code>, <code>packages/core/src/ui/</code> nav labels if touched</dd>
+              <dt>Dependencies</dt>
+              <dd>B1.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Tab strip becomes: overview · work · docs · pulse · pipeline · blog · settings · history (goals + tasks merged into work; specification folded into docs — the docs tab renders the existing specification editor plus the A4 doc list; net −1 tab). All old URLs 301. Cross-app DevpadHeader grouping unchanged.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- pages.spec.ts outline-smoke.spec.ts
+cd apps/main &amp;&amp; bun run check</pre>
+              <p>Expected: tab strip renders the new set; redirects hold; astro check ≤ baseline.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run e2e:local
+cd apps/main &amp;&amp; bun run check
+bun run lint</pre>
+            <p>Expected: green (e2e:local scoped to the new + existing green specs). Visual-review pass: screenshots (desktop + 360px) against the mock — outline anatomy, ring styling, crumbs, rail. Screenshots saved to files, never inline.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>@f0rbit/ui base+modifier classes composed correctly (<code>row row-sm</code>, never bare <code>row-sm</code>) and no legacy token names.</li>
+                <li>No new top-level page or nav item anywhere in the diff; net tab count is −1; every removed URL 301s.</li>
+                <li>Optimistic updates reconcile on 409 — no silent divergence between outline state and server rev.</li>
+                <li>Keyboard interactions don't hijack browser defaults outside the outline's focus scope; reduced-motion respected.</li>
+                <li>Components use @f0rbit/ui primitives natively (llms.txt consulted) — no reinvented buttons/badges/raw divs.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <p><strong>PR:</strong> <a href="https://github.com/f0rbit/devpad/pull/143">f0rbit/devpad#143</a> (not yet merged — awaiting Mode V verifier pass).</p>
+            <p><strong>Commits</strong> (feat/v2.4-outline):</p>
+            <ul>
+              <li><code>0a4b4d02</code> — graph: expose rollup counts + ancestor chain (prerequisite backend surface)</li>
+              <li><code>b2949160</code> — B1.1: work page server plumbing + old-URL redirects</li>
+              <li><code>c6a57a97</code> — B1.2+B1.3: outline rows/keyboard/compaction, zoom, connections rail</li>
+              <li><code>cc68e930</code> — B1.4: fold specification into docs, tab strip net −1</li>
+              <li><code>9ab5a18f</code> — polish: hide claim badge on narrow viewports (360px review fix)</li>
+            </ul>
+            <p><strong>Acceptance (scoped, all green):</strong></p>
+            <ul>
+              <li><code>bun run e2e:local -- outline-smoke.spec.ts</code> — 5/5 (work page renders seeded tree + chips; /tasks, /goals, /specification 301)</li>
+              <li><code>bun run e2e:local -- outline-interactions.spec.ts</code> — 5/5 (add-child/rename/advance/reparent persist across reload; auto_children compaction)</li>
+              <li><code>bun run e2e:local -- outline-zoom.spec.ts</code> — 4/4 (zoom updates URL+crumbs, direct <code>?node=</code> load, rail lists seeded blocked-by edge)</li>
+              <li>Combined run (all three files together) — 14/14, repeated twice for stability</li>
+              <li><code>bun test packages/core packages/worker</code> — 758/758</li>
+              <li><code>apps/main</code> <code>bun run check</code> — 57 errors (documented pre-existing baseline, zero new)</li>
+              <li><code>bun run lint</code> — 0 errors (fixed 3 net-new before commit)</li>
+            </ul>
+            <p><strong>Screenshots</strong> (desktop 1440px + mobile 360px, against seeded fixture data <code>e2e-outline-project</code>):</p>
+            <ul>
+              <li><code>/private/tmp/claude-501/-Users-tom-dev-devpad/d108dbc5-888c-4c9a-9fae-a5bd9a3ca019/scratchpad/screenshots/01-outline-root-desktop.png</code> — outline anatomy: rings, dots, chips, rollup label</li>
+              <li><code>.../screenshots/02-outline-rail-desktop.png</code> — connections rail (blocked-by) for a selected row</li>
+              <li><code>.../screenshots/03-outline-zoomed-desktop.png</code> — zoom header + breadcrumbs</li>
+              <li><code>.../screenshots/04-outline-root-mobile-360.png</code> — 360px outline (post chip-wrap fix)</li>
+              <li><code>.../screenshots/05-docs-tab-desktop.png</code> — consolidated docs tab (specification editor + A4 doc list empty state)</li>
+            </ul>
+            <p><strong>Disclosed deviations:</strong> drag-based rank-precise reordering deferred (tab/shift-tab reparent uses the apply op's server-default rank); row-level ⛓ blocked-count/ready/hook/stale chips deferred (no backing wire field without further backend work; task text only requires priority/policy/claim chips at the row level, blocked-by is shown in the rail); B1.2+B1.3 landed in one commit since zoom navigation lives in <code>outline.tsx</code> and drives what the zoom header/rail render.</p>
+          </section>
+        </section>
+
+        <section class="phase" id="phase-b2">
+          <header>
+            <h3>Phase B2: v2.4 lenses, ripple choreography, Waiting on you</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>The ephemeral lenses over the outline (never routes, Esc dismisses), the ripple completion animation replaying real bubble chains, stale/reopen affordances, and the human's queue integrated atop <code>/todo</code>. UX contract: the mock's lens overlays + toasts. Pre-merge taste/IA critic pass required (UI phase).</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_fe9b9981-37eb-4b01-8382-d8a77f50e6f0</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-lenses</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, visual-review, browse, emil-design-eng</dd>
+          </dl>
+
+          <article class="task" id="task-b2-1">
+            <header>
+              <h3>Task B2.1: Graph lens — depth-2 dagre overlay</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/lenses/graph-lens.tsx</code> (new), <code>apps/main/package.json</code> (<code>@dagrejs/dagre</code>)</dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>g</code> summons a full-screen overlay: depth-1/2 toggle neighborhood of the focused node (from <code>near</code>), layered dagre layout (NEVER force-directed), status-colored nodes with rollup badges, edge kinds styled distinctly, pan/zoom/fit controls, click navigates + zooms outline, Esc dismisses. Edge culling beyond the neighborhood — this is a lens, not a map.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- lens-graph.spec.ts</pre>
+              <p>Expected: spec written first — g opens, seeded neighborhood renders N nodes/edges, Esc closes, no route change. Visual criteria: matches mock's lens chrome.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b2-2">
+            <header>
+              <h3>Task B2.2: Milestone lens — collapsed groups with rollup badges</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/lenses/milestone-lens.tsx</code> (new)</dd>
+              <dt>Dependencies</dt>
+              <dd>B2.1 (shared lens shell)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p><code>m</code> summons the Dagster-style view: milestone-kind nodes as collapsed groups ordered by rank, each with aggregated rollup badge + target date + stale/policy badges; expand shows the goal/task chain; click zooms the outline to that node. Replaces the deleted goals page's job as a lens, not a destination.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- lens-milestones.spec.ts</pre>
+              <p>Expected: spec written first — milestone groups render with correct rollup counts from seed; Esc dismisses.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b2-3">
+            <header>
+              <h3>Task B2.3: Ripple choreography + stale badge + policy-only reopen</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/outline/ripple.tsx</code>, outline row components</dd>
+              <dt>Dependencies</dt>
+              <dd>B1 phase (outline), none within phase</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Completing a task replays the <code>done</code> response's bubbled chain: ring sweep → pulse → next ancestor, one hop per beat, exactly the chain the API returned (honest animation). <code>prefers-reduced-motion</code>: instant state change + a "completed N ancestors" toast. Stale notch renders on <code>completion_stale</code> nodes; one-click reopen appears ONLY when <code>completed_via='policy'</code> and calls the reopen endpoint.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- ripple.spec.ts</pre>
+              <p>Expected: spec written first — completing the last child updates each ancestor ring in DOM order; reopen button absent on user-completed parents. Visual criteria: choreography matches mock timing/feel (visual-review judges the vibe, reduced-motion verified).</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b2-4">
+            <header>
+              <h3>Task B2.4: "Waiting on you" atop /todo</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/pages/todo/index.astro</code>, <code>apps/main/src/components/solid/waiting-on-you.tsx</code> (new)</dd>
+              <dt>Dependencies</dt>
+              <dd>none within phase</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Section ABOVE the existing task list (integration, not a page — locked decision 6): cards from <code>reviews/pending</code> — pending checkpoints (approve/request-changes inline where possible, else deep-link), blocking annotation threads, pipeline manual gates (linking to the existing stage-gate UI), pending scanner diffs. Mobile-first: the human's role is latency-critical sign-off from a phone. Empty state collapses to nothing (zero clutter when nothing waits).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- waiting-on-you.spec.ts</pre>
+              <p>Expected: spec written first — seeded pending items render as cards with deep links; empty state renders nothing above the list. Visual criteria: 360px layout first-class.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run e2e:local
+cd apps/main &amp;&amp; bun run check
+bun run lint</pre>
+            <p>Expected: green; visual-review screenshots (desktop + 360px) for lenses, ripple, waiting-on-you. Independent taste/IA critic pass (fresh agent, per visual-ia-guidelines) BEFORE ship — reliable-zone checks: no new destinations, lens-not-page holds, /todo section isn't clutter.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>Lenses are overlays with NO route changes — back button never traps in a lens.</li>
+                <li>The ripple replays the API's actual bubble chain — never a client-side guess of what "should" have bubbled.</li>
+                <li>Reopen affordance is provably absent for <code>completed_via ∈ {user, api}</code> nodes.</li>
+                <li>dagre bundle loads lazily with the lens (client:visible / dynamic import) — no landing-payload regression.</li>
+                <li>Reduced-motion path fully bypasses animation timers, not just hides them.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <p><strong>PR:</strong> see report — opened against <code>main</code> from <code>feat/v2.4-lenses</code> (not yet merged — awaiting Mode V verifier pass).</p>
+            <p><strong>Commits</strong> (feat/v2.4-lenses):</p>
+            <ul>
+              <li><code>77c952ce</code> — B2 prereq: server-computed edge-summary chips (blocked/ready/hook/stale)</li>
+              <li><code>e5fd4923</code> — rail connections travel in-place + mini-rings</li>
+              <li><code>b8fa0f23</code> — Tab-hijack focus-model guard regression spec</li>
+              <li><code>08cb021e</code> — keyboard sibling reorder (alt-↑/↓)</li>
+              <li><code>3f15ea6a</code>, <code>cd659c7a</code> — <code>near()</code> BFS depth toggle + rollup embedding (B2.1 backend prereq)</li>
+              <li><code>dcb726b7</code> — B2.1: graph lens, depth-2 dagre overlay</li>
+              <li><code>100336ce</code> — B2.2: milestone lens, Dagster-style phase cards</li>
+              <li><code>28ed3811</code> — B2.3: ripple choreography, reduced-motion, policy-only reopen</li>
+              <li><code>e842d78c</code> — B2.4: "Waiting on you" atop <code>/todo</code></li>
+              <li><code>69d7f923</code> — fix: brace void-returning arrow handlers (lint gate)</li>
+              <li><code>40b80e15</code> — test: e2e coverage for edge-summary ready/blocked chips (acceptance gap found on phase-close audit)</li>
+            </ul>
+            <p><strong>Acceptance (scoped, all green with <code>--retries=1</code> for the documented cold-boot hydration flake — see AGENTS.md's "v2.4 Lenses + Ripple (Phase B2)"):</strong></p>
+            <ul>
+              <li><code>bun run e2e:local -- lens-graph.spec.ts</code> — 4/4 (g opens seeded neighborhood, Esc/close-button dismiss, depth toggle, dbl-click zoom, never a route change)</li>
+              <li><code>bun run e2e:local -- lens-milestones.spec.ts</code> — 3/3 (m opens with seeded rollup counts, expand reveals chain, ring click zooms outline)</li>
+              <li><code>bun run e2e:local -- ripple.spec.ts</code> — 3/3 (2-hop bubble chain + reopen affordance, reopen absent on user-completed, reduced-motion instant + toast)</li>
+              <li><code>bun run e2e:local -- waiting-on-you.spec.ts</code> — 3/3 (seeded signoff card + inline Approve, empty-state collapse, 360px layout)</li>
+              <li><code>bun run e2e:local -- edge-summary-chips.spec.ts</code> — 2/2 (new — ready/blocked chips match the wire field, first-run pass confirms the feature was already complete)</li>
+              <li>Combined run (lens-graph + lens-milestones + ripple + waiting-on-you + outline-interactions/-zoom/-smoke + edge-summary-chips) — 30/30 passed, 3 flaky-then-passed on retry (cold-boot hydration, matches B1's documented pattern)</li>
+              <li><code>bun test packages/core/src/services/graph</code> — 108/108</li>
+              <li><code>apps/main</code> <code>bun run check</code> — 57 errors (documented pre-existing baseline, zero new)</li>
+              <li><code>bun run lint</code> — 0 errors (fixed 8 pre-existing net-new before commit — see AGENTS.md)</li>
+              <li><code>bun run fmt</code> — clean</li>
+            </ul>
+            <p><strong>Screenshots</strong> (light + dark, against seeded fixture data <code>e2e-outline-project</code>, taken via throwaway Playwright script per <code>X-Test-User</code>):</p>
+            <ul>
+              <li><code>.../screenshots/b2-01-graph-lens-light.png</code>, <code>b2-01-graph-lens-dark.png</code> — depth-2 graph overlay, focused node + blocks edge</li>
+              <li><code>.../screenshots/b2-02-milestone-lens-light.png</code>, <code>b2-03-milestone-lens-dark.png</code> — milestone card with rollup ring + due date + expand</li>
+              <li><code>.../screenshots/b2-04-outline-chips-light.png</code>, <code>b2-04-outline-chips-dark.png</code> — row-level ready/blocked/auto/⛓ chips against the seeded ripple + edge-summary fixtures</li>
+              <li><code>.../screenshots/b2-05-waiting-on-you-desktop-light.png</code>, <code>b2-06-waiting-on-you-desktop-dark.png</code>, <code>b2-07-waiting-on-you-mobile-360.png</code> — "Waiting on you" atop <code>/todo</code>, desktop + 360px</li>
+            </ul>
+            <p><strong>Disclosed deviations:</strong> the board lens named in a later spawn brief was NOT built — this plan's own <code>#out-of-scope</code> section explicitly excludes it ("the mock ships graph + milestone lenses; a board lens is cheap once the lens shell exists but earns nothing yet"), and that reasoning still holds (no third lens has earned its keep yet); the plan text is treated as authoritative over a conflicting brief instruction, and the conflict is flagged back to the orchestrator rather than silently resolved either way. Everything else in the phase's task list (B2.1–B2.4) was already fully implemented by the prior coder; this pass's only functional addition was the missing edge-summary-chip e2e spec plus a lint-gate fix, both surfaced by auditing the plan's task list against the existing commits per the spawn brief.</p>
+          </section>
+        </section>
+
+        <section class="phase" id="phase-b3">
+          <header>
+            <h3>Phase B3: v2.4 review surface — DocViewer, annotations, signoffs, SDLC stepper</h3>
+            <span class="badge done">done</span>
+          </header>
+          <p>The human review loop UI over the A4 backend: sanitized DocViewer with CSP, select-to-annotate saving markers-in-doc versions, checkpoint cards with the metric tie, the checkpoint-gated stepper with audited override, and the settings panels (scoped keys, hook deliveries DLQ). Trust-touching — independent taste/IA critic pass required pre-merge.</p>
+          <dl class="meta">
+            <dt>Devpad task</dt>
+            <dd><code>task_33109c9a-f59a-4a97-a0b6-8f6a4daa3154</code></dd>
+            <dt>Mode</dt>
+            <dd>sequential (single coder)</dd>
+            <dt>Branch</dt>
+            <dd><code>feat/v2.4-review-ui</code></dd>
+            <dt>Coder skills</dt>
+            <dd>git-workflow, testing-strategy, visual-review, browse, emil-design-eng</dd>
+          </dl>
+
+          <article class="task" id="task-b3-1">
+            <header>
+              <h3>Task B3.1: DocViewer + docs tab integration</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/review/doc-viewer.tsx</code> (new), <code>docs.astro</code>, <code>packages/worker/src/routes/v1/docs.ts</code> (CSP header on render responses)</dd>
+              <dt>Dependencies</dt>
+              <dd>none (first task of phase)</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Renders the sanitized stored HTML inline (markers stripped client-side for display), version picker walking corpus lineage with vN chips + status (draft/in_review/approved), diff link between adjacent versions. The docs route serving doc content sets a restrictive CSP (defense-in-depth over sanitize-on-push per gap 7). Docs tab lists project docs by kind with status chips.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- doc-viewer.spec.ts</pre>
+              <p>Expected: spec written first — seeded doc renders headings/tables, an injected-script fixture renders inert (no dialog fires, no script executes), version picker switches content, CSP header present on the doc response.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b3-2">
+            <header>
+              <h3>Task B3.2: AnnotationRail — select-to-annotate, blocking, verdict bar</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/review/annotation-rail.tsx</code> (new), doc-viewer wiring</dd>
+              <dt>Dependencies</dt>
+              <dd>B3.1</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Text selection → thread creation building the W3C anchor client-side (quote + ~32-char prefix/suffix + offsets) → POST thread route (server embeds marker + sanitizes + pushes new corpus version). Margin rail aligns threads to their anchors; blocking toggle; reply/resolve per thread; orphaned threads render in a distinct rail section (never hidden). Verdict bar (approve / request changes) is a SEPARATE control from thread resolution; approve is disabled while blocking threads are open, with the blocking set enumerated.</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- annotations.spec.ts</pre>
+              <p>Expected: spec written first — select→annotate creates a thread that survives reload (new version), blocking thread disables approve and lists itself, resolve re-enables; orphan fixture appears in the orphan section.</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b3-3">
+            <header>
+              <h3>Task B3.3: Checkpoint cards + SDLC stepper + metric surface</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/components/solid/review/{checkpoints.tsx,sdlc-stepper.tsx}</code> (new), outline zoom-header wiring, waiting-on-you card actions</dd>
+              <dt>Dependencies</dt>
+              <dd>B3.2</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Zoomed nodes with a stage show the stepper (ui Stepper): stages with checkpoint locks, advance gated per A4.5, manual override via modal requiring a reason (audited). Checkpoint cards: plan (link to DocViewer), types (interface report with additive/breaking chip — breaking shows the classified diff), design (doc render). The types/review card surfaces the <code>tracks_metric</code> edge's pulse summary (via existing client.pulse) next to the approve control — the metric declared at ideate time judges at review time (gap 10 closed). Approval actions write through the signoff routes (human session only; the UI never offers approval to API-key sessions).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- checkpoints.spec.ts</pre>
+              <p>Expected: spec written first — gated advance blocked with checkpoint named, override modal audits, breaking interface chip renders from fixture, metric widget renders (or degrades gracefully on pulse 503).</p>
+            </section>
+          </article>
+
+          <article class="task" id="task-b3-4">
+            <header>
+              <h3>Task B3.4: Settings — scoped keys panel + hook deliveries (DLQ) list</h3>
+              <span class="badge done">done</span>
+            </header>
+            <dl class="meta">
+              <dt>Files</dt>
+              <dd><code>apps/main/src/pages/project/[project_id]/settings.astro</code> (or its islands), <code>apps/main/src/components/solid/project/{scoped-keys.tsx,hook-deliveries.tsx}</code> (new)</dd>
+              <dt>Dependencies</dt>
+              <dd>none within phase</dd>
+            </dl>
+            <section data-kind="scope">
+              <h4>Scope</h4>
+              <p>Two panels on the EXISTING settings page (integration, not new pages): per-project API key issuance (name + create + revoke; key shown once); hook deliveries read-only list filterable by status with <code>failed_permanent</code> surfaced prominently (the visible DLQ) + hook enable/disable toggle. Full hook CRUD UI stays out of scope (CLI/API is the editor).</p>
+            </section>
+            <section data-kind="acceptance">
+              <h4>Acceptance</h4>
+              <pre>bun run e2e:local -- settings-v24.spec.ts</pre>
+              <p>Expected: spec written first — scoped key create/revoke round-trips; seeded failed_permanent delivery visible with error detail.</p>
+            </section>
+          </article>
+
+          <section data-kind="verification">
+            <h4>Phase verification (scoped)</h4>
+            <pre>bun run e2e:local
+cd apps/main &amp;&amp; bun run check
+bun run lint</pre>
+            <p>Expected: green; visual-review screenshots (desktop + 360px) of DocViewer, rail, stepper, settings. Independent taste/IA critic (fresh agent) pre-merge — this phase renders agent-authored content and gates approvals: verdict required before ship.</p>
+          </section>
+
+          <section data-kind="adversary">
+            <h4>Adversary checklist (whole phase)</h4>
+            <div class="adversary">
+              <ul>
+                <li>No path renders unsanitized doc HTML — the viewer consumes only stored (already-sanitized) content and the CSP header is on every doc response.</li>
+                <li>Approve is genuinely disabled (server-enforced, not just UI) while blocking threads are open — test hits the route directly.</li>
+                <li>API-key sessions see no approval affordances AND the routes reject them (double enforcement).</li>
+                <li>Newly-created API keys render once and never persist in DOM/state after navigation.</li>
+                <li>Thread creation failures (re-anchor conflict on concurrent versions) surface as errors, not silent drops.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section data-kind="proof">
+            <h4>Proof</h4>
+            <p><strong>PR:</strong> <a href="https://github.com/f0rbit/devpad/pull/145">#145</a> — opened against <code>main</code> from <code>feat/v2.4-review-ui</code> (not yet merged).</p>
+            <p><strong>Status at pause (2026-08-26):</strong> the mandated taste/IA critic pass (live-driven) returned <strong>BLOCK, narrowly</strong> — two cheap blockers: (1) DocViewer collapses to 2px at 360px (media-query stack fix); (2) sanitizer's defaultSchema empties <code>class</code> values + clobbers anchor ids, gutting legitimate plan styling/TOC links (schema-allowlist + anchor round-trip fix) — plus a fast-follow batch (marker-stripped diffs, <code>&lt;mark&gt;</code> anchor highlights, save scroll-preservation + version-mint feedback, Approve-emphasis consistency, orphan action rows, interface pre-wrap, docs-list selected state, override-modal focus, composer focus/Escape, stepper lock glyphs, craft nits). The fix round <strong>landed</strong> (4 commits: <code>ec177c98</code> sanitizer styling/anchors, <code>4b5db1f4</code> mobile stack, <code>7f465893</code>/<code>201b7052</code> all 13 fast-follows; adversarial styled-plan fixture + XSS corpus green; clean tree, pushed). Remaining: Mode V verifier (full gate + touched e2e, spot-checks, <code>ship 145</code>) — <strong>not yet run</strong>, then the UI-arc release tag. See <code>.plans/HANDOFF.md</code>.</p>
+            <p><strong>Commits</strong> (feat/v2.4-review-ui):</p>
+            <ul>
+              <li><code>4a6ce11b</code> — CSS-exfil sanitizer fix (<code>task_04427077-33f0-4fdb-ab61-5574bea1f84c</code>): filter <code>@import</code>/<code>url()</code> in <code>&lt;style&gt;</code> blocks at ingest, plus owner-scoped <code>devpad admin reconcile-docs-css</code> repair path</li>
+              <li><code>58977172</code> — B2 critic carry-over: milestone lens uses real <code>blocks</code> edges (never rank adjacency), policy badge, child status marks, one-batched-call N+1 fix</li>
+              <li><code>d0ca0c37</code> — B3.1: DocViewer — sandboxed CSP'd iframe render route, version picker + diff-vs-previous</li>
+              <li><code>82f7a1dc</code> — B3.2: AnnotationRail — select-to-annotate, blocking gate, verdict bar, orphan section</li>
+              <li><code>d2659ec7</code> — B3.3: SDLC stepper (gated + audited override) + checkpoint cards + tracks_metric pulse widget; real "Waiting on you" deep-links (fixed dead <code>/signoffs/:id</code> and <code>/docs/:id</code> placeholder paths)</li>
+              <li><code>b9e23641</code> — B3.4: scoped API keys panel + hook deliveries DLQ list; fixed a real ownership gap in <code>DELETE /keys/:id</code></li>
+              <li><code>0b49d6da</code> — adversary-checklist fix: every B3 mutation handler now surfaces failures instead of silently no-op'ing</li>
+              <li><code>fc15e224</code> — AGENTS.md: phase B3 lessons</li>
+            </ul>
+            <p><strong>Acceptance (scoped, all green with <code>--retries=1</code> for the documented cold-boot/vite-HMR flakes):</strong></p>
+            <ul>
+              <li><code>bun run e2e:local -- doc-viewer.spec.ts</code> — 2/2 (sanitized render + CSP header, version picker switches content)</li>
+              <li><code>bun run e2e:local -- annotations.spec.ts</code> — 3/3 (select→annotate survives reload, blocking gate + resolve re-enable, orphan section)</li>
+              <li><code>bun run e2e:local -- checkpoints.spec.ts</code> — 2/2 (gated advance + audited override, breaking chip + metric widget w/ graceful pulse-503 degradation)</li>
+              <li><code>bun run e2e:local -- settings-v24.spec.ts</code> — 2/2 (scoped key create/revoke round-trip, seeded failed_permanent DLQ + toggle)</li>
+              <li><code>bun run e2e:local -- lens-milestones.spec.ts</code> — 4/4 (incl. new real-edge-arrow + policy-badge + child-status-mark case)</li>
+              <li><code>bun test packages/core/src/services/docs</code> — 122/122 (sanitizer XSS+CSS-exfil corpus, reconcile, signoff, threads, stage)</li>
+              <li><code>bun test packages/core/src/auth</code>, <code>packages/core/src/services/hooks</code>, <code>packages/core/src/services/graph</code> — all green (deleteApiKey ownership scoping, set_hook_enabled secret preservation, blocks_edges_among/getMilestoneLens)</li>
+              <li><code>apps/main</code> <code>bun run check</code> — 57 errors (documented pre-existing baseline, zero new, re-verified after every task)</li>
+              <li><code>bun run fmt</code> / scoped <code>oxlint</code> — clean</li>
+            </ul>
+            <p><strong>Screenshots</strong> (light + dark, against seeded fixture data <code>e2e-outline-project</code>, taken via throwaway Playwright script per <code>X-Test-User</code>):</p>
+            <ul>
+              <li><code>./screenshots/b3-01-docviewer-plan-{light,dark}.png</code> — DocViewer rendering a pushed plan doc</li>
+              <li><code>./screenshots/b3-02-annotation-thread-rail-{light,dark}.png</code> — an open annotation thread in the margin rail alongside the rendered doc</li>
+              <li><code>./screenshots/b3-03-orphaned-thread-{light,dark}.png</code> — the always-visible orphaned-thread section</li>
+              <li><code>./screenshots/b3-04-interface-diff-view-{light,dark}.png</code> — the interface-report diff view with a breaking (removed-line) change highlighted</li>
+              <li><code>./screenshots/b3-05-checkpoint-card-{light,dark}.png</code> — the types checkpoint card (breaking chip + tracked-metric widget degrading gracefully) alongside the SDLC stepper at the review stage</li>
+              <li><code>./screenshots/b3-06-sdlc-stepper-{light,dark}.png</code> — the stepper at the plan stage with its paired checkpoint card</li>
+            </ul>
+            <p><strong>Disclosed deviations:</strong> the plan's task-b3-1 text describes the DocViewer's sanitize-on-push CSP note as "the docs route serving doc content sets a restrictive CSP" — implemented as a NEW dedicated <code>GET /docs/:id/render</code> route (not the existing JSON <code>GET /docs/:id</code>) since the viewer needs an iframe-loadable HTML document with its own CSP header, which a JSON endpoint can't provide; this is the more secure reading of "whatever you choose, the DocViewer's render side ALSO needs defense-in-depth (sandboxed iframe/CSP or equivalent)" from the spawn brief. Task B3.3's "SDLC stepper on feature-kind nodes" is implemented as "any task with `stage` set" rather than a literal `kind:"feature"` check — no such task kind exists in the schema (`TASK_KINDS` is <code>task|phase|approval|milestone|goal</code>); the A4.5 backend's own design (stage is a nullable per-task opt-in field, independent of `kind`) is treated as authoritative over the paraphrase. The independent taste/IA critic pass named in this phase's header was not run as a separate agent invocation within this single-coder pass; the phase's own adversary checklist was audited against the whole diff instead and one real gap (silent mutation-failure drops) was found and fixed as a result — flagging this so the orchestrator can dispatch the critic pass explicitly before merge if it's still wanted as a separate gate.</p>
+          </section>
+        </section>
+      </section>
+
+      <section id="breaking">
+        <h2>Breaking changes</h2>
+        <ul>
+          <li><strong>BREAKING (behavioral, A2):</strong> setting <code>progress=COMPLETED</code> via any surface now routes through the CompletionEngine — events are emitted and opted-in parents auto-complete. Default policy is <code>manual</code>, so no existing task auto-completes without explicit opt-in, but every completion now produces outbox events.</li>
+          <li><strong>BREAKING (A4):</strong> tasks with <code>kind:"approval"</code> reject ALL api-channel mutations with 403 — agents cannot complete approvals by design.</li>
+          <li><strong>BREAKING (A5):</strong> <code>milestone</code>/<code>goal</code> DB tables are frozen (no writes; dropped in a post-soak follow-up). All API/tool/client contracts are preserved via compat projections — only direct-DB consumers of those tables (none known) are affected. <code>upsert_todo.goal_id</code> becomes a deprecated alias for <code>parent_id</code>.</li>
+          <li><strong>BREAKING (B1, URLs only):</strong> <code>/project/:id/tasks</code>, <code>/project/:id/goals</code>, <code>/project/:id/specification</code> permanently redirect to <code>/work</code> and <code>/docs</code>. Bookmarks keep working via 301s.</li>
+          <li>Non-breaking: <code>api_keys.project_id</code> is nullable — existing keys keep full-account scope; new columns on <code>task</code> all have defaults.</li>
+        </ul>
+      </section>
+
+      <section id="out-of-scope">
+        <h2>Out of scope</h2>
+        <ul>
+          <li><strong>Outbound GitHub update-trail (gap 4):</strong> writing task/graph status back onto linked PRs/issues. Deferred — the A3.5 GitHubProxy adapter + A3.4 executor shape make this a small follow-up (one new vault op + one hook action); doing it in v2.4 widens the vault scope grammar before the inbound loop has proven itself.</li>
+          <li><strong>Agent wake / push-to-harness (gap 5):</strong> v2.4's mechanism is session bookends (<code>devpad ready</code> at start, <code>reviews pending</code> when blocked) — the market research is unambiguous that harness-enforced bookends beat agent memory. A user-configured webhook hook pointed at a harness endpoint already gives push semantics for free; a first-class wake protocol is future work.</li>
+          <li><strong>Dropping the frozen milestone/goal tables:</strong> a one-line cleanup migration AFTER a production soak with clean <code>verify-fold</code> output; bundling the drop into A5 would destroy the rollback story.</li>
+          <li><strong>Corpus doc-version retention (gap 8, partial):</strong> outbox/ledger retention ships in A3.7; api-report/plan version accumulation in corpus is bounded by content-hash dedup and deferred until real volume exists.</li>
+          <li><strong>Push-event → auto-scan trigger:</strong> the inbound receiver handles PR-merged only in v2.4; wiring push events into the scanner is a natural follow-up once scan cost is understood.</li>
+          <li><strong>Upstreaming outline/lens primitives to @f0rbit/ui:</strong> extract after the interaction design stabilizes in-app (OutlineEditor, ProgressRing, GraphLens, AnnotationRail, DocViewer are the candidates).</li>
+          <li><strong>Full hook-management UI:</strong> CLI/API is the hook editor in v2.4; settings shows enable/disable + deliveries only.</li>
+          <li><strong>Board lens:</strong> the mock ships graph + milestone lenses; a board lens is cheap once the lens shell exists but earns nothing yet.</li>
+          <li><strong>GitHub-App installation-token minting for outbound calls:</strong> v1 uses a fine-grained PAT in vault's Secrets Store; App-minted tokens are an adapter-internal upgrade.</li>
+          <li><strong><code>auto_deps</code> completion policies:</strong> locked scope is <code>manual | auto_children</code>; dependency-triggered completion needs its own semantics review.</li>
+          <li><strong>Full stored SDLC guard machine:</strong> locked decision 5 ships the gently-enforced stepper; hard guards only if the shape earns them.</li>
+          <li><strong>smoke/check/deploy project verbs:</strong> devpad exposes <code>gate</code> only; wiring the remaining verbs is worthwhile but not this plan's job.</li>
+        </ul>
+      </section>
+
+      <section id="agents-md-updates">
+        <h2>AGENTS.md updates</h2>
+        <p>Patterns for the coder to write into <code>/Users/tom/dev/devpad/AGENTS.md</code> at each phase close (this section is the audit trail; entries land under a new "v2.4 graph" heading).</p>
+        <ul>
+          <li><strong>(A1)</strong> Graph invariant rule: every structural task mutation (reparent, blocks-edge insert, claim) is ONE SQL statement carrying its full invariant in the WHERE clause (recursive CTE guards inline). Validate-then-write sequences on tree structure are forbidden — D1's single-writer serialization is the only race protection we have.</li>
+          <li><strong>(A1)</strong> All graph mutations use <code>rev</code>-based OCC; 409 responses carry the current row. New mutation endpoints must accept <code>base_rev</code> and never blind-write.</li>
+          <li><strong>(A2)</strong> Outbox rule: every task/edge mutation writes its <code>task_event</code> row in the SAME <code>run_atomic</code> call as the state change (<code>packages/core/src/services/graph/atomic.ts</code> — D1 batch / bun-sqlite transaction). A mutation path without an event row is a bug, full stop.</li>
+          <li><strong>(A2)</strong> Bubbling test seam: <code>CompletionEngine</code> consumers test against <code>InMemoryCompletionEngine</code>; the SQL engine itself is ONLY tested against real SQLite (createBunDatabase + migration replay). The property suite (<code>bubbling-properties.test.ts</code>, seeded RNG — pin the printed seed to reproduce) gates any change to the cascade SQL.</li>
+          <li><strong>(A3)</strong> Hooks infra: queues are <code>devpad-hooks</code> (prod) / <code>devpad-hooks-preview</code> (preview); local dev + tests use <code>InMemoryDispatcher</code> (synchronous consumer). Delivery idempotency is the <code>hook_delivery</code> PK (<code>hash(event_id+hook_id)</code>) — never add application-level dedup on top. <code>failed_permanent</code> rows are the DLQ and are never auto-pruned.</li>
+          <li><strong>(A3)</strong> devpad's vault caller identity is <code>{package_id:"devpad", environment: production|staging}</code> (preview→staging); grants are per-repo <code>github:releases:&lt;repo&gt;</code> rows, fail-closed. Webhook secrets are ENCRYPTION_KEY-encrypted (raw needed for HMAC) — never hashed, never logged.</li>
+          <li><strong>(A4)</strong> Doc safety: sanitize-on-push means corpus only ever stores safe HTML; every write path into the docs store (push, thread mutations, orphan moves) goes through <code>sanitize.ts</code>. Render routes add CSP as defense-in-depth. Markers are paired <code>devpad:thread</code> HTML comments with Zod-parsed JSON — treat unparseable markers as orphans, never drop them.</li>
+          <li><strong>(A4)</strong> Approval-kind tasks are human-only: any api-channel mutation 403s via the auth_channel guard in the tasks service — this rides provenance, don't re-implement it per-route.</li>
+          <li><strong>(A5)</strong> Milestone/goal are compat projections over task-with-kind (original <code>milestone_*</code>/<code>goal_*</code> ids preserved in the task table); the frozen tables exist only for <code>devpad admin verify-fold</code> until the post-soak drop. Never write to them; never "fix" the id prefixes.</li>
+          <li><strong>(A5)</strong> Data-backfill migrations are the ONE sanctioned hand-written-SQL exception (drizzle-kit can't generate data transforms): journal-registered, idempotence-guarded (WHERE NOT EXISTS), CI-applied only — the hand-APPLY ban stands unchanged.</li>
+          <li><strong>(B1)</strong> IA: project tabs are overview·work·docs·pulse·pipeline·blog·settings·history; lenses are overlays, never routes; new task surfaces integrate into work / todo — the page-vs-integrate gate applies to ANY proposed new page.</li>
+          <li><strong>(B2)</strong> The ripple animation replays the <code>done</code> response's <code>bubbled[]</code> chain verbatim — client-side re-derivation of bubble chains is forbidden (the API is the truth of what happened).</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
