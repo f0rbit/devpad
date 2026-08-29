@@ -36,6 +36,7 @@ import type {
 	AnnotationThread,
 	ApiKey,
 	CompletedVia,
+	CompletionPolicy,
 	Document,
 	GetConfigResult,
 	Goal,
@@ -90,15 +91,19 @@ export type PublicHook = Omit<Hook, "action" | "trigger"> & { trigger: HookTrigg
 // v2.4 (task A4.1) — wire shapes the docs route returns; `content` mirrors
 // `packages/core/src/services/docs/store.ts`'s `DocContent`/`DocVersionInfo`
 // but is defined locally since `@devpad/api` doesn't depend on `@devpad/core`.
-type DocContent = { title: string; html: string };
-type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
-type PullDocResponse = {
+export type DocContent = { title: string; html: string };
+export type DocVersionInfo = { version: string; parent: string | null; created_at: string; tags: string[] };
+export type PullDocResponse = {
 	document: Document;
 	content: DocContent | null;
 	threads: ThreadMarker[];
 	orphaned: ThreadMarker[];
 };
-type PushInterfaceReportResult = { document: Document; classification: InterfaceDiffClass; signoff: Signoff | null };
+export type PushInterfaceReportResult = {
+	document: Document;
+	classification: InterfaceDiffClass;
+	signoff: Signoff | null;
+};
 
 type FoldDiff =
 	| { kind: "missing_row"; entity: "milestone" | "goal"; id: string }
@@ -119,6 +124,7 @@ type FoldDiff =
 	  }
 	| { kind: "ordering_violation"; entity: "milestone"; id: string; after_id: string };
 type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: FoldDiff[]; clean: boolean };
+type ReconcileCssReport = { scanned: number; reconciled: string[] };
 
 type ReadyResponse = { items: Task[]; next_cursor: string | null };
 /** `rollups` is keyed by task id — see `packages/core/src/services/graph/rollup.ts`'s `RollupCounts`; a childless task is simply absent. */
@@ -132,6 +138,15 @@ type TreeResponse = {
 	edge_summary: Partial<Record<string, EdgeSummary>>;
 };
 type NearResponse = { links: TaskLink[]; tasks: Task[]; rollups: Partial<Record<string, RollupCounts>> };
+/** v2.4 (B2 critic carry-over) — the milestone lens's one batched read; see `packages/core/src/services/milestones.ts`'s `MilestoneLens`. */
+export type MilestoneLensRow = {
+	milestone: Milestone;
+	completion_policy: CompletionPolicy;
+	rollup: RollupCounts | undefined;
+	edge: EdgeSummary | undefined;
+	descendants: Task[];
+};
+export type MilestoneLensResponse = { rows: MilestoneLensRow[]; blocks: { src_id: string; dst_id: string }[] };
 type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 export type BubbleStep = { task: Task; via: CompletedVia };
@@ -504,6 +519,19 @@ export class ApiClient {
 			wrap(() => this.clients.milestones.get<Milestone[]>(`/projects/${project_id}/milestones`)),
 
 		/**
+		 * v2.4 (B2 critic carry-over) — the milestone lens's one batched read:
+		 * rollups/edge-summaries computed once across every milestone's
+		 * combined subtree, plus the real `blocks` edges between milestones for
+		 * the lens's sequencing arrows. Replaces N `tasks.tree()` calls.
+		 */
+		lens: (project_id: string, depth?: number): Promise<ApiResult<MilestoneLensResponse>> =>
+			wrap(() =>
+				this.clients.milestones.get<MilestoneLensResponse>(`/projects/${project_id}/milestones/lens`, {
+					query: depth ? { depth: String(depth) } : {},
+				}),
+			),
+
+		/**
 		 * Get milestone by ID
 		 */
 		find: (id: string): Promise<ApiResult<Milestone | null>> =>
@@ -595,6 +623,10 @@ export class ApiClient {
 
 		delete: (id: string): Promise<ApiResult<{ success: boolean }>> =>
 			wrap(() => this.clients.hooks.delete<{ success: boolean }>(`/hooks/${id}`)),
+
+		/** v2.4 (B3.4) — settings panel enable/disable toggle; never touches trigger/action (see registry.ts's `set_hook_enabled`). */
+		setEnabled: (id: string, enabled: boolean): Promise<ApiResult<PublicHook>> =>
+			wrap(() => this.clients.hooks.patch<PublicHook>(`/hooks/${id}/enabled`, { body: { enabled } })),
 
 		deliveries: (id: string, status?: HookDeliveryStatus): Promise<ApiResult<HookDelivery[]>> =>
 			wrap(() =>
@@ -885,6 +917,18 @@ export class ApiClient {
 			wrap(() => this.clients.docs.get<DocVersionInfo[]>(`/docs/${id}/versions`)),
 
 		/**
+		 * v2.4 (B3.1) — the DocViewer's sandboxed-iframe `src`: a standalone
+		 * HTML document with its own CSP (defense in depth over
+		 * sanitize-on-push), never a JSON payload injected into the main app's
+		 * DOM. Not a `fetch` call — the browser navigates the iframe here
+		 * directly, carrying the same session cookie as any same-origin nav.
+		 */
+		renderUrl: (id: string, version?: string): string => {
+			const query = version ? `?version=${encodeURIComponent(version)}` : "";
+			return `${this.clients.docs.url()}/docs/${id}/render${query}`;
+		},
+
+		/**
 		 * Annotation engine (task A4.2) — markers-in-doc threads. Every
 		 * mutation pushes a new corpus version; the doc itself is the thread
 		 * history (locked decision 3).
@@ -948,6 +992,14 @@ export class ApiClient {
 
 		find: (id: string): Promise<ApiResult<Signoff>> =>
 			wrap(() => this.clients.signoffs.get<Signoff>(`/signoffs/${id}`)),
+
+		/** v2.4 (B3) — the pending (undecided) signoff for a subject+checkpoint, or `null` if none has been requested yet. */
+		findPending: (filters: {
+			subject_kind: "doc_version" | "stage";
+			subject_id: string;
+			checkpoint: "plan" | "types" | "design";
+		}): Promise<ApiResult<Signoff | null>> =>
+			wrap(() => this.clients.signoffs.get<Signoff | null>("/signoffs", { query: filters })),
 
 		decide: (id: string, data: DecideCheckpointRequest): Promise<ApiResult<Signoff>> =>
 			wrap(() => this.clients.signoffs.post<Signoff>(`/signoffs/${id}/decide`, { body: data })),
@@ -1257,6 +1309,10 @@ export class ApiClient {
 	public readonly admin = {
 		verifyFold: (): Promise<ApiResult<FoldVerifyReport>> =>
 			wrap(() => this.clients.admin.get<FoldVerifyReport>("/admin/verify-fold")),
+
+		/** v2.4 (B3, CSS-exfil fix) — re-scrubs `<style>` blocks in every already-stored doc the caller owns. */
+		reconcileDocsCss: (): Promise<ApiResult<ReconcileCssReport>> =>
+			wrap(() => this.clients.admin.post<ReconcileCssReport>("/admin/reconcile-docs-css")),
 	};
 
 	public readonly user = {

@@ -16,7 +16,14 @@ import { and, eq, ne } from "drizzle-orm";
 import { errors, type ServiceError } from "../errors.js";
 import { emit_event } from "../graph/outbox.js";
 import { resolve_anchor } from "./anchor.js";
-import { begin_comment, embed_marker, parse_markers, replace_marker, strip_markers } from "./markers.js";
+import {
+	begin_comment,
+	embed_marker,
+	parse_markers,
+	replace_marker,
+	replace_orphan_marker,
+	strip_markers,
+} from "./markers.js";
 import { sanitize_html, sanitize_text } from "./sanitize.js";
 import { type DocCorpusError, type PushDocError, get_document, get_version, push_document_raw } from "./store.js";
 
@@ -158,7 +165,13 @@ export async function create_thread(
 	return pushed;
 }
 
-/** Mutates a currently-paired thread's marker in place (reply/resolve/toggle-blocking share this). `not_found` if the thread isn't currently paired — an orphaned thread must re-anchor (via the next push) before it can be mutated. */
+/**
+ * Mutates a thread's marker in place (reply/resolve/toggle-blocking share
+ * this) — tries a currently-PAIRED thread first, then falls back to an
+ * ORPHANED one (B3 fast-follow #7: "visible must not mean dead-ended" — an
+ * orphan gets the same reply/resolve/toggle-blocking actions a live thread
+ * does, via `replace_orphan_marker`). `not_found` if `thread_id` is neither.
+ */
 async function mutate_thread(
 	db: Database,
 	backend: Backend,
@@ -170,14 +183,22 @@ async function mutate_thread(
 	const head = await pull_head(db, backend, document_id);
 	if (!head.ok) return head;
 
-	const { threads } = parse_markers(head.value.html);
-	const found = threads.find((t) => t.marker.id === thread_id);
-	if (!found) return errors.notFound("thread", thread_id);
+	const { threads, orphans } = parse_markers(head.value.html);
+	const paired = threads.find((t) => t.marker.id === thread_id);
+	if (paired) {
+		const replaced = replace_marker(head.value.html, thread_id, mutate(paired.marker));
+		if (!replaced) return errors.notFound("thread", thread_id);
+		return push_document_raw(db, backend, push_payload(head.value, replaced), actor.channel);
+	}
 
-	const replaced = replace_marker(head.value.html, thread_id, mutate(found.marker));
-	if (!replaced) return errors.notFound("thread", thread_id);
+	const orphaned = orphans.find((o) => o.marker?.id === thread_id);
+	if (orphaned?.marker) {
+		const replaced = replace_orphan_marker(head.value.html, thread_id, mutate(orphaned.marker));
+		if (!replaced) return errors.notFound("thread", thread_id);
+		return push_document_raw(db, backend, push_payload(head.value, replaced), actor.channel);
+	}
 
-	return push_document_raw(db, backend, push_payload(head.value, replaced), actor.channel);
+	return errors.notFound("thread", thread_id);
 }
 
 export async function reply_thread(

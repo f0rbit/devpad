@@ -64,7 +64,7 @@ app.delete("/:key_id", requireAuth, async (c) => {
 
 	if (!key_id) return c.json({ error: "Key ID required" }, 400);
 
-	const result = await keys.deleteApiKey(db, key_id);
+	const result = await keys.deleteApiKey(db, key_id, auth_user.id);
 	if (!result.ok) {
 		if (result.error.kind === "not_found") return c.json({ error: "API key not found" }, 404);
 		return c.json({ error: "Failed to delete API key" }, 500);

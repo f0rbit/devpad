@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "@devpad/schema/database/types";
 import { type Backend, create_memory_backend } from "@f0rbit/corpus";
 import { create_thread } from "../../threads.js";
-import { decide_checkpoint, latest_decided_signoff, push_interface_report, request_checkpoint } from "../../signoff.js";
+import {
+	decide_checkpoint,
+	latest_decided_signoff,
+	pending_signoff_for,
+	push_interface_report,
+	request_checkpoint,
+} from "../../signoff.js";
 import { get_version, push_document } from "../../store.js";
 import { graph } from "../../../index.js";
 import { create_test_db, seed_project, seed_task, seed_user } from "./helpers.js";
@@ -52,6 +58,36 @@ describe("signoff — checkpoint request + human-only decision (task A4.3)", () 
 		const after = await graph.ready(db, { owner_id, project_id, limit: 20 });
 		expect(after.ok).toBe(true);
 		if (after.ok) expect(after.value.items.some((t) => t.id === downstream.id)).toBe(true);
+	});
+
+	test("pending_signoff_for finds an undecided signoff and returns null once it's decided", async () => {
+		const before = await pending_signoff_for(db, "stage", "some-stage-pending", "plan");
+		expect(before.ok).toBe(true);
+		if (before.ok) expect(before.value).toBeNull();
+
+		const requested = await request_checkpoint(
+			db,
+			{ project_id, subject_kind: "stage", subject_id: "some-stage-pending", checkpoint: "plan", blocks: [] },
+			{ owner_id, auth_channel: "api" },
+		);
+		if (!requested.ok) throw new Error("request failed");
+
+		const pending = await pending_signoff_for(db, "stage", "some-stage-pending", "plan");
+		expect(pending.ok).toBe(true);
+		if (pending.ok) expect(pending.value?.id).toBe(requested.value.signoff.id);
+
+		const decided = await decide_checkpoint(
+			db,
+			backend,
+			requested.value.signoff.id,
+			{ decision: "approved" },
+			{ user_id: owner_id, auth_channel: "user" },
+		);
+		expect(decided.ok).toBe(true);
+
+		const after = await pending_signoff_for(db, "stage", "some-stage-pending", "plan");
+		expect(after.ok).toBe(true);
+		if (after.ok) expect(after.value).toBeNull();
 	});
 
 	test("an api-channel decision attempt is rejected with approval_channel, regardless of decision value", async () => {

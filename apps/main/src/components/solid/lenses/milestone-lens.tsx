@@ -1,5 +1,5 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { EdgeSummary, Milestone, RollupCounts } from "@devpad/api";
+import type { MilestoneLensRow } from "@devpad/api";
 import type { Task } from "@devpad/schema";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { Ring } from "../outline/ring";
@@ -12,12 +12,8 @@ export type MilestoneLensProps = {
 	onZoom: (id: string) => void;
 };
 
-type MilestoneRow = {
-	milestone: Milestone;
-	rollup: RollupCounts | undefined;
-	edge: EdgeSummary | undefined;
-	descendants: Task[];
-};
+const dotClass = (progress: Task["progress"]): string =>
+	`outline-dot${progress === "IN_PROGRESS" ? " outline-dot-doing" : progress === "COMPLETED" ? " outline-dot-done" : ""}`;
 
 /**
  * Task B2.2 — the milestone lens: Dagster-style collapsed phase cards,
@@ -26,9 +22,17 @@ type MilestoneRow = {
  * SAME `edge_summary`/`rollups` fields the outline's own rows use — no
  * client re-derivation. Replaces the deleted goals page's job as a lens,
  * not a destination.
+ *
+ * v2.4 (B2 critic carry-over) — `load()` now makes ONE batched call
+ * (`milestones.lens`) instead of N `tasks.tree()` calls; the sequencing
+ * arrow between adjacent cards renders only when a real `blocks` edge
+ * connects them (never rank adjacency); each card shows its
+ * `completion_policy`; and each expanded child shows the same done/doing
+ * status dot the outline's own rows use.
  */
 export default function MilestoneLens(props: MilestoneLensProps) {
-	const [rows, setRows] = createSignal<MilestoneRow[]>([]);
+	const [rows, setRows] = createSignal<MilestoneLensRow[]>([]);
+	const [blocks, setBlocks] = createSignal<{ src_id: string; dst_id: string }[]>([]);
 	const [loading, setLoading] = createSignal(true);
 	const [expanded, setExpanded] = createSignal<Set<string>>(new Set());
 
@@ -37,25 +41,15 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 	async function load(): Promise<void> {
 		setLoading(true);
 		const client = getBrowserClient();
-		const list_result = await client.milestones.getByProject(props.projectId);
-		if (!list_result.ok) {
+		const result = await client.milestones.lens(props.projectId, 2);
+		if (!result.ok) {
 			setRows([]);
+			setBlocks([]);
 			setLoading(false);
 			return;
 		}
-		const milestones = list_result.value;
-		const trees = await Promise.all(milestones.map((m) => client.tasks.tree(m.id, 2)));
-		const built: MilestoneRow[] = milestones.map((m, i) => {
-			const tree = trees[i];
-			if (!tree.ok) return { milestone: m, rollup: undefined, edge: undefined, descendants: [] };
-			return {
-				milestone: m,
-				rollup: tree.value.rollups[m.id],
-				edge: tree.value.edge_summary[m.id],
-				descendants: tree.value.descendants,
-			};
-		});
-		setRows(built);
+		setRows(result.value.rows);
+		setBlocks(result.value.blocks);
 		setLoading(false);
 	}
 
@@ -72,6 +66,10 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 		props.onClose();
 	};
 
+	/** A real `blocks` edge FROM `from_id` TO `to_id` — never rank adjacency. */
+	const blocksNext = (from_id: string, to_id: string) =>
+		blocks().some((e) => e.src_id === from_id && e.dst_id === to_id);
+
 	return (
 		<LensShell title="Milestone lens" onClose={props.onClose}>
 			<div class="lens-milestones">
@@ -81,8 +79,8 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 							<For each={rows()}>
 								{(row, i) => (
 									<>
-										<Show when={i() > 0}>
-											<span class="lens-milestone-arrow" aria-hidden="true">
+										<Show when={i() > 0 && blocksNext(rows()[i() - 1]?.milestone.id ?? "", row.milestone.id)}>
+											<span class="lens-milestone-arrow" aria-hidden="true" title="blocks">
 												→
 											</span>
 										</Show>
@@ -94,12 +92,25 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 													goto(row.milestone.id);
 												}}
 											>
-												<Ring rollup={row.rollup} size={26} auto={false} rippling={false} />
+												<Ring
+													rollup={row.rollup}
+													size={26}
+													auto={row.completion_policy === "auto_children"}
+													rippling={false}
+												/>
 												<span class="lens-milestone-title">{row.milestone.name}</span>
 											</button>
 											<div class="lens-milestone-meta">
 												<Show when={row.milestone.target_time}>
 													{(target) => <span class="outline-chip">due {new Date(target()).toLocaleDateString()}</span>}
+												</Show>
+												<Show when={row.completion_policy === "auto_children"}>
+													<span
+														class="outline-chip outline-chip-auto"
+														title="completion_policy: auto_children — completes when all children are done"
+													>
+														auto ⚙
+													</span>
 												</Show>
 												<Show when={row.edge?.stale}>
 													<span class="outline-chip outline-chip-stale">stale</span>
@@ -135,6 +146,7 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 																			goto(child.id);
 																		}}
 																	>
+																		<span class={dotClass(child.progress)} />
 																		{child.title}
 																	</button>
 																</li>

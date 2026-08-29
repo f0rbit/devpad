@@ -18,7 +18,16 @@
  * the outline's progress ring renders a real fraction rather than 0/0.
  */
 
-import { project, session, task, task_link, task_rollup, user } from "@devpad/schema/database/schema";
+import {
+	hook,
+	hook_delivery,
+	project,
+	session,
+	task,
+	task_link,
+	task_rollup,
+	user,
+} from "@devpad/schema/database/schema";
 import type { Database as DrizzleDatabase } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
 import {
@@ -30,13 +39,19 @@ import {
 	E2E_TASK_COMPACT_PARENT,
 	E2E_TASK_LEAF,
 	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_2,
+	E2E_TASK_MILESTONE_2_CHILD,
 	E2E_TASK_MILESTONE_CHILD,
 	E2E_TASK_PHASE,
 	E2E_TASK_RIPPLE_GRANDPARENT,
 	E2E_TASK_RIPPLE_LEAF,
 	E2E_TASK_RIPPLE_PARENT,
+	E2E_HOOK_DELIVERY_DLQ_ID,
+	E2E_HOOK_ID,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
+	E2E_TASK_STAGE_PLAN,
+	E2E_TASK_STAGE_REVIEW,
 	E2E_USER_ID,
 } from "./outline-ids";
 import { open_test_db } from "./pipelines";
@@ -51,13 +66,19 @@ export {
 	E2E_TASK_COMPACT_PARENT,
 	E2E_TASK_LEAF,
 	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_2,
+	E2E_TASK_MILESTONE_2_CHILD,
 	E2E_TASK_MILESTONE_CHILD,
 	E2E_TASK_PHASE,
 	E2E_TASK_RIPPLE_GRANDPARENT,
 	E2E_TASK_RIPPLE_LEAF,
 	E2E_TASK_RIPPLE_PARENT,
+	E2E_HOOK_DELIVERY_DLQ_ID,
+	E2E_HOOK_ID,
 	E2E_TASK_RIPPLE_REDUCED_LEAF,
 	E2E_TASK_RIPPLE_REDUCED_PARENT,
+	E2E_TASK_STAGE_PLAN,
+	E2E_TASK_STAGE_REVIEW,
 	E2E_USER_ID,
 };
 
@@ -264,6 +285,54 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 
 	await db.insert(task).values({
 		...base_task,
+		id: E2E_TASK_MILESTONE_2,
+		title: "Ripple v2",
+		kind: "milestone",
+		completion_policy: "auto_children",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		end_time: "2099-02-01T00:00:00.000Z",
+		rank: "i5a",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_MILESTONE_2_CHILD,
+		title: "Polish the ripple lens",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "COMPLETED",
+		priority: "LOW",
+		parent_id: E2E_TASK_MILESTONE_2,
+		rank: "i0",
+	} as never);
+
+	await db.insert(task_rollup).values({
+		task_id: E2E_TASK_MILESTONE_2,
+		direct_done: 1,
+		direct_total: 1,
+		subtree_done: 1,
+		subtree_total: 1,
+	} as never);
+
+	await db.insert(task_link).values({
+		id: `link_${E2E_TASK_MILESTONE}-blocks-${E2E_TASK_MILESTONE_2}`,
+		src_id: E2E_TASK_MILESTONE,
+		dst_id: E2E_TASK_MILESTONE_2,
+		kind: "blocks",
+		ref: null,
+		note: null,
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
 		id: E2E_TASK_RIPPLE_GRANDPARENT,
 		title: "Ripple grandparent",
 		kind: "phase",
@@ -345,6 +414,75 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 		subtree_done: 0,
 		subtree_total: 1,
 	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_STAGE_PLAN,
+		title: "Stage-tracked task (plan)",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		stage: "plan",
+		rank: "i8",
+	} as never);
+
+	await db.insert(task).values({
+		...base_task,
+		id: E2E_TASK_STAGE_REVIEW,
+		title: "Stage-tracked task (review)",
+		kind: "task",
+		completion_policy: "manual",
+		progress: "UNSTARTED",
+		priority: "LOW",
+		parent_id: null,
+		stage: "review",
+		rank: "i9",
+	} as never);
+
+	await db.insert(task_link).values({
+		id: `link_${E2E_TASK_STAGE_REVIEW}-tracks_metric`,
+		src_id: E2E_TASK_STAGE_REVIEW,
+		dst_id: null,
+		kind: "tracks_metric",
+		ref: { metric_name: "error_rate" },
+		note: null,
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	await db.insert(hook).values({
+		id: E2E_HOOK_ID,
+		project_id: E2E_OUTLINE_PROJECT_ID,
+		enabled: true,
+		trigger: { kinds: ["task.completed"], selector: {} },
+		action: { kind: "webhook", url: "https://example.com/e2e-hook" },
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	// No API can fabricate a `hook_delivery` row directly (only the dispatch
+	// system ever creates one) — this is the one part of the settings
+	// fixture that has to be seeded at the SQL level.
+	await db.insert(hook_delivery).values({
+		id: E2E_HOOK_DELIVERY_DLQ_ID,
+		hook_id: E2E_HOOK_ID,
+		event_id: "event_e2e-dlq-sample",
+		status: "failed_permanent",
+		attempts: 3,
+		last_error: "connect ECONNREFUSED 127.0.0.1:9999",
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+	} as never);
 }
 
 async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
@@ -358,8 +496,12 @@ async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(task).where(eq(task.id, E2E_TASK_COMPACT_CHILD));
 	await db.delete(task).where(eq(task.id, E2E_TASK_COMPACT_PARENT));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_MILESTONE));
+	await db.delete(task_link).where(eq(task_link.id, `link_${E2E_TASK_MILESTONE}-blocks-${E2E_TASK_MILESTONE_2}`));
 	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_CHILD));
 	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE));
+	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_MILESTONE_2));
+	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_2_CHILD));
+	await db.delete(task).where(eq(task.id, E2E_TASK_MILESTONE_2));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_GRANDPARENT));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_PARENT));
 	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_LEAF));
@@ -368,6 +510,11 @@ async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_RIPPLE_REDUCED_PARENT));
 	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_REDUCED_LEAF));
 	await db.delete(task).where(eq(task.id, E2E_TASK_RIPPLE_REDUCED_PARENT));
+	await db.delete(task_link).where(eq(task_link.id, `link_${E2E_TASK_STAGE_REVIEW}-tracks_metric`));
+	await db.delete(task).where(eq(task.id, E2E_TASK_STAGE_PLAN));
+	await db.delete(task).where(eq(task.id, E2E_TASK_STAGE_REVIEW));
+	await db.delete(hook_delivery).where(eq(hook_delivery.id, E2E_HOOK_DELIVERY_DLQ_ID));
+	await db.delete(hook).where(eq(hook.id, E2E_HOOK_ID));
 	await db.delete(project).where(eq(project.id, E2E_OUTLINE_PROJECT_ID));
 	// user/session are shared with the pipelines fixture on the same fixed ids
 	// (see the `onConflictDoNothing` inserts above) — never deleted here.

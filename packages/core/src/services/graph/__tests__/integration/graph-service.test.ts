@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { GRAPH_CHILDREN_CAP, GRAPH_DEPTH_CAP } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { add_link, ancestors, claim, near, ready, set_parent, subtree } from "../../graph.js";
+import { add_link, ancestors, blocks_edges_among, claim, near, ready, set_parent, subtree } from "../../graph.js";
 import { create_test_db, seed_task, seed_user } from "./helpers.js";
 
 let db: Database;
@@ -119,6 +119,31 @@ describe("add_link — blocks-cycle guard", () => {
 		const backward = await add_link(db, { src_id: b.id, dst_id: a.id, kind: "relates_to" });
 		expect(forward.ok).toBe(true);
 		expect(backward.ok).toBe(true);
+	});
+});
+
+describe("blocks_edges_among — v2.4 B2 critic carry-over (milestone lens arrows)", () => {
+	test("returns only blocks edges where BOTH ends are members of the set", async () => {
+		const a = await seed_task(db, owner_id);
+		const b = await seed_task(db, owner_id);
+		const outside = await seed_task(db, owner_id);
+		await add_link(db, { src_id: a.id, dst_id: b.id, kind: "blocks" });
+		// blocks an outside task — must not appear once we scope to {a, b}.
+		await add_link(db, { src_id: a.id, dst_id: outside.id, kind: "blocks" });
+		// a non-blocks edge between a and b — must not appear either.
+		const c = await seed_task(db, owner_id);
+		await add_link(db, { src_id: b.id, dst_id: c.id, kind: "relates_to" });
+
+		const result = await blocks_edges_among(db, [a.id, b.id, c.id]);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value).toEqual([{ src_id: a.id, dst_id: b.id }]);
+	});
+
+	test("empty id set returns no edges", async () => {
+		const result = await blocks_edges_among(db, []);
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.value).toEqual([]);
 	});
 });
 

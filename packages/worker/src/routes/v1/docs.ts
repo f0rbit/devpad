@@ -176,6 +176,55 @@ app.get("/:id", requireAuth, async (c) => {
 	});
 });
 
+/**
+ * v2.4 (B3.1) — the DocViewer's render surface: a STANDALONE HTML document
+ * (not JSON) the viewer loads into a sandboxed, script-disabled iframe.
+ * Defense in depth over sanitize-on-push (gap 7): even if a future ingest
+ * gap ever let something hostile through, this response's own CSP has no
+ * `script-src`/`connect-src`/`frame-src` at all, so nothing it could embed
+ * can execute or phone home — independent of whatever the DOM sanitizer did.
+ *
+ * v2.4 (B3 fast-follow #4, taste/IA critic — "anchor connection") — paired
+ * marker comments are converted to `<mark data-thread-id>` spans (not just
+ * stripped) so the annotation rail has a DOM hook to scroll/flash a thread's
+ * anchored text against. The annotation engine's own anchor math always
+ * operates on the corpus-stored content directly, never on this render.
+ */
+app.get("/:id/render", requireAuth, async (c) => {
+	const db = c.get("db");
+	const id = c.req.param("id");
+	const version = c.req.query("version");
+
+	const doc_result = await docs.get_document(db, id);
+	if (!doc_result.ok) return c.text("Not found", 404);
+	const guard = await assertProjectOwnership(c, doc_result.value.project_id);
+	if (!guard.ok) return guard.response;
+
+	const backend_guard = requireDocsBackend(c);
+	if (!backend_guard.ok) return c.text("Docs corpus backend not configured", 503);
+
+	if (!doc_result.value.head_version) return c.text("", 200);
+
+	const content_result = await docs.get_version(backend_guard.backend, id, version);
+	if (!content_result.ok) return c.text("Not found", 404);
+
+	const marked = docs.markers_to_marks(content_result.value.html);
+	// v2.4 (B3 fast-follow #8) — `interface` docs are pushed as escaped plain
+	// text (see `signoff.ts`'s `push_interface_report`), so without
+	// `pre-wrap` a multi-line declaration list collapses to one unreadable
+	// line; other kinds keep normal HTML flow.
+	const white_space = doc_result.value.kind === "interface" ? "white-space:pre-wrap;" : "";
+	const body_style = `body{font:14px/1.6 system-ui,sans-serif;color:#1a1a1a;margin:16px;overflow-wrap:anywhere;${white_space}}table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}mark{background:#fff3a3;color:inherit}mark.mark-flash{background:#ffd23f}`;
+	const body = `<!doctype html><html><head><meta charset="utf-8"><style>${body_style}</style></head><body>${marked}</body></html>`;
+
+	c.header(
+		"Content-Security-Policy",
+		"default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; frame-ancestors 'self'",
+	);
+	c.header("X-Content-Type-Options", "nosniff");
+	return c.html(body);
+});
+
 app.post("/:id/threads", requireAuth, zValidator("json", create_thread_request), async (c) => {
 	const db = c.get("db");
 	const auth_user = c.get("user");

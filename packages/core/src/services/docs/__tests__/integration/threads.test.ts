@@ -3,6 +3,7 @@ import { annotation_thread } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { type Backend, create_memory_backend } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
+import { parse_markers } from "../../markers.js";
 import { get_version, push_document } from "../../store.js";
 import {
 	create_thread,
@@ -162,6 +163,55 @@ describe("annotation engine — threads over corpus lineage (task A4.2)", () => 
 		const rows = await db.select().from(annotation_thread).where(eq(annotation_thread.document_id, doc.id));
 		expect(rows).toHaveLength(1);
 		expect(rows[0]?.status).toBe("orphaned");
+	});
+
+	test("B3 fast-follow #7 — resolve/reply/toggle-blocking all work on an ORPHANED thread, not just a paired one", async () => {
+		const doc = await push_doc(DOC_HTML);
+		const created = await create_thread(db, backend, doc.id, { ...anchor_for("brown fox"), body: "seems off" }, ACTOR);
+		if (!created.ok) throw new Error("create failed");
+
+		const annotated_html = await pull_html(doc.id, created.value.head_version);
+		const edited_html = annotated_html.replace("brown fox", "grey wolf");
+		const edited = await push_document_annotated(
+			db,
+			backend,
+			{ document_id: doc.id, project_id, kind: "design", title: "Design", html: edited_html },
+			"api",
+		);
+		if (!edited.ok) throw new Error("edit failed");
+
+		const orphaned_rows = await db.select().from(annotation_thread).where(eq(annotation_thread.document_id, doc.id));
+		const thread_id = orphaned_rows[0]?.thread_id;
+		if (!thread_id) throw new Error("thread not indexed");
+		expect(orphaned_rows[0]?.status).toBe("orphaned");
+
+		const replied = await reply_thread(db, backend, doc.id, thread_id, "still relevant", ACTOR);
+		expect(replied.ok).toBe(true);
+		if (!replied.ok) return;
+		const after_reply_html = await pull_html(doc.id, replied.value.head_version);
+		expect(parse_markers(after_reply_html).orphans[0]?.marker?.entries.at(-1)?.body).toBe("still relevant");
+
+		const toggled = await toggle_blocking(db, backend, doc.id, thread_id, true, ACTOR);
+		expect(toggled.ok).toBe(true);
+		if (!toggled.ok) return;
+		const after_toggle_html = await pull_html(doc.id, toggled.value.head_version);
+		expect(parse_markers(after_toggle_html).orphans[0]?.marker?.blocking).toBe(true);
+		// `rebuild_thread_index`'s aggregate table hardcodes "orphaned" for
+		// anything structurally unpaired, regardless of the marker's own
+		// internal status — that clamp is deliberate (an orphan always needs
+		// attention until re-anchored) and unrelated to this fast-follow.
+		const index_after_toggle = await db
+			.select()
+			.from(annotation_thread)
+			.where(eq(annotation_thread.document_id, doc.id));
+		expect(index_after_toggle[0]?.status).toBe("orphaned");
+		expect(index_after_toggle[0]?.blocking).toBe(true);
+
+		const resolved = await resolve_thread(db, backend, doc.id, thread_id, ACTOR);
+		expect(resolved.ok).toBe(true);
+		if (!resolved.ok) return;
+		const after_resolve_html = await pull_html(doc.id, resolved.value.head_version);
+		expect(parse_markers(after_resolve_html).orphans[0]?.marker?.status).toBe("resolved");
 	});
 
 	test("reply appends an entry without moving or dropping the thread", async () => {

@@ -395,3 +395,25 @@ export async function near(db: Database, id: string, depth: number = 2): Promise
 
 	return ok({ links, tasks });
 }
+
+/**
+ * v2.4 (B2 critic carry-over) — real `blocks` edges among a closed set of ids
+ * (e.g. every milestone in a project), for a lens that draws sequencing
+ * arrows. Deliberately NOT rank adjacency: `src_id` blocks `dst_id`
+ * (matching `edge-summary.ts`'s `blocked_counts_for` join direction), and
+ * both ends must be members of `ids` — an edge pointing outside the set
+ * (e.g. a milestone blocked by a plain task) is not this lens's concern.
+ */
+export async function blocks_edges_among(
+	db: Database,
+	ids: string[],
+): Promise<Result<{ src_id: string; dst_id: string }[], ServiceError>> {
+	if (ids.length === 0) return ok([]);
+	const id_set = new Set(ids);
+	const rows = await db
+		.select({ src_id: task_link.src_id, dst_id: task_link.dst_id })
+		.from(task_link)
+		.where(and(inArray(task_link.src_id, ids), eq(task_link.kind, "blocks"), eq(task_link.deleted, false)));
+	const edges = rows.flatMap((r) => (r.dst_id && id_set.has(r.dst_id) ? [{ src_id: r.src_id, dst_id: r.dst_id }] : []));
+	return ok(edges);
+}

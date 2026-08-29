@@ -1120,6 +1120,10 @@ button.outline-row {
 	.outline-toast-leaving {
 		animation: none;
 	}
+
+	.doc-version-just-now {
+		animation: none;
+	}
 }
 
 .project-blog__card-meta {
@@ -1516,6 +1520,9 @@ button.outline-row {
 
 .lens-milestone-child {
 	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	text-align: left;
 	background: none;
 	border: none;
@@ -1527,6 +1534,463 @@ button.outline-row {
 
 .lens-milestone-child:hover {
 	color: var(--fg);
+}
+
+/* ── DocViewer + AnnotationRail — v2.4 phase B3 review surfaces ── */
+
+.doc-viewer {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.doc-viewer-header {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.doc-viewer-title {
+	margin: 0;
+}
+
+.doc-version-picker {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+}
+
+.doc-version-chip-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.doc-version-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+	padding: 3px 8px;
+	border-radius: var(--radius);
+	border: 1px solid var(--border);
+	background: var(--bg-alt);
+	color: var(--fg-muted);
+	cursor: pointer;
+}
+
+.doc-version-chip-active {
+	border-color: var(--accent);
+	color: var(--fg);
+}
+
+.doc-version-approved {
+	color: var(--success-fg);
+}
+
+/* Fast-follow #5 — transient save feedback on the freshly-minted head chip. */
+.doc-version-just-now {
+	color: var(--accent);
+	font-weight: 500;
+	animation: doc-version-just-now-pulse 1.6s ease-in-out 2;
+}
+
+@keyframes doc-version-just-now-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+}
+
+.doc-version-diff-link {
+	font-size: 13px;
+	line-height: 1;
+	color: var(--fg-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0 2px;
+}
+
+.doc-version-diff-link:hover {
+	color: var(--fg-muted);
+}
+
+.doc-diff-panel {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 8px;
+	max-height: 320px;
+	overflow: auto;
+}
+
+.doc-diff-pre {
+	margin: 0;
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.doc-diff-line {
+	padding: 1px 4px;
+}
+
+.doc-diff-add {
+	background: color-mix(in srgb, var(--success) 60%, transparent);
+	color: var(--success-fg);
+}
+
+.doc-diff-remove {
+	background: color-mix(in srgb, var(--error) 60%, transparent);
+	color: var(--error-fg);
+}
+
+.doc-viewer-body {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+}
+
+.doc-render-frame {
+	flex: 1;
+	min-width: 0;
+	width: 100%;
+	height: 60vh;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: #fff;
+}
+
+.doc-viewer-not-head-note {
+	flex: 1;
+	padding: 12px;
+}
+
+.annotation-rail {
+	width: 300px;
+	flex-shrink: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-height: 60vh;
+	overflow: auto;
+}
+
+/* Taste/IA critic BLOCKER: a fixed 300px rail next to `flex: 1; min-width: 0`
+   collapses the doc iframe to ~2px on narrow viewports (the rail wins the
+   available width first) and overflows the page horizontally. Stack the
+   iframe above the rail, both full-width, below ~720px. */
+@media (max-width: 720px) {
+	.doc-viewer-body {
+		flex-direction: column;
+	}
+
+	.doc-render-frame {
+		height: 50vh;
+	}
+
+	.annotation-rail {
+		width: 100%;
+		max-height: none;
+	}
+}
+
+.verdict-bar {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.verdict-blocked-note {
+	font-size: 12px;
+	color: var(--error-fg);
+	margin: 0;
+}
+
+.verdict-reason {
+	width: 100%;
+	font-size: 12px;
+	min-height: 40px;
+	resize: vertical;
+}
+
+.verdict-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.annotation-rail-header {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.thread-composer,
+.thread-card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 8px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.thread-quote {
+	font-size: 12px;
+	font-style: italic;
+	color: var(--fg-muted);
+	margin: 0;
+	cursor: pointer;
+}
+
+.thread-entry {
+	font-size: 12px;
+	margin: 0;
+}
+
+.thread-meta {
+	display: flex;
+	gap: 4px;
+}
+
+.thread-blocking-label {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 12px;
+}
+
+.thread-composer-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.thread-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.thread-actions {
+	display: flex;
+	gap: 8px;
+}
+
+.thread-action-link {
+	font-size: 11px;
+	color: var(--fg-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+}
+
+.thread-action-link:hover {
+	color: var(--fg-muted);
+}
+
+.thread-reply-box {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.thread-reply-box textarea {
+	font-size: 12px;
+	min-height: 40px;
+}
+
+.thread-list-orphaned {
+	border-top: 1px dashed var(--warning-fg);
+	padding-top: 8px;
+}
+
+.thread-card-orphaned {
+	border-style: dashed;
+	border-color: var(--warning-fg);
+}
+
+.sdlc-stepper {
+	margin-top: 12px;
+}
+
+.checkpoints {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.checkpoint-card {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg-alt);
+	padding: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	width: 260px;
+}
+
+.checkpoint-card h5 {
+	margin: 0;
+}
+
+.checkpoint-doc-link {
+	font-size: 12px;
+}
+
+.checkpoint-actions {
+	display: flex;
+	gap: 6px;
+}
+
+.checkpoint-metric {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* Craft fast-follow #13a — `.checkpoint-card` is a column flex container;
+   without `align-self`, a bare `.outline-chip` (an inline `<span>` that
+   still becomes a full-stretch flex item) reads as a full-width banner
+   instead of a chip. */
+.checkpoint-card [data-testid="interface-classification-chip"] {
+	align-self: flex-start;
+}
+
+.scoped-keys,
+.hook-deliveries {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	max-width: 480px;
+}
+
+.scoped-key-reveal {
+	border: 1px solid var(--warning-fg);
+	border-radius: var(--radius);
+	background: var(--warning);
+	padding: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.scoped-key-reveal code {
+	word-break: break-all;
+}
+
+.scoped-key-create {
+	align-items: center;
+}
+
+.scoped-key-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.scoped-key-revoke-confirm {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.hook-delivery-group {
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	padding: 8px;
+}
+
+.hook-delivery-head {
+	align-items: center;
+}
+
+.hook-delivery-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.hook-delivery-item-dlq {
+	border-left: 2px solid var(--error-fg);
+	padding-left: 6px;
+}
+
+.sdlc-stepper-error {
+	margin-top: 6px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: var(--error-fg);
+}
+
+.sdlc-stepper-error p {
+	margin: 0;
+}
+
+.docs-list {
+	margin-top: 24px;
+}
+
+.docs-list__item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 8px;
+	margin: 0 -8px;
+	border-radius: var(--radius);
+}
+
+.docs-list__item[aria-current="true"] {
+	background: var(--bg-alt);
+}
+
+.docs-list__link {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	font: inherit;
+	color: inherit;
+	text-align: left;
+}
+
+.docs-list__link:hover .docs-list__title {
+	color: var(--accent);
+}
+
+.docs-list__title {
+	font-weight: 500;
+}
+
+.docs-list__updated {
+	margin-left: auto;
+}
+
+/* Fast-follow #9 — once a doc is open, the rest of the list shrinks to a
+   compact title-only strip so the DocViewer gets the room. */
+.docs-list--compact .docs-list__item:not([aria-current="true"]) {
+	gap: 6px;
+	padding: 2px 8px;
+}
+
+.docs-list--compact .docs-list__item:not([aria-current="true"]) .docs-list__updated {
+	display: none;
 }
 
 /* ── "Waiting on you" — integration atop /todo (task B2.4) ── */

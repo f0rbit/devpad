@@ -14,6 +14,7 @@ import { fail_with, make_spinner } from "./printer.js";
 
 type ClientFactory = () => ApiClient;
 type FoldVerifyReport = { milestone_count: number; goal_count: number; diffs: unknown[]; clean: boolean };
+type ReconcileCssReport = { scanned: number; reconciled: string[] };
 
 async function print_json(data: unknown): Promise<void> {
 	const output = JSON.stringify(data, null, 2) + "\n";
@@ -45,5 +46,18 @@ export function register_admin_commands(program: Command, get_client: ClientFact
 			spinner.fail(`Fold verification found ${String(result.diffs.length)} divergence(s)`);
 			await print_json(result);
 			process.exit(1);
+		});
+
+	admin
+		.command("reconcile-docs-css")
+		.description("Re-scrub CSS exfil vectors (@import, url()) out of already-stored docs' <style> blocks")
+		.action(async () => {
+			const spinner = make_spinner("Reconciling stored docs...").start();
+			const tool = getTool("devpad_admin_reconcile_docs_css");
+			if (!tool) return fail_with(spinner, "Tool not found: devpad_admin_reconcile_docs_css");
+			const result = (await tool.execute(get_client(), {})) as ReconcileCssReport;
+
+			spinner.succeed(`Scanned ${String(result.scanned)} doc(s), reconciled ${String(result.reconciled.length)}`);
+			await print_json(result);
 		});
 }

@@ -320,6 +320,15 @@ export const tools: Record<string, ToolDefinition> = {
 		execute: async (client) => unwrap(await client.admin.verifyFold()),
 	}),
 
+	// Admin (B3, CSS-exfil fix) — repair docs pushed before the sanitizer scrubbed <style> blocks
+	devpad_admin_reconcile_docs_css: define_tool({
+		name: "devpad_admin_reconcile_docs_css",
+		description:
+			"Re-scrub CSS exfil vectors (@import, url()) out of every already-stored doc's <style> blocks for the authenticated account's own projects",
+		inputSchema: z.object({}),
+		execute: async (client) => unwrap(await client.admin.reconcileDocsCss()),
+	}),
+
 	// Additional project operations
 	devpad_projects_delete: define_tool({
 		name: "devpad_projects_delete",

@@ -47,7 +47,17 @@ async function pending_signoffs(db: Database, owner_id: string): Promise<ReviewI
 		title: `${row.checkpoint} checkpoint — ${row.subject_kind}/${row.subject_id}`,
 		project_id: row.project_id,
 		created_at: row.created_at,
-		path: `/signoffs/${row.id}`,
+		// v2.4 (B3.3) — a real UI page, not a placeholder: `doc_version`
+		// signoffs deep-link into the docs tab with the document pre-selected
+		// (DocViewer's verdict bar decides it); `stage` signoffs deep-link
+		// into the outline zoomed on the gated task (the SDLC stepper's
+		// checkpoint card decides it there). `pipeline_gate` has its own
+		// existing pipeline-run UI, not this doc-review surface.
+		path: !row.project_id
+			? "/todo"
+			: row.subject_kind === "doc_version"
+				? `/project/${row.project_id}/docs?doc=${row.subject_id}`
+				: `/project/${row.project_id}/work?node=${row.subject_id}`,
 	}));
 }
 
@@ -78,7 +88,7 @@ async function pending_blocking_annotations(db: Database, owner_id: string): Pro
 		title: `Blocking thread on "${row.doc_title}"`,
 		project_id: row.project_id,
 		created_at: row.created_at,
-		path: `/docs/${row.document_id}`,
+		path: `/project/${row.project_id}/docs?doc=${row.document_id}`,
 	}));
 }
 

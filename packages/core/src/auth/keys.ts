@@ -104,11 +104,19 @@ export async function createApiKey(
 	return ok({ key: rows[0], raw_key });
 }
 
-export async function deleteApiKey(db: Database, key_id: string): Promise<Result<void, KeyError>> {
+/**
+ * v2.4 (B3.4) — `user_id` scoping added here: the route previously deleted
+ * by `key_id` alone, with no check that the caller actually owned the key
+ * (any authenticated user could revoke anyone else's key by guessing/
+ * enumerating ids). `rows.length === 0` now covers both "doesn't exist" and
+ * "exists but isn't yours" — deliberately the same `not_found` outcome so
+ * the route doesn't leak which case it was.
+ */
+export async function deleteApiKey(db: Database, key_id: string, user_id: string): Promise<Result<void, KeyError>> {
 	const rows = await db
 		.update(api_keys)
 		.set({ deleted: true })
-		.where(eq(api_keys.id, key_id))
+		.where(and(eq(api_keys.id, key_id), eq(api_keys.user_id, user_id)))
 		.returning()
 		.catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
 

@@ -3,6 +3,7 @@ import {
 	E2E_OUTLINE_PROJECT_ID,
 	E2E_SESSION_ID,
 	E2E_TASK_MILESTONE,
+	E2E_TASK_MILESTONE_2,
 	E2E_TASK_MILESTONE_CHILD,
 } from "./fixtures/outline-ids";
 
@@ -84,5 +85,30 @@ test.describe("milestone lens", () => {
 		await expect(lens).toHaveCount(0);
 		await expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_MILESTONE}`));
 		await expect(page.getByTestId("outline-zoom-title")).toHaveText("Ripple v1");
+	});
+
+	// v2.4 B3 — B2 critic carry-over: arrows come from real `blocks` edges
+	// (never rank adjacency), each card shows its completion_policy, and
+	// expanded children show a real done/doing status dot.
+	test("draws a sequencing arrow only for a real blocks edge, and shows policy badge + child status marks", async ({
+		page,
+		context,
+	}) => {
+		await inject_test_user(context);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+
+		const lens = page.getByTestId("lens-overlay");
+		await pressWithRetry(page, "m", () => expect(lens).toBeVisible({ timeout: 5000 }));
+
+		// The fixture's second milestone is genuinely blocked by the first —
+		// exactly one real edge, so exactly one arrow renders on the track.
+		await expect(page.locator(".lens-milestone-arrow")).toHaveCount(1);
+
+		const secondCard = page.locator(`[data-testid="lens-milestone-card"][data-task-id="${E2E_TASK_MILESTONE_2}"]`);
+		await expect(secondCard).toContainText("auto");
+
+		await secondCard.locator(".lens-milestone-expand").click();
+		const doneChild = secondCard.locator(".lens-milestone-child", { hasText: "Polish the ripple lens" });
+		await expect(doneChild.locator(".outline-dot-done")).toBeVisible();
 	});
 });

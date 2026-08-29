@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { Database } from "@devpad/schema/database/types";
-import { create_test_db, seed_project, seed_user } from "../graph/__tests__/integration/helpers.js";
+import { create_test_db, seed_project, seed_task, seed_user } from "../graph/__tests__/integration/helpers.js";
+import { add_link } from "../graph/graph.js";
 import {
 	addMilestoneAction,
 	completeMilestone,
 	deleteMilestone,
 	getMilestone,
+	getMilestoneLens,
 	getProjectMilestones,
 	getUserMilestones,
 	upsertMilestone,
@@ -198,6 +200,35 @@ describe("milestones", () => {
 			expect(result.ok).toBe(true);
 			if (!result.ok) return;
 			expect(result.value.finished_at).not.toBeNull();
+		});
+	});
+
+	describe("getMilestoneLens — v2.4 B2 critic carry-over", () => {
+		test("batches rollup/edge/completion_policy per milestone and returns real blocks edges", async () => {
+			const first = await upsertMilestone(db, { name: "v1", project_id }, owner_id);
+			const second = await upsertMilestone(db, { name: "v2", project_id }, owner_id);
+			if (!first.ok || !second.ok) throw new Error("setup failed");
+
+			const child = await seed_task(db, owner_id, { project_id, parent_id: first.value.id, title: "child" });
+			const link = await add_link(db, { src_id: first.value.id, dst_id: second.value.id, kind: "blocks" });
+			expect(link.ok).toBe(true);
+
+			const result = await getMilestoneLens(db, project_id, 2);
+			expect(result.ok).toBe(true);
+			if (!result.ok) return;
+
+			expect(result.value.rows).toHaveLength(2);
+			const first_row = result.value.rows.find((r) => r.milestone.id === first.value.id);
+			expect(first_row?.completion_policy).toBe("auto_children");
+			expect(first_row?.descendants.map((d) => d.id)).toEqual([child.id]);
+			expect(result.value.blocks).toEqual([{ src_id: first.value.id, dst_id: second.value.id }]);
+		});
+
+		test("empty project returns an empty lens with no error", async () => {
+			const other_project = await seed_project(db, owner_id, { id: "empty-lens-project" });
+			const result = await getMilestoneLens(db, other_project.id, 2);
+			expect(result.ok).toBe(true);
+			if (result.ok) expect(result.value).toEqual({ rows: [], blocks: [] });
 		});
 	});
 

@@ -129,6 +129,37 @@ export async function latest_decided_signoff(
 }
 
 /**
+ * v2.4 (B3) — the checkpoint card's/verdict bar's "is there something to
+ * decide right now" lookup: the most recent UNDECIDED signoff for a
+ * subject+checkpoint, or `null` if none has been requested yet. Distinct
+ * from `latest_decided_signoff` (which only ever returns a DECIDED one) —
+ * a subject can have at most one meaningfully "current" pending signoff at
+ * a time in practice, but this deliberately picks the latest by insertion
+ * order (same `rowid` tiebreak as `latest_decided_signoff`) rather than
+ * assuming uniqueness.
+ */
+export async function pending_signoff_for(
+	db: Database,
+	subject_kind: SignoffSubjectKind,
+	subject_id: string,
+	checkpoint: SignoffCheckpoint,
+): Promise<Result<Signoff | null, ServiceError>> {
+	const rows = await db
+		.select()
+		.from(signoff)
+		.where(
+			and(
+				eq(signoff.subject_kind, subject_kind),
+				eq(signoff.subject_id, subject_id),
+				eq(signoff.checkpoint, checkpoint),
+				sql`${signoff.decision} IS NULL`,
+			),
+		)
+		.orderBy(desc(sql`rowid`));
+	return ok(rows[0] ?? null);
+}
+
+/**
  * The Buf-style fast path (task A4.4): a diff classified `additive` against
  * an already-approved base skips human review entirely — no approval task
  * node is ever created, only an audit row recording the auto-decision. This

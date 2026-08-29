@@ -19,17 +19,60 @@
  * a thread mutation is the human-authored entry body, which goes through
  * `sanitize_text` (a plain-text HTML-escape) before being embedded into the
  * marker's JSON — see `markers.ts`.
+ *
+ * v2.4 (B3, CSS-exfil fix) — the A4 verifier found that `<style>` content
+ * round-trips untouched: `@import url("https://evil…")` and any `url(...)`
+ * function (background-image, `behavior:`, `-moz-binding:`, `@font-face src`)
+ * are all live network-egress vectors an agent-authored doc could smuggle
+ * out through — no script execution needed, just the browser fetching a
+ * stylesheet/image/font at render time. We chose FILTER over strip-`<style>`
+ * or a full CSS-AST sanitizer: `<style>` stays useful for real layout/color
+ * CSS (an existing test asserts `.foo { color: red; }` survives), and a
+ * regex scrub of `@import` + `url(...)` is proportionate given the DocViewer
+ * ALSO gets a CSP + sandboxed-iframe render path (defense in depth — see
+ * `packages/worker/src/routes/v1/docs.ts`'s `/render` route) rather than
+ * leaning on this being a perfect CSS parser (it isn't; it can't catch e.g.
+ * CSS escape obfuscation like `\75rl(...)`, and never needs to).
+ *
+ * v2.4 (B3 fast-follow, taste/IA critic BLOCKER) — `defaultSchema` guts
+ * legitimate plan/design-doc styling in two ways the CSS-exfil fix above
+ * didn't touch: (1) it allows `className` only on a handful of GitHub-
+ * specific tag/value pairs (e.g. `code`'s `language-*`), so EVERY other
+ * `class` value is stripped — a doc's own `<style>` block class selectors
+ * then match nothing in the body; (2) `clobber`/`clobberPrefix` rewrite
+ * EVERY `id` to `user-content-<id>` unconditionally (DOM-clobbering
+ * protection, not conditional on actual risk), so a TOC's own
+ * `href="#section-1"` no longer matches its heading's rewritten
+ * `id="user-content-section-1"`. Fix: (1) allow arbitrary `className`
+ * values on all elements — inert here since the render route's sandboxed,
+ * `allow-scripts`-less iframe means no CSS selector or class name can ever
+ * execute anything; (2) `rewrite_fragment_hrefs` mirrors the same
+ * `clobberPrefix` onto same-document `href="#..."` fragment links so
+ * anchor navigation keeps working post-sanitize. URL-scheme filtering and
+ * the CSS `url()`/`@import` filter above are unchanged.
  */
 
 import { fromHtml } from "hast-util-from-html";
 import { type Schema, defaultSchema, sanitize } from "hast-util-sanitize";
 import { toHtml } from "hast-util-to-html";
 
+type PropertyDefinition = NonNullable<Schema["attributes"]>[string][number];
+
+/** `hast-util-sanitize` checks a tag's OWN `attributes` entry before falling back to `'*'` — several tags (`a`, `code`, `li`, `ol`, `ul`, `h2`, `section`) already carry a value-RESTRICTED `className` entry (e.g. `code`'s `language-*` only), which shadows a permissive `'*'` entry rather than falling through to it. Widening those to bare `'className'` (any value allowed) is what actually makes the `'*'` addition below take effect everywhere. */
+const permit_any_class_name = (defs: PropertyDefinition[]): PropertyDefinition[] =>
+	defs.map((entry) => (Array.isArray(entry) && entry[0] === "className" ? "className" : entry));
+
+const attributes: NonNullable<Schema["attributes"]> = Object.fromEntries(
+	Object.entries(defaultSchema.attributes ?? {}).map(([tag, defs]) => [tag, permit_any_class_name(defs)]),
+);
+attributes["*"] = [...(attributes["*"] ?? []), "className"];
+
 const schema: Schema = {
 	...defaultSchema,
 	allowComments: false,
 	allowDoctypes: false,
 	tagNames: [...(defaultSchema.tagNames ?? []), "style"],
+	attributes,
 	// script/iframe/object/embed/form are dropped WITH their contents (not
 	// merely unwrapped) — `defaultSchema.strip` already drops `script`.
 	strip: [...(defaultSchema.strip ?? []), "iframe", "object", "embed", "form"],
@@ -38,11 +81,36 @@ const schema: Schema = {
 	// as-is via the spread above.
 };
 
+const CLOBBER_PREFIX = defaultSchema.clobberPrefix ?? "user-content-";
+const FRAGMENT_HREF_RE = new RegExp(`(href=["'])#(?!${CLOBBER_PREFIX})`, "gi");
+
+/** Mirrors hast-util-sanitize's own `clobberPrefix` onto same-document `href="#..."` fragment links, so a TOC written against a doc's original heading ids still resolves after `id` clobbering renamed every target to `${CLOBBER_PREFIX}<id>`. Single source of truth: reads the prefix from `defaultSchema` rather than duplicating the literal. Full-URL hrefs with a fragment (e.g. `https://x#y`) never start with a bare `#`, so they're untouched. */
+export function rewrite_fragment_hrefs(html: string): string {
+	return html.replace(FRAGMENT_HREF_RE, `$1#${CLOBBER_PREFIX}`);
+}
+
+const STYLE_BLOCK_RE = /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi;
+const CSS_IMPORT_RE = /@import\b[^;]*;?/gi;
+const CSS_URL_RE = /url\([^)]*\)/gi;
+
+/** Strips `@import` at-rules and neutralizes every `url(...)` function (background/behavior/-moz-binding/@font-face src alike) inside `<style>` blocks — the network-egress surface a `<style>` tag otherwise offers. Non-url CSS (colors, layout, fonts-by-keyword) is untouched. */
+export function sanitize_css(css: string): string {
+	return css.replace(CSS_IMPORT_RE, "").replace(CSS_URL_RE, "url()");
+}
+
+/** CSS-only re-scrub for content that must NOT go through the full `sanitize_html` comment-stripping pass (e.g. reconciling already-stored docs that carry live annotation markers). */
+export function sanitize_style_blocks(html: string): string {
+	return html.replace(
+		STYLE_BLOCK_RE,
+		(_match, open: string, css: string, close: string) => `${open}${sanitize_css(css)}${close}`,
+	);
+}
+
 /** Sanitizes agent-authored HTML on ingest (push). The returned string is the artifact every consumer trusts. */
 export function sanitize_html(html: string): string {
 	const tree = fromHtml(html, { fragment: true });
 	const clean = sanitize(tree, schema);
-	return toHtml(clean);
+	return rewrite_fragment_hrefs(sanitize_style_blocks(toHtml(clean)));
 }
 
 const TEXT_ESCAPES: Record<string, string> = {

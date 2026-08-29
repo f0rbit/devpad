@@ -170,9 +170,35 @@ export function embed_marker(html: string, marker: ThreadMarker, range: { start:
 }
 
 /**
+ * v2.4 (B3 fast-follow #4, taste/IA critic — "anchor connection") — the
+ * render route used to just `strip_markers` every marker comment away, so a
+ * rendered doc had no DOM hook for the annotation rail to scroll/flash a
+ * thread's anchored text against. This wraps each PAIRED thread's bracketed
+ * content in `<mark data-thread-id="...">` instead of stripping it, then
+ * strips whatever's left (orphans — no target range to wrap). Processed
+ * right-to-left (by `begin.index`, descending) against the ORIGINAL parsed
+ * offsets so each replacement — confined to `[begin.index, end.index + end.length)`
+ * — never shifts a still-pending, lower-index thread's recorded offsets.
+ */
+export function markers_to_marks(html: string): string {
+	const { threads } = parse_markers(html);
+	const wrapped = threads
+		.toSorted((a: ParsedThread, b: ParsedThread) => b.begin.index - a.begin.index)
+		.reduce((acc: string, t: ParsedThread) => {
+			const before = acc.slice(0, t.begin.index);
+			const bracketed = acc.slice(t.begin.index + t.begin.length, t.end.index);
+			const after = acc.slice(t.end.index + t.end.length);
+			return `${before}<mark data-thread-id="${t.marker.id}">${bracketed}</mark>${after}`;
+		}, html);
+	return strip_markers(wrapped).stripped;
+}
+
+/**
  * Swaps a paired thread's JSON payload in place (reply/resolve/toggle-blocking)
  * without touching the bracketed content or its position. Returns `null` if
- * `thread_id` isn't currently paired (orphaned threads must re-anchor first).
+ * `thread_id` isn't currently PAIRED — an orphan (unpaired begin, no anchor
+ * range to preserve) goes through `replace_orphan_marker` instead; see
+ * `threads.ts`'s `mutate_thread`, which tries both.
  */
 export function replace_marker(html: string, thread_id: string, updated: ThreadMarker): string | null {
 	const { threads } = parse_markers(html);
@@ -183,4 +209,24 @@ export function replace_marker(html: string, thread_id: string, updated: ThreadM
 	const bracketed = html.slice(found.begin.index + found.begin.length, found.end.index);
 	const after = html.slice(found.end.index + found.end.length);
 	return before + begin_comment(updated) + bracketed + end_comment(updated.id) + after;
+}
+
+/**
+ * v2.4 (B3 fast-follow #7, taste/IA critic — "visible must not mean
+ * dead-ended") — an orphaned thread (its anchored text wasn't found on the
+ * last reconcile) has no bracketed range to preserve, only a dangling begin
+ * comment (see `threads.ts`'s `reconcile()`). Swaps its JSON payload in
+ * place the same way `replace_marker` does for a paired thread, so reply/
+ * resolve/toggle-blocking all work on an orphan without requiring it to
+ * re-anchor first. Returns `null` if `thread_id` isn't a currently-orphaned
+ * marker.
+ */
+export function replace_orphan_marker(html: string, thread_id: string, updated: ThreadMarker): string | null {
+	const { orphans } = parse_markers(html);
+	const found = orphans.find((o) => o.marker?.id === thread_id);
+	if (!found) return null;
+
+	const before = html.slice(0, found.begin.index);
+	const after = html.slice(found.begin.index + found.begin.length);
+	return before + begin_comment(updated) + after;
 }

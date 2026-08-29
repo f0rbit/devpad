@@ -1,0 +1,110 @@
+[
+  {
+    "file": "b3-01-docviewer-plan-light.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "light",
+    "ok": true
+  },
+  {
+    "file": "b3-01-docviewer-plan-dark.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "dark",
+    "ok": true
+  },
+  {
+    "file": "b3-02-annotation-thread-rail-light.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "light",
+    "ok": true
+  },
+  {
+    "file": "b3-02-annotation-thread-rail-dark.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "dark",
+    "ok": true
+  },
+  {
+    "file": "b3-03-orphaned-thread-light.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "light",
+    "ok": true
+  },
+  {
+    "file": "b3-03-orphaned-thread-dark.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "dark",
+    "ok": true
+  },
+  {
+    "file": "b3-04-interface-diff-view-light.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "light",
+    "ok": true
+  },
+  {
+    "file": "b3-04-interface-diff-view-dark.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "dark",
+    "ok": true
+  },
+  {
+    "file": "b3-05-checkpoint-card-light.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "light",
+    "ok": true
+  },
+  {
+    "file": "b3-05-checkpoint-card-dark.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "dark",
+    "ok": true
+  },
+  {
+    "file": "b3-06-sdlc-stepper-light.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "light",
+    "ok": true
+  },
+  {
+    "file": "b3-06-sdlc-stepper-dark.png",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "theme": "dark",
+    "ok": true
+  }
+]

@@ -1,5 +1,5 @@
 import { docs, graph, projects } from "@devpad/core/services";
-import { decide_checkpoint_request, request_checkpoint_request } from "@devpad/schema/validation";
+import { decide_checkpoint_request, request_checkpoint_request, signoff_checkpoint } from "@devpad/schema/validation";
 import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -44,6 +44,45 @@ app.post("/", requireAuth, zValidator("json", request_checkpoint_request), async
 
 	const auth_channel = c.get("auth_channel");
 	const result = await docs.request_checkpoint(db, data, { owner_id: auth_user.id, auth_channel });
+	if (!result.ok) return signoff_error_response(c, result.error);
+	return c.json(result.value);
+});
+
+/**
+ * v2.4 (B3) — "is there something pending to decide right now" for a
+ * subject+checkpoint. `subject_kind=doc_version` scopes ownership via the
+ * document's project; `subject_kind=stage` scopes via the task itself.
+ * `pipeline_gate` isn't wired to any UI in this phase — 400s rather than
+ * silently returning an unscoped result.
+ */
+app.get("/", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+
+	const subject_kind = c.req.query("subject_kind");
+	const subject_id = c.req.query("subject_id");
+	const checkpoint_parsed = signoff_checkpoint.safeParse(c.req.query("checkpoint"));
+	if (subject_kind !== "doc_version" && subject_kind !== "stage") {
+		return c.json({ error: "subject_kind must be 'doc_version' or 'stage'" }, 400);
+	}
+	if (!subject_id || !checkpoint_parsed.success)
+		return c.json({ error: "subject_id and a valid checkpoint required" }, 400);
+	const checkpoint = checkpoint_parsed.data;
+
+	if (subject_kind === "doc_version") {
+		const doc_result = await docs.get_document(db, subject_id);
+		if (!doc_result.ok) return c.json(null, 404);
+		const project_result = await projects.getProjectById(db, doc_result.value.project_id);
+		if (!project_result.ok || project_result.value.owner_id !== auth_user.id) return c.json(null, 404);
+		if (isProjectScopeDenied(c, doc_result.value.project_id)) return projectScopeDeniedResponse(c);
+	} else {
+		const task_row = await graph.get_task_row(db, subject_id);
+		if (!task_row || task_row.owner_id !== auth_user.id) return c.json(null, 404);
+		if (isProjectScopeDenied(c, task_row.project_id)) return projectScopeDeniedResponse(c);
+	}
+
+	const result = await docs.pending_signoff_for(db, subject_kind, subject_id, checkpoint);
 	if (!result.ok) return signoff_error_response(c, result.error);
 	return c.json(result.value);
 });
