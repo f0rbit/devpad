@@ -46,9 +46,11 @@ function latest_doc_of_kind(docs: Document[], kind: Document["kind"]): Document 
 
 function useDocForTask(task: Task, kind: Document["kind"]): () => Document | undefined {
 	const [doc, setDoc] = createSignal<Document | undefined>(undefined);
-	onMount(async () => {
-		const result = await getBrowserClient().docs.list({ project_id: task.project_id ?? "", task_id: task.id });
-		if (result.ok) setDoc(latest_doc_of_kind(result.value, kind));
+	onMount(() => {
+		void (async () => {
+			const result = await getBrowserClient().docs.list({ project_id: task.project_id ?? "", task_id: task.id });
+			if (result.ok) setDoc(latest_doc_of_kind(result.value, kind));
+		})();
 	});
 	return doc;
 }
@@ -61,9 +63,11 @@ function useStageDecision(task: Task, checkpoint: "plan" | "types") {
 	const [submitting, setSubmitting] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 
-	onMount(async () => {
-		const result = await client.signoffs.findPending({ subject_kind: "stage", subject_id: task.id, checkpoint });
-		if (result.ok) setPending(result.value);
+	onMount(() => {
+		void (async () => {
+			const result = await client.signoffs.findPending({ subject_kind: "stage", subject_id: task.id, checkpoint });
+			if (result.ok) setPending(result.value);
+		})();
 	});
 
 	async function decide(decision: "approved" | "changes_requested"): Promise<void> {
@@ -95,7 +99,7 @@ function PlanCheckpointCard(props: { task: Task }) {
 			</p>
 			<Show when={doc()}>
 				{(d) => (
-					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id}/docs?doc=${d().id}`}>
+					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id ?? ""}/docs?doc=${d().id}`}>
 						View plan doc →
 					</a>
 				)}
@@ -148,42 +152,47 @@ function TypesCheckpointCard(props: { task: Task }) {
 	const [pulseError, setPulseError] = createSignal(false);
 	const [metricName, setMetricName] = createSignal<string | null>(null);
 
-	onMount(async () => {
-		const near_result = await client.tasks.near(props.task.id, 1);
-		if (near_result.ok) {
-			const edge = near_result.value.links.find((l) => l.kind === "tracks_metric" && l.src_id === props.task.id);
-			const ref = edge?.ref as { metric_name?: string } | null;
-			if (ref?.metric_name) setMetricName(ref.metric_name);
-		}
+	onMount(() => {
+		void (async () => {
+			const near_result = await client.tasks.near(props.task.id, 1);
+			if (near_result.ok) {
+				const edge = near_result.value.links.find((l) => l.kind === "tracks_metric" && l.src_id === props.task.id);
+				const ref = edge?.ref as { metric_name?: string } | null;
+				if (ref?.metric_name) setMetricName(ref.metric_name);
+			}
 
-		if (props.task.project_id) {
-			const summary_result = await client.pulse.summary({ project_id: props.task.project_id, range: "24h" });
-			if (summary_result.ok) setPulse(summary_result.value);
-			else setPulseError(true);
-		}
+			if (props.task.project_id) {
+				const summary_result = await client.pulse.summary({ project_id: props.task.project_id, range: "24h" });
+				if (summary_result.ok) setPulse(summary_result.value);
+				else setPulseError(true);
+			}
+		})();
 	});
 
-	onMount(async () => {
-		const result = await client.docs.list({ project_id: props.task.project_id ?? "", task_id: props.task.id });
-		if (!result.ok) return;
-		const interface_doc = latest_doc_of_kind(result.value, "interface");
-		if (!interface_doc) return;
-		const versions = await client.docs.versions(interface_doc.id);
-		if (!versions.ok || versions.value.length === 0) return;
-		if (versions.value.length < 2) {
-			setClassification("single-version");
-			return;
-		}
-		const [newer, older] = versions.value;
-		const [newer_content, older_content] = await Promise.all([
-			client.docs.pull(interface_doc.id, newer.version),
-			client.docs.pull(interface_doc.id, older.version),
-		]);
-		if (!newer_content.ok || !older_content.ok || !newer_content.value.content || !older_content.value.content) return;
-		const lines = diffLines(older_content.value.content.html, newer_content.value.content.html);
-		if (lines.every((l) => l.kind === "same")) setClassification("unchanged");
-		else if (lines.some((l) => l.kind === "remove")) setClassification("breaking");
-		else setClassification("additive");
+	onMount(() => {
+		void (async () => {
+			const result = await client.docs.list({ project_id: props.task.project_id ?? "", task_id: props.task.id });
+			if (!result.ok) return;
+			const interface_doc = latest_doc_of_kind(result.value, "interface");
+			if (!interface_doc) return;
+			const versions = await client.docs.versions(interface_doc.id);
+			if (!versions.ok || versions.value.length === 0) return;
+			if (versions.value.length < 2) {
+				setClassification("single-version");
+				return;
+			}
+			const [newer, older] = versions.value;
+			const [newer_content, older_content] = await Promise.all([
+				client.docs.pull(interface_doc.id, newer.version),
+				client.docs.pull(interface_doc.id, older.version),
+			]);
+			if (!newer_content.ok || !older_content.ok || !newer_content.value.content || !older_content.value.content)
+				return;
+			const lines = diffLines(older_content.value.content.html, newer_content.value.content.html);
+			if (lines.every((l) => l.kind === "same")) setClassification("unchanged");
+			else if (lines.some((l) => l.kind === "remove")) setClassification("breaking");
+			else setClassification("additive");
+		})();
 	});
 
 	return (
@@ -194,7 +203,7 @@ function TypesCheckpointCard(props: { task: Task }) {
 			</p>
 			<Show when={doc()}>
 				{(d) => (
-					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id}/docs?doc=${d().id}`}>
+					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id ?? ""}/docs?doc=${d().id}`}>
 						View interface report →
 					</a>
 				)}
@@ -280,7 +289,7 @@ function DesignCheckpointCard(props: { task: Task }) {
 					<p class="text-xs text-faint checkpoint-gate-label" data-testid="checkpoint-gate-label-design">
 						{CHECKPOINT_GATE_LABEL.design}
 					</p>
-					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id}/docs?doc=${d().id}`}>
+					<a class="checkpoint-doc-link" href={`/project/${props.task.project_id ?? ""}/docs?doc=${d().id}`}>
 						View design doc →
 					</a>
 					<p class="text-xs text-faint">Decided from the design doc's own verdict bar.</p>

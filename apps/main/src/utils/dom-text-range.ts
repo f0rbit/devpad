@@ -40,7 +40,7 @@ export function anchorFromRange(root: HTMLElement, range: Range): PlainTextAncho
 	const quote = range.toString();
 	if (quote.length === 0) return null;
 
-	const text = root.textContent ?? "";
+	const text = root.textContent;
 	const start = walkTextOffset(root, range.startContainer, range.startOffset);
 	const end = walkTextOffset(root, range.endContainer, range.endOffset);
 
@@ -55,7 +55,7 @@ export function anchorFromRange(root: HTMLElement, range: Range): PlainTextAncho
 
 /** Reverse of the text-offset walk: builds a live `Range` spanning `[start, end)` plain-text characters within `root`. Returns `null` if the offsets run past the end of `root`'s text. */
 export function rangeFromTextOffsets(root: HTMLElement, start: number, end: number): Range | null {
-	const walker = (root.ownerDocument ?? document).createTreeWalker(root, NodeFilter.SHOW_TEXT);
+	const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
 	let total = 0;
 	let startNode: Node | null = null;
 	let startOffset = 0;
@@ -79,7 +79,7 @@ export function rangeFromTextOffsets(root: HTMLElement, start: number, end: numb
 	}
 	if (!startNode || !endNode) return null;
 
-	const range = (root.ownerDocument ?? document).createRange();
+	const range = root.ownerDocument.createRange();
 	range.setStart(startNode, startOffset);
 	range.setEnd(endNode, endOffset);
 	return range;
@@ -87,7 +87,7 @@ export function rangeFromTextOffsets(root: HTMLElement, start: number, end: numb
 
 /** Locates a thread's stored quote in the CURRENTLY rendered `root` (first occurrence — see module doc) and returns its bounding rect, for margin-rail vertical alignment. `null` when the quote isn't found (the thread is orphaned in this render). */
 export function findQuoteRect(root: HTMLElement, quote: string): DOMRect | null {
-	const text = root.textContent ?? "";
+	const text = root.textContent;
 	const idx = text.indexOf(quote);
 	if (idx === -1) return null;
 	const range = rangeFromTextOffsets(root, idx, idx + quote.length);

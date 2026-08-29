@@ -405,11 +405,11 @@ export async function getMilestoneLens(
 	const milestone_ids = milestones.map((m) => m.id);
 	const subtree_results = await Promise.all(milestone_ids.map((id) => subtree(db, id, depth)));
 	const first_error = subtree_results.find((r) => !r.ok);
-	if (first_error && !first_error.ok) return first_error;
+	if (first_error) return first_error;
 	const descendants_by_id = new Map<string, Task[]>(
 		milestone_ids.map((id, i) => {
 			const result = subtree_results[i];
-			return [id, result?.ok ? result.value : []];
+			return [id, result.ok ? result.value : []];
 		}),
 	);
 
