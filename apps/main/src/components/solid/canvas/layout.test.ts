@@ -197,6 +197,7 @@ describe("apply_view_overrides", () => {
 			],
 			edges: [],
 			bounds: { x: 0, y: 0, w: 0, h: 0 },
+			rankdir: "LR" as const,
 		};
 
 		const overridden = apply_view_overrides(layout);
@@ -216,6 +217,7 @@ describe("apply_view_overrides", () => {
 			],
 			edges: [],
 			bounds: { x: 0, y: 0, w: 0, h: 0 },
+			rankdir: "LR" as const,
 		};
 
 		const overridden = apply_view_overrides(layout, undefined, { parent: { x: 500, y: 500 } });
@@ -304,5 +306,105 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 	test("the forest spreads across at least 3 distinct rank columns — not collapsed into a single narrow strip", () => {
 		const distinct_x = new Set(layout.nodes.map((n) => Math.round(n.x / 10)));
 		expect(distinct_x.size).toBeGreaterThanOrEqual(3);
+	});
+});
+
+/**
+ * Regression coverage for the "auto-orientation reflow produces a hairball"
+ * bug (PR #152 review, coordinator-caught): the FIRST fix attempt
+ * (`wrap_dense_ranks`) moved node positions AFTER dagre had already routed
+ * edges against the original positions — exactly the class of bug #151 had
+ * just fixed. The replacement (`layout_graph`'s `viewport` param picking
+ * `LR`/`TB`) never reflows anything post-hoc: dagre runs ONCE per candidate
+ * direction and owns both positions and edge routing for whichever wins, so
+ * the SAME geometry invariants from the block above must hold for BOTH
+ * orientations — this exercises them against the real staging fixture at
+ * two viewports chosen to each pick a different `rankdir` (see the module
+ * doc comment on `layout_graph`).
+ */
+describe.each([
+	{ label: "LR (1000x680 — the default toolbar-sized viewport)", viewport: { width: 1000, height: 680 }, want: "LR" },
+	{
+		label: "TB (1600x500 — wide/short, favours stacking ranks vertically)",
+		viewport: { width: 1600, height: 500 },
+		want: "TB",
+	},
+] as const)("layout_graph orientation-by-aspect on the staging fixture — $label", ({ viewport, want }) => {
+	const tasks = staging_graph.tasks as unknown as Task[];
+	const links = staging_graph.links as unknown as TaskLink[];
+	const layout = apply_view_overrides(layout_graph(tasks, links, undefined, viewport));
+
+	test(`picks rankdir "${want}" for this viewport`, () => {
+		expect(layout.rankdir).toBe(want);
+	});
+
+	test("every edge's endpoints land within its src/dst node's rect", () => {
+		const by_id = new Map(layout.nodes.map((n) => [n.task.id, n]));
+		for (const edge of layout.edges) {
+			const src = by_id.get(edge.src_id);
+			const dst = by_id.get(edge.dst_id);
+			expect(src).toBeDefined();
+			expect(dst).toBeDefined();
+			if (!src || !dst) continue;
+
+			const src_size = node_size_for(src.task.kind, "neighborhood");
+			const dst_size = node_size_for(dst.task.kind, "neighborhood");
+			const [first, ...rest] = clip_edge_endpoints(
+				edge.points,
+				{ x: src.x, y: src.y, size: src_size },
+				{ x: dst.x, y: dst.y, size: dst_size },
+			);
+			const last = rest.at(-1) ?? first;
+
+			expect(first.x).toBeGreaterThanOrEqual(src.x - src_size.width / 2 - 0.5);
+			expect(first.x).toBeLessThanOrEqual(src.x + src_size.width / 2 + 0.5);
+			expect(first.y).toBeGreaterThanOrEqual(src.y - src_size.height / 2 - 0.5);
+			expect(first.y).toBeLessThanOrEqual(src.y + src_size.height / 2 + 0.5);
+
+			expect(last.x).toBeGreaterThanOrEqual(dst.x - dst_size.width / 2 - 0.5);
+			expect(last.x).toBeLessThanOrEqual(dst.x + dst_size.width / 2 + 0.5);
+			expect(last.y).toBeGreaterThanOrEqual(dst.y - dst_size.height / 2 - 0.5);
+			expect(last.y).toBeLessThanOrEqual(dst.y + dst_size.height / 2 + 0.5);
+		}
+	});
+
+	test("no two node rects intersect", () => {
+		const half_w = CANVAS_NODE_W / 2;
+		const half_h = CANVAS_NODE_H / 2;
+		const rects = layout.nodes.map((n) => ({
+			x0: n.x - half_w,
+			x1: n.x + half_w,
+			y0: n.y - half_h,
+			y1: n.y + half_h,
+		}));
+		for (let i = 0; i < rects.length; i++) {
+			for (let j = i + 1; j < rects.length; j++) {
+				const a = rects[i];
+				const b = rects[j];
+				const overlaps = a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+				expect(overlaps).toBe(false);
+			}
+		}
+	});
+
+	/**
+	 * Letterboxing on the non-binding axis is ACCEPTED (coordinator directive
+	 * following the `wrap_dense_ranks` revert) — a graph with one very dense
+	 * rank can't fill both viewport axes without either distorting the fit or
+	 * reflowing positions post-layout (the very bug this replaces). Only the
+	 * BINDING dimension (whichever axis the uniform-scale fit actually
+	 * saturates — the larger of the two fill fractions below) needs to clear
+	 * 80%; the other axis is allowed slack.
+	 */
+	test("the fit-to-forest scale fills at least 80% of the viewport's binding dimension", () => {
+		const fit_margin = 40;
+		const fit_top_inset_px = 64; // matches canvas-surface.tsx's CANVAS_TOOLBAR_INSET_PX
+		const usable_w = viewport.width - fit_margin * 2;
+		const usable_h = viewport.height - fit_margin * 2 - fit_top_inset_px;
+		const scale = Math.min(usable_w / layout.bounds.w, usable_h / layout.bounds.h);
+		const width_fill = (layout.bounds.w * scale) / usable_w;
+		const height_fill = (layout.bounds.h * scale) / usable_h;
+
+		expect(Math.max(width_fill, height_fill)).toBeGreaterThanOrEqual(0.8);
 	});
 });

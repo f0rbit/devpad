@@ -6,7 +6,7 @@ import {
 	type Task,
 	type TaskLink,
 } from "@devpad/schema";
-import { curveMonotoneX, line } from "d3-shape";
+import { curveBumpX, curveBumpY, line } from "d3-shape";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
@@ -20,6 +20,7 @@ import {
 	layout_graph,
 	node_size_for,
 	type EdgeKind,
+	type LayoutOrientation,
 } from "./layout";
 import { fetch_node_projections, type NodeProjection } from "./projections";
 import { build_spatial_index } from "./spatial-index";
@@ -105,15 +106,21 @@ function edge_chips_for(tasks: readonly Task[], links: readonly TaskLink[]): Map
 	return result;
 }
 
-/** Smooths dagre's routed point lists into curved paths — `curveMonotoneX`
- * matches the `rankdir: "LR"` layout direction (monotonic left-to-right),
- * avoiding the hand-rolled bezier math a from-scratch curve would need. */
-const line_gen = line<{ x: number; y: number }>()
-	.x((p) => p.x)
-	.y((p) => p.y)
-	.curve(curveMonotoneX);
-const path_for = (points: readonly { x: number; y: number }[]): string =>
-	line_gen(points as { x: number; y: number }[]) ?? "";
+/**
+ * Smooths dagre's routed point lists into curved paths — matched to the
+ * layout's CURRENT `rankdir` (`layout_graph` can pick either per viewport
+ * aspect, see `layout.ts`): `curveBumpX` assumes a monotonic-in-x point
+ * sequence (`LR`), `curveBumpY` assumes monotonic-in-y (`TB`) — using the
+ * wrong one for the active orientation draws a curve that loops back on
+ * itself instead of a clean bump between ranks.
+ */
+const line_gen_for = (rankdir: LayoutOrientation) =>
+	line<{ x: number; y: number }>()
+		.x((p) => p.x)
+		.y((p) => p.y)
+		.curve(rankdir === "TB" ? curveBumpY : curveBumpX);
+const path_for = (points: readonly { x: number; y: number }[], rankdir: LayoutOrientation): string =>
+	line_gen_for(rankdir)(points as { x: number; y: number }[]) ?? "";
 
 const DOUBLE_CLICK_MS = 300;
 
@@ -138,6 +145,14 @@ const CULL_MARGIN = Math.max(CANVAS_NODE_W, CANVAS_NODE_H);
 /** `.canvas-toolbar`'s `top: 16px` + `.canvas-breadcrumb`'s `min-height: 35px` + a little breathing room — kept a constant rather than measured, since the toolbar's own height doesn't respond to viewport resize. */
 const CANVAS_TOOLBAR_INSET_PX = 64;
 
+/** How long a viewport must sit still before `layoutViewport` (and therefore `layout_graph`'s orientation pick) updates — avoids re-running dagre twice on every resize-drag pixel. */
+const LAYOUT_VIEWPORT_DEBOUNCE_MS = 300;
+
+/** Coarse aspect-ratio bucket — quantizes `width/height` so a few px of scrollbar/toolbar reflow doesn't count as "orientation-worthy"; only a bucket CHANGE (e.g. portrait <-> landscape) is worth a re-layout. */
+const ORIENTATION_ASPECT_BUCKET_STEP = 0.15;
+const aspect_bucket = (viewport: ViewportSize): number =>
+	viewport.height > 0 ? Math.round(viewport.width / viewport.height / ORIENTATION_ASPECT_BUCKET_STEP) : 0;
+
 const EMPTY_LAYOUT_STATE: ProjectViewLayoutInput = { pins: {} };
 
 /**
@@ -151,6 +166,15 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const [data, setData] = createSignal<ProjectGraphResponse>(props.initial);
 	const [selectedId, setSelectedId] = createSignal<string | null>(null);
 	const [viewportSize, setViewportSize] = createSignal<ViewportSize>({ width: 0, height: 0 });
+	// A SEPARATE, DEBOUNCED copy of `viewportSize` feeds `layout_graph`'s
+	// orientation pick — re-running dagre TWICE (once per `rankdir`
+	// candidate) on every resize pixel would be wasteful and would jitter
+	// node positions mid-drag. Only updates once the viewport's ASPECT
+	// crosses into a new coarse bucket (`aspect_bucket`) after
+	// `LAYOUT_VIEWPORT_DEBOUNCE_MS` of no further resizing — a portrait <->
+	// landscape flip is "orientation-worthy"; a few px of scrollbar/toolbar
+	// reflow is not.
+	const [layoutViewport, setLayoutViewport] = createSignal<ViewportSize>({ width: 0, height: 0 });
 	const [pins, setPins] = createSignal<ProjectViewLayoutInput["pins"]>({});
 	const [dragPreview, setDragPreview] = createSignal<{ id: string; x: number; y: number } | null>(null);
 	const [ancestors, setAncestors] = createSignal<Task[]>([]);
@@ -164,7 +188,19 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	});
 	const transform = camera.transform;
 
-	const layout = createMemo(() => layout_graph(data().tasks, data().links));
+	let layoutViewportTimer: ReturnType<typeof setTimeout> | undefined;
+	createEffect(() => {
+		const vp = viewportSize();
+		clearTimeout(layoutViewportTimer);
+		layoutViewportTimer = setTimeout(() => {
+			setLayoutViewport((prev) => (aspect_bucket(prev) === aspect_bucket(vp) ? prev : vp));
+		}, LAYOUT_VIEWPORT_DEBOUNCE_MS);
+	});
+	onCleanup(() => {
+		clearTimeout(layoutViewportTimer);
+	});
+
+	const layout = createMemo(() => layout_graph(data().tasks, data().links, undefined, layoutViewport()));
 	const edgeChips = createMemo(() => edge_chips_for(data().tasks, data().links));
 	const placedLayout = createMemo(() => apply_view_overrides(layout(), undefined, pins()));
 	const nodeById = createMemo(() => new Map(placedLayout().nodes.map((node) => [node.task.id, node])));
@@ -588,6 +624,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				classList={{ "canvas-world-moving": camera.is_moving() }}
 				style={{
 					transform: `translate(${String(transform().x)}px, ${String(transform().y)}px) scale(${String(transform().scale)})`,
+					// Exposed so map-tier dots/fold-pills can counter-scale themselves
+					// back up to a legible on-screen floor (`.canvas-node[data-lod="map"]`
+					// in main.css) — the SAME "stay legible regardless of camera zoom"
+					// idea as `.canvas-edge`'s `vector-effect: non-scaling-stroke`,
+					// generalised to plain HTML elements via a CSS custom property.
+					"--canvas-scale": String(transform().scale),
 				}}
 			>
 				<svg class="canvas-edges" aria-hidden="true">
@@ -611,7 +653,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 					<For each={renderableEdges()}>
 						{(edge) => (
 							<path
-								d={path_for(edge.points)}
+								d={path_for(edge.points, placedLayout().rankdir)}
 								class={`canvas-edge ${EDGE_CLASS[edge.kind]}`}
 								classList={{ "canvas-edge-selected": selected_edge_ids().has(edge.id) }}
 								data-edge-kind={edge.kind}
@@ -647,7 +689,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			</div>
 
 			<p class="canvas-layout-status" data-testid="canvas-layout-status">
-				layout <strong>{pinnedCount() > 0 ? `${String(pinnedCount())} pinned` : "auto"}</strong>
+				layout <strong>{pinnedCount() > 0 ? `${String(pinnedCount())} pinned` : "auto"}</strong> · dagre{" "}
+				<strong data-testid="canvas-layout-rankdir">{placedLayout().rankdir}</strong>
 				<Show when={saveFailed()}>
 					<span class="canvas-layout-unsaved" data-testid="canvas-layout-unsaved">
 						unsaved
