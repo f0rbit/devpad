@@ -1,61 +1,40 @@
 import dagre, { type GraphLabel, type NodeLabel } from "@dagrejs/dagre";
 import type { Task, TaskLink } from "@devpad/schema";
-import type { CameraLevel, ContentBounds, ViewportSize } from "./camera";
+import type { ContentBounds, ViewportSize } from "./camera";
 
 export type NodeSize = { readonly width: number; readonly height: number };
 
 /**
- * Fold kinds (goal/milestone) get a bigger `map`-tier footprint (dot + label,
- * not just a dot) — shared with `canvas-node.tsx` so layout spacing and the
- * node's own inline size never drift apart (this was the root cause of the
- * "goal node drawn over a task card" overlap: the label used to float BELOW
- * the box via absolute positioning, escaping whatever space dagre reserved).
+ * Fold kinds (goal/milestone) show a title at every LOD (even `map`) instead
+ * of collapsing to a bare dot — purely a `canvas-node.tsx` content decision
+ * now that the box itself (below) no longer varies by kind or LOD.
  */
 export const FOLD_KINDS: ReadonlySet<Task["kind"]> = new Set(["milestone", "goal"]);
 
 /**
- * The exact box a `CanvasNode` renders at each LOD tier — single source of
- * truth consumed by BOTH `node_size_for` (below, used for the node's inline
- * `width`/`height` style) and CSS' cosmetic-only per-`data-lod` rules (which
- * must no longer set width/height themselves). Content taller than the
- * allocated height is capped via `overflow-y: auto` on the scrollable inner
- * region (`.canvas-node-body`), never by growing the box — a card growing
- * past its allocated footprint (e.g. from a long chip row wrapping to a 3rd
- * line) was the other root cause of node/node overlap.
+ * ONE fixed world-space box for every node, regardless of kind or camera
+ * LOD — Tom's staging feedback ("space things out better so when we zoom in
+ * things are still spaced properly") traced to the box dagre reserved for
+ * spacing (`CANVAS_NODE_W`/`H`, a single uniform size) disagreeing with the
+ * box `canvas-node.tsx` actually RENDERED, which used to grow per LOD up to
+ * 320x300 at `detail` — bigger than dagre had reserved, so a zoomed-in card
+ * could grow past its allocated footprint and overlap a neighbour. Now there
+ * is exactly one reserved/rendered box, always this size: LOD only swaps
+ * INNER content (`canvas-node.tsx`) and the `map`-tier dot/pill treatment is
+ * a pure CSS `transform: scale` DOWN into that same fixed box — it never
+ * changes the box's actual width/height, so it can never grow past what
+ * dagre reserved for it. Content taller than the box is capped via
+ * `overflow-y: auto` on the scrollable inner region (`.canvas-node-body`),
+ * never by growing the box. `node_size_for` keeps a `kind` parameter (even
+ * though every kind currently maps to the same box) so a future kind-specific
+ * size has exactly one call site to change.
  */
-const NODE_SIZE_BY_LEVEL: Record<CameraLevel, NodeSize> = {
-	map: { width: 20, height: 20 },
-	neighborhood: { width: 250, height: 76 },
-	node: { width: 260, height: 180 },
-	detail: { width: 320, height: 300 },
-};
+export const CANVAS_NODE_W = 260;
+export const CANVAS_NODE_H = 200;
 
-const FOLD_MAP_SIZE: NodeSize = { width: 96, height: 44 };
-
-export function node_size_for(kind: Task["kind"], level: CameraLevel): NodeSize {
-	if (level === "map" && FOLD_KINDS.has(kind)) return FOLD_MAP_SIZE;
-	return NODE_SIZE_BY_LEVEL[level];
+export function node_size_for(_kind: Task["kind"]): NodeSize {
+	return { width: CANVAS_NODE_W, height: CANVAS_NODE_H };
 }
-
-/**
- * Node footprint dagre reserves when spacing ranks/siblings — matches the
- * `node`-LOD render size (dagre's own default rank/sibling separation is the
- * common case, since map/neighborhood render SMALLER than this and `detail`
- * is reached by explicit zoom on ONE node at a time, not a dense grid of
- * them). Deliberately NOT relaid-out per LOD tier — that would jump
- * non-pinned node positions on every zoom transition, fighting the
- * "predictable, stable graph" premise dagre layout exists for — and
- * deliberately NOT the single largest (`detail`) footprint either: inflating
- * this reservation cascades into `apply_view_overrides`'s bounds margin,
- * which is independently consumed by `camera.ts`'s fit-to-content math, and
- * a large highly agent-placed graph (this canvas' own 500-node stress
- * fixture: every node `created_by: "api"`) can amplify a bigger margin into
- * content extending outside the "fit" viewport. A card growing past this
- * box from CONTENT (not from an LOD tier needing more room) is capped by
- * `.canvas-node-body`'s `max-height` + scroll instead — see `node_size_for`.
- */
-export const CANVAS_NODE_W = 250;
-export const CANVAS_NODE_H = 124;
 
 /**
  * `hierarchy` is a structural edge derived from `parent_id` — never a row in
@@ -129,7 +108,11 @@ function run_dagre(
 	// impossible via `parent_id` — guarded elsewhere) but keeps dagre robust
 	// if a future edge source ever introduces one.
 	const g = new dagre.graphlib.Graph<GraphLabel, NodeLabel, EdgeLabel>({ multigraph: true });
-	g.setGraph({ rankdir, nodesep: 48, ranksep: 96, marginx: 32, marginy: 32, acyclicer: "greedy" });
+	// Spacing per Tom's staging feedback ("space things out better") — at
+	// least 0.6x the card's width between siblings and a full card width
+	// between ranks, so the fixed `node_size_for` box (see above) always has
+	// visible breathing room around it, not just enough to avoid touching.
+	g.setGraph({ rankdir, nodesep: 170, ranksep: 300, marginx: 32, marginy: 32, acyclicer: "greedy" });
 
 	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });

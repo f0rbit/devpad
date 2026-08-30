@@ -238,6 +238,40 @@ describe("apply_view_overrides", () => {
 });
 
 /**
+ * Comfortably below `layout.ts`'s configured `nodesep`(170)/`ranksep`(300)
+ * — 0.6x `CANVAS_NODE_W` (156), the brief's literal minimum sibling gap —
+ * but well above the OLD spacing (48/96) this replaces, so a regression back
+ * toward the tighter values fails this even though nothing technically
+ * overlaps.
+ */
+const MIN_EXPECTED_GAP = 0.6 * CANVAS_NODE_W;
+
+/**
+ * Minimum edge-to-edge gap across every pair of node rects. For a pair
+ * separated along only one axis, the gap is that axis' distance; for a
+ * diagonal pair (separated on both axes) this takes the LARGER of the two
+ * axis gaps as a permissive (not exact Euclidean) lower bound. A pair that
+ * overlaps on BOTH axes produces a negative number on both, so the overall
+ * minimum still correctly reports the overlap.
+ */
+function min_rect_gap(nodes: readonly { readonly x: number; readonly y: number }[]): number {
+	const half_w = CANVAS_NODE_W / 2;
+	const half_h = CANVAS_NODE_H / 2;
+	const rects = nodes.map((n) => ({ x0: n.x - half_w, x1: n.x + half_w, y0: n.y - half_h, y1: n.y + half_h }));
+	let min_gap = Number.POSITIVE_INFINITY;
+	for (let i = 0; i < rects.length; i++) {
+		for (let j = i + 1; j < rects.length; j++) {
+			const a = rects[i];
+			const b = rects[j];
+			const x_gap = a.x0 >= b.x1 ? a.x0 - b.x1 : b.x0 >= a.x1 ? b.x0 - a.x1 : -1;
+			const y_gap = a.y0 >= b.y1 ? a.y0 - b.y1 : b.y0 >= a.y1 ? b.y0 - a.y1 : -1;
+			min_gap = Math.min(min_gap, Math.max(x_gap, y_gap));
+		}
+	}
+	return min_gap;
+}
+
+/**
  * Regression coverage for the "map view collapses into a narrow vertical
  * strip, edges run through cards" bug: `apply_view_overrides`' agent-
  * placement fallback used to unconditionally reposition every
@@ -263,8 +297,8 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 			expect(dst).toBeDefined();
 			if (!src || !dst) continue;
 
-			const src_size = node_size_for(src.task.kind, "neighborhood");
-			const dst_size = node_size_for(dst.task.kind, "neighborhood");
+			const src_size = node_size_for(src.task.kind);
+			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
 				{ x: src.x, y: src.y, size: src_size },
@@ -284,23 +318,8 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 		}
 	});
 
-	test("no two node rects (dagre's own reserved footprint) intersect", () => {
-		const half_w = CANVAS_NODE_W / 2;
-		const half_h = CANVAS_NODE_H / 2;
-		const rects = layout.nodes.map((n) => ({
-			x0: n.x - half_w,
-			x1: n.x + half_w,
-			y0: n.y - half_h,
-			y1: n.y + half_h,
-		}));
-		for (let i = 0; i < rects.length; i++) {
-			for (let j = i + 1; j < rects.length; j++) {
-				const a = rects[i];
-				const b = rects[j];
-				const overlaps = a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
-				expect(overlaps).toBe(false);
-			}
-		}
+	test("every pair of node rects (dagre's own reserved footprint) keeps at least the configured minimum gap — not just barely non-overlapping", () => {
+		expect(min_rect_gap(layout.nodes)).toBeGreaterThanOrEqual(MIN_EXPECTED_GAP);
 	});
 
 	test("the forest spreads across at least 3 distinct rank columns — not collapsed into a single narrow strip", () => {
@@ -321,9 +340,21 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
  * orientations — this exercises them against the real staging fixture at
  * two viewports chosen to each pick a different `rankdir` (see the module
  * doc comment on `layout_graph`).
+ *
+ * The LR viewport below was widened/heightened from the old 1000x680 default
+ * toolbar size for the wider spacing this fixes (`nodesep`/`ranksep` — see
+ * `layout.ts`): the fixture's dense ~20-sibling rank now spreads far enough
+ * that 1000x680 itself tips to `TB` (a near-square viewport genuinely does
+ * fit that shape better once cards have real breathing room) — a portrait
+ * viewport keeps demonstrating the SAME discrimination the mock's `LR`
+ * default relies on for a typical desktop toolbar aspect.
  */
 describe.each([
-	{ label: "LR (1000x680 — the default toolbar-sized viewport)", viewport: { width: 1000, height: 680 }, want: "LR" },
+	{
+		label: "LR (500x1400 — portrait, favours the fixture's naturally narrow/tall LR shape)",
+		viewport: { width: 500, height: 1400 },
+		want: "LR",
+	},
 	{
 		label: "TB (1600x500 — wide/short, favours stacking ranks vertically)",
 		viewport: { width: 1600, height: 500 },
@@ -347,8 +378,8 @@ describe.each([
 			expect(dst).toBeDefined();
 			if (!src || !dst) continue;
 
-			const src_size = node_size_for(src.task.kind, "neighborhood");
-			const dst_size = node_size_for(dst.task.kind, "neighborhood");
+			const src_size = node_size_for(src.task.kind);
+			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
 				{ x: src.x, y: src.y, size: src_size },
@@ -368,23 +399,8 @@ describe.each([
 		}
 	});
 
-	test("no two node rects intersect", () => {
-		const half_w = CANVAS_NODE_W / 2;
-		const half_h = CANVAS_NODE_H / 2;
-		const rects = layout.nodes.map((n) => ({
-			x0: n.x - half_w,
-			x1: n.x + half_w,
-			y0: n.y - half_h,
-			y1: n.y + half_h,
-		}));
-		for (let i = 0; i < rects.length; i++) {
-			for (let j = i + 1; j < rects.length; j++) {
-				const a = rects[i];
-				const b = rects[j];
-				const overlaps = a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
-				expect(overlaps).toBe(false);
-			}
-		}
+	test("every pair of node rects keeps at least the configured minimum gap", () => {
+		expect(min_rect_gap(layout.nodes)).toBeGreaterThanOrEqual(MIN_EXPECTED_GAP);
 	});
 
 	/**

@@ -516,13 +516,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		);
 	});
 
-	/** Clips each edge's endpoints to the ACTUAL box its src/dst renders at the
-	 * current LOD (`node_size_for` — the same source `CanvasNode` reads), so
-	 * arrowheads land on the visible border instead of dagre's uniform
-	 * `CANVAS_NODE_W`/`CANVAS_NODE_H` spacing box, which the real per-LOD card
-	 * is almost always smaller (or, at `detail`, larger) than. */
+	/** Clips each edge's endpoints to the node's fixed box (`node_size_for` —
+	 * the same source `CanvasNode` reads, one size regardless of kind or LOD),
+	 * so arrowheads land exactly on the visible border rather than dagre's
+	 * raw routed points (which target the box's edge, not necessarily where a
+	 * bend crosses it). */
 	const renderableEdges = createMemo(() => {
-		const level = stableLevel();
 		const by_id = nodeById();
 		return placedLayout()
 			.edges.filter((edge) => is_visible(edge.src_id) || is_visible(edge.dst_id))
@@ -534,8 +533,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				const dst_pos = node_position(dst);
 				const points = clip_edge_endpoints(
 					edge.points,
-					{ x: src_pos.x, y: src_pos.y, size: node_size_for(src.task.kind, level) },
-					{ x: dst_pos.x, y: dst_pos.y, size: node_size_for(dst.task.kind, level) },
+					{ x: src_pos.x, y: src_pos.y, size: node_size_for(src.task.kind) },
+					{ x: dst_pos.x, y: dst_pos.y, size: node_size_for(dst.task.kind) },
 				);
 				return [{ ...edge, points }];
 			});
