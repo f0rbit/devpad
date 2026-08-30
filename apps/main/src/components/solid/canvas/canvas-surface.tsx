@@ -73,6 +73,15 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		camera.set_content_bounds(l.nodes.length > 0 ? l.bounds : null);
 	});
 
+	// Keeps `zoom_to`/HUD level buttons framed on the selected node instead of
+	// drifting to the content-bounds center once something is selected — see
+	// camera.ts's `zoom_to` doc comment.
+	createEffect(() => {
+		const id = selectedId();
+		const node = id === null ? undefined : layout().nodes.find((n) => n.task.id === id);
+		camera.set_focus(node ? { x: node.x, y: node.y } : null);
+	});
+
 	// Rebuilt only when the layout changes (not per frame) — queried below
 	// against the current viewport world rect for cheap per-frame culling.
 	const spatialIndex = createMemo(() => {

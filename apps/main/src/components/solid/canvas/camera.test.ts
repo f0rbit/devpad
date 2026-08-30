@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { create_camera, LEVEL_SCALE, type WheelInput } from "./camera";
+import { CAMERA_LEVELS, create_camera, LEVEL_SCALE, type WheelInput } from "./camera";
 
 const wheel = (partial: Partial<WheelInput>): WheelInput => ({
 	offsetX: 0,
@@ -159,6 +159,47 @@ describe("fit", () => {
 		camera.fit();
 
 		expect(camera.level()).toBe("map");
+
+		camera.dispose();
+	});
+});
+
+describe("zoom_to without an anchor stays framed", () => {
+	test("stepping through every level from fit() keeps the content-bounds center on-screen", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		const viewport = { width: 1000, height: 800 };
+		camera.set_viewport(viewport);
+		camera.set_content_bounds({ x: 0, y: 0, w: 500, h: 400 });
+
+		camera.fit();
+
+		for (const level of CAMERA_LEVELS) {
+			camera.zoom_to(level);
+			const t = camera.transform();
+			const center_x = t.x + 250 * t.scale;
+			const center_y = t.y + 200 * t.scale;
+			expect(center_x).toBeGreaterThanOrEqual(0);
+			expect(center_x).toBeLessThanOrEqual(viewport.width);
+			expect(center_y).toBeGreaterThanOrEqual(0);
+			expect(center_y).toBeLessThanOrEqual(viewport.height);
+		}
+
+		camera.dispose();
+	});
+
+	test("a set_focus point is preferred over the content-bounds center", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1000, height: 800 });
+		camera.set_content_bounds({ x: 0, y: 0, w: 2000, h: 1600 });
+		camera.set_focus({ x: 1800, y: 1400 });
+
+		camera.zoom_to("detail");
+
+		const t = camera.transform();
+		const focus_x = t.x + 1800 * t.scale;
+		const focus_y = t.y + 1400 * t.scale;
+		expect(focus_x).toBeCloseTo(500, 6);
+		expect(focus_y).toBeCloseTo(400, 6);
 
 		camera.dispose();
 	});

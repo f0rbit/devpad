@@ -7,6 +7,13 @@ import { createRoot, createSignal, untrack, type Accessor } from "solid-js";
  * semantic zoom levels, a content-bounds clamp so pan/zoom never shows only
  * void, and an `is_moving` signal LOD swaps can debounce against.
  *
+ * `zoom_to`/`zoom_in`/`zoom_out` without an explicit screen anchor keep
+ * content framed rather than defaulting to the viewport center: they anchor
+ * on `set_focus`'s point (world coords — callers set this to the selected
+ * node's center) when one is set, else on the content-bounds center, else
+ * fall back to the old viewport-center-anchored behaviour. Cursor-anchored
+ * wheel zoom always passes an explicit anchor, so it's unaffected.
+ *
  * Deliberately DOM-free: callers pass plain structural event shapes
  * (`WheelInput`/`PointerInput`/`KeyInput`) instead of real `WheelEvent` /
  * `PointerEvent` — native events satisfy these shapes, but it keeps this
@@ -56,6 +63,7 @@ export type Camera = {
 	readonly zoom_in: (anchor?: Point) => void;
 	readonly zoom_out: (anchor?: Point) => void;
 	readonly fit: () => void;
+	readonly set_focus: (point: Point | null) => void;
 	readonly set_content_bounds: (bounds: ContentBounds | null) => void;
 	readonly set_viewport: (viewport: ViewportSize) => void;
 	readonly handle_key: (e: KeyInput) => void;
@@ -136,6 +144,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		const [is_moving, set_is_moving] = createSignal(false);
 
 		let bounds: ContentBounds | null = null;
+		let focus: Point | null = null;
 		let viewport: ViewportSize = { width: 0, height: 0 };
 		let dragging = false;
 		let last_point: Point = { x: 0, y: 0 };
@@ -186,14 +195,26 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			animation_frame = raf(step);
 		};
 
+		const default_focus_world = (): Point | null => {
+			if (focus) return focus;
+			if (bounds && bounds.w > 0 && bounds.h > 0) return { x: bounds.x + bounds.w / 2, y: bounds.y + bounds.h / 2 };
+			return null;
+		};
+
 		const zoom_to = (target_level: CameraLevel, anchor?: Point) => {
 			const t = transform();
-			const point = anchor ?? { x: viewport.width / 2, y: viewport.height / 2 };
 			const target_scale = LEVEL_SCALE[target_level];
-			const world_x = (point.x - t.x) / t.scale;
-			const world_y = (point.y - t.y) / t.scale;
+			const screen_point = anchor ?? { x: viewport.width / 2, y: viewport.height / 2 };
+			const world_point =
+				anchor !== undefined
+					? { x: (anchor.x - t.x) / t.scale, y: (anchor.y - t.y) / t.scale }
+					: (default_focus_world() ?? { x: (screen_point.x - t.x) / t.scale, y: (screen_point.y - t.y) / t.scale });
 			animate_to(
-				{ x: point.x - world_x * target_scale, y: point.y - world_y * target_scale, scale: target_scale },
+				{
+					x: screen_point.x - world_point.x * target_scale,
+					y: screen_point.y - world_point.y * target_scale,
+					scale: target_scale,
+				},
 				target_level,
 			);
 		};
@@ -281,6 +302,9 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			bounds = next_bounds;
 			apply_clamped(untrack(transform));
 		};
+		const set_focus = (point: Point | null) => {
+			focus = point;
+		};
 		const set_viewport = (next_viewport: ViewportSize) => {
 			viewport = next_viewport;
 			apply_clamped(untrack(transform));
@@ -344,6 +368,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			zoom_in: (anchor?: Point) => step_level(1, anchor),
 			zoom_out: (anchor?: Point) => step_level(-1, anchor),
 			fit,
+			set_focus,
 			set_content_bounds,
 			set_viewport,
 			handle_key,
