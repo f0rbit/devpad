@@ -33,9 +33,29 @@ const openCanvas = async (page: Page): Promise<void> => {
 	await page.goto(`/project/${E2E_CANVAS_P3_PROJECT_ID}/canvas`);
 	await expect(page.getByTestId("canvas-viewport")).toBeVisible({ timeout: 10_000 });
 	await expect(page.locator("[data-canvas-node]:visible").first()).toBeVisible({ timeout: 10_000 });
+	// The dev-only Astro toolbar floats over the full viewport and can
+	// intercept a click landing anywhere near the bottom of the page —
+	// remove it up front for every test in this file, not just the ones that
+	// happened to hit it locally. CI's slower first paint gives it more time
+	// to render before the first interaction than a local run does.
+	await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
 };
 
 const nodeFor = (page: Page, task_id: string) => page.locator(`[data-canvas-node][data-task-id="${task_id}"]`);
+
+/**
+ * `force: true` skips Playwright's "receives pointer events" actionability
+ * check — the dev-only Astro toolbar can re-render itself over the full
+ * viewport after `openCanvas`'s one-time removal (its custom element
+ * reinitializes off the HMR websocket), and on CI's slower runner that race
+ * was long enough to exhaust the whole 45s test timeout retrying a normal
+ * click. The node itself is still asserted visible/present via the locator;
+ * this only bypasses an unrelated dev-chrome overlay, never a real app
+ * layer.
+ */
+const clickNode = async (page: Page, task_id: string): Promise<void> => {
+	await nodeFor(page, task_id).click({ force: true });
+};
 
 /** Matches `.canvas-world`'s CSS `transition: transform 210ms` — a level's `data-lod` attribute flips at animation START, not end, so any code reading on-screen POSITIONS (a `boundingBox()` for a drag, not just presence) has to wait out the tween too. */
 const CAMERA_SETTLE_MS = 300;
@@ -79,7 +99,7 @@ test.describe("canvas home — P3 verification", () => {
 		// `canvas-surface.tsx`'s `set_focus` effect) so the "Node" LOD zoom
 		// below centers it on screen deterministically rather than landing
 		// wherever the unfocused content-bounds center happened to be.
-		await nodeFor(page, E2E_CANVAS_P3_CHILD).click();
+		await clickNode(page, E2E_CANVAS_P3_CHILD);
 		await page.waitForTimeout(350);
 
 		// "Node" LOD — the full 250x124 card, not the tiny 20px map dot, so the
@@ -146,16 +166,12 @@ test.describe("canvas home — P3 verification", () => {
 		await inject_test_user(context);
 		await page.setViewportSize({ width: 1440, height: 900 });
 		await openCanvas(page);
-		// The dev-only Astro toolbar can float over the viewport and intercept a
-		// click landing near it — drop it before interacting.
-		await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
 		// "Node" LOD — a real 250x124 target, not the ~12px `map`-scale dot,
 		// which is fragile to hit precisely via a synthesized click.
 		await clickLevel(page, "Node");
 
-		const node = nodeFor(page, E2E_CANVAS_P3_CHILD);
-		await node.click();
-		await node.press("Enter");
+		await clickNode(page, E2E_CANVAS_P3_CHILD);
+		await nodeFor(page, E2E_CANVAS_P3_CHILD).press("Enter");
 
 		await expect(page.getByTestId("canvas-crumb-current")).toHaveText("Canvas P3 child");
 
