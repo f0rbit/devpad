@@ -39,18 +39,24 @@ export function node_size_for(kind: Task["kind"], level: CameraLevel): NodeSize 
 }
 
 /**
- * Node footprint dagre reserves when spacing ranks/siblings — the LARGEST
- * box any (kind, LOD) combination above can render, so a node can NEVER
- * visually collide with a neighbor regardless of which LOD tier is current.
- * This is deliberately NOT the per-LOD render size: relaying out on every
- * LOD-tier change (so spacing shrinks/grows to match the current tier) would
- * jump non-pinned node positions on every zoom transition, fighting the
- * "predictable, stable graph" premise dagre layout exists for. Trading some
- * extra whitespace at `map`/`neighborhood` for positions that never move on
- * zoom is the simpler, less surprising fix.
+ * Node footprint dagre reserves when spacing ranks/siblings — matches the
+ * `node`-LOD render size (dagre's own default rank/sibling separation is the
+ * common case, since map/neighborhood render SMALLER than this and `detail`
+ * is reached by explicit zoom on ONE node at a time, not a dense grid of
+ * them). Deliberately NOT relaid-out per LOD tier — that would jump
+ * non-pinned node positions on every zoom transition, fighting the
+ * "predictable, stable graph" premise dagre layout exists for — and
+ * deliberately NOT the single largest (`detail`) footprint either: inflating
+ * this reservation cascades into `apply_view_overrides`'s bounds margin,
+ * which is independently consumed by `camera.ts`'s fit-to-content math, and
+ * a large highly agent-placed graph (this canvas' own 500-node stress
+ * fixture: every node `created_by: "api"`) can amplify a bigger margin into
+ * content extending outside the "fit" viewport. A card growing past this
+ * box from CONTENT (not from an LOD tier needing more room) is capped by
+ * `.canvas-node-body`'s `max-height` + scroll instead — see `node_size_for`.
  */
-export const CANVAS_NODE_W = 320;
-export const CANVAS_NODE_H = 300;
+export const CANVAS_NODE_W = 250;
+export const CANVAS_NODE_H = 124;
 
 /**
  * `hierarchy` is a structural edge derived from `parent_id` — never a row in
@@ -160,22 +166,8 @@ function bounds_for(nodes: readonly LaidOutNode[], node_size: NodeSize): Content
 
 export type ViewPin = { readonly x: number; readonly y: number };
 
-/**
- * Fixed offset an un-pinned agent-created node is placed at, relative to its
- * parent — matches the UX contract's "placed beside its parent so it is
- * never lost in the map". Deliberately NOT derived from `CANVAS_NODE_W`/
- * `CANVAS_NODE_H` (the dagre-spacing box, sized to the largest possible
- * rendered footprint) — a real project with many agent-created siblings
- * under one parent (the staging fixture: up to 7) would otherwise stack them
- * ~2100px tall, making `map`'s "fit everything" scale so tiny the dots
- * become sub-pixel. This is the SAME "node" LOD footprint pre-P2.5's node
- * card CSS was tuned against; siblings can still overlap if a user zooms
- * a dense agent-placed cluster to `detail` — a pre-existing tradeoff of the
- * "placed beside parent, not dagre-ranked" design this PR doesn't attempt
- * to re-architect.
- */
-const AGENT_PLACEMENT_OFFSET = { dx: 250 * 0.7, dy: 124 * 0.9 };
-const AGENT_SIBLING_GAP_PX = 124 + 16;
+/** Fixed offset (dagre's own nodesep/ranksep-scaled) an un-pinned agent-created node is placed at, relative to its parent — matches the UX contract's "placed beside its parent so it is never lost in the map". */
+const AGENT_PLACEMENT_OFFSET = { dx: CANVAS_NODE_W * 0.7, dy: CANVAS_NODE_H * 0.9 };
 
 /**
  * P3.3 — applies view-state pins (drag overrides, last-write-wins) and, for
@@ -218,7 +210,7 @@ export function apply_view_overrides(
 			return {
 				...node,
 				x: parent_pos.x + AGENT_PLACEMENT_OFFSET.dx,
-				y: parent_pos.y + AGENT_PLACEMENT_OFFSET.dy + index * AGENT_SIBLING_GAP_PX,
+				y: parent_pos.y + AGENT_PLACEMENT_OFFSET.dy + index * (node_size.height + 16),
 			};
 		}
 		return node;
