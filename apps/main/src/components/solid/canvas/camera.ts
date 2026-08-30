@@ -3,9 +3,18 @@ import { createRoot, createSignal, untrack, type Accessor } from "solid-js";
 /**
  * Camera primitive for the canvas home surface. Extracted from
  * `lenses/graph-lens.tsx`'s transform/wheel/pan math (kept identical) and
- * extended per the canvas UX contract (`.plans/canvas-mock.html`): stepped
- * semantic zoom levels, a content-bounds clamp so pan/zoom never shows only
- * void, and an `is_moving` signal LOD swaps can debounce against.
+ * extended per the canvas UX contract (`.plans/canvas-mock.html`): a
+ * content-bounds clamp so pan/zoom never shows only void, and an
+ * `is_moving` signal LOD swaps can debounce against.
+ *
+ * **Fluid zoom (disclosed deviation from the mock — Tom's staging feedback,
+ * see AGENTS.md's Canvas section)**: wheel/pinch zoom is CONTINUOUS, never
+ * snapped to a named level's exact scale. `level` is a pure function of the
+ * current scale — the level whose scale BAND (bounded by the midpoints
+ * between adjacent levels' scales) contains it — so LOD/culling/projections
+ * always track the live scale even between named levels. The HUD buttons and
+ * `+`/`-`/`0` keys still animate to an exact level scale via `zoom_to`/`fit`,
+ * but that's a navigation TARGET, not a clamp on free wheel/pinch zoom.
  *
  * `zoom_to`/`zoom_in`/`zoom_out` without an explicit screen anchor keep
  * content framed rather than defaulting to the viewport center: they anchor
@@ -41,9 +50,9 @@ export type KeyInput = { readonly key: string; readonly preventDefault?: () => v
 export type CameraOptions = {
 	readonly initial_level?: CameraLevel;
 	readonly initial_transform?: Transform;
-	/** ms for a level-to-level animated snap. 0 makes zoom_to/fit synchronous — used by tests. */
+	/** ms for a `zoom_to`/`fit` animated move to its target level's scale. 0 makes it synchronous — used by tests. */
 	readonly animation_ms?: number;
-	/** ms of wheel silence before a free-scroll scale snaps to its nearest level. 0 settles synchronously — used by tests. */
+	/** ms of wheel silence before `is_moving` clears (settle-debounces the LOD swap) — does NOT snap the scale itself, wheel zoom is continuous. 0 settles synchronously — used by tests. */
 	readonly wheel_settle_ms?: number;
 	readonly wheel_sensitivity?: number;
 	readonly pan_step?: number;
@@ -91,9 +100,6 @@ const DEFAULT_WHEEL_SENSITIVITY = 0.0012;
 const DEFAULT_PAN_STEP = 48;
 const DEFAULT_CLAMP_MARGIN = 48;
 const DEFAULT_FIT_MARGIN = 40;
-
-/** Breathing room below the exact fit-to-forest scale so wheel-zoom-out doesn't clip content right at the edge. */
-const MIN_SCALE_HEADROOM = 0.9;
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
@@ -165,7 +171,6 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 
 	return createRoot((dispose_root) => {
 		const [transform, set_transform] = createSignal<Transform>(initial_transform);
-		const [level, set_level] = createSignal<CameraLevel>(initial_level);
 		const [is_moving, set_is_moving] = createSignal(false);
 		const [map_scale, set_map_scale] = createSignal(LEVEL_SCALE.map);
 
@@ -176,16 +181,27 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		let last_point: Point = { x: 0, y: 0 };
 		let animation_frame: RafHandle | null = null;
 		let wheel_settle_timer: ReturnType<typeof setTimeout> | undefined;
-		let last_wheel_anchor: Point = { x: 0, y: 0 };
 
 		/** Effective scale for a level — `map` is the dynamic fit-to-forest scale, every other level is fixed. */
 		const level_scale = (target_level: CameraLevel): number =>
 			target_level === "map" ? map_scale() : LEVEL_SCALE[target_level];
 
-		const nearest_level = (scale: number): CameraLevel =>
+		/** The level whose scale band (bounded by midpoints to its neighbours) contains `scale` — equivalent to "nearest level by scale", just framed as bands per the fluid-zoom contract above. */
+		const level_for_scale = (scale: number): CameraLevel =>
 			CAMERA_LEVELS.reduce((best, candidate) =>
 				Math.abs(level_scale(candidate) - scale) < Math.abs(level_scale(best) - scale) ? candidate : best,
 			);
+
+		// Deliberately a PLAIN function, not `createMemo` — it forwards straight
+		// to the `transform`/`map_scale` signal reads, so it recomputes on every
+		// call AND still participates correctly in a caller's Solid tracking
+		// scope (e.g. `canvas-surface.tsx`'s `stableLevel` effect) purely because
+		// the signal reads happen synchronously inside it. `createMemo` would
+		// cache this — fatal under `solid-js/dist/server.js` (bun test's
+		// resolved build, see camera.test.ts), whose `createMemo` runs its
+		// callback ONCE and returns a fixed value forever, silently freezing
+		// `level` at whatever scale was current at first read.
+		const level: Accessor<CameraLevel> = () => level_for_scale(transform().scale);
 
 		const best_fit_level = (
 			bounds_arg: ContentBounds,
@@ -217,9 +233,8 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 
 		const apply_clamped = (t: Transform) => set_transform(clamp_transform(t, bounds, viewport, clamp_margin));
 
-		const animate_to = (target: Transform, next_level: CameraLevel) => {
+		const animate_to = (target: Transform) => {
 			cancel_animation();
-			set_level(next_level);
 			const from = transform();
 			if (animation_ms <= 0) {
 				apply_clamped(target);
@@ -261,14 +276,11 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 				anchor !== undefined
 					? { x: (anchor.x - t.x) / t.scale, y: (anchor.y - t.y) / t.scale }
 					: (default_focus_world() ?? { x: (screen_point.x - t.x) / t.scale, y: (screen_point.y - t.y) / t.scale });
-			animate_to(
-				{
-					x: screen_point.x - world_point.x * target_scale,
-					y: screen_point.y - world_point.y * target_scale,
-					scale: target_scale,
-				},
-				target_level,
-			);
+			animate_to({
+				x: screen_point.x - world_point.x * target_scale,
+				y: screen_point.y - world_point.y * target_scale,
+				scale: target_scale,
+			});
 		};
 
 		const step_level = (direction: 1 | -1, anchor?: Point) => {
@@ -279,7 +291,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 
 		const fit = (top_inset_px = fit_top_inset_px) => {
 			if (!bounds || bounds.w <= 0 || bounds.h <= 0) {
-				animate_to({ x: 0, y: top_inset_px / 2, scale: level_scale("map") }, "map");
+				animate_to({ x: 0, y: top_inset_px / 2, scale: level_scale("map") });
 				return;
 			}
 			const target_level = best_fit_level(bounds, viewport, fit_margin, top_inset_px);
@@ -289,13 +301,16 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 				y: top_inset_px + (viewport.height - top_inset_px) / 2 - (bounds.y + bounds.h / 2) * scale,
 				scale,
 			};
-			animate_to(target, target_level);
+			animate_to(target);
 		};
 
+		// Fluid zoom (see the module doc comment): wheel/pinch never snaps to a
+		// level's exact scale — this timer only clears `is_moving` once wheeling
+		// stops, so the settle-debounced LOD swap (`canvas-surface.tsx`'s
+		// `stableLevel`) still lands on whatever band the live scale ended up in.
 		const settle_wheel = () => {
 			wheel_settle_timer = undefined;
-			const nearest = nearest_level(transform().scale);
-			zoom_to(nearest, last_wheel_anchor);
+			if (!dragging) set_is_moving(false);
 		};
 
 		const on_wheel = (e: WheelInput) => {
@@ -303,9 +318,10 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			cancel_animation();
 			const t = transform();
 			const anchor = { x: e.offsetX, y: e.offsetY };
-			last_wheel_anchor = anchor;
 			const delta = -e.deltaY * wheel_sensitivity;
-			const next_scale = clamp(t.scale + delta, map_scale() * MIN_SCALE_HEADROOM, LEVEL_SCALE.detail);
+			// Continuous — clamped only to [map-fit scale, MAX_SCALE (`detail`'s
+			// fixed scale)], never quantized to a named level's exact value.
+			const next_scale = clamp(t.scale + delta, map_scale(), LEVEL_SCALE.detail);
 			const world_x = (anchor.x - t.x) / t.scale;
 			const world_y = (anchor.y - t.y) / t.scale;
 			apply_clamped({ x: anchor.x - world_x * next_scale, y: anchor.y - world_y * next_scale, scale: next_scale });

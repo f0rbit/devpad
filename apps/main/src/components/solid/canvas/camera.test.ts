@@ -57,15 +57,34 @@ describe("camera cursor-anchor invariance", () => {
 	});
 });
 
-describe("stepped zoom snap-to-level", () => {
-	test("wheel settles the free-scroll scale onto the nearest named level", () => {
+describe("fluid zoom — no wheel snap", () => {
+	test("wheel scroll never snaps to a named level's exact scale — level is derived from the live scale band", () => {
 		const camera = create_camera({ wheel_settle_ms: 0, animation_ms: 0 });
 		camera.set_viewport({ width: 800, height: 600 });
 
 		camera.on_wheel(wheel({ offsetX: 400, offsetY: 300, deltaY: -150 }));
 
+		// Landed inside the "neighborhood" scale band (closer to it than to any
+		// other level)...
 		expect(camera.level()).toBe("neighborhood");
-		expect(camera.transform().scale).toBeCloseTo(LEVEL_SCALE.neighborhood, 6);
+		// ...but the scale itself is continuous, not quantized to 0.82 exactly.
+		expect(camera.transform().scale).not.toBeCloseTo(LEVEL_SCALE.neighborhood, 6);
+
+		camera.dispose();
+	});
+
+	test("repeated small wheel ticks move the scale continuously, landing at a non-level value", () => {
+		const camera = create_camera({ wheel_settle_ms: 0, animation_ms: 0 });
+		camera.set_viewport({ width: 800, height: 600 });
+
+		for (let i = 0; i < 5; i++) {
+			camera.on_wheel(wheel({ offsetX: 400, offsetY: 300, deltaY: -10 }));
+		}
+
+		const scale = camera.transform().scale;
+		for (const level of CAMERA_LEVELS) {
+			expect(Math.abs(scale - LEVEL_SCALE[level])).toBeGreaterThan(0.001);
+		}
 
 		camera.dispose();
 	});

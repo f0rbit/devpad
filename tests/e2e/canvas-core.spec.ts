@@ -112,7 +112,10 @@ test.describe("canvas home — P2.5 verification", () => {
 			}
 		});
 
-		test("wheel scroll snaps through all 4 levels in sequence", async ({ page, context }) => {
+		test("wheel scroll is fluid — walks through all 4 LOD bands without ever snapping to a level's exact scale", async ({
+			page,
+			context,
+		}) => {
 			await inject_test_user(context);
 			const viewport = await openCanvas(page, E2E_OUTLINE_PROJECT_ID);
 
@@ -125,22 +128,30 @@ test.describe("canvas home — P2.5 verification", () => {
 			if (!box) throw new Error("canvas viewport has no bounding box");
 			await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 
-			// `map`'s scale is now relative (fit-to-forest), not the fixed 0.58 of
-			// old — read it live and derive each step's deltaY off the WHEEL_SENSITIVITY
-			// math (`delta = -deltaY * 0.0012`) so `nearest_level`'s settle lands on
-			// the next level's exact target scale deterministically.
+			// `map`'s scale is relative (fit-to-forest) — read it live. Each step
+			// drives the wheel 55% of the way from the current scale toward the
+			// next level's exact scale: past that band's midpoint (so `data-lod`
+			// flips to the target level) but deliberately short of the level's
+			// exact value, proving the zoom never snaps.
 			const WHEEL_SENSITIVITY = 0.0012;
-			let current_scale = await readWorldScale(page);
 			const targets: readonly CameraLevel[] = ["neighborhood", "node", "detail"];
 			for (const level of targets) {
+				const current_scale = await readWorldScale(page);
 				const target_scale = LEVEL_SCALE[level];
-				const deltaY = -(target_scale - current_scale) / WHEEL_SENSITIVITY;
+				const stepped_scale = current_scale + (target_scale - current_scale) * 0.55;
+				const deltaY = -(stepped_scale - current_scale) / WHEEL_SENSITIVITY;
 				await page.mouse.wheel(0, deltaY);
 				await expect(anyNodeAtLevel(page, level)).toBeVisible({ timeout: 5000 });
-				current_scale = target_scale;
+
+				const landed_scale = await readWorldScale(page);
+				expect(landed_scale).toBeCloseTo(stepped_scale, 2);
+				for (const camera_level of CAMERA_LEVELS) {
+					expect(Math.abs(landed_scale - LEVEL_SCALE[camera_level])).toBeGreaterThan(0.01);
+				}
 			}
 
-			// A big reverse scroll snaps straight back down to the min level.
+			// A big reverse scroll drives the scale continuously back down to the
+			// map-fit floor — still never re-snapping to an exact level scale.
 			await page.mouse.wheel(0, 2000);
 			await expect(anyNodeAtLevel(page, "map")).toBeVisible({ timeout: 5000 });
 		});
