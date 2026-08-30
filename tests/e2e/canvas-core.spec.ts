@@ -482,5 +482,65 @@ test.describe("canvas home — P2.5 verification", () => {
 			await page.screenshot({ path: dragged_output, fullPage: false });
 			expect(existsSync(dragged_output)).toBeTruthy();
 		});
+
+		/**
+		 * Proof set for "content-sized node boxes, round map dots, edges reach
+		 * the visible shape" (Tom's staging pass 3) — the STAGING fixture (real
+		 * spread-out spacing, a genuine hierarchy tree for map dots + edges) at
+		 * every LOD, plus a `detail` shot with a node selected so the new
+		 * `.canvas-node-detail-overlay` (rendered OUTSIDE the fixed box) is
+		 * visible. One light-mode shot (`node`) is enough to prove the smaller
+		 * box reads correctly in both themes without doubling every capture.
+		 */
+		test("captures the content-sized box / round map dots / edge-reach fix at every LOD", async ({ page, context }) => {
+			test.setTimeout(120_000);
+			mkdirSync(screenshot_dir, { recursive: true });
+			await inject_test_user(context);
+			await page.setViewportSize({ width: 1440, height: 900 });
+			await openCanvas(page, E2E_CANVAS_STAGING_PROJECT_ID);
+			// `camera.set_content_bounds`'s effect fires once with a placeholder
+			// (still-loading) bounds, then again once the async graph fetch
+			// resolves with the REAL bounds — `map_scale` recomputes correctly
+			// each time, but nothing re-applies the new value to the camera's own
+			// `transform` until an explicit `zoom_to`/`fit`. Clicking a level
+			// button before that second recompute settles can animate to the
+			// STALE placeholder scale (pre-existing race, unrelated to this
+			// phase's fixes) — this wait is a test-only mitigation so the proof
+			// screenshots reliably show the real fit-to-forest map view.
+			await page.waitForTimeout(1500);
+
+			await page.emulateMedia({ colorScheme: "dark" });
+			for (const level of ["map", "neighborhood", "node"] as const) {
+				await page.getByRole("button", { name: LEVEL_LABEL[level], exact: true }).click();
+				await expect(anyNodeAtLevelAnywhere(page, level)).toHaveCount(1, { timeout: 5000 });
+				await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
+				await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
+				const output = resolve(screenshot_dir, `canvas-box-${level}-dark.png`);
+				await page.screenshot({ path: output, fullPage: false });
+				expect(existsSync(output)).toBeTruthy();
+
+				if (level === "node") {
+					const light_output = resolve(screenshot_dir, "canvas-box-node-light.png");
+					await page.emulateMedia({ colorScheme: "light" });
+					await page.screenshot({ path: light_output, fullPage: false });
+					expect(existsSync(light_output)).toBeTruthy();
+					await page.emulateMedia({ colorScheme: "dark" });
+				}
+			}
+
+			// `detail` needs a SELECTED node for the overlay to render — click
+			// one, then zoom to `detail`.
+			const node = page
+				.locator('[data-canvas-node][data-task-id="staging-task_047e53dd-b3cd-4a7e-85bb-32b9cb7b1634"]')
+				.first();
+			await node.click({ force: true });
+			await clickLevel(page, "detail");
+			await expect(page.getByTestId("canvas-node-detail-panel")).toBeVisible({ timeout: 5000 });
+			await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
+			await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
+			const detail_output = resolve(screenshot_dir, "canvas-box-detail-dark.png");
+			await page.screenshot({ path: detail_output, fullPage: false });
+			expect(existsSync(detail_output)).toBeTruthy();
+		});
 	});
 });
