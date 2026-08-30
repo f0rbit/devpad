@@ -1,10 +1,12 @@
 import type { Task } from "@devpad/schema";
 import { Badge } from "@f0rbit/ui";
 import Layers from "lucide-solid/icons/layers";
+import Link2 from "lucide-solid/icons/link-2";
 import MilestoneIcon from "lucide-solid/icons/milestone";
 import PenLine from "lucide-solid/icons/pen-line";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import Target from "lucide-solid/icons/target";
+import Zap from "lucide-solid/icons/zap";
 import { type Component, createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
 import { Ring } from "./ring";
@@ -147,7 +149,7 @@ export function OutlineRow(props: OutlineRowProps) {
 				</Show>
 				<Show when={(edge()?.blocked_count ?? 0) > 0}>
 					<span class="outline-chip outline-chip-blocked" title="blocked by other open tasks">
-						⛓ {edge()?.blocked_count}
+						<Link2 size={10} /> {edge()?.blocked_count}
 					</span>
 				</Show>
 				<Show when={edge()?.ready}>
@@ -155,7 +157,7 @@ export function OutlineRow(props: OutlineRowProps) {
 				</Show>
 				<Show when={edge()?.hook}>
 					<span class="outline-chip outline-chip-hook" title="a hook is subscribed to this node's completion">
-						⚡ hook
+						<Zap size={10} /> hook
 					</span>
 				</Show>
 				<Show when={edge()?.stale}>

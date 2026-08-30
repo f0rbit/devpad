@@ -685,6 +685,9 @@ button.outline-row {
 }
 
 .outline-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
 	font-size: 10.5px;
 	font-family: var(--font-mono);
 	letter-spacing: 0.01em;
@@ -694,6 +697,11 @@ button.outline-row {
 	border: 1px solid var(--border);
 	color: var(--fg-faint);
 	background: var(--bg-alt);
+}
+
+.outline-chip svg {
+	width: 10px;
+	height: 10px;
 }
 
 .outline-chip-hi {
@@ -2263,6 +2271,12 @@ button.outline-row {
 
 .canvas-world-moving {
 	transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.canvas-world {
+		transition: none;
+	}
 }
 
 .canvas-edges {

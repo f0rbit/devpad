@@ -23,7 +23,7 @@ const inject_test_user = async (context: BrowserContext) => {
 test.describe("edge-summary chips", () => {
 	test("an unblocked leaf shows the ready chip, never the blocked chip", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const leafRow = page.locator(`[data-task-id="${E2E_TASK_LEAF}"]`);
 		await expect(leafRow.locator(".outline-chip-ready")).toBeVisible();
@@ -32,7 +32,7 @@ test.describe("edge-summary chips", () => {
 
 	test("a task blocked by an open blocker shows the blocked chip, never the ready chip", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const blockedRow = page.locator(`[data-task-id="${E2E_TASK_CHILD_2}"]`);
 		await expect(blockedRow.locator(".outline-chip-blocked")).toContainText("1");

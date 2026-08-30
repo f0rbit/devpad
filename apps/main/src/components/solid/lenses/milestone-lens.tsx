@@ -1,6 +1,7 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { MilestoneLensRow } from "@devpad/api";
 import type { Task } from "@devpad/schema";
+import Link2 from "lucide-solid/icons/link-2";
 import { createSignal, For, onMount, Show } from "solid-js";
 import { Ring } from "../outline/ring";
 import { LensShell } from "./lens-shell";
@@ -116,7 +117,9 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 													<span class="outline-chip outline-chip-stale">stale</span>
 												</Show>
 												<Show when={(row.edge?.blocked_count ?? 0) > 0}>
-													<span class="outline-chip outline-chip-blocked">⛓ {row.edge?.blocked_count}</span>
+													<span class="outline-chip outline-chip-blocked">
+														<Link2 size={10} /> {row.edge?.blocked_count}
+													</span>
 												</Show>
 												<Show when={(row.rollup?.subtree_total ?? 0) > 0}>
 													<span class="outline-chip">
