@@ -6,12 +6,21 @@ import {
 	type Task,
 	type TaskLink,
 } from "@devpad/schema";
+import { curveMonotoneX, line } from "d3-shape";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { CAMERA_LEVELS, create_camera, type CameraLevel, type ViewportSize } from "./camera";
 import CanvasNode from "./canvas-node";
-import { CANVAS_NODE_H, CANVAS_NODE_W, apply_view_overrides, layout_graph, type EdgeKind } from "./layout";
+import {
+	CANVAS_NODE_H,
+	CANVAS_NODE_W,
+	apply_view_overrides,
+	clip_edge_endpoints,
+	layout_graph,
+	node_size_for,
+	type EdgeKind,
+} from "./layout";
 import { fetch_node_projections, type NodeProjection } from "./projections";
 import { build_spatial_index } from "./spatial-index";
 
@@ -96,8 +105,15 @@ function edge_chips_for(tasks: readonly Task[], links: readonly TaskLink[]): Map
 	return result;
 }
 
+/** Smooths dagre's routed point lists into curved paths — `curveMonotoneX`
+ * matches the `rankdir: "LR"` layout direction (monotonic left-to-right),
+ * avoiding the hand-rolled bezier math a from-scratch curve would need. */
+const line_gen = line<{ x: number; y: number }>()
+	.x((p) => p.x)
+	.y((p) => p.y)
+	.curve(curveMonotoneX);
 const path_for = (points: readonly { x: number; y: number }[]): string =>
-	points.map((p, i) => `${i === 0 ? "M" : "L"}${String(p.x)},${String(p.y)}`).join(" ");
+	line_gen(points as { x: number; y: number }[]) ?? "";
 
 const DOUBLE_CLICK_MS = 300;
 
@@ -151,6 +167,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const layout = createMemo(() => layout_graph(data().tasks, data().links));
 	const edgeChips = createMemo(() => edge_chips_for(data().tasks, data().links));
 	const placedLayout = createMemo(() => apply_view_overrides(layout(), undefined, pins()));
+	const nodeById = createMemo(() => new Map(placedLayout().nodes.map((node) => [node.task.id, node])));
 
 	createEffect(() => {
 		const l = placedLayout();
@@ -453,6 +470,41 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		return preview && preview.id === node.task.id ? { x: preview.x, y: preview.y } : { x: node.x, y: node.y };
 	};
 
+	const selected_edge_ids = createMemo((): ReadonlySet<string> => {
+		const id = selectedId();
+		if (id === null) return new Set();
+		return new Set(
+			placedLayout()
+				.edges.filter((edge) => edge.src_id === id || edge.dst_id === id)
+				.map((edge) => edge.id),
+		);
+	});
+
+	/** Clips each edge's endpoints to the ACTUAL box its src/dst renders at the
+	 * current LOD (`node_size_for` — the same source `CanvasNode` reads), so
+	 * arrowheads land on the visible border instead of dagre's uniform
+	 * `CANVAS_NODE_W`/`CANVAS_NODE_H` spacing box, which the real per-LOD card
+	 * is almost always smaller (or, at `detail`, larger) than. */
+	const renderableEdges = createMemo(() => {
+		const level = stableLevel();
+		const by_id = nodeById();
+		return placedLayout()
+			.edges.filter((edge) => is_visible(edge.src_id) || is_visible(edge.dst_id))
+			.flatMap((edge) => {
+				const src = by_id.get(edge.src_id);
+				const dst = by_id.get(edge.dst_id);
+				if (!src || !dst) return [];
+				const src_pos = node_position(src);
+				const dst_pos = node_position(dst);
+				const points = clip_edge_endpoints(
+					edge.points,
+					{ x: src_pos.x, y: src_pos.y, size: node_size_for(src.task.kind, level) },
+					{ x: dst_pos.x, y: dst_pos.y, size: node_size_for(dst.task.kind, level) },
+				);
+				return [{ ...edge, points }];
+			});
+	});
+
 	const pinnedCount = () => Object.keys(pins()).length;
 	const breadcrumb = () => [...ancestors()].toReversed();
 	const currentTitle = () => {
@@ -556,11 +608,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 							)}
 						</For>
 					</defs>
-					<For each={placedLayout().edges.filter((edge) => is_visible(edge.src_id) || is_visible(edge.dst_id))}>
+					<For each={renderableEdges()}>
 						{(edge) => (
 							<path
 								d={path_for(edge.points)}
 								class={`canvas-edge ${EDGE_CLASS[edge.kind]}`}
+								classList={{ "canvas-edge-selected": selected_edge_ids().has(edge.id) }}
 								data-edge-kind={edge.kind}
 								marker-end={edge.kind === "hierarchy" ? undefined : `url(#${arrow_id_for(edge.kind)})`}
 							/>
