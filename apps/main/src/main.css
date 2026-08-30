@@ -2134,20 +2134,23 @@ button.outline-row {
 	min-height: 550px;
 }
 
-/* BLOCKER #1 — canvas|list segmented toggle, same visual weight as the
-   canvas surface's own `.canvas-zoom-hud`/`.canvas-level-btn` (kept as
-   plain SSR `<a>`s, not a client-JS tab component — this switches which
-   surface the SERVER rendered, not a panel within one page). */
+/* canvas|list segmented toggle — same `bg-subtle` treatment (segmented
+   control on the muted `--bg-alt` surface; the design system has no literal
+   `--bg-subtle` token, `--bg-alt` is its closest "subtle surface"
+   equivalent) as `.canvas-zoom-hud` below, for visual consistency between
+   the two HUD segmented controls. Reads as a real tab strip
+   (`role="tablist"`/`role="tab"`/`aria-selected`, see index.astro) even
+   though it's plain SSR `<a>`s, not `@f0rbit/ui`'s client-JS-only `Tabs`
+   (which has no `href`/navigation support — wrong tool for a control that
+   swaps which SERVER-rendered surface loads, not a panel within one page). */
 .canvas-view-toggle {
 	display: inline-flex;
 	align-items: center;
 	gap: 2px;
 	margin: 0 0 0.75rem;
-	border: 1px solid var(--border);
 	border-radius: 10px;
-	background: color-mix(in oklch, var(--bg) 93%, transparent);
+	background: var(--bg-alt);
 	padding: 3px;
-	box-shadow: var(--shadow);
 }
 
 .canvas-view-toggle-btn {
@@ -2165,10 +2168,11 @@ button.outline-row {
 	color: var(--fg);
 }
 
-.canvas-view-toggle-btn[aria-current="page"],
-.canvas-view-toggle-btn[aria-current="page"]:hover {
-	background: var(--fg);
-	color: var(--bg);
+.canvas-view-toggle-btn[aria-selected="true"],
+.canvas-view-toggle-btn[aria-selected="true"]:hover {
+	background: var(--bg);
+	color: var(--fg);
+	box-shadow: var(--shadow);
 }
 
 .project-home-link {
@@ -2264,10 +2268,8 @@ button.outline-row {
 	align-items: center;
 	gap: 2px;
 	padding: 3px;
-	border: 1px solid var(--border);
 	border-radius: 10px;
-	background: color-mix(in oklch, var(--bg) 93%, transparent);
-	box-shadow: var(--shadow);
+	background: var(--bg-alt);
 }
 
 .canvas-level-btn {
@@ -2289,8 +2291,9 @@ button.outline-row {
 
 .canvas-level-btn-active,
 .canvas-level-btn-active:hover {
-	background: var(--fg);
-	color: var(--bg);
+	background: var(--bg);
+	color: var(--fg);
+	box-shadow: var(--shadow);
 }
 
 .canvas-world {

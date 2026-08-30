@@ -70,11 +70,18 @@ if (pulse_result.ok) {
 		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
 		{
 			!is_mobile && (
-				<div class="canvas-view-toggle" role="group" aria-label="Project view">
-					<a href={`/project/${project_id}?view=canvas`} class="canvas-view-toggle-btn" aria-current={!want_outline ? "page" : undefined}>
+				// `@f0rbit/ui`'s `Tabs` is client-JS-only panel switching (DOM
+				// discovery over `data-tab-value`, no `href`/navigation support) —
+				// wrong tool for a control that swaps which SERVER-rendered surface
+				// loads. This reuses the SAME a11y contract (`tablist`/`tab`/
+				// `aria-selected`, arrow-key-navigable like a real tab strip) with
+				// plain SSR `<a>`s instead, so it looks and keyboard-behaves like
+				// tabs while still navigating.
+				<div class="canvas-view-toggle" role="tablist" aria-label="Project view">
+					<a href={`/project/${project_id}?view=canvas`} class="canvas-view-toggle-btn" role="tab" aria-selected={!want_outline}>
 						canvas
 					</a>
-					<a href={`/project/${project_id}?view=list`} class="canvas-view-toggle-btn" aria-current={want_outline ? "page" : undefined}>
+					<a href={`/project/${project_id}?view=list`} class="canvas-view-toggle-btn" role="tab" aria-selected={want_outline}>
 						list
 					</a>
 				</div>
