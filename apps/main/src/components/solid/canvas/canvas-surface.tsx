@@ -2,9 +2,10 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import { TASK_LINK_KINDS, type ProjectGraphResponse, type TaskLink } from "@devpad/schema";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount } from "solid-js";
-import { CAMERA_LEVELS, create_camera, type CameraLevel } from "./camera";
+import { CAMERA_LEVELS, create_camera, type CameraLevel, type ViewportSize } from "./camera";
 import CanvasNode from "./canvas-node";
-import { layout_graph } from "./layout";
+import { CANVAS_NODE_H, CANVAS_NODE_W, layout_graph } from "./layout";
+import { build_spatial_index } from "./spatial-index";
 
 export type CanvasSurfaceProps = {
 	readonly projectId: string;
@@ -38,6 +39,15 @@ const path_for = (points: readonly { x: number; y: number }[]): string => points
 const DOUBLE_CLICK_MS = 300;
 
 /**
+ * Cell size ≈2x node footprint (per P2.4's spatial-index contract) so a
+ * viewport rect only ever touches a handful of cells. The margin pads the
+ * culling rect beyond the visible viewport so nodes don't pop in right at
+ * the edge during a pan.
+ */
+const CULL_CELL_SIZE = Math.max(CANVAS_NODE_W, CANVAS_NODE_H) * 2;
+const CULL_MARGIN = Math.max(CANVAS_NODE_W, CANVAS_NODE_H);
+
+/**
  * Full-viewport canvas home surface (P2.3) — dagre layered layout piped
  * through the stepped-zoom camera module. Lives at its own route
  * (`canvas.astro`) with ZERO IA change: no nav links/tabs point here yet
@@ -48,16 +58,58 @@ const DOUBLE_CLICK_MS = 300;
 export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const [data, setData] = createSignal<ProjectGraphResponse>(props.initial);
 	const [selectedId, setSelectedId] = createSignal<string | null>(null);
+	const [viewportSize, setViewportSize] = createSignal<ViewportSize>({ width: 0, height: 0 });
 	let viewportRef: HTMLDivElement | undefined;
 
 	const camera = create_camera();
 	onCleanup(() => camera.dispose());
+	const transform = camera.transform;
 
 	const layout = createMemo(() => layout_graph(data().tasks, data().links));
 
 	createEffect(() => {
 		const l = layout();
 		camera.set_content_bounds(l.nodes.length > 0 ? l.bounds : null);
+	});
+
+	// Rebuilt only when the layout changes (not per frame) — queried below
+	// against the current viewport world rect for cheap per-frame culling.
+	const spatialIndex = createMemo(() => {
+		const l = layout();
+		return build_spatial_index(
+			l.nodes.map(node => ({ id: node.task.id, x: node.x - CANVAS_NODE_W / 2, y: node.y - CANVAS_NODE_H / 2, w: CANVAS_NODE_W, h: CANVAS_NODE_H })),
+			CULL_CELL_SIZE,
+		);
+	});
+
+	// null (not yet measured) means "render everything" — never cull before
+	// we know the real viewport size.
+	const visibleIds = createMemo((): ReadonlySet<string> | null => {
+		const viewport = viewportSize();
+		if (viewport.width <= 0 || viewport.height <= 0) return null;
+		const t = transform();
+		const rect = {
+			x: -t.x / t.scale - CULL_MARGIN,
+			y: -t.y / t.scale - CULL_MARGIN,
+			w: viewport.width / t.scale + CULL_MARGIN * 2,
+			h: viewport.height / t.scale + CULL_MARGIN * 2,
+		};
+		return spatialIndex().query(rect);
+	});
+
+	const is_visible = (id: string): boolean => {
+		const visible = visibleIds();
+		return visible === null || visible.has(id);
+	};
+
+	// LOD swap only lands once the camera settles — swapping mid-animation
+	// (e.g. map -> node body content appearing halfway through a zoom_to
+	// tween) is exactly the thrash the UX contract calls out to avoid.
+	const [stableLevel, setStableLevel] = createSignal<CameraLevel>(camera.level());
+	createEffect(() => {
+		const moving = camera.is_moving();
+		const level = camera.level();
+		if (!moving) setStableLevel(level);
 	});
 
 	const revalidate = async () => {
@@ -72,7 +124,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		const observer = new ResizeObserver(entries => {
 			const entry = entries[0];
 			if (!entry) return;
-			camera.set_viewport({ width: entry.contentRect.width, height: entry.contentRect.height });
+			const size = { width: entry.contentRect.width, height: entry.contentRect.height };
+			camera.set_viewport(size);
+			setViewportSize(size);
 		});
 		observer.observe(viewport);
 		onCleanup(() => observer.disconnect());
@@ -129,8 +183,6 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		}, DOUBLE_CLICK_MS);
 	};
 
-	const transform = camera.transform;
-
 	return (
 		<div
 			ref={viewportRef}
@@ -167,10 +219,22 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 					<defs>
 						<For each={TASK_LINK_KINDS}>{kind => <marker id={arrow_id_for(kind)} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class={`canvas-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} /></marker>}</For>
 					</defs>
-					<For each={layout().edges}>{edge => <path d={path_for(edge.points)} class={`canvas-edge ${EDGE_CLASS[edge.kind]}`} marker-end={`url(#${arrow_id_for(edge.kind)})`} />}</For>
+					<For each={layout().edges.filter(edge => is_visible(edge.src_id) || is_visible(edge.dst_id))}>
+						{edge => <path d={path_for(edge.points)} class={`canvas-edge ${EDGE_CLASS[edge.kind]}`} marker-end={`url(#${arrow_id_for(edge.kind)})`} />}
+					</For>
 				</svg>
 				<For each={layout().nodes}>
-					{node => <CanvasNode task={node.task} x={node.x} y={node.y} level={camera.level()} selected={selectedId() === node.task.id} onSelect={on_node_select} />}
+					{node => (
+						<CanvasNode
+							task={node.task}
+							x={node.x}
+							y={node.y}
+							level={stableLevel()}
+							selected={selectedId() === node.task.id}
+							visible={is_visible(node.task.id)}
+							onSelect={on_node_select}
+						/>
+					)}
 				</For>
 			</div>
 

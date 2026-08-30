@@ -15,10 +15,16 @@ export const CANVAS_NODE_H = 124;
 export type NodeSize = { readonly width: number; readonly height: number };
 
 export type LaidOutNode = { readonly task: Task; readonly x: number; readonly y: number };
-export type LaidOutEdge = { readonly id: string; readonly kind: TaskLink["kind"]; readonly points: readonly { x: number; y: number }[] };
+export type LaidOutEdge = {
+	readonly id: string;
+	readonly kind: TaskLink["kind"];
+	readonly points: readonly { x: number; y: number }[];
+	readonly src_id: string;
+	readonly dst_id: string;
+};
 export type GraphLayout = { readonly nodes: readonly LaidOutNode[]; readonly edges: readonly LaidOutEdge[]; readonly bounds: ContentBounds };
 
-type EdgeLabel = { kind: TaskLink["kind"]; id: string; points?: { x: number; y: number }[] };
+type EdgeLabel = { kind: TaskLink["kind"]; id: string; src_id: string; dst_id: string; points?: { x: number; y: number }[] };
 
 const EMPTY_BOUNDS: ContentBounds = { x: 0, y: 0, w: 0, h: 0 };
 export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_BOUNDS };
@@ -39,7 +45,7 @@ export function layout_graph(tasks: readonly Task[], links: readonly TaskLink[],
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
 	for (const link of links) {
 		if (!link.dst_id || !id_set.has(link.src_id) || !id_set.has(link.dst_id)) continue; // edge culling — dangling/foreign links never reach the layout
-		g.setEdge(link.src_id, link.dst_id, { kind: link.kind, id: link.id });
+		g.setEdge(link.src_id, link.dst_id, { kind: link.kind, id: link.id, src_id: link.src_id, dst_id: link.dst_id });
 	}
 	dagre.layout(g);
 
@@ -49,7 +55,7 @@ export function layout_graph(tasks: readonly Task[], links: readonly TaskLink[],
 	});
 	const edges: LaidOutEdge[] = g.edges().map(e => {
 		const label = g.edge(e);
-		return { id: label.id, kind: label.kind, points: label.points ?? [] };
+		return { id: label.id, kind: label.kind, points: label.points ?? [], src_id: label.src_id, dst_id: label.dst_id };
 	});
 
 	if (nodes.length === 0) return EMPTY_LAYOUT;
