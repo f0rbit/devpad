@@ -1,0 +1,727 @@
+<!-- Design contract mapping: @f0rbit/ui/dist/tokens.css --bg, --bg-alt, --border, --fg, --fg-muted, --fg-subtle, --fg-faint, --accent, --font, --font-mono, --radius, --radius-lg, --shadow, --shadow-lg, --transition, --success*, --error*, --warning*, --info* map to the underscored mock variables below; packages/core/src/ui/styles/globals.css --text-link, --hover-filter, --input-placeholder, --input-focus, --item-red, --item-green, --item-red-border, --item-green-border, --overlay are mirrored directly. Header and tab geometry follows globals.css .unified-header and ProjectLayout.astro. -->
+<!-- P4 migration note: these icon-led indicators retire the old filled text-chip style when the canvas becomes product UI. -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>devpad · canvas home</title>
+  <style>
+    :root {
+      --bg: oklch(97% 0.02 290);
+      --bg_alt: oklch(96% 0.01 290);
+      --surface: oklch(97% 0.02 290);
+      --surface_strong: var(--bg);
+      --border: oklch(91% 0.01 290);
+      --fg: oklch(1% 0.02 290);
+      --fg_muted: oklch(25% 0.02 290);
+      --fg_subtle: oklch(35% 0.02 290);
+      --fg_faint: oklch(50% 0.03 290);
+      --accent: oklch(46% 0.015 300);
+      --accent_fg: var(--bg);
+      --success: oklch(0.95 0.05 150);
+      --success_fg: oklch(0.35 0.15 150);
+      --error: oklch(0.95 0.05 20);
+      --error_fg: oklch(0.45 0.15 20);
+      --warning: oklch(0.95 0.08 85);
+      --warning_fg: oklch(0.45 0.15 85);
+      --info: oklch(0.95 0.05 240);
+      --info_fg: oklch(0.4 0.15 240);
+      --border_strong: var(--border);
+      --accent_soft: color-mix(in oklch, var(--accent) 12%, var(--bg));
+      --accent_faint: color-mix(in oklch, var(--accent) 5%, var(--bg));
+      --green: var(--success_fg);
+      --green_soft: var(--success);
+      --red: var(--error_fg);
+      --red_soft: var(--error);
+      --amber: var(--warning_fg);
+      --amber_soft: var(--warning);
+      --ai: oklch(55% 0.18 290);
+      --ai_soft: color-mix(in oklch, var(--ai) 12%, var(--bg));
+      --text_link: oklch(45.92% 0.0149 300.97);
+      --hover_filter: brightness(50%);
+      --input_placeholder: oklch(70% 0.03 290);
+      --input_focus: var(--fg_subtle);
+      --item_red: oklch(0.95 0.05 20);
+      --item_green: oklch(0.95 0.05 150);
+      --item_red_border: color-mix(in srgb, var(--item_red) 90%, var(--fg) 10%);
+      --item_green_border: color-mix(in srgb, var(--item_green) 90%, var(--fg) 10%);
+      --overlay: oklch(20% 0.02 290 / 0.45);
+      --font_sans: "neue-haas-grotesk-text", "Inter", Helvetica, sans-serif;
+      --font_mono: ui-monospace, "SF Mono", Menlo, monospace;
+      --font_semibold: 600;
+      --radius: 0.25rem;
+      --radius_lg: 0.5rem;
+      --shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+      --shadow_lg: 0 10px 25px rgb(0 0 0 / 0.15);
+      --shadow_small: var(--shadow);
+      --transition: 150ms ease;
+      --ease_out: cubic-bezier(0.23, 1, 0.32, 1);
+      --ease_in_out: cubic-bezier(0.77, 0, 0.175, 1);
+    }
+
+    [data-theme="dark"] {
+      --bg: oklch(21% 0.015 280);
+      --bg_alt: oklch(27% 0.02 290);
+      --surface: oklch(21% 0.015 280);
+      --surface_strong: var(--bg);
+      --border: oklch(32% 0.02 290);
+      --fg: oklch(100% 0 0);
+      --fg_muted: oklch(85% 0.02 290);
+      --fg_subtle: oklch(75% 0.02 290);
+      --fg_faint: oklch(60% 0.03 290);
+      --accent: oklch(70% 0.035 280);
+      --accent_fg: var(--bg);
+      --success: oklch(0.35 0.05 150);
+      --success_fg: oklch(0.85 0.1 150);
+      --error: oklch(0.35 0.05 20);
+      --error_fg: oklch(0.85 0.1 20);
+      --warning: oklch(0.35 0.08 85);
+      --warning_fg: oklch(0.85 0.12 85);
+      --info: oklch(0.35 0.05 240);
+      --info_fg: oklch(0.85 0.1 240);
+      --text_link: oklch(70% 0.035 280);
+      --hover_filter: brightness(150%);
+      --input_placeholder: oklch(45% 0.03 290);
+      --input_focus: var(--text_link);
+      --item_red: oklch(0.35 0.05 20);
+      --item_green: oklch(0.35 0.05 150);
+      --item_red_border: color-mix(in srgb, var(--item_red) 90%, var(--fg) 10%);
+      --item_green_border: color-mix(in srgb, var(--item_green) 90%, var(--fg) 10%);
+      --overlay: oklch(10% 0.01 280 / 0.6);
+      --border_strong: var(--border);
+      --accent_soft: color-mix(in oklch, var(--accent) 16%, var(--bg));
+      --accent_faint: color-mix(in oklch, var(--accent) 7%, var(--bg));
+      --green: var(--success_fg);
+      --green_soft: var(--success);
+      --red: var(--error_fg);
+      --red_soft: var(--error);
+      --amber: var(--warning_fg);
+      --amber_soft: var(--warning);
+      --ai: oklch(75% 0.15 290);
+      --ai_soft: color-mix(in oklch, var(--ai) 17%, var(--bg));
+      --shadow: 0 1px 3px rgb(0 0 0 / 0.3);
+      --shadow_lg: 0 10px 25px rgb(0 0 0 / 0.4);
+      --shadow_small: var(--shadow);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      width: calc(100% - 2em);
+      min-height: 100vh;
+      padding: 1em;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--bg);
+      color: var(--fg_muted);
+      font-family: var(--font_sans);
+      -webkit-font-smoothing: auto;
+      font-size: 16px;
+      line-height: 1.5;
+      transition: background-color 180ms ease, color 180ms ease;
+    }
+    .icon { width: 14px; height: 14px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    button { font: inherit; color: inherit; }
+    button:focus-visible, [tabindex="0"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+    .app_shell { min-height: 100vh; }
+    .top_nav { width: 1000px; max-width: 100%; display: flex; align-items: center; justify-content: space-between; padding-bottom: 8px; }
+    .brand { display: flex; align-items: center; gap: 6px; color: var(--fg); font-weight: 500; }
+    .brand_mark { width: 21px; height: 21px; color: var(--fg); }
+    .top_links { display: flex; align-items: center; gap: 5px; margin-left: auto; margin-right: 16px; color: var(--text_link); font-size: 16px; }
+    .top_links a { color: inherit; text-decoration: none; }
+    .top_links a:first-child { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; }
+    .top_actions { display: flex; align-items: center; gap: 8px; }
+    .theme_button, .icon_button { border: 0; background: none; border-radius: var(--radius); width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer; transition: transform 150ms ease-out, filter 150ms ease-out; color: var(--text_link); }
+    .theme_button:hover, .icon_button:hover { filter: var(--hover_filter); }
+    .theme_button:active, .icon_button:active, .level_button:active, .reset_button:active { transform: scale(0.97); }
+    .avatar { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 50%; background: var(--accent_soft); color: var(--accent); font-size: 11px; font-weight: 700; }
+
+    .project_header { width: 1000px; max-width: 100%; margin: 0 auto; padding: 0 0 8px; }
+    .project_line { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .project_identity { display: flex; align-items: baseline; gap: 13px; }
+    .project_title { margin: 0; font-size: 1.5rem; letter-spacing: normal; line-height: calc(2 / 1.5); font-weight: bold; }
+    .project_meta { color: var(--fg_muted); font-size: 12px; }
+    .project_tabs { display: flex; gap: 5px; margin-top: 0; color: var(--text_link); font-size: 16px; }
+    .project_tabs a { color: inherit; text-decoration: none; }
+    .project_tabs a.active { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; }
+
+    .canvas_intro { width: 1000px; max-width: 100%; margin: 0 auto; padding: 14px 0 14px; display: flex; justify-content: space-between; align-items: end; gap: 24px; }
+    .intro_kicker { margin: 0 0 4px; color: var(--accent); font-family: var(--font_mono); font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; }
+    .intro_title { margin: 0; font-size: 19px; letter-spacing: -0.03em; font-weight: 600; }
+    .intro_copy { margin: 5px 0 0; color: var(--fg_muted); font-size: 13px; }
+    .layout_status { color: var(--fg_subtle); font-size: 11px; white-space: nowrap; }
+    .layout_status strong { color: var(--fg_muted); font-weight: 600; }
+
+    .canvas_frame { width: 1000px; max-width: 100%; margin: 0 auto; padding: 0; }
+    .canvas_viewport { height: min(66vh, 650px); min-height: 550px; position: relative; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius_lg); background-color: var(--bg_alt); background-image: radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--fg) 10%, transparent) 1px, transparent 0); background-size: 24px 24px; cursor: grab; touch-action: none; isolation: isolate; }
+    .canvas_viewport.is_dragging { cursor: grabbing; }
+    .canvas_viewport::before { content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(90deg, var(--bg_alt), transparent 12%, transparent 88%, var(--bg_alt)); opacity: 0.72; }
+    .canvas_toolbar { position: absolute; z-index: 10; top: 16px; left: 18px; right: 18px; display: flex; justify-content: space-between; align-items: start; pointer-events: none; }
+    .canvas_viewport[data-level="detail"] .world { z-index: 11; }
+    .canvas_toolbar > * { pointer-events: auto; }
+    .breadcrumb { display: flex; align-items: center; min-height: 35px; gap: 8px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: color-mix(in oklch, var(--surface) 93%, transparent); box-shadow: var(--shadow_small); color: var(--fg_muted); font-size: 12px; }
+    .breadcrumb button { border: 0; background: none; padding: 0; cursor: pointer; color: var(--fg_muted); }
+    .breadcrumb button:hover { color: var(--fg); }
+    .crumb_current { color: var(--fg); font-weight: 600; }
+    .zoom_hud { display: flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in oklch, var(--surface) 93%, transparent); box-shadow: var(--shadow_small); }
+    .level_button { border: 0; border-radius: 7px; background: transparent; padding: 6px 10px; color: var(--fg_subtle); cursor: pointer; font-size: 11px; transition: background 150ms ease-out, color 150ms ease-out, transform 150ms ease-out; }
+    .level_button:hover { color: var(--fg); }
+    .level_button.active { background: var(--fg); color: var(--bg); }
+
+    .world { position: absolute; z-index: 1; left: 0; top: 0; width: 2200px; height: 760px; transform-origin: 0 0; transition: transform 210ms var(--ease_in_out); }
+    .world.is_panning { transition: none; }
+    .edges { position: absolute; inset: 0; width: 2200px; height: 760px; overflow: visible; pointer-events: none; }
+    .edge_line { fill: none; stroke: var(--border_strong); stroke-width: 1.5; opacity: 0.75; }
+    .edge_line.blocks { stroke: var(--red); stroke-dasharray: 7 5; opacity: 0.74; }
+    .edge_line.ready { stroke: var(--green); stroke-width: 2; }
+    .edge_line.metric { stroke: var(--accent); stroke-dasharray: 2 6; }
+    .node { position: absolute; width: 250px; min-height: 124px; transform: translate(-50%, -50%); border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow_small); cursor: pointer; transition: opacity 180ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 180ms var(--ease_out); transform-origin: center; }
+    .node:hover { border-color: var(--border_strong); box-shadow: var(--shadow); }
+    .node.is_selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent_soft), var(--shadow); }
+    .node.is_faded { opacity: 0.34; }
+    .node.is_rippling { animation: ripple_beat 240ms var(--ease_out); }
+    .node.is_pinned::after { content: ""; position: absolute; top: -5px; right: 12px; width: 7px; height: 7px; border: 1.5px solid var(--accent); border-radius: 50%; background: var(--surface); }
+    .node.is_programmatic::before { content: "placed here"; position: absolute; right: -4px; top: -26px; padding: 3px 7px; border-radius: 5px; background: var(--ai_soft); color: var(--ai); font-family: var(--font_mono); font-size: 9px; letter-spacing: 0.02em; opacity: 0; transform: translateY(4px); transition: opacity 180ms ease-out, transform 180ms ease-out; }
+    .node.is_programmatic.show_placement::before { opacity: 1; transform: translateY(0); }
+    .node_head { display: flex; align-items: start; gap: 11px; padding: 15px 15px 8px; }
+    .node_text { min-width: 0; flex: 1; }
+    .node_title { margin: 0; overflow: hidden; font-size: 14px; font-weight: 600; letter-spacing: -0.018em; text-overflow: ellipsis; white-space: nowrap; }
+    .node_kind { margin-top: 3px; color: var(--fg_subtle); font-family: var(--font_mono); font-size: 9px; letter-spacing: 0.035em; text-transform: uppercase; }
+    .ring { flex: 0 0 auto; width: 31px; height: 31px; transform: rotate(-90deg); }
+    .ring_track { fill: none; stroke: var(--border); stroke-width: 3.2; }
+    .ring_value { fill: none; stroke: var(--accent); stroke-linecap: round; stroke-width: 3.2; stroke-dasharray: 81.7; }
+    .ring_value.complete { stroke: var(--green); }
+    .ring_value.waiting { stroke: var(--amber); }
+    .ring_label { position: absolute; left: 15px; top: 23px; width: 31px; color: var(--fg_muted); font-family: var(--font_mono); font-size: 7px; text-align: center; }
+    .chip_row { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 15px 13px; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; min-height: 19px; padding: 0; border: 0; border-radius: var(--radius); color: var(--fg_muted); font-family: var(--font_mono); font-size: 9px; line-height: 1.1; }
+    .chip .icon { width: 13px; height: 13px; color: var(--fg_faint); }
+    .chip .chip_label { color: var(--fg_muted); }
+    .chip.accent .icon { color: var(--accent); }
+    .chip.red .icon { color: var(--error_fg); }
+    .chip.green .icon { color: var(--success_fg); }
+    .chip.purple .icon { color: var(--ai); }
+    .chip.amber .icon { color: var(--warning_fg); }
+    .neighborhood .chip .chip_label, .detail .map_node .chip_label { display: none; }
+    .node_body { display: none; border-top: 1px solid var(--border); padding: 12px 15px 15px; }
+    .node[data-lod="node"] .node_body, .node[data-lod="detail"] .node_body { display: block; }
+    .body_grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mini_label { margin: 0 0 5px; color: var(--fg_subtle); font-family: var(--font_mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; }
+    .sparkline { width: 100%; height: 28px; display: block; }
+    .sparkline polyline { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .sparkline line { stroke: var(--border); stroke-width: 1; }
+    .step_strip { display: flex; align-items: center; gap: 3px; margin-top: 7px; }
+    .step { height: 4px; flex: 1; border-radius: 4px; background: var(--border); }
+    .step.complete { background: var(--green); }
+    .step.current { background: var(--accent); }
+    .stage_text { margin-top: 5px; color: var(--fg_muted); font-size: 10px; }
+    .detail_content { display: none; }
+    .node[data-lod="detail"] { width: 440px; min-height: 350px; border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent_soft), var(--shadow); }
+    .node[data-lod="detail"] { margin-top: 24px; }
+    .node[data-lod="detail"] .node_title { font-size: 18px; }
+    .node[data-lod="detail"] .node_head { padding: 20px 20px 11px; }
+    .node[data-lod="detail"] .ring_label { top: 29px; left: 20px; }
+    .node[data-lod="detail"] .ring { width: 40px; height: 40px; }
+    .node[data-lod="detail"] .node_body { padding: 16px 20px 20px; }
+    .node[data-lod="detail"] .detail_content { display: block; margin-top: 17px; padding-top: 15px; border-top: 1px solid var(--border); }
+    .node > .ring, .node > .ring_label { display: none; }
+    .map .node > .ring, .detail .map_node > .ring { display: block; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
+    .map .node > .ring_label, .detail .map_node > .ring_label { display: none !important; }
+    .detail_sections { display: grid; grid-template-columns: 1.18fr 0.82fr; gap: 20px; }
+    .detail_section h4 { margin: 0 0 9px; font-size: 11px; font-weight: 600; }
+    .detail_section h4 { display: flex; align-items: center; gap: 5px; }
+    .detail_section h4 .icon { width: 13px; height: 13px; color: var(--fg_subtle); }
+    .doc_row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 0; border-top: 1px solid var(--border); color: var(--fg_muted); font-size: 11px; }
+    .doc_row:first-of-type { border-top: 0; }
+    .doc_state { display: inline-flex; align-items: center; gap: 4px; color: var(--warning_fg); font-family: var(--font_mono); font-size: 9px; }
+    .doc_state .icon { width: 12px; height: 12px; }
+    .doc_state.approved { color: var(--success_fg); }
+    .pulse_value { color: var(--fg); font-size: 20px; font-weight: 600; letter-spacing: -0.04em; }
+    .pulse_value span { color: var(--fg_subtle); font-size: 10px; font-weight: 400; letter-spacing: 0; }
+    .detail_note { margin: 14px 0 0; padding: 8px 10px; border-left: 2px solid var(--ai); background: var(--ai_soft); color: var(--fg_muted); font-size: 11px; }
+    .map .node, .detail .map_node { width: 20px; min-height: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent); }
+    .map .node.is_selected, .detail .map_node.is_selected { box-shadow: 0 0 0 6px var(--accent_soft), 0 0 0 2px var(--accent); }
+    .map .node_head, .map .chip_row, .map .node_body, .detail .map_node .node_head, .detail .map_node .chip_row, .detail .map_node .node_body { display: none; }
+    .neighborhood .node { min-height: 76px; }
+    .neighborhood .node_head { padding: 12px 12px 6px; gap: 8px; }
+    .neighborhood .node_title { font-size: 12px; }
+    .neighborhood .node_kind, .neighborhood .node_body { display: none; }
+    .neighborhood .chip_row { padding: 0 12px 11px; }
+    .neighborhood .ring { width: 26px; height: 26px; }
+    .neighborhood .ring_label { left: 12px; top: 20px; width: 26px; }
+    .node:not(.is_selected) .node_body { pointer-events: none; }
+
+    .lens_panel { position: absolute; z-index: 8; left: 20px; bottom: 19px; width: 236px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: color-mix(in oklch, var(--surface) 95%, transparent); box-shadow: var(--shadow_small); opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 160ms ease-out, transform 160ms ease-out; }
+    .lens_panel.is_open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .lens_heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .lens_heading strong { font-size: 12px; }
+    .lens_heading span { color: var(--fg_subtle); font-family: var(--font_mono); font-size: 9px; }
+    .lens_item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); color: var(--fg_muted); font-size: 11px; }
+    .lens_dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+    .lens_dot.red { background: var(--red); }
+    .lens_dot.green { background: var(--green); }
+    .reset_button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: var(--text_link); cursor: pointer; font-family: var(--font_mono); font-size: 9px; }
+    .reset_button .icon { width: 12px; height: 12px; }
+    .reset_button:hover { text-decoration: underline; }
+    .edge_indicator { position: absolute; z-index: 7; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: color-mix(in oklch, var(--surface) 88%, transparent); color: var(--accent); font-size: 17px; opacity: 0; pointer-events: none; transition: opacity 150ms ease; box-shadow: var(--shadow_small); }
+    .edge_indicator.is_visible { opacity: 1; }
+    .edge_indicator.north { top: 72px; left: 50%; transform: translateX(-50%); }
+    .edge_indicator.east { right: 21px; top: 50%; transform: translateY(-50%); }
+    .edge_indicator.south { bottom: 72px; left: 50%; transform: translateX(-50%); }
+    .edge_indicator.west { left: 21px; top: 50%; transform: translateY(-50%); }
+    .edge_indicator small { position: absolute; top: 31px; color: var(--fg_subtle); font-family: var(--font_mono); font-size: 8px; white-space: nowrap; }
+    .edge_indicator.east small, .edge_indicator.west small { top: 35px; }
+    .placement_note { position: absolute; z-index: 7; right: 20px; bottom: 19px; max-width: 265px; padding: 10px 12px; border: 1px solid color-mix(in oklch, var(--ai) 35%, var(--border)); border-radius: 9px; background: color-mix(in oklch, var(--ai_soft) 90%, var(--surface)); color: var(--fg_muted); font-size: 11px; opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity 180ms ease-out, transform 180ms ease-out; }
+    .placement_note.is_visible { opacity: 1; transform: translateY(0); }
+    .placement_note strong { display: inline-flex; align-items: center; gap: 4px; color: var(--ai); font-weight: 600; }
+    .placement_note strong .icon { width: 13px; height: 13px; }
+    .toast { position: absolute; z-index: 20; top: 62px; left: 50%; transform: translate(-50%, -7px); padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface_strong); box-shadow: var(--shadow_small); color: var(--fg_muted); font-size: 11px; opacity: 0; pointer-events: none; transition: opacity 160ms ease-out, transform 160ms ease-out; }
+    .toast.is_visible { opacity: 1; transform: translate(-50%, 0); }
+
+    .canvas_footer { width: 1000px; max-width: 100%; margin: 0 auto; padding: 14px 0 23px; display: flex; justify-content: space-between; gap: 24px; align-items: center; }
+    .hint_bar { display: flex; flex-wrap: wrap; gap: 7px 14px; color: var(--fg_subtle); font-family: var(--font_mono); font-size: 10px; }
+    .hint_bar kbd { margin-right: 4px; color: var(--fg); font-family: inherit; }
+    .mobile_note { max-width: 360px; color: var(--fg_subtle); font-size: 10px; line-height: 1.35; text-align: right; }
+    .mobile_note strong { color: var(--fg_muted); font-weight: 600; }
+    .legend { width: 1000px; max-width: 100%; margin: 0 auto; padding: 0 0 36px; display: flex; align-items: center; gap: 15px; color: var(--fg_subtle); font-family: var(--font_mono); font-size: 9px; }
+    .legend_item { display: inline-flex; align-items: center; gap: 5px; }
+    .legend_line { width: 20px; border-top: 1.5px solid var(--border_strong); }
+    .legend_line.blocks { border-color: var(--red); border-top-style: dashed; }
+    .legend_line.ready { border-color: var(--green); border-top-width: 2px; }
+    .legend_line.metric { border-color: var(--accent); border-top-style: dotted; }
+
+    @keyframes ripple_beat { 0% { box-shadow: 0 0 0 0 var(--accent); } 35% { box-shadow: 0 0 0 8px color-mix(in oklch, var(--accent) 25%, transparent), var(--shadow); } 100% { box-shadow: var(--shadow_small); } }
+    @media (max-width: 820px) {
+      .top_nav { padding: 0 18px; }
+      .top_links { gap: 10px; }
+      .top_links a:nth-child(n+2) { display: none; }
+      .project_header, .canvas_intro, .canvas_frame, .canvas_footer, .legend { padding-left: 18px; padding-right: 18px; }
+      .canvas_viewport { min-height: 520px; }
+      .canvas_footer { align-items: start; flex-direction: column; }
+      .mobile_note { text-align: left; }
+    }
+    @media (max-width: 720px) {
+      .canvas_frame { padding: 0; }
+      .canvas_viewport { border-radius: 0; border-left: 0; border-right: 0; }
+      .canvas_intro { display: block; }
+      .layout_status { margin-top: 8px; }
+      .zoom_hud { transform: scale(0.9); transform-origin: top right; }
+      .mobile_note { max-width: none; }
+      .node[data-lod="detail"] { width: 320px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><defs>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="icon-circle-dashed" viewBox="0 0 24 24"><path d="M8.5 3.6a9 9 0 0 0-3.9 2.8M3.7 9.2A9 9 0 0 0 3.5 13M5.2 16.8a9 9 0 0 0 3.5 2.6M11 20.4a9 9 0 0 0 4.4-.1M16.9 18.8a9 9 0 0 0 2.8-3.1M20.4 13a9 9 0 0 0-.9-4.3M18.1 6.3a9 9 0 0 0-3.8-2.4M12 3a9 9 0 0 0-2.2.3"/></symbol>
+    <symbol id="icon-circle-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="icon-zap" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 9-12h-7l1-8Z"/></symbol>
+    <symbol id="icon-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/></symbol>
+    <symbol id="icon-badge-check" viewBox="0 0 24 24"><path d="m8.5 3.3 3.5-1.1 3.5 1.1 2.8 2.4.7 3.6-1.4 3.4-2.8 2.4-3.5 1.1-3.5-1.1-2.8-2.4-1.4-3.4.7-3.6 2.8-2.4Z"/><path d="m8.5 9.8 2.3 2.3 4.8-5"/></symbol>
+    <symbol id="icon-bell-ring" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 22h4"/><path d="M20.5 6.5a9 9 0 0 1 1 3.5M3.5 6.5a9 9 0 0 0-1 3.5"/></symbol>
+    <symbol id="icon-bot" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="13" rx="3"/><path d="M12 3v4M8 13h.01M16 13h.01M8 17h8"/><path d="M2 12h2M20 12h2"/></symbol>
+    <symbol id="icon-file-text" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+    <symbol id="icon-webhook" viewBox="0 0 24 24"><path d="M18.5 13.5a4 4 0 1 1-3.7-5.5M7 10.5a4 4 0 1 1-1.8 6.8M9 5.5a4 4 0 1 1 5.8 3.6M8 20h8"/><circle cx="12" cy="4" r="2"/></symbol>
+    <symbol id="icon-pin" viewBox="0 0 24 24"><path d="m15 4 5 5-3 2-1 5-3 1-5-5 1-3 5-1 1-4ZM12 17l-5 5"/></symbol>
+    <symbol id="icon-git-branch" viewBox="0 0 24 24"><circle cx="6" cy="5" r="2"/><circle cx="18" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M6 7v5a7 7 0 0 0 7 7h3M13 12a5 5 0 0 0 5-5"/></symbol>
+    <symbol id="icon-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="icon-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14M18 13l-6 6-6-6"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="icon-rotate-ccw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8.5M3 4v4.5h4.5"/></symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z"/></symbol>
+  </defs></svg>
+  <div class="app_shell" id="app_shell">
+    <header class="top_nav">
+      <div class="brand">
+        <svg class="brand_mark" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6.5 4.5h8.7a2.3 2.3 0 0 1 2.3 2.3v10.4a2.3 2.3 0 0 1-2.3 2.3H6.5a2.3 2.3 0 0 1-2.3-2.3V6.8a2.3 2.3 0 0 1 2.3-2.3Z" stroke="currentColor" stroke-width="1.6"/><path d="M9 8.2h5.1M9 11.7h5.1M9 15.2h3.3M16.2 3.3v4.1l2.1-1.2 2.1 1.2V3.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>devpad</span>
+      </div>
+      <nav class="top_links" aria-label="Global navigation"><a href="#">projects</a><a href="#">tasks</a><a href="#">blog</a><a href="#">media</a><a href="#">docs</a><a href="#">account</a></nav>
+      <div class="top_actions"><button class="theme_button" id="theme_button" type="button" aria-label="Toggle color theme"><svg class="icon"><use href="#icon-sun"></use></svg></button><span class="avatar" aria-label="Tom">T</span></div>
+    </header>
+
+    <section class="project_header">
+      <div class="project_line"><div class="project_identity"><h1 class="project_title">devpad</h1><span class="project_meta">project home</span></div><span class="project_meta">updated just now</span></div>
+      <nav class="project_tabs" aria-label="Project navigation"><a class="active" href="#">overview</a><a href="#">work</a><a href="#">docs</a><a href="#">pulse</a><a href="#">pipeline</a><a href="#">blog</a><a href="#">settings</a><a href="#">history</a></nav>
+    </section>
+
+    <section class="canvas_intro"><div><p class="intro_kicker">project canvas</p><h2 class="intro_title">Scroll around and see.</h2><p class="intro_copy">A living map of the work, its edges, and what needs attention next.</p></div><div class="layout_status">layout <strong>auto · 1 pinned</strong> <button class="reset_button" id="reset_layout" type="button"><svg class="icon"><use href="#icon-rotate-ccw"></use></svg>reset</button></div></section>
+
+    <main class="canvas_frame">
+      <section class="canvas_viewport" id="canvas_viewport" aria-label="Interactive project canvas" tabindex="0">
+        <div class="canvas_toolbar"><div class="breadcrumb" id="breadcrumb"><button type="button" id="root_breadcrumb">devpad</button><svg class="icon"><use href="#icon-chevron-right"></use></svg><span class="crumb_current">canvas home</span></div><div class="zoom_hud" role="group" aria-label="Semantic zoom level"><button class="level_button active" data-level="map" type="button">Map</button><button class="level_button" data-level="neighborhood" type="button">Neighborhood</button><button class="level_button" data-level="node" type="button">Node</button><button class="level_button" data-level="detail" type="button">Detail</button></div></div>
+        <div class="edge_indicator north" data-direction="north"><svg class="icon"><use href="#icon-arrow-up"></use></svg><small>more work</small></div><div class="edge_indicator east" data-direction="east"><svg class="icon"><use href="#icon-arrow-right"></use></svg><small>more work</small></div><div class="edge_indicator south" data-direction="south"><svg class="icon"><use href="#icon-arrow-down"></use></svg><small>more work</small></div><div class="edge_indicator west" data-direction="west"><svg class="icon"><use href="#icon-arrow-left"></use></svg><small>more work</small></div>
+        <div class="world map" id="world"><svg class="edges" id="edges" aria-hidden="true"></svg><div id="nodes"></div></div>
+        <aside class="lens_panel" id="lens_panel" aria-label="Graph lens"><div class="lens_heading"><strong>graph lens</strong><span>g</span></div><div class="lens_item"><span class="lens_dot red"></span><span>2 blocked edges</span></div><div class="lens_item"><span class="lens_dot green"></span><span>3 ready edges</span></div><div class="lens_item"><span class="lens_dot"></span><span>1 metric tracked</span></div></aside>
+        <div class="placement_note" id="placement_note"><strong><svg class="icon"><use href="#icon-bot"></use></svg>agent-created</strong> node placed beside its parent so it is never lost in the map.</div>
+        <div class="toast" id="toast" role="status"></div>
+      </section>
+    </main>
+
+    <footer class="canvas_footer"><div class="hint_bar" aria-label="Keyboard shortcuts"><span><kbd>j</kbd>/<kbd>k</kbd> select</span><span><kbd>space</kbd> advance</span><span><kbd>z</kbd> zoom</span><span><kbd>g</kbd> lens</span><span><kbd>o</kbd> add child</span><span><kbd>Enter</kbd> travel</span></div><p class="mobile_note"><strong>≤720px</strong> Canvas hands off to the existing outline. Mobile is a separate surface, not a squeezed map.</p></footer>
+    <div class="legend"><span class="legend_item"><i class="legend_line blocks"></i> blocks</span><span class="legend_item"><i class="legend_line ready"></i> ready</span><span class="legend_item"><i class="legend_line metric"></i> tracks_metric</span><span class="legend_item" style="margin-left:auto">one dataset · four levels of meaning</span></div>
+  </div>
+
+  <script>
+    const nodes_data = [
+      { id: "release", title: "v2.5 release", kind: "milestone", status: "COMPLETED", progress: 100, x: 510, y: 150, parent_id: null, stages: ["done", "done", "done"], docs: "approved", waiting: false, spark: false, auto_children: true },
+      { id: "canvas", title: "canvas home", kind: "task", status: "IN_PROGRESS", progress: 50, x: 1010, y: 160, parent_id: "release", stages: ["done", "current", "upcoming"], docs: "in_review", waiting: true, spark: true, auto_children: true, programmatic: true },
+      { id: "graph", title: "graph primitives", kind: "task", status: "COMPLETED", progress: 100, x: 790, y: 350, parent_id: "release", stages: ["done", "done", "done"], docs: "approved", waiting: false, spark: true, auto_children: true },
+      { id: "bubbling", title: "bubbling engine", kind: "task", status: "IN_PROGRESS", progress: 50, x: 1110, y: 390, parent_id: "graph", stages: ["done", "current", "upcoming"], docs: "draft", waiting: false, spark: true, auto_children: true },
+      { id: "hooks", title: "hooks queue", kind: "task", status: "UNSTARTED", progress: 0, x: 1430, y: 370, parent_id: "graph", stages: ["upcoming", "upcoming", "upcoming"], docs: "draft", hook: true, waiting: false, spark: false, auto_children: false },
+      { id: "docs", title: "docs annotation engine", kind: "task", status: "IN_PROGRESS", progress: 50, x: 1460, y: 170, parent_id: "release", stages: ["done", "current", "upcoming"], docs: "in_review", waiting: false, spark: true, auto_children: true },
+      { id: "pulse", title: "pulse dashboard", kind: "task", status: "IN_PROGRESS", progress: 50, x: 1740, y: 310, parent_id: "release", stages: ["done", "done", "current"], docs: "draft", waiting: false, spark: true, pinned: true, auto_children: false },
+      { id: "keys", title: "scoped API keys", kind: "task", status: "COMPLETED", progress: 100, x: 1830, y: 500, parent_id: "pulse", stages: ["done", "done", "done"], docs: "approved", waiting: false, spark: false, auto_children: false },
+      { id: "quality", title: "integration checks", kind: "approval", status: "UNSTARTED", progress: 0, x: 650, y: 580, parent_id: "release", stages: ["done", "current", "upcoming"], docs: "in_review", waiting: true, spark: false, auto_children: false },
+      { id: "plan", title: "v2.5 rollout plan", kind: "plan", status: "COMPLETED", progress: 100, x: 250, y: 420, parent_id: "release", stages: ["done", "done", "done"], docs: "approved", waiting: false, spark: false, auto_children: false }
+    ];
+
+    const edges_data = [
+      { from: "graph", to: "bubbling", kind: "blocks" },
+      { from: "bubbling", to: "hooks", kind: "ready" },
+      { from: "docs", to: "quality", kind: "blocks" },
+      { from: "pulse", to: "keys", kind: "tracks_metric" },
+      { from: "plan", to: "release", kind: "ready" }
+    ];
+
+    const level_scales = { map: 0.58, neighborhood: 0.82, node: 1, detail: 1.08 };
+    const level_order = ["map", "neighborhood", "node", "detail"];
+    const state = { level: "map", selected_id: "canvas", tx: 46, ty: 35, is_dragging: false, drag_x: 0, drag_y: 0, start_tx: 0, start_ty: 0, node_drag: null, lens_open: false, breadcrumb: [], placement_seen: false, toast_timer: null };
+    const viewport = document.getElementById("canvas_viewport");
+    const world = document.getElementById("world");
+    const nodes_el = document.getElementById("nodes");
+    const edges_el = document.getElementById("edges");
+    const breadcrumb_el = document.getElementById("breadcrumb");
+    const placement_note = document.getElementById("placement_note");
+    const toast_el = document.getElementById("toast");
+
+    function node_by_id(id) { return nodes_data.find((item) => item.id === id); }
+
+    function icon_markup(name) { return `<svg class="icon" aria-hidden="true"><use href="#icon-${name}"></use></svg>`; }
+
+    function chip_markup(icon, label, tone) {
+      const icon_only = state.level === "neighborhood";
+      return `<span class="chip ${tone}" title="${label}" aria-label="${label}">${icon_markup(icon)}${icon_only ? "" : `<span class="chip_label">${label}</span>`}</span>`;
+    }
+
+    function ring_markup(item) {
+      const dash = (81.7 * item.progress) / 100;
+      const ring_class = item.waiting ? "waiting" : item.progress === 100 ? "complete" : "";
+      return `<svg class="ring" viewBox="0 0 32 32" aria-label="${item.progress}% complete"><circle class="ring_track" cx="16" cy="16" r="13"/><circle class="ring_value ${ring_class}" cx="16" cy="16" r="13" style="stroke-dashoffset:${81.7 - dash}"/></svg><span class="ring_label">${item.progress}%</span>`;
+    }
+
+    function chips_markup(item) {
+      const edge_chips = edges_data.filter((edge) => edge.from === item.id || edge.to === item.id).map((edge) => {
+        if (edge.kind === "blocks") return chip_markup("lock", "blocked", "red");
+        if (edge.kind === "ready") return chip_markup("zap", "ready", "green");
+        return chip_markup("activity", "metric", "purple");
+      });
+      const status_chip = item.status === "COMPLETED" ? chip_markup("check", "done", "green") : item.status === "IN_PROGRESS" ? chip_markup("circle-dot", "in progress", "accent") : chip_markup("circle-dashed", "unstarted", "plain");
+      const waiting_chip = item.waiting ? chip_markup("bell-ring", "waiting on you", "amber") : "";
+      const pin_chip = item.pinned ? chip_markup("pin", "pinned", "purple") : "";
+      const agent_chip = item.programmatic ? chip_markup("bot", "agent-created", "purple") : "";
+      const doc_icon = item.docs === "approved" ? "badge-check" : item.docs === "in_review" ? "eye" : "file-text";
+      const doc_chip = chip_markup(doc_icon, item.docs, item.docs === "approved" ? "green" : item.docs === "in_review" ? "amber" : "plain");
+      const hook_chip = item.hook ? chip_markup("webhook", "hook", "purple") : "";
+      return `${status_chip}${edge_chips.join("")}${doc_chip}${hook_chip}${waiting_chip}${pin_chip}${agent_chip}`;
+    }
+
+    function spark_markup(item) {
+      if (!item.spark) return `<div><p class="mini_label">pulse</p><span style="color:var(--fg_subtle);font-size:10px">quiet</span></div>`;
+      return `<div><p class="mini_label">pulse · 7d</p><svg class="sparkline" viewBox="0 0 120 28" preserveAspectRatio="none"><line x1="0" y1="24" x2="120" y2="24"/><polyline points="0,22 16,19 31,21 47,12 62,16 77,9 94,12 106,5 120,8"/></svg></div>`;
+    }
+
+    function stage_markup(item) {
+      if (!item.stages) return "";
+      const labels = ["plan", "types", "design"];
+      const strip = item.stages.map((stage) => `<span class="step ${stage}"></span>`).join("");
+      const current_index = item.stages.findIndex((stage) => stage === "current");
+      return `<div><p class="mini_label">stage</p><div class="step_strip">${strip}</div><div class="stage_text">${current_index < 0 ? "design approved" : `${labels[current_index]} checkpoint`}</div></div>`;
+    }
+
+    function detail_markup(item) {
+      const doc_icon = item.docs === "approved" ? "badge-check" : item.docs === "in_review" ? "eye" : "file-text";
+      return `<div class="detail_content"><div class="detail_sections"><div class="detail_section"><h4>${icon_markup("file-text")} docs</h4><div class="doc_row"><span>interface report</span><span class="doc_state ${item.docs === "approved" ? "approved" : ""}">${icon_markup(doc_icon)}${item.docs}</span></div><div class="doc_row"><span>design notes</span><span class="doc_state">${icon_markup("file-text")}draft</span></div><h4 style="margin-top:17px">${icon_markup("git-branch")} pipeline</h4><div class="step_strip"><span class="step complete"></span><span class="step current"></span><span class="step"></span></div><div class="stage_text">types checkpoint · review next</div></div><div class="detail_section"><h4>${icon_markup("activity")} pulse</h4><div class="pulse_value">1.8k <span>events</span></div>${spark_markup(item)}<div class="chip_row" style="padding:12px 0 0">${chip_markup("check", "healthy", "green")}<span class="chip plain">p95 214ms</span></div></div></div><p class="detail_note">This node is waiting on your review. Advance it with <strong>space</strong>, or travel deeper with <strong>Enter</strong>.</p></div>`;
+    }
+
+    function node_markup(item) {
+      const selected = item.id === state.selected_id;
+      const is_detail = state.level === "detail" && selected;
+      const is_map = state.level === "map";
+      const is_context = state.level === "detail" && !selected;
+      const class_names = ["node", selected ? "is_selected" : "", item.pinned ? "is_pinned" : "", item.programmatic ? "is_programmatic" : "", is_map || is_context ? "map_node" : ""].filter(Boolean).join(" ");
+      const body = `<div class="node_body"><div class="body_grid">${spark_markup(item)}${stage_markup(item)}</div>${is_detail ? detail_markup(item) : ""}</div>`;
+      const node_lod = is_detail ? "detail" : is_context ? "map" : state.level;
+      return `<article class="${class_names}" data-id="${item.id}" data-lod="${node_lod}" style="left:${item.x}px;top:${item.y}px" tabindex="0" aria-label="${item.title}, ${item.progress}% complete">${ring_markup(item)}<div class="node_head"><div class="node_text"><h3 class="node_title">${item.title}</h3><div class="node_kind">${item.kind} · ${item.status}</div></div>${ring_markup(item)}</div><div class="chip_row">${chips_markup(item)}</div>${body}</article>`;
+    }
+
+    function edge_markup(edge) {
+      const from = node_by_id(edge.from);
+      const to = node_by_id(edge.to);
+      if (!from || !to) return "";
+      const marker = edge.kind === "blocks" ? "url(#arrow_red)" : edge.kind === "ready" ? "url(#arrow_green)" : "url(#arrow_accent)";
+      return `<path class="edge_line ${edge.kind === "tracks_metric" ? "metric" : edge.kind}" d="M ${from.x} ${from.y} C ${(from.x + to.x) / 2} ${from.y}, ${(from.x + to.x) / 2} ${to.y}, ${to.x} ${to.y}" marker-end="${marker}"/>`;
+    }
+
+    function render_edges() {
+      edges_el.innerHTML = `<defs><marker id="arrow_red" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="none" stroke="var(--red)" stroke-width="1.2"/></marker><marker id="arrow_green" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="none" stroke="var(--green)" stroke-width="1.2"/></marker><marker id="arrow_accent" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7" fill="none" stroke="var(--accent)" stroke-width="1.2"/></marker></defs>${edges_data.map(edge_markup).join("")}`;
+    }
+
+    function render_nodes() {
+      world.className = `world ${state.level}`;
+      viewport.dataset.level = state.level;
+      nodes_el.innerHTML = nodes_data.map(node_markup).join("");
+      nodes_el.querySelectorAll(".node").forEach((element) => {
+        element.addEventListener("click", (event) => { event.stopPropagation(); select_node(element.dataset.id); });
+        element.addEventListener("dblclick", (event) => { event.stopPropagation(); travel_to(element.dataset.id); });
+        element.addEventListener("keydown", (event) => { if (event.key === "Enter") travel_to(element.dataset.id); });
+      });
+      document.querySelectorAll(".level_button").forEach((button) => button.classList.toggle("active", button.dataset.level === state.level));
+      render_breadcrumb();
+      apply_camera();
+      update_indicators();
+      if (state.level !== "map" && !state.placement_seen) show_placement();
+    }
+
+    function render_breadcrumb() {
+      breadcrumb_el.innerHTML = `<button type="button" id="root_breadcrumb">devpad</button>${state.breadcrumb.map((crumb) => `${icon_markup("chevron-right")}<button type="button" data-crumb="${crumb.id}">${crumb.title}</button>`).join("")}${icon_markup("chevron-right")}<span class="crumb_current">${state.level === "detail" ? node_by_id(state.selected_id).title : "canvas home"}</span>`;
+      breadcrumb_el.querySelector("#root_breadcrumb").addEventListener("click", () => { state.breadcrumb = []; state.selected_id = "canvas"; set_level("map"); });
+      breadcrumb_el.querySelectorAll("[data-crumb]").forEach((button) => button.addEventListener("click", () => { state.selected_id = button.dataset.crumb; state.breadcrumb = state.breadcrumb.slice(0, state.breadcrumb.findIndex((item) => item.id === state.selected_id)); set_level("detail"); focus_selected(); }));
+    }
+
+    function select_node(id) {
+      state.selected_id = id;
+      render_nodes();
+    }
+
+    function set_level(level, should_focus = false) {
+      state.level = level_order.includes(level) ? level : "map";
+      render_nodes();
+      if (should_focus || state.level === "detail") focus_selected();
+    }
+
+    function travel_to(id) {
+      const item = node_by_id(id);
+      if (!item) return;
+      const previous_id = state.selected_id;
+      state.selected_id = id;
+      if (state.level !== "detail") state.breadcrumb = id === "canvas" ? [] : [{ id: "canvas", title: "canvas home" }];
+      if (state.level === "detail" && previous_id !== id && !state.breadcrumb.some((crumb) => crumb.id === previous_id)) {
+        const previous = node_by_id(previous_id);
+        if (previous) state.breadcrumb.push({ id: previous.id, title: previous.title });
+      }
+      set_level("detail");
+      focus_selected();
+      show_toast(`Travelled into ${item.title}`);
+    }
+
+    function apply_camera() {
+      const scale = level_scales[state.level];
+      world.style.transform = `translate(${state.tx}px, ${state.ty}px) scale(${scale})`;
+    }
+
+    function camera_bounds() {
+      const scale = level_scales[state.level];
+      const width = viewport.clientWidth;
+      const height = viewport.clientHeight;
+      const world_width = 2200 * scale;
+      const world_height = 760 * scale;
+      const edge = 46;
+      return { min_x: Math.min(edge, width - world_width - edge), max_x: edge, min_y: Math.min(edge, height - world_height - edge), max_y: edge };
+    }
+
+    function clamp_camera(tx, ty) {
+      const bounds = camera_bounds();
+      return { tx: Math.min(bounds.max_x, Math.max(bounds.min_x, tx)), ty: Math.min(bounds.max_y, Math.max(bounds.min_y, ty)) };
+    }
+
+    function apply_clamped_camera() {
+      const clamped = clamp_camera(state.tx, state.ty);
+      state.tx = clamped.tx;
+      state.ty = clamped.ty;
+      apply_camera();
+      update_indicators();
+    }
+
+    function focus_selected() {
+      const item = node_by_id(state.selected_id);
+      if (!item) return;
+      const scale = level_scales[state.level];
+      state.tx = viewport.clientWidth / 2 - item.x * scale;
+      const focus_y = state.level === "detail" ? viewport.clientHeight / 2 + 30 : viewport.clientHeight / 2;
+      state.ty = focus_y - item.y * scale;
+      apply_clamped_camera();
+    }
+
+    function update_indicators() {
+      const scale = level_scales[state.level];
+      const width = viewport.clientWidth;
+      const height = viewport.clientHeight;
+      const visible = { north: false, east: false, south: false, west: false };
+      nodes_data.forEach((item) => {
+        const x = state.tx + item.x * scale;
+        const y = state.ty + item.y * scale;
+        if (x < 0) visible.west = true;
+        if (x > width) visible.east = true;
+        if (y < 0) visible.north = true;
+        if (y > height) visible.south = true;
+      });
+      document.querySelectorAll(".edge_indicator").forEach((indicator) => indicator.classList.toggle("is_visible", visible[indicator.dataset.direction]));
+    }
+
+    function show_placement() {
+      state.placement_seen = true;
+      placement_note.classList.add("is_visible");
+      const programmatic = document.querySelector(".is_programmatic");
+      if (programmatic) programmatic.classList.add("show_placement");
+      window.setTimeout(() => { placement_note.classList.remove("is_visible"); if (programmatic) programmatic.classList.remove("show_placement"); }, 3600);
+    }
+
+    function show_toast(message) {
+      window.clearTimeout(state.toast_timer);
+      toast_el.textContent = message;
+      toast_el.classList.add("is_visible");
+      state.toast_timer = window.setTimeout(() => toast_el.classList.remove("is_visible"), 2200);
+    }
+
+    function advance_selected() {
+      const item = node_by_id(state.selected_id);
+      if (!item || item.status === "COMPLETED") { show_toast("Already complete"); return; }
+      item.progress = 100;
+      item.status = "COMPLETED";
+      item.stages = item.stages.map(() => "done");
+      render_nodes();
+      const chain = [];
+      let parent = node_by_id(item.parent_id);
+      while (parent) { if (parent.auto_children) chain.push(parent); parent = node_by_id(parent.parent_id); }
+      chain.forEach((ancestor, index) => window.setTimeout(() => { ancestor.progress = 100; ancestor.status = "COMPLETED"; ancestor.stages = ancestor.stages.map(() => "done"); render_nodes(); const element = document.querySelector(`[data-id="${ancestor.id}"]`); if (element) element.classList.add("is_rippling"); }, (index + 1) * 240));
+      show_toast(chain.length ? `Completed · ripple travelling through ${chain.length} parent${chain.length > 1 ? "s" : ""}` : "Completed");
+    }
+
+    function add_child() {
+      const parent = node_by_id(state.selected_id) || node_by_id("canvas");
+      const id = `new_${Date.now()}`;
+      nodes_data.push({ id, title: "new graph task", kind: "task", status: "UNSTARTED", progress: 0, x: parent.x + 270, y: parent.y + 110, parent_id: parent.id, stages: ["upcoming", "upcoming", "upcoming"], docs: "draft", waiting: false, spark: false, auto_children: false, programmatic: true });
+      state.selected_id = id;
+      render_nodes();
+      set_level("neighborhood", true);
+      show_toast("Child placed beside its parent");
+    }
+
+    function auto_layout() {
+      const children = nodes_data.reduce((groups, item) => { const key = item.parent_id || "root"; (groups[key] ||= []).push(item); return groups; }, {});
+      let next_y = 120;
+      function place(item, depth) {
+        const descendants = children[item.id] || [];
+        if (!descendants.length) { item.x = 360 + depth * 310; item.y = next_y; next_y += 116; return item.y; }
+        const child_y = descendants.map((child) => place(child, depth + 1));
+        item.x = 360 + depth * 310;
+        item.y = (child_y[0] + child_y[child_y.length - 1]) / 2;
+        return item.y;
+      }
+      (children.root || []).forEach((item) => place(item, 0));
+    }
+
+    viewport.addEventListener("pointerdown", (event) => {
+      const node_element = event.target.closest(".node");
+      if (node_element) {
+        const item = node_by_id(node_element.dataset.id);
+        if (!item || state.level === "map") { select_node(node_element.dataset.id); return; }
+        const scale = level_scales[state.level];
+        state.node_drag = { id: item.id, x: event.clientX, y: event.clientY, start_x: item.x, start_y: item.y, scale };
+        state.selected_id = item.id;
+        viewport.setPointerCapture(event.pointerId);
+        return;
+      }
+      if (event.target.closest("button") || event.target.closest(".lens_panel")) return;
+      state.is_dragging = true;
+      state.drag_x = event.clientX;
+      state.drag_y = event.clientY;
+      state.start_tx = state.tx;
+      state.start_ty = state.ty;
+      viewport.classList.add("is_dragging");
+      world.classList.add("is_panning");
+      viewport.setPointerCapture(event.pointerId);
+    });
+    viewport.addEventListener("pointermove", (event) => {
+      if (state.node_drag) {
+        const item = node_by_id(state.node_drag.id);
+        if (!item) return;
+        item.x = state.node_drag.start_x + (event.clientX - state.node_drag.x) / state.node_drag.scale;
+        item.y = state.node_drag.start_y + (event.clientY - state.node_drag.y) / state.node_drag.scale;
+        const element = document.querySelector(`[data-id="${item.id}"]`);
+        if (element) { element.style.left = `${item.x}px`; element.style.top = `${item.y}px`; }
+        render_edges();
+        return;
+      }
+      if (!state.is_dragging) return;
+      const damping = 0.82;
+      state.tx = state.start_tx + (event.clientX - state.drag_x) * damping;
+      state.ty = state.start_ty + (event.clientY - state.drag_y) * damping;
+      apply_clamped_camera();
+    });
+    viewport.addEventListener("pointerup", (event) => {
+      if (state.node_drag) {
+        const item = node_by_id(state.node_drag.id);
+        if (item) { item.pinned = true; show_toast(`${item.title} pinned in place`); render_nodes(); }
+        state.node_drag = null;
+        viewport.releasePointerCapture(event.pointerId);
+        return;
+      }
+      state.is_dragging = false; viewport.classList.remove("is_dragging"); world.classList.remove("is_panning"); viewport.releasePointerCapture(event.pointerId);
+    });
+    viewport.addEventListener("pointercancel", () => { state.node_drag = null; state.is_dragging = false; viewport.classList.remove("is_dragging"); world.classList.remove("is_panning"); });
+    viewport.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      if (!event.deltaY) return;
+      const current = level_order.indexOf(state.level);
+      const wheel_direction = event.ctrlKey ? Math.sign(event.deltaY) : event.deltaY > 0 ? 1 : -1;
+      const next = wheel_direction > 0 ? Math.max(0, current - 1) : Math.min(level_order.length - 1, current + 1);
+      if (next === current) return;
+      const old_scale = level_scales[state.level];
+      const pointer_x = event.offsetX;
+      const pointer_y = event.offsetY;
+      const world_x = (pointer_x - state.tx) / old_scale;
+      const world_y = (pointer_y - state.ty) / old_scale;
+      state.level = level_order[next];
+      const new_scale = level_scales[state.level];
+      state.tx = pointer_x - world_x * new_scale;
+      state.ty = pointer_y - world_y * new_scale;
+      render_nodes();
+      apply_clamped_camera();
+    }, { passive: false });
+
+    document.querySelectorAll(".level_button").forEach((button) => button.addEventListener("click", () => set_level(button.dataset.level)));
+    document.getElementById("reset_layout").addEventListener("click", () => { const item = node_by_id("pulse"); item.pinned = false; auto_layout(); state.tx = 46; state.ty = 35; render_edges(); render_nodes(); show_toast("Auto-layout restored · pinned override cleared"); });
+    document.getElementById("theme_button").addEventListener("click", () => { const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = next; document.getElementById("theme_button").innerHTML = icon_markup(next === "dark" ? "moon" : "sun"); });
+    document.addEventListener("keydown", (event) => {
+      if (event.target.matches("input, textarea, select")) return;
+      const index = nodes_data.findIndex((item) => item.id === state.selected_id);
+      if (event.key === "j") { event.preventDefault(); state.selected_id = nodes_data[Math.min(nodes_data.length - 1, index + 1)].id; render_nodes(); }
+      if (event.key === "k") { event.preventDefault(); state.selected_id = nodes_data[Math.max(0, index - 1)].id; render_nodes(); }
+      if (event.key === " ") { event.preventDefault(); advance_selected(); }
+      if (event.key.toLowerCase() === "z") { event.preventDefault(); const next = event.shiftKey ? Math.max(0, level_order.indexOf(state.level) - 1) : Math.min(3, level_order.indexOf(state.level) + 1); set_level(level_order[next], true); }
+      if (event.key.toLowerCase() === "g") { event.preventDefault(); state.lens_open = !state.lens_open; document.getElementById("lens_panel").classList.toggle("is_open", state.lens_open); }
+      if (event.key.toLowerCase() === "o") { event.preventDefault(); add_child(); }
+      if (event.key === "Enter" && !event.target.closest(".node")) { event.preventDefault(); travel_to(state.selected_id); }
+      if (event.key === "Escape" && state.level !== "map") { state.breadcrumb = []; set_level("map"); }
+    });
+    window.addEventListener("resize", apply_clamped_camera);
+    render_edges();
+    render_nodes();
+  </script>
+</body>
+</html>
