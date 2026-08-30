@@ -1,0 +1,28 @@
+---
+import CanvasSurface from "@/components/solid/canvas/canvas-surface";
+import { ProjectContextSetter } from "@/components/solid/project-context-setter";
+import PageLayout from "@/layouts/PageLayout.astro";
+import ProjectLayout from "@/layouts/ProjectLayout.astro";
+import { getProject } from "@/utils/api-client";
+
+const project_id = Astro.params.project_id!;
+
+const guard = await getProject(Astro);
+if (guard instanceof Response) return guard;
+const { client, project } = guard;
+
+// SSR-first paint (P2.3): the initial graph ships as props so the canvas
+// paints laid-out nodes on first render; the island stale-revalidates via
+// `client.projects.graph` once mounted.
+const graph_result = await client.projects.graph(project.id);
+const initial_graph = graph_result.ok ? graph_result.value : { tasks: [], links: [], rollups: {} };
+---
+
+<PageLayout title={`Canvas - ${project_id}`}>
+	<ProjectLayout project_id={project_id}>
+		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
+		<div style="height: min(78vh, 780px); min-height: 550px;">
+			<CanvasSurface client:load projectId={project.id} projectName={project.project_id} initial={initial_graph} />
+		</div>
+	</ProjectLayout>
+</PageLayout>
