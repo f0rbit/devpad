@@ -2098,3 +2098,94 @@ button.outline-row {
 		width: 100%;
 	}
 }
+
+/* Canvas home (P2.3) node card — .plans/canvas-mock.html's `.node` treatment,
+   scoped `.canvas-*` (kept separate from the ephemeral `.lens-*` overlay). */
+.canvas-node {
+	position: absolute;
+	width: 250px;
+	min-height: 124px;
+	transform: translate(-50%, -50%);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg);
+	box-shadow: var(--shadow);
+	cursor: pointer;
+	transition: opacity 180ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.canvas-node:hover {
+	border-color: var(--fg-faint);
+	box-shadow: var(--shadow-lg);
+}
+
+.canvas-node-selected {
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent), var(--shadow);
+}
+
+.canvas-node-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 11px;
+	padding: 15px 15px 8px;
+}
+
+.canvas-node-text {
+	min-width: 0;
+	flex: 1;
+}
+
+.canvas-node-title {
+	margin: 0;
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: -0.018em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--fg);
+}
+
+.canvas-node-kind {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-top: 3px;
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: 0.035em;
+	text-transform: uppercase;
+}
+
+.canvas-kind-glyph {
+	flex: 0 0 auto;
+	color: var(--accent);
+}
+
+.canvas-ring {
+	flex: 0 0 auto;
+	width: 31px;
+	height: 31px;
+	transform: rotate(-90deg);
+}
+
+.canvas-ring-track {
+	fill: none;
+	stroke: var(--border);
+	stroke-width: 3.2;
+}
+
+.canvas-ring-value {
+	fill: none;
+	stroke: var(--accent);
+	stroke-linecap: round;
+	stroke-width: 3.2;
+	stroke-dasharray: 81.7;
+}
+
+.canvas-ring-complete {
+	stroke: var(--success-fg);
+}
+
