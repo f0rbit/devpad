@@ -685,6 +685,9 @@ button.outline-row {
 }
 
 .outline-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
 	font-size: 10.5px;
 	font-family: var(--font-mono);
 	letter-spacing: 0.01em;
@@ -694,6 +697,11 @@ button.outline-row {
 	border: 1px solid var(--border);
 	color: var(--fg-faint);
 	background: var(--bg-alt);
+}
+
+.outline-chip svg {
+	width: 10px;
+	height: 10px;
 }
 
 .outline-chip-hi {
@@ -2096,5 +2104,639 @@ button.outline-row {
 
 	.waiting-card-actions > button {
 		width: 100%;
+	}
+}
+
+/* Canvas home HUD (P4.1) — absorbed `overview`'s description/status/repo
+   strip, shown above the surface itself. `.canvas-home-surface` mirrors the
+   old overview/canvas island's sizing so the transplant reads as a single
+   surface, not a resize. */
+.canvas-home-hud {
+	margin-bottom: 0.75rem;
+}
+
+.canvas-home-description {
+	margin: 0 0 0.375rem;
+	color: var(--fg-muted);
+}
+
+.canvas-home-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin: 0;
+	color: var(--fg-subtle);
+	font-size: 0.85rem;
+}
+
+.canvas-home-surface {
+	height: min(78vh, 780px);
+	min-height: 550px;
+}
+
+/* BLOCKER #1 — canvas|list segmented toggle, same visual weight as the
+   canvas surface's own `.canvas-zoom-hud`/`.canvas-level-btn` (kept as
+   plain SSR `<a>`s, not a client-JS tab component — this switches which
+   surface the SERVER rendered, not a panel within one page). */
+.canvas-view-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
+	margin: 0 0 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: color-mix(in oklch, var(--bg) 93%, transparent);
+	padding: 3px;
+	box-shadow: var(--shadow);
+}
+
+.canvas-view-toggle-btn {
+	border-radius: 7px;
+	padding: 6px 10px;
+	color: var(--fg-subtle);
+	text-decoration: none;
+	font-size: 11px;
+	transition:
+		background 150ms ease-out,
+		color 150ms ease-out;
+}
+
+.canvas-view-toggle-btn:hover {
+	color: var(--fg);
+}
+
+.canvas-view-toggle-btn[aria-current="page"],
+.canvas-view-toggle-btn[aria-current="page"]:hover {
+	background: var(--fg);
+	color: var(--bg);
+}
+
+.project-home-link {
+	color: inherit;
+	text-decoration: none;
+	transition: opacity 150ms ease;
+}
+
+.project-home-link:hover {
+	opacity: 0.75;
+}
+
+/* Canvas home (P2.3) — full-viewport spatial surface for the whole project
+   graph. Token mapping follows `.plans/canvas-mock.html`'s design contract
+   comment (mock's underscored vars -> these kebab tokens 1:1). Scoped
+   `.canvas-*` classes, not shared with the ephemeral `.lens-*` overlay. */
+.canvas-viewport {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	min-height: 550px;
+	overflow: hidden;
+	background-color: var(--bg-alt);
+	background-image: radial-gradient(
+		circle at 1px 1px,
+		color-mix(in oklch, var(--fg) 10%, transparent) 1px,
+		transparent 0
+	);
+	background-size: 24px 24px;
+	cursor: grab;
+	touch-action: none;
+	isolation: isolate;
+}
+
+.canvas-viewport:active {
+	cursor: grabbing;
+}
+
+.canvas-toolbar {
+	position: absolute;
+	z-index: 10;
+	top: 16px;
+	left: 18px;
+	right: 18px;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	pointer-events: none;
+}
+
+.canvas-toolbar > * {
+	pointer-events: auto;
+}
+
+.canvas-breadcrumb {
+	display: flex;
+	align-items: center;
+	min-height: 35px;
+	gap: 8px;
+	padding: 0 12px;
+	border: 1px solid var(--border);
+	border-radius: 9px;
+	background: color-mix(in oklch, var(--bg) 93%, transparent);
+	box-shadow: var(--shadow);
+	color: var(--fg-muted);
+	font-size: 12px;
+}
+
+.canvas-crumb-current {
+	color: var(--fg);
+	font-weight: 600;
+}
+
+/* P3.4 — breadcrumb crumbs are buttons now (semantic travel lets you click
+   back up the ancestor chain), styled to read the same as the old plain
+   spans. */
+.canvas-crumb-btn {
+	border: 0;
+	background: none;
+	padding: 0;
+	color: var(--fg-muted);
+	cursor: pointer;
+	font: inherit;
+}
+
+.canvas-crumb-btn:hover {
+	color: var(--fg);
+	text-decoration: underline;
+}
+
+.canvas-zoom-hud {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	padding: 3px;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: color-mix(in oklch, var(--bg) 93%, transparent);
+	box-shadow: var(--shadow);
+}
+
+.canvas-level-btn {
+	border: 0;
+	border-radius: 7px;
+	background: transparent;
+	padding: 6px 10px;
+	color: var(--fg-subtle);
+	cursor: pointer;
+	font-size: 11px;
+	transition:
+		background 150ms ease-out,
+		color 150ms ease-out;
+}
+
+.canvas-level-btn:hover {
+	color: var(--fg);
+}
+
+.canvas-level-btn-active,
+.canvas-level-btn-active:hover {
+	background: var(--fg);
+	color: var(--bg);
+}
+
+.canvas-world {
+	position: absolute;
+	z-index: 1;
+	left: 0;
+	top: 0;
+	transform-origin: 0 0;
+	transition: transform 210ms cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+.canvas-world-moving {
+	transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.canvas-world {
+		transition: none;
+	}
+}
+
+.canvas-edges {
+	position: absolute;
+	inset: 0;
+	overflow: visible;
+	pointer-events: none;
+}
+
+.canvas-edge {
+	fill: none;
+	stroke: var(--border);
+	stroke-width: 1.5;
+	opacity: 0.75;
+}
+
+.canvas-edge-blocks {
+	stroke: var(--error-fg);
+	stroke-dasharray: 7 5;
+	opacity: 0.74;
+}
+
+.canvas-edge-relates {
+	stroke: var(--accent);
+	stroke-dasharray: 10 3;
+}
+
+.canvas-edge-discovered {
+	stroke: var(--info-fg);
+	stroke-dasharray: 4 3;
+}
+
+.canvas-edge-references {
+	stroke-dasharray: 2 3;
+}
+
+.canvas-edge-metric {
+	stroke: var(--warning-fg);
+	stroke-dasharray: 8 2 2 2;
+}
+
+.canvas-arrowhead {
+	fill: var(--border);
+}
+
+.canvas-edge-blocks-arrowhead {
+	fill: var(--error-fg);
+}
+
+.canvas-edge-relates-arrowhead {
+	fill: var(--accent);
+}
+
+.canvas-edge-discovered-arrowhead {
+	fill: var(--info-fg);
+}
+
+.canvas-edge-metric-arrowhead {
+	fill: var(--warning-fg);
+}
+
+/* Canvas home (P2.3) node card — .plans/canvas-mock.html's `.node` treatment,
+   scoped `.canvas-*` (kept separate from the ephemeral `.lens-*` overlay). */
+.canvas-node {
+	position: absolute;
+	width: 250px;
+	transform: translate(-50%, -50%);
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg);
+	box-shadow: var(--shadow);
+	cursor: pointer;
+	transition:
+		opacity 180ms ease,
+		border-color 150ms ease,
+		box-shadow 150ms ease;
+}
+
+.canvas-node:hover {
+	border-color: var(--fg-faint);
+	box-shadow: var(--shadow-lg);
+}
+
+.canvas-node-selected {
+	border-color: var(--accent);
+	box-shadow:
+		0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent),
+		var(--shadow);
+}
+
+.canvas-node-head {
+	display: flex;
+	align-items: flex-start;
+	gap: 11px;
+	padding: 15px 15px 8px;
+}
+
+.canvas-node-text {
+	min-width: 0;
+	flex: 1;
+}
+
+.canvas-node-title {
+	margin: 0;
+	overflow: hidden;
+	font-size: 14px;
+	font-weight: 600;
+	letter-spacing: -0.018em;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	color: var(--fg);
+}
+
+.canvas-node-kind {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-top: 3px;
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: 0.035em;
+	text-transform: uppercase;
+}
+
+.canvas-kind-glyph {
+	flex: 0 0 auto;
+	color: var(--accent);
+}
+
+.canvas-ring {
+	flex: 0 0 auto;
+	width: 31px;
+	height: 31px;
+	transform: rotate(-90deg);
+}
+
+.canvas-ring-track {
+	fill: none;
+	stroke: var(--border);
+	stroke-width: 3.2;
+}
+
+.canvas-ring-value {
+	fill: none;
+	stroke: var(--accent);
+	stroke-linecap: round;
+	stroke-width: 3.2;
+	stroke-dasharray: 81.7;
+}
+
+.canvas-ring-complete {
+	stroke: var(--success-fg);
+}
+
+/* LOD tiers (P2.4) — map collapses to a dot/pill, neighborhood is a compact
+   icon-only-kind card, node/detail are the full card. Keyed off the
+   per-node `data-lod` attribute (not an ancestor `.canvas-world` class) so
+   nodes mid-debounce never disagree with a stale ancestor class. */
+.canvas-node[data-lod="map"] {
+	width: 20px;
+	min-height: 20px;
+	height: 20px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent);
+}
+
+.canvas-node[data-lod="map"] .canvas-node-head {
+	position: relative;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 0;
+}
+
+.canvas-node[data-lod="map"] .canvas-ring {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.canvas-node[data-lod="map"] .canvas-node-text {
+	position: absolute;
+	left: 50%;
+	top: calc(100% + 4px);
+	flex: none;
+	width: max-content;
+	transform: translateX(-50%);
+	text-align: center;
+}
+
+.canvas-node[data-lod="map"] .canvas-node-kind {
+	display: none;
+}
+
+.canvas-node[data-lod="neighborhood"] {
+	min-height: 76px;
+}
+
+.canvas-node[data-lod="neighborhood"] .canvas-node-head {
+	padding: 12px 12px 6px;
+	gap: 8px;
+}
+
+/* `.canvas-node-title`'s font-size is set in WORLD px, rendered through
+   `.canvas-world`'s `scale(0.82)` at this LOD (`LEVEL_SCALE.neighborhood` in
+   `camera.ts`) — 12px world-px was only ~9.8 SCREEN px, below the ~12-13px
+   legibility floor. 15px world-px renders at ~12.3 screen px. */
+.canvas-node[data-lod="neighborhood"] .canvas-node-title {
+	font-size: 15px;
+}
+
+.canvas-node[data-lod="neighborhood"] .canvas-ring {
+	width: 26px;
+	height: 26px;
+}
+
+.canvas-node-body {
+	border-top: 1px solid var(--border);
+	padding: 12px 15px 15px;
+}
+
+.canvas-node[data-lod="detail"] {
+	width: 320px;
+}
+
+.canvas-node[data-lod="detail"] .canvas-node-title {
+	font-size: 16px;
+}
+
+.canvas-node-detail-panel {
+	min-height: 120px;
+}
+
+.canvas-node-detail-desc {
+	margin: 10px 0 0;
+	color: var(--fg-muted);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.canvas-node-sparkline {
+	width: 100%;
+	height: 32px;
+	color: var(--accent);
+}
+
+/* P3.2 — projection chips (SDLC stage / waiting-on-you / docs status / pin / agent-created). */
+.canvas-node-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	margin-bottom: 8px;
+}
+
+.canvas-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	padding: 2px 7px;
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+.canvas-chip-waiting {
+	border-color: color-mix(in oklch, var(--warning-fg) 45%, var(--border));
+	color: var(--warning-fg);
+}
+
+.canvas-chip-docs.canvas-chip {
+	color: var(--info-fg);
+}
+
+.canvas-chip-pin,
+.canvas-chip-agent {
+	border-color: color-mix(in oklch, var(--accent) 40%, var(--border));
+	color: var(--accent);
+}
+
+.canvas-chip-blocked {
+	border-color: color-mix(in oklch, var(--error-fg) 45%, var(--border));
+	color: var(--error-fg);
+}
+
+.canvas-chip-ready {
+	border-color: color-mix(in oklch, var(--success-fg) 40%, var(--border));
+	color: var(--success-fg);
+}
+
+/* P3.3 — pinned-node indicator dot, matching the UX contract's `.node.is_pinned::after`. */
+.canvas-node-pinned::after {
+	content: "";
+	position: absolute;
+	top: -5px;
+	right: 12px;
+	width: 7px;
+	height: 7px;
+	border: 1.5px solid var(--accent);
+	border-radius: 50%;
+	background: var(--bg);
+}
+
+/* One-time flash when an agent-created node's default beside-parent
+   placement first enters view — dismissed by `canvas-surface.tsx` after
+   ~3.6s, never re-triggered for the same session. */
+.canvas-node-cue {
+	animation: canvas-node-cue-flash 1.8s ease-out 2;
+}
+
+@keyframes canvas-node-cue-flash {
+	0%,
+	100% {
+		box-shadow: var(--shadow);
+	}
+	50% {
+		box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 22%, transparent);
+	}
+}
+
+.canvas-layout-status {
+	position: absolute;
+	z-index: 8;
+	left: 20px;
+	bottom: 19px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 0;
+	color: var(--fg-subtle);
+	font-size: 11px;
+	white-space: nowrap;
+}
+
+.canvas-layout-status strong {
+	color: var(--fg-muted);
+	font-weight: 600;
+}
+
+.canvas-layout-unsaved {
+	color: var(--error-fg);
+}
+
+.canvas-reset-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: 0;
+	background: none;
+	padding: 0;
+	color: var(--text-link, var(--accent));
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 9px;
+}
+
+.canvas-reset-btn:hover {
+	text-decoration: underline;
+}
+
+/* SHOULD #7 — one-line edge-kind key, mirrors the mock's `.legend` (reuses
+   the SAME `.canvas-arrowhead-*` fill classes the edges themselves use, so
+   there's one source of truth for edge-kind color). */
+.canvas-legend {
+	position: absolute;
+	z-index: 8;
+	left: 50%;
+	/* A separate row ABOVE `.canvas-layout-status`/`.canvas-hintbar` (both also
+	   pinned to `bottom: 19px`) — sharing that row collided the legend's
+	   centered items into the hintbar's right-aligned ones on any viewport
+	   narrower than roughly their combined width. */
+	bottom: 44px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	transform: translateX(-50%);
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	white-space: nowrap;
+}
+
+.canvas-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.canvas-legend-swatch {
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+}
+
+@media (max-width: 900px) {
+	.canvas-legend {
+		display: none;
+	}
+}
+
+.canvas-hintbar {
+	position: absolute;
+	z-index: 8;
+	right: 20px;
+	bottom: 19px;
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 7px 14px;
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 10px;
+}
+
+.canvas-hintbar kbd {
+	margin-right: 4px;
+	color: var(--fg);
+	font-family: inherit;
+}
+
+@media (max-width: 720px) {
+	.canvas-hintbar {
+		display: none;
 	}
 }

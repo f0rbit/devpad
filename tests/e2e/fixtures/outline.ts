@@ -22,6 +22,7 @@ import {
 	hook,
 	hook_delivery,
 	project,
+	project_view_state,
 	session,
 	task,
 	task_link,
@@ -486,6 +487,7 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 }
 
 async function delete_outline_fixtures(db: DrizzleDatabase): Promise<void> {
+	await db.delete(project_view_state).where(eq(project_view_state.project_id, E2E_OUTLINE_PROJECT_ID));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_PHASE));
 	await db.delete(task_rollup).where(eq(task_rollup.task_id, E2E_TASK_COMPACT_PARENT));
 	await db.delete(task_link).where(eq(task_link.id, `link_${E2E_TASK_LEAF}-blocks-${E2E_TASK_CHILD_2}`));

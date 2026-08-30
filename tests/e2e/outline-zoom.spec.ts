@@ -49,7 +49,7 @@ const clickWithRetry = async (target: Locator, check: () => Promise<void>) => {
 test.describe("zoom + breadcrumbs", () => {
 	test("direct load of ?node= renders that subtree, not the project root", async ({ page, context }) => {
 		await inject_test_user(context);
-		const response = await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work?node=${E2E_TASK_PHASE}`);
+		const response = await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?node=${E2E_TASK_PHASE}&view=list`);
 		expect(response?.status()).toBeLessThan(400);
 
 		await expect(page.getByTestId("outline-zoom-title")).toHaveText("Ripple UI");
@@ -61,7 +61,7 @@ test.describe("zoom + breadcrumbs", () => {
 
 	test("clicking a parent row's ring zooms in and updates the URL + crumbs", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await clickWithRetry(page.locator(`[data-task-id="${E2E_TASK_PHASE}"] .outline-bullet`), () =>
 			expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_PHASE}`), { timeout: 3000 }),
@@ -72,7 +72,7 @@ test.describe("zoom + breadcrumbs", () => {
 
 	test("a crumb click zooms back out to the project root", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work?node=${E2E_TASK_PHASE}`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?node=${E2E_TASK_PHASE}&view=list`);
 
 		await clickWithRetry(page.getByTestId("outline-crumbs").getByRole("button", { name: "e2e-outline-project" }), () =>
 			expect(page).not.toHaveURL(/node=/, { timeout: 3000 }),
@@ -82,7 +82,7 @@ test.describe("zoom + breadcrumbs", () => {
 
 	test("browser Back/Forward stays in sync with the zoomed view", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await clickWithRetry(page.locator(`[data-task-id="${E2E_TASK_PHASE}"] .outline-bullet`), () =>
 			expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_PHASE}`), { timeout: 3000 }),
@@ -102,7 +102,7 @@ test.describe("zoom + breadcrumbs", () => {
 test.describe("connections rail", () => {
 	test("selecting the blocked child lists the leaf under 'blocked by'", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const rail = page.getByTestId("outline-rail");
 		await clickWithRetry(page.locator(`[data-task-id="${E2E_TASK_CHILD_2}"]`), () =>
@@ -114,7 +114,7 @@ test.describe("connections rail", () => {
 
 	test("clicking a rail item travels in-place — zooms the outline, never navigates away", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const rail = page.getByTestId("outline-rail");
 		await clickWithRetry(page.locator(`[data-task-id="${E2E_TASK_CHILD_2}"]`), () =>
@@ -125,7 +125,7 @@ test.describe("connections rail", () => {
 			expect(page).toHaveURL(new RegExp(`node=${E2E_TASK_LEAF}`), { timeout: 3000 }),
 		);
 		// still on the same page (in-place travel) — only the ?node= param + zoom header changed.
-		await expect(page).toHaveURL(new RegExp(`/project/${E2E_OUTLINE_PROJECT_ID}/work`));
+		await expect(page).toHaveURL(new RegExp(`/project/${E2E_OUTLINE_PROJECT_ID}\\?view=list`));
 		await expect(page.getByTestId("outline-zoom-title")).toHaveText("Standalone leaf task");
 	});
 });

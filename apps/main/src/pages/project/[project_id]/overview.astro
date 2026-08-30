@@ -1,0 +1,9 @@
+---
+// P4.1 IA absorption: `overview` was always the content at `/project/:id`
+// itself (no separate `/overview` route ever existed) — this stub exists
+// defensively in case anything assumed one did, redirecting straight to the
+// canvas home per the same "redirect, never delete" pattern as the other
+// dropped tabs.
+const project_id = Astro.params.project_id!;
+return Astro.redirect(`/project/${project_id}${Astro.url.search}`, 301);
+---

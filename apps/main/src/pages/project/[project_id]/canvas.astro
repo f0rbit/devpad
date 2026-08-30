@@ -1,0 +1,7 @@
+---
+// P4.1 IA absorption: canvas is now the project home at `/project/:id`
+// itself, not a separate tab. Redirect rather than delete — bookmarks,
+// external links, and in-flight PRs referencing the old URL keep working.
+const project_id = Astro.params.project_id!;
+return Astro.redirect(`/project/${project_id}${Astro.url.search}`, 301);
+---

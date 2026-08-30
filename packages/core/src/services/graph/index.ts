@@ -5,6 +5,8 @@ export * from "./edge-summary.js";
 export * from "./fold-verify.js";
 export * from "./graph.js";
 export * from "./outbox.js";
+export * from "./project-graph.js";
 export * from "./rank.js";
 export * from "./rollup.js";
 export * from "./sweeper.js";
+export * from "./view-state.js";

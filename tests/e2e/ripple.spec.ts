@@ -44,7 +44,7 @@ test.describe("ripple choreography + stale + reopen", () => {
 
 	test("completing the leaf bubbles both ancestors, each gets a reopen affordance", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const leafBullet = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_LEAF}"] .outline-bullet`);
 		const grandparentRow = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_GRANDPARENT}"]`);
@@ -66,7 +66,7 @@ test.describe("ripple choreography + stale + reopen", () => {
 
 	test("reopen is absent on a directly (non-policy) completed task", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const row = page.locator(`[data-task-id="${E2E_TASK_CHILD_1}"]`);
 		await clickWithRetry(row.locator(".outline-bullet"), () =>
@@ -78,7 +78,7 @@ test.describe("ripple choreography + stale + reopen", () => {
 	test("prefers-reduced-motion bypasses the stagger — instant update + a summary toast", async ({ page, context }) => {
 		await inject_test_user(context);
 		await page.emulateMedia({ reducedMotion: "reduce" });
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const leafBullet = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_REDUCED_LEAF}"] .outline-bullet`);
 		const parentRow = page.locator(`[data-task-id="${E2E_TASK_RIPPLE_REDUCED_PARENT}"]`);

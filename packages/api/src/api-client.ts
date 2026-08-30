@@ -77,6 +77,8 @@ import type {
 	HookActionPublic,
 	HookTrigger,
 	InterfaceDiffClass,
+	ProjectGraphResponse,
+	ProjectViewLayoutInput,
 	PushDocRequest,
 	PushInterfaceReportRequest,
 	RequestCheckpointRequest,
@@ -500,6 +502,26 @@ export class ApiClient {
 				this.clients.projects.patch("/projects", {
 					body: { ...project, deleted: true },
 				}),
+			),
+
+		/**
+		 * Whole-project graph read (v2.5, canvas home task P2.2) — every task
+		 * in the project (fold kinds included), every in-project task_link,
+		 * and batched rollups. Backs the canvas' spatial view of the project.
+		 */
+		graph: (project_id: string): Promise<ApiResult<ProjectGraphResponse>> =>
+			wrap(() => this.clients.projects.get<ProjectGraphResponse>(`/projects/${project_id}/graph`)),
+
+		/**
+		 * Canvas view-state (v2.5, task P3.1) — pinned node positions.
+		 * Last-write-wins; `putViewState` always sends the full layout.
+		 */
+		getViewState: (project_id: string): Promise<ApiResult<ProjectViewLayoutInput>> =>
+			wrap(() => this.clients.projects.get<ProjectViewLayoutInput>(`/projects/${project_id}/view-state`)),
+
+		putViewState: (project_id: string, layout: ProjectViewLayoutInput): Promise<ApiResult<ProjectViewLayoutInput>> =>
+			wrap(() =>
+				this.clients.projects.put<ProjectViewLayoutInput>(`/projects/${project_id}/view-state`, { body: layout }),
 			),
 	};
 
