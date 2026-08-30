@@ -688,6 +688,38 @@ Bumped `@f0rbit/lint` `0.1.5` → `0.3.0`, crossing both the 0.2.0 wave (`no-tes
 - **`page.waitForLoadState("networkidle")` after a `page.reload()` (not the first cold `page.goto()`) is flaky specifically because vite's HMR client keeps a persistent WebSocket open**, which can prevent the page from ever reading "idle". The fix used throughout B3's specs: `networkidle` after the FIRST cold navigation (compiling a heavy new island can genuinely take longer than a fixed sleep), but a click-with-retry (no `networkidle`) for any RELOAD later in the same test, since the island's JS is already in vite's dev cache by then.
 - **The Astro dev toolbar removal (`document.querySelector("astro-dev-toolbar")?.remove()`, documented in B2) must be called immediately before EACH screenshot, not just once after the first `page.goto()`** — it reappears across subsequent client-side navigations within the same page session. A `page.on("load", ...)` handler alone was insufficient for B3's multi-shot script; an explicit `await page.evaluate(...)` call right before every `page.screenshot()` was the reliable fix.
 
+## Canvas home (v2.5, Phase P2)
+
+`apps/main/src/components/solid/canvas/` — a full-viewport dagre-layout graph surface at `/project/[project_id]/canvas`, zero IA wiring yet (no nav/tab points here; P4). All filenames kebab-case per project convention.
+
+```
+canvas/
+├── camera.ts            # DOM-free camera primitive: transform signal, stepped zoom levels, pan/wheel/key handlers, content-bounds clamp
+├── camera.test.ts
+├── layout.ts             # dagre layered layout (task/link -> {x,y} + edge routing)
+├── layout.test.ts
+├── spatial-index.ts      # uniform-grid spatial index for O(cells-touched) viewport culling
+├── spatial-index.test.ts
+├── canvas-node.tsx        # per-task card, LOD-aware body content, `data-lod` + `data-canvas-node` attrs
+├── canvas-surface.tsx     # the island: wires camera+layout+spatial-index+node together
+└── __fixtures__/
+    └── synthetic-graph.ts # deterministic ~500-node stress fixture (mulberry32 seed) — shared by the spatial-index unit test AND `tests/e2e/fixtures/canvas.ts`
+```
+
+**LOD design**: `CAMERA_LEVELS = ["map", "neighborhood", "node", "detail"]` (`LEVEL_SCALE` maps each to a fixed zoom scale). `canvas-surface.tsx` only swaps the `stableLevel` signal (what `CanvasNode` actually renders) once `camera.is_moving()` goes false — mid-animation LOD thrash is deliberately avoided. `CanvasNode` reads `props.level` to decide body content: `map` collapses to a dot (title shown only for `milestone`/`goal` fold kinds), `neighborhood` is icon-only, `node`/`detail` show the full card, `detail` additionally shows an (currently empty-shell) detail panel when selected.
+
+**Culling design**: `build_spatial_index` buckets node rects into a uniform grid (cell size ≈2x node footprint) rebuilt only when layout changes; `visibleIds` (a memo over `transform()` + `viewportSize()`) queries it once per frame. Culled nodes stay MOUNTED and get `display:none` (tldraw-style — avoids mount/unmount churn), never removed from the DOM. `visibleIds()` is `null` (meaning "render everything") until the real viewport has been measured via `ResizeObserver` — don't assert a specific visible/hidden ratio before that fires; poll instead.
+
+**Known interaction gotcha (found + fixed in P2.5)**: `on_pointer_down`'s early-return guard for "this is a click candidate, not a pan gesture" must also exclude the HUD toolbar (`.canvas-toolbar`), not just `[data-canvas-node]`. Without it, `setPointerCapture` (called on every non-excluded pointerdown to support drag-panning) re-targets the FOLLOWING pointerup at the outer viewport, and Chromium silently suppresses the synthesized `click` when its up-target differs from its down-target — every HUD zoom-level button click was a no-op with no console error. Any new toolbar/HUD control added to the canvas surface needs the same exclusion.
+
+**Known reactivity gotcha (found + fixed in P2.5)**: never read a Solid signal via an imperative "get current value to recompute" call (e.g. `transform()` inside `apply_clamped`) from a module method that might be invoked SYNCHRONOUSLY from inside a caller's `createEffect` — Solid's dependency tracking is call-stack based, not lexical, so the read gets accidentally attributed as a dependency of the CALLER's effect. Since `clamp_transform` always returns a new object (even when numerically unchanged), every subsequent write re-triggers that same effect, which reclamps and writes again — a self-sustaining loop that eventually stack-overflows (`Maximum call stack size exceeded` inside Solid's `runUpdates`/`completeUpdates`). Fix: wrap the internal read in `untrack()` (`camera.ts`'s `set_content_bounds`/`set_viewport`). Any camera/store module exposing imperative setters that read their own signals internally needs the same treatment if callers might invoke them from inside an effect.
+
+**Workspace-dist-rebuild gotcha**: after pulling/rebasing canvas work (or any change touching `@devpad/schema`/`@devpad/api` types consumed by `apps/main`), rebuild both dists before running e2e or typecheck — `bun run --filter=@devpad/schema build && bun run --filter=@devpad/api build`. Stale `dist/` output silently masks type errors and can make fixtures import outdated schema shapes.
+
+**E2E fixture**: `tests/e2e/fixtures/canvas.ts` seeds a dedicated `e2e-canvas-project` with the SAME `build_synthetic_graph(500)` generator the spatial-index unit test uses (single source of truth for the stress shape), remapping `project_id`/`owner_id` onto the seeded E2E user and batching inserts (100/chunk — bun:sqlite chokes on one 500-row insert). Cleanup keys off the `synthetic-` id prefix. See `canvas-core.spec.ts` for zoom/culling/keyboard/pan coverage; it's serial-mode across the whole file (same cold-hydration + CPU-contention rationale as `outline-interactions.spec.ts`/`lens-graph.spec.ts`) and uses a `clickLevel` retry helper for the same cold `client:load` hydration race those specs already document.
+
+**Lint note**: `apps/main/src/components/solid/canvas/camera.ts` had a pre-existing `unicorn/no-array-sort` oxlint error (`Array#sort()` mutating `[...CAMERA_LEVELS]`) that was BLOCKING `bun run lint`'s `oxlint && eslint` chain before it ever reached eslint — fixed via `Array#toSorted()`. Fixing it unmasked a pre-existing, repo-wide ESLint backlog (28 errors across ~20 files, none in the canvas directory's OWN newly-added P2.5 code — confirmed identical error content/line-shift on a clean `git stash` diff) that `bun run gate` had never actually surfaced before on this branch. This is a real gap worth a dedicated cleanup phase; it is NOT part of P2.5's scope and was not fixed here beyond the one-line unblock.
+
 # Debugging
 
 When running integration tests, logs will get piped to `packages/worker/server.log`, only read the logs if you're looking for errors.
