@@ -1,28 +1,7 @@
 ---
-import CanvasSurface from "@/components/solid/canvas/canvas-surface";
-import { ProjectContextSetter } from "@/components/solid/project-context-setter";
-import PageLayout from "@/layouts/PageLayout.astro";
-import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { getProject } from "@/utils/api-client";
-
+// P4.1 IA absorption: canvas is now the project home at `/project/:id`
+// itself, not a separate tab. Redirect rather than delete — bookmarks,
+// external links, and in-flight PRs referencing the old URL keep working.
 const project_id = Astro.params.project_id!;
-
-const guard = await getProject(Astro);
-if (guard instanceof Response) return guard;
-const { client, project } = guard;
-
-// SSR-first paint (P2.3): the initial graph ships as props so the canvas
-// paints laid-out nodes on first render; the island stale-revalidates via
-// `client.projects.graph` once mounted.
-const graph_result = await client.projects.graph(project.id);
-const initial_graph = graph_result.ok ? graph_result.value : { tasks: [], links: [], rollups: {} };
+return Astro.redirect(`/project/${project_id}${Astro.url.search}`, 301);
 ---
-
-<PageLayout title={`Canvas - ${project_id}`}>
-	<ProjectLayout project_id={project_id}>
-		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
-		<div style="height: min(78vh, 780px); min-height: 550px;">
-			<CanvasSurface client:load projectId={project.id} projectName={project.project_id} initial={initial_graph} />
-		</div>
-	</ProjectLayout>
-</PageLayout>

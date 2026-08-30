@@ -49,7 +49,7 @@ test.describe("graph lens", () => {
 
 	test("g opens the seeded neighborhood, Esc closes it, no route change", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 		const startUrl = page.url();
 
 		await selectChild2(page);
@@ -71,7 +71,7 @@ test.describe("graph lens", () => {
 
 	test("close button dismisses the lens the same as Esc", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await selectChild2(page);
 		const lens = page.getByTestId("lens-overlay");
@@ -83,7 +83,7 @@ test.describe("graph lens", () => {
 
 	test("depth toggle 1 hides what depth 2 shows", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await selectChild2(page);
 		const lens = page.getByTestId("lens-overlay");
@@ -107,7 +107,7 @@ test.describe("graph lens", () => {
 		context,
 	}) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await selectChild2(page);
 		const lens = page.getByTestId("lens-overlay");
@@ -127,7 +127,7 @@ test.describe("graph lens", () => {
 
 	test("double-click a node zooms the outline there and closes the lens", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await selectChild2(page);
 		const lens = page.getByTestId("lens-overlay");

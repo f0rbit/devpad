@@ -23,7 +23,7 @@ const inject_test_user = async (context: BrowserContext) => {
 };
 
 async function gotoNode(page: Page, node: string) {
-	await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work?node=${node}`);
+	await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?node=${node}&view=list`);
 	await page.waitForLoadState("networkidle");
 }
 

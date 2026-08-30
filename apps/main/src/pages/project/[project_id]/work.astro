@@ -1,28 +1,11 @@
 ---
-import Outline from "@/components/solid/outline/outline";
-import { ProjectContextSetter } from "@/components/solid/project-context-setter";
-import PageLayout from "@/layouts/PageLayout.astro";
-import ProjectLayout from "@/layouts/ProjectLayout.astro";
-import { getProject } from "@/utils/api-client";
-import { loadOutline } from "@/utils/outline-data";
-
+// P4.1 IA absorption: `work` is no longer its own tab/route — the outline it
+// showed is retained as the `?view=list` mode of the project home
+// (`/project/:id`, see index.astro). Redirect rather than delete —
+// bookmarks, external links, and in-flight PRs referencing the old URL keep
+// working, including any `?node=` deep link into a zoomed subtree.
 const project_id = Astro.params.project_id!;
-
-const guard = await getProject(Astro);
-if (guard instanceof Response) return guard;
-const { client, project, user } = guard;
-
-const zoom_id = Astro.url.searchParams.get("node");
-const outline = await loadOutline(client, project.id, zoom_id);
-
-// A stale/foreign ?node= (deleted task, or one from another project) falls
-// back to the project root rather than 404ing the whole page.
-const data = outline ?? (await loadOutline(client, project.id, null))!;
+const search = Astro.url.search;
+const suffix = search ? `${search}&view=list` : "?view=list";
+return Astro.redirect(`/project/${project_id}${suffix}`, 301);
 ---
-
-<PageLayout title={`Work - ${project_id}`}>
-	<ProjectLayout project_id={project_id}>
-		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
-		<Outline client:load project={{ id: project.id, name: project.project_id }} ownerId={user.id} initial={data} />
-	</ProjectLayout>
-</PageLayout>

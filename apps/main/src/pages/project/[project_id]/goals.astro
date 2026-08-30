@@ -1,7 +1,12 @@
 ---
 // v2.4 IA consolidation (task B1.4) — tasks + goals merged into the work
-// outline. Redirects rather than deletes: bookmarks, external links, and
-// in-flight PRs referencing the old URL keep working.
+// outline; v2.5 P4.1 absorbed `work` itself into the canvas home's
+// `?view=list` mode. Redirects rather than deletes: bookmarks, external
+// links, and in-flight PRs referencing the old URL keep working. Points
+// straight at the final destination rather than chaining through the old
+// `/work` redirect.
 const project_id = Astro.params.project_id!;
-return Astro.redirect(`/project/${project_id}/work${Astro.url.search}`, 301);
+const search = Astro.url.search;
+const suffix = search ? `${search}&view=list` : "?view=list";
+return Astro.redirect(`/project/${project_id}${suffix}`, 301);
 ---

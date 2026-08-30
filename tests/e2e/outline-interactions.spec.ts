@@ -68,7 +68,7 @@ test.describe("outline row interactions", () => {
 
 	test("add-child persists across reload", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const title = `E2E added ${Date.now()}`;
 		await quickAdd(page, title);
@@ -79,7 +79,7 @@ test.describe("outline row interactions", () => {
 
 	test("inline rename persists across reload", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const original = `E2E rename-me ${Date.now()}`;
 		const row = await quickAdd(page, original);
@@ -113,7 +113,7 @@ test.describe("outline row interactions", () => {
 
 	test("advancing status persists across reload", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const title = `E2E advance ${Date.now()}`;
 		const row = await quickAdd(page, title);
@@ -129,7 +129,7 @@ test.describe("outline row interactions", () => {
 
 	test("shift-tab promotes a nested task to the project root and persists", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work?node=${E2E_TASK_PHASE}`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?node=${E2E_TASK_PHASE}&view=list`);
 
 		const title = `E2E reparent ${Date.now()}`;
 		await quickAdd(page, title); // created under the zoomed phase
@@ -140,7 +140,7 @@ test.describe("outline row interactions", () => {
 		// promoted out of the phase — back to the project root, no longer under this zoom.
 		await expect(page.locator(".outline-title", { hasText: title })).toHaveCount(0);
 
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 		await expect(page.locator(".outline-title", { hasText: title })).toBeVisible();
 	});
 
@@ -149,7 +149,7 @@ test.describe("outline row interactions", () => {
 		context,
 	}) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const container = page.locator(".outline-container");
 		await expect(container).toBeFocused();
@@ -165,7 +165,7 @@ test.describe("outline row interactions", () => {
 
 	test("alt-↑ moves a sibling up (rank_between) and persists across reload", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const titleA = `E2E reorder A ${Date.now()}`;
 		const titleB = `E2E reorder B ${Date.now()}`;
@@ -199,7 +199,7 @@ test.describe("outline row interactions", () => {
 
 	test("a fully-done auto_children subtree compacts into a summary row", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		await expect(page.locator(`[data-task-id="${E2E_TASK_COMPACT_CHILD}"]`)).toBeVisible();
 

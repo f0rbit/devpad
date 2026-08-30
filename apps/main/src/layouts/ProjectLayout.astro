@@ -25,12 +25,12 @@ if (Astro.locals.user) {
 
 const pipeline_label = pending_approval_count > 0 ? `pipeline (${pending_approval_count} awaiting)` : "pipeline";
 
-// Tab order — v2.4 IA consolidation (task B1.4): goals + tasks merged into
-// "work" (the outline), specification folded into "docs" — net -1 tab.
-// Pipeline slots after pulse, before blog (operational sibling of pulse).
+// Tab order — v2.5 IA consolidation (task P4.1): canvas absorbed both
+// "overview" and "work" as the project home (`/project/:id`, no tab entry of
+// its own — reached via the project title, not a tab). specification folded
+// into "docs" (v2.4). 8 -> 6 tabs. Pipeline slots after pulse, before blog
+// (operational sibling of pulse).
 const pages = [
-	{ name: "overview", label: "overview", href: `/project/${project_id}` },
-	{ name: "work", label: "work", href: `/project/${project_id}/work` },
 	{ name: "docs", label: "docs", href: `/project/${project_id}/docs` },
 	{ name: "pulse", label: "pulse", href: `/project/${project_id}/pulse` },
 	{ name: "pipeline", label: pipeline_label, href: `/project/${project_id}/pipeline` },
@@ -39,17 +39,15 @@ const pages = [
 	{ name: "history", label: "history", href: `/project/${project_id}/history` },
 ];
 
-const search_pages = pages.filter(p => p.name !== "overview");
 // `/tasks/create` and `/tasks/update` still live under the old sub-layout
-// (linked from goal detail pages) but no longer have their own tab — they
-// highlight "work", their new conceptual home, rather than falling back to
-// "overview".
-const is_legacy_tasks_subpage = Astro.url.pathname.includes(`/project/${project_id}/tasks/`);
-const active = is_legacy_tasks_subpage ? "work" : (search_pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "overview");
+// (linked from goal detail pages) but no longer have their own tab, and
+// their conceptual home (the outline) is now a view mode of the project
+// home rather than a tab — neither highlights any tab.
+const active = pages.find(p => Astro.url.pathname.startsWith(p.href))?.name ?? "";
 ---
 
 <main>
-	<h1>{project_id}</h1>
+	<h1><a href={`/project/${project_id}`} class="project-home-link">{project_id}</a></h1>
 	<nav>
 		{
 			pages.map((p) => (

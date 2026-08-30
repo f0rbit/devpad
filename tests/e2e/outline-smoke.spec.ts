@@ -26,7 +26,7 @@ test.describe("work page — server plumbing", () => {
 	test("renders the seeded project tree (phase + both children + standalone leaf)", async ({ page, context }) => {
 		await inject_test_user(context);
 
-		const response = await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		const response = await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 		expect(response?.status()).toBeLessThan(400);
 
 		await expect(page.getByTestId("outline")).toBeVisible();
@@ -38,7 +38,7 @@ test.describe("work page — server plumbing", () => {
 
 	test("the phase's HIGH-priority claimed child shows its chips", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const child = page.locator(`[data-task-id="${E2E_TASK_CHILD_1}"]`);
 		await expect(child).toContainText("HIGH");
@@ -47,23 +47,50 @@ test.describe("work page — server plumbing", () => {
 	});
 });
 
-test.describe("old task/goal URLs 301 to work", () => {
-	test("/tasks redirects to /work, preserving query params", async ({ request }) => {
+test.describe("old task/goal/work/overview/canvas URLs 301 to the canvas home", () => {
+	test("/tasks redirects to the canvas home's list view, preserving query params", async ({ request }) => {
 		const response = await request.get(`/project/${E2E_OUTLINE_PROJECT_ID}/tasks?foo=bar`, {
 			maxRedirects: 0,
 			headers: { "X-Test-User": "true" },
 		});
 		expect(response.status()).toBe(301);
-		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}/work?foo=bar`);
+		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}?foo=bar&view=list`);
 	});
 
-	test("/goals redirects to /work", async ({ request }) => {
+	test("/goals redirects to the canvas home's list view", async ({ request }) => {
 		const response = await request.get(`/project/${E2E_OUTLINE_PROJECT_ID}/goals`, {
 			maxRedirects: 0,
 			headers: { "X-Test-User": "true" },
 		});
 		expect(response.status()).toBe(301);
-		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
+	});
+
+	test("/work redirects to the canvas home's list view, preserving query params", async ({ request }) => {
+		const response = await request.get(`/project/${E2E_OUTLINE_PROJECT_ID}/work?node=${E2E_TASK_PHASE}`, {
+			maxRedirects: 0,
+			headers: { "X-Test-User": "true" },
+		});
+		expect(response.status()).toBe(301);
+		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}?node=${E2E_TASK_PHASE}&view=list`);
+	});
+
+	test("/overview redirects to the canvas home", async ({ request }) => {
+		const response = await request.get(`/project/${E2E_OUTLINE_PROJECT_ID}/overview`, {
+			maxRedirects: 0,
+			headers: { "X-Test-User": "true" },
+		});
+		expect(response.status()).toBe(301);
+		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}`);
+	});
+
+	test("/canvas redirects to the canvas home", async ({ request }) => {
+		const response = await request.get(`/project/${E2E_OUTLINE_PROJECT_ID}/canvas`, {
+			maxRedirects: 0,
+			headers: { "X-Test-User": "true" },
+		});
+		expect(response.status()).toBe(301);
+		expect(response.headers().location).toBe(`/project/${E2E_OUTLINE_PROJECT_ID}`);
 	});
 
 	test("/specification redirects to /docs", async ({ request }) => {

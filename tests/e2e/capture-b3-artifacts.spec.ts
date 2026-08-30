@@ -100,7 +100,7 @@ async function open_doc(page: Page, document_id: string): Promise<void> {
 }
 
 async function open_node(page: Page, task_id: string): Promise<void> {
-	await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work?node=${task_id}`);
+	await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?node=${task_id}&view=list`);
 	await expect(page.getByTestId("sdlc-stepper")).toBeVisible();
 }
 

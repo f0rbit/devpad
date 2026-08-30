@@ -39,7 +39,7 @@ test.describe("milestone lens", () => {
 
 	test("m opens milestone cards with seeded rollup counts, Esc dismisses", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 		const startUrl = page.url();
 
 		const lens = page.getByTestId("lens-overlay");
@@ -57,7 +57,7 @@ test.describe("milestone lens", () => {
 
 	test("expand reveals the goal/task chain; clicking a child zooms the outline there", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const lens = page.getByTestId("lens-overlay");
 		await pressWithRetry(page, "m", () => expect(lens).toBeVisible({ timeout: 5000 }));
@@ -74,7 +74,7 @@ test.describe("milestone lens", () => {
 
 	test("clicking a milestone card's ring zooms the outline to the milestone", async ({ page, context }) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const lens = page.getByTestId("lens-overlay");
 		await pressWithRetry(page, "m", () => expect(lens).toBeVisible({ timeout: 5000 }));
@@ -95,7 +95,7 @@ test.describe("milestone lens", () => {
 		context,
 	}) => {
 		await inject_test_user(context);
-		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}/work`);
+		await page.goto(`/project/${E2E_OUTLINE_PROJECT_ID}?view=list`);
 
 		const lens = page.getByTestId("lens-overlay");
 		await pressWithRetry(page, "m", () => expect(lens).toBeVisible({ timeout: 5000 }));

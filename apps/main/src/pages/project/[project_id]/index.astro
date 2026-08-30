@@ -1,16 +1,44 @@
 ---
 import type { PulseSummary } from "@devpad/api";
+import CanvasSurface from "@/components/solid/canvas/canvas-surface";
+import Outline from "@/components/solid/outline/outline";
 import { ProjectContextSetter } from "@/components/solid/project-context-setter";
 import PulseWidget from "@/components/solid/project/pulse-widget";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject } from "@/utils/api-client";
+import { isMobileUserAgent } from "@/utils/is-mobile-user-agent";
+import { loadOutline } from "@/utils/outline-data";
 
 const project_id = Astro.params.project_id!;
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
-const { client, project } = guard;
+const { client, project, user } = guard;
+
+// P4.1 IA absorption: canvas is now the project home. `overview` and `work`
+// no longer have their own routes/tabs (301s live in overview.astro /
+// work.astro / canvas.astro). `work`'s outline is retained two ways:
+// unconditionally on mobile (SSR-only, no canvas JS shipped — P4.3), and on
+// desktop via an explicit `?view=list` toggle (the outline has interactions
+// — rename, edge chips, milestone lens, zoom breadcrumbs — the canvas
+// doesn't replicate; this is how "nothing uniquely shown is lost" holds
+// without duplicating that surface inside the canvas).
+const is_mobile = isMobileUserAgent(Astro.request.headers.get("user-agent"));
+const want_outline = is_mobile || Astro.url.searchParams.get("view") === "list";
+
+let outline_data: Awaited<ReturnType<typeof loadOutline>> | null = null;
+let graph_result: Awaited<ReturnType<typeof client.projects.graph>> | null = null;
+
+if (want_outline) {
+	const zoom_id = Astro.url.searchParams.get("node");
+	// A stale/foreign ?node= (deleted task, or one from another project) falls
+	// back to the project root rather than 404ing the whole page.
+	outline_data = (await loadOutline(client, project.id, zoom_id)) ?? (await loadOutline(client, project.id, null))!;
+} else {
+	graph_result = await client.projects.graph(project.id);
+}
+const initial_graph = graph_result?.ok ? graph_result.value : { tasks: [], links: [], rollups: {} };
 
 // Best-effort pulse summary — page must render even if pulse is unreachable.
 const pulse_result = await client.pulse.summary({ project_id: project.id, range: "7d" });
@@ -28,11 +56,40 @@ if (pulse_result.ok) {
 <PageLayout title={`${project_id} - devpad`}>
 	<ProjectLayout project_id={project_id}>
 		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
-		<p>{project!.description}</p>
-		{project!.repo_url && <a href={project!.repo_url}>{project!.repo_url}</a>}
-		<p>
-			<span>{project!.status?.toLowerCase()}</span><span>, </span>{project!.visibility?.toLowerCase()}<span></span>
-		</p>
-		<PulseWidget projectSlug={project_id} summary={pulse_summary} error={pulse_error} client:visible />
+		{
+			want_outline ? (
+				<>
+					{!is_mobile && (
+						<p class="canvas-home-view-toggle">
+							<a href={`/project/${project_id}`}>← back to canvas</a>
+						</p>
+					)}
+					<Outline client:load project={{ id: project.id, name: project.project_id }} ownerId={user.id} initial={outline_data!} />
+				</>
+			) : (
+				<>
+					<div class="canvas-home-hud">
+						<p class="canvas-home-description">{project.description}</p>
+						<p class="canvas-home-meta">
+							<span>{project.status?.toLowerCase()}</span>
+							<span>·</span>
+							<span>{project.visibility?.toLowerCase()}</span>
+							{project.repo_url && (
+								<>
+									<span>·</span>
+									<a href={project.repo_url}>{project.repo_url}</a>
+								</>
+							)}
+							<span>·</span>
+							<a href={`/project/${project_id}?view=list`}>list view</a>
+						</p>
+					</div>
+					<div class="canvas-home-surface">
+						<CanvasSurface client:load projectId={project.id} projectName={project.project_id} initial={initial_graph} />
+					</div>
+					<PulseWidget projectSlug={project_id} summary={pulse_summary} error={pulse_error} client:visible />
+				</>
+			)
+		}
 	</ProjectLayout>
 </PageLayout>
