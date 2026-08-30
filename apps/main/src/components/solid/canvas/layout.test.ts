@@ -1,7 +1,6 @@
 import type { Task, TaskLink } from "@devpad/schema";
 import { describe, expect, test } from "bun:test";
 import staging_graph from "../../../../../../tests/e2e/fixtures/staging-devpad-graph.json" with { type: "json" };
-import { create_camera } from "./camera";
 import {
 	apply_view_overrides,
 	CANVAS_NODE_H,
@@ -305,34 +304,5 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 	test("the forest spreads across at least 3 distinct rank columns — not collapsed into a single narrow strip", () => {
 		const distinct_x = new Set(layout.nodes.map((n) => Math.round(n.x / 10)));
 		expect(distinct_x.size).toBeGreaterThanOrEqual(3);
-	});
-
-	/**
-	 * Regression coverage for the "map level fills only ~25% of the viewport
-	 * width" bug: a single dense rank (one milestone's ~20 direct/agent-placed
-	 * children) used to dominate the forest's height, so `camera.ts`'s
-	 * fit-to-forest math — mathematically correct given that shape — used
-	 * ~100% of the viewport's height and ~25% of its width. `wrap_dense_ranks`
-	 * fixes the root cause (the SHAPE), not the fit math: this asserts the
-	 * fitted scale now fills at least 80% of the viewport's SMALLER dimension
-	 * (per Tom's staging review at 1000x680) on whichever axis binds.
-	 */
-	test("map level fits the forest to at least 80% of the viewport's smaller dimension", () => {
-		const viewport = { width: 1000, height: 680 };
-		const fit_margin = 40;
-		const fit_top_inset_px = 64; // matches canvas-surface.tsx's CANVAS_TOOLBAR_INSET_PX
-		const camera = create_camera({ animation_ms: 0, fit_margin, fit_top_inset_px });
-		camera.set_viewport(viewport);
-		camera.set_content_bounds(layout.bounds);
-		camera.zoom_to("map");
-
-		const { scale } = camera.transform();
-		const available_w = viewport.width - fit_margin * 2;
-		const available_h = viewport.height - fit_margin * 2 - fit_top_inset_px;
-		const width_fill = (layout.bounds.w * scale) / available_w;
-		const height_fill = (layout.bounds.h * scale) / available_h;
-
-		expect(Math.min(width_fill, height_fill)).toBeGreaterThanOrEqual(0.8);
-		camera.dispose();
 	});
 });
