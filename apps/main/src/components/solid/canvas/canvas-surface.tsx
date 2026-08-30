@@ -11,7 +11,7 @@ import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
 import { CAMERA_LEVELS, create_camera, type CameraLevel, type ViewportSize } from "./camera";
 import CanvasNode from "./canvas-node";
-import { CANVAS_NODE_H, CANVAS_NODE_W, apply_view_overrides, layout_graph } from "./layout";
+import { CANVAS_NODE_H, CANVAS_NODE_W, apply_view_overrides, layout_graph, type EdgeKind } from "./layout";
 import { fetch_node_projections, type NodeProjection } from "./projections";
 import { build_spatial_index } from "./spatial-index";
 
@@ -31,8 +31,11 @@ const LEVEL_LABEL: Record<CameraLevel, string> = {
 /** Same edge-kind grammar as the graph lens (`lenses/graph-lens.tsx`) — shape
  * carries the meaning (dasharray), not just color, so it survives
  * color-blindness/print. Prefixed `canvas-` since this is a separate CSS
- * scope, not a shared stylesheet with the lens. */
-const EDGE_CLASS: Record<TaskLink["kind"], string> = {
+ * scope, not a shared stylesheet with the lens. `hierarchy` (parent_id
+ * structure, never a `task_link` row) is thin/muted with no dasharray or
+ * arrowhead — containment, not a directional relationship. */
+const EDGE_CLASS: Record<EdgeKind, string> = {
+	hierarchy: "canvas-edge-hierarchy",
 	blocks: "canvas-edge-blocks",
 	relates_to: "canvas-edge-relates",
 	discovered_from: "canvas-edge-discovered",
@@ -42,13 +45,17 @@ const EDGE_CLASS: Record<TaskLink["kind"], string> = {
 
 const arrow_id_for = (kind: TaskLink["kind"]): string => `canvas-arrow-${kind.replace(/_/g, "-")}`;
 
-const EDGE_LABEL: Record<TaskLink["kind"], string> = {
+const EDGE_LABEL: Record<EdgeKind, string> = {
+	hierarchy: "hierarchy",
 	blocks: "blocks",
 	relates_to: "relates to",
 	discovered_from: "discovered from",
 	references: "references",
 	tracks_metric: "tracks metric",
 };
+
+/** Legend order: structural hierarchy first, then the real `task_link` kinds. */
+const EDGE_LEGEND_KINDS: readonly EdgeKind[] = ["hierarchy", ...TASK_LINK_KINDS];
 
 type EdgeChips = { readonly blocked: boolean; readonly ready: boolean };
 const NO_EDGE_CHIPS: EdgeChips = { blocked: false, ready: false };
@@ -554,7 +561,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 							<path
 								d={path_for(edge.points)}
 								class={`canvas-edge ${EDGE_CLASS[edge.kind]}`}
-								marker-end={`url(#${arrow_id_for(edge.kind)})`}
+								data-edge-kind={edge.kind}
+								marker-end={edge.kind === "hierarchy" ? undefined : `url(#${arrow_id_for(edge.kind)})`}
 							/>
 						)}
 					</For>
@@ -601,11 +609,16 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			</p>
 
 			<div class="canvas-legend" data-testid="canvas-legend">
-				<For each={TASK_LINK_KINDS}>
+				<For each={EDGE_LEGEND_KINDS}>
 					{(kind) => (
 						<span class="canvas-legend-item">
 							<svg class="canvas-legend-swatch" viewBox="0 0 10 10" aria-hidden="true">
-								<path d="M0,0 L10,5 L0,10 z" class={`canvas-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} />
+								<Show
+									when={kind !== "hierarchy"}
+									fallback={<line x1="0" y1="5" x2="10" y2="5" class="canvas-edge-hierarchy" stroke-width="1.5" />}
+								>
+									<path d="M0,0 L10,5 L0,10 z" class={`canvas-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} />
+								</Show>
 							</svg>
 							{EDGE_LABEL[kind]}
 						</span>
