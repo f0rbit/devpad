@@ -170,13 +170,19 @@ export type ViewPin = { readonly x: number; readonly y: number };
 const AGENT_PLACEMENT_OFFSET = { dx: CANVAS_NODE_W * 0.7, dy: CANVAS_NODE_H * 0.9 };
 
 /**
- * P3.3 — applies view-state pins (drag overrides, last-write-wins) and, for
- * any UNPINNED agent-created task (`created_by === "api"`) with a parent
- * elsewhere in the same layout, a deterministic "beside its parent"
- * placement instead of wherever dagre put it — so an agent-created node
- * never gets lost in a busy map. Returns which node ids got the
- * agent-placement treatment (`programmaticIds`) so the caller can show the
- * one-time visual cue.
+ * P3.3 — applies view-state pins (drag overrides, last-write-wins). For any
+ * UNPINNED agent-created task (`created_by === "api"`) with a parent
+ * elsewhere in the same layout, `programmaticIds` still marks it (drives the
+ * `.canvas-node-programmatic` chip + one-time placement cue) — but its
+ * POSITION is only overridden with the deterministic "beside its parent"
+ * offset when dagre never actually ranked it against that parent (no
+ * `hierarchy` edge connects them — layout_graph's job since the
+ * "hierarchy edges" pass, see layout.ts's top-of-file comment). Every
+ * `parent_id` present in the same task set now feeds dagre a hierarchy edge,
+ * so this fallback is dormant in the common case; it exists only for the
+ * defensive case of a structurally-disconnected agent-created node. dagre
+ * stays the layout — this function must never REPLACE a rank dagre already
+ * computed, only fill in for a node it couldn't rank at all.
  */
 export function apply_view_overrides(
 	layout: GraphLayout,
@@ -194,6 +200,9 @@ export function apply_view_overrides(
 			return [node.task.id, pin ? { x: pin.x, y: pin.y } : { x: node.x, y: node.y }] as const;
 		}),
 	);
+	const hierarchy_connected = new Set(
+		layout.edges.filter((edge) => edge.kind === "hierarchy").map((edge) => `${edge.src_id}:${edge.dst_id}`),
+	);
 	const programmaticIds = new Set<string>();
 	const sibling_count = new Map<string, number>();
 
@@ -203,17 +212,18 @@ export function apply_view_overrides(
 
 		const parent_id = node.task.parent_id;
 		const parent_pos = parent_id ? resolved.get(parent_id) : undefined;
-		if (node.task.created_by === "api" && parent_pos) {
-			const index = sibling_count.get(parent_id ?? "") ?? 0;
-			sibling_count.set(parent_id ?? "", index + 1);
-			programmaticIds.add(node.task.id);
-			return {
-				...node,
-				x: parent_pos.x + AGENT_PLACEMENT_OFFSET.dx,
-				y: parent_pos.y + AGENT_PLACEMENT_OFFSET.dy + index * (node_size.height + 16),
-			};
-		}
-		return node;
+		if (node.task.created_by !== "api" || !parent_pos || !parent_id) return node;
+
+		programmaticIds.add(node.task.id);
+		if (hierarchy_connected.has(`${parent_id}:${node.task.id}`)) return node; // dagre already ranked it — leave its position alone
+
+		const index = sibling_count.get(parent_id) ?? 0;
+		sibling_count.set(parent_id, index + 1);
+		return {
+			...node,
+			x: parent_pos.x + AGENT_PLACEMENT_OFFSET.dx,
+			y: parent_pos.y + AGENT_PLACEMENT_OFFSET.dy + index * (node_size.height + 16),
+		};
 	});
 
 	return { nodes, edges: layout.edges, bounds: bounds_for(nodes, node_size), programmaticIds };
