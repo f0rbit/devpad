@@ -2,11 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import {
-	E2E_CANVAS_P3_AGENT_CHILD,
-	E2E_CANVAS_P3_CHILD,
-	E2E_CANVAS_P3_PROJECT_ID,
-} from "./fixtures/canvas-p3-ids";
+import { E2E_CANVAS_P3_AGENT_CHILD, E2E_CANVAS_P3_CHILD, E2E_CANVAS_P3_PROJECT_ID } from "./fixtures/canvas-p3-ids";
 import { E2E_SESSION_ID } from "./fixtures/outline-ids";
 
 /**

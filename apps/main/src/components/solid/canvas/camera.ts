@@ -127,12 +127,19 @@ type RafHandle = number | ReturnType<typeof setTimeout>;
 const raf: (cb: (t: number) => void) => RafHandle =
 	typeof requestAnimationFrame === "function"
 		? requestAnimationFrame
-		: (cb) => setTimeout(() => cb(Date.now()), 16);
+		: (cb) =>
+				setTimeout(() => {
+					cb(Date.now());
+				}, 16);
 
 const cancel_raf: (handle: RafHandle) => void =
 	typeof cancelAnimationFrame === "function"
-		? (handle) => { cancelAnimationFrame(handle as number); }
-		: (handle) => { clearTimeout(handle); };
+		? (handle) => {
+				cancelAnimationFrame(handle as number);
+			}
+		: (handle) => {
+				clearTimeout(handle);
+			};
 
 export function create_camera(opts: CameraOptions = {}): Camera {
 	const animation_ms = opts.animation_ms ?? DEFAULT_ANIMATION_MS;
@@ -230,8 +237,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		const step_level = (direction: 1 | -1, anchor?: Point) => {
 			const index = CAMERA_LEVELS.indexOf(level());
 			const next_index = clamp(index + direction, 0, CAMERA_LEVELS.length - 1);
-			const next = CAMERA_LEVELS[next_index];
-			if (next !== undefined) zoom_to(next, anchor);
+			zoom_to(CAMERA_LEVELS[next_index], anchor);
 		};
 
 		const fit = (top_inset_px = fit_top_inset_px) => {
@@ -373,8 +379,12 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			on_pointer_move,
 			on_pointer_up,
 			zoom_to,
-			zoom_in: (anchor?: Point) => step_level(1, anchor),
-			zoom_out: (anchor?: Point) => step_level(-1, anchor),
+			zoom_in: (anchor?: Point) => {
+				step_level(1, anchor);
+			},
+			zoom_out: (anchor?: Point) => {
+				step_level(-1, anchor);
+			},
 			fit,
 			set_focus,
 			set_content_bounds,

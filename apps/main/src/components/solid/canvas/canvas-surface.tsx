@@ -1,5 +1,11 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import { TASK_LINK_KINDS, type ProjectGraphResponse, type ProjectViewLayoutInput, type Task, type TaskLink } from "@devpad/schema";
+import {
+	TASK_LINK_KINDS,
+	type ProjectGraphResponse,
+	type ProjectViewLayoutInput,
+	type Task,
+	type TaskLink,
+} from "@devpad/schema";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
@@ -130,7 +136,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	let viewportRef: HTMLDivElement | undefined;
 
 	const camera = create_camera({ fit_top_inset_px: CANVAS_TOOLBAR_INSET_PX });
-	onCleanup(() => { camera.dispose(); });
+	onCleanup(() => {
+		camera.dispose();
+	});
 	const transform = camera.transform;
 
 	const layout = createMemo(() => layout_graph(data().tasks, data().links));
@@ -244,10 +252,14 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	};
 
 	let save_timer: ReturnType<typeof setTimeout> | undefined;
-	onCleanup(() => { clearTimeout(save_timer); });
+	onCleanup(() => {
+		clearTimeout(save_timer);
+	});
 	const schedule_save = (next_pins: ProjectViewLayoutInput["pins"]) => {
 		clearTimeout(save_timer);
-		save_timer = setTimeout(() => { save_view_state({ pins: next_pins }); }, VIEW_STATE_SAVE_DEBOUNCE_MS);
+		save_timer = setTimeout(() => {
+			save_view_state({ pins: next_pins });
+		}, VIEW_STATE_SAVE_DEBOUNCE_MS);
 	};
 
 	const reset_layout = () => {
@@ -262,13 +274,14 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 
 		const observer = new ResizeObserver((entries) => {
 			const entry = entries[0];
-			if (!entry) return;
 			const size = { width: entry.contentRect.width, height: entry.contentRect.height };
 			camera.set_viewport(size);
 			setViewportSize(size);
 		});
 		observer.observe(viewport);
-		onCleanup(() => { observer.disconnect(); });
+		onCleanup(() => {
+			observer.disconnect();
+		});
 
 		// Non-passive — the camera's stepped zoom needs to preventDefault the
 		// page scroll on every wheel tick, which a passive listener can't do.
@@ -283,7 +296,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			});
 		};
 		viewport.addEventListener("wheel", on_wheel, { passive: false });
-		onCleanup(() => { viewport.removeEventListener("wheel", on_wheel); });
+		onCleanup(() => {
+			viewport.removeEventListener("wheel", on_wheel);
+		});
 
 		camera.fit();
 		void revalidate();
@@ -309,7 +324,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		// `setPointerCapture` below re-targets its pointerup and Chromium
 		// silently swallows the synthesized click).
 		const target = e.target;
-		if (target instanceof Element && target.closest("[data-canvas-node], .canvas-toolbar, .canvas-layout-status")) return;
+		if (target instanceof Element && target.closest("[data-canvas-node], .canvas-toolbar, .canvas-layout-status"))
+			return;
 		dragging = true;
 		camera.on_pointer_down(e);
 		const current_target = e.currentTarget;
@@ -327,8 +343,14 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	// P3.3 — node placement drag. Never shares the viewport's pointer capture
 	// (the guard above already excludes `[data-canvas-node]`), so this can
 	// freely track its own window-level listeners without fighting pan.
-	let node_drag: { id: string; startX: number; startY: number; originX: number; originY: number; moved: boolean } | null =
-		null;
+	let node_drag: {
+		id: string;
+		startX: number;
+		startY: number;
+		originX: number;
+		originY: number;
+		moved: boolean;
+	} | null = null;
 	let suppress_click_for: string | null = null;
 
 	const on_node_drag_move = (e: PointerEvent) => {
@@ -338,7 +360,11 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		if (!node_drag.moved && Math.hypot(dx_screen, dy_screen) < DRAG_THRESHOLD_PX) return;
 		node_drag.moved = true;
 		const scale = transform().scale;
-		setDragPreview({ id: node_drag.id, x: node_drag.originX + dx_screen / scale, y: node_drag.originY + dy_screen / scale });
+		setDragPreview({
+			id: node_drag.id,
+			x: node_drag.originX + dx_screen / scale,
+			y: node_drag.originY + dy_screen / scale,
+		});
 	};
 	const on_node_drag_up = () => {
 		window.removeEventListener("pointermove", on_node_drag_move);
@@ -391,7 +417,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 
 	let pending_id: string | null = null;
 	let pending_timer: ReturnType<typeof setTimeout> | undefined;
-	onCleanup(() => { clearTimeout(pending_timer); });
+	onCleanup(() => {
+		clearTimeout(pending_timer);
+	});
 
 	const on_node_select = (id: string) => {
 		if (suppress_click_for === id) {
@@ -454,7 +482,13 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		>
 			<div class="canvas-toolbar">
 				<div class="canvas-breadcrumb" data-testid="canvas-breadcrumb">
-					<button type="button" class="canvas-crumb-btn" onClick={() => { travel_up(); }}>
+					<button
+						type="button"
+						class="canvas-crumb-btn"
+						onClick={() => {
+							travel_up();
+						}}
+					>
 						{props.projectName}
 					</button>
 					<For each={breadcrumb()}>
@@ -479,7 +513,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 								type="button"
 								class="canvas-level-btn"
 								classList={{ "canvas-level-btn-active": stableLevel() === level }}
-								onClick={() => { camera.zoom_to(level); }}
+								onClick={() => {
+									camera.zoom_to(level);
+								}}
 							>
 								{LEVEL_LABEL[level]}
 							</button>
@@ -491,7 +527,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			<div
 				class="canvas-world"
 				classList={{ "canvas-world-moving": camera.is_moving() }}
-				style={{ transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().scale})` }}
+				style={{
+					transform: `translate(${String(transform().x)}px, ${String(transform().y)}px) scale(${String(transform().scale)})`,
+				}}
 			>
 				<svg class="canvas-edges" aria-hidden="true">
 					<defs>
@@ -548,10 +586,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			</div>
 
 			<p class="canvas-layout-status" data-testid="canvas-layout-status">
-				layout{" "}
-				<strong>
-					{pinnedCount() > 0 ? `${String(pinnedCount())} pinned` : "auto"}
-				</strong>
+				layout <strong>{pinnedCount() > 0 ? `${String(pinnedCount())} pinned` : "auto"}</strong>
 				<Show when={saveFailed()}>
 					<span class="canvas-layout-unsaved" data-testid="canvas-layout-unsaved">
 						unsaved

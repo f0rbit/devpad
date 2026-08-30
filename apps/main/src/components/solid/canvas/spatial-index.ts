@@ -23,7 +23,7 @@ const cell_range = (
 	max: Math.floor((start + size) / cell_size),
 });
 
-const cell_key = (cx: number, cy: number): string => `${cx},${cy}`;
+const cell_key = (cx: number, cy: number): string => `${String(cx)},${String(cy)}`;
 
 export function build_spatial_index(items: readonly SpatialItem[], cell_size: number): SpatialIndex {
 	const cells = new Map<string, string[]>();

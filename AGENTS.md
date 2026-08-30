@@ -750,23 +750,23 @@ canvas/
 - **`packages/core/src/ui/styles/globals.css`'s `.unified-header__row1` gained `flex-wrap: wrap`** — the 360px mobile header collision flagged in the P4 close-out (`task_8d114f90`) was a one-line fix after all; this file is the SHARED header across every app on the platform (source-imported, no build step), so the change's blast radius is every app, not just devpad's canvas page.
 - **Mock (`.plans/canvas-mock.html`) parity** — what's built vs. still mocked-only vs. deliberately deferred:
 
-| UX-contract element | Status |
-|---|---|
-| 4-level semantic zoom (map/neighborhood/node/detail) | Built |
-| Dagre layout + drag-to-pin + view-state persistence | Built |
-| Status chip (done/in progress/unstarted) + blocked/ready edge chips | Built |
-| Stage/waiting/docs/pin/agent-created chips | Built |
-| Edge-kind legend (blocks/relates_to/discovered_from/references/tracks_metric) | Built |
-| canvas\|list HUD toggle, cookie-remembered | Built |
-| Sparkline (project-level `by_day`, not per-task) | Built (simplified — see P3's `projections.ts` note) |
-| Directional `.edge_indicator` arrows ("more work" north/east/south/west) | Mocked only — not implemented |
-| `.lens_panel` (graph lens: blocked/ready/tracked-edge counts, `g` key) | Mocked only — not implemented |
-| `.toast` transient notifications | Mocked only — not implemented |
-| Ripple/bubbling visual choreography on graph changes | Mocked only — not implemented |
-| `j`/`k`/`space`/`o`/`g` keyboard verbs (select/advance/add-child/lens) | Mocked only — real canvas uses arrows/+/-/0/Enter/Esc instead |
-| Ring `%` label text (mock shows `${progress}%` next to the ring) | Mocked only — real `CanvasNode` renders the ring with no adjacent label |
-| Amber "waiting" ring state (ring stroke color keyed to `waiting`) | Mocked only — real ring only distinguishes complete/incomplete |
-| Per-task pulse metric binding (`tracks_metric` link's `ref` column) | Deferred — real backend work, not a UI gap |
+| UX-contract element                                                           | Status                                                                  |
+| ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 4-level semantic zoom (map/neighborhood/node/detail)                          | Built                                                                   |
+| Dagre layout + drag-to-pin + view-state persistence                           | Built                                                                   |
+| Status chip (done/in progress/unstarted) + blocked/ready edge chips           | Built                                                                   |
+| Stage/waiting/docs/pin/agent-created chips                                    | Built                                                                   |
+| Edge-kind legend (blocks/relates_to/discovered_from/references/tracks_metric) | Built                                                                   |
+| canvas\|list HUD toggle, cookie-remembered                                    | Built                                                                   |
+| Sparkline (project-level `by_day`, not per-task)                              | Built (simplified — see P3's `projections.ts` note)                     |
+| Directional `.edge_indicator` arrows ("more work" north/east/south/west)      | Mocked only — not implemented                                           |
+| `.lens_panel` (graph lens: blocked/ready/tracked-edge counts, `g` key)        | Mocked only — not implemented                                           |
+| `.toast` transient notifications                                              | Mocked only — not implemented                                           |
+| Ripple/bubbling visual choreography on graph changes                          | Mocked only — not implemented                                           |
+| `j`/`k`/`space`/`o`/`g` keyboard verbs (select/advance/add-child/lens)        | Mocked only — real canvas uses arrows/+/-/0/Enter/Esc instead           |
+| Ring `%` label text (mock shows `${progress}%` next to the ring)              | Mocked only — real `CanvasNode` renders the ring with no adjacent label |
+| Amber "waiting" ring state (ring stroke color keyed to `waiting`)             | Mocked only — real ring only distinguishes complete/incomplete          |
+| Per-task pulse metric binding (`tracks_metric` link's `ref` column)           | Deferred — real backend work, not a UI gap                              |
 
 # Debugging
 

@@ -96,9 +96,9 @@ export default function CanvasNode(props: CanvasNodeProps) {
 			data-lod={props.level}
 			data-pinned={props.pinned ? "true" : "false"}
 			data-programmatic={props.programmatic ? "true" : "false"}
-			style={{ left: `${props.x}px`, top: `${props.y}px`, display: props.visible ? undefined : "none" }}
+			style={{ left: `${String(props.x)}px`, top: `${String(props.y)}px`, display: props.visible ? undefined : "none" }}
 			tabIndex={0}
-			aria-label={`${props.task.title}, ${progress_percent(props.task)}% complete`}
+			aria-label={`${props.task.title}, ${String(progress_percent(props.task))}% complete`}
 			onClick={(e) => {
 				e.stopPropagation();
 				props.onSelect(props.task.id);
@@ -132,7 +132,7 @@ export default function CanvasNode(props: CanvasNodeProps) {
 						cx="16"
 						cy="16"
 						r="13"
-						style={{ "stroke-dashoffset": `${RING_CIRCUMFERENCE - dash()}` }}
+						style={{ "stroke-dashoffset": String(RING_CIRCUMFERENCE - dash()) }}
 					/>
 				</svg>
 			</div>

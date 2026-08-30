@@ -2,8 +2,8 @@ import type { Task, TaskLink } from "@devpad/schema";
 import { describe, expect, test } from "bun:test";
 import { apply_view_overrides, CANVAS_NODE_H, CANVAS_NODE_W, EMPTY_LAYOUT, layout_graph } from "./layout";
 
-const make_task = (id: string, overrides: Partial<Task> = {}): Task =>
-	({
+const make_task = (id: string, overrides: Partial<Task> = {}): Task => {
+	const task: Task = {
 		id,
 		title: id,
 		kind: "task",
@@ -28,11 +28,17 @@ const make_task = (id: string, overrides: Partial<Task> = {}): Task =>
 		claimed_by: null,
 		claimed_at: null,
 		stage: null,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
 		...overrides,
-	}) as Task;
+	};
+	return task;
+};
 
-const make_link = (src_id: string, dst_id: string | null, kind: TaskLink["kind"] = "blocks"): TaskLink =>
-	({
+const make_link = (src_id: string, dst_id: string | null, kind: TaskLink["kind"] = "blocks"): TaskLink => {
+	const link: TaskLink = {
 		id: `${src_id}->${String(dst_id)}`,
 		src_id,
 		dst_id,
@@ -41,7 +47,13 @@ const make_link = (src_id: string, dst_id: string | null, kind: TaskLink["kind"]
 		note: null,
 		created_at: "2026-01-01T00:00:00.000Z",
 		updated_at: "2026-01-01T00:00:00.000Z",
-	}) as TaskLink;
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	};
+	return link;
+};
 
 describe("layout_graph", () => {
 	test("empty input returns EMPTY_LAYOUT", () => {

@@ -35,9 +35,9 @@ export function build_synthetic_graph(count: number = SYNTHETIC_TASK_COUNT): {
 
 	const tasks: Task[] = Array.from({ length: count }, (_, index) => {
 		const parent_index = index === 0 ? null : Math.floor(random() * index);
-		return {
-			id: `synthetic-${index}`,
-			title: `Synthetic task ${index}`,
+		const task: Task = {
+			id: `synthetic-${String(index)}`,
+			title: `Synthetic task ${String(index)}`,
 			kind: kind_for(index),
 			progress: progress_for(index),
 			visibility: "PRIVATE",
@@ -53,31 +53,40 @@ export function build_synthetic_graph(count: number = SYNTHETIC_TASK_COUNT): {
 			end_time: null,
 			summary: null,
 			codebase_task_id: null,
-			parent_id: parent_index === null ? null : `synthetic-${parent_index}`,
+			parent_id: parent_index === null ? null : `synthetic-${String(parent_index)}`,
 			rank: "",
 			rev: 0,
 			completed_via: null,
 			claimed_by: null,
 			claimed_at: null,
 			stage: null,
-		} as Task;
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
+		return task;
 	});
 
 	const links: TaskLink[] = tasks
 		.filter((task): task is Task & { parent_id: string } => task.parent_id !== null)
-		.map(
-			(task) =>
-				({
-					id: `${task.parent_id}->${task.id}`,
-					src_id: task.parent_id,
-					dst_id: task.id,
-					kind: "relates_to",
-					ref: null,
-					note: null,
-					created_at: CREATED_AT,
-					updated_at: CREATED_AT,
-				}) as TaskLink,
-		);
+		.map((task) => {
+			const link: TaskLink = {
+				id: `${task.parent_id}->${task.id}`,
+				src_id: task.parent_id,
+				dst_id: task.id,
+				kind: "relates_to",
+				ref: null,
+				note: null,
+				created_at: CREATED_AT,
+				updated_at: CREATED_AT,
+				created_by: "api",
+				modified_by: "api",
+				protected: false,
+				deleted: false,
+			};
+			return link;
+		});
 
 	return { tasks, links };
 }
