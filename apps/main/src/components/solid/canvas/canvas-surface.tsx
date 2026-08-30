@@ -19,7 +19,7 @@ import {
 	clip_edge_endpoints,
 	direct_route,
 	layout_graph,
-	node_size_for,
+	shape_for,
 	type EdgeKind,
 	type LayoutOrientation,
 } from "./layout";
@@ -534,20 +534,26 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		);
 	});
 
-	/** Clips each edge's endpoints to the node's fixed box (`node_size_for` —
-	 * the same source `CanvasNode` reads, one size regardless of kind or LOD),
-	 * so arrowheads land exactly on the visible border rather than dagre's
-	 * raw routed points (which target the box's edge, not necessarily where a
-	 * bend crosses it). While a node is being actively dragged (before the
-	 * drag ends and `pins()` commits — `apply_view_overrides` only rewrites
-	 * touching edges to a fresh `direct_route` on a COMMITTED pin), every
-	 * edge touching it gets the same `direct_route` treatment here so it
-	 * follows the pointer smoothly instead of keeping dagre's stale bend
-	 * points until the drag ends (the same class of artifact `apply_view_
-	 * overrides` fixes for the persisted case). */
+	/** Clips each edge's endpoints to the node's ACTUAL rendered shape at the
+	 * current LOD/scale (`shape_for` — a box everywhere except a non-fold
+	 * kind's `map` dot, which is a circle), so arrowheads/lines land exactly
+	 * on the visible border rather than dagre's raw routed points (which
+	 * target the STATIC layout box, leaving a visible gap to a shrunk `map`
+	 * dot — Tom's staging screenshot: "the lines don't reach"). Depends on
+	 * `stableLevel()`/`transform().scale` (not just `placedLayout()`), so this
+	 * recomputes whenever the camera moves, matching the CSS `scale(clamp(...))`
+	 * every `.canvas-node[data-lod="map"]` renders with. While a node is being
+	 * actively dragged (before the drag ends and `pins()` commits —
+	 * `apply_view_overrides` only rewrites touching edges to a fresh
+	 * `direct_route` on a COMMITTED pin), every edge touching it gets the same
+	 * `direct_route` treatment here so it follows the pointer smoothly instead
+	 * of keeping dagre's stale bend points until the drag ends (the same class
+	 * of artifact `apply_view_overrides` fixes for the persisted case). */
 	const renderableEdges = createMemo(() => {
 		const by_id = nodeById();
 		const dragging_id = dragPreview()?.id ?? null;
+		const level = stableLevel();
+		const canvas_scale = transform().scale;
 		return placedLayout()
 			.edges.filter((edge) => is_visible(edge.src_id) || is_visible(edge.dst_id))
 			.flatMap((edge) => {
@@ -560,8 +566,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				const raw_points = is_dragging_edge ? direct_route(src_pos, dst_pos) : edge.points;
 				const points = clip_edge_endpoints(
 					raw_points,
-					{ x: src_pos.x, y: src_pos.y, size: node_size_for(src.task.kind) },
-					{ x: dst_pos.x, y: dst_pos.y, size: node_size_for(dst.task.kind) },
+					{ x: src_pos.x, y: src_pos.y, shape: shape_for(src.task, level, canvas_scale) },
+					{ x: dst_pos.x, y: dst_pos.y, shape: shape_for(dst.task, level, canvas_scale) },
 				);
 				return [{ ...edge, points }];
 			});
