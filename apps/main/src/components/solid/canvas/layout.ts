@@ -1,7 +1,6 @@
 import dagre, { type GraphLabel, type NodeLabel } from "@dagrejs/dagre";
 import type { Task, TaskLink } from "@devpad/schema";
-import type { CameraLevel } from "./camera";
-import type { ContentBounds } from "./camera";
+import type { CameraLevel, ContentBounds, ViewportSize } from "./camera";
 
 export type NodeSize = { readonly width: number; readonly height: number };
 
@@ -68,6 +67,19 @@ export const CANVAS_NODE_H = 124;
  */
 export type EdgeKind = TaskLink["kind"] | "hierarchy";
 
+/**
+ * dagre's own rank direction. Chosen per-graph by `layout_graph` (see below)
+ * rather than hardcoded — a graph that's naturally deep-and-narrow (many
+ * ranks, few siblings) fits a landscape viewport well as `LR`; a graph
+ * that's shallow-and-wide (few ranks, many siblings — e.g. one milestone
+ * with ~20 direct children) fits better as `TB`, ranks stacking vertically
+ * instead of one rank ballooning tall. dagre still owns BOTH the node
+ * positions AND the edge routing for whichever direction is picked — never
+ * reflowed after the fact (see the reverted `wrap_dense_ranks`: moving nodes
+ * post-layout without re-routing edges produced a hairball, PR #152 review).
+ */
+export type LayoutOrientation = "LR" | "TB";
+
 export type LaidOutNode = { readonly task: Task; readonly x: number; readonly y: number };
 export type LaidOutEdge = {
 	readonly id: string;
@@ -80,6 +92,7 @@ export type GraphLayout = {
 	readonly nodes: readonly LaidOutNode[];
 	readonly edges: readonly LaidOutEdge[];
 	readonly bounds: ContentBounds;
+	readonly rankdir: LayoutOrientation;
 };
 
 type EdgeLabel = {
@@ -93,21 +106,22 @@ type EdgeLabel = {
 const hierarchy_edge_id = (parent_id: string, child_id: string): string => `hierarchy:${parent_id}:${child_id}`;
 
 const EMPTY_BOUNDS: ContentBounds = { x: 0, y: 0, w: 0, h: 0 };
-export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_BOUNDS };
+export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_BOUNDS, rankdir: "LR" };
+
+/** Above this many tasks, running dagre TWICE (once per candidate `rankdir`) just to compare fit scores isn't worth the extra layout pass — falls back to the fixed `LR` default matching pre-orientation behaviour. */
+const ORIENTATION_COMPARE_TASK_CAP = 500;
 
 /**
- * Layered (dagre) layout — NEVER force-directed, per the canvas UX contract:
- * a graph you can predict beats one that resettles every render. Extracted
- * from `lenses/graph-lens.tsx`'s `layoutGraph` (kept identical rank/parent
- * layout logic; the lens keeps its own smaller-node-footprint copy since it
- * returns a lens-local `{width, height}` shape rather than camera-ready
- * `ContentBounds` — not a clean swap without touching the lens' render path).
+ * Single dagre pass for one `rankdir` candidate — factored out of
+ * `layout_graph` so orientation selection (below) can run it twice (once per
+ * candidate direction) without duplicating the graph-building logic.
  */
-export function layout_graph(
+function run_dagre(
 	tasks: readonly Task[],
 	links: readonly TaskLink[],
-	node_size: NodeSize = { width: CANVAS_NODE_W, height: CANVAS_NODE_H },
-): GraphLayout {
+	node_size: NodeSize,
+	rankdir: LayoutOrientation,
+): { readonly nodes: LaidOutNode[]; readonly edges: LaidOutEdge[] } {
 	// `multigraph: true` — a hierarchy edge and a task_link edge can share the
 	// same (parent, child) pair, and dagre's default single-edge graph would
 	// silently overwrite one with the other. `acyclicer: "greedy"` is a
@@ -115,7 +129,7 @@ export function layout_graph(
 	// impossible via `parent_id` — guarded elsewhere) but keeps dagre robust
 	// if a future edge source ever introduces one.
 	const g = new dagre.graphlib.Graph<GraphLabel, NodeLabel, EdgeLabel>({ multigraph: true });
-	g.setGraph({ rankdir: "LR", nodesep: 48, ranksep: 96, marginx: 32, marginy: 32, acyclicer: "greedy" });
+	g.setGraph({ rankdir, nodesep: 48, ranksep: 96, marginx: 32, marginy: 32, acyclicer: "greedy" });
 
 	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
@@ -147,11 +161,61 @@ export function layout_graph(
 		const label = g.edge(e);
 		return { id: label.id, kind: label.kind, points: label.points ?? [], src_id: label.src_id, dst_id: label.dst_id };
 	});
-
-	if (nodes.length === 0) return EMPTY_LAYOUT;
-	return { nodes, edges, bounds: bounds_for(nodes, node_size) };
+	return { nodes, edges };
 }
 
+/** How much of `viewport` a `bounds`-sized forest would occupy at its best uniform-scale fit — purely a COMPARISON metric between `LR`/`TB` candidates, not the camera's actual fit computation (`camera.ts` owns that, with its own margin/inset/cap rules). Larger is better; `0` for a degenerate (zero-area) bounds always loses. */
+function fit_scale_for(bounds: ContentBounds, viewport: ViewportSize): number {
+	if (bounds.w <= 0 || bounds.h <= 0) return 0;
+	return Math.min(viewport.width / bounds.w, viewport.height / bounds.h);
+}
+
+/**
+ * Layered (dagre) layout — NEVER force-directed, per the canvas UX contract:
+ * a graph you can predict beats one that resettles every render. Extracted
+ * from `lenses/graph-lens.tsx`'s `layoutGraph` (kept identical rank/parent
+ * layout logic; the lens keeps its own smaller-node-footprint copy since it
+ * returns a lens-local `{width, height}` shape rather than camera-ready
+ * `ContentBounds` — not a clean swap without touching the lens' render path).
+ *
+ * `viewport`, when given, picks `rankdir` by comparing each candidate's
+ * `fit_scale_for` against it (ties -> `LR`) — a deliberate deviation from the
+ * UX mock's fixed `LR` (see AGENTS.md's Canvas section). Omitted (or a
+ * degenerate 0x0), or above `ORIENTATION_COMPARE_TASK_CAP` tasks, always
+ * yields `LR` (the pre-orientation default) without paying for a second
+ * dagre pass. dagre owns positions AND edge routing for whichever direction
+ * wins — nothing reflows either afterward.
+ */
+export function layout_graph(
+	tasks: readonly Task[],
+	links: readonly TaskLink[],
+	node_size: NodeSize = { width: CANVAS_NODE_W, height: CANVAS_NODE_H },
+	viewport?: ViewportSize,
+): GraphLayout {
+	if (tasks.length === 0) return EMPTY_LAYOUT;
+
+	const lr = run_dagre(tasks, links, node_size, "LR");
+	const lr_layout: GraphLayout = {
+		nodes: lr.nodes,
+		edges: lr.edges,
+		bounds: bounds_for(lr.nodes, node_size),
+		rankdir: "LR",
+	};
+
+	if (!viewport || viewport.width <= 0 || viewport.height <= 0 || tasks.length > ORIENTATION_COMPARE_TASK_CAP) {
+		return lr_layout;
+	}
+
+	const tb = run_dagre(tasks, links, node_size, "TB");
+	const tb_layout: GraphLayout = {
+		nodes: tb.nodes,
+		edges: tb.edges,
+		bounds: bounds_for(tb.nodes, node_size),
+		rankdir: "TB",
+	};
+
+	return fit_scale_for(tb_layout.bounds, viewport) > fit_scale_for(lr_layout.bounds, viewport) ? tb_layout : lr_layout;
+}
 function bounds_for(nodes: readonly LaidOutNode[], node_size: NodeSize): ContentBounds {
 	const half_w = node_size.width / 2;
 	const half_h = node_size.height / 2;
@@ -226,7 +290,7 @@ export function apply_view_overrides(
 		};
 	});
 
-	return { nodes, edges: layout.edges, bounds: bounds_for(nodes, node_size), programmaticIds };
+	return { nodes, edges: layout.edges, bounds: bounds_for(nodes, node_size), rankdir: layout.rankdir, programmaticIds };
 }
 
 type Point = { readonly x: number; readonly y: number };
