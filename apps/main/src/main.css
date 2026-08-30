@@ -2418,10 +2418,10 @@ button.outline-row {
 /* Width/height are set inline by `canvas-node.tsx` from `layout.ts`'s
    `node_size_for` — ONE fixed box regardless of kind or LOD (single source
    shared with dagre's spacing/edge-clipping math, see `layout.ts`) — this
-   260px is only a pre-hydration/no-JS fallback. */
+   240px is only a pre-hydration/no-JS fallback. */
 .canvas-node {
 	position: absolute;
-	width: 260px;
+	width: 240px;
 	overflow: hidden;
 	transform: translate(-50%, -50%);
 	border: 1px solid var(--border);
@@ -2522,7 +2522,7 @@ button.outline-row {
    never dimensions, so the rendered box can never disagree with what dagre
    reserved for it. */
 /* `scale()` here is PURELY visual — it never changes the box's actual
-   260x200 reserved width/height, only how it LOOKS on screen — collapsing
+   240x108 reserved width/height, only how it LOOKS on screen — collapsing
    the full card down to dot scale at `map`. The base `0.14` targets a
    dot-ish on-screen footprint at a typical fit-to-forest `map_scale`; the
    `clamp` boosts it back up when `.canvas-world`'s `--canvas-scale` drops
@@ -2637,27 +2637,41 @@ button.outline-row {
 	height: 26px;
 }
 
-/* `max-height` + scroll caps the body at what fits inside the fixed
-   `node_size_for` box (same box at every LOD now — see `layout.ts`) below
-   the head, so a wide chip row wrapping to a 3rd/4th line, or `detail`'s
-   longer description/sparkline, scrolls internally instead of growing the
-   card past its reserved dagre footprint (the other root cause of node/node
-   overlap — a card's real height depends on content, dagre's spacing math
-   can't). The outer `.canvas-node`'s own `overflow: hidden` is the backstop
-   that guarantees this even if a future addition here miscalculates. */
+/* No `max-height`/scroll cap here anymore — `node_size_for`'s 240x108 box is
+   now SIZED to exactly this content (head + one chip row), and `detail`'s
+   extra content (description/sparkline) no longer renders inside this box at
+   all: it's `.canvas-node-detail-overlay` below, a separate absolutely-
+   positioned element outside the card. The outer `.canvas-node`'s
+   `overflow: hidden` stays as a defensive backstop for an unexpectedly wide
+   chip row, but is no longer load-bearing for capping height. */
 .canvas-node-body {
 	border-top: 1px solid var(--border);
 	padding: 12px 15px 15px;
-	max-height: 130px;
-	overflow-y: auto;
+}
+
+/* P4 fix — the detail panel used to render INSIDE `.canvas-node-body`,
+   growing the fixed box past what `layout.ts` reserved for it (Tom's staging
+   feedback: cards ballooning at `detail`). It's now a transient overlay,
+   absolutely positioned in the world layer (same coordinate space as
+   `.canvas-node`) just below/right of the selected card — anchored via
+   `canvas-node.tsx`'s inline `left`/`top`/`width` (derived from the node's
+   own x/y/size), never counted in dagre's spacing math. It may overlap a
+   neighbour; that's an acceptable tradeoff for a transient, selection-driven
+   panel. Renders AFTER the node in DOM order (both are plain document-flow
+   siblings, same stacking context as the edges' `<svg>`), so it paints above
+   both the card and the edges without needing an explicit `z-index`. */
+.canvas-node-detail-overlay {
+	position: absolute;
+	z-index: 6;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--bg);
+	box-shadow: var(--shadow-lg);
+	padding: 12px 15px 15px;
 }
 
 .canvas-node[data-lod="detail"] .canvas-node-title {
 	font-size: 16px;
-}
-
-.canvas-node-detail-panel {
-	min-height: 0;
 }
 
 .canvas-node-detail-desc {

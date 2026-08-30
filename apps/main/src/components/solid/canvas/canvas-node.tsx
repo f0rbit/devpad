@@ -87,134 +87,145 @@ export default function CanvasNode(props: CanvasNodeProps) {
 	const size = () => node_size_for(props.task.kind);
 
 	return (
-		<article
-			class={`canvas-node ${STATUS_CLASS[props.task.progress]}${props.selected ? " canvas-node-selected" : ""}${is_fold() ? " canvas-node-fold" : ""}`}
-			classList={{
-				"canvas-node-detail": show_detail_panel(),
-				"canvas-node-pinned": props.pinned,
-				"canvas-node-programmatic": props.programmatic,
-				"canvas-node-cue": props.showPlacementCue,
-			}}
-			data-canvas-node
-			data-testid="canvas-node"
-			data-task-id={props.task.id}
-			data-lod={props.level}
-			data-pinned={props.pinned ? "true" : "false"}
-			data-programmatic={props.programmatic ? "true" : "false"}
-			style={{
-				left: `${String(props.x)}px`,
-				top: `${String(props.y)}px`,
-				width: `${String(size().width)}px`,
-				height: `${String(size().height)}px`,
-				display: props.visible ? undefined : "none",
-			}}
-			tabIndex={0}
-			aria-label={`${props.task.title}, ${String(progress_percent(props.task))}% complete`}
-			onClick={(e) => {
-				e.stopPropagation();
-				props.onSelect(props.task.id);
-			}}
-			onKeyDown={(e) => {
-				if (e.key === "Enter") props.onSelect(props.task.id);
-			}}
-			onPointerDown={(e) => {
-				props.onPointerDownNode(props.task.id, e);
-			}}
-		>
-			<div class="canvas-node-head">
-				<div class="canvas-node-text">
-					<Show when={!is_map() || is_fold()}>
-						<h3 class="canvas-node-title">{props.task.title}</h3>
-					</Show>
-					<Show when={!is_map()}>
-						<div class="canvas-node-kind">
-							<KindGlyph kind={props.task.kind} />
-							<Show when={!is_neighborhood()}>
-								{props.task.kind} · {props.task.progress}
-							</Show>
-						</div>
-					</Show>
-				</div>
-				<svg class="canvas-ring" viewBox="0 0 32 32" aria-hidden="true">
-					<circle class="canvas-ring-track" cx="16" cy="16" r="13" />
-					<circle
-						class="canvas-ring-value"
-						classList={{ "canvas-ring-complete": props.task.progress === "COMPLETED" }}
-						cx="16"
-						cy="16"
-						r="13"
-						style={{ "stroke-dashoffset": String(RING_CIRCUMFERENCE - dash()) }}
-					/>
-				</svg>
-			</div>
-			<Show when={show_body()}>
-				<div class="canvas-node-body">
-					<div class="canvas-node-chips" data-testid="canvas-node-chips">
-						{(() => {
-							const status = STATUS_CHIP[props.task.progress];
-							const StatusIcon = status.icon;
-							return (
-								<span class="canvas-chip canvas-chip-status" data-testid="canvas-chip-status">
-									<StatusIcon size={10} aria-hidden="true" />
-									{status.label}
-								</span>
-							);
-						})()}
-						<Show when={props.blocked}>
-							<span class="canvas-chip canvas-chip-blocked" data-testid="canvas-chip-blocked">
-								<Lock size={10} aria-hidden="true" />
-								blocked
-							</span>
+		<>
+			<article
+				class={`canvas-node ${STATUS_CLASS[props.task.progress]}${props.selected ? " canvas-node-selected" : ""}${is_fold() ? " canvas-node-fold" : ""}`}
+				classList={{
+					"canvas-node-detail": show_detail_panel(),
+					"canvas-node-pinned": props.pinned,
+					"canvas-node-programmatic": props.programmatic,
+					"canvas-node-cue": props.showPlacementCue,
+				}}
+				data-canvas-node
+				data-testid="canvas-node"
+				data-task-id={props.task.id}
+				data-lod={props.level}
+				data-pinned={props.pinned ? "true" : "false"}
+				data-programmatic={props.programmatic ? "true" : "false"}
+				style={{
+					left: `${String(props.x)}px`,
+					top: `${String(props.y)}px`,
+					width: `${String(size().width)}px`,
+					height: `${String(size().height)}px`,
+					display: props.visible ? undefined : "none",
+				}}
+				tabIndex={0}
+				aria-label={`${props.task.title}, ${String(progress_percent(props.task))}% complete`}
+				onClick={(e) => {
+					e.stopPropagation();
+					props.onSelect(props.task.id);
+				}}
+				onKeyDown={(e) => {
+					if (e.key === "Enter") props.onSelect(props.task.id);
+				}}
+				onPointerDown={(e) => {
+					props.onPointerDownNode(props.task.id, e);
+				}}
+			>
+				<div class="canvas-node-head">
+					<div class="canvas-node-text">
+						<Show when={!is_map() || is_fold()}>
+							<h3 class="canvas-node-title">{props.task.title}</h3>
 						</Show>
-						<Show when={props.ready}>
-							<span class="canvas-chip canvas-chip-ready" data-testid="canvas-chip-ready">
-								<Zap size={10} aria-hidden="true" />
-								ready
-							</span>
-						</Show>
-						<Show when={props.task.stage}>
-							{(stage) => <span class="canvas-chip canvas-chip-stage">{STAGE_LABEL[stage()]}</span>}
-						</Show>
-						<Show when={props.projection?.waiting}>
-							<span class="canvas-chip canvas-chip-waiting" data-testid="canvas-chip-waiting">
-								<Watch size={10} aria-hidden="true" />
-								waiting on you
-							</span>
-						</Show>
-						<Show when={props.projection?.docsStatus}>
-							{(status) => (
-								<span class="canvas-chip canvas-chip-docs" data-testid="canvas-chip-docs">
-									<FileText size={10} aria-hidden="true" />
-									{status()}
-								</span>
-							)}
-						</Show>
-						<Show when={props.pinned}>
-							<span class="canvas-chip canvas-chip-pin" data-testid="canvas-chip-pin">
-								<Pin size={10} aria-hidden="true" />
-								pinned
-							</span>
-						</Show>
-						<Show when={props.programmatic}>
-							<span class="canvas-chip canvas-chip-agent" data-testid="canvas-chip-agent">
-								<Bot size={10} aria-hidden="true" />
-								agent-created
-							</span>
+						<Show when={!is_map()}>
+							<div class="canvas-node-kind">
+								<KindGlyph kind={props.task.kind} />
+								<Show when={!is_neighborhood()}>
+									{props.task.kind} · {props.task.progress}
+								</Show>
+							</div>
 						</Show>
 					</div>
-					<Show when={show_detail_panel()}>
-						<div class="canvas-node-detail-panel" data-testid="canvas-node-detail-panel">
-							<Show when={props.projection?.pulseSpark && props.projection.pulseSpark.length > 0}>
-								<Sparkline values={props.projection?.pulseSpark ?? []} />
+					<svg class="canvas-ring" viewBox="0 0 32 32" aria-hidden="true">
+						<circle class="canvas-ring-track" cx="16" cy="16" r="13" />
+						<circle
+							class="canvas-ring-value"
+							classList={{ "canvas-ring-complete": props.task.progress === "COMPLETED" }}
+							cx="16"
+							cy="16"
+							r="13"
+							style={{ "stroke-dashoffset": String(RING_CIRCUMFERENCE - dash()) }}
+						/>
+					</svg>
+				</div>
+				<Show when={show_body()}>
+					<div class="canvas-node-body">
+						<div class="canvas-node-chips" data-testid="canvas-node-chips">
+							{(() => {
+								const status = STATUS_CHIP[props.task.progress];
+								const StatusIcon = status.icon;
+								return (
+									<span class="canvas-chip canvas-chip-status" data-testid="canvas-chip-status">
+										<StatusIcon size={10} aria-hidden="true" />
+										{status.label}
+									</span>
+								);
+							})()}
+							<Show when={props.blocked}>
+								<span class="canvas-chip canvas-chip-blocked" data-testid="canvas-chip-blocked">
+									<Lock size={10} aria-hidden="true" />
+									blocked
+								</span>
 							</Show>
-							<Show when={props.task.description}>
-								<p class="canvas-node-detail-desc">{props.task.description}</p>
+							<Show when={props.ready}>
+								<span class="canvas-chip canvas-chip-ready" data-testid="canvas-chip-ready">
+									<Zap size={10} aria-hidden="true" />
+									ready
+								</span>
+							</Show>
+							<Show when={props.task.stage}>
+								{(stage) => <span class="canvas-chip canvas-chip-stage">{STAGE_LABEL[stage()]}</span>}
+							</Show>
+							<Show when={props.projection?.waiting}>
+								<span class="canvas-chip canvas-chip-waiting" data-testid="canvas-chip-waiting">
+									<Watch size={10} aria-hidden="true" />
+									waiting on you
+								</span>
+							</Show>
+							<Show when={props.projection?.docsStatus}>
+								{(status) => (
+									<span class="canvas-chip canvas-chip-docs" data-testid="canvas-chip-docs">
+										<FileText size={10} aria-hidden="true" />
+										{status()}
+									</span>
+								)}
+							</Show>
+							<Show when={props.pinned}>
+								<span class="canvas-chip canvas-chip-pin" data-testid="canvas-chip-pin">
+									<Pin size={10} aria-hidden="true" />
+									pinned
+								</span>
+							</Show>
+							<Show when={props.programmatic}>
+								<span class="canvas-chip canvas-chip-agent" data-testid="canvas-chip-agent">
+									<Bot size={10} aria-hidden="true" />
+									agent-created
+								</span>
 							</Show>
 						</div>
+					</div>
+				</Show>
+			</article>
+			<Show when={show_detail_panel()}>
+				<div
+					class="canvas-node-detail-overlay"
+					data-testid="canvas-node-detail-panel"
+					style={{
+						left: `${String(props.x - size().width / 2)}px`,
+						top: `${String(props.y + size().height / 2 + 12)}px`,
+						width: `${String(size().width)}px`,
+						display: props.visible ? undefined : "none",
+					}}
+				>
+					<Show when={props.projection?.pulseSpark && props.projection.pulseSpark.length > 0}>
+						<Sparkline values={props.projection?.pulseSpark ?? []} />
+					</Show>
+					<Show when={props.task.description}>
+						<p class="canvas-node-detail-desc">{props.task.description}</p>
 					</Show>
 				</div>
 			</Show>
-		</article>
+		</>
 	);
 }
 

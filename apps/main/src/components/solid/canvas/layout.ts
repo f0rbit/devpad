@@ -18,19 +18,32 @@ export const FOLD_KINDS: ReadonlySet<Task["kind"]> = new Set(["milestone", "goal
  * spacing (`CANVAS_NODE_W`/`H`, a single uniform size) disagreeing with the
  * box `canvas-node.tsx` actually RENDERED, which used to grow per LOD up to
  * 320x300 at `detail` — bigger than dagre had reserved, so a zoomed-in card
- * could grow past its allocated footprint and overlap a neighbour. Now there
- * is exactly one reserved/rendered box, always this size: LOD only swaps
- * INNER content (`canvas-node.tsx`) and the `map`-tier dot/pill treatment is
- * a pure CSS `transform: scale` DOWN into that same fixed box — it never
- * changes the box's actual width/height, so it can never grow past what
- * dagre reserved for it. Content taller than the box is capped via
- * `overflow-y: auto` on the scrollable inner region (`.canvas-node-body`),
- * never by growing the box. `node_size_for` keeps a `kind` parameter (even
- * though every kind currently maps to the same box) so a future kind-specific
- * size has exactly one call site to change.
+ * could grow past its allocated footprint and overlap a neighbour. There is
+ * exactly one reserved/rendered box, always this size: LOD only swaps INNER
+ * content (`canvas-node.tsx`) and the `map`-tier dot/pill treatment is a pure
+ * CSS `transform: scale` DOWN into that same fixed box — it never changes the
+ * box's actual width/height, so it can never grow past what dagre reserved
+ * for it.
+ *
+ * **Sized to `node`-tier content, not a round number** — Tom's staging
+ * feedback ("the boxes should be smaller"): the previous 260x200 box left
+ * ~60% empty chrome below the title/meta/chip-row content, which actually
+ * needs roughly 240x104 (head: title + meta line + 31px ring, padding
+ * 15/8px ≈54px; body: border + one chip row + padding ≈54px). `detail`'s
+ * extra content (description/sparkline) no longer grows this box at all — it
+ * renders as a separate `.canvas-node-detail-overlay`, absolutely positioned
+ * in the world layer OUTSIDE this box (see `canvas-node.tsx`), so it may
+ * overlap a neighbour without needing dagre to reserve space for it. Node/
+ * detail content (title + kind/status meta + one chip row) is structurally
+ * IDENTICAL for fold (`milestone`/`goal`) and non-fold kinds at this LOD —
+ * fold kinds only differ at `map` (dot vs. pill, a pure CSS transform, never
+ * a box-size change) — so a single uniform box for every kind is correct,
+ * not a simplification. `node_size_for` keeps a `kind` parameter anyway (a
+ * future kind-specific size has exactly one call site to change) but every
+ * kind currently maps to the same box.
  */
-export const CANVAS_NODE_W = 260;
-export const CANVAS_NODE_H = 200;
+export const CANVAS_NODE_W = 240;
+export const CANVAS_NODE_H = 108;
 
 export function node_size_for(_kind: Task["kind"]): NodeSize {
 	return { width: CANVAS_NODE_W, height: CANVAS_NODE_H };
@@ -112,7 +125,17 @@ function run_dagre(
 	// least 0.6x the card's width between siblings and a full card width
 	// between ranks, so the fixed `node_size_for` box (see above) always has
 	// visible breathing room around it, not just enough to avoid touching.
-	g.setGraph({ rankdir, nodesep: 170, ranksep: 300, marginx: 32, marginy: 32, acyclicer: "greedy" });
+	// Scaled with `CANVAS_NODE_W` (the smaller content-sized box) rather than
+	// hardcoded, so a future box resize doesn't silently drift below either
+	// minimum.
+	g.setGraph({
+		rankdir,
+		nodesep: Math.round(node_size.width * 0.65),
+		ranksep: Math.round(node_size.width * 1.15),
+		marginx: 32,
+		marginy: 32,
+		acyclicer: "greedy",
+	});
 
 	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
