@@ -2529,12 +2529,26 @@ button.outline-row {
    very low (a big/sparse forest's fit-to-viewport scale can fall well below
    0.1), so the dot never shrinks under a legible floor. The upper bound
    keeps a hugely boosted dot from visually eating into a same-rank
-   neighbour — `layout.ts`'s `nodesep` now reserves >=156px between
-   rank-mates, comfortably more headroom than the old tiny-dot design had. */
+   neighbour — `layout.ts`'s `nodesep` reserves comfortably more headroom
+   than the old tiny-dot design had.
+
+   **Root cause of the squashed-ellipse dot** (Tom's staging screenshot):
+   `border-radius: 50%` was applied directly to THIS element, whose real
+   layout box is 240x108 (non-square) — a single uniform `scale()` can never
+   turn a non-square rect into a circle, no matter what value it is. The fix
+   is to never make the non-square outer box itself circular: it goes fully
+   transparent/borderless at `map`, and the actual circular chrome moves onto
+   a dedicated `::before` square on `.canvas-node-head` (below) — a real
+   36x36 WORLD-space square, independent of the outer box's rectangular
+   dimensions, so `border-radius: 50%` on it is always a true circle at any
+   `scale()` value (uniform scale of a square is always a square). */
 .canvas-node[data-lod="map"] {
-	border-radius: 50%;
-	box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent);
-	transform: translate(-50%, -50%) scale(clamp(0.14, calc(2.2 / (260 * var(--canvas-scale, 1))), 0.55));
+	overflow: visible;
+	border: none;
+	border-radius: 0;
+	background: transparent;
+	box-shadow: none;
+	transform: translate(-50%, -50%) scale(clamp(0.14, calc(2.2 / (240 * var(--canvas-scale, 1))), 0.55));
 }
 
 .canvas-node[data-lod="map"] .canvas-node-head {
@@ -2543,6 +2557,28 @@ button.outline-row {
 	justify-content: center;
 	height: 100%;
 	padding: 0;
+}
+
+/* The circle itself — a fixed 36x36 WORLD-space square (see root-cause note
+   above), painted behind the ring (pseudo-elements paint before DOM
+   children) so it reads as the dot's card-ish background/border.
+   `:not(.canvas-node-fold)` — a fold kind gets its OWN rounded-rect pill
+   background below (`.canvas-node[data-lod="map"].canvas-node-fold`); without
+   this exclusion the circle would paint a redundant, overlapping dot inside
+   the pill. */
+.canvas-node[data-lod="map"]:not(.canvas-node-fold) .canvas-node-head::before {
+	content: "";
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	width: 36px;
+	height: 36px;
+	transform: translate(-50%, -50%);
+	border-radius: 50%;
+	background: var(--bg);
+	box-shadow:
+		0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent),
+		var(--shadow);
 }
 
 .canvas-node[data-lod="map"] .canvas-ring {
@@ -2570,8 +2606,12 @@ button.outline-row {
    avoid `overflow: hidden` clipping a bigger glyph down to a sliver. A
    bigger base scale than the dot's (`0.3` vs `0.14`) since a fold's title
    needs to stay legible even before the low-`--canvas-scale` boost kicks in;
-   the box is the SAME fixed 260x200 as every other node, so this too is
-   purely visual and never exceeds what `layout.ts` reserved for it. */
+   the box is the SAME fixed 240x108 as every other node. Unlike the plain
+   dot, this pill keeps its border-radius as `var(--radius)` (a rounded
+   RECTANGLE, not a circle) — a non-square shape has no "distorted ellipse"
+   failure mode, and `scale()` is already a single uniform value applied to
+   both axes here, so this is purely visual and never exceeds what
+   `layout.ts` reserved for it. */
 .canvas-node[data-lod="map"].canvas-node-fold {
 	display: flex;
 	flex-direction: column;
@@ -2583,7 +2623,7 @@ button.outline-row {
 	box-shadow: var(--shadow);
 	padding: 4px 6px;
 	overflow: hidden;
-	transform: translate(-50%, -50%) scale(clamp(0.3, calc(1.4 / (260 * var(--canvas-scale, 1))), 0.7));
+	transform: translate(-50%, -50%) scale(clamp(0.3, calc(1.4 / (240 * var(--canvas-scale, 1))), 0.7));
 }
 
 .canvas-node[data-lod="map"].canvas-node-fold .canvas-node-head {
