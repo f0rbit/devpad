@@ -73,6 +73,16 @@ export type Camera = {
 	readonly dispose: () => void;
 };
 
+/**
+ * `map`'s value here is only the DEFAULT/fallback — before a viewport and
+ * content bounds are both known (or for a caller that never sets them, e.g.
+ * a bare unit test), there's nothing to fit against. Once both are known,
+ * `map`'s effective scale is recomputed per camera instance by
+ * `compute_map_scale` below: "fit ALL content in the viewport" (relative
+ * zoom-to-forest), capped at `neighborhood` so a tiny project's map level
+ * isn't blown up past its next tier. `neighborhood`/`node`/`detail` stay
+ * fixed absolute scales.
+ */
 export const LEVEL_SCALE: Record<CameraLevel, number> = { map: 0.58, neighborhood: 0.82, node: 1, detail: 1.08 };
 
 const DEFAULT_ANIMATION_MS = 200;
@@ -82,8 +92,8 @@ const DEFAULT_PAN_STEP = 48;
 const DEFAULT_CLAMP_MARGIN = 48;
 const DEFAULT_FIT_MARGIN = 40;
 
-const MIN_SCALE = LEVEL_SCALE.map;
-const MAX_SCALE = LEVEL_SCALE.detail;
+/** Breathing room below the exact fit-to-forest scale so wheel-zoom-out doesn't clip content right at the edge. */
+const MIN_SCALE_HEADROOM = 0.9;
 
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
@@ -91,20 +101,20 @@ const lerp = (from: number, to: number, t: number): number => from + (to - from)
 
 const ease_out_cubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
-const nearest_level = (scale: number): CameraLevel =>
-	CAMERA_LEVELS.reduce((best, level) =>
-		Math.abs(LEVEL_SCALE[level] - scale) < Math.abs(LEVEL_SCALE[best] - scale) ? level : best,
-	);
+const compute_map_scale = (
+	bounds: ContentBounds | null,
+	viewport: ViewportSize,
+	margin: number,
+	top_inset: number,
+): number => {
+	if (!bounds || bounds.w <= 0 || bounds.h <= 0 || viewport.width <= 0 || viewport.height <= 0) return LEVEL_SCALE.map;
+	const usable_w = Math.max(1, viewport.width - margin * 2);
+	const usable_h = Math.max(1, viewport.height - margin * 2 - top_inset);
+	const fit = Math.min(usable_w / bounds.w, usable_h / bounds.h);
+	return Math.min(fit, LEVEL_SCALE.neighborhood);
+};
 
 const levels_by_scale_desc = CAMERA_LEVELS.toSorted((a, b) => LEVEL_SCALE[b] - LEVEL_SCALE[a]);
-
-const best_fit_level = (bounds: ContentBounds, viewport: ViewportSize, margin: number, top_inset = 0): CameraLevel => {
-	const usable_w = Math.max(0, viewport.width - margin * 2);
-	const usable_h = Math.max(0, viewport.height - margin * 2 - top_inset);
-	const fits = (level: CameraLevel) =>
-		bounds.w * LEVEL_SCALE[level] <= usable_w && bounds.h * LEVEL_SCALE[level] <= usable_h;
-	return levels_by_scale_desc.find(fits) ?? "map";
-};
 
 const clamp_transform = (
 	t: Transform,
@@ -157,6 +167,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		const [transform, set_transform] = createSignal<Transform>(initial_transform);
 		const [level, set_level] = createSignal<CameraLevel>(initial_level);
 		const [is_moving, set_is_moving] = createSignal(false);
+		const [map_scale, set_map_scale] = createSignal(LEVEL_SCALE.map);
 
 		let bounds: ContentBounds | null = null;
 		let focus: Point | null = null;
@@ -166,6 +177,32 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		let animation_frame: RafHandle | null = null;
 		let wheel_settle_timer: ReturnType<typeof setTimeout> | undefined;
 		let last_wheel_anchor: Point = { x: 0, y: 0 };
+
+		/** Effective scale for a level — `map` is the dynamic fit-to-forest scale, every other level is fixed. */
+		const level_scale = (target_level: CameraLevel): number =>
+			target_level === "map" ? map_scale() : LEVEL_SCALE[target_level];
+
+		const nearest_level = (scale: number): CameraLevel =>
+			CAMERA_LEVELS.reduce((best, candidate) =>
+				Math.abs(level_scale(candidate) - scale) < Math.abs(level_scale(best) - scale) ? candidate : best,
+			);
+
+		const best_fit_level = (
+			bounds_arg: ContentBounds,
+			viewport_arg: ViewportSize,
+			margin: number,
+			top_inset = 0,
+		): CameraLevel => {
+			const usable_w = Math.max(0, viewport_arg.width - margin * 2);
+			const usable_h = Math.max(0, viewport_arg.height - margin * 2 - top_inset);
+			const fits = (target_level: CameraLevel) =>
+				bounds_arg.w * level_scale(target_level) <= usable_w && bounds_arg.h * level_scale(target_level) <= usable_h;
+			return levels_by_scale_desc.find(fits) ?? "map";
+		};
+
+		const recompute_map_scale = () => {
+			set_map_scale(compute_map_scale(bounds, viewport, fit_margin, fit_top_inset_px));
+		};
 
 		const cancel_animation = () => {
 			if (animation_frame !== null) {
@@ -218,7 +255,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 
 		const zoom_to = (target_level: CameraLevel, anchor?: Point) => {
 			const t = transform();
-			const target_scale = LEVEL_SCALE[target_level];
+			const target_scale = level_scale(target_level);
 			const screen_point = anchor ?? { x: viewport.width / 2, y: viewport.height / 2 };
 			const world_point =
 				anchor !== undefined
@@ -242,11 +279,11 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 
 		const fit = (top_inset_px = fit_top_inset_px) => {
 			if (!bounds || bounds.w <= 0 || bounds.h <= 0) {
-				animate_to({ x: 0, y: top_inset_px / 2, scale: LEVEL_SCALE.map }, "map");
+				animate_to({ x: 0, y: top_inset_px / 2, scale: level_scale("map") }, "map");
 				return;
 			}
 			const target_level = best_fit_level(bounds, viewport, fit_margin, top_inset_px);
-			const scale = LEVEL_SCALE[target_level];
+			const scale = level_scale(target_level);
 			const target = {
 				x: viewport.width / 2 - (bounds.x + bounds.w / 2) * scale,
 				y: top_inset_px + (viewport.height - top_inset_px) / 2 - (bounds.y + bounds.h / 2) * scale,
@@ -268,7 +305,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			const anchor = { x: e.offsetX, y: e.offsetY };
 			last_wheel_anchor = anchor;
 			const delta = -e.deltaY * wheel_sensitivity;
-			const next_scale = clamp(t.scale + delta, MIN_SCALE, MAX_SCALE);
+			const next_scale = clamp(t.scale + delta, map_scale() * MIN_SCALE_HEADROOM, LEVEL_SCALE.detail);
 			const world_x = (anchor.x - t.x) / t.scale;
 			const world_y = (anchor.y - t.y) / t.scale;
 			apply_clamped({ x: anchor.x - world_x * next_scale, y: anchor.y - world_y * next_scale, scale: next_scale });
@@ -314,6 +351,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		// a self-sustaining reactive loop that eventually stack-overflows.
 		const set_content_bounds = (next_bounds: ContentBounds | null) => {
 			bounds = next_bounds;
+			recompute_map_scale();
 			apply_clamped(untrack(transform));
 		};
 		const set_focus = (point: Point | null) => {
@@ -321,6 +359,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		};
 		const set_viewport = (next_viewport: ViewportSize) => {
 			viewport = next_viewport;
+			recompute_map_scale();
 			apply_clamped(untrack(transform));
 		};
 

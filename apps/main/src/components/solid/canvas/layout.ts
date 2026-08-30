@@ -14,10 +14,20 @@ export const CANVAS_NODE_H = 124;
 
 export type NodeSize = { readonly width: number; readonly height: number };
 
+/**
+ * `hierarchy` is a structural edge derived from `parent_id` — never a row in
+ * `task_link` — so it isn't part of `TASK_LINK_KINDS`. It's added purely so
+ * dagre's LR ranking follows the goal -> milestone -> task -> subtask tree
+ * instead of treating every node as a disconnected island; the surface
+ * renders it as a thin/muted line with no arrowhead (containment, not a
+ * directional relationship).
+ */
+export type EdgeKind = TaskLink["kind"] | "hierarchy";
+
 export type LaidOutNode = { readonly task: Task; readonly x: number; readonly y: number };
 export type LaidOutEdge = {
 	readonly id: string;
-	readonly kind: TaskLink["kind"];
+	readonly kind: EdgeKind;
 	readonly points: readonly { x: number; y: number }[];
 	readonly src_id: string;
 	readonly dst_id: string;
@@ -29,12 +39,14 @@ export type GraphLayout = {
 };
 
 type EdgeLabel = {
-	kind: TaskLink["kind"];
+	kind: EdgeKind;
 	id: string;
 	src_id: string;
 	dst_id: string;
 	points?: { x: number; y: number }[];
 };
+
+const hierarchy_edge_id = (parent_id: string, child_id: string): string => `hierarchy:${parent_id}:${child_id}`;
 
 const EMPTY_BOUNDS: ContentBounds = { x: 0, y: 0, w: 0, h: 0 };
 export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_BOUNDS };
@@ -52,14 +64,34 @@ export function layout_graph(
 	links: readonly TaskLink[],
 	node_size: NodeSize = { width: CANVAS_NODE_W, height: CANVAS_NODE_H },
 ): GraphLayout {
-	const g = new dagre.graphlib.Graph<GraphLabel, NodeLabel, EdgeLabel>();
-	g.setGraph({ rankdir: "LR", nodesep: 48, ranksep: 96, marginx: 32, marginy: 32 });
+	// `multigraph: true` — a hierarchy edge and a task_link edge can share the
+	// same (parent, child) pair, and dagre's default single-edge graph would
+	// silently overwrite one with the other. `acyclicer: "greedy"` is a
+	// defensive no-op for the hierarchy edges specifically (a cycle is
+	// impossible via `parent_id` — guarded elsewhere) but keeps dagre robust
+	// if a future edge source ever introduces one.
+	const g = new dagre.graphlib.Graph<GraphLabel, NodeLabel, EdgeLabel>({ multigraph: true });
+	g.setGraph({ rankdir: "LR", nodesep: 48, ranksep: 96, marginx: 32, marginy: 32, acyclicer: "greedy" });
 
 	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
+
+	// Hierarchy edges (parent -> child) first, so dagre's rank assignment
+	// follows the goal/milestone/task tree — without these, tasks with no
+	// `task_link` are disconnected islands dagre ranks arbitrarily.
+	for (const task of tasks) {
+		if (!task.parent_id || !id_set.has(task.parent_id)) continue;
+		const id = hierarchy_edge_id(task.parent_id, task.id);
+		g.setEdge(task.parent_id, task.id, { kind: "hierarchy", id, src_id: task.parent_id, dst_id: task.id }, id);
+	}
 	for (const link of links) {
 		if (!link.dst_id || !id_set.has(link.src_id) || !id_set.has(link.dst_id)) continue; // edge culling — dangling/foreign links never reach the layout
-		g.setEdge(link.src_id, link.dst_id, { kind: link.kind, id: link.id, src_id: link.src_id, dst_id: link.dst_id });
+		g.setEdge(
+			link.src_id,
+			link.dst_id,
+			{ kind: link.kind, id: link.id, src_id: link.src_id, dst_id: link.dst_id },
+			link.id,
+		);
 	}
 	dagre.layout(g);
 

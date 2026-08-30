@@ -2326,6 +2326,11 @@ button.outline-row {
 	opacity: 0.75;
 }
 
+.canvas-edge-hierarchy {
+	stroke: var(--border);
+	opacity: 0.45;
+}
+
 .canvas-edge-blocks {
 	stroke: var(--error-fg);
 	stroke-dasharray: 7 5;

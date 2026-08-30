@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
-import { CAMERA_LEVELS, type CameraLevel } from "../../apps/main/src/components/solid/canvas/camera";
+import { CAMERA_LEVELS, LEVEL_SCALE, type CameraLevel } from "../../apps/main/src/components/solid/canvas/camera";
 import { E2E_CANVAS_PROJECT_ID } from "./fixtures/canvas-ids";
 import { E2E_OUTLINE_PROJECT_ID, E2E_SESSION_ID } from "./fixtures/outline-ids";
 
@@ -46,6 +46,16 @@ const openCanvas = async (page: Page, project_id: string): Promise<Locator> => {
 // swap landed.
 const anyNodeAtLevel = (page: Page, level: CameraLevel) =>
 	page.locator(`[data-canvas-node][data-lod="${level}"]:visible`).first();
+
+/** `map`'s scale is now relative — "fit the whole forest" — so it isn't a
+ * fixed constant per fixture. Read the live scale straight off `.canvas-world`'s
+ * inline transform rather than assuming `LEVEL_SCALE.map`. */
+const readWorldScale = async (page: Page): Promise<number> => {
+	const transform = await page.locator(".canvas-world").getAttribute("style");
+	const match = transform?.match(/scale\(([\d.]+)\)/);
+	if (!match?.[1]) throw new Error("could not read .canvas-world scale from style attribute");
+	return Number(match[1]);
+};
 
 /**
  * Same cold-hydration retry pattern as `outline-zoom.spec.ts`'s
@@ -105,25 +115,28 @@ test.describe("canvas home — P2.5 verification", () => {
 			await inject_test_user(context);
 			const viewport = await openCanvas(page, E2E_OUTLINE_PROJECT_ID);
 
-			// Pin to a known starting scale (map, 0.58) via the HUD before driving
-			// the wheel — `fit()`'s initial scale otherwise depends on viewport size.
+			// Pin to a known starting scale (map — dynamic "fit the whole forest"
+			// scale for this fixture) via the HUD before driving the wheel —
+			// `fit()`'s initial scale otherwise depends on viewport size.
 			await clickLevel(page, "map");
 
 			const box = await viewport.boundingBox();
 			if (!box) throw new Error("canvas viewport has no bounding box");
 			await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 
-			// Each step's deltaY lands the wheel's `on_wheel` math (delta = -deltaY *
-			// 0.0012) on the NEXT level's exact target scale, so `nearest_level`'s
-			// settle picks it deterministically rather than approximately.
-			const steps: Array<{ readonly deltaY: number; readonly level: CameraLevel }> = [
-				{ deltaY: -200, level: "neighborhood" }, // 0.58 -> 0.82
-				{ deltaY: -150, level: "node" }, // 0.82 -> 1.00
-				{ deltaY: -67, level: "detail" }, // 1.00 -> 1.08
-			];
-			for (const step of steps) {
-				await page.mouse.wheel(0, step.deltaY);
-				await expect(anyNodeAtLevel(page, step.level)).toBeVisible({ timeout: 5000 });
+			// `map`'s scale is now relative (fit-to-forest), not the fixed 0.58 of
+			// old — read it live and derive each step's deltaY off the WHEEL_SENSITIVITY
+			// math (`delta = -deltaY * 0.0012`) so `nearest_level`'s settle lands on
+			// the next level's exact target scale deterministically.
+			const WHEEL_SENSITIVITY = 0.0012;
+			let current_scale = await readWorldScale(page);
+			const targets: readonly CameraLevel[] = ["neighborhood", "node", "detail"];
+			for (const level of targets) {
+				const target_scale = LEVEL_SCALE[level];
+				const deltaY = -(target_scale - current_scale) / WHEEL_SENSITIVITY;
+				await page.mouse.wheel(0, deltaY);
+				await expect(anyNodeAtLevel(page, level)).toBeVisible({ timeout: 5000 });
+				current_scale = target_scale;
 			}
 
 			// A big reverse scroll snaps straight back down to the min level.
@@ -137,27 +150,82 @@ test.describe("canvas home — P2.5 verification", () => {
 			await inject_test_user(context);
 			await page.setViewportSize({ width: 900, height: 600 });
 			await openCanvas(page, E2E_CANVAS_PROJECT_ID);
-			await clickLevel(page, "map");
+			// `map` is now the fit-the-whole-forest tier by design (everything
+			// visible is the point) — culling only shows up at a tier with a fixed,
+			// larger-than-fit absolute scale, so this test zooms to `detail`.
+			await clickLevel(page, "detail");
 
 			const total = await page.locator("[data-canvas-node]").count();
 			expect(total).toBe(500);
 
-			// The visible count only settles once the `ResizeObserver` has
-			// measured the real viewport and `visibleIds` has recomputed off it
-			// (before that, `visibleIds()` is `null` — "render everything") — poll
-			// rather than assert immediately.
+			// Read total/visible/hidden ATOMICALLY in one evaluate — the culling
+			// recompute (ResizeObserver settle + spatial-index requery) can keep
+			// shifting counts across separate round-trips, so two split reads can
+			// race each other. Poll until two consecutive snapshots agree — not
+			// just "below half" — before asserting the invariant.
+			const counts = () =>
+				page.$$eval("[data-canvas-node]", (els) => {
+					const hidden = els.filter((el) => (el as HTMLElement).style.display === "none").length;
+					return { total: els.length, hidden, visible: els.length - hidden };
+				});
+
+			let previous = await counts();
 			await expect
-				.poll(async () => page.locator("[data-canvas-node]:visible").count(), { timeout: 5000 })
-				.toBeLessThan(total / 2);
+				.poll(
+					async () => {
+						const current = await counts();
+						const stable = current.visible < total / 2 && current.visible === previous.visible;
+						previous = current;
+						return stable;
+					},
+					{ timeout: 5000 },
+				)
+				.toBe(true);
 
+			const final = await counts();
+			expect(final.visible).toBeGreaterThan(0);
+			expect(final.hidden).toBe(final.total - final.visible);
+		});
+	});
+
+	test.describe("hierarchy edges + fit-to-forest map level", () => {
+		test("a deep project renders hierarchy edges and fit() frames every node within the viewport at map level", async ({
+			page,
+			context,
+		}) => {
+			await inject_test_user(context);
+			await page.setViewportSize({ width: 1280, height: 800 });
+			const viewport = await openCanvas(page, E2E_CANVAS_PROJECT_ID);
+			await viewport.focus();
+
+			await clickLevel(page, "map");
+			const hierarchy_edge_count = await page.locator('[data-edge-kind="hierarchy"]').count();
+			expect(hierarchy_edge_count).toBeGreaterThan(0);
+
+			// `0` re-fits (same tier, but re-centers/re-scales to the CURRENT
+			// content bounds) — every node should land inside the viewport with no
+			// culling once framed at the fit-to-forest scale.
+			await viewport.press("0");
+			await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
+
+			const total = await page.locator("[data-canvas-node]").count();
 			const visible_count = await page.locator("[data-canvas-node]:visible").count();
-			expect(visible_count).toBeGreaterThan(0);
+			expect(visible_count).toBe(total);
 
-			const hidden_count = await page.$$eval(
-				"[data-canvas-node]",
-				(els) => els.filter((el) => (el as HTMLElement).style.display === "none").length,
+			const box = await viewport.boundingBox();
+			if (!box) throw new Error("canvas viewport has no bounding box");
+			const node_boxes = await page.locator("[data-canvas-node]:visible").evaluateAll((els) =>
+				els.map((el) => {
+					const rect = el.getBoundingClientRect();
+					return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+				}),
 			);
-			expect(hidden_count).toBe(total - visible_count);
+			for (const node_box of node_boxes) {
+				expect(node_box.x + node_box.width).toBeGreaterThanOrEqual(box.x);
+				expect(node_box.x).toBeLessThanOrEqual(box.x + box.width);
+				expect(node_box.y + node_box.height).toBeGreaterThanOrEqual(box.y);
+				expect(node_box.y).toBeLessThanOrEqual(box.y + box.height);
+			}
 		});
 	});
 
