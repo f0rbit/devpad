@@ -77,6 +77,7 @@ import type {
 	HookActionPublic,
 	HookTrigger,
 	InterfaceDiffClass,
+	ProjectGraphResponse,
 	PushDocRequest,
 	PushInterfaceReportRequest,
 	RequestCheckpointRequest,
@@ -501,6 +502,14 @@ export class ApiClient {
 					body: { ...project, deleted: true },
 				}),
 			),
+
+		/**
+		 * Whole-project graph read (v2.5, canvas home task P2.2) — every task
+		 * in the project (fold kinds included), every in-project task_link,
+		 * and batched rollups. Backs the canvas' spatial view of the project.
+		 */
+		graph: (project_id: string): Promise<ApiResult<ProjectGraphResponse>> =>
+			wrap(() => this.clients.projects.get<ProjectGraphResponse>(`/projects/${project_id}/graph`)),
 	};
 
 	/**

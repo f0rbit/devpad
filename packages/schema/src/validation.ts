@@ -1,3 +1,4 @@
+import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
 	COMPLETED_VIA_VALUES,
@@ -8,6 +9,8 @@ import {
 	SIGNOFF_DECISIONS,
 	SIGNOFF_SUBJECT_KINDS,
 	STAGE_EVENT_KINDS,
+	task,
+	task_link,
 	TASK_EVENT_ACTORS,
 	TASK_EVENT_KINDS,
 	TASK_KINDS,
@@ -678,3 +681,23 @@ export type UpsertHook = z.infer<typeof upsert_hook>;
 /** v2.4 (B3.4) — the settings panel's enable/disable toggle; deliberately NOT `upsert_hook` (see `registry.ts`'s `set_hook_enabled`). */
 export const toggle_hook_enabled = z.object({ enabled: z.boolean() });
 export type ToggleHookEnabled = z.infer<typeof toggle_hook_enabled>;
+
+// v2.5 (canvas home, task P2.2) — whole-project graph read response.
+// `createSelectSchema` derives the row shapes straight from the `task`/
+// `task_link` Drizzle tables (single source of truth: the DB schema, not a
+// hand-duplicated shape that could drift from it) rather than re-declaring
+// every column by hand like `upsert_task_link` does for its narrower input.
+export const project_graph_task = createSelectSchema(task);
+export const project_graph_link = createSelectSchema(task_link);
+export const project_graph_rollup_counts = z.object({
+	direct_done: z.number().int(),
+	direct_total: z.number().int(),
+	subtree_done: z.number().int(),
+	subtree_total: z.number().int(),
+});
+export const project_graph_response = z.object({
+	tasks: z.array(project_graph_task),
+	links: z.array(project_graph_link),
+	rollups: z.record(z.string(), project_graph_rollup_counts),
+});
+export type ProjectGraphResponse = z.infer<typeof project_graph_response>;

@@ -1,5 +1,5 @@
-import { action, github, milestones, projects, tags } from "@devpad/core/services";
-import { save_config_request, upsert_project } from "@devpad/schema";
+import { action, github, graph, milestones, projects, tags } from "@devpad/core/services";
+import { project_graph_response, save_config_request, upsert_project } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
@@ -354,6 +354,35 @@ app.get("/:id/milestones/lens", requireAuth, async (c) => {
 	const result = await milestones.getMilestoneLens(db, project_result.value.id, depth);
 	if (!result.ok) return c.json({ error: result.error.kind }, 500);
 	return c.json(result.value);
+});
+
+/**
+ * Whole-project graph read (v2.5, canvas home task P2.2) — every task in the
+ * project (fold kinds included), every in-project `task_link`, and batched
+ * rollups. Response validated against `project_graph_response` (Zod,
+ * derived from the `task`/`task_link` Drizzle tables) so the wire shape
+ * can't silently drift from the DB schema it's read from.
+ */
+app.get("/:id/graph", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const project_id = c.req.param("id");
+
+	if (!project_id) return c.json({ error: "Missing project ID" }, 400);
+
+	const result = await graph.project_graph(db, { project_id, owner_id: auth_user.id });
+	if (!result.ok) {
+		if (result.error.kind === "not_found") return c.json({ error: "Project not found" }, 404);
+		if (result.error.kind === "project_graph_capped") {
+			return c.json({ error: result.error.message, cap: result.error.cap, count: result.error.count }, 413);
+		}
+		return c.json({ error: result.error.kind }, 500);
+	}
+
+	const parsed = project_graph_response.safeParse(result.value);
+	if (!parsed.success) return c.json({ error: "project_graph_response validation failed" }, 500);
+	return c.json(parsed.data);
 });
 
 app.get("/repos", requireAuth, async (c) => {
