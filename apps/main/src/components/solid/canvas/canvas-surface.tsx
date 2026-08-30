@@ -181,9 +181,9 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 
 	// Fire-and-forget, last-write-wins — a failed save just leaves the pin
 	// live in memory until the next successful debounce tick or page reload.
-	const save_view_state = (layout: ProjectViewLayoutInput) => {
+	const save_view_state = (next_layout: ProjectViewLayoutInput) => {
 		void getBrowserClient()
-			.projects.putViewState(props.projectId, layout)
+			.projects.putViewState(props.projectId, next_layout)
 			.then((result) => {
 				if (!result.ok) return;
 			});
@@ -249,7 +249,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		// synthesized `click` when its up-target differs from its down-target
 		// — so capturing on a toolbar-button pointerdown silently eats every
 		// HUD click.
-		if ((e.target as Element).closest("[data-canvas-node], .canvas-toolbar")) return;
+		// P3.3's reset button lives in `.canvas-layout-status` — a separate
+		// overlay from `.canvas-toolbar` (see camera.ts's documented pointer-
+		// capture gotcha: ANY toolbar/HUD control needs this same exclusion, or
+		// `setPointerCapture` below re-targets its pointerup and Chromium
+		// silently swallows the synthesized click).
+		if ((e.target as Element).closest("[data-canvas-node], .canvas-toolbar, .canvas-layout-status")) return;
 		dragging = true;
 		camera.on_pointer_down(e);
 		(e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -293,7 +298,13 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		setDragPreview(null);
 		node_drag = null;
 	};
-	onCleanup(() => { window.removeEventListener("pointermove", on_node_drag_move); });
+	// `typeof window` guard — this cleanup runs unconditionally at dispose
+	// (including during Astro's server-side render pass, where `window`
+	// doesn't exist), regardless of whether a drag ever actually attached
+	// the listener.
+	onCleanup(() => {
+		if (typeof window !== "undefined") window.removeEventListener("pointermove", on_node_drag_move);
+	});
 
 	const on_node_pointer_down = (id: string, e: PointerEvent) => {
 		const node = placedLayout().nodes.find((n) => n.task.id === id);
@@ -400,19 +411,10 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 							</>
 						)}
 					</For>
-					<Show when={currentTitle()} fallback={<ChevronRight class="canvas-icon" size={12} aria-hidden="true" />}>
-						{(title) => (
-							<>
-								<ChevronRight class="canvas-icon" size={12} aria-hidden="true" />
-								<span class="canvas-crumb-current" data-testid="canvas-crumb-current">
-									{title()}
-								</span>
-							</>
-						)}
-					</Show>
-					<Show when={!currentTitle()}>
-						<span class="canvas-crumb-current">canvas home</span>
-					</Show>
+					<ChevronRight class="canvas-icon" size={12} aria-hidden="true" />
+					<span class="canvas-crumb-current" data-testid="canvas-crumb-current">
+						{currentTitle() ?? "canvas home"}
+					</span>
 				</div>
 				<div class="canvas-zoom-hud" role="group" aria-label="Semantic zoom level">
 					<For each={CAMERA_LEVELS}>
