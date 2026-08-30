@@ -2160,6 +2160,23 @@ button.outline-row {
 	font-weight: 600;
 }
 
+/* P3.4 — breadcrumb crumbs are buttons now (semantic travel lets you click
+   back up the ancestor chain), styled to read the same as the old plain
+   spans. */
+.canvas-crumb-btn {
+	border: 0;
+	background: none;
+	padding: 0;
+	color: var(--fg-muted);
+	cursor: pointer;
+	font: inherit;
+}
+
+.canvas-crumb-btn:hover {
+	color: var(--fg);
+	text-decoration: underline;
+}
+
 .canvas-zoom-hud {
 	display: flex;
 	align-items: center;
@@ -2436,11 +2453,94 @@ button.outline-row {
 	min-height: 120px;
 }
 
+.canvas-node-detail-desc {
+	margin: 10px 0 0;
+	color: var(--fg-muted);
+	font-size: 12px;
+	line-height: 1.5;
+}
+
+.canvas-node-sparkline {
+	width: 100%;
+	height: 32px;
+	color: var(--accent);
+}
+
+/* P3.2 — projection chips (SDLC stage / waiting-on-you / docs status / pin / agent-created). */
+.canvas-node-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+	margin-bottom: 8px;
+}
+
+.canvas-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	padding: 2px 7px;
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+.canvas-chip-waiting {
+	border-color: color-mix(in oklch, var(--warning-fg) 45%, var(--border));
+	color: var(--warning-fg);
+}
+
+.canvas-chip-docs.canvas-chip {
+	color: var(--info-fg);
+}
+
+.canvas-chip-pin,
+.canvas-chip-agent {
+	border-color: color-mix(in oklch, var(--accent) 40%, var(--border));
+	color: var(--accent);
+}
+
+/* P3.3 — pinned-node indicator dot, matching the UX contract's `.node.is_pinned::after`. */
+.canvas-node-pinned::after {
+	content: "";
+	position: absolute;
+	top: -5px;
+	right: 12px;
+	width: 7px;
+	height: 7px;
+	border: 1.5px solid var(--accent);
+	border-radius: 50%;
+	background: var(--bg);
+}
+
+/* One-time flash when an agent-created node's default beside-parent
+   placement first enters view — dismissed by `canvas-surface.tsx` after
+   ~3.6s, never re-triggered for the same session. */
+.canvas-node-cue {
+	animation: canvas-node-cue-flash 1.8s ease-out 2;
+}
+
+@keyframes canvas-node-cue-flash {
+	0%,
+	100% {
+		box-shadow: var(--shadow);
+	}
+	50% {
+		box-shadow: 0 0 0 4px color-mix(in oklch, var(--accent) 22%, transparent);
+	}
+}
+
 .canvas-layout-status {
 	position: absolute;
 	z-index: 8;
 	left: 20px;
 	bottom: 19px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
 	margin: 0;
 	color: var(--fg-subtle);
 	font-size: 11px;
@@ -2450,6 +2550,23 @@ button.outline-row {
 .canvas-layout-status strong {
 	color: var(--fg-muted);
 	font-weight: 600;
+}
+
+.canvas-reset-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	border: 0;
+	background: none;
+	padding: 0;
+	color: var(--text-link, var(--accent));
+	cursor: pointer;
+	font-family: var(--font-mono);
+	font-size: 9px;
+}
+
+.canvas-reset-btn:hover {
+	text-decoration: underline;
 }
 
 .canvas-hintbar {

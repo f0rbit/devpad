@@ -1,6 +1,6 @@
 import type { Task, TaskLink } from "@devpad/schema";
 import { describe, expect, test } from "bun:test";
-import { CANVAS_NODE_H, CANVAS_NODE_W, EMPTY_LAYOUT, layout_graph } from "./layout";
+import { apply_view_overrides, CANVAS_NODE_H, CANVAS_NODE_W, EMPTY_LAYOUT, layout_graph } from "./layout";
 
 const make_task = (id: string, overrides: Partial<Task> = {}): Task =>
 	({
@@ -93,5 +93,51 @@ describe("layout_graph", () => {
 			expect(node.y - CANVAS_NODE_H / 2).toBeGreaterThanOrEqual(bounds.y);
 			expect(node.y + CANVAS_NODE_H / 2).toBeLessThanOrEqual(bounds.y + bounds.h);
 		}
+	});
+});
+
+describe("apply_view_overrides", () => {
+	test("a pinned task takes its pin position, not dagre's", () => {
+		const tasks = [make_task("a"), make_task("b")];
+		const layout = layout_graph(tasks, [make_link("a", "b")]);
+
+		const overridden = apply_view_overrides(layout, undefined, { b: { x: 999, y: 888 } });
+
+		const b = overridden.nodes.find((n) => n.task.id === "b");
+		expect(b?.x).toBe(999);
+		expect(b?.y).toBe(888);
+		expect(overridden.programmaticIds.has("b")).toBe(false);
+	});
+
+	test("an unpinned agent-created task is placed beside its resolved parent position", () => {
+		const tasks = [make_task("parent"), make_task("child", { parent_id: "parent", created_by: "api" })];
+		const layout = layout_graph(tasks, []);
+
+		const overridden = apply_view_overrides(layout);
+
+		const parent = overridden.nodes.find((n) => n.task.id === "parent");
+		const child = overridden.nodes.find((n) => n.task.id === "child");
+		expect(overridden.programmaticIds.has("child")).toBe(true);
+		expect(child?.x).toBeGreaterThan(parent?.x ?? 0);
+	});
+
+	test("pinning the parent drags an unpinned agent-created child along with it", () => {
+		const tasks = [make_task("parent"), make_task("child", { parent_id: "parent", created_by: "api" })];
+		const layout = layout_graph(tasks, []);
+
+		const overridden = apply_view_overrides(layout, undefined, { parent: { x: 500, y: 500 } });
+
+		const child = overridden.nodes.find((n) => n.task.id === "child");
+		expect(child?.x).toBeGreaterThan(500);
+		expect(child?.y).toBeGreaterThan(500);
+	});
+
+	test("a user-created task with no pin keeps its dagre position", () => {
+		const tasks = [make_task("parent"), make_task("child", { parent_id: "parent", created_by: "user" })];
+		const layout = layout_graph(tasks, []);
+
+		const overridden = apply_view_overrides(layout);
+
+		expect(overridden.programmaticIds.size).toBe(0);
 	});
 });
