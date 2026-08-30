@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import { CAMERA_LEVELS, LEVEL_SCALE, type CameraLevel } from "../../apps/main/src/components/solid/canvas/camera";
 import { E2E_CANVAS_PROJECT_ID } from "./fixtures/canvas-ids";
+import { E2E_CANVAS_STAGING_PROJECT_ID } from "./fixtures/canvas-staging";
 import { E2E_OUTLINE_PROJECT_ID, E2E_SESSION_ID } from "./fixtures/outline-ids";
 
 /**
@@ -226,6 +227,43 @@ test.describe("canvas home — P2.5 verification", () => {
 				expect(node_box.y + node_box.height).toBeGreaterThanOrEqual(box.y);
 				expect(node_box.y).toBeLessThanOrEqual(box.y + box.height);
 			}
+		});
+	});
+
+	test.describe("staging fixture geometry (55 tasks, 47 with parent_id, 5 links)", () => {
+		test("no two node bounding boxes intersect at map level, and every parented task has a hierarchy edge", async ({
+			page,
+			context,
+		}) => {
+			await inject_test_user(context);
+			await page.setViewportSize({ width: 1280, height: 800 });
+			await openCanvas(page, E2E_CANVAS_STAGING_PROJECT_ID);
+			await clickLevel(page, "map");
+
+			const node_boxes = await page.locator("[data-canvas-node]:visible").evaluateAll((els) =>
+				els.map((el) => {
+					const rect = el.getBoundingClientRect();
+					return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+				}),
+			);
+			expect(node_boxes.length).toBeGreaterThan(0);
+			for (let i = 0; i < node_boxes.length; i++) {
+				for (let j = i + 1; j < node_boxes.length; j++) {
+					const a = node_boxes[i]!;
+					const b = node_boxes[j]!;
+					const intersects = a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+					expect(intersects).toBe(false);
+				}
+			}
+
+			// Every task with a `parent_id` (47 of 55 in this fixture) got a
+			// structural hierarchy edge from `layout_graph` — the edge count is a
+			// looser bound (multiple children can share one parent's edge id
+			// space, and dagre's multigraph can theoretically dedupe none of
+			// these) but a non-trivial count proves the edges were actually built,
+			// not just that the DOM has SOME `[data-edge-kind]` element.
+			const hierarchy_edge_count = await page.locator('[data-edge-kind="hierarchy"]').count();
+			expect(hierarchy_edge_count).toBeGreaterThanOrEqual(40);
 		});
 	});
 

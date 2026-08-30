@@ -2,6 +2,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { E2E_CANVAS_PROJECT_ID, seed_canvas_fixtures } from "./fixtures/canvas";
 import { E2E_CANVAS_P3_PROJECT_ID, seed_canvas_p3_fixtures } from "./fixtures/canvas-p3";
+import { E2E_CANVAS_STAGING_PROJECT_ID, seed_canvas_staging_fixtures } from "./fixtures/canvas-staging";
 import { E2E_DENSITY_PROJECT_ID, seed_density_fixtures } from "./fixtures/density";
 import { E2E_OUTLINE_PROJECT_ID, seed_outline_fixtures } from "./fixtures/outline";
 import { E2E_PROJECT_ID, open_test_db, seed_pipeline_fixtures } from "./fixtures/pipelines";
@@ -44,6 +45,10 @@ export async function seed(): Promise<void> {
 		console.log(`[e2e seed] seeded canvas-home synthetic fixtures into ${db_file} (project=${E2E_CANVAS_PROJECT_ID})`);
 		await seed_canvas_p3_fixtures(db);
 		console.log(`[e2e seed] seeded canvas-home P3 fixtures into ${db_file} (project=${E2E_CANVAS_P3_PROJECT_ID})`);
+		await seed_canvas_staging_fixtures(db);
+		console.log(
+			`[e2e seed] seeded canvas-home staging-shape fixtures into ${db_file} (project=${E2E_CANVAS_STAGING_PROJECT_ID})`,
+		);
 	} finally {
 		sqlite.close();
 	}

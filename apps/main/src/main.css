@@ -2134,20 +2134,23 @@ button.outline-row {
 	min-height: 550px;
 }
 
-/* BLOCKER #1 — canvas|list segmented toggle, same visual weight as the
-   canvas surface's own `.canvas-zoom-hud`/`.canvas-level-btn` (kept as
-   plain SSR `<a>`s, not a client-JS tab component — this switches which
-   surface the SERVER rendered, not a panel within one page). */
+/* canvas|list segmented toggle — same `bg-subtle` treatment (segmented
+   control on the muted `--bg-alt` surface; the design system has no literal
+   `--bg-subtle` token, `--bg-alt` is its closest "subtle surface"
+   equivalent) as `.canvas-zoom-hud` below, for visual consistency between
+   the two HUD segmented controls. Reads as a real tab strip
+   (`role="tablist"`/`role="tab"`/`aria-selected`, see index.astro) even
+   though it's plain SSR `<a>`s, not `@f0rbit/ui`'s client-JS-only `Tabs`
+   (which has no `href`/navigation support — wrong tool for a control that
+   swaps which SERVER-rendered surface loads, not a panel within one page). */
 .canvas-view-toggle {
 	display: inline-flex;
 	align-items: center;
 	gap: 2px;
 	margin: 0 0 0.75rem;
-	border: 1px solid var(--border);
 	border-radius: 10px;
-	background: color-mix(in oklch, var(--bg) 93%, transparent);
+	background: var(--bg-alt);
 	padding: 3px;
-	box-shadow: var(--shadow);
 }
 
 .canvas-view-toggle-btn {
@@ -2165,10 +2168,11 @@ button.outline-row {
 	color: var(--fg);
 }
 
-.canvas-view-toggle-btn[aria-current="page"],
-.canvas-view-toggle-btn[aria-current="page"]:hover {
-	background: var(--fg);
-	color: var(--bg);
+.canvas-view-toggle-btn[aria-selected="true"],
+.canvas-view-toggle-btn[aria-selected="true"]:hover {
+	background: var(--bg);
+	color: var(--fg);
+	box-shadow: var(--shadow);
 }
 
 .project-home-link {
@@ -2264,10 +2268,8 @@ button.outline-row {
 	align-items: center;
 	gap: 2px;
 	padding: 3px;
-	border: 1px solid var(--border);
 	border-radius: 10px;
-	background: color-mix(in oklch, var(--bg) 93%, transparent);
-	box-shadow: var(--shadow);
+	background: var(--bg-alt);
 }
 
 .canvas-level-btn {
@@ -2289,8 +2291,9 @@ button.outline-row {
 
 .canvas-level-btn-active,
 .canvas-level-btn-active:hover {
-	background: var(--fg);
-	color: var(--bg);
+	background: var(--bg);
+	color: var(--fg);
+	box-shadow: var(--shadow);
 }
 
 .canvas-world {
@@ -2312,23 +2315,48 @@ button.outline-row {
 	}
 }
 
+/* ROOT CAUSE of "edges aren't visible at all": `@f0rbit/ui`'s reset sets
+   `svg { max-width: 100% }` globally. `.canvas-world` has no intrinsic size
+   of its own (every child, including this svg, is `position: absolute`, so
+   an absolutely-positioned parent with only absolutely-positioned children
+   never gets a non-zero auto size) — so `max-width: 100%` resolved against
+   that 0-width containing block clamped this svg's computed width to a
+   literal 0, no matter what `width` value this rule set (max-width always
+   wins over width when it's the smaller constraint, `!important` on `width`
+   included — only overriding `max-width` itself fixes it). A 0-width `<svg>`
+   root then clips ALL its path content on that axis even with
+   `overflow: visible` (a replaced-element sizing quirk), so every edge
+   silently failed to paint. `max-width: none` + an oversized fixed box
+   sidesteps the whole auto-sizing question. */
 .canvas-edges {
 	position: absolute;
-	inset: 0;
+	left: 0;
+	top: 0;
+	width: 200000px;
+	height: 200000px;
+	max-width: none;
 	overflow: visible;
 	pointer-events: none;
 }
 
+/* `vector-effect: non-scaling-stroke` keeps the stroke a constant SCREEN
+   width regardless of `.canvas-world`'s camera-level `scale()` — without it
+   a 1.5px stroke shrinks below 1 physical pixel at `map`'s ~0.4-0.6 scale
+   and becomes invisible (the root cause of "connecting lines aren't
+   visible"). Link edges are 2px for extra contrast; hierarchy overrides
+   narrower per the UX contract (containment, not a directional relation). */
 .canvas-edge {
 	fill: none;
-	stroke: var(--border);
-	stroke-width: 1.5;
-	opacity: 0.75;
+	stroke: var(--fg-subtle);
+	stroke-width: 2;
+	vector-effect: non-scaling-stroke;
+	opacity: 0.9;
 }
 
 .canvas-edge-hierarchy {
-	stroke: var(--border);
-	opacity: 0.45;
+	stroke: var(--fg-muted);
+	stroke-width: 1.5;
+	opacity: 0.6;
 }
 
 .canvas-edge-blocks {
@@ -2356,6 +2384,15 @@ button.outline-row {
 	stroke-dasharray: 8 2 2 2;
 }
 
+/* Declared last so it wins over any kind-specific stroke above regardless of
+   class order on the element (selected always reads as "the important one"). */
+.canvas-edge-selected {
+	stroke: var(--accent);
+	stroke-dasharray: none;
+	opacity: 1;
+	stroke-width: 3;
+}
+
 .canvas-arrowhead {
 	fill: var(--border);
 }
@@ -2378,6 +2415,9 @@ button.outline-row {
 
 /* Canvas home (P2.3) node card — .plans/canvas-mock.html's `.node` treatment,
    scoped `.canvas-*` (kept separate from the ephemeral `.lens-*` overlay). */
+/* Width/height are set inline by `canvas-node.tsx` from `layout.ts`'s
+   `node_size_for` (single source shared with dagre's spacing/edge-clipping
+   math) — this 250px is only a pre-hydration/no-JS fallback. */
 .canvas-node {
 	position: absolute;
 	width: 250px;
@@ -2473,11 +2513,12 @@ button.outline-row {
 /* LOD tiers (P2.4) — map collapses to a dot/pill, neighborhood is a compact
    icon-only-kind card, node/detail are the full card. Keyed off the
    per-node `data-lod` attribute (not an ancestor `.canvas-world` class) so
-   nodes mid-debounce never disagree with a stale ancestor class. */
+   nodes mid-debounce never disagree with a stale ancestor class. Width and
+   height come from the JS `size` inline style (`layout.ts`'s
+   `node_size_for`) — these rules are cosmetic only (shape/padding/font),
+   never dimensions, so the rendered box can never disagree with what dagre
+   reserved for it. */
 .canvas-node[data-lod="map"] {
-	width: 20px;
-	min-height: 20px;
-	height: 20px;
 	border-radius: 50%;
 	box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent);
 }
@@ -2498,21 +2539,56 @@ button.outline-row {
 }
 
 .canvas-node[data-lod="map"] .canvas-node-text {
-	position: absolute;
-	left: 50%;
-	top: calc(100% + 4px);
-	flex: none;
-	width: max-content;
-	transform: translateX(-50%);
-	text-align: center;
+	display: none;
 }
 
 .canvas-node[data-lod="map"] .canvas-node-kind {
 	display: none;
 }
 
+/* Fold kinds (goal/milestone) get a taller rectangular pill INSTEAD of the
+   plain dot — the title renders inside its own allocated box (contained by
+   `overflow: hidden` + the title's existing ellipsis truncation) rather than
+   floating below the box via absolute positioning, which used to escape
+   whatever space dagre reserved and draw over whatever card sat below it. */
+.canvas-node[data-lod="map"].canvas-node-fold {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 3px;
+	border-radius: var(--radius);
+	background: var(--bg);
+	box-shadow: var(--shadow);
+	padding: 4px 6px;
+	overflow: hidden;
+}
+
+.canvas-node[data-lod="map"].canvas-node-fold .canvas-node-head {
+	position: static;
+	flex: 0 0 auto;
+	height: auto;
+}
+
+.canvas-node[data-lod="map"].canvas-node-fold .canvas-ring {
+	position: static;
+	width: 18px;
+	height: 18px;
+	transform: rotate(-90deg);
+}
+
+.canvas-node[data-lod="map"].canvas-node-fold .canvas-node-text {
+	display: block;
+	width: 100%;
+	text-align: center;
+}
+
+.canvas-node[data-lod="map"].canvas-node-fold .canvas-node-title {
+	font-size: 9px;
+}
+
 .canvas-node[data-lod="neighborhood"] {
-	min-height: 76px;
+	overflow: hidden;
 }
 
 .canvas-node[data-lod="neighborhood"] .canvas-node-head {
@@ -2533,21 +2609,28 @@ button.outline-row {
 	height: 26px;
 }
 
+/* `max-height` + scroll caps the body at exactly what `node_size_for`
+   allocated for its LOD tier, so a wide chip row wrapping to a 3rd/4th line
+   scrolls internally instead of growing the card past its reserved dagre
+   footprint (the other root cause of node/node overlap — a card's real
+   height depends on content, dagre's spacing math can't). */
 .canvas-node-body {
 	border-top: 1px solid var(--border);
 	padding: 12px 15px 15px;
-}
-
-.canvas-node[data-lod="detail"] {
-	width: 320px;
+	max-height: 120px;
+	overflow-y: auto;
 }
 
 .canvas-node[data-lod="detail"] .canvas-node-title {
 	font-size: 16px;
 }
 
+.canvas-node[data-lod="detail"] .canvas-node-body {
+	max-height: 235px;
+}
+
 .canvas-node-detail-panel {
-	min-height: 120px;
+	min-height: 0;
 }
 
 .canvas-node-detail-desc {
