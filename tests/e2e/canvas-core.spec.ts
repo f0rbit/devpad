@@ -515,6 +515,14 @@ test.describe("canvas home — P2.5 verification", () => {
 				await expect(anyNodeAtLevelAnywhere(page, level)).toHaveCount(1, { timeout: 5000 });
 				await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
 				await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
+				// Same settle wait `clickLevel` already bakes in (AGENTS.md's "E2E
+				// camera-settle gotcha") — `.canvas-viewport-moving` clearing only
+				// proves the animation reached raw=1, not that Solid's `stableLevel`
+				// effect (and therefore `.canvas-level-btn-active`/`data-lod`) has
+				// re-rendered and the browser has COMPOSITED that new frame yet. A
+				// bare double-`requestAnimationFrame` wasn't reliably enough extra
+				// margin in practice; this fixed wait is.
+				await page.waitForTimeout(CAMERA_SETTLE_MS);
 				const output = resolve(screenshot_dir, `canvas-box-${level}-dark.png`);
 				await page.screenshot({ path: output, fullPage: false });
 				expect(existsSync(output)).toBeTruthy();
@@ -538,6 +546,7 @@ test.describe("canvas home — P2.5 verification", () => {
 			await expect(page.getByTestId("canvas-node-detail-panel")).toBeVisible({ timeout: 5000 });
 			await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
 			await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
+			await page.waitForTimeout(CAMERA_SETTLE_MS);
 			const detail_output = resolve(screenshot_dir, "canvas-box-detail-dark.png");
 			await page.screenshot({ path: detail_output, fullPage: false });
 			expect(existsSync(detail_output)).toBeTruthy();
