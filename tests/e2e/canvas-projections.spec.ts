@@ -30,8 +30,12 @@ const inject_test_user = async (context: BrowserContext) => {
 };
 
 const openCanvas = async (page: Page): Promise<void> => {
+	// `/canvas` now 301s to `/project/:id` (P4.1 IA absorption) before the
+	// cold `client:load` island hydrates — the extra redirect hop pushes the
+	// FIRST navigation in this file past the default 5s visibility timeout
+	// often enough to matter; match the node-visibility timeout below.
 	await page.goto(`/project/${E2E_CANVAS_P3_PROJECT_ID}/canvas`);
-	await expect(page.getByTestId("canvas-viewport")).toBeVisible();
+	await expect(page.getByTestId("canvas-viewport")).toBeVisible({ timeout: 10_000 });
 	await expect(page.locator("[data-canvas-node]:visible").first()).toBeVisible({ timeout: 10_000 });
 };
 
