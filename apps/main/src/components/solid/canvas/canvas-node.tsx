@@ -10,8 +10,13 @@ export type CanvasNodeProps = {
 	readonly y: number;
 	readonly level: CameraLevel;
 	readonly selected: boolean;
+	/** Culled-out nodes stay mounted (tldraw-style — no mount/unmount churn per
+	 * frame) and are hidden with `display:none` instead. */
+	readonly visible: boolean;
 	readonly onSelect: (id: string) => void;
 };
+
+const FOLD_KINDS: ReadonlySet<Task["kind"]> = new Set(["milestone", "goal"]);
 
 const STATUS_CLASS: Record<Task["progress"], string> = {
 	UNSTARTED: "canvas-node-unstarted",
@@ -28,17 +33,31 @@ const RING_CIRCUMFERENCE = 81.7;
  * projections land in P3 — this stays a thin, `level`-aware shell so both
  * can slot in without a rewrite.
  */
+/**
+ * LOD tiers per the UX contract: `map` collapses to a dot/pill (title shown
+ * only for fold kinds — milestone/goal — since those are the anchors worth
+ * naming even zoomed all the way out), `neighborhood` is a compact
+ * icon-only-kind card, `node` is the full card, `detail` is the full card
+ * plus a detail panel slot (empty shell here — P3 fills it in). The caller
+ * debounces `level` itself while `camera.is_moving()` so this component
+ * never has to know about motion.
+ */
 export default function CanvasNode(props: CanvasNodeProps) {
 	const dash = () => (RING_CIRCUMFERENCE * progress_percent(props.task)) / 100;
+	const is_map = () => props.level === "map";
+	const is_neighborhood = () => props.level === "neighborhood";
+	const show_body = () => props.level === "node" || props.level === "detail";
+	const show_detail_panel = () => props.level === "detail" && props.selected;
 
 	return (
 		<article
 			class={`canvas-node ${STATUS_CLASS[props.task.progress]}${props.selected ? " canvas-node-selected" : ""}`}
+			classList={{ "canvas-node-detail": show_detail_panel() }}
 			data-canvas-node
 			data-testid="canvas-node"
 			data-task-id={props.task.id}
 			data-lod={props.level}
-			style={{ left: `${props.x}px`, top: `${props.y}px` }}
+			style={{ left: `${props.x}px`, top: `${props.y}px`, display: props.visible ? undefined : "none" }}
 			tabIndex={0}
 			aria-label={`${props.task.title}, ${progress_percent(props.task)}% complete`}
 			onClick={e => {
@@ -51,11 +70,17 @@ export default function CanvasNode(props: CanvasNodeProps) {
 		>
 			<div class="canvas-node-head">
 				<div class="canvas-node-text">
-					<h3 class="canvas-node-title">{props.task.title}</h3>
-					<div class="canvas-node-kind">
-						<KindGlyph kind={props.task.kind} />
-						{props.task.kind} · {props.task.progress}
-					</div>
+					<Show when={!is_map() || FOLD_KINDS.has(props.task.kind)}>
+						<h3 class="canvas-node-title">{props.task.title}</h3>
+					</Show>
+					<Show when={!is_map()}>
+						<div class="canvas-node-kind">
+							<KindGlyph kind={props.task.kind} />
+							<Show when={!is_neighborhood()}>
+								{props.task.kind} · {props.task.progress}
+							</Show>
+						</div>
+					</Show>
 				</div>
 				<svg class="canvas-ring" viewBox="0 0 32 32" aria-hidden="true">
 					<circle class="canvas-ring-track" cx="16" cy="16" r="13" />
@@ -69,6 +94,14 @@ export default function CanvasNode(props: CanvasNodeProps) {
 					/>
 				</svg>
 			</div>
+			<Show when={show_body()}>
+				<div class="canvas-node-body">
+					<Show when={show_detail_panel()}>
+						{/* Empty shell — P3 fills this in with the selected node's detail panel content. */}
+						<div class="canvas-node-detail-panel" data-testid="canvas-node-detail-panel" />
+					</Show>
+				</div>
+			</Show>
 		</article>
 	);
 }

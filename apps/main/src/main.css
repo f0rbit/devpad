@@ -2349,6 +2349,81 @@ button.outline-row {
 	stroke: var(--success-fg);
 }
 
+/* LOD tiers (P2.4) — map collapses to a dot/pill, neighborhood is a compact
+   icon-only-kind card, node/detail are the full card. Keyed off the
+   per-node `data-lod` attribute (not an ancestor `.canvas-world` class) so
+   nodes mid-debounce never disagree with a stale ancestor class. */
+.canvas-node[data-lod="map"] {
+	width: 20px;
+	min-height: 20px;
+	height: 20px;
+	border-radius: 50%;
+	box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent);
+}
+
+.canvas-node[data-lod="map"] .canvas-node-head {
+	position: relative;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	padding: 0;
+}
+
+.canvas-node[data-lod="map"] .canvas-ring {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.canvas-node[data-lod="map"] .canvas-node-text {
+	position: absolute;
+	left: 50%;
+	top: calc(100% + 4px);
+	flex: none;
+	width: max-content;
+	transform: translateX(-50%);
+	text-align: center;
+}
+
+.canvas-node[data-lod="map"] .canvas-node-kind {
+	display: none;
+}
+
+.canvas-node[data-lod="neighborhood"] {
+	min-height: 76px;
+}
+
+.canvas-node[data-lod="neighborhood"] .canvas-node-head {
+	padding: 12px 12px 6px;
+	gap: 8px;
+}
+
+.canvas-node[data-lod="neighborhood"] .canvas-node-title {
+	font-size: 12px;
+}
+
+.canvas-node[data-lod="neighborhood"] .canvas-ring {
+	width: 26px;
+	height: 26px;
+}
+
+.canvas-node-body {
+	border-top: 1px solid var(--border);
+	padding: 12px 15px 15px;
+}
+
+.canvas-node[data-lod="detail"] {
+	width: 320px;
+}
+
+.canvas-node[data-lod="detail"] .canvas-node-title {
+	font-size: 16px;
+}
+
+.canvas-node-detail-panel {
+	min-height: 120px;
+}
 
 .canvas-layout-status {
 	position: absolute;
