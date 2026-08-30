@@ -197,6 +197,7 @@ describe("apply_view_overrides", () => {
 			],
 			edges: [],
 			bounds: { x: 0, y: 0, w: 0, h: 0 },
+			rankdir: "LR" as const,
 		};
 
 		const overridden = apply_view_overrides(layout);
@@ -216,6 +217,7 @@ describe("apply_view_overrides", () => {
 			],
 			edges: [],
 			bounds: { x: 0, y: 0, w: 0, h: 0 },
+			rankdir: "LR" as const,
 		};
 
 		const overridden = apply_view_overrides(layout, undefined, { parent: { x: 500, y: 500 } });
