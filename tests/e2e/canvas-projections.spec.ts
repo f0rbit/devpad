@@ -2,6 +2,7 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { CANVAS_NODE_W } from "../../apps/main/src/components/solid/canvas/layout";
 import { E2E_CANVAS_P3_AGENT_CHILD, E2E_CANVAS_P3_CHILD, E2E_CANVAS_P3_PROJECT_ID } from "./fixtures/canvas-p3-ids";
 import { E2E_SESSION_ID } from "./fixtures/outline-ids";
 
@@ -84,6 +85,46 @@ const clickLevel = async (page: Page, label: "Map" | "Neighborhood" | "Node" | "
 
 const screenshot_dir = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", ".plans", "screenshots");
 
+/**
+ * Regression coverage for the "weird artifact" bug from Tom's staging
+ * screenshot — a dragged/pinned node's edge kept dagre's OLD routed
+ * waypoints, an elbow hanging in empty space with only the endpoint moved.
+ * `apply_view_overrides`/`canvas-surface.tsx` now re-route any edge touching
+ * a moved node as a direct 2-point curve (`layout.ts`'s `direct_route`) —
+ * this asserts the RENDERED path's bounding box never extends more than
+ * ~1 card width/height past either endpoint's own on-screen box, which a
+ * stale multi-point route (routed against the node's OLD position) would.
+ */
+async function assert_no_stale_edge_elbow(page: Page, moved_task_id: string): Promise<void> {
+	const margin = CANVAS_NODE_W; // ~1 card width of slack either side
+	const edges = page.locator(`[data-edge-src="${moved_task_id}"], [data-edge-dst="${moved_task_id}"]`);
+	const count = await edges.count();
+	expect(count).toBeGreaterThan(0); // otherwise this assertion isn't exercising anything
+
+	for (let i = 0; i < count; i++) {
+		const edge = edges.nth(i);
+		const src_id = await edge.getAttribute("data-edge-src");
+		const dst_id = await edge.getAttribute("data-edge-dst");
+		if (!src_id || !dst_id) continue;
+
+		const edge_box = await edge.boundingBox();
+		const src_box = await nodeFor(page, src_id).boundingBox();
+		const dst_box = await nodeFor(page, dst_id).boundingBox();
+		if (!edge_box || !src_box || !dst_box) continue;
+
+		const allowed = {
+			x0: Math.min(src_box.x, dst_box.x) - margin,
+			x1: Math.max(src_box.x + src_box.width, dst_box.x + dst_box.width) + margin,
+			y0: Math.min(src_box.y, dst_box.y) - margin,
+			y1: Math.max(src_box.y + src_box.height, dst_box.y + dst_box.height) + margin,
+		};
+		expect(edge_box.x).toBeGreaterThanOrEqual(allowed.x0);
+		expect(edge_box.x + edge_box.width).toBeLessThanOrEqual(allowed.x1);
+		expect(edge_box.y).toBeGreaterThanOrEqual(allowed.y0);
+		expect(edge_box.y + edge_box.height).toBeLessThanOrEqual(allowed.y1);
+	}
+}
+
 test.describe("canvas home — P3 verification", () => {
 	// Same rationale as canvas-core.spec.ts: real (unfaked) camera-settle
 	// animations + a shared dev server mean full parallelism can starve
@@ -118,6 +159,12 @@ test.describe("canvas home — P3 verification", () => {
 
 		await expect(node).toHaveAttribute("data-pinned", "true");
 		await expect(page.getByTestId("canvas-reset-layout")).toBeVisible();
+
+		// No stale dagre-routed elbow — every edge touching the just-dragged
+		// node has been re-routed as a direct curve, so its rendered path's
+		// bounding box stays within ~1 card width/height of BOTH endpoints
+		// (a stale bend would poke far outside this box, into empty space).
+		await assert_no_stale_edge_elbow(page, E2E_CANVAS_P3_CHILD);
 
 		// The PUT is debounced (VIEW_STATE_SAVE_DEBOUNCE_MS = 500ms) — wait past
 		// it before reloading, or the reload can race an in-flight/not-yet-fired

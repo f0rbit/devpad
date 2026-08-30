@@ -48,6 +48,19 @@ const openCanvas = async (page: Page, project_id: string): Promise<Locator> => {
 const anyNodeAtLevel = (page: Page, level: CameraLevel) =>
 	page.locator(`[data-canvas-node][data-lod="${level}"]:visible`).first();
 
+/**
+ * `data-lod` is bound to the SAME `stableLevel` signal on every node (not
+ * per-node state), so it flips identically everywhere regardless of on-screen
+ * visibility — this drops the `:visible` filter above for the wheel-fluid
+ * test, which wheels centered on a fixed viewport point rather than a
+ * specific node: on a big/sparse fixture (wide `nodesep`/`ranksep`, see
+ * `layout.ts`), that anchor point can legitimately drift into empty space
+ * between cards as scale grows, culling every node in view without that
+ * meaning the LOD swap itself failed.
+ */
+const anyNodeAtLevelAnywhere = (page: Page, level: CameraLevel) =>
+	page.locator(`[data-canvas-node][data-lod="${level}"]`).first();
+
 /** `map`'s scale is now relative — "fit the whole forest" — so it isn't a
  * fixed constant per fixture. Read the live scale straight off `.canvas-world`'s
  * inline transform rather than assuming `LEVEL_SCALE.map`. */
@@ -64,6 +77,9 @@ const readWorldScale = async (page: Page): Promise<number> => {
  * the FIRST interaction on a freshly-navigated page can land before Solid's
  * delegated click listener has attached.
  */
+/** Matches `.canvas-world`'s CSS `transition: transform 210ms` / `zoom_to`'s real 200ms tween — see AGENTS.md's "E2E camera-settle gotcha". */
+const CAMERA_SETTLE_MS = 300;
+
 const clickLevel = async (page: Page, level: CameraLevel, timeout = 5000): Promise<void> => {
 	const button = page.getByRole("button", { name: LEVEL_LABEL[level], exact: true });
 	await button.click();
@@ -117,31 +133,52 @@ test.describe("canvas home — P2.5 verification", () => {
 			context,
 		}) => {
 			await inject_test_user(context);
-			const viewport = await openCanvas(page, E2E_OUTLINE_PROJECT_ID);
+			// The STAGING fixture (not `E2E_OUTLINE_PROJECT_ID`) — its much larger
+			// spread-out content reliably pins `map`'s fit-to-forest scale well
+			// below `neighborhood`'s 0.82 cap. The small outline fixture's map
+			// scale can land close enough to 0.82 that the "neighborhood" step's
+			// band below has near-zero width, flaking this test.
+			const viewport = await openCanvas(page, E2E_CANVAS_STAGING_PROJECT_ID);
 
 			// Pin to a known starting scale (map — dynamic "fit the whole forest"
 			// scale for this fixture) via the HUD before driving the wheel —
 			// `fit()`'s initial scale otherwise depends on viewport size.
+			// `clickLevel`'s own visibility check only proves `data-lod` has
+			// flipped, which happens at the START of the REAL (unfaked, 200ms)
+			// `zoom_to` tween, not the end (see AGENTS.md's "E2E camera-settle
+			// gotcha") — under CPU contention this test's first `readWorldScale`
+			// call below can otherwise race an in-flight tween and read an
+			// intermediate scale, throwing off every wheel step's math.
 			await clickLevel(page, "map");
+			await page.waitForTimeout(CAMERA_SETTLE_MS);
 
 			const box = await viewport.boundingBox();
 			if (!box) throw new Error("canvas viewport has no bounding box");
 			await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 
-			// `map`'s scale is relative (fit-to-forest) — read it live. Each step
-			// drives the wheel 55% of the way from the current scale toward the
-			// next level's exact scale: past that band's midpoint (so `data-lod`
-			// flips to the target level) but deliberately short of the level's
-			// exact value, proving the zoom never snaps.
+			// `map`'s scale is relative (fit-to-forest) — read it live. `level` is
+			// derived from a BAND (bounded by the midpoint between adjacent
+			// levels' scales), so each step targets a scale just past that band's
+			// LOWER boundary (30% of the way from the boundary to the level's own
+			// exact scale) — comfortably inside the target band regardless of
+			// where the previous step actually landed, but deliberately short of
+			// the level's exact value, proving the zoom never snaps to it.
 			const WHEEL_SENSITIVITY = 0.0012;
-			const targets: readonly CameraLevel[] = ["neighborhood", "node", "detail"];
+			const PREV_SCALE: Record<"neighborhood" | "node" | "detail", number | "live"> = {
+				neighborhood: "live", // map's scale is dynamic — read it live below
+				node: LEVEL_SCALE.neighborhood,
+				detail: LEVEL_SCALE.node,
+			};
+			const targets: readonly ("neighborhood" | "node" | "detail")[] = ["neighborhood", "node", "detail"];
 			for (const level of targets) {
 				const current_scale = await readWorldScale(page);
+				const prev_scale = PREV_SCALE[level] === "live" ? current_scale : PREV_SCALE[level];
 				const target_scale = LEVEL_SCALE[level];
-				const stepped_scale = current_scale + (target_scale - current_scale) * 0.55;
+				const band_boundary = (prev_scale + target_scale) / 2;
+				const stepped_scale = band_boundary + (target_scale - band_boundary) * 0.3;
 				const deltaY = -(stepped_scale - current_scale) / WHEEL_SENSITIVITY;
 				await page.mouse.wheel(0, deltaY);
-				await expect(anyNodeAtLevel(page, level)).toBeVisible({ timeout: 5000 });
+				await expect(anyNodeAtLevelAnywhere(page, level)).toHaveCount(1, { timeout: 5000 });
 
 				const landed_scale = await readWorldScale(page);
 				expect(landed_scale).toBeCloseTo(stepped_scale, 2);
@@ -153,7 +190,7 @@ test.describe("canvas home — P2.5 verification", () => {
 			// A big reverse scroll drives the scale continuously back down to the
 			// map-fit floor — still never re-snapping to an exact level scale.
 			await page.mouse.wheel(0, 2000);
-			await expect(anyNodeAtLevel(page, "map")).toBeVisible({ timeout: 5000 });
+			await expect(anyNodeAtLevelAnywhere(page, "map")).toHaveCount(1, { timeout: 5000 });
 		});
 	});
 
@@ -312,9 +349,18 @@ test.describe("canvas home — P2.5 verification", () => {
 	});
 
 	test.describe("clamped pan", () => {
-		test("dragging far past the content leaves content visible, never a void", async ({ page, context }) => {
+		test("dragging far past the content clamps the transform instead of escaping into a void", async ({
+			page,
+			context,
+		}) => {
 			await inject_test_user(context);
 			const viewport = await openCanvas(page, E2E_OUTLINE_PROJECT_ID);
+			// `layoutViewport`'s debounced re-layout (`LAYOUT_VIEWPORT_DEBOUNCE_MS`,
+			// canvas-surface.tsx) can still fire a LATE orientation flip after the
+			// immediate first measurement, under CPU contention — wait past that
+			// window before measuring anything below, so the layout (and content
+			// bounds this test's clamp math depends on) is fully settled first.
+			await page.waitForTimeout(400);
 			await clickLevel(page, "detail");
 
 			const box = await viewport.boundingBox();
@@ -322,10 +368,19 @@ test.describe("canvas home — P2.5 verification", () => {
 			const cx = box.x + box.width / 2;
 			const cy = box.y + box.height / 2;
 
+			const readTranslate = async (): Promise<{ x: number; y: number }> => {
+				const style = await page.locator(".canvas-world").getAttribute("style");
+				const match = style?.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+				if (!match?.[1] || !match[2]) throw new Error("could not read .canvas-world translate from style attribute");
+				return { x: Number(match[1]), y: Number(match[2]) };
+			};
+			const before = await readTranslate();
+
 			// Repeated large drags (rather than one continuous off-screen drag) —
 			// `on_pointer_move` diffs successive clientX/clientY, so several
 			// same-direction gestures accumulate the same total pan a single huge
 			// drag would, without needing off-viewport mouse coordinates.
+			const TOTAL_DRAG_PX = 12 * 400;
 			for (let i = 0; i < 12; i++) {
 				await page.mouse.move(cx, cy);
 				await page.mouse.down();
@@ -333,9 +388,24 @@ test.describe("canvas home — P2.5 verification", () => {
 				await page.mouse.up();
 			}
 
-			await expect(page.locator("[data-canvas-node]:visible").first()).toBeVisible({ timeout: 3000 });
-			const visible_after_pan = await page.locator("[data-canvas-node]:visible").count();
-			expect(visible_after_pan).toBeGreaterThan(0);
+			// Checking for an on-screen NODE (the original assertion here) is no
+			// longer a reliable proxy for "clamping worked": Tom's staging
+			// spacing fix (`layout.ts`'s wider `nodesep`/`ranksep`) means a
+			// small/sparse fixture's content, at `detail`'s max zoom, can
+			// legitimately have a viewport-sized GAP between cards even while
+			// correctly clamped to the content's own edge — that's expected
+			// (Google-Maps-style "sparse region of a real place", not a void
+			// past the edge of the map). `camera.test.ts`'s "content-bounds
+			// clamp" suite already proves the clamp MATH precisely; this only
+			// needs to prove the real pointer events actually reached it — i.e.
+			// the transform moved much LESS than the raw drag distance, not that
+			// it moved zero (a stuck camera) or the full unclamped amount (no
+			// clamp at all).
+			const after = await readTranslate();
+			const drifted = Math.hypot(after.x - before.x, after.y - before.y);
+			const raw_unclamped_drift = Math.hypot(TOTAL_DRAG_PX, TOTAL_DRAG_PX);
+			expect(drifted).toBeGreaterThan(0); // the camera actually moved...
+			expect(drifted).toBeLessThan(raw_unclamped_drift * 0.5); // ...but clamped well short of the raw unclamped drag
 		});
 	});
 

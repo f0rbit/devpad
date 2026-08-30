@@ -230,6 +230,19 @@ const AGENT_PLACEMENT_OFFSET = { dx: CANVAS_NODE_W * 0.7, dy: CANVAS_NODE_H * 0.
  * defensive case of a structurally-disconnected agent-created node. dagre
  * stays the layout — this function must never REPLACE a rank dagre already
  * computed, only fill in for a node it couldn't rank at all.
+ *
+ * **Stale-elbow fix**: any node whose FINAL position differs from dagre's
+ * own (pinned, or agent-placed off-rank) drops dagre's routed `points` for
+ * every edge touching it — dagre routed those bends against the position it
+ * originally computed, so once the node moves, only re-anchoring the first/
+ * last point (`clip_edge_endpoints`) leaves an interior bend hanging in the
+ * node's OLD location, a visible elbow in empty space (Tom's staging
+ * screenshot: a dragged/pinned node's `tracks_metric` edge). The replacement
+ * is a plain 2-point [src, dst] pair — `canvas-surface.tsx`'s `path_for`
+ * (`curveBumpX`/`Y`) then draws a clean curve between the two current
+ * centers, and the existing per-render `clip_edge_endpoints` call still
+ * anchors both ends to the actual box border. Edges untouched by a moved
+ * node keep dagre's original multi-point route unchanged.
  */
 export function apply_view_overrides(
 	layout: GraphLayout,
@@ -273,7 +286,21 @@ export function apply_view_overrides(
 		};
 	});
 
-	return { nodes, edges: layout.edges, bounds: bounds_for(nodes, node_size), rankdir: layout.rankdir, programmaticIds };
+	const moved_ids = new Set(
+		nodes
+			.filter((node, i) => node.x !== layout.nodes[i]?.x || node.y !== layout.nodes[i]?.y)
+			.map((node) => node.task.id),
+	);
+	const by_id = new Map(nodes.map((node) => [node.task.id, node]));
+	const edges: LaidOutEdge[] = layout.edges.map((edge) => {
+		if (!moved_ids.has(edge.src_id) && !moved_ids.has(edge.dst_id)) return edge;
+		const src = by_id.get(edge.src_id);
+		const dst = by_id.get(edge.dst_id);
+		if (!src || !dst) return edge;
+		return { ...edge, points: direct_route(src, dst) };
+	});
+
+	return { nodes, edges, bounds: bounds_for(nodes, node_size), rankdir: layout.rankdir, programmaticIds };
 }
 
 type Point = { readonly x: number; readonly y: number };
@@ -295,13 +322,28 @@ function clip_to_box(center: Point, half_w: number, half_h: number, toward: Poin
 }
 
 /**
- * dagre's `points` are routed for spacing purposes against the uniform
- * `CANVAS_NODE_W`/`CANVAS_NODE_H` reservation, NOT the node's actual current
- * (per-LOD, per-kind) rendered box — so the raw points land short of, or
- * buried inside, the real card. Re-anchors just the first/last point to
- * where the line actually crosses the REAL box (via `node_size_for`),
- * leaving any interior dagre bend points untouched, so arrowheads land
- * exactly on the visible border at every LOD tier without a relayout.
+ * A raw, unclipped 2-point [src, dst] "route" — the direct-curve replacement
+ * for a moved node's stale dagre `points` (see `apply_view_overrides`'s doc
+ * comment above, and `canvas-surface.tsx`'s live-drag use of this same
+ * helper). `clip_edge_endpoints` still re-anchors both ends to the actual
+ * box border downstream; `path_for`'s `curveBumpX`/`Y` turns the 2 points
+ * into a smooth curve rather than a straight line.
+ */
+export function direct_route(src: Point, dst: Point): Point[] {
+	return [
+		{ x: src.x, y: src.y },
+		{ x: dst.x, y: dst.y },
+	];
+}
+
+/**
+ * dagre's `points` are routed for spacing purposes against the node's
+ * reserved box position at LAYOUT time — a moved node (see
+ * `apply_view_overrides`/`direct_route` above) already gets a fresh 2-point
+ * route before this runs. For an UNMOVED edge, this just re-anchors the
+ * first/last point to where the line actually crosses the box (via
+ * `node_size_for`), leaving any interior dagre bend points untouched, so
+ * arrowheads land exactly on the visible border without a relayout.
  */
 export function clip_edge_endpoints(
 	points: readonly Point[],

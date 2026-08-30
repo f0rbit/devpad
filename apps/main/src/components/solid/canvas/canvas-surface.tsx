@@ -17,6 +17,7 @@ import {
 	CANVAS_NODE_W,
 	apply_view_overrides,
 	clip_edge_endpoints,
+	direct_route,
 	layout_graph,
 	node_size_for,
 	type EdgeKind,
@@ -189,9 +190,26 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const transform = camera.transform;
 
 	let layoutViewportTimer: ReturnType<typeof setTimeout> | undefined;
+	// The very FIRST real measurement applies immediately (no debounce) — it's
+	// not a resize-drag pixel to coalesce, it's the only viewport `camera.fit()`
+	// (called synchronously right after this in `onMount`) will ever see for
+	// its initial frame. Debouncing it let the ResizeObserver's real size
+	// arrive AFTER `fit()` had already framed content against the WRONG
+	// (still-default `{0,0}`, always-`LR`) layout; a wider spacing (this
+	// phase's fix) makes `TB` win the orientation pick far more often than the
+	// old tighter spacing did, so the later debounced flip — silently
+	// reshuffling every node's position without a matching re-fit — went from
+	// a rare edge case to a reliably reproducing one (500-node fixture: fit()
+	// framed all 500, then ~300ms later only 484 stayed on-screen).
+	let has_measured_viewport = false;
 	createEffect(() => {
 		const vp = viewportSize();
 		clearTimeout(layoutViewportTimer);
+		if (!has_measured_viewport) {
+			has_measured_viewport = true;
+			setLayoutViewport(vp);
+			return;
+		}
 		layoutViewportTimer = setTimeout(() => {
 			setLayoutViewport((prev) => (aspect_bucket(prev) === aspect_bucket(vp) ? prev : vp));
 		}, LAYOUT_VIEWPORT_DEBOUNCE_MS);
@@ -520,9 +538,16 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	 * the same source `CanvasNode` reads, one size regardless of kind or LOD),
 	 * so arrowheads land exactly on the visible border rather than dagre's
 	 * raw routed points (which target the box's edge, not necessarily where a
-	 * bend crosses it). */
+	 * bend crosses it). While a node is being actively dragged (before the
+	 * drag ends and `pins()` commits — `apply_view_overrides` only rewrites
+	 * touching edges to a fresh `direct_route` on a COMMITTED pin), every
+	 * edge touching it gets the same `direct_route` treatment here so it
+	 * follows the pointer smoothly instead of keeping dagre's stale bend
+	 * points until the drag ends (the same class of artifact `apply_view_
+	 * overrides` fixes for the persisted case). */
 	const renderableEdges = createMemo(() => {
 		const by_id = nodeById();
+		const dragging_id = dragPreview()?.id ?? null;
 		return placedLayout()
 			.edges.filter((edge) => is_visible(edge.src_id) || is_visible(edge.dst_id))
 			.flatMap((edge) => {
@@ -531,8 +556,10 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				if (!src || !dst) return [];
 				const src_pos = node_position(src);
 				const dst_pos = node_position(dst);
+				const is_dragging_edge = dragging_id !== null && (edge.src_id === dragging_id || edge.dst_id === dragging_id);
+				const raw_points = is_dragging_edge ? direct_route(src_pos, dst_pos) : edge.points;
 				const points = clip_edge_endpoints(
-					edge.points,
+					raw_points,
 					{ x: src_pos.x, y: src_pos.y, size: node_size_for(src.task.kind) },
 					{ x: dst_pos.x, y: dst_pos.y, size: node_size_for(dst.task.kind) },
 				);
@@ -656,6 +683,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 								class={`canvas-edge ${EDGE_CLASS[edge.kind]}`}
 								classList={{ "canvas-edge-selected": selected_edge_ids().has(edge.id) }}
 								data-edge-kind={edge.kind}
+								data-edge-src={edge.src_id}
+								data-edge-dst={edge.dst_id}
 								marker-end={edge.kind === "hierarchy" ? undefined : `url(#${arrow_id_for(edge.kind)})`}
 							/>
 						)}
