@@ -36,6 +36,53 @@ const EDGE_CLASS: Record<TaskLink["kind"], string> = {
 
 const arrow_id_for = (kind: TaskLink["kind"]): string => `canvas-arrow-${kind.replace(/_/g, "-")}`;
 
+const EDGE_LABEL: Record<TaskLink["kind"], string> = {
+	blocks: "blocks",
+	relates_to: "relates to",
+	discovered_from: "discovered from",
+	references: "references",
+	tracks_metric: "tracks metric",
+};
+
+type EdgeChips = { readonly blocked: boolean; readonly ready: boolean };
+const NO_EDGE_CHIPS: EdgeChips = { blocked: false, ready: false };
+
+/**
+ * Client-side simplification of `packages/core/src/services/graph/edge-summary.ts`'s
+ * `blocked_count`/`ready` — the canvas already holds the WHOLE project graph
+ * (tasks + links), so this derives straight from that instead of adding a
+ * fourth batched fetch alongside `projections.ts`. Deliberately drops the
+ * `hook`/`stale` fields the outline's `EdgeSummary` also carries — those need
+ * server-side hook-table/completed_via data this surface doesn't load.
+ */
+function edge_chips_for(tasks: readonly Task[], links: readonly TaskLink[]): Map<string, EdgeChips> {
+	const incomplete_ids = new Set(tasks.filter((t) => t.progress !== "COMPLETED").map((t) => t.id));
+	const blocked_by = new Map<string, number>();
+	for (const link of links) {
+		if (link.kind !== "blocks" || !link.dst_id || !incomplete_ids.has(link.src_id)) continue;
+		blocked_by.set(link.dst_id, (blocked_by.get(link.dst_id) ?? 0) + 1);
+	}
+	const parents_with_open_children = new Set(
+		tasks
+			.filter((t): t is Task & { parent_id: string } => t.parent_id !== null && incomplete_ids.has(t.id))
+			.map((t) => t.parent_id),
+	);
+	const now = new Date().toISOString();
+
+	const result = new Map<string, EdgeChips>();
+	for (const task of tasks) {
+		const blocked_count = blocked_by.get(task.id) ?? 0;
+		const has_incomplete_children = parents_with_open_children.has(task.id);
+		const ready =
+			task.progress !== "COMPLETED" &&
+			(!task.start_time || task.start_time <= now) &&
+			!has_incomplete_children &&
+			blocked_count === 0;
+		result.set(task.id, { blocked: blocked_count > 0, ready });
+	}
+	return result;
+}
+
 const path_for = (points: readonly { x: number; y: number }[]): string =>
 	points.map((p, i) => `${i === 0 ? "M" : "L"}${String(p.x)},${String(p.y)}`).join(" ");
 
@@ -59,6 +106,9 @@ const PLACEMENT_CUE_MS = 3600;
 const CULL_CELL_SIZE = Math.max(CANVAS_NODE_W, CANVAS_NODE_H) * 2;
 const CULL_MARGIN = Math.max(CANVAS_NODE_W, CANVAS_NODE_H);
 
+/** `.canvas-toolbar`'s `top: 16px` + `.canvas-breadcrumb`'s `min-height: 35px` + a little breathing room — kept a constant rather than measured, since the toolbar's own height doesn't respond to viewport resize. */
+const CANVAS_TOOLBAR_INSET_PX = 64;
+
 const EMPTY_LAYOUT_STATE: ProjectViewLayoutInput = { pins: {} };
 
 /**
@@ -79,11 +129,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const [placementCueIds, setPlacementCueIds] = createSignal<ReadonlySet<string>>(new Set());
 	let viewportRef: HTMLDivElement | undefined;
 
-	const camera = create_camera();
+	const camera = create_camera({ fit_top_inset_px: CANVAS_TOOLBAR_INSET_PX });
 	onCleanup(() => { camera.dispose(); });
 	const transform = camera.transform;
 
 	const layout = createMemo(() => layout_graph(data().tasks, data().links));
+	const edgeChips = createMemo(() => edge_chips_for(data().tasks, data().links));
 	const placedLayout = createMemo(() => apply_view_overrides(layout(), undefined, pins()));
 
 	createEffect(() => {
@@ -179,13 +230,16 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		}
 	};
 
-	// Fire-and-forget, last-write-wins — a failed save just leaves the pin
-	// live in memory until the next successful debounce tick or page reload.
+	// Fire-and-forget, last-write-wins — a failed save leaves the pin live in
+	// memory (never silently reverted, which would surprise a user mid-drag)
+	// but surfaces via `saveFailed` so `.canvas-layout-status` can say
+	// "unsaved" instead of implying the pin persisted.
+	const [saveFailed, setSaveFailed] = createSignal(false);
 	const save_view_state = (next_layout: ProjectViewLayoutInput) => {
 		void getBrowserClient()
 			.projects.putViewState(props.projectId, next_layout)
 			.then((result) => {
-				if (!result.ok) return;
+				setSaveFailed(!result.ok);
 			});
 	};
 
@@ -254,10 +308,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		// capture gotcha: ANY toolbar/HUD control needs this same exclusion, or
 		// `setPointerCapture` below re-targets its pointerup and Chromium
 		// silently swallows the synthesized click).
-		if ((e.target as Element).closest("[data-canvas-node], .canvas-toolbar, .canvas-layout-status")) return;
+		const target = e.target;
+		if (target instanceof Element && target.closest("[data-canvas-node], .canvas-toolbar, .canvas-layout-status")) return;
 		dragging = true;
 		camera.on_pointer_down(e);
-		(e.currentTarget as Element).setPointerCapture(e.pointerId);
+		const current_target = e.currentTarget;
+		if (current_target instanceof Element) current_target.setPointerCapture(e.pointerId);
 	};
 	const on_pointer_move = (e: PointerEvent) => {
 		if (!dragging) return;
@@ -476,6 +532,8 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 							visible={is_visible(node.task.id)}
 							pinned={Object.hasOwn(pins(), node.task.id)}
 							programmatic={placedLayout().programmaticIds.has(node.task.id)}
+							blocked={(edgeChips().get(node.task.id) ?? NO_EDGE_CHIPS).blocked}
+							ready={(edgeChips().get(node.task.id) ?? NO_EDGE_CHIPS).ready}
 							showPlacementCue={placementCueIds().has(node.task.id)}
 							projection={
 								stableLevel() === "node" || stableLevel() === "detail"
@@ -494,6 +552,11 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				<strong>
 					{pinnedCount() > 0 ? `${String(pinnedCount())} pinned` : "auto"}
 				</strong>
+				<Show when={saveFailed()}>
+					<span class="canvas-layout-unsaved" data-testid="canvas-layout-unsaved">
+						unsaved
+					</span>
+				</Show>
 				<Show when={pinnedCount() > 0}>
 					<button type="button" class="canvas-reset-btn" data-testid="canvas-reset-layout" onClick={reset_layout}>
 						<RotateCcw class="canvas-icon" size={12} aria-hidden="true" />
@@ -501,6 +564,19 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 					</button>
 				</Show>
 			</p>
+
+			<div class="canvas-legend" data-testid="canvas-legend">
+				<For each={TASK_LINK_KINDS}>
+					{(kind) => (
+						<span class="canvas-legend-item">
+							<svg class="canvas-legend-swatch" viewBox="0 0 10 10" aria-hidden="true">
+								<path d="M0,0 L10,5 L0,10 z" class={`canvas-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} />
+							</svg>
+							{EDGE_LABEL[kind]}
+						</span>
+					)}
+				</For>
+			</div>
 
 			<div class="canvas-hintbar" aria-label="Keyboard shortcuts">
 				<span>

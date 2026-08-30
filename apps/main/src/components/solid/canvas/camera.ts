@@ -49,6 +49,8 @@ export type CameraOptions = {
 	readonly pan_step?: number;
 	readonly clamp_margin?: number;
 	readonly fit_margin?: number;
+	/** Default `fit()` top inset (e.g. the toolbar height) — used by the `0`/keyboard-fit shortcut, which has no per-call way to pass one. */
+	readonly fit_top_inset_px?: number;
 };
 
 export type Camera = {
@@ -62,7 +64,8 @@ export type Camera = {
 	readonly zoom_to: (level: CameraLevel, anchor?: Point) => void;
 	readonly zoom_in: (anchor?: Point) => void;
 	readonly zoom_out: (anchor?: Point) => void;
-	readonly fit: () => void;
+	/** `top_inset_px` reserves space (e.g. the toolbar/breadcrumb strip) at the top of the viewport so fitted content is never framed under it. */
+	readonly fit: (top_inset_px?: number) => void;
 	readonly set_focus: (point: Point | null) => void;
 	readonly set_content_bounds: (bounds: ContentBounds | null) => void;
 	readonly set_viewport: (viewport: ViewportSize) => void;
@@ -95,9 +98,9 @@ const nearest_level = (scale: number): CameraLevel =>
 
 const levels_by_scale_desc = CAMERA_LEVELS.toSorted((a, b) => LEVEL_SCALE[b] - LEVEL_SCALE[a]);
 
-const best_fit_level = (bounds: ContentBounds, viewport: ViewportSize, margin: number): CameraLevel => {
+const best_fit_level = (bounds: ContentBounds, viewport: ViewportSize, margin: number, top_inset = 0): CameraLevel => {
 	const usable_w = Math.max(0, viewport.width - margin * 2);
-	const usable_h = Math.max(0, viewport.height - margin * 2);
+	const usable_h = Math.max(0, viewport.height - margin * 2 - top_inset);
 	const fits = (level: CameraLevel) =>
 		bounds.w * LEVEL_SCALE[level] <= usable_w && bounds.h * LEVEL_SCALE[level] <= usable_h;
 	return levels_by_scale_desc.find(fits) ?? "map";
@@ -119,13 +122,17 @@ const clamp_transform = (
 	return { x, y, scale: t.scale };
 };
 
-const raf: (cb: (t: number) => void) => number =
+type RafHandle = number | ReturnType<typeof setTimeout>;
+
+const raf: (cb: (t: number) => void) => RafHandle =
 	typeof requestAnimationFrame === "function"
 		? requestAnimationFrame
-		: (cb) => setTimeout(() => cb(Date.now()), 16) as unknown as number;
+		: (cb) => setTimeout(() => cb(Date.now()), 16);
 
-const cancel_raf: (handle: number) => void =
-	typeof cancelAnimationFrame === "function" ? cancelAnimationFrame : (handle) => clearTimeout(handle);
+const cancel_raf: (handle: RafHandle) => void =
+	typeof cancelAnimationFrame === "function"
+		? (handle) => { cancelAnimationFrame(handle as number); }
+		: (handle) => { clearTimeout(handle); };
 
 export function create_camera(opts: CameraOptions = {}): Camera {
 	const animation_ms = opts.animation_ms ?? DEFAULT_ANIMATION_MS;
@@ -134,6 +141,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 	const pan_step = opts.pan_step ?? DEFAULT_PAN_STEP;
 	const clamp_margin = opts.clamp_margin ?? DEFAULT_CLAMP_MARGIN;
 	const fit_margin = opts.fit_margin ?? DEFAULT_FIT_MARGIN;
+	const fit_top_inset_px = opts.fit_top_inset_px ?? 0;
 
 	const initial_level = opts.initial_level ?? "map";
 	const initial_transform = opts.initial_transform ?? { x: 0, y: 0, scale: LEVEL_SCALE[initial_level] };
@@ -148,7 +156,7 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		let viewport: ViewportSize = { width: 0, height: 0 };
 		let dragging = false;
 		let last_point: Point = { x: 0, y: 0 };
-		let animation_frame: number | null = null;
+		let animation_frame: RafHandle | null = null;
 		let wheel_settle_timer: ReturnType<typeof setTimeout> | undefined;
 		let last_wheel_anchor: Point = { x: 0, y: 0 };
 
@@ -226,16 +234,16 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			if (next !== undefined) zoom_to(next, anchor);
 		};
 
-		const fit = () => {
+		const fit = (top_inset_px = fit_top_inset_px) => {
 			if (!bounds || bounds.w <= 0 || bounds.h <= 0) {
-				animate_to({ x: 0, y: 0, scale: LEVEL_SCALE.map }, "map");
+				animate_to({ x: 0, y: top_inset_px / 2, scale: LEVEL_SCALE.map }, "map");
 				return;
 			}
-			const target_level = best_fit_level(bounds, viewport, fit_margin);
+			const target_level = best_fit_level(bounds, viewport, fit_margin, top_inset_px);
 			const scale = LEVEL_SCALE[target_level];
 			const target = {
 				x: viewport.width / 2 - (bounds.x + bounds.w / 2) * scale,
-				y: viewport.height / 2 - (bounds.y + bounds.h / 2) * scale,
+				y: top_inset_px + (viewport.height - top_inset_px) / 2 - (bounds.y + bounds.h / 2) * scale,
 				scale,
 			};
 			animate_to(target, target_level);

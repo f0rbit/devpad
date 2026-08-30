@@ -2134,9 +2134,41 @@ button.outline-row {
 	min-height: 550px;
 }
 
-.canvas-home-view-toggle {
+/* BLOCKER #1 — canvas|list segmented toggle, same visual weight as the
+   canvas surface's own `.canvas-zoom-hud`/`.canvas-level-btn` (kept as
+   plain SSR `<a>`s, not a client-JS tab component — this switches which
+   surface the SERVER rendered, not a panel within one page). */
+.canvas-view-toggle {
+	display: inline-flex;
+	align-items: center;
+	gap: 2px;
 	margin: 0 0 0.75rem;
-	font-size: 0.85rem;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	background: color-mix(in oklch, var(--bg) 93%, transparent);
+	padding: 3px;
+	box-shadow: var(--shadow);
+}
+
+.canvas-view-toggle-btn {
+	border-radius: 7px;
+	padding: 6px 10px;
+	color: var(--fg-subtle);
+	text-decoration: none;
+	font-size: 11px;
+	transition:
+		background 150ms ease-out,
+		color 150ms ease-out;
+}
+
+.canvas-view-toggle-btn:hover {
+	color: var(--fg);
+}
+
+.canvas-view-toggle-btn[aria-current="page"],
+.canvas-view-toggle-btn[aria-current="page"]:hover {
+	background: var(--fg);
+	color: var(--bg);
 }
 
 .project-home-link {
@@ -2255,7 +2287,8 @@ button.outline-row {
 	color: var(--fg);
 }
 
-.canvas-level-btn-active {
+.canvas-level-btn-active,
+.canvas-level-btn-active:hover {
 	background: var(--fg);
 	color: var(--bg);
 }
@@ -2343,7 +2376,6 @@ button.outline-row {
 .canvas-node {
 	position: absolute;
 	width: 250px;
-	min-height: 124px;
 	transform: translate(-50%, -50%);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
@@ -2483,8 +2515,12 @@ button.outline-row {
 	gap: 8px;
 }
 
+/* `.canvas-node-title`'s font-size is set in WORLD px, rendered through
+   `.canvas-world`'s `scale(0.82)` at this LOD (`LEVEL_SCALE.neighborhood` in
+   `camera.ts`) — 12px world-px was only ~9.8 SCREEN px, below the ~12-13px
+   legibility floor. 15px world-px renders at ~12.3 screen px. */
 .canvas-node[data-lod="neighborhood"] .canvas-node-title {
-	font-size: 12px;
+	font-size: 15px;
 }
 
 .canvas-node[data-lod="neighborhood"] .canvas-ring {
@@ -2559,6 +2595,16 @@ button.outline-row {
 	color: var(--accent);
 }
 
+.canvas-chip-blocked {
+	border-color: color-mix(in oklch, var(--error-fg) 45%, var(--border));
+	color: var(--error-fg);
+}
+
+.canvas-chip-ready {
+	border-color: color-mix(in oklch, var(--success-fg) 40%, var(--border));
+	color: var(--success-fg);
+}
+
 /* P3.3 — pinned-node indicator dot, matching the UX contract's `.node.is_pinned::after`. */
 .canvas-node-pinned::after {
 	content: "";
@@ -2608,6 +2654,10 @@ button.outline-row {
 	font-weight: 600;
 }
 
+.canvas-layout-unsaved {
+	color: var(--error-fg);
+}
+
 .canvas-reset-btn {
 	display: inline-flex;
 	align-items: center;
@@ -2623,6 +2673,46 @@ button.outline-row {
 
 .canvas-reset-btn:hover {
 	text-decoration: underline;
+}
+
+/* SHOULD #7 — one-line edge-kind key, mirrors the mock's `.legend` (reuses
+   the SAME `.canvas-arrowhead-*` fill classes the edges themselves use, so
+   there's one source of truth for edge-kind color). */
+.canvas-legend {
+	position: absolute;
+	z-index: 8;
+	left: 50%;
+	/* A separate row ABOVE `.canvas-layout-status`/`.canvas-hintbar` (both also
+	   pinned to `bottom: 19px`) — sharing that row collided the legend's
+	   centered items into the hintbar's right-aligned ones on any viewport
+	   narrower than roughly their combined width. */
+	bottom: 44px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	transform: translateX(-50%);
+	color: var(--fg-subtle);
+	font-family: var(--font-mono);
+	font-size: 9px;
+	white-space: nowrap;
+}
+
+.canvas-legend-item {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.canvas-legend-swatch {
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+}
+
+@media (max-width: 900px) {
+	.canvas-legend {
+		display: none;
+	}
 }
 
 .canvas-hintbar {

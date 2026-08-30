@@ -25,7 +25,19 @@ const { client, project, user } = guard;
 // doesn't replicate; this is how "nothing uniquely shown is lost" holds
 // without duplicating that surface inside the canvas).
 const is_mobile = isMobileUserAgent(Astro.request.headers.get("user-agent"));
-const want_outline = is_mobile || Astro.url.searchParams.get("view") === "list";
+const CANVAS_VIEW_COOKIE = "canvas_view";
+const view_param = Astro.url.searchParams.get("view");
+const cookie_view = Astro.cookies.get(CANVAS_VIEW_COOKIE)?.value;
+// `?view=` always wins over the cookie (an explicit link/bookmark shouldn't
+// be silently overridden by a stale preference); with no `?view=` at all, a
+// list-first user's last choice re-homes them straight to the outline
+// instead of re-landing on canvas every visit.
+const want_outline = is_mobile || (view_param ? view_param === "list" : cookie_view === "list");
+// Only an EXPLICIT `?view=` choice updates the remembered preference — a bare
+// `/project/:id` load (falling back to the cookie) must not re-write it.
+if (!is_mobile && (view_param === "list" || view_param === "canvas")) {
+	Astro.cookies.set(CANVAS_VIEW_COOKIE, view_param, { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" });
+}
 
 let outline_data: Awaited<ReturnType<typeof loadOutline>> | null = null;
 let graph_result: Awaited<ReturnType<typeof client.projects.graph>> | null = null;
@@ -57,19 +69,24 @@ if (pulse_result.ok) {
 	<ProjectLayout project_id={project_id}>
 		<ProjectContextSetter client:load id={project.id} name={project.project_id} />
 		{
+			!is_mobile && (
+				<div class="canvas-view-toggle" role="group" aria-label="Project view">
+					<a href={`/project/${project_id}?view=canvas`} class="canvas-view-toggle-btn" aria-current={!want_outline ? "page" : undefined}>
+						canvas
+					</a>
+					<a href={`/project/${project_id}?view=list`} class="canvas-view-toggle-btn" aria-current={want_outline ? "page" : undefined}>
+						list
+					</a>
+				</div>
+			)
+		}
+		{
 			want_outline ? (
-				<>
-					{!is_mobile && (
-						<p class="canvas-home-view-toggle">
-							<a href={`/project/${project_id}`}>← back to canvas</a>
-						</p>
-					)}
-					<Outline client:load project={{ id: project.id, name: project.project_id }} ownerId={user.id} initial={outline_data!} />
-				</>
+				<Outline client:load project={{ id: project.id, name: project.project_id }} ownerId={user.id} initial={outline_data!} />
 			) : (
 				<>
 					<div class="canvas-home-hud">
-						<p class="canvas-home-description">{project.description}</p>
+						{project.description && <p class="canvas-home-description">{project.description}</p>}
 						<p class="canvas-home-meta">
 							<span>{project.status?.toLowerCase()}</span>
 							<span>·</span>
@@ -80,8 +97,6 @@ if (pulse_result.ok) {
 									<a href={project.repo_url}>{project.repo_url}</a>
 								</>
 							)}
-							<span>·</span>
-							<a href={`/project/${project_id}?view=list`}>list view</a>
 						</p>
 					</div>
 					<div class="canvas-home-surface">

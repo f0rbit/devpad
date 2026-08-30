@@ -70,6 +70,10 @@ async function captureLevel(page: Page, theme: "light" | "dark", level: CameraLe
 	await page.emulateMedia({ colorScheme: theme });
 	await page.getByRole("button", { name: LEVEL_LABEL[level], exact: true }).click();
 	await expect(anyNodeAtLevel(page, level)).toBeVisible({ timeout: 5000 });
+	// `data-lod`/visibility flip at the START of the 210ms `.canvas-world`
+	// transition (see AGENTS.md's "E2E camera-settle gotcha"), not the end —
+	// screenshotting before the tween settles catches mid-pan/zoom blur.
+	await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
 	await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
 	const output = resolve(screenshot_dir, `canvas-p2-${level}-${theme}.png`);
 	await page.screenshot({ path: output, fullPage: false });

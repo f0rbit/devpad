@@ -1,9 +1,9 @@
 import type { ApiClient } from "@devpad/api";
-import type { Task, TaskLink } from "@devpad/schema";
+import type { DocumentStatus, Task, TaskLink } from "@devpad/schema";
 
 export type NodeProjection = {
 	readonly waiting: boolean;
-	readonly docsStatus: "draft" | "in_review" | "approved" | null;
+	readonly docsStatus: DocumentStatus | null;
 	readonly pulseSpark: number[] | null;
 };
 
@@ -40,7 +40,7 @@ export async function fetch_node_projections(
 
 	const waiting_ids = new Set(pending_result.ok ? pending_result.value.items.map((item) => item.subject_id) : []);
 
-	const docs_status_by_task = new Map<string, "draft" | "in_review" | "approved">();
+	const docs_status_by_task = new Map<string, DocumentStatus>();
 	if (docs_result.ok) {
 		for (const doc of docs_result.value) {
 			if (!doc.task_id) continue;

@@ -1,10 +1,15 @@
 import type { SdlcStage, Task } from "@devpad/schema";
 import Bot from "lucide-solid/icons/bot";
+import Check from "lucide-solid/icons/check";
+import CircleDashed from "lucide-solid/icons/circle-dashed";
+import CircleDot from "lucide-solid/icons/circle-dot";
 import FileText from "lucide-solid/icons/file-text";
+import Lock from "lucide-solid/icons/lock";
 import Milestone from "lucide-solid/icons/milestone";
 import Pin from "lucide-solid/icons/pin";
 import Target from "lucide-solid/icons/target";
 import Watch from "lucide-solid/icons/watch";
+import Zap from "lucide-solid/icons/zap";
 import { Show } from "solid-js";
 import type { CameraLevel } from "./camera";
 import type { NodeProjection } from "./projections";
@@ -21,6 +26,9 @@ export type CanvasNodeProps = {
 	readonly pinned: boolean;
 	/** Agent-created (`created_by === "api"`) AND unpinned — got the default beside-parent placement. */
 	readonly programmatic: boolean;
+	/** Derived client-side from the already-loaded graph `links` (no fetch) — see `canvas-surface.tsx`'s `edge_chips_for`. */
+	readonly blocked: boolean;
+	readonly ready: boolean;
 	/** True for one render pass right after an agent-created node first enters view — drives the `.canvas-node-cue` flash. */
 	readonly showPlacementCue: boolean;
 	/** Lazily fetched only for visible node/detail-LOD nodes (see `projections.ts`) — null until loaded, undefined if never requested. */
@@ -48,6 +56,12 @@ const STAGE_LABEL: Record<SdlcStage, string> = {
 
 const RING_CIRCUMFERENCE = 81.7;
 
+const STATUS_CHIP: Record<Task["progress"], { icon: typeof Check; label: string }> = {
+	COMPLETED: { icon: Check, label: "done" },
+	IN_PROGRESS: { icon: CircleDot, label: "in progress" },
+	UNSTARTED: { icon: CircleDashed, label: "unstarted" },
+};
+
 /**
  * Node card — LOD tiers per the UX contract: `map` collapses to a dot/pill
  * (title shown only for fold kinds), `neighborhood` is icon-only,
@@ -60,9 +74,12 @@ export default function CanvasNode(props: CanvasNodeProps) {
 	const dash = () => (RING_CIRCUMFERENCE * progress_percent(props.task)) / 100;
 	const is_map = () => props.level === "map";
 	const is_neighborhood = () => props.level === "neighborhood";
-	const show_body = () => props.level === "node" || props.level === "detail";
 	const show_detail_panel = () => props.level === "detail" && props.selected;
 	const is_fold = () => FOLD_KINDS.has(props.task.kind);
+	// The status chip always renders at node/detail LOD, so the chip row is
+	// never actually empty — the old ".canvas-node-body always renders" bug
+	// (~60% empty chrome per critic finding #3) predates that chip existing.
+	const show_body = () => props.level === "node" || props.level === "detail";
 
 	return (
 		<article
@@ -122,6 +139,28 @@ export default function CanvasNode(props: CanvasNodeProps) {
 			<Show when={show_body()}>
 				<div class="canvas-node-body">
 					<div class="canvas-node-chips" data-testid="canvas-node-chips">
+						{(() => {
+							const status = STATUS_CHIP[props.task.progress];
+							const StatusIcon = status.icon;
+							return (
+								<span class="canvas-chip canvas-chip-status" data-testid="canvas-chip-status">
+									<StatusIcon size={10} aria-hidden="true" />
+									{status.label}
+								</span>
+							);
+						})()}
+						<Show when={props.blocked}>
+							<span class="canvas-chip canvas-chip-blocked" data-testid="canvas-chip-blocked">
+								<Lock size={10} aria-hidden="true" />
+								blocked
+							</span>
+						</Show>
+						<Show when={props.ready}>
+							<span class="canvas-chip canvas-chip-ready" data-testid="canvas-chip-ready">
+								<Zap size={10} aria-hidden="true" />
+								ready
+							</span>
+						</Show>
 						<Show when={props.task.stage}>
 							{(stage) => <span class="canvas-chip canvas-chip-stage">{STAGE_LABEL[stage()]}</span>}
 						</Show>
