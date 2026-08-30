@@ -2344,11 +2344,21 @@ button.outline-row {
    a 1.5px stroke shrinks below 1 physical pixel at `map`'s ~0.4-0.6 scale
    and becomes invisible (the root cause of "connecting lines aren't
    visible"). Link edges are 2px for extra contrast; hierarchy overrides
-   narrower per the UX contract (containment, not a directional relation). */
+   narrower per the UX contract (containment, not a directional relation).
+   `stroke-linecap`/`stroke-linejoin: round` fix a SEPARATE artifact at
+   `map`'s extreme zoom-out (e.g. a 500-node forest's fit-to-viewport scale
+   can be well under 0.1): a long, mostly-diagonal `curveBumpX`/`Y` bezier
+   with the default miter join and butt caps anti-aliases into a visually
+   "dotted/broken" line at that scale, even though `non-scaling-stroke`
+   already guarantees the stroke is a solid >=1 SCREEN pixel wide — rounding
+   both smooths the per-segment coverage enough that the eye reads it as one
+   continuous line instead of a dashed one. */
 .canvas-edge {
 	fill: none;
 	stroke: var(--fg-subtle);
 	stroke-width: 2;
+	stroke-linecap: round;
+	stroke-linejoin: round;
 	vector-effect: non-scaling-stroke;
 	opacity: 0.9;
 }
