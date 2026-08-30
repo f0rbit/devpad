@@ -93,6 +93,47 @@ describe("layout_graph", () => {
 		);
 	});
 
+	test("adds a hierarchy edge for every in-project parent_id, ranking children after their parent", () => {
+		const tasks = [
+			make_task("goal"),
+			make_task("milestone", { parent_id: "goal" }),
+			make_task("task", { parent_id: "milestone" }),
+		];
+
+		const layout = layout_graph(tasks, []);
+
+		const hierarchy_edges = layout.edges.filter((e) => e.kind === "hierarchy");
+		expect(hierarchy_edges).toHaveLength(2);
+		expect(hierarchy_edges.some((e) => e.src_id === "goal" && e.dst_id === "milestone")).toBe(true);
+		expect(hierarchy_edges.some((e) => e.src_id === "milestone" && e.dst_id === "task")).toBe(true);
+
+		const by_id = new Map(layout.nodes.map((n) => [n.task.id, n]));
+		const goal_x = by_id.get("goal")?.x ?? 0;
+		const milestone_x = by_id.get("milestone")?.x ?? 0;
+		const task_x = by_id.get("task")?.x ?? 0;
+		expect(milestone_x).toBeGreaterThan(goal_x);
+		expect(task_x).toBeGreaterThan(milestone_x);
+	});
+
+	test("hierarchy edges never replace an overlapping task_link edge between the same pair", () => {
+		const tasks = [make_task("parent"), make_task("child", { parent_id: "parent" })];
+		const links = [make_link("parent", "child", "blocks")];
+
+		const layout = layout_graph(tasks, links);
+
+		expect(layout.edges).toHaveLength(2);
+		expect(layout.edges.some((e) => e.kind === "hierarchy")).toBe(true);
+		expect(layout.edges.some((e) => e.kind === "blocks")).toBe(true);
+	});
+
+	test("a parent_id pointing outside the loaded task set is never added as a hierarchy edge", () => {
+		const tasks = [make_task("child", { parent_id: "outside-the-project" })];
+
+		const layout = layout_graph(tasks, []);
+
+		expect(layout.edges).toHaveLength(0);
+	});
+
 	test("bounds fully contain every node's card footprint", () => {
 		const tasks = [make_task("a"), make_task("b"), make_task("c")];
 		const links = [make_link("a", "b"), make_link("b", "c")];
