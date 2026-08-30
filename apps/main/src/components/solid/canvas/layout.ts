@@ -95,6 +95,11 @@ const hierarchy_edge_id = (parent_id: string, child_id: string): string => `hier
 const EMPTY_BOUNDS: ContentBounds = { x: 0, y: 0, w: 0, h: 0 };
 export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_BOUNDS };
 
+/** dagre spacing knobs — named so `wrap_dense_ranks` (below) can reproduce the exact same gaps when it reflows a rank dagre stacked too tall. */
+const NODESEP = 48;
+const RANKSEP = 96;
+const MARGINX = 32;
+
 /**
  * Layered (dagre) layout — NEVER force-directed, per the canvas UX contract:
  * a graph you can predict beats one that resettles every render. Extracted
@@ -115,7 +120,7 @@ export function layout_graph(
 	// impossible via `parent_id` — guarded elsewhere) but keeps dagre robust
 	// if a future edge source ever introduces one.
 	const g = new dagre.graphlib.Graph<GraphLabel, NodeLabel, EdgeLabel>({ multigraph: true });
-	g.setGraph({ rankdir: "LR", nodesep: 48, ranksep: 96, marginx: 32, marginy: 32, acyclicer: "greedy" });
+	g.setGraph({ rankdir: "LR", nodesep: NODESEP, ranksep: RANKSEP, marginx: MARGINX, marginy: 32, acyclicer: "greedy" });
 
 	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
@@ -139,7 +144,7 @@ export function layout_graph(
 	}
 	dagre.layout(g);
 
-	const nodes: LaidOutNode[] = tasks.map((task) => {
+	const raw_nodes: LaidOutNode[] = tasks.map((task) => {
 		const pos = g.node(task.id);
 		return { task, x: pos.x ?? 0, y: pos.y ?? 0 };
 	});
@@ -148,8 +153,80 @@ export function layout_graph(
 		return { id: label.id, kind: label.kind, points: label.points ?? [], src_id: label.src_id, dst_id: label.dst_id };
 	});
 
-	if (nodes.length === 0) return EMPTY_LAYOUT;
+	if (raw_nodes.length === 0) return EMPTY_LAYOUT;
+	const nodes = wrap_dense_ranks(raw_nodes, node_size);
 	return { nodes, edges, bounds: bounds_for(nodes, node_size) };
+}
+
+/** Below this many siblings, a single dagre column reads fine — wrapping would cost more legibility (extra sub-columns) than it buys back in aspect ratio. */
+const RANK_WRAP_MIN_NODES = 5;
+
+type RankGroup = { readonly rank_x: number; readonly nodes: LaidOutNode[] };
+
+/** Buckets nodes by dagre's rank (LR mode gives every node in the same rank an identical `x`, since every node shares one `node_size`). */
+function group_by_rank(nodes: readonly LaidOutNode[]): RankGroup[] {
+	const sorted = nodes.toSorted((a, b) => a.x - b.x);
+	const groups: RankGroup[] = [];
+	for (const node of sorted) {
+		const last = groups.at(-1);
+		if (last && Math.abs(node.x - last.rank_x) < 0.5) {
+			last.nodes.push(node);
+			continue;
+		}
+		groups.push({ rank_x: node.x, nodes: [node] });
+	}
+	return groups;
+}
+
+/**
+ * dagre stacks every node in a rank into a single column, sized/spaced for
+ * the real card footprint (`node_size`) — fine for a balanced tree, but a
+ * project with one wide fan-out rank (e.g. 25 direct children under one
+ * milestone, 4 ranks total) produces a tall, narrow forest that "fits" a
+ * landscape viewport by using ~100% of its height and ~25% of its width
+ * (confirmed against staging's 55-task fixture — see `layout.test.ts`). This
+ * reflows any rank with more than `RANK_WRAP_MIN_NODES` siblings into a
+ * roughly-square grid block (columns ≈ `sqrt(count)`) instead of one column,
+ * then re-centers every rank left-to-right using the SAME `NODESEP`/`RANKSEP`
+ * gaps dagre used, so a wrapped rank's extra width never intrudes into its
+ * neighbours. `hierarchy`/`task_link` order (which node is upstream of which)
+ * is untouched — only the on-screen position within a rank changes.
+ */
+function wrap_dense_ranks(nodes: readonly LaidOutNode[], node_size: NodeSize): LaidOutNode[] {
+	const groups = group_by_rank(nodes);
+
+	const ranks = groups.map((group) => {
+		if (group.nodes.length < RANK_WRAP_MIN_NODES) {
+			return {
+				half_width: node_size.width / 2,
+				positioned: group.nodes.map((n) => ({ node: n, x_offset: 0, y: n.y })),
+			};
+		}
+		const cols = Math.ceil(Math.sqrt(group.nodes.length));
+		const rows = Math.ceil(group.nodes.length / cols);
+		const ordered = group.nodes.toSorted((a, b) => a.y - b.y);
+		const ys = group.nodes.map((n) => n.y);
+		const rank_y_center = (Math.min(...ys) + Math.max(...ys)) / 2;
+		const block_w = cols * node_size.width + (cols - 1) * NODESEP;
+		const block_h = rows * node_size.height + (rows - 1) * NODESEP;
+		const positioned = ordered.map((n, index) => {
+			const col = index % cols;
+			const row = Math.floor(index / cols);
+			const x_offset = col * (node_size.width + NODESEP) - block_w / 2 + node_size.width / 2;
+			const y = rank_y_center + row * (node_size.height + NODESEP) - block_h / 2 + node_size.height / 2;
+			return { node: n, x_offset, y };
+		});
+		return { half_width: block_w / 2, positioned };
+	});
+
+	const result: LaidOutNode[] = [];
+	let right_edge = MARGINX - RANKSEP;
+	for (const rank of ranks) {
+		const center_x = right_edge + RANKSEP + rank.half_width;
+		for (const p of rank.positioned) result.push({ task: p.node.task, x: center_x + p.x_offset, y: p.y });
+		right_edge = center_x + rank.half_width;
+	}
+	return result;
 }
 
 function bounds_for(nodes: readonly LaidOutNode[], node_size: NodeSize): ContentBounds {
