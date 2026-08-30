@@ -54,3 +54,23 @@ The two B3 AGENTS.md lessons are now recorded: `@f0rbit/ui` Button `primary` is 
 ## How to resume (one line)
 
 The v2.4 arc is closed. Future work continues from the tracked follow-ups and the hooks go-live operations prerequisite; conventions remain in `~/dev/devpad/AGENTS.md` and the plan's phase-b3 section.
+
+## Canvas home arc (P2–P4) — closed 2026-08-30
+
+**Shipped**: PR [#148](https://github.com/f0rbit/devpad/pull/148) squash-merged to `main` at `f2bfe35d` (26 feature commits + one ship-verification fix-forward commit `63b99cfc`). CI green (`bun run gate` scoped checks, `bun run e2e:ci`), staging deploy (`Deploy Staging` run 33295216753) green, migration `0022_project_view_state` applied cleanly via CI's `wrangler d1 migrations apply` step (no `duplicate column name` retry-failure — the never-hand-apply rule held).
+
+**What shipped**: full-viewport dagre-laid-out project canvas as the project home at `/project/:id` (4-level semantic zoom, viewport culling, drag-to-pin view-state, lazy node projections, semantic travel), IA absorption (8 tabs → 6, `overview`/`work`/`canvas` all 301-redirect to the same route), mobile UA-sniffed straight to the outline (no canvas JS shipped), a visible canvas↔list toggle with cookie memory, emoji-chip retirement, and a critic-fix pass (HUD toggle, LOD chrome, edge chips, fit inset). Full detail + the mock-parity table live in `AGENTS.md`'s Canvas section.
+
+**Verifier fix-forward** (`63b99cfc`, on top of the coder's 26 commits): `bun run gate`'s eslint pass surfaced 21 real errors confined to this branch's own new canvas files — numeric template-literal interpolations (`restrict-template-expressions`), `as Task`/`as TaskLink` casts that were silently hiding four missing required fields (`created_by`/`modified_by`/`protected`/`deleted`, caught only once the casts were replaced with typed consts and `astro check` regressed from 57→61), and a few forbidden void-returning arrow shorthands. All fixed; `astro check` is back to the documented 57-error baseline. Also cleared pre-existing `oxfmt` drift in `AGENTS.md` and `canvas-projections.spec.ts` (whitespace/table reflow only, confirmed unrelated to this branch via `git stash`).
+
+**Staging smoke**: `/`, `/health` (`{"status":"ok"}`), `/todo` all 200. `/project/<id>` and `/v1/projects/:id/view-state` return 401 (auth-gated, not 500) for an unauthenticated request against a real staging project id (`project_3f0035e0-8530-4542-a087-75a11a419ac3`) — consistent with the v2.5.0 close-out's precedent of not driving authed pages in a headless smoke pass. The CI `Apply D1 migrations` step itself completing green is the authoritative migration-applied evidence (a re-run would hard-fail with `duplicate column name` if the row hadn't been written).
+
+**Not done — no production release cut**: staging is green; a `v2.6.0` (or similar) production tag was intentionally NOT cut per the brief's Mode V instructions ("report readiness instead"). Whoever cuts it next should re-run the production smoke triad (`/`, `/health`, `/todo`) plus, if reachable with an authed session, an actual `/project/:id` canvas render check — this pass could only prove the route doesn't 500, not that it renders correctly, since it's auth-gated and no session was available.
+
+**devpad tracker discrepancy**: the brief named `task_0b0d0010`/`task_8a4c8a75`/`task_dba50404` as the phase tasks to reference/close. None of the 352 tasks in the tracker (across all projects, not just `-p devpad`) match those ids or contain "canvas" in title/description — `devpad tasks get task_dba50404` returns "Resource not found". Nothing was marked done; this needs the planner/orchestrator to either locate the real task ids or create them retroactively for this arc.
+
+**Follow-ups carried forward** (unchanged from before this arc, plus one new item):
+- `task_5a33dfc5…` — repo-wide ESLint warning backlog (~5,520 warnings, 0 errors as of this arc); confirmed none are in this branch's own new files.
+- `task_8d114f90…` — mobile 360px header collision: actually fixed this arc via `globals.css`'s `.unified-header__row1` gaining `flex-wrap: wrap` (platform-wide file, no build step) — close this task out.
+- Per-task pulse metric binding (`tracks_metric` link's `ref` column) — real backend work, deferred, not a UI gap; tracked only in the AGENTS.md parity table, no devpad task exists for it yet.
+- Directional edge indicators, graph lens panel, toast notifications, ripple/bubbling choreography on the canvas, and the mock's `j/k/space/o/g` keyboard verbs remain mocked-only per the parity table — no devpad task exists for these either; worth a planning pass if they're still wanted.
