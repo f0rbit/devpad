@@ -71,15 +71,15 @@ const readWorldScale = async (page: Page): Promise<number> => {
 	return Number(match[1]);
 };
 
+/** Matches `.canvas-world`'s CSS `transition: transform 210ms` / `zoom_to`'s real 200ms tween — see AGENTS.md's "E2E camera-settle gotcha". */
+const CAMERA_SETTLE_MS = 300;
+
 /**
  * Same cold-hydration retry pattern as `outline-zoom.spec.ts`'s
  * `clickWithRetry` — the canvas surface is a `client:load` Astro island, so
  * the FIRST interaction on a freshly-navigated page can land before Solid's
  * delegated click listener has attached.
  */
-/** Matches `.canvas-world`'s CSS `transition: transform 210ms` / `zoom_to`'s real 200ms tween — see AGENTS.md's "E2E camera-settle gotcha". */
-const CAMERA_SETTLE_MS = 300;
-
 const clickLevel = async (page: Page, level: CameraLevel, timeout = 5000): Promise<void> => {
 	const button = page.getByRole("button", { name: LEVEL_LABEL[level], exact: true });
 	await button.click();
@@ -424,6 +424,63 @@ test.describe("canvas home — P2.5 verification", () => {
 					await captureLevel(page, theme, level);
 				}
 			}
+		});
+
+		/**
+		 * Task 4 proof set for this phase's fixes — the STAGING fixture (55
+		 * tasks, real spread-out spacing) for map/neighborhood/node so the
+		 * wider `nodesep`/`ranksep` is actually visible, plus one post-drag
+		 * shot proving no stale dagre elbow survives a pin.
+		 */
+		test("captures fluid-zoom map/neighborhood/node in light and dark, plus a post-drag shot", async ({
+			page,
+			context,
+		}) => {
+			test.setTimeout(120_000);
+			mkdirSync(screenshot_dir, { recursive: true });
+			await inject_test_user(context);
+			await page.setViewportSize({ width: 1440, height: 900 });
+			await openCanvas(page, E2E_CANVAS_STAGING_PROJECT_ID);
+
+			for (const theme of ["light", "dark"] as const) {
+				await page.emulateMedia({ colorScheme: theme });
+				for (const level of ["map", "neighborhood", "node"] as const) {
+					await page.getByRole("button", { name: LEVEL_LABEL[level], exact: true }).click();
+					await expect(anyNodeAtLevelAnywhere(page, level)).toHaveCount(1, { timeout: 5000 });
+					await expect(page.locator(".canvas-viewport-moving")).toHaveCount(0, { timeout: 5000 });
+					await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
+					const output = resolve(screenshot_dir, `canvas-fluid-${level}-${theme}.png`);
+					await page.screenshot({ path: output, fullPage: false });
+					expect(existsSync(output)).toBeTruthy();
+				}
+			}
+
+			// Post-drag: pin the SAME task_id (remapped with the fixture's
+			// `staging-` prefix — see `fixtures/canvas-staging.ts`) whose
+			// `tracks_metric` edge was the exact one in Tom's staging screenshot,
+			// and prove the edge follows it directly, no stale elbow.
+			await page.emulateMedia({ colorScheme: "dark" });
+			const node = page.locator('[data-canvas-node][data-task-id="staging-task_047e53dd-b3cd-4a7e-85bb-32b9cb7b1634"]');
+			// `map` shows every node (fit-to-forest, by design) — select it there
+			// first so the camera focuses on it (`canvas-surface.tsx`'s
+			// `set_focus` effect), THEN zoom to "node" so it lands centered and
+			// on-screen rather than wherever it happened to fall at map scale.
+			await clickLevel(page, "map");
+			await node.click({ force: true });
+			await clickLevel(page, "node");
+			await expect(node).toBeVisible();
+			const box = await node.boundingBox();
+			if (!box) throw new Error("node has no bounding box");
+			await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+			await page.mouse.down();
+			await page.mouse.move(box.x + box.width / 2 + 220, box.y + box.height / 2 - 150, { steps: 10 });
+			await page.mouse.up();
+			await expect(node).toHaveAttribute("data-pinned", "true");
+			await page.waitForTimeout(CAMERA_SETTLE_MS);
+			await page.evaluate(() => document.querySelector("astro-dev-toolbar")?.remove());
+			const dragged_output = resolve(screenshot_dir, "canvas-fluid-dragged-dark.png");
+			await page.screenshot({ path: dragged_output, fullPage: false });
+			expect(existsSync(dragged_output)).toBeTruthy();
 		});
 	});
 });
