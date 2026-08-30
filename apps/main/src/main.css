@@ -2315,9 +2315,26 @@ button.outline-row {
 	}
 }
 
+/* ROOT CAUSE of "edges aren't visible at all": `@f0rbit/ui`'s reset sets
+   `svg { max-width: 100% }` globally. `.canvas-world` has no intrinsic size
+   of its own (every child, including this svg, is `position: absolute`, so
+   an absolutely-positioned parent with only absolutely-positioned children
+   never gets a non-zero auto size) — so `max-width: 100%` resolved against
+   that 0-width containing block clamped this svg's computed width to a
+   literal 0, no matter what `width` value this rule set (max-width always
+   wins over width when it's the smaller constraint, `!important` on `width`
+   included — only overriding `max-width` itself fixes it). A 0-width `<svg>`
+   root then clips ALL its path content on that axis even with
+   `overflow: visible` (a replaced-element sizing quirk), so every edge
+   silently failed to paint. `max-width: none` + an oversized fixed box
+   sidesteps the whole auto-sizing question. */
 .canvas-edges {
 	position: absolute;
-	inset: 0;
+	left: 0;
+	top: 0;
+	width: 200000px;
+	height: 200000px;
+	max-width: none;
 	overflow: visible;
 	pointer-events: none;
 }

@@ -160,8 +160,22 @@ function bounds_for(nodes: readonly LaidOutNode[], node_size: NodeSize): Content
 
 export type ViewPin = { readonly x: number; readonly y: number };
 
-/** Fixed offset (dagre's own nodesep/ranksep-scaled) an un-pinned agent-created node is placed at, relative to its parent — matches the UX contract's "placed beside its parent so it is never lost in the map". */
-const AGENT_PLACEMENT_OFFSET = { dx: CANVAS_NODE_W * 0.7, dy: CANVAS_NODE_H * 0.9 };
+/**
+ * Fixed offset an un-pinned agent-created node is placed at, relative to its
+ * parent — matches the UX contract's "placed beside its parent so it is
+ * never lost in the map". Deliberately NOT derived from `CANVAS_NODE_W`/
+ * `CANVAS_NODE_H` (the dagre-spacing box, sized to the largest possible
+ * rendered footprint) — a real project with many agent-created siblings
+ * under one parent (the staging fixture: up to 7) would otherwise stack them
+ * ~2100px tall, making `map`'s "fit everything" scale so tiny the dots
+ * become sub-pixel. This is the SAME "node" LOD footprint pre-P2.5's node
+ * card CSS was tuned against; siblings can still overlap if a user zooms
+ * a dense agent-placed cluster to `detail` — a pre-existing tradeoff of the
+ * "placed beside parent, not dagre-ranked" design this PR doesn't attempt
+ * to re-architect.
+ */
+const AGENT_PLACEMENT_OFFSET = { dx: 250 * 0.7, dy: 124 * 0.9 };
+const AGENT_SIBLING_GAP_PX = 124 + 16;
 
 /**
  * P3.3 — applies view-state pins (drag overrides, last-write-wins) and, for
@@ -204,7 +218,7 @@ export function apply_view_overrides(
 			return {
 				...node,
 				x: parent_pos.x + AGENT_PLACEMENT_OFFSET.dx,
-				y: parent_pos.y + AGENT_PLACEMENT_OFFSET.dy + index * (node_size.height + 16),
+				y: parent_pos.y + AGENT_PLACEMENT_OFFSET.dy + index * AGENT_SIBLING_GAP_PX,
 			};
 		}
 		return node;
