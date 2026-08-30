@@ -2416,11 +2416,13 @@ button.outline-row {
 /* Canvas home (P2.3) node card — .plans/canvas-mock.html's `.node` treatment,
    scoped `.canvas-*` (kept separate from the ephemeral `.lens-*` overlay). */
 /* Width/height are set inline by `canvas-node.tsx` from `layout.ts`'s
-   `node_size_for` (single source shared with dagre's spacing/edge-clipping
-   math) — this 250px is only a pre-hydration/no-JS fallback. */
+   `node_size_for` — ONE fixed box regardless of kind or LOD (single source
+   shared with dagre's spacing/edge-clipping math, see `layout.ts`) — this
+   260px is only a pre-hydration/no-JS fallback. */
 .canvas-node {
 	position: absolute;
-	width: 250px;
+	width: 260px;
+	overflow: hidden;
 	transform: translate(-50%, -50%);
 	border: 1px solid var(--border);
 	border-radius: var(--radius);
@@ -2515,22 +2517,24 @@ button.outline-row {
    per-node `data-lod` attribute (not an ancestor `.canvas-world` class) so
    nodes mid-debounce never disagree with a stale ancestor class. Width and
    height come from the JS `size` inline style (`layout.ts`'s
-   `node_size_for`) — these rules are cosmetic only (shape/padding/font),
+   `node_size_for`) and are now IDENTICAL across every LOD tier (see
+   layout.ts's doc comment) — these rules only ever touch shape/padding/font,
    never dimensions, so the rendered box can never disagree with what dagre
    reserved for it. */
-/* `scale()` here counter-scales the dot back up when `.canvas-world`'s
-   `--canvas-scale` is small — a lopsided/wide forest's fit-to-viewport scale
-   can drop well below 0.2 (see `layout.ts`'s `wrap_dense_ranks`), at which
-   point a plain 20px-world dot renders under 4 SCREEN px and reads as an
-   invisible speck. `clamp(1, ...)` never shrinks it below its own 20px world
-   size once zoomed past `neighborhood`; the upper `6` bound keeps a hugely
-   boosted dot from visually eating into a same-rank neighbour (dagre's own
-   sibling spacing reserves 172px+ between rank-mates — see `layout.ts` — so
-   a dot rendered up to 6x its 20px box (120px) still clears that gap). */
+/* `scale()` here is PURELY visual — it never changes the box's actual
+   260x200 reserved width/height, only how it LOOKS on screen — collapsing
+   the full card down to dot scale at `map`. The base `0.14` targets a
+   dot-ish on-screen footprint at a typical fit-to-forest `map_scale`; the
+   `clamp` boosts it back up when `.canvas-world`'s `--canvas-scale` drops
+   very low (a big/sparse forest's fit-to-viewport scale can fall well below
+   0.1), so the dot never shrinks under a legible floor. The upper bound
+   keeps a hugely boosted dot from visually eating into a same-rank
+   neighbour — `layout.ts`'s `nodesep` now reserves >=156px between
+   rank-mates, comfortably more headroom than the old tiny-dot design had. */
 .canvas-node[data-lod="map"] {
 	border-radius: 50%;
 	box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent);
-	transform: translate(-50%, -50%) scale(clamp(1, calc(8 / (20 * var(--canvas-scale, 1))), 6));
+	transform: translate(-50%, -50%) scale(clamp(0.14, calc(2.2 / (260 * var(--canvas-scale, 1))), 0.55));
 }
 
 .canvas-node[data-lod="map"] .canvas-node-head {
@@ -2561,13 +2565,13 @@ button.outline-row {
    `overflow: hidden` + the title's existing ellipsis truncation) rather than
    floating below the box via absolute positioning, which used to escape
    whatever space dagre reserved and draw over whatever card sat below it. */
-/* Same counter-scale idea as the plain dot above, applied to the whole pill
-   (not just its title text) since the title's box needs to grow along with
-   the font to avoid `overflow: hidden` clipping a bigger glyph down to a
-   sliver. Capped lower than the dot's (`3.5` vs `6`) because a fold pill's
-   own world footprint (44px tall) is already over 2x a dot's (20px) — the
-   same 172px sibling-gap safety margin (`layout.ts`'s dagre spacing) allows
-   less headroom before a boosted pill reaches into its rank-mate's space. */
+/* Same idea as the plain dot above, applied to the whole pill (not just its
+   title text) since the title's box needs to grow along with the font to
+   avoid `overflow: hidden` clipping a bigger glyph down to a sliver. A
+   bigger base scale than the dot's (`0.3` vs `0.14`) since a fold's title
+   needs to stay legible even before the low-`--canvas-scale` boost kicks in;
+   the box is the SAME fixed 260x200 as every other node, so this too is
+   purely visual and never exceeds what `layout.ts` reserved for it. */
 .canvas-node[data-lod="map"].canvas-node-fold {
 	display: flex;
 	flex-direction: column;
@@ -2579,7 +2583,7 @@ button.outline-row {
 	box-shadow: var(--shadow);
 	padding: 4px 6px;
 	overflow: hidden;
-	transform: translate(-50%, -50%) scale(clamp(1, calc(1 / var(--canvas-scale, 1)), 3.5));
+	transform: translate(-50%, -50%) scale(clamp(0.3, calc(1.4 / (260 * var(--canvas-scale, 1))), 0.7));
 }
 
 .canvas-node[data-lod="map"].canvas-node-fold .canvas-node-head {
@@ -2605,7 +2609,13 @@ button.outline-row {
 	font-size: 9px;
 }
 
+/* `neighborhood`'s icon-only content is much shorter than the fixed 200px
+   box (`.canvas-node-body` never renders at this LOD) — center it instead of
+   leaving it pinned to the top with a large empty gap below. */
 .canvas-node[data-lod="neighborhood"] {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
 	overflow: hidden;
 }
 
@@ -2627,24 +2637,23 @@ button.outline-row {
 	height: 26px;
 }
 
-/* `max-height` + scroll caps the body at exactly what `node_size_for`
-   allocated for its LOD tier, so a wide chip row wrapping to a 3rd/4th line
-   scrolls internally instead of growing the card past its reserved dagre
-   footprint (the other root cause of node/node overlap — a card's real
-   height depends on content, dagre's spacing math can't). */
+/* `max-height` + scroll caps the body at what fits inside the fixed
+   `node_size_for` box (same box at every LOD now — see `layout.ts`) below
+   the head, so a wide chip row wrapping to a 3rd/4th line, or `detail`'s
+   longer description/sparkline, scrolls internally instead of growing the
+   card past its reserved dagre footprint (the other root cause of node/node
+   overlap — a card's real height depends on content, dagre's spacing math
+   can't). The outer `.canvas-node`'s own `overflow: hidden` is the backstop
+   that guarantees this even if a future addition here miscalculates. */
 .canvas-node-body {
 	border-top: 1px solid var(--border);
 	padding: 12px 15px 15px;
-	max-height: 120px;
+	max-height: 130px;
 	overflow-y: auto;
 }
 
 .canvas-node[data-lod="detail"] .canvas-node-title {
 	font-size: 16px;
-}
-
-.canvas-node[data-lod="detail"] .canvas-node-body {
-	max-height: 235px;
 }
 
 .canvas-node-detail-panel {

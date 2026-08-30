@@ -80,9 +80,11 @@ export default function CanvasNode(props: CanvasNodeProps) {
 	// (~60% empty chrome per critic finding #3) predates that chip existing.
 	const show_body = () => props.level === "node" || props.level === "detail";
 	// Single source of truth (`layout.ts`'s `node_size_for`) for this node's
-	// box — also what dagre spacing/edge-clipping read off, so the rendered
-	// card and the layout math can never disagree.
-	const size = () => node_size_for(props.task.kind, props.level);
+	// box — ONE fixed size regardless of LOD, also what dagre spacing/edge-
+	// clipping read off, so the rendered card and the layout math can never
+	// disagree. LOD only swaps inner content below; the `map`-tier dot/pill
+	// look is a pure CSS `transform: scale` DOWN into this same box.
+	const size = () => node_size_for(props.task.kind);
 
 	return (
 		<article

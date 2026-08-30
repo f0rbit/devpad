@@ -235,7 +235,98 @@ describe("apply_view_overrides", () => {
 
 		expect(overridden.programmaticIds.size).toBe(0);
 	});
+
+	test("pinning a node drops dagre's stale routed points for every edge touching it, straight to a 2-point route — other edges unchanged", () => {
+		// A little chain (a -> b -> c) so pinning `b` touches two edges
+		// (a->b, b->c) and leaves one (nothing else here, but the shape
+		// generalizes) — dagre gives every edge multi-point routing by default
+		// once nodes are far enough apart for a bend.
+		const tasks = [make_task("a"), make_task("b"), make_task("c")];
+		const links = [make_link("a", "b", "relates_to"), make_link("b", "c", "relates_to")];
+		const layout = layout_graph(tasks, links);
+		const unpinned = apply_view_overrides(layout);
+
+		const pinned = apply_view_overrides(layout, undefined, { b: { x: 5000, y: -3000 } });
+		const by_id = new Map(pinned.nodes.map((n) => [n.task.id, n]));
+		const b = by_id.get("b");
+		expect(b?.x).toBe(5000);
+		expect(b?.y).toBe(-3000);
+
+		for (const edge of pinned.edges) {
+			const touches_b = edge.src_id === "b" || edge.dst_id === "b";
+			if (!touches_b) {
+				// An edge untouched by the pin keeps dagre's original route exactly.
+				const original = unpinned.edges.find((e) => e.id === edge.id);
+				expect(edge.points).toEqual(original?.points ?? []);
+				continue;
+			}
+
+			expect(edge.points).toHaveLength(2);
+			const src = by_id.get(edge.src_id);
+			const dst = by_id.get(edge.dst_id);
+			expect(src).toBeDefined();
+			expect(dst).toBeDefined();
+			if (!src || !dst) continue;
+
+			const src_size = node_size_for(src.task.kind);
+			const dst_size = node_size_for(dst.task.kind);
+			const [first, ...rest] = clip_edge_endpoints(
+				edge.points,
+				{ x: src.x, y: src.y, size: src_size },
+				{ x: dst.x, y: dst.y, size: dst_size },
+			);
+			const last = rest.at(-1) ?? first;
+			expect(first.x).toBeGreaterThanOrEqual(src.x - src_size.width / 2 - 0.5);
+			expect(first.x).toBeLessThanOrEqual(src.x + src_size.width / 2 + 0.5);
+			expect(first.y).toBeGreaterThanOrEqual(src.y - src_size.height / 2 - 0.5);
+			expect(first.y).toBeLessThanOrEqual(src.y + src_size.height / 2 + 0.5);
+			expect(last.x).toBeGreaterThanOrEqual(dst.x - dst_size.width / 2 - 0.5);
+			expect(last.x).toBeLessThanOrEqual(dst.x + dst_size.width / 2 + 0.5);
+			expect(last.y).toBeGreaterThanOrEqual(dst.y - dst_size.height / 2 - 0.5);
+			expect(last.y).toBeLessThanOrEqual(dst.y + dst_size.height / 2 + 0.5);
+		}
+
+		// Sanity: dagre actually DID give at least one of these edges an
+		// interior bend point pre-pin — otherwise this test wouldn't be
+		// exercising anything (a 2-point straight route would already have
+		// looked identical).
+		expect(unpinned.edges.some((e) => e.points.length > 2)).toBe(true);
+	});
 });
+
+/**
+ * Comfortably below `layout.ts`'s configured `nodesep`(170)/`ranksep`(300)
+ * — 0.6x `CANVAS_NODE_W` (156), the brief's literal minimum sibling gap —
+ * but well above the OLD spacing (48/96) this replaces, so a regression back
+ * toward the tighter values fails this even though nothing technically
+ * overlaps.
+ */
+const MIN_EXPECTED_GAP = 0.6 * CANVAS_NODE_W;
+
+/**
+ * Minimum edge-to-edge gap across every pair of node rects. For a pair
+ * separated along only one axis, the gap is that axis' distance; for a
+ * diagonal pair (separated on both axes) this takes the LARGER of the two
+ * axis gaps as a permissive (not exact Euclidean) lower bound. A pair that
+ * overlaps on BOTH axes produces a negative number on both, so the overall
+ * minimum still correctly reports the overlap.
+ */
+function min_rect_gap(nodes: readonly { readonly x: number; readonly y: number }[]): number {
+	const half_w = CANVAS_NODE_W / 2;
+	const half_h = CANVAS_NODE_H / 2;
+	const rects = nodes.map((n) => ({ x0: n.x - half_w, x1: n.x + half_w, y0: n.y - half_h, y1: n.y + half_h }));
+	let min_gap = Number.POSITIVE_INFINITY;
+	for (let i = 0; i < rects.length; i++) {
+		for (let j = i + 1; j < rects.length; j++) {
+			const a = rects[i];
+			const b = rects[j];
+			const x_gap = a.x0 >= b.x1 ? a.x0 - b.x1 : b.x0 >= a.x1 ? b.x0 - a.x1 : -1;
+			const y_gap = a.y0 >= b.y1 ? a.y0 - b.y1 : b.y0 >= a.y1 ? b.y0 - a.y1 : -1;
+			min_gap = Math.min(min_gap, Math.max(x_gap, y_gap));
+		}
+	}
+	return min_gap;
+}
 
 /**
  * Regression coverage for the "map view collapses into a narrow vertical
@@ -263,8 +354,8 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 			expect(dst).toBeDefined();
 			if (!src || !dst) continue;
 
-			const src_size = node_size_for(src.task.kind, "neighborhood");
-			const dst_size = node_size_for(dst.task.kind, "neighborhood");
+			const src_size = node_size_for(src.task.kind);
+			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
 				{ x: src.x, y: src.y, size: src_size },
@@ -284,23 +375,8 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 		}
 	});
 
-	test("no two node rects (dagre's own reserved footprint) intersect", () => {
-		const half_w = CANVAS_NODE_W / 2;
-		const half_h = CANVAS_NODE_H / 2;
-		const rects = layout.nodes.map((n) => ({
-			x0: n.x - half_w,
-			x1: n.x + half_w,
-			y0: n.y - half_h,
-			y1: n.y + half_h,
-		}));
-		for (let i = 0; i < rects.length; i++) {
-			for (let j = i + 1; j < rects.length; j++) {
-				const a = rects[i];
-				const b = rects[j];
-				const overlaps = a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
-				expect(overlaps).toBe(false);
-			}
-		}
+	test("every pair of node rects (dagre's own reserved footprint) keeps at least the configured minimum gap — not just barely non-overlapping", () => {
+		expect(min_rect_gap(layout.nodes)).toBeGreaterThanOrEqual(MIN_EXPECTED_GAP);
 	});
 
 	test("the forest spreads across at least 3 distinct rank columns — not collapsed into a single narrow strip", () => {
@@ -321,9 +397,21 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
  * orientations — this exercises them against the real staging fixture at
  * two viewports chosen to each pick a different `rankdir` (see the module
  * doc comment on `layout_graph`).
+ *
+ * The LR viewport below was widened/heightened from the old 1000x680 default
+ * toolbar size for the wider spacing this fixes (`nodesep`/`ranksep` — see
+ * `layout.ts`): the fixture's dense ~20-sibling rank now spreads far enough
+ * that 1000x680 itself tips to `TB` (a near-square viewport genuinely does
+ * fit that shape better once cards have real breathing room) — a portrait
+ * viewport keeps demonstrating the SAME discrimination the mock's `LR`
+ * default relies on for a typical desktop toolbar aspect.
  */
 describe.each([
-	{ label: "LR (1000x680 — the default toolbar-sized viewport)", viewport: { width: 1000, height: 680 }, want: "LR" },
+	{
+		label: "LR (500x1400 — portrait, favours the fixture's naturally narrow/tall LR shape)",
+		viewport: { width: 500, height: 1400 },
+		want: "LR",
+	},
 	{
 		label: "TB (1600x500 — wide/short, favours stacking ranks vertically)",
 		viewport: { width: 1600, height: 500 },
@@ -347,8 +435,8 @@ describe.each([
 			expect(dst).toBeDefined();
 			if (!src || !dst) continue;
 
-			const src_size = node_size_for(src.task.kind, "neighborhood");
-			const dst_size = node_size_for(dst.task.kind, "neighborhood");
+			const src_size = node_size_for(src.task.kind);
+			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
 				{ x: src.x, y: src.y, size: src_size },
@@ -368,23 +456,8 @@ describe.each([
 		}
 	});
 
-	test("no two node rects intersect", () => {
-		const half_w = CANVAS_NODE_W / 2;
-		const half_h = CANVAS_NODE_H / 2;
-		const rects = layout.nodes.map((n) => ({
-			x0: n.x - half_w,
-			x1: n.x + half_w,
-			y0: n.y - half_h,
-			y1: n.y + half_h,
-		}));
-		for (let i = 0; i < rects.length; i++) {
-			for (let j = i + 1; j < rects.length; j++) {
-				const a = rects[i];
-				const b = rects[j];
-				const overlaps = a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
-				expect(overlaps).toBe(false);
-			}
-		}
+	test("every pair of node rects keeps at least the configured minimum gap", () => {
+		expect(min_rect_gap(layout.nodes)).toBeGreaterThanOrEqual(MIN_EXPECTED_GAP);
 	});
 
 	/**
