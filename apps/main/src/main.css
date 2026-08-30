@@ -2518,9 +2518,19 @@ button.outline-row {
    `node_size_for`) — these rules are cosmetic only (shape/padding/font),
    never dimensions, so the rendered box can never disagree with what dagre
    reserved for it. */
+/* `scale()` here counter-scales the dot back up when `.canvas-world`'s
+   `--canvas-scale` is small — a lopsided/wide forest's fit-to-viewport scale
+   can drop well below 0.2 (see `layout.ts`'s `wrap_dense_ranks`), at which
+   point a plain 20px-world dot renders under 4 SCREEN px and reads as an
+   invisible speck. `clamp(1, ...)` never shrinks it below its own 20px world
+   size once zoomed past `neighborhood`; the upper `6` bound keeps a hugely
+   boosted dot from visually eating into a same-rank neighbour (dagre's own
+   sibling spacing reserves 172px+ between rank-mates — see `layout.ts` — so
+   a dot rendered up to 6x its 20px box (120px) still clears that gap). */
 .canvas-node[data-lod="map"] {
 	border-radius: 50%;
 	box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 12%, transparent);
+	transform: translate(-50%, -50%) scale(clamp(1, calc(8 / (20 * var(--canvas-scale, 1))), 6));
 }
 
 .canvas-node[data-lod="map"] .canvas-node-head {
@@ -2551,6 +2561,13 @@ button.outline-row {
    `overflow: hidden` + the title's existing ellipsis truncation) rather than
    floating below the box via absolute positioning, which used to escape
    whatever space dagre reserved and draw over whatever card sat below it. */
+/* Same counter-scale idea as the plain dot above, applied to the whole pill
+   (not just its title text) since the title's box needs to grow along with
+   the font to avoid `overflow: hidden` clipping a bigger glyph down to a
+   sliver. Capped lower than the dot's (`3.5` vs `6`) because a fold pill's
+   own world footprint (44px tall) is already over 2x a dot's (20px) — the
+   same 172px sibling-gap safety margin (`layout.ts`'s dagre spacing) allows
+   less headroom before a boosted pill reaches into its rank-mate's space. */
 .canvas-node[data-lod="map"].canvas-node-fold {
 	display: flex;
 	flex-direction: column;
@@ -2562,6 +2579,7 @@ button.outline-row {
 	box-shadow: var(--shadow);
 	padding: 4px 6px;
 	overflow: hidden;
+	transform: translate(-50%, -50%) scale(clamp(1, calc(1 / var(--canvas-scale, 1)), 3.5));
 }
 
 .canvas-node[data-lod="map"].canvas-node-fold .canvas-node-head {

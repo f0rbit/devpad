@@ -588,6 +588,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				classList={{ "canvas-world-moving": camera.is_moving() }}
 				style={{
 					transform: `translate(${String(transform().x)}px, ${String(transform().y)}px) scale(${String(transform().scale)})`,
+					// Exposed so map-tier dots/fold-pills can counter-scale themselves
+					// back up to a legible on-screen floor (`.canvas-node[data-lod="map"]`
+					// in main.css) — the SAME "stay legible regardless of camera zoom"
+					// idea as `.canvas-edge`'s `vector-effect: non-scaling-stroke`,
+					// generalised to plain HTML elements via a CSS custom property.
+					"--canvas-scale": String(transform().scale),
 				}}
 			>
 				<svg class="canvas-edges" aria-hidden="true">
