@@ -16,7 +16,10 @@ describe("camera cursor-anchor invariance", () => {
 
 		const anchor = { offsetX: 300, offsetY: 200 };
 		const before = camera.transform();
-		const world_before = { x: (anchor.offsetX - before.x) / before.scale, y: (anchor.offsetY - before.y) / before.scale };
+		const world_before = {
+			x: (anchor.offsetX - before.x) / before.scale,
+			y: (anchor.offsetY - before.y) / before.scale,
+		};
 
 		camera.on_wheel(wheel({ ...anchor, deltaY: -120 }));
 
@@ -36,7 +39,10 @@ describe("camera cursor-anchor invariance", () => {
 
 		const anchor = { offsetX: 120, offsetY: 90 };
 		const before = camera.transform();
-		const world_before = { x: (anchor.offsetX - before.x) / before.scale, y: (anchor.offsetY - before.y) / before.scale };
+		const world_before = {
+			x: (anchor.offsetX - before.x) / before.scale,
+			y: (anchor.offsetY - before.y) / before.scale,
+		};
 
 		camera.on_wheel(wheel({ ...anchor, deltaY: 80, ctrlKey: true }));
 

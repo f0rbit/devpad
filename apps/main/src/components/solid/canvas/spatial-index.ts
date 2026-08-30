@@ -14,7 +14,11 @@ export type SpatialRect = { readonly x: number; readonly y: number; readonly w: 
 export type SpatialItem = SpatialRect & { readonly id: string };
 export type SpatialIndex = { readonly query: (rect: SpatialRect) => ReadonlySet<string> };
 
-const cell_range = (start: number, size: number, cell_size: number): { readonly min: number; readonly max: number } => ({
+const cell_range = (
+	start: number,
+	size: number,
+	cell_size: number,
+): { readonly min: number; readonly max: number } => ({
 	min: Math.floor(start / cell_size),
 	max: Math.floor((start + size) / cell_size),
 });

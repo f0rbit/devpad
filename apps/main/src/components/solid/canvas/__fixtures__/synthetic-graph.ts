@@ -24,9 +24,13 @@ const SEED = 0x5eed_0001;
 const CREATED_AT = "2026-01-01T00:00:00.000Z";
 
 const kind_for = (index: number): Task["kind"] => (index % 47 === 0 ? "milestone" : index % 31 === 0 ? "goal" : "task");
-const progress_for = (index: number): Task["progress"] => (index % 3 === 0 ? "COMPLETED" : index % 3 === 1 ? "IN_PROGRESS" : "UNSTARTED");
+const progress_for = (index: number): Task["progress"] =>
+	index % 3 === 0 ? "COMPLETED" : index % 3 === 1 ? "IN_PROGRESS" : "UNSTARTED";
 
-export function build_synthetic_graph(count: number = SYNTHETIC_TASK_COUNT): { readonly tasks: readonly Task[]; readonly links: readonly TaskLink[] } {
+export function build_synthetic_graph(count: number = SYNTHETIC_TASK_COUNT): {
+	readonly tasks: readonly Task[];
+	readonly links: readonly TaskLink[];
+} {
 	const random = mulberry32(SEED);
 
 	const tasks: Task[] = Array.from({ length: count }, (_, index) => {
@@ -61,16 +65,19 @@ export function build_synthetic_graph(count: number = SYNTHETIC_TASK_COUNT): { r
 
 	const links: TaskLink[] = tasks
 		.filter((task): task is Task & { parent_id: string } => task.parent_id !== null)
-		.map(task => ({
-			id: `${task.parent_id}->${task.id}`,
-			src_id: task.parent_id,
-			dst_id: task.id,
-			kind: "relates_to",
-			ref: null,
-			note: null,
-			created_at: CREATED_AT,
-			updated_at: CREATED_AT,
-		}) as TaskLink);
+		.map(
+			(task) =>
+				({
+					id: `${task.parent_id}->${task.id}`,
+					src_id: task.parent_id,
+					dst_id: task.id,
+					kind: "relates_to",
+					ref: null,
+					note: null,
+					created_at: CREATED_AT,
+					updated_at: CREATED_AT,
+				}) as TaskLink,
+		);
 
 	return { tasks, links };
 }

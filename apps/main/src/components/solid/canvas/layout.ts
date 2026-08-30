@@ -22,9 +22,19 @@ export type LaidOutEdge = {
 	readonly src_id: string;
 	readonly dst_id: string;
 };
-export type GraphLayout = { readonly nodes: readonly LaidOutNode[]; readonly edges: readonly LaidOutEdge[]; readonly bounds: ContentBounds };
+export type GraphLayout = {
+	readonly nodes: readonly LaidOutNode[];
+	readonly edges: readonly LaidOutEdge[];
+	readonly bounds: ContentBounds;
+};
 
-type EdgeLabel = { kind: TaskLink["kind"]; id: string; src_id: string; dst_id: string; points?: { x: number; y: number }[] };
+type EdgeLabel = {
+	kind: TaskLink["kind"];
+	id: string;
+	src_id: string;
+	dst_id: string;
+	points?: { x: number; y: number }[];
+};
 
 const EMPTY_BOUNDS: ContentBounds = { x: 0, y: 0, w: 0, h: 0 };
 export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_BOUNDS };
@@ -37,11 +47,15 @@ export const EMPTY_LAYOUT: GraphLayout = { nodes: [], edges: [], bounds: EMPTY_B
  * returns a lens-local `{width, height}` shape rather than camera-ready
  * `ContentBounds` — not a clean swap without touching the lens' render path).
  */
-export function layout_graph(tasks: readonly Task[], links: readonly TaskLink[], node_size: NodeSize = { width: CANVAS_NODE_W, height: CANVAS_NODE_H }): GraphLayout {
+export function layout_graph(
+	tasks: readonly Task[],
+	links: readonly TaskLink[],
+	node_size: NodeSize = { width: CANVAS_NODE_W, height: CANVAS_NODE_H },
+): GraphLayout {
 	const g = new dagre.graphlib.Graph<GraphLabel, NodeLabel, EdgeLabel>();
 	g.setGraph({ rankdir: "LR", nodesep: 48, ranksep: 96, marginx: 32, marginy: 32 });
 
-	const id_set = new Set(tasks.map(task => task.id));
+	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
 	for (const link of links) {
 		if (!link.dst_id || !id_set.has(link.src_id) || !id_set.has(link.dst_id)) continue; // edge culling — dangling/foreign links never reach the layout
@@ -49,11 +63,11 @@ export function layout_graph(tasks: readonly Task[], links: readonly TaskLink[],
 	}
 	dagre.layout(g);
 
-	const nodes: LaidOutNode[] = tasks.map(task => {
+	const nodes: LaidOutNode[] = tasks.map((task) => {
 		const pos = g.node(task.id);
 		return { task, x: pos.x ?? 0, y: pos.y ?? 0 };
 	});
-	const edges: LaidOutEdge[] = g.edges().map(e => {
+	const edges: LaidOutEdge[] = g.edges().map((e) => {
 		const label = g.edge(e);
 		return { id: label.id, kind: label.kind, points: label.points ?? [], src_id: label.src_id, dst_id: label.dst_id };
 	});
@@ -61,8 +75,8 @@ export function layout_graph(tasks: readonly Task[], links: readonly TaskLink[],
 	if (nodes.length === 0) return EMPTY_LAYOUT;
 	const half_w = node_size.width / 2;
 	const half_h = node_size.height / 2;
-	const xs = nodes.map(node => node.x);
-	const ys = nodes.map(node => node.y);
+	const xs = nodes.map((node) => node.x);
+	const ys = nodes.map((node) => node.y);
 	const min_x = Math.min(...xs) - half_w;
 	const max_x = Math.max(...xs) + half_w;
 	const min_y = Math.min(...ys) - half_h;

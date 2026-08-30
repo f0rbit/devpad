@@ -36,7 +36,7 @@ describe("build_spatial_index at map-level culling scale", () => {
 		expect(layout.nodes.length).toBe(SYNTHETIC_TASK_COUNT);
 
 		const cell_size = Math.max(CANVAS_NODE_W, CANVAS_NODE_H) * 2;
-		const items: SpatialItem[] = layout.nodes.map(node => ({
+		const items: SpatialItem[] = layout.nodes.map((node) => ({
 			id: node.task.id,
 			x: node.x - CANVAS_NODE_W / 2,
 			y: node.y - CANVAS_NODE_H / 2,

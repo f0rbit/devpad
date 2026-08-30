@@ -2110,7 +2110,11 @@ button.outline-row {
 	min-height: 550px;
 	overflow: hidden;
 	background-color: var(--bg-alt);
-	background-image: radial-gradient(circle at 1px 1px, color-mix(in oklch, var(--fg) 10%, transparent) 1px, transparent 0);
+	background-image: radial-gradient(
+		circle at 1px 1px,
+		color-mix(in oklch, var(--fg) 10%, transparent) 1px,
+		transparent 0
+	);
 	background-size: 24px 24px;
 	cursor: grab;
 	touch-action: none;
@@ -2175,7 +2179,9 @@ button.outline-row {
 	color: var(--fg-subtle);
 	cursor: pointer;
 	font-size: 11px;
-	transition: background 150ms ease-out, color 150ms ease-out;
+	transition:
+		background 150ms ease-out,
+		color 150ms ease-out;
 }
 
 .canvas-level-btn:hover {
@@ -2271,7 +2277,10 @@ button.outline-row {
 	background: var(--bg);
 	box-shadow: var(--shadow);
 	cursor: pointer;
-	transition: opacity 180ms ease, border-color 150ms ease, box-shadow 150ms ease;
+	transition:
+		opacity 180ms ease,
+		border-color 150ms ease,
+		box-shadow 150ms ease;
 }
 
 .canvas-node:hover {
@@ -2281,7 +2290,9 @@ button.outline-row {
 
 .canvas-node-selected {
 	border-color: var(--accent);
-	box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent), var(--shadow);
+	box-shadow:
+		0 0 0 3px color-mix(in oklch, var(--accent) 12%, transparent),
+		var(--shadow);
 }
 
 .canvas-node-head {

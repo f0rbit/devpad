@@ -60,11 +60,11 @@ export default function CanvasNode(props: CanvasNodeProps) {
 			style={{ left: `${props.x}px`, top: `${props.y}px`, display: props.visible ? undefined : "none" }}
 			tabIndex={0}
 			aria-label={`${props.task.title}, ${progress_percent(props.task)}% complete`}
-			onClick={e => {
+			onClick={(e) => {
 				e.stopPropagation();
 				props.onSelect(props.task.id);
 			}}
-			onKeyDown={e => {
+			onKeyDown={(e) => {
 				if (e.key === "Enter") props.onSelect(props.task.id);
 			}}
 		>
@@ -106,7 +106,8 @@ export default function CanvasNode(props: CanvasNodeProps) {
 	);
 }
 
-const progress_percent = (task: Task): number => (task.progress === "COMPLETED" ? 100 : task.progress === "IN_PROGRESS" ? 50 : 0);
+const progress_percent = (task: Task): number =>
+	task.progress === "COMPLETED" ? 100 : task.progress === "IN_PROGRESS" ? 50 : 0;
 
 function KindGlyph(props: { kind: Task["kind"] }) {
 	return (

@@ -32,7 +32,16 @@ const make_task = (id: string, overrides: Partial<Task> = {}): Task =>
 	}) as Task;
 
 const make_link = (src_id: string, dst_id: string | null, kind: TaskLink["kind"] = "blocks"): TaskLink =>
-	({ id: `${src_id}->${String(dst_id)}`, src_id, dst_id, kind, ref: null, note: null, created_at: "2026-01-01T00:00:00.000Z", updated_at: "2026-01-01T00:00:00.000Z" }) as TaskLink;
+	({
+		id: `${src_id}->${String(dst_id)}`,
+		src_id,
+		dst_id,
+		kind,
+		ref: null,
+		note: null,
+		created_at: "2026-01-01T00:00:00.000Z",
+		updated_at: "2026-01-01T00:00:00.000Z",
+	}) as TaskLink;
 
 describe("layout_graph", () => {
 	test("empty input returns EMPTY_LAYOUT", () => {
@@ -47,7 +56,7 @@ describe("layout_graph", () => {
 
 		expect(layout.nodes).toHaveLength(3);
 		expect(layout.edges).toHaveLength(2);
-		expect(new Set(layout.nodes.map(n => n.task.id))).toEqual(new Set(["a", "b", "c"]));
+		expect(new Set(layout.nodes.map((n) => n.task.id))).toEqual(new Set(["a", "b", "c"]));
 	});
 
 	test("culls edges pointing at dangling/foreign task ids", () => {
@@ -67,7 +76,9 @@ describe("layout_graph", () => {
 		const first = layout_graph(tasks, links);
 		const second = layout_graph(tasks, links);
 
-		expect(first.nodes.map(n => ({ id: n.task.id, x: n.x, y: n.y }))).toEqual(second.nodes.map(n => ({ id: n.task.id, x: n.x, y: n.y })));
+		expect(first.nodes.map((n) => ({ id: n.task.id, x: n.x, y: n.y }))).toEqual(
+			second.nodes.map((n) => ({ id: n.task.id, x: n.x, y: n.y })),
+		);
 	});
 
 	test("bounds fully contain every node's card footprint", () => {
