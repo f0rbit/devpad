@@ -12,6 +12,7 @@ import Watch from "lucide-solid/icons/watch";
 import Zap from "lucide-solid/icons/zap";
 import { Show } from "solid-js";
 import type { CameraLevel } from "./camera";
+import { FOLD_KINDS, node_size_for } from "./layout";
 import type { NodeProjection } from "./projections";
 
 export type CanvasNodeProps = {
@@ -36,8 +37,6 @@ export type CanvasNodeProps = {
 	readonly onSelect: (id: string) => void;
 	readonly onPointerDownNode: (id: string, event: PointerEvent) => void;
 };
-
-const FOLD_KINDS: ReadonlySet<Task["kind"]> = new Set(["milestone", "goal"]);
 
 const STATUS_CLASS: Record<Task["progress"], string> = {
 	UNSTARTED: "canvas-node-unstarted",
@@ -80,6 +79,10 @@ export default function CanvasNode(props: CanvasNodeProps) {
 	// never actually empty — the old ".canvas-node-body always renders" bug
 	// (~60% empty chrome per critic finding #3) predates that chip existing.
 	const show_body = () => props.level === "node" || props.level === "detail";
+	// Single source of truth (`layout.ts`'s `node_size_for`) for this node's
+	// box — also what dagre spacing/edge-clipping read off, so the rendered
+	// card and the layout math can never disagree.
+	const size = () => node_size_for(props.task.kind, props.level);
 
 	return (
 		<article
@@ -96,7 +99,13 @@ export default function CanvasNode(props: CanvasNodeProps) {
 			data-lod={props.level}
 			data-pinned={props.pinned ? "true" : "false"}
 			data-programmatic={props.programmatic ? "true" : "false"}
-			style={{ left: `${String(props.x)}px`, top: `${String(props.y)}px`, display: props.visible ? undefined : "none" }}
+			style={{
+				left: `${String(props.x)}px`,
+				top: `${String(props.y)}px`,
+				width: `${String(size().width)}px`,
+				height: `${String(size().height)}px`,
+				display: props.visible ? undefined : "none",
+			}}
 			tabIndex={0}
 			aria-label={`${props.task.title}, ${String(progress_percent(props.task))}% complete`}
 			onClick={(e) => {
