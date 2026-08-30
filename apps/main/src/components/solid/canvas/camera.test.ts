@@ -205,6 +205,49 @@ describe("zoom_to without an anchor stays framed", () => {
 	});
 });
 
+describe("map level fits the whole forest", () => {
+	test("a huge project's map scale shrinks below the old fixed 0.58 to fit it all", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1200, height: 800 });
+		camera.set_content_bounds({ x: 0, y: 0, w: 20_000, h: 16_000 });
+
+		camera.fit();
+
+		expect(camera.level()).toBe("map");
+		expect(camera.transform().scale).toBeLessThan(0.58);
+
+		camera.dispose();
+	});
+
+	test("a tiny project's map scale never exceeds neighborhood", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1200, height: 800 });
+		camera.set_content_bounds({ x: 0, y: 0, w: 100, h: 80 });
+
+		camera.zoom_to("map");
+
+		expect(camera.transform().scale).toBeLessThanOrEqual(LEVEL_SCALE.neighborhood);
+
+		camera.dispose();
+	});
+
+	test("map scale recomputes when content bounds change after the camera is created", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1000, height: 800 });
+		camera.set_content_bounds({ x: 0, y: 0, w: 500, h: 400 });
+		camera.zoom_to("map");
+		const small_scale = camera.transform().scale;
+
+		camera.set_content_bounds({ x: 0, y: 0, w: 40_000, h: 32_000 });
+		camera.zoom_to("map");
+		const huge_scale = camera.transform().scale;
+
+		expect(huge_scale).toBeLessThan(small_scale);
+
+		camera.dispose();
+	});
+});
+
 describe("is_moving", () => {
 	test("true while dragging, false once released", () => {
 		const camera = create_camera({ animation_ms: 0 });
