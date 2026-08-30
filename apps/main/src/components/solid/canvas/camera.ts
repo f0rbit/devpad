@@ -107,6 +107,21 @@ const lerp = (from: number, to: number, t: number): number => from + (to - from)
 
 const ease_out_cubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
+/**
+ * Cap `map`'s dynamic fit-to-forest scale strictly BELOW
+ * `LEVEL_SCALE.neighborhood`, never exactly at it. A small-enough project
+ * (content-sized node boxes made this common on tiny E2E fixtures — see
+ * `level_for_scale`'s doc comment) can fit comfortably within neighborhood's
+ * own scale, and capping at EXACTLY that value made `map` and `neighborhood`
+ * indistinguishable BY SCALE ALONE — whichever the user actually clicked,
+ * `level()` (a pure function of the live scale) could only ever report one of
+ * the two, since both `zoom_to` calls animate to the literal same number. A
+ * small strict margin keeps every scale value uniquely resolvable to one
+ * level, restoring "clicking a level actually shows that level" for every
+ * project size — the 2% gap is visually imperceptible.
+ */
+const MAP_SCALE_CAP_FACTOR = 0.98;
+
 const compute_map_scale = (
 	bounds: ContentBounds | null,
 	viewport: ViewportSize,
@@ -117,7 +132,7 @@ const compute_map_scale = (
 	const usable_w = Math.max(1, viewport.width - margin * 2);
 	const usable_h = Math.max(1, viewport.height - margin * 2 - top_inset);
 	const fit = Math.min(usable_w / bounds.w, usable_h / bounds.h);
-	return Math.min(fit, LEVEL_SCALE.neighborhood);
+	return Math.min(fit, LEVEL_SCALE.neighborhood * MAP_SCALE_CAP_FACTOR);
 };
 
 const levels_by_scale_desc = CAMERA_LEVELS.toSorted((a, b) => LEVEL_SCALE[b] - LEVEL_SCALE[a]);
@@ -186,10 +201,24 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		const level_scale = (target_level: CameraLevel): number =>
 			target_level === "map" ? map_scale() : LEVEL_SCALE[target_level];
 
-		/** The level whose scale band (bounded by midpoints to its neighbours) contains `scale` — equivalent to "nearest level by scale", just framed as bands per the fluid-zoom contract above. */
+		/**
+		 * The level whose scale band (bounded by midpoints to its neighbours)
+		 * contains `scale` — equivalent to "nearest level by scale", just framed
+		 * as bands per the fluid-zoom contract above. Ties resolve toward the
+		 * LATER (more-zoomed-in) candidate (`<=`, not `<`) — a tiny project's
+		 * `map_scale` is capped at `LEVEL_SCALE.neighborhood` (see
+		 * `compute_map_scale`), so a small-enough graph can make `map` and
+		 * `neighborhood` land on the EXACT same scale. With a strict `<`, the
+		 * tie always fell back to `CAMERA_LEVELS`' first entry ("map"), which
+		 * meant `zoom_to("neighborhood")` on such a project animated the
+		 * transform to the right scale but `level()` (and therefore `data-lod`)
+		 * silently stayed "map" — clicking the Neighborhood HUD button visibly
+		 * did nothing. Preferring the later candidate on a tie always resolves
+		 * to what the user actually navigated to.
+		 */
 		const level_for_scale = (scale: number): CameraLevel =>
 			CAMERA_LEVELS.reduce((best, candidate) =>
-				Math.abs(level_scale(candidate) - scale) < Math.abs(level_scale(best) - scale) ? candidate : best,
+				Math.abs(level_scale(candidate) - scale) <= Math.abs(level_scale(best) - scale) ? candidate : best,
 			);
 
 		// Deliberately a PLAIN function, not `createMemo` — it forwards straight

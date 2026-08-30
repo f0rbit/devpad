@@ -265,6 +265,36 @@ describe("map level fits the whole forest", () => {
 
 		camera.dispose();
 	});
+
+	/**
+	 * Regression coverage: a project small enough that `map`'s uniform-fit
+	 * scale (pre-cap) EXCEEDS `LEVEL_SCALE.neighborhood` used to clamp to
+	 * EXACTLY that value — a tie that made `map` and `neighborhood`
+	 * indistinguishable BY SCALE ALONE. Since `level()` is a pure function of
+	 * the live scale, whichever level the user actually clicked, only ONE of
+	 * the two could ever be reported (no tie-break direction fixes this — both
+	 * `zoom_to` calls animate to the literal same number). `compute_map_scale`
+	 * now caps strictly BELOW neighborhood (`MAP_SCALE_CAP_FACTOR`) so this
+	 * degenerate case can't occur: clicking either level always resolves to
+	 * that level.
+	 */
+	test("a project small enough to exceed neighborhood's scale caps strictly below it — map and neighborhood stay independently reachable", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1200, height: 800 });
+		// Chosen so `compute_map_scale`'s uniform-fit comfortably exceeds
+		// `LEVEL_SCALE.neighborhood` (0.82) before the cap is applied.
+		camera.set_content_bounds({ x: 0, y: 0, w: 50, h: 40 });
+
+		camera.zoom_to("map");
+		expect(camera.transform().scale).toBeLessThan(LEVEL_SCALE.neighborhood);
+		expect(camera.level()).toBe("map");
+
+		camera.zoom_to("neighborhood");
+		expect(camera.transform().scale).toBe(LEVEL_SCALE.neighborhood);
+		expect(camera.level()).toBe("neighborhood");
+
+		camera.dispose();
+	});
 });
 
 describe("is_moving", () => {
