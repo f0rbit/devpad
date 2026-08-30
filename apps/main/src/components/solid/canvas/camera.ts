@@ -1,4 +1,4 @@
-import { createRoot, createSignal, type Accessor } from "solid-js";
+import { createRoot, createSignal, untrack, type Accessor } from "solid-js";
 
 /**
  * Camera primitive for the canvas home surface. Extracted from
@@ -85,16 +85,22 @@ const nearest_level = (scale: number): CameraLevel =>
 		Math.abs(LEVEL_SCALE[level] - scale) < Math.abs(LEVEL_SCALE[best] - scale) ? level : best,
 	);
 
-const levels_by_scale_desc = [...CAMERA_LEVELS].sort((a, b) => LEVEL_SCALE[b] - LEVEL_SCALE[a]);
+const levels_by_scale_desc = CAMERA_LEVELS.toSorted((a, b) => LEVEL_SCALE[b] - LEVEL_SCALE[a]);
 
 const best_fit_level = (bounds: ContentBounds, viewport: ViewportSize, margin: number): CameraLevel => {
 	const usable_w = Math.max(0, viewport.width - margin * 2);
 	const usable_h = Math.max(0, viewport.height - margin * 2);
-	const fits = (level: CameraLevel) => bounds.w * LEVEL_SCALE[level] <= usable_w && bounds.h * LEVEL_SCALE[level] <= usable_h;
+	const fits = (level: CameraLevel) =>
+		bounds.w * LEVEL_SCALE[level] <= usable_w && bounds.h * LEVEL_SCALE[level] <= usable_h;
 	return levels_by_scale_desc.find(fits) ?? "map";
 };
 
-const clamp_transform = (t: Transform, bounds: ContentBounds | null, viewport: ViewportSize, margin: number): Transform => {
+const clamp_transform = (
+	t: Transform,
+	bounds: ContentBounds | null,
+	viewport: ViewportSize,
+	margin: number,
+): Transform => {
 	if (!bounds || bounds.w <= 0 || bounds.h <= 0 || viewport.width <= 0 || viewport.height <= 0) return t;
 	const min_x = margin - (bounds.x + bounds.w) * t.scale;
 	const max_x = viewport.width - margin - bounds.x * t.scale;
@@ -186,7 +192,10 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			const target_scale = LEVEL_SCALE[target_level];
 			const world_x = (point.x - t.x) / t.scale;
 			const world_y = (point.y - t.y) / t.scale;
-			animate_to({ x: point.x - world_x * target_scale, y: point.y - world_y * target_scale, scale: target_scale }, target_level);
+			animate_to(
+				{ x: point.x - world_x * target_scale, y: point.y - world_y * target_scale, scale: target_scale },
+				target_level,
+			);
 		};
 
 		const step_level = (direction: 1 | -1, anchor?: Point) => {
@@ -257,13 +266,24 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 			set_is_moving(false);
 		};
 
+		// `untrack` here is load-bearing, not defensive polish: both setters are
+		// called from OUTSIDE this module (a caller's `createEffect` for
+		// `set_content_bounds`, a `ResizeObserver` callback for `set_viewport`),
+		// and Solid's dependency tracking is call-stack based — an untracked
+		// read of `transform()` reads the CURRENT value to reclamp without
+		// accidentally subscribing the caller's effect to it. Without this, a
+		// caller effect that calls `set_content_bounds` synchronously picks up
+		// `transform` as an accidental dependency; since `apply_clamped` always
+		// writes a NEW object (even when numerically unchanged), every write
+		// re-triggers that same effect, which reclamps and writes again —
+		// a self-sustaining reactive loop that eventually stack-overflows.
 		const set_content_bounds = (next_bounds: ContentBounds | null) => {
 			bounds = next_bounds;
-			apply_clamped(transform());
+			apply_clamped(untrack(transform));
 		};
 		const set_viewport = (next_viewport: ViewportSize) => {
 			viewport = next_viewport;
-			apply_clamped(transform());
+			apply_clamped(untrack(transform));
 		};
 
 		// Arrows pan, +/- step the semantic zoom level, 0 fits — same vocabulary

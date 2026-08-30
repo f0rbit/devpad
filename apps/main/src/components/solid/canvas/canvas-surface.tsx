@@ -34,7 +34,8 @@ const EDGE_CLASS: Record<TaskLink["kind"], string> = {
 
 const arrow_id_for = (kind: TaskLink["kind"]): string => `canvas-arrow-${kind.replace(/_/g, "-")}`;
 
-const path_for = (points: readonly { x: number; y: number }[]): string => points.map((p, i) => `${i === 0 ? "M" : "L"}${String(p.x)},${String(p.y)}`).join(" ");
+const path_for = (points: readonly { x: number; y: number }[]): string =>
+	points.map((p, i) => `${i === 0 ? "M" : "L"}${String(p.x)},${String(p.y)}`).join(" ");
 
 const DOUBLE_CLICK_MS = 300;
 
@@ -77,7 +78,13 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const spatialIndex = createMemo(() => {
 		const l = layout();
 		return build_spatial_index(
-			l.nodes.map(node => ({ id: node.task.id, x: node.x - CANVAS_NODE_W / 2, y: node.y - CANVAS_NODE_H / 2, w: CANVAS_NODE_W, h: CANVAS_NODE_H })),
+			l.nodes.map((node) => ({
+				id: node.task.id,
+				x: node.x - CANVAS_NODE_W / 2,
+				y: node.y - CANVAS_NODE_H / 2,
+				w: CANVAS_NODE_W,
+				h: CANVAS_NODE_H,
+			})),
 			CULL_CELL_SIZE,
 		);
 	});
@@ -121,7 +128,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		const viewport = viewportRef;
 		if (!viewport) return;
 
-		const observer = new ResizeObserver(entries => {
+		const observer = new ResizeObserver((entries) => {
 			const entry = entries[0];
 			if (!entry) return;
 			const size = { width: entry.contentRect.width, height: entry.contentRect.height };
@@ -136,7 +143,12 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		const on_wheel = (e: WheelEvent) => {
 			e.preventDefault();
 			const rect = viewport.getBoundingClientRect();
-			camera.on_wheel({ offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top, deltaY: e.deltaY, ctrlKey: e.ctrlKey });
+			camera.on_wheel({
+				offsetX: e.clientX - rect.left,
+				offsetY: e.clientY - rect.top,
+				deltaY: e.deltaY,
+				ctrlKey: e.ctrlKey,
+			});
 		};
 		viewport.addEventListener("wheel", on_wheel, { passive: false });
 		onCleanup(() => viewport.removeEventListener("wheel", on_wheel));
@@ -148,8 +160,13 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	let dragging = false;
 	const on_pointer_down = (e: PointerEvent) => {
 		// A pointerdown that landed on a node card is a click/dblclick
-		// candidate, not a pan gesture — same rule as the graph lens.
-		if ((e.target as Element).closest("[data-canvas-node]")) return;
+		// candidate, not a pan gesture — same rule as the graph lens. The HUD
+		// toolbar needs the same bail: `setPointerCapture` below re-targets the
+		// FOLLOWING pointerup at the viewport, and Chromium suppresses the
+		// synthesized `click` when its up-target differs from its down-target
+		// — so capturing on a toolbar-button pointerdown silently eats every
+		// HUD click.
+		if ((e.target as Element).closest("[data-canvas-node], .canvas-toolbar")) return;
 		dragging = true;
 		camera.on_pointer_down(e);
 		(e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -195,7 +212,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			onPointerMove={on_pointer_move}
 			onPointerUp={on_pointer_up}
 			onPointerLeave={on_pointer_up}
-			onKeyDown={e => camera.handle_key(e)}
+			onKeyDown={(e) => camera.handle_key(e)}
 		>
 			<div class="canvas-toolbar">
 				<div class="canvas-breadcrumb" data-testid="canvas-breadcrumb">
@@ -205,8 +222,13 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				</div>
 				<div class="canvas-zoom-hud" role="group" aria-label="Semantic zoom level">
 					<For each={CAMERA_LEVELS}>
-						{level => (
-							<button type="button" class="canvas-level-btn" classList={{ "canvas-level-btn-active": camera.level() === level }} onClick={() => camera.zoom_to(level)}>
+						{(level) => (
+							<button
+								type="button"
+								class="canvas-level-btn"
+								classList={{ "canvas-level-btn-active": camera.level() === level }}
+								onClick={() => camera.zoom_to(level)}
+							>
 								{LEVEL_LABEL[level]}
 							</button>
 						)}
@@ -214,17 +236,41 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				</div>
 			</div>
 
-			<div class="canvas-world" classList={{ "canvas-world-moving": camera.is_moving() }} style={{ transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().scale})` }}>
+			<div
+				class="canvas-world"
+				classList={{ "canvas-world-moving": camera.is_moving() }}
+				style={{ transform: `translate(${transform().x}px, ${transform().y}px) scale(${transform().scale})` }}
+			>
 				<svg class="canvas-edges" aria-hidden="true">
 					<defs>
-						<For each={TASK_LINK_KINDS}>{kind => <marker id={arrow_id_for(kind)} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class={`canvas-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} /></marker>}</For>
+						<For each={TASK_LINK_KINDS}>
+							{(kind) => (
+								<marker
+									id={arrow_id_for(kind)}
+									viewBox="0 0 10 10"
+									refX="9"
+									refY="5"
+									markerWidth="7"
+									markerHeight="7"
+									orient="auto-start-reverse"
+								>
+									<path d="M0,0 L10,5 L0,10 z" class={`canvas-arrowhead ${EDGE_CLASS[kind]}-arrowhead`} />
+								</marker>
+							)}
+						</For>
 					</defs>
-					<For each={layout().edges.filter(edge => is_visible(edge.src_id) || is_visible(edge.dst_id))}>
-						{edge => <path d={path_for(edge.points)} class={`canvas-edge ${EDGE_CLASS[edge.kind]}`} marker-end={`url(#${arrow_id_for(edge.kind)})`} />}
+					<For each={layout().edges.filter((edge) => is_visible(edge.src_id) || is_visible(edge.dst_id))}>
+						{(edge) => (
+							<path
+								d={path_for(edge.points)}
+								class={`canvas-edge ${EDGE_CLASS[edge.kind]}`}
+								marker-end={`url(#${arrow_id_for(edge.kind)})`}
+							/>
+						)}
 					</For>
 				</svg>
 				<For each={layout().nodes}>
-					{node => (
+					{(node) => (
 						<CanvasNode
 							task={node.task}
 							x={node.x}
