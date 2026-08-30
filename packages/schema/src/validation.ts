@@ -701,3 +701,10 @@ export const project_graph_response = z.object({
 	rollups: z.record(z.string(), project_graph_rollup_counts),
 });
 export type ProjectGraphResponse = z.infer<typeof project_graph_response>;
+
+// v2.5 (canvas home, task P3.1) — per-project view-state (pinned node
+// positions). `project_view_pin` is intentionally narrow (just x/y) — this
+// is presentation-only state, never a place task fields leak into.
+export const project_view_pin = z.object({ x: z.number(), y: z.number() });
+export const project_view_layout = z.object({ pins: z.record(z.string(), project_view_pin) });
+export type ProjectViewLayoutInput = z.infer<typeof project_view_layout>;

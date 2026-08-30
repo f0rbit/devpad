@@ -1,5 +1,5 @@
 import { action, github, graph, milestones, projects, tags } from "@devpad/core/services";
-import { project_graph_response, save_config_request, upsert_project } from "@devpad/schema";
+import { project_graph_response, project_view_layout, save_config_request, upsert_project } from "@devpad/schema";
 import { ignore_path, project, tag, tag_config } from "@devpad/schema/database";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
@@ -383,6 +383,41 @@ app.get("/:id/graph", requireAuth, async (c) => {
 	const parsed = project_graph_response.safeParse(result.value);
 	if (!parsed.success) return c.json({ error: "project_graph_response validation failed" }, 500);
 	return c.json(parsed.data);
+});
+
+/**
+ * Canvas view-state (v2.5, task P3.1) — pinned node positions for a
+ * project's canvas. A projection over the real graph, last-write-wins.
+ */
+app.get("/:id/view-state", requireAuth, async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const project_id = c.req.param("id");
+	if (!project_id) return c.json({ error: "Missing project ID" }, 400);
+
+	const result = await graph.get_project_view_state(db, { project_id, owner_id: auth_user.id });
+	if (!result.ok) {
+		if (result.error.kind === "not_found") return c.json({ error: "Project not found" }, 404);
+		return c.json({ error: result.error.kind }, 500);
+	}
+	return c.json(result.value);
+});
+
+app.put("/:id/view-state", requireAuth, zValidator("json", project_view_layout), async (c) => {
+	const db = c.get("db");
+	const auth_user = c.get("user");
+	if (!auth_user) return c.json({ error: "Unauthorized" }, 401);
+	const project_id = c.req.param("id");
+	if (!project_id) return c.json({ error: "Missing project ID" }, 400);
+
+	const layout = c.req.valid("json");
+	const result = await graph.put_project_view_state(db, { project_id, owner_id: auth_user.id, layout });
+	if (!result.ok) {
+		if (result.error.kind === "not_found") return c.json({ error: "Project not found" }, 404);
+		return c.json({ error: result.error.kind }, 500);
+	}
+	return c.json(result.value);
 });
 
 app.get("/repos", requireAuth, async (c) => {

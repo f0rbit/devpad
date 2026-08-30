@@ -112,6 +112,22 @@ export const project = sqliteTable("project", {
 	github_autoclose: integer("github_autoclose", { mode: "boolean" }).notNull().default(false),
 });
 
+// v2.5 (canvas home, task P3.1) — per-project canvas view state: pinned node
+// positions + any future layout overrides. A projection over D1's real graph
+// data, not a second source of truth for task state — `layout` holds only
+// presentation (where a node sits, whether it's pinned), never task fields.
+// Last-write-wins: `updated_at` is bumped on every PUT, no merge/versioning.
+export const project_view_state = sqliteTable("project_view_state", {
+	project_id: text("project_id")
+		.primaryKey()
+		.references(() => project.id),
+	layout: text("layout", { mode: "json" }).notNull().$type<ProjectViewLayout>(),
+	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+});
+
+export type ProjectViewPin = { x: number; y: number };
+export type ProjectViewLayout = { pins: Record<string, ProjectViewPin> };
+
 const ACTIONS = [
 	"CREATE_TASK",
 	"UPDATE_TASK",

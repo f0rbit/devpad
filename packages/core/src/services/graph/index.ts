@@ -9,3 +9,4 @@ export * from "./project-graph.js";
 export * from "./rank.js";
 export * from "./rollup.js";
 export * from "./sweeper.js";
+export * from "./view-state.js";
