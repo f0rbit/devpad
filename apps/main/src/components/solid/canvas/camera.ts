@@ -187,7 +187,12 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 				Math.abs(level_scale(candidate) - scale) < Math.abs(level_scale(best) - scale) ? candidate : best,
 			);
 
-		const best_fit_level = (bounds_arg: ContentBounds, viewport_arg: ViewportSize, margin: number, top_inset = 0): CameraLevel => {
+		const best_fit_level = (
+			bounds_arg: ContentBounds,
+			viewport_arg: ViewportSize,
+			margin: number,
+			top_inset = 0,
+		): CameraLevel => {
 			const usable_w = Math.max(0, viewport_arg.width - margin * 2);
 			const usable_h = Math.max(0, viewport_arg.height - margin * 2 - top_inset);
 			const fits = (target_level: CameraLevel) =>
