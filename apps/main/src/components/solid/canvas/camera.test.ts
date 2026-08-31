@@ -250,6 +250,33 @@ describe("map level fits the whole forest", () => {
 		camera.dispose();
 	});
 
+	/**
+	 * Regression coverage for the "stuck at the placeholder scale" bug found
+	 * verifying the content-sized-box phase: `onMount` calls `fit()`
+	 * synchronously before the async graph fetch resolves, landing on
+	 * `map_scale()`'s PLACEHOLDER default (`LEVEL_SCALE.map`, 0.58) since
+	 * `bounds` is still null. Once real bounds arrive, the old
+	 * `set_content_bounds` only re-CLAMPED the transform's still-placeholder
+	 * scale — nothing ever re-applied the corrected fit-to-forest value, so
+	 * `level()` could resolve to the wrong named level (whichever is nearest
+	 * 0.58) with most of the real content off-screen. Never calling
+	 * `zoom_to`/`fit` here on purpose — this exercises the AUTOMATIC snap that
+	 * now happens purely from `set_content_bounds` itself, while the camera is
+	 * parked at the (stale) map scale.
+	 */
+	test("a camera parked at the placeholder map scale automatically snaps to the real fit once bounds arrive", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1200, height: 800 });
+		expect(camera.transform().scale).toBe(LEVEL_SCALE.map);
+
+		camera.set_content_bounds({ x: 0, y: 0, w: 20_000, h: 16_000 });
+
+		expect(camera.transform().scale).toBeLessThan(LEVEL_SCALE.map);
+		expect(camera.level()).toBe("map");
+
+		camera.dispose();
+	});
+
 	test("map scale recomputes when content bounds change after the camera is created", () => {
 		const camera = create_camera({ animation_ms: 0 });
 		camera.set_viewport({ width: 1000, height: 800 });
@@ -262,6 +289,36 @@ describe("map level fits the whole forest", () => {
 		const huge_scale = camera.transform().scale;
 
 		expect(huge_scale).toBeLessThan(small_scale);
+
+		camera.dispose();
+	});
+
+	/**
+	 * Regression coverage: a project small enough that `map`'s uniform-fit
+	 * scale (pre-cap) EXCEEDS `LEVEL_SCALE.neighborhood` used to clamp to
+	 * EXACTLY that value — a tie that made `map` and `neighborhood`
+	 * indistinguishable BY SCALE ALONE. Since `level()` is a pure function of
+	 * the live scale, whichever level the user actually clicked, only ONE of
+	 * the two could ever be reported (no tie-break direction fixes this — both
+	 * `zoom_to` calls animate to the literal same number). `compute_map_scale`
+	 * now caps strictly BELOW neighborhood (`MAP_SCALE_CAP_FACTOR`) so this
+	 * degenerate case can't occur: clicking either level always resolves to
+	 * that level.
+	 */
+	test("a project small enough to exceed neighborhood's scale caps strictly below it — map and neighborhood stay independently reachable", () => {
+		const camera = create_camera({ animation_ms: 0 });
+		camera.set_viewport({ width: 1200, height: 800 });
+		// Chosen so `compute_map_scale`'s uniform-fit comfortably exceeds
+		// `LEVEL_SCALE.neighborhood` (0.82) before the cap is applied.
+		camera.set_content_bounds({ x: 0, y: 0, w: 50, h: 40 });
+
+		camera.zoom_to("map");
+		expect(camera.transform().scale).toBeLessThan(LEVEL_SCALE.neighborhood);
+		expect(camera.level()).toBe("map");
+
+		camera.zoom_to("neighborhood");
+		expect(camera.transform().scale).toBe(LEVEL_SCALE.neighborhood);
+		expect(camera.level()).toBe("neighborhood");
 
 		camera.dispose();
 	});

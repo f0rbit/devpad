@@ -107,6 +107,23 @@ const lerp = (from: number, to: number, t: number): number => from + (to - from)
 
 const ease_out_cubic = (t: number): number => 1 - Math.pow(1 - t, 3);
 
+/**
+ * Cap `map`'s dynamic fit-to-forest scale strictly BELOW
+ * `LEVEL_SCALE.neighborhood`, never exactly (or nearly) at it. A small-enough
+ * project (content-sized node boxes made this common on tiny E2E fixtures —
+ * see `level_for_scale`'s doc comment) can fit comfortably within
+ * neighborhood's own scale, and capping too close to that value made `map`
+ * and `neighborhood` PRACTICALLY indistinguishable by scale: `level_for_scale`
+ * resolves the nearest level by distance, so the real decision boundary sits
+ * at the MIDPOINT between the two — a 2% cap only left a ~1% band on either
+ * side, fragile to float rounding and the smallest additional drift. 15%
+ * gives a real, robust band (`map` unambiguously wins any scale below
+ * `~0.93x` neighborhood) while still being visually reasonable — `map` stays
+ * a meaningfully-more-zoomed-out tier than `neighborhood` for a tiny project,
+ * not a near-duplicate of it.
+ */
+const MAP_SCALE_CAP_FACTOR = 0.85;
+
 const compute_map_scale = (
 	bounds: ContentBounds | null,
 	viewport: ViewportSize,
@@ -117,7 +134,7 @@ const compute_map_scale = (
 	const usable_w = Math.max(1, viewport.width - margin * 2);
 	const usable_h = Math.max(1, viewport.height - margin * 2 - top_inset);
 	const fit = Math.min(usable_w / bounds.w, usable_h / bounds.h);
-	return Math.min(fit, LEVEL_SCALE.neighborhood);
+	return Math.min(fit, LEVEL_SCALE.neighborhood * MAP_SCALE_CAP_FACTOR);
 };
 
 const levels_by_scale_desc = CAMERA_LEVELS.toSorted((a, b) => LEVEL_SCALE[b] - LEVEL_SCALE[a]);
@@ -186,10 +203,24 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		const level_scale = (target_level: CameraLevel): number =>
 			target_level === "map" ? map_scale() : LEVEL_SCALE[target_level];
 
-		/** The level whose scale band (bounded by midpoints to its neighbours) contains `scale` — equivalent to "nearest level by scale", just framed as bands per the fluid-zoom contract above. */
+		/**
+		 * The level whose scale band (bounded by midpoints to its neighbours)
+		 * contains `scale` — equivalent to "nearest level by scale", just framed
+		 * as bands per the fluid-zoom contract above. Ties resolve toward the
+		 * LATER (more-zoomed-in) candidate (`<=`, not `<`) — a tiny project's
+		 * `map_scale` is capped at `LEVEL_SCALE.neighborhood` (see
+		 * `compute_map_scale`), so a small-enough graph can make `map` and
+		 * `neighborhood` land on the EXACT same scale. With a strict `<`, the
+		 * tie always fell back to `CAMERA_LEVELS`' first entry ("map"), which
+		 * meant `zoom_to("neighborhood")` on such a project animated the
+		 * transform to the right scale but `level()` (and therefore `data-lod`)
+		 * silently stayed "map" — clicking the Neighborhood HUD button visibly
+		 * did nothing. Preferring the later candidate on a tie always resolves
+		 * to what the user actually navigated to.
+		 */
 		const level_for_scale = (scale: number): CameraLevel =>
 			CAMERA_LEVELS.reduce((best, candidate) =>
-				Math.abs(level_scale(candidate) - scale) < Math.abs(level_scale(best) - scale) ? candidate : best,
+				Math.abs(level_scale(candidate) - scale) <= Math.abs(level_scale(best) - scale) ? candidate : best,
 			);
 
 		// Deliberately a PLAIN function, not `createMemo` — it forwards straight
@@ -365,17 +396,53 @@ export function create_camera(opts: CameraOptions = {}): Camera {
 		// writes a NEW object (even when numerically unchanged), every write
 		// re-triggers that same effect, which reclamps and writes again —
 		// a self-sustaining reactive loop that eventually stack-overflows.
+		//
+		// **Stale-placeholder-scale bug (found verifying the content-sized-box
+		// phase)**: `onMount` calls `fit()` synchronously BEFORE the async graph
+		// fetch resolves, when `bounds` is still null — that lands on the
+		// PLACEHOLDER `map_scale()` default (`LEVEL_SCALE.map`, 0.58), not the
+		// real fit-to-forest value. Once real data arrives, THIS function
+		// recomputes the internal `map_scale` signal correctly, but previously
+		// only re-CLAMPED the transform's existing (still-placeholder) scale —
+		// nothing ever re-applied the corrected value to the camera. A user
+		// landing on a big/sparse project could get stuck at the placeholder
+		// scale (level() would then resolve to whatever named level is nearest
+		// 0.58 — often "neighborhood", not "map" — a visibly wrong LOD with a
+		// mostly-offscreen viewport). Fixed by snapping straight to the
+		// corrected map fit WHENEVER the camera is currently sitting at exactly
+		// the OLD `map_scale()` value (i.e. nothing has navigated it away from
+		// the dynamic map view since) — covers both the initial-load race and
+		// any later bounds change (e.g. a task added) while parked at `map`.
+		// Deliberately reads/writes via `apply_clamped` directly (never
+		// `animate_to`/`fit()`, which read `transform()` in a TRACKED way) so
+		// this stays safe to call from inside a caller's effect.
+		const snap_to_map_fit_if_parked = (previous_map_scale: number) => {
+			const current = untrack(transform);
+			if (Math.abs(current.scale - previous_map_scale) > 1e-6) return false;
+			if (!bounds || bounds.w <= 0 || bounds.h <= 0) return false;
+			const scale = untrack(map_scale);
+			apply_clamped({
+				x: viewport.width / 2 - (bounds.x + bounds.w / 2) * scale,
+				y: fit_top_inset_px + (viewport.height - fit_top_inset_px) / 2 - (bounds.y + bounds.h / 2) * scale,
+				scale,
+			});
+			return true;
+		};
 		const set_content_bounds = (next_bounds: ContentBounds | null) => {
+			const previous_map_scale = untrack(map_scale);
 			bounds = next_bounds;
 			recompute_map_scale();
+			if (snap_to_map_fit_if_parked(previous_map_scale)) return;
 			apply_clamped(untrack(transform));
 		};
 		const set_focus = (point: Point | null) => {
 			focus = point;
 		};
 		const set_viewport = (next_viewport: ViewportSize) => {
+			const previous_map_scale = untrack(map_scale);
 			viewport = next_viewport;
 			recompute_map_scale();
+			if (snap_to_map_fit_if_parked(previous_map_scale)) return;
 			apply_clamped(untrack(transform));
 		};
 

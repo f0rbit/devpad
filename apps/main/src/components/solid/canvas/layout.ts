@@ -1,6 +1,6 @@
 import dagre, { type GraphLabel, type NodeLabel } from "@dagrejs/dagre";
 import type { Task, TaskLink } from "@devpad/schema";
-import type { ContentBounds, ViewportSize } from "./camera";
+import type { CameraLevel, ContentBounds, ViewportSize } from "./camera";
 
 export type NodeSize = { readonly width: number; readonly height: number };
 
@@ -18,19 +18,32 @@ export const FOLD_KINDS: ReadonlySet<Task["kind"]> = new Set(["milestone", "goal
  * spacing (`CANVAS_NODE_W`/`H`, a single uniform size) disagreeing with the
  * box `canvas-node.tsx` actually RENDERED, which used to grow per LOD up to
  * 320x300 at `detail` — bigger than dagre had reserved, so a zoomed-in card
- * could grow past its allocated footprint and overlap a neighbour. Now there
- * is exactly one reserved/rendered box, always this size: LOD only swaps
- * INNER content (`canvas-node.tsx`) and the `map`-tier dot/pill treatment is
- * a pure CSS `transform: scale` DOWN into that same fixed box — it never
- * changes the box's actual width/height, so it can never grow past what
- * dagre reserved for it. Content taller than the box is capped via
- * `overflow-y: auto` on the scrollable inner region (`.canvas-node-body`),
- * never by growing the box. `node_size_for` keeps a `kind` parameter (even
- * though every kind currently maps to the same box) so a future kind-specific
- * size has exactly one call site to change.
+ * could grow past its allocated footprint and overlap a neighbour. There is
+ * exactly one reserved/rendered box, always this size: LOD only swaps INNER
+ * content (`canvas-node.tsx`) and the `map`-tier dot/pill treatment is a pure
+ * CSS `transform: scale` DOWN into that same fixed box — it never changes the
+ * box's actual width/height, so it can never grow past what dagre reserved
+ * for it.
+ *
+ * **Sized to `node`-tier content, not a round number** — Tom's staging
+ * feedback ("the boxes should be smaller"): the previous 260x200 box left
+ * ~60% empty chrome below the title/meta/chip-row content, which actually
+ * needs roughly 240x104 (head: title + meta line + 31px ring, padding
+ * 15/8px ≈54px; body: border + one chip row + padding ≈54px). `detail`'s
+ * extra content (description/sparkline) no longer grows this box at all — it
+ * renders as a separate `.canvas-node-detail-overlay`, absolutely positioned
+ * in the world layer OUTSIDE this box (see `canvas-node.tsx`), so it may
+ * overlap a neighbour without needing dagre to reserve space for it. Node/
+ * detail content (title + kind/status meta + one chip row) is structurally
+ * IDENTICAL for fold (`milestone`/`goal`) and non-fold kinds at this LOD —
+ * fold kinds only differ at `map` (dot vs. pill, a pure CSS transform, never
+ * a box-size change) — so a single uniform box for every kind is correct,
+ * not a simplification. `node_size_for` keeps a `kind` parameter anyway (a
+ * future kind-specific size has exactly one call site to change) but every
+ * kind currently maps to the same box.
  */
-export const CANVAS_NODE_W = 260;
-export const CANVAS_NODE_H = 200;
+export const CANVAS_NODE_W = 240;
+export const CANVAS_NODE_H = 108;
 
 export function node_size_for(_kind: Task["kind"]): NodeSize {
 	return { width: CANVAS_NODE_W, height: CANVAS_NODE_H };
@@ -112,7 +125,17 @@ function run_dagre(
 	// least 0.6x the card's width between siblings and a full card width
 	// between ranks, so the fixed `node_size_for` box (see above) always has
 	// visible breathing room around it, not just enough to avoid touching.
-	g.setGraph({ rankdir, nodesep: 170, ranksep: 300, marginx: 32, marginy: 32, acyclicer: "greedy" });
+	// Scaled with `CANVAS_NODE_W` (the smaller content-sized box) rather than
+	// hardcoded, so a future box resize doesn't silently drift below either
+	// minimum.
+	g.setGraph({
+		rankdir,
+		nodesep: Math.round(node_size.width * 0.65),
+		ranksep: Math.round(node_size.width * 1.15),
+		marginx: 32,
+		marginy: 32,
+		acyclicer: "greedy",
+	});
 
 	const id_set = new Set(tasks.map((task) => task.id));
 	for (const task of tasks) g.setNode(task.id, { width: node_size.width, height: node_size.height });
@@ -306,6 +329,57 @@ export function apply_view_overrides(
 type Point = { readonly x: number; readonly y: number };
 
 /**
+ * The shape an edge endpoint clips against — a rect for `neighborhood`/
+ * `node`/`detail` (and a fold kind's `map` pill), a circle for a non-fold
+ * kind's `map` dot. Distinct from `NodeSize` (the fixed DAGRE-reserved
+ * footprint) because the rendered on-screen shape at `map` is neither that
+ * size nor square (see `layout.ts`'s `CANVAS_NODE_W`/`H` doc comment and
+ * `main.css`'s `.canvas-node[data-lod="map"]` root-cause note) — clipping to
+ * the STATIC reserved box left a visible gap between an edge's end and the
+ * tiny dot it should touch (Tom's staging screenshot: "the lines don't
+ * reach"). `shape_for` (below) is the single place that derives this from a
+ * task/level/scale triple; callers never hand-roll a shape.
+ */
+export type ClipShape =
+	| { readonly kind: "box"; readonly width: number; readonly height: number }
+	| { readonly kind: "circle"; readonly radius: number };
+
+/**
+ * Half the `main.css` `::before` dot's fixed 36px WORLD-space square — keep
+ * this and `map_dot_local_scale_clamp`/`map_fold_local_scale_clamp` below in
+ * sync with `.canvas-node[data-lod="map"]`'s two `scale(clamp(...))` rules in
+ * `main.css`; CSS and this geometry module can't share one literal, so this
+ * comment is the cross-reference.
+ */
+const MAP_DOT_RADIUS_WORLD = 18;
+
+function map_dot_local_scale_clamp(canvas_scale: number): number {
+	return Math.min(0.55, Math.max(0.14, 2.2 / (CANVAS_NODE_W * Math.max(canvas_scale, 1e-6))));
+}
+
+function map_fold_local_scale_clamp(canvas_scale: number): number {
+	return Math.min(0.7, Math.max(0.3, 1.4 / (CANVAS_NODE_W * Math.max(canvas_scale, 1e-6))));
+}
+
+/**
+ * The ACTUAL rendered shape for `task` at `level`/`canvas_scale` — the single
+ * source `clip_edge_endpoints` callers read, so an edge always clips to what
+ * is genuinely on screen rather than the static layout box. `canvas_scale` is
+ * `.canvas-world`'s live `transform().scale` (the same value exposed to CSS
+ * as `--canvas-scale`) — the map-tier shapes shrink/grow with it exactly like
+ * their CSS counterparts.
+ */
+export function shape_for(task: Task, level: CameraLevel, canvas_scale: number): ClipShape {
+	const size = node_size_for(task.kind);
+	if (level !== "map") return { kind: "box", width: size.width, height: size.height };
+	if (FOLD_KINDS.has(task.kind)) {
+		const local = map_fold_local_scale_clamp(canvas_scale);
+		return { kind: "box", width: size.width * local, height: size.height * local };
+	}
+	return { kind: "circle", radius: MAP_DOT_RADIUS_WORLD * map_dot_local_scale_clamp(canvas_scale) };
+}
+
+/**
  * Where a ray from `center` toward `toward` crosses the border of the
  * axis-aligned box `{center, half_w, half_h}` — the standard "clip a line to
  * a rect" formula (scale by whichever axis hits its half-extent first).
@@ -319,6 +393,22 @@ function clip_to_box(center: Point, half_w: number, half_h: number, toward: Poin
 		dy !== 0 ? half_h / Math.abs(dy) : Number.POSITIVE_INFINITY,
 	);
 	return { x: center.x + dx * scale, y: center.y + dy * scale };
+}
+
+/** Where a ray from `center` toward `toward` crosses a circle of `radius` centered on `center`. */
+function clip_to_circle(center: Point, radius: number, toward: Point): Point {
+	const dx = toward.x - center.x;
+	const dy = toward.y - center.y;
+	const dist = Math.hypot(dx, dy);
+	if (dist === 0) return center;
+	const scale = radius / dist;
+	return { x: center.x + dx * scale, y: center.y + dy * scale };
+}
+
+function clip_to_shape(center: Point, shape: ClipShape, toward: Point): Point {
+	return shape.kind === "circle"
+		? clip_to_circle(center, shape.radius, toward)
+		: clip_to_box(center, shape.width / 2, shape.height / 2, toward);
 }
 
 /**
@@ -341,21 +431,25 @@ export function direct_route(src: Point, dst: Point): Point[] {
  * reserved box position at LAYOUT time — a moved node (see
  * `apply_view_overrides`/`direct_route` above) already gets a fresh 2-point
  * route before this runs. For an UNMOVED edge, this just re-anchors the
- * first/last point to where the line actually crosses the box (via
- * `node_size_for`), leaving any interior dagre bend points untouched, so
- * arrowheads land exactly on the visible border without a relayout.
+ * first/last point to where the line actually crosses the RENDERED shape
+ * (`shape_for` — a box at every LOD except a non-fold kind's `map` dot,
+ * which is a circle), leaving any interior dagre bend points untouched, so
+ * arrowheads land exactly on the visible border without a relayout. Callers
+ * pass `shape` freshly computed from the CURRENT level/scale (see
+ * `canvas-surface.tsx`'s `renderableEdges`) — never a static layout-time
+ * size — since the map-tier shape changes size as the camera zooms.
  */
 export function clip_edge_endpoints(
 	points: readonly Point[],
-	src: { readonly x: number; readonly y: number; readonly size: NodeSize },
-	dst: { readonly x: number; readonly y: number; readonly size: NodeSize },
+	src: { readonly x: number; readonly y: number; readonly shape: ClipShape },
+	dst: { readonly x: number; readonly y: number; readonly shape: ClipShape },
 ): Point[] {
 	const first = points.at(0);
 	const last = points.at(-1);
 	if (!first || !last) return [];
 	const toward_first = points.at(1) ?? dst;
 	const toward_last = points.length > 1 ? (points.at(-2) ?? src) : src;
-	const clipped_first = clip_to_box({ x: src.x, y: src.y }, src.size.width / 2, src.size.height / 2, toward_first);
-	const clipped_last = clip_to_box({ x: dst.x, y: dst.y }, dst.size.width / 2, dst.size.height / 2, toward_last);
+	const clipped_first = clip_to_shape({ x: src.x, y: src.y }, src.shape, toward_first);
+	const clipped_last = clip_to_shape({ x: dst.x, y: dst.y }, dst.shape, toward_last);
 	return [clipped_first, ...points.slice(1, -1), clipped_last];
 }

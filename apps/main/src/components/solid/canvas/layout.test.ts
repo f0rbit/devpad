@@ -9,6 +9,7 @@ import {
 	EMPTY_LAYOUT,
 	layout_graph,
 	node_size_for,
+	shape_for,
 } from "./layout";
 
 const make_task = (id: string, overrides: Partial<Task> = {}): Task => {
@@ -272,8 +273,8 @@ describe("apply_view_overrides", () => {
 			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
-				{ x: src.x, y: src.y, size: src_size },
-				{ x: dst.x, y: dst.y, size: dst_size },
+				{ x: src.x, y: src.y, shape: { kind: "box", width: src_size.width, height: src_size.height } },
+				{ x: dst.x, y: dst.y, shape: { kind: "box", width: dst_size.width, height: dst_size.height } },
 			);
 			const last = rest.at(-1) ?? first;
 			expect(first.x).toBeGreaterThanOrEqual(src.x - src_size.width / 2 - 0.5);
@@ -358,8 +359,8 @@ describe("layout_graph + apply_view_overrides on the staging fixture", () => {
 			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
-				{ x: src.x, y: src.y, size: src_size },
-				{ x: dst.x, y: dst.y, size: dst_size },
+				{ x: src.x, y: src.y, shape: { kind: "box", width: src_size.width, height: src_size.height } },
+				{ x: dst.x, y: dst.y, shape: { kind: "box", width: dst_size.width, height: dst_size.height } },
 			);
 			const last = rest.at(-1) ?? first;
 
@@ -439,8 +440,8 @@ describe.each([
 			const dst_size = node_size_for(dst.task.kind);
 			const [first, ...rest] = clip_edge_endpoints(
 				edge.points,
-				{ x: src.x, y: src.y, size: src_size },
-				{ x: dst.x, y: dst.y, size: dst_size },
+				{ x: src.x, y: src.y, shape: { kind: "box", width: src_size.width, height: src_size.height } },
+				{ x: dst.x, y: dst.y, shape: { kind: "box", width: dst_size.width, height: dst_size.height } },
 			);
 			const last = rest.at(-1) ?? first;
 
@@ -479,5 +480,105 @@ describe.each([
 		const height_fill = (layout.bounds.h * scale) / usable_h;
 
 		expect(Math.max(width_fill, height_fill)).toBeGreaterThanOrEqual(0.8);
+	});
+});
+
+/**
+ * Regression coverage for "the circles look distorted, and the lines don't
+ * reach" (Tom's staging screenshots): `shape_for` derives the ACTUAL rendered
+ * shape at the current level/scale so `clip_edge_endpoints` clips to what's
+ * really on screen, not the static layout box.
+ */
+describe("shape_for + clip_edge_endpoints against the rendered shape", () => {
+	test("a non-fold task's map-tier shape is always a circle, at any camera scale — never an ellipse", () => {
+		const task = make_task("a");
+		for (const canvas_scale of [0.02, 0.1, 0.5, 1, 2]) {
+			const shape = shape_for(task, "map", canvas_scale);
+			expect(shape.kind).toBe("circle");
+		}
+	});
+
+	test("a fold task's map-tier shape stays a box (pill), not a circle", () => {
+		const task = make_task("g", { kind: "goal" });
+		const shape = shape_for(task, "map", 0.3);
+		expect(shape.kind).toBe("box");
+	});
+
+	test("every non-map level renders the full card box, regardless of kind", () => {
+		for (const level of ["neighborhood", "node", "detail"] as const) {
+			const task_shape = shape_for(make_task("a"), level, 1);
+			const fold_shape = shape_for(make_task("g", { kind: "goal" }), level, 1);
+			expect(task_shape).toEqual({ kind: "box", width: CANVAS_NODE_W, height: CANVAS_NODE_H });
+			expect(fold_shape).toEqual({ kind: "box", width: CANVAS_NODE_W, height: CANVAS_NODE_H });
+		}
+	});
+
+	test("at map scale, a hierarchy edge's endpoint lands within `radius + 1px` of the dot's center", () => {
+		const parent = make_task("parent");
+		const child = make_task("child", { parent_id: "parent" });
+		const layout = layout_graph([parent, child], []);
+		const by_id = new Map(layout.nodes.map((n) => [n.task.id, n]));
+		const src = by_id.get("parent");
+		const dst = by_id.get("child");
+		expect(src).toBeDefined();
+		expect(dst).toBeDefined();
+		if (!src || !dst) return;
+
+		const canvas_scale = 0.2;
+		const src_shape = shape_for(src.task, "map", canvas_scale);
+		const dst_shape = shape_for(dst.task, "map", canvas_scale);
+		expect(src_shape.kind).toBe("circle");
+		expect(dst_shape.kind).toBe("circle");
+		if (src_shape.kind !== "circle" || dst_shape.kind !== "circle") return;
+
+		const edge = layout.edges.find((e) => e.kind === "hierarchy");
+		expect(edge).toBeDefined();
+		if (!edge) return;
+
+		const [first, ...rest] = clip_edge_endpoints(
+			edge.points,
+			{ x: src.x, y: src.y, shape: src_shape },
+			{ x: dst.x, y: dst.y, shape: dst_shape },
+		);
+		const last = rest.at(-1) ?? first;
+
+		expect(Math.hypot(first.x - src.x, first.y - src.y)).toBeLessThanOrEqual(src_shape.radius + 1);
+		expect(Math.hypot(last.x - dst.x, last.y - dst.y)).toBeLessThanOrEqual(dst_shape.radius + 1);
+	});
+
+	test("at node scale, the same edge's endpoints land within the card rect's border", () => {
+		const parent = make_task("parent");
+		const child = make_task("child", { parent_id: "parent" });
+		const layout = layout_graph([parent, child], []);
+		const by_id = new Map(layout.nodes.map((n) => [n.task.id, n]));
+		const src = by_id.get("parent");
+		const dst = by_id.get("child");
+		expect(src).toBeDefined();
+		expect(dst).toBeDefined();
+		if (!src || !dst) return;
+
+		const src_shape = shape_for(src.task, "node", 1);
+		const dst_shape = shape_for(dst.task, "node", 1);
+		expect(src_shape).toEqual({ kind: "box", width: CANVAS_NODE_W, height: CANVAS_NODE_H });
+
+		const edge = layout.edges.find((e) => e.kind === "hierarchy");
+		expect(edge).toBeDefined();
+		if (!edge) return;
+
+		const [first, ...rest] = clip_edge_endpoints(
+			edge.points,
+			{ x: src.x, y: src.y, shape: src_shape },
+			{ x: dst.x, y: dst.y, shape: dst_shape },
+		);
+		const last = rest.at(-1) ?? first;
+
+		expect(first.x).toBeGreaterThanOrEqual(src.x - CANVAS_NODE_W / 2 - 0.5);
+		expect(first.x).toBeLessThanOrEqual(src.x + CANVAS_NODE_W / 2 + 0.5);
+		expect(first.y).toBeGreaterThanOrEqual(src.y - CANVAS_NODE_H / 2 - 0.5);
+		expect(first.y).toBeLessThanOrEqual(src.y + CANVAS_NODE_H / 2 + 0.5);
+		expect(last.x).toBeGreaterThanOrEqual(dst.x - CANVAS_NODE_W / 2 - 0.5);
+		expect(last.x).toBeLessThanOrEqual(dst.x + CANVAS_NODE_W / 2 + 0.5);
+		expect(last.y).toBeGreaterThanOrEqual(dst.y - CANVAS_NODE_H / 2 - 0.5);
+		expect(last.y).toBeLessThanOrEqual(dst.y + CANVAS_NODE_H / 2 + 0.5);
 	});
 });
