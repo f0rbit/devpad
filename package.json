@@ -38,6 +38,7 @@
 		"fmt:check": "oxfmt --check .",
 		"build:worker": "bun scripts/build-unified.ts",
 		"lint:sh": "shellcheck $(git ls-files \"*.sh\")",
+		"db:migration-check": "bun scripts/d1-migration-check.ts",
 		"gate": "bash scripts/gate.sh"
 	},
 	"dependencies": {
