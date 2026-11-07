@@ -107,6 +107,74 @@ describe("Pipelines API Client", () => {
 		expect(result).toBeInstanceOf(Promise);
 	});
 
+	it("pipelines.redispatch accepts run_id", () => {
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+		});
+
+		const result = client.pipelines.redispatch("run_123");
+		expect(result).toBeInstanceOf(Promise);
+	});
+
+	it("pipelines.redispatch issues POST /runs/:id/redispatch with an empty body", async () => {
+		const recorded: Array<{ url: string; method: string; body: string | null }> = [];
+		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
+			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
+			recorded.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
+			return new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } });
+		};
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+			custom_fetch: fake_fetch as unknown as typeof fetch,
+		});
+
+		await client.pipelines.redispatch("run_123");
+		expect(recorded.length).toBe(1);
+		expect(recorded[0].method).toBe("POST");
+		expect(recorded[0].url).toContain("/runs/run_123/redispatch");
+	});
+
+	it("pipelines.dispatches issues GET /runs/:id/dispatches", async () => {
+		const recorded: Array<{ url: string; method: string }> = [];
+		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
+			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
+			recorded.push({ url, method: init?.method ?? "GET" });
+			return new Response(
+				JSON.stringify({
+					run_id: "run_123",
+					run_status: "completed",
+					commit_sha: "a".repeat(40),
+					dispatches: [
+						{
+							stage_name: "production",
+							commit_sha: "a".repeat(40),
+							status: "dispatched",
+							error: null,
+							requested_by: "user_1",
+							created_at: "2026-01-01T00:00:00Z",
+							updated_at: "2026-01-01T00:00:00Z",
+						},
+					],
+				}),
+				{ status: 200, headers: { "content-type": "application/json" } },
+			);
+		};
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+			custom_fetch: fake_fetch as unknown as typeof fetch,
+		});
+
+		const result = await client.pipelines.dispatches("run_123");
+		expect(recorded.length).toBe(1);
+		expect(recorded[0].method).toBe("GET");
+		expect(recorded[0].url).toContain("/runs/run_123/dispatches");
+		expect(result.ok).toBe(true);
+		if (result.ok) expect(result.value.dispatches.length).toBe(1);
+	});
+
 	it("exposes pipelines.packages.* methods", () => {
 		const client = new ApiClient({
 			base_url: "http://test.localhost/api/v1",
@@ -272,6 +340,14 @@ describe("Pipelines MCP tool schemas", () => {
 			expect(tools[name]?.inputSchema).toBeDefined();
 			expect(typeof tools[name]?.execute).toBe("function");
 		}
+	});
+
+	it("devpad_pipelines_dispatches requires run_id (read-only ledger read)", () => {
+		const tool = tools.devpad_pipelines_dispatches!;
+		expect(tool).toBeDefined();
+		expect(tool.name).toBe("devpad_pipelines_dispatches");
+		expect(tool.inputSchema.safeParse({ run_id: "run_123" }).success).toBe(true);
+		expect(tool.inputSchema.safeParse({}).success).toBe(false);
 	});
 
 	it("devpad_pipelines_list accepts empty input", () => {
