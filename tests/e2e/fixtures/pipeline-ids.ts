@@ -38,5 +38,17 @@ export const E2E_RUN_COMPLETED = "pipeline-run_e2e-completed" as const;
 export const E2E_RUN_AWAITING = "pipeline-run_e2e-awaiting" as const;
 export const E2E_TEMPLATE_ID = "pipeline-analysis-template_e2e" as const;
 
+/**
+ * External deploy mode (#155) fixtures: a third project with an
+ * `external` package (deployed by CI; the orchestrator only holds the
+ * manual staging→production gate) and two runs targeting commits rather
+ * than version sets.
+ */
+export const E2E_EXTERNAL_PROJECT_ID = "e2e-pipe-external" as const;
+export const E2E_PKG_EXTERNAL_ID = "pipeline-package_e2e-external" as const;
+export const E2E_RUN_EXT_AWAITING = "pipeline-run_e2e-ext-awaiting" as const;
+export const E2E_RUN_EXT_UNCONFIRMED = "pipeline-run_e2e-ext-unconfirmed" as const;
+export const E2E_COMMIT_SHA = "1111111111111111111111111111111111111111" as const;
+
 /** The current stage of the awaiting run; the manual gate key must `.includes` it. */
 export const E2E_AWAITING_STAGE = "atomic-prod" as const;
