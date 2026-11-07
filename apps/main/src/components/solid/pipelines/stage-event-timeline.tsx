@@ -27,11 +27,33 @@ type StageEventTimelineProps = {
 
 type BadgeVariant = "success" | "error" | "warning" | "info" | "accent" | "default";
 
+/**
+ * Display labels for every StageEventKind — `Record<StageEventKind, string>`
+ * over the schema enum, so a new event kind added to STAGE_EVENT_KINDS
+ * fails the typecheck instead of rendering unlabelled.
+ */
+const KIND_LABELS: Record<StageEventKind, string> = {
+	deploy_started: "deploy started",
+	deploy_completed: "deploy completed",
+	deploy_failed: "deploy failed",
+	dispatch_requested: "dispatch requested",
+	dispatch_failed: "dispatch failed",
+	timed_out: "timed out",
+	bake_started: "bake started",
+	bake_completed: "bake completed",
+	gate_verdict: "gate verdict",
+	approval_requested: "approval requested",
+	rollback_started: "rollback started",
+	rollback_completed: "rollback completed",
+	warning: "warning",
+	error: "error",
+};
+
 const kind_variant = (kind: StageEventKind): BadgeVariant => {
-	if (kind === "error") return "error";
-	if (kind === "warning") return "warning";
+	if (kind === "error" || kind === "deploy_failed" || kind === "dispatch_failed") return "error";
+	if (kind === "warning" || kind === "timed_out") return "warning";
 	if (kind === "deploy_completed" || kind === "rollback_completed") return "success";
-	if (kind === "gate_verdict") return "info";
+	if (kind === "gate_verdict" || kind === "dispatch_requested") return "info";
 	if (kind === "approval_requested") return "accent";
 	// deploy_started, bake_started, bake_completed, rollback_started
 	return "default";
@@ -140,7 +162,7 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 							}}
 						>
 							<div style={{ display: "flex", "align-items": "center", gap: "0.5rem", "flex-wrap": "wrap" }}>
-								<Badge variant={kind_variant(ev.kind)}>{ev.kind}</Badge>
+								<Badge variant={kind_variant(ev.kind)}>{KIND_LABELS[ev.kind]}</Badge>
 								<span style={{ "font-size": "0.85rem", opacity: 0.85 }}>{ev.stage_name}</span>
 							</div>
 							<span
