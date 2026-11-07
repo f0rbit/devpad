@@ -95,17 +95,14 @@ test.describe("Pipelines page render smoke", () => {
 		expect(errors(), "severe console / page errors on invalid tab").toEqual([]);
 	});
 
-	test("run-detail page hard-404s locally (orchestrator packages.list unmounted)", async ({ page, context }) => {
+	test("run-detail page degrades when the orchestrator is unreachable", async ({ page, context }) => {
 		await inject_test_user(context);
 
-		// SCOPE NOTE: `runs/[run_id].astro` does `packages.list()` then `rethrow()` on
-		// failure — there is no graceful-degradation path on this page. Locally
-		// packages.list 404s, so the page returns the rethrown 4xx. We assert it is a
-		// clean client error (NOT a 5xx / SSR crash). Asserting StageGate renders for an
-		// awaiting run is only meaningful with the orchestrator stood up (out-of-scope).
+		// Locally no orchestrator is configured, so the proxy answers 503
+		// `pipelines_unreachable`. The page renders its shell with the degraded banner
+		// rather than propagating a 5xx. Widgets (StageGate etc.) need a live orchestrator.
 		const response = await page.goto(`/project/${E2E_PROJECT_ID}/pipeline/runs/${E2E_RUN_AWAITING}`);
-		const status = response?.status() ?? 0;
-		expect(status).toBeGreaterThanOrEqual(400);
-		expect(status).toBeLessThan(500);
+		expect(response?.status()).toBeLessThan(500);
+		await expect(page.getByTestId("pipeline-degraded")).toBeVisible();
 	});
 });
