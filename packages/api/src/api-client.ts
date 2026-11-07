@@ -1677,11 +1677,15 @@ export class ApiClient {
 			),
 
 		/**
-		 * Approve a stage in a pipeline run
+		 * Approve a stage in a pipeline run. Identity is resolved
+		 * server-side by the worker proxy (`X-Devpad-Actor` header) — the
+		 * caller never supplies a `user_id`. Approvals are human-only:
+		 * api-channel callers get `403 human_approval_required`; approve
+		 * from the devpad web UI while signed in.
 		 */
 		approve: (
 			run_id: string,
-			input: { stage_name: string; decision: "approved" | "denied"; user_id: string; reason?: string },
+			input: { stage_name: string; decision: "approved" | "denied"; reason?: string },
 		): Promise<ApiResult<void>> =>
 			wrap(() =>
 				this.clients.pipelines.post(`/runs/${run_id}/approve`, {
@@ -1743,22 +1747,25 @@ export class ApiClient {
 				),
 
 			/**
-			 * Approve a grant
+			 * Approve a pending grant. Human-only — the actor is resolved
+			 * server-side by the worker proxy; api-channel callers get
+			 * `403 human_approval_required`.
 			 */
-			approve: (grant_id: string, user_id: string): Promise<ApiResult<PipelineGrant>> =>
+			approve: (grant_id: string): Promise<ApiResult<PipelineGrant>> =>
 				wrap(() =>
 					this.clients.pipelines.post<PipelineGrant>(`/grants/${grant_id}/approve`, {
-						body: { user_id },
+						body: {},
 					}),
 				),
 
 			/**
-			 * Deny a grant
+			 * Deny a pending grant. Human-only — same actor resolution as
+			 * `approve`.
 			 */
-			deny: (grant_id: string, user_id: string, reason?: string): Promise<ApiResult<{ success: boolean }>> =>
+			deny: (grant_id: string, reason?: string): Promise<ApiResult<{ success: boolean }>> =>
 				wrap(() =>
 					this.clients.pipelines.post<{ success: boolean }>(`/grants/${grant_id}/deny`, {
-						body: { user_id, reason },
+						body: reason !== undefined ? { reason } : {},
 					}),
 				),
 		},

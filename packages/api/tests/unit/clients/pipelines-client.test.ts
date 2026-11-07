@@ -69,7 +69,6 @@ describe("Pipelines API Client", () => {
 		const result = client.pipelines.approve("run_123", {
 			stage_name: "staging",
 			decision: "approved",
-			user_id: "user_456",
 		});
 		expect(result).toBeInstanceOf(Promise);
 	});
@@ -83,7 +82,6 @@ describe("Pipelines API Client", () => {
 		const result = client.pipelines.approve("run_123", {
 			stage_name: "staging",
 			decision: "denied",
-			user_id: "user_456",
 			reason: "Failing tests",
 		});
 		expect(result).toBeInstanceOf(Promise);
@@ -300,13 +298,12 @@ describe("Pipelines MCP tool schemas", () => {
 		expect(tool.inputSchema.safeParse({}).success).toBe(false);
 	});
 
-	it("devpad_pipelines_approve requires run_id, stage_name, decision, and user_id", () => {
+	it("devpad_pipelines_approve requires run_id, stage_name, and decision (actor resolved server-side)", () => {
 		const tool = tools.devpad_pipelines_approve!;
 		const valid = {
 			run_id: "run_123",
 			stage_name: "staging",
 			decision: "approved",
-			user_id: "user_456",
 		};
 		expect(tool.inputSchema.safeParse(valid).success).toBe(true);
 

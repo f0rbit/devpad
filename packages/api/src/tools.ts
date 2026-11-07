@@ -856,16 +856,22 @@ export const tools: Record<string, ToolDefinition> = {
 
 	devpad_pipelines_approve: define_tool({
 		name: "devpad_pipelines_approve",
-		description: "Approve or deny a stage in a pipeline run",
+		description:
+			"Approve or deny a stage in a pipeline run. Human-only: the actor is resolved from the caller's own authentication, and approvals are gated to signed-in humans in the devpad web UI — API-key/MCP callers receive 403 human_approval_required. Failures surface as typed errors, never thrown.",
 		inputSchema: z.object({
 			run_id: z.string().describe("Pipeline run ID"),
 			stage_name: z.string().describe("Stage name to approve"),
 			decision: z.enum(["approved", "denied"]).describe("Approval decision"),
-			user_id: z.string().describe("User ID making the decision"),
 			reason: z.string().optional().describe("Optional reason for the decision"),
 		}),
 		execute: async (client, input) => {
-			unwrap(await client.pipelines.approve(input.run_id, input));
+			unwrap(
+				await client.pipelines.approve(input.run_id, {
+					stage_name: input.stage_name,
+					decision: input.decision,
+					reason: input.reason,
+				}),
+			);
 			return { success: true };
 		},
 	}),
@@ -939,24 +945,23 @@ export const tools: Record<string, ToolDefinition> = {
 
 	devpad_pipelines_grants_approve: define_tool({
 		name: "devpad_pipelines_grants_approve",
-		description: "Approve a pending vault grant request for a pipeline package",
+		description:
+			"Approve a pending vault grant request for a pipeline package. Human-only: requires a signed-in human deciding in the devpad web UI — API-key/MCP callers receive 403 human_approval_required.",
 		inputSchema: z.object({
 			grant_id: z.string().describe("Grant ID to approve"),
-			user_id: z.string().describe("User ID making the approval decision"),
 		}),
-		execute: async (client, input) => unwrap(await client.pipelines.grants.approve(input.grant_id, input.user_id)),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.approve(input.grant_id)),
 	}),
 
 	devpad_pipelines_grants_deny: define_tool({
 		name: "devpad_pipelines_grants_deny",
-		description: "Deny a pending vault grant request for a pipeline package",
+		description:
+			"Deny a pending vault grant request for a pipeline package. Human-only: requires a signed-in human deciding in the devpad web UI — API-key/MCP callers receive 403 human_approval_required.",
 		inputSchema: z.object({
 			grant_id: z.string().describe("Grant ID to deny"),
-			user_id: z.string().describe("User ID making the denial decision"),
 			reason: z.string().optional().describe("Optional reason for the denial"),
 		}),
-		execute: async (client, input) =>
-			unwrap(await client.pipelines.grants.deny(input.grant_id, input.user_id, input.reason)),
+		execute: async (client, input) => unwrap(await client.pipelines.grants.deny(input.grant_id, input.reason)),
 	}),
 
 	devpad_pipelines_packages_list: define_tool({
