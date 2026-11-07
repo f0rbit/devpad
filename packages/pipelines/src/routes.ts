@@ -18,16 +18,21 @@ import type {
 	EventPulseEmitter,
 	OidcSessionClaims,
 	ResolvedPlan,
+	RunTarget,
 	VerifiedOidcClaims,
 } from "@devpad/core/services/pipelines";
 import {
+	create_external_run,
 	create_run,
 	exchange_oidc_for_session,
+	external_plan,
 	get_run,
 	ingest_event,
 	is_terminal_status,
 	list_runs,
+	parse_external_target,
 	resolve_run_plan,
+	run_target_of,
 } from "@devpad/core/services/pipelines";
 import {
 	create_analysis_template,
@@ -52,21 +57,51 @@ import {
 	update_package,
 } from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
-import { pipeline_package, pipeline_stage_event, RUN_STATUSES, type RunStatus } from "@devpad/schema/database/schema";
+import {
+	pipeline_package,
+	pipeline_run,
+	pipeline_stage_event,
+	RUN_STATUSES,
+	type RunStatus,
+} from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
+import type { PipelineRun, ServiceError } from "@devpad/schema";
+import type { ExternalTarget } from "@devpad/schema/validation";
 import { webhook_event_body } from "@devpad/schema/validation";
 import type { Backend, Result, SnapshotMeta, VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
+import { deploy_mode as deploy_mode_zod, external_target as external_target_zod } from "@devpad/schema/validation";
 import type { AuthError, AuthIdentity } from "./auth";
 import type { DoRouter } from "./do-router";
 
 export const create_run_body = z.object({
 	package_id: z.string().min(1),
-	version_set_id: z.string().min(1),
+	/** Orchestred mode target. Mutually exclusive with `commit_sha`. */
+	version_set_id: z.string().min(1).optional(),
+	/** External mode target (#155): 40-hex SHA. Mutually exclusive with
+	 * `version_set_id`. */
+	commit_sha: z
+		.string()
+		.regex(/^[0-9a-f]{40}$/, "commit_sha must be a 40-hex SHA")
+		.optional(),
 });
+
+type CreateRunBranch = { kind: "version_set"; version_set_id: string } | { kind: "commit"; commit_sha: string };
+
+/**
+ * Classify exactly-one-of version_set_id / commit_sha before any mode
+ * checks. Both-set or neither-set is an invalid body, not a mode mismatch.
+ */
+const classify_create_run = (body: z.infer<typeof create_run_body>): Result<CreateRunBranch, "both" | "neither"> => {
+	const { version_set_id, commit_sha } = body;
+	if (version_set_id !== undefined && commit_sha !== undefined) return err("both");
+	if (version_set_id === undefined && commit_sha === undefined) return err("neither");
+	if (commit_sha !== undefined) return ok({ kind: "commit", commit_sha });
+	return ok({ kind: "version_set", version_set_id: version_set_id as string });
+};
 
 /**
  * Run-stage approval body. The approver NEVER comes from the body — it is
@@ -94,6 +129,8 @@ export const create_package_body = z.object({
 	repo_url: z.string().nullable().optional(),
 	project_id: z.string().nullable().optional(),
 	default_template_ref: z.string().nullable().optional(),
+	deploy_mode: deploy_mode_zod.optional(),
+	external_target: external_target_zod.nullable().optional(),
 });
 
 export const update_package_body = z.object({
@@ -101,6 +138,8 @@ export const update_package_body = z.object({
 	project_id: z.string().nullable().optional(),
 	default_template_ref: z.string().nullable().optional(),
 	script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
+	deploy_mode: deploy_mode_zod.optional(),
+	external_target: external_target_zod.nullable().optional(),
 });
 
 export const oidc_exchange_body = z.object({
@@ -276,6 +315,9 @@ const STATUS_BY_CODE: Record<string, number> = {
 	trust_policy_failed: 403,
 	package_not_found: 404,
 	invalid_request: 400,
+	// External deploy mode (#155)
+	deploy_mode_mismatch: 400,
+	no_previous_commit: 400,
 };
 
 const status_for_code = (code: string): number => STATUS_BY_CODE[code] ?? 500;
@@ -382,6 +424,20 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result instanceof Response) return auth_result;
 		const identity = auth_result.identity;
 
+		const branch = classify_create_run(parsed.data);
+		if (!branch.ok) {
+			return wire_err(
+				{
+					code: "invalid_body",
+					message:
+						branch.error === "both"
+							? "provide exactly one of version_set_id / commit_sha"
+							: "provide version_set_id or commit_sha",
+				},
+				400,
+			);
+		}
+
 		// Session identity must hold `runs:start` scope and the package
 		// must be in their allowed list.
 		const deny = session_scope_check(identity, "runs:start", parsed.data.package_id);
@@ -395,21 +451,60 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (package_row === undefined)
 			return wire_err({ code: "not_found", resource: "pipeline_package", id: parsed.data.package_id });
 
-		const manifest = await deps.manifests.get(parsed.data.version_set_id);
-		if (manifest === null)
-			return wire_err({ code: "not_found", resource: "version_set_manifest", id: parsed.data.version_set_id });
+		// Deploy-mode gating (#155): a commit body on an orchestrated
+		// package — or a version-set body on an external package — is a
+		// `deploy_mode_mismatch` (400), not a 404/409.
+		if (branch.value.kind === "commit" && package_row.deploy_mode !== "external") {
+			return wire_err({ code: "deploy_mode_mismatch", deploy_mode: package_row.deploy_mode, given: "commit_sha" }, 400);
+		}
+		if (branch.value.kind === "version_set" && package_row.deploy_mode === "external") {
+			return wire_err(
+				{ code: "deploy_mode_mismatch", deploy_mode: package_row.deploy_mode, given: "version_set_id" },
+				400,
+			);
+		}
 
-		const template = await deps.templates.resolve(parsed.data.package_id, parsed.data.version_set_id);
+		if (branch.value.kind === "commit") {
+			// External path: no manifest / template / version-set involved.
+			// The gate + dispatch target come ONLY from the package row.
+			const external_target = parse_external_target(package_row.external_target);
+			if (!external_target.ok) return wire_err(external_target.error, 400);
+			const created = await create_external_run(deps.db, {
+				package_id: parsed.data.package_id,
+				commit_sha: branch.value.commit_sha,
+				external_target: external_target.value,
+				kind: "deploy",
+			});
+			if (!created.ok) return wire_err(created.error);
+
+			const { run, plan } = created.value;
+			const advance_res = await do_call(deps, run.id, "advance", { plan });
+			let advance_body: unknown = null;
+			try {
+				const advance_json: unknown = await advance_res.json();
+				advance_body = advance_json;
+			} catch {
+				advance_body = null;
+			}
+			if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
+			return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
+		}
+
+		const version_set_id = branch.value.version_set_id;
+		const manifest = await deps.manifests.get(version_set_id);
+		if (manifest === null) return wire_err({ code: "not_found", resource: "version_set_manifest", id: version_set_id });
+
+		const template = await deps.templates.resolve(parsed.data.package_id, version_set_id);
 		if (template === null)
 			return wire_err({ code: "not_found", resource: "pipeline_template", id: parsed.data.package_id });
 
-		const previous_version_set_id = await deps.lineage.previous(parsed.data.package_id, parsed.data.version_set_id);
+		const previous_version_set_id = await deps.lineage.previous(parsed.data.package_id, version_set_id);
 
 		const created = await create_run(deps.db, {
 			package_id: parsed.data.package_id,
 			template,
 			manifest,
-			version_set_id: parsed.data.version_set_id,
+			version_set_id,
 			previous_version_set_id,
 		});
 		if (!created.ok) return wire_err(created.error);
@@ -556,10 +651,10 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const run = await get_run(deps.db, run_id);
 		if (!run.ok) return wire_err(run.error);
 
-		// Reconstruct the plan from the snapshot stored on the run row.
-		// (The DO has the plan too, but we keep this read self-contained
-		// so the route works even if the DO storage is cold.)
-		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
+		// Reconstruct the plan. External runs (commit target) derive the
+		// fixed plan from the package row; orchestrated runs re-resolve
+		// from template + manifest.
+		const plan = await reconstruct_plan_for_run(deps, run.value);
 		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 
 		const response = await do_call(deps, run_id, "approve", {
@@ -569,6 +664,27 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			actor: human.actor,
 			plan,
 		});
+		return normalise_do_response(response);
+	});
+
+	// ─── External deploy mode (#155) — redispatch ─────────────────────
+	//
+	// `POST /runs/:id/redispatch` — human-only: re-dispatches a FAILED
+	// `pipeline_dispatch` row via a guarded `WHERE status = 'failed'`
+	// update. A run that never claimed a dispatch (or one whose dispatch
+	// is `claimed`/`dispatched`) is rejected with a conflict.
+
+	app.post("/runs/:id/redispatch", async (c) => {
+		const deps = c.get("deps");
+		const run_id = c.req.param("id");
+
+		const human = await require_human_actor(deps, c.req.raw);
+		if (human instanceof Response) return human;
+
+		const run = await get_run(deps.db, run_id);
+		if (!run.ok) return wire_err(run.error);
+
+		const response = await do_call(deps, run_id, "redispatch", { actor: human.actor });
 		return normalise_do_response(response);
 	});
 
@@ -587,7 +703,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const deny = session_scope_check(auth_result.identity, "runs:cancel", run.value.package_id);
 		if (deny !== null) return deny;
 
-		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
+		const plan = await reconstruct_plan_for_run(deps, run.value);
 		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 		const response = await do_call(deps, run_id, "cancel", { plan });
 		return normalise_do_response(response);
@@ -597,36 +713,50 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
 
-		// Rollback is machine-operable: admin identity is unscoped; a
-		// session identity (CI) must hold `runs:rollback` for the run's package.
+		// Authenticate before touching the run: an unauthenticated caller
+		// must get the fail-closed 401/503, never a run-existence 404.
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
 
 		const source_run = await get_run(deps.db, run_id);
 		if (!source_run.ok) return wire_err(source_run.error);
+		const source = source_run.value;
+		const source_target = run_target_of(source);
 
-		const deny = session_scope_check(auth_result.identity, "runs:rollback", source_run.value.package_id);
+		// External rollback (#155) is HUMAN ONLY — CI identities can never
+		// move production backwards on an externally-deployed package. The
+		// rollback run dispatches production directly with the previous
+		// complete run's SHA through the same claim path.
+		if (source_target?.kind === "commit") {
+			const human = await require_human_actor(deps, c.req.raw);
+			if (human instanceof Response) return human;
+			return apply_external_rollback(deps, source, human.actor);
+		}
+
+		// Malformed run rows (neither/both of version_set_id + commit_sha
+		// set) can't reconstruct a plan — refuse rather than straddle.
+		if (source_target === null) {
+			return wire_err({ code: "plan_unavailable", run_id }, 500);
+		}
+
+		// Rollback is machine-operable: admin identity is unscoped; a
+		// session identity (CI) must hold `runs:rollback` for the run's package.
+		const deny = session_scope_check(auth_result.identity, "runs:rollback", source.package_id);
 		if (deny !== null) return deny;
 
 		// Resolve the predecessor in lineage. If there is none, this run
 		// has nothing to roll back to and we refuse — the operator should
 		// re-upload a known-good version-set instead.
-		const previous_version_set_id = await deps.lineage.previous(
-			source_run.value.package_id,
-			source_run.value.version_set_id,
-		);
+		const previous_version_set_id = await deps.lineage.previous(source.package_id, source_target.version_set_id);
 		if (previous_version_set_id === null) {
-			return wire_err(
-				{ code: "no_previous_version_set", run_id, version_set_id: source_run.value.version_set_id },
-				400,
-			);
+			return wire_err({ code: "no_previous_version_set", run_id, version_set_id: source_target.version_set_id }, 400);
 		}
 
 		// In-flight source runs get cancelled first so we don't have two
 		// runs trying to mutate the same script. Terminal-state sources are
 		// left alone — the new rollback run carries the audit trail.
-		if (!is_terminal_status(source_run.value.status)) {
-			const source_plan = await reconstruct_plan(deps, source_run.value.package_id, source_run.value.version_set_id);
+		if (!is_terminal_status(source.status)) {
+			const source_plan = await reconstruct_plan_for_run(deps, source);
 			if (source_plan !== null) {
 				await do_call(deps, run_id, "cancel", { plan: source_plan }).catch(() => null);
 			}
@@ -636,16 +766,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const manifest = await deps.manifests.get(previous_version_set_id);
 		if (manifest === null)
 			return wire_err({ code: "not_found", resource: "version_set_manifest", id: previous_version_set_id });
-		const template = await deps.templates.resolve(source_run.value.package_id, previous_version_set_id);
-		if (template === null)
-			return wire_err({ code: "not_found", resource: "pipeline_template", id: source_run.value.package_id });
-		const predecessor_of_predecessor = await deps.lineage.previous(
-			source_run.value.package_id,
-			previous_version_set_id,
-		);
+		const template = await deps.templates.resolve(source.package_id, previous_version_set_id);
+		if (template === null) return wire_err({ code: "not_found", resource: "pipeline_template", id: source.package_id });
+		const predecessor_of_predecessor = await deps.lineage.previous(source.package_id, previous_version_set_id);
 
 		const created = await create_run(deps.db, {
-			package_id: source_run.value.package_id,
+			package_id: source.package_id,
 			template,
 			manifest,
 			version_set_id: previous_version_set_id,
@@ -654,26 +780,12 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		});
 		if (!created.ok) return wire_err(created.error);
 
-		const { run, plan } = created.value;
-		const advance_res = await do_call(deps, run.id, "advance", { plan });
-		let advance_body: unknown = null;
-		try {
-			const advance_json: unknown = await advance_res.json();
-			advance_body = advance_json;
-		} catch {
-			advance_body = null;
-		}
-		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
-
-		return json_ok({
-			run_id: run.id,
-			status: run.status,
-			kind: run.kind,
-			target_version_set_id: previous_version_set_id,
-			source_run_id: run_id,
-			plan,
-			advance: advance_body,
-		});
+		return finish_rollback_response(
+			deps,
+			created.value,
+			{ kind: "version_set", version_set_id: previous_version_set_id },
+			run_id,
+		);
 	});
 
 	app.get("/grants", async (c) => {
@@ -1339,24 +1451,147 @@ const normalise_do_response = async (response: Response): Promise<Response> => {
 /**
  * Rebuild the ResolvedPlan that the DO needs.
  *
- * The `pipeline_run` row already carries `resolved_rollout` +
- * `resolved_gates` JSON, but the state machine needs the typed
- * `Stage[]` + `Gate` map. The cleanest path is to re-run
- * `resolve_run_plan` from the template + manifest — both of which
- * are available via the resolver/manifest providers.
+ * Orchestrated runs (version_set target): re-run `resolve_run_plan` from
+ * the template + manifest via the providers.
+ *
+ * External runs (#155, commit target): the fixed plan is derived purely
+ * from the package row's validated `external_target` — no manifest,
+ * template, or lineage is involved, so the reconstruction can never need
+ * those providers. `null` everywhere means "cannot reconstruct" and the
+ * caller surfaces `plan_unavailable`.
  *
  * Phase 2 can collapse this into reading the snapshot directly off
  * the row.
  */
-const reconstruct_plan = async (
-	deps: RoutesDeps,
-	package_id: string,
-	version_set_id: string,
-): Promise<ResolvedPlan | null> => {
-	const manifest = await deps.manifests.get(version_set_id);
+const reconstruct_plan_for_run = async (deps: RoutesDeps, run: PipelineRun): Promise<ResolvedPlan | null> => {
+	const target = run_target_of(run);
+	if (target === null) return null;
+	if (target.kind === "commit") {
+		const external_target = await parse_external_target_from_package(deps.db, run.package_id);
+		if (!external_target.ok) return null;
+		return external_plan(external_target.value, target.commit_sha, run.kind);
+	}
+	const manifest = await deps.manifests.get(target.version_set_id);
 	if (manifest === null) return null;
-	const template = await deps.templates.resolve(package_id, version_set_id);
+	const template = await deps.templates.resolve(run.package_id, target.version_set_id);
 	if (template === null) return null;
-	const previous_version_set_id = await deps.lineage.previous(package_id, version_set_id);
-	return resolve_run_plan({ template, manifest, version_set_id, previous_version_set_id });
+	const previous_version_set_id = await deps.lineage.previous(run.package_id, target.version_set_id);
+	return resolve_run_plan({
+		template,
+		manifest,
+		version_set_id: target.version_set_id,
+		previous_version_set_id,
+	});
+};
+
+/**
+ * Locate the deploy-mode payload for `package_id` — resolves the package
+ * row, demands `deploy_mode: external`, and parses `external_target`
+ * through the boundary schema.
+ */
+const parse_external_target_from_package = async (
+	db: Database,
+	package_id: string,
+): Promise<Result<ExternalTarget, ServiceError>> => {
+	const pkg = await get_package(db, package_id);
+	if (!pkg.ok) return err(pkg.error);
+	if (pkg.value.deploy_mode !== "external") {
+		return err({
+			kind: "validation_error",
+			field: "deploy_mode",
+			message: `package ${package_id} is not in external deploy mode`,
+		});
+	}
+	return parse_external_target(pkg.value.external_target);
+};
+
+/**
+ * The commit SHA of the most recent `completed` external run for the
+ * package, excluding the source run itself. External-rollback target —
+ * `null` means there is nothing to roll back to.
+ */
+const previous_completed_commit = async (db: Database, source: PipelineRun): Promise<string | null> => {
+	const rows = await db
+		.select({ id: pipeline_run.id, commit_sha: pipeline_run.commit_sha })
+		.from(pipeline_run)
+		.where(and(eq(pipeline_run.package_id, source.package_id), eq(pipeline_run.status, "completed")))
+		.orderBy(desc(pipeline_run.created_at));
+	const previous = rows.find((r) => r.id !== source.id && r.commit_sha !== null && r.commit_sha !== source.commit_sha);
+	return previous?.commit_sha ?? null;
+};
+
+/**
+ * External rollback branch (#155): the human gate has already been
+ * verified by the route. Cancels a non-terminal source, then creates a
+ * rollback run whose target is the previous completed run's SHA — the
+ * advance performs the production dispatch through the claim path.
+ */
+const apply_external_rollback = async (deps: RoutesDeps, source: PipelineRun, actor: string): Promise<Response> => {
+	const previous_commit = await previous_completed_commit(deps.db, source);
+	if (previous_commit === null) {
+		return wire_err({ code: "no_previous_commit", run_id: source.id, package_id: source.package_id }, 400);
+	}
+
+	if (!is_terminal_status(source.status)) {
+		const source_plan = await reconstruct_plan_for_run(deps, source);
+		if (source_plan !== null) {
+			await do_call(deps, source.id, "cancel", { plan: source_plan }).catch(() => null);
+		}
+	}
+
+	const external_target = await parse_external_target_from_package(deps.db, source.package_id);
+	if (!external_target.ok) {
+		return wire_err(external_target.error, external_target.error.kind === "not_found" ? 404 : 400);
+	}
+
+	const created = await create_external_run(deps.db, {
+		package_id: source.package_id,
+		commit_sha: previous_commit,
+		external_target: external_target.value,
+		kind: "rollback",
+	});
+	if (!created.ok) return wire_err(created.error);
+
+	return finish_rollback_response(
+		deps,
+		created.value,
+		{ kind: "commit", commit_sha: previous_commit },
+		source.id,
+		actor,
+	);
+};
+
+/**
+ * Drive the freshly-created rollback run and shape the wire envelope —
+ * shared tail of the orchestrated + external rollback branches.
+ */
+const finish_rollback_response = async (
+	deps: RoutesDeps,
+	created: { run: { id: string; status: PipelineRun["status"]; kind: PipelineRun["kind"] }; plan: ResolvedPlan },
+	target: RunTarget,
+	source_run_id: string,
+	actor?: string,
+): Promise<Response> => {
+	const { run, plan } = created;
+	const advance_res = await do_call(deps, run.id, "advance", { plan, ...(actor !== undefined ? { actor } : {}) });
+	let advance_body: unknown = null;
+	try {
+		const advance_json: unknown = await advance_res.json();
+		advance_body = advance_json;
+	} catch {
+		advance_body = null;
+	}
+	if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
+
+	return json_ok({
+		run_id: run.id,
+		status: run.status,
+		kind: run.kind,
+		...(target.kind === "commit"
+			? { target_commit_sha: target.commit_sha }
+			: { target_version_set_id: target.version_set_id }),
+		source_run_id,
+		plan,
+		advance: advance_body,
+	});
 };

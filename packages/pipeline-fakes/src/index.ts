@@ -33,6 +33,7 @@ export {
 	type StorageFake,
 } from "./in-memory-do";
 export { type DispatchRecord, InMemoryGithubProvider } from "./in-memory-github";
+export { InMemoryDispatcher } from "./in-memory-dispatcher";
 export { InMemoryPulseSummaryProvider, type PulseSummaryCall } from "./in-memory-pulse-summary";
 export { AssetManifest, AssetPart, BundleManifest, ModulePart } from "./manifests";
 export type {
