@@ -5,7 +5,6 @@ import { createSignal, Show } from "solid-js";
 
 type StageGateProps = {
 	run: PipelineRun;
-	user_id: string;
 };
 
 type RunGate = {
@@ -70,7 +69,6 @@ export default function StageGate(props: StageGateProps) {
 		const result = await client.pipelines.approve(props.run.id, {
 			stage_name,
 			decision,
-			user_id: props.user_id,
 			...(trimmed_reason ? { reason: trimmed_reason } : {}),
 		});
 

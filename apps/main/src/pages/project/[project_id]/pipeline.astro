@@ -222,7 +222,7 @@ const status_color = (status: string) => {
 							{grants_error && (
 								<p class="text-sm" style="color: var(--error); margin: 0;">{grants_error}</p>
 							)}
-							<GrantsList client:load grants={grants} user_id={user.id} />
+							<GrantsList client:load grants={grants} />
 						</div>
 					)}
 

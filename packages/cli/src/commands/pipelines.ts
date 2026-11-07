@@ -120,18 +120,23 @@ type ClientFactory = () => ApiClient;
 
 const action_approve =
 	(client_factory: ClientFactory) =>
-	async (run_id: string, stage: string, options: { user?: string; reason?: string }): Promise<void> => {
+	async (run_id: string, stage: string, options: { reason?: string }): Promise<void> => {
 		const spinner = make_spinner(`Approving ${run_id} @ ${stage}...`).start();
-		const user_id = options.user ?? process.env.DEVPAD_USER_ID;
-		if (user_id === undefined) return fail_with(spinner, "--user required (or DEVPAD_USER_ID env var)");
 		const client = client_factory();
 		const result = await client.pipelines.approve(run_id, {
 			stage_name: stage,
 			decision: "approved",
-			user_id,
 			reason: options.reason,
 		});
-		if (!result.ok) return fail_with(spinner, result.error.message);
+		if (!result.ok) {
+			if (result.error.message === "human_approval_required") {
+				return fail_with(
+					spinner,
+					"approvals must be made from the devpad web UI while signed in — the CLI/API-key channel cannot approve",
+				);
+			}
+			return fail_with(spinner, result.error.message);
+		}
 		spinner.succeed(`approved ${run_id} @ ${stage}`);
 	};
 
@@ -171,25 +176,37 @@ const action_grants_list =
 
 const action_grants_approve =
 	(client_factory: ClientFactory) =>
-	async (grant_id: string, options: { user?: string }): Promise<void> => {
+	async (grant_id: string): Promise<void> => {
 		const spinner = make_spinner(`Approving grant ${grant_id}...`).start();
-		const user_id = options.user ?? process.env.DEVPAD_USER_ID;
-		if (user_id === undefined) return fail_with(spinner, "--user required (or DEVPAD_USER_ID env var)");
 		const client = client_factory();
-		const result = await client.pipelines.grants.approve(grant_id, user_id);
-		if (!result.ok) return fail_with(spinner, result.error.message);
+		const result = await client.pipelines.grants.approve(grant_id);
+		if (!result.ok) {
+			if (result.error.message === "human_approval_required") {
+				return fail_with(
+					spinner,
+					"approvals must be made from the devpad web UI while signed in — the CLI/API-key channel cannot approve",
+				);
+			}
+			return fail_with(spinner, result.error.message);
+		}
 		spinner.succeed(`approved grant ${grant_id}`);
 	};
 
 const action_grants_deny =
 	(client_factory: ClientFactory) =>
-	async (grant_id: string, options: { user?: string; reason?: string }): Promise<void> => {
+	async (grant_id: string, options: { reason?: string }): Promise<void> => {
 		const spinner = make_spinner(`Denying grant ${grant_id}...`).start();
-		const user_id = options.user ?? process.env.DEVPAD_USER_ID;
-		if (user_id === undefined) return fail_with(spinner, "--user required (or DEVPAD_USER_ID env var)");
 		const client = client_factory();
-		const result = await client.pipelines.grants.deny(grant_id, user_id, options.reason);
-		if (!result.ok) return fail_with(spinner, result.error.message);
+		const result = await client.pipelines.grants.deny(grant_id, options.reason);
+		if (!result.ok) {
+			if (result.error.message === "human_approval_required") {
+				return fail_with(
+					spinner,
+					"approvals must be made from the devpad web UI while signed in — the CLI/API-key channel cannot approve",
+				);
+			}
+			return fail_with(spinner, result.error.message);
+		}
 		spinner.succeed(`denied grant ${grant_id}`);
 	};
 
@@ -1438,8 +1455,9 @@ export const register_pipelines_commands = (
 
 	pipelines
 		.command("approve <run-id> <stage>")
-		.description("Approve a gated stage transition")
-		.option("--user <user-id>", "User ID granting approval (defaults to $DEVPAD_USER_ID)")
+		.description(
+			"Approve a gated stage transition. HUMAN ONLY — signed-in session in the devpad web UI; the CLI/API-key channel gets 403 human_approval_required.",
+		)
 		.option("--reason <text>", "Optional approval reason")
 		.action(action_approve(client_factory));
 
@@ -1531,14 +1549,16 @@ export const register_pipelines_commands = (
 
 	grants
 		.command("approve <grant-id>")
-		.description("Approve a pending vault grant")
-		.option("--user <user-id>", "User ID granting approval (defaults to $DEVPAD_USER_ID)")
+		.description(
+			"Approve a pending vault grant. HUMAN ONLY — signed-in session in the devpad web UI; the CLI/API-key channel gets 403 human_approval_required.",
+		)
 		.action(action_grants_approve(client_factory));
 
 	grants
 		.command("deny <grant-id>")
-		.description("Deny a pending vault grant")
-		.option("--user <user-id>", "User ID denying the grant (defaults to $DEVPAD_USER_ID)")
+		.description(
+			"Deny a pending vault grant. HUMAN ONLY — signed-in session in the devpad web UI; the CLI/API-key channel gets 403 human_approval_required.",
+		)
 		.option("--reason <text>", "Optional denial reason")
 		.action(action_grants_deny(client_factory));
 

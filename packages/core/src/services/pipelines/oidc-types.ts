@@ -116,7 +116,14 @@ export type VerifiedOidcClaims = z.infer<typeof verified_oidc_claims_schema>;
 
 // ─── OidcSessionClaims (HS256 orchestrator-signed) ──────────────────
 
-export const OIDC_SESSION_SCOPES = ["artifacts:upload", "runs:start", "runs:events"] as const;
+export const OIDC_SESSION_SCOPES = [
+	"artifacts:upload",
+	"packages:write",
+	"runs:cancel",
+	"runs:events",
+	"runs:rollback",
+	"runs:start",
+] as const;
 export type OidcSessionScope = (typeof OIDC_SESSION_SCOPES)[number];
 
 export type OidcAudit = {

@@ -8,7 +8,6 @@ import { createSignal, For, Show } from "solid-js";
 
 type GrantsListProps = {
 	grants: PipelineGrant[];
-	user_id: string;
 };
 
 const format_date = (dateString: string | null) => {
@@ -34,15 +33,13 @@ export default function GrantsList(props: GrantsListProps) {
 		setLoading(grant.id);
 		setError(null);
 		const client = getBrowserClient();
-		const result = await client.pipelines.grants.approve(grant.id, props.user_id);
+		const result = await client.pipelines.grants.approve(grant.id);
 		if (!result.ok) {
 			setError(result.error.message);
 		} else {
-			setGrants((prev) =>
-				prev.map((g) =>
-					g.id === grant.id ? { ...g, granted_at: new Date().toISOString(), granted_by: props.user_id } : g,
-				),
-			);
+			// The proxy resolves the approver server-side (`X-Devpad-Actor`);
+			// the upstream response carries the authoritative grant row.
+			setGrants((prev) => prev.map((g) => (g.id === grant.id ? result.value : g)));
 		}
 		setLoading(null);
 	};
@@ -51,7 +48,7 @@ export default function GrantsList(props: GrantsListProps) {
 		setLoading(grant.id);
 		setError(null);
 		const client = getBrowserClient();
-		const result = await client.pipelines.grants.deny(grant.id, props.user_id);
+		const result = await client.pipelines.grants.deny(grant.id);
 		if (!result.ok) {
 			setError(result.error.message);
 		} else {

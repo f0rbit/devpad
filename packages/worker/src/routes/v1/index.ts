@@ -11,6 +11,7 @@ import hooks from "./hooks.js";
 import keys from "./keys.js";
 import milestones from "./milestones.js";
 import pipelines_dashboard from "./pipelines-dashboard.js";
+import pipelines_proxy from "./pipelines.js";
 import projects from "./projects.js";
 import pulse from "./pulse.js";
 import scanning from "./scanning.js";
@@ -38,6 +39,7 @@ app.route("/tags", tags);
 app.route("/activity", activity);
 app.route("/pulse", pulse);
 app.route("/pipelines", pipelines_dashboard);
+app.route("/", pipelines_proxy);
 
 app.route("/projects", scanning);
 

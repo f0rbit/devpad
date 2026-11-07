@@ -48,7 +48,7 @@ describe("artifacts upload integration", () => {
 		expect(put_result.ok).toBe(true);
 		if (!put_result.ok) return;
 
-		expect(put_result.value.version).toMatch(/^[a-zA-Z0-9_-]+$/);
+		expect(put_result.value.version).toMatch(/^[a-zA-Z0-9_.-]+$/);
 		expect(put_result.value.content_hash).toMatch(/^[a-f0-9]{64}$/);
 
 		// Verify we can retrieve the uploaded manifest

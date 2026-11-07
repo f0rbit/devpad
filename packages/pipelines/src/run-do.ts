@@ -37,10 +37,16 @@ import { z } from "zod";
 
 const plan_body = z.object({ plan: z.unknown() });
 
+/**
+ * Approve body arriving from the route layer. `actor` is the
+ * `X-Devpad-Actor` value — the route has already verified admin identity
+ * + human channel before this DO fetch happens; the DO itself is not a
+ * trust boundary for it, so it's recorded verbatim.
+ */
 const approve_body = z.object({
 	stage_name: z.string(),
 	decision: z.enum(["approved", "denied"]),
-	user_id: z.string(),
+	actor: z.string(),
 	reason: z.string().optional(),
 	plan: z.unknown(),
 });
@@ -191,7 +197,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 				run_id,
 				stage_name: parsed.data.stage_name,
 				decision: parsed.data.decision,
-				user_id: parsed.data.user_id,
+				user_id: parsed.data.actor,
 				reason: parsed.data.reason,
 			},
 			plan,
