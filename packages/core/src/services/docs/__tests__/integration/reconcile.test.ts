@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import { document } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { create_memory_backend, type Backend } from "@f0rbit/corpus";
+import { eq } from "drizzle-orm";
 import { reconcile_docs_css } from "../../reconcile.js";
 import { get_version, push_document_raw } from "../../store.js";
 import { create_test_db, seed_project, seed_user } from "./helpers.js";
@@ -43,7 +45,9 @@ describe("reconcile_docs_css — repairs already-stored docs pushed before the C
 		expect(report.value.scanned).toBe(1);
 		expect(report.value.reconciled).toEqual([pushed.value.id]);
 
-		const head = await get_version(backend, pushed.value.id, undefined);
+		// Resolve via the document's head pointer, not `get_latest` — same-millisecond pushes tie on created_at.
+		const [row] = await db.select().from(document).where(eq(document.id, pushed.value.id));
+		const head = await get_version(backend, pushed.value.id, row?.head_version ?? undefined);
 		expect(head.ok).toBe(true);
 		if (!head.ok) return;
 		expect(head.value.html).not.toContain("evil.example");
