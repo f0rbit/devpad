@@ -16,13 +16,17 @@
  *   on the first call.
  * - Tests inject a fully synthesised env (`make_test_env`) so the same
  *   factory drives both production and the integration test.
+ * - The `GITHUB` binding (vault's `GitHubVault` entrypoint, #155) is
+ *   optional: when bound it surfaces as `RunDeps.dispatcher` for
+ *   external-deploy CI-workflow dispatch; when absent external runs
+ *   fail fast with the typed `dispatcher` error.
  *
  * The structure mirrors the in-memory test harness in
  * `__tests__/integration/helpers.ts` — production swaps in-memory
  * providers for live ones; every dep type stays identical.
  */
 
-import type { BundleProvider, RunDeps } from "@devpad/core/services/pipelines";
+import type { BundleProvider, Dispatcher, RunDeps } from "@devpad/core/services/pipelines";
 import type { CloudflareProvider, VersionBinding } from "@devpad/pipeline-fakes";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Backend } from "@f0rbit/corpus";
@@ -42,6 +46,7 @@ import {
 import { make_github_oidc_verifier, type OidcVerifier } from "./providers/oidc-verifier";
 import { make_pulse_emitter, make_pulse_summary_client } from "./providers/pulse";
 import { make_session_signer, type SessionSigner } from "./providers/session-signer";
+import { make_vault_dispatcher } from "./providers/vault-dispatcher";
 import type { AuthGate, OidcDeps, PulseEmitterLite, RoutesDeps } from "./routes";
 
 /**
@@ -160,6 +165,16 @@ const build_core = (env: PipelineEnv) => {
 };
 
 /**
+ * Wire the optional {@link Dispatcher} from the `GITHUB` service
+ * binding (vault's `GitHubVault` entrypoint). Unbound → `undefined` —
+ * external runs then keep failing fast with the existing typed
+ * `external packages require a dispatcher` error instead of crashing
+ * the whole orchestrator for packages that never dispatch.
+ */
+const make_vault_dispatcher_from_env = (env: PipelineEnv): Dispatcher | undefined =>
+	env.GITHUB === undefined ? undefined : make_vault_dispatcher(env.GITHUB);
+
+/**
  * Build the `RunDeps` injected into the run Durable Object. The DO
  * touches D1 (run rows, stage events, approvals), the CF API
  * (deployments + versions), pulse (gate-pending notifications), and
@@ -174,6 +189,7 @@ export const build_run_deps_from_env = (env: PipelineEnv): RunDeps => {
 		pulse: core.pulse,
 		approvals: core.approvals,
 		pulse_summary: core.pulse_summary,
+		dispatcher: make_vault_dispatcher_from_env(env),
 	};
 };
 

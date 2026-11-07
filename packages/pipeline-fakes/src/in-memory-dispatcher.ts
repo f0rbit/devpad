@@ -6,6 +6,7 @@ import { err, ok, type Result } from "@f0rbit/corpus";
  * stays dependency-free (core imports fakes, never the reverse).
  */
 export type RecordedDispatch = {
+	package_id: string;
 	repo: string;
 	workflow: string;
 	ref: string;

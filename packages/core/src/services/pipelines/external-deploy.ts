@@ -153,6 +153,7 @@ export const execute_external_dispatch = async (
 	if (!requested.ok) return requested;
 
 	const dispatched = await deps.dispatcher.dispatch({
+		package_id: input.run.package_id,
 		repo: input.external_target.repo,
 		workflow: input.external_target.workflow,
 		ref: input.external_target.ref,

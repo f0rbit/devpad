@@ -58,6 +58,7 @@ import {
 } from "@devpad/core/services/pipelines/packages";
 import type { PipelineTemplate } from "@devpad/pipeline-templates";
 import {
+	pipeline_dispatch,
 	pipeline_package,
 	pipeline_run,
 	pipeline_stage_event,
@@ -629,6 +630,54 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			return json_ok(rows);
 		} catch (e) {
 			return wire_err({ code: "db_error", message: `failed to list pipeline_stage_event: ${String(e)}` }, 500);
+		}
+	});
+
+	// ─── External deploy mode (#155) — dispatch verification ────────
+	//
+	// `GET /runs/:id/dispatches` — the guard CI's production job runs
+	// FIRST: it proves (a) the run was created through the orchestrator
+	// for exactly this commit, (b) a `pipeline_dispatch` row for the
+	// stage exists with status `dispatched` (i.e. a devpad-approved
+	// dispatch actually happened), and (c) the run is still in an
+	// in-flight deploy state. The CLI's `runs verify-dispatch` turns
+	// this into an exit code so a manual `workflow_dispatch` from
+	// GitHub without a devpad approval cannot deploy.
+	//
+	// Auth REQUIRED: admin bearer passes; session identities must carry
+	// `runs:events` scope AND have the run's package in `package_ids`
+	// (CI holds this — same policy as `POST /runs/:id/events`).
+	app.get("/runs/:id/dispatches", async (c) => {
+		const deps = c.get("deps");
+		const run_id = c.req.param("id");
+
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+
+		const run = await get_run(deps.db, run_id);
+		if (!run.ok) return wire_err(run.error);
+
+		const deny = session_scope_check(auth_result.identity, "runs:events", run.value.package_id);
+		if (deny !== null) return deny;
+
+		try {
+			const rows = await deps.db.select().from(pipeline_dispatch).where(eq(pipeline_dispatch.run_id, run_id));
+			return json_ok({
+				run_id: run.value.id,
+				run_status: run.value.status,
+				commit_sha: run.value.commit_sha,
+				dispatches: rows.map((row) => ({
+					stage_name: row.stage_name,
+					commit_sha: row.commit_sha,
+					status: row.status,
+					error: row.error,
+					requested_by: row.requested_by,
+					created_at: row.created_at,
+					updated_at: row.updated_at,
+				})),
+			});
+		} catch (e) {
+			return wire_err({ code: "db_error", message: `failed to list pipeline_dispatch: ${String(e)}` }, 500);
 		}
 	});
 

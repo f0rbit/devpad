@@ -158,6 +158,7 @@ describe("external mode — acceptance flow", () => {
 		// dispatched + audit-attributed to the approving human.
 		expect(h.dispatcher.dispatched).toHaveLength(1);
 		expect(h.dispatcher.dispatched[0]).toEqual({
+			package_id: "pipeline-package_ext",
 			repo: "acme/my-pkg",
 			workflow: "deploy.yml",
 			ref: "main",
@@ -324,6 +325,7 @@ describe("external mode — dispatch failure + redispatch", () => {
 		expect(again.ok).toBe(true);
 		expect(h.dispatcher.dispatched).toHaveLength(1);
 		expect(h.dispatcher.dispatched[0]!.inputs).toEqual({ stage: "production", sha: COMMIT_A, run_id: ctx.run.id });
+		expect(h.dispatcher.dispatched[0]!.package_id).toBe("pipeline-package_ext");
 		const dispatched_row = (
 			await h.db.select().from(pipeline_dispatch).where(eq(pipeline_dispatch.run_id, ctx.run.id))
 		).at(0);
