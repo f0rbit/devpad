@@ -29,6 +29,16 @@ export {
 	type DeployRequest,
 	deploy_stage,
 } from "./deploy.js";
+export { type DispatchError, type DispatchInput, type Dispatcher, EXTERNAL_DISPATCH_STAGE } from "./dispatch.js";
+export {
+	claim_dispatch,
+	type ExternalDispatchOutcome,
+	external_plan_gates,
+	external_plan_stages,
+	execute_external_dispatch,
+	parse_external_target,
+	redispatch_failed,
+} from "./external-deploy.js";
 export {
 	type EventDeps,
 	type EventDoRouter,
@@ -102,16 +112,26 @@ export {
 	approve_stage,
 	cancel_run,
 	create_run,
+	create_external_run,
 	drive_run,
 	get_run,
 	type ListRunsFilter,
 	list_runs,
 	type RunDeps,
+	redispatch,
 	type RunRecord,
 	record_stage_event,
+	run_target_of,
+	external_plan,
 	request_rollback,
 	resolve_run_plan,
+	apply_external_event,
+	type ExternalEventInput,
+	type ExternalEventOutcome,
+	type ExternalEventNoOp,
 	tick_bake_complete,
+	tick_deploy_timeout,
 } from "./runs.js";
 export { resolve_script_name, type ScriptNameInput } from "./script-name.js";
+export { record_stage_event_row } from "./stage-events.js";
 export * from "./state-machine.js";

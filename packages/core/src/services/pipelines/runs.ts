@@ -32,14 +32,9 @@ import type { CloudflareProvider } from "@devpad/pipeline-fakes";
 import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
-import type {
-	ApprovalDecision,
-	PipelineRun,
-	PipelineStageEvent,
-	StageEventKind,
-	UpsertPipelineRun,
-} from "@devpad/schema";
-import { pipeline_approval, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
+import { type ExternalTarget } from "@devpad/schema/validation";
+import type { ApprovalDecision, PipelineRun, UpsertPipelineRun } from "@devpad/schema";
+import { pipeline_approval, pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -49,12 +44,26 @@ import { environment_for_stage } from "./caller-identity.js";
 import { type BundleProvider, type DeployError, deploy_stage } from "./deploy.js";
 import type { ApprovalStore, GateError, GateEvaluatorDeps, PulseEmitter } from "./gates/index.js";
 import { gateEvaluatorFor } from "./gates/index.js";
+import type { Dispatcher } from "./dispatch.js";
+import {
+	type ExternalDispatchOutcome,
+	external_plan_gates,
+	external_plan_stages,
+	execute_external_dispatch,
+	parse_external_target,
+	redispatch_failed,
+} from "./external-deploy.js";
+import { get_package } from "./packages.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
 import { resolve_script_name } from "./script-name.js";
+import { record_stage_event_row } from "./stage-events.js";
 import {
+	is_terminal_status,
 	type ResolvedPlan,
 	type RunEvent,
 	type RunState,
+	type RunTarget,
+	target_version_id,
 	type TransitionError,
 	type TransitionOutput,
 	transition,
@@ -66,6 +75,9 @@ export type RunDeps = {
 	bundles: BundleProvider;
 	pulse: PulseEmitter;
 	approvals: ApprovalStore;
+	/** CI-workflow dispatch seam for external deploy mode (#155). Absent →
+	 * external runs fail fast with a typed error. */
+	dispatcher?: Dispatcher;
 	pulse_summary?: PulseSummaryProvider;
 	now?: () => number;
 	lineage?: (package_id: string) => Promise<Result<VersionSetRef[], ServiceError>>;
@@ -117,10 +129,31 @@ export const resolve_run_plan = (input: {
 		stages,
 		gates: gates_for_resolved,
 		forced_reason: resolved.forced_reason,
-		version_set_id: input.version_set_id,
+		target: { kind: "version_set", version_set_id: input.version_set_id },
 		previous_version_set_id: input.previous_version_set_id,
+		external_timeout_ms: null,
 	};
 };
+
+/**
+ * Pure: the fixed resolved plan for an EXTERNAL run (#155). Driven by the
+ * package row's validated `ExternalTarget` — the manual gate and timeout
+ * come from the row, never from the request. Deploy runs walk
+ * `[staging, production]` (CI deploys staging before run creation);
+ * rollback runs walk `[production]` alone.
+ */
+export const external_plan = (
+	external_target: ExternalTarget,
+	commit_sha: string,
+	kind: "deploy" | "rollback" = "deploy",
+): ResolvedPlan => ({
+	stages: external_plan_stages(kind),
+	gates: external_plan_gates(kind, external_target.gate),
+	forced_reason: null,
+	target: { kind: "commit", commit_sha },
+	previous_version_set_id: null,
+	external_timeout_ms: external_target.timeout_ms,
+});
 
 const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "atomic"): unknown => {
 	if (shape === "atomic") return { type: "atomic" };
@@ -145,7 +178,6 @@ const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Recor
 };
 
 const make_id = (): string => `pipeline-run_${crypto.randomUUID()}`;
-const make_event_id = (): string => `pipeline-stage-event_${crypto.randomUUID()}`;
 const make_approval_id = (): string => `pipeline-approval_${crypto.randomUUID()}`;
 
 /**
@@ -186,8 +218,9 @@ export const create_run = async (
 					stages: expand_rollout({ type: "atomic" }),
 					gates: { "staging→atomic-prod": { type: "auto" } },
 					forced_reason: null,
-					version_set_id: input.version_set_id,
+					target: { kind: "version_set", version_set_id: input.version_set_id },
 					previous_version_set_id: input.previous_version_set_id ?? null,
+					external_timeout_ms: null,
 				}
 			: base_plan;
 	const shape = plan.stages.some((s) => s.name === "atomic-prod") ? "atomic" : "gradual";
@@ -198,6 +231,7 @@ export const create_run = async (
 		id: row_id,
 		package_id: input.package_id,
 		version_set_id: input.version_set_id,
+		commit_sha: null,
 		shape,
 		kind,
 		status: "queued",
@@ -245,6 +279,90 @@ export const create_run = async (
 			if (!forced_event.ok) return forced_event;
 		}
 
+		return ok({ run: row, plan });
+	} catch (e) {
+		return err({ kind: "store_error", operation: "insert_pipeline_run", message: String(e) });
+	}
+};
+
+/**
+ * Parse the run row's nullable `version_set_id` / `commit_sha` pair into
+ * the {@link RunTarget} union. The DB doesn't carry a CHECK for
+ * "exactly one set" — this boundary parser is the enforcement point:
+ * `null` means the row is malformed (both or neither set) and callers
+ * treat it as an orchestrated-vs-external ambiguity they must refuse.
+ */
+export const run_target_of = (row: Pick<PipelineRun, "version_set_id" | "commit_sha">): RunTarget | null => {
+	if (row.commit_sha !== null && row.version_set_id === null) {
+		return { kind: "commit", commit_sha: row.commit_sha };
+	}
+	if (row.version_set_id !== null && row.commit_sha === null) {
+		return { kind: "version_set", version_set_id: row.version_set_id };
+	}
+	return null;
+};
+
+/**
+ * Persist a freshly-created EXTERNAL run row (#155). No template / manifest
+ * / version-set is involved; the resolved plan is the fixed external shape
+ * derived from the validated `ExternalTarget`. `version_set_id` stays null
+ * and `commit_sha` carries the run's target SHA.
+ */
+export const create_external_run = async (
+	db: Database,
+	input: {
+		package_id: string;
+		commit_sha: string;
+		external_target: ExternalTarget;
+		kind?: "deploy" | "rollback";
+	},
+): Promise<Result<{ run: PipelineRun; plan: ResolvedPlan }, ServiceError>> => {
+	const kind = input.kind ?? "deploy";
+	const plan = external_plan(input.external_target, input.commit_sha, kind);
+	const shape: "gradual" | "atomic" = "gradual";
+	const now = new Date().toISOString();
+	const row_id = make_id();
+	const upsert: UpsertPipelineRun = {
+		id: row_id,
+		package_id: input.package_id,
+		version_set_id: null,
+		commit_sha: input.commit_sha,
+		shape,
+		kind,
+		status: "queued",
+		current_stage: plan.stages[0]?.name ?? null,
+		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape) as never,
+		resolved_gates: gates_to_resolved_gates_json(plan.gates) as never,
+		forced_atomic_reason: plan.forced_reason,
+		started_at: now,
+		finished_at: null,
+	};
+
+	try {
+		const insert_values = {
+			...upsert,
+			id: row_id,
+			current_stage: upsert.current_stage ?? null,
+			started_at: now,
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
+		const inserted = await db
+			.insert(pipeline_run)
+			.values(insert_values as never)
+			.returning();
+		const row = inserted.at(0);
+		if (!row) {
+			return err({
+				kind: "store_error",
+				operation: "insert_pipeline_run",
+				message: "insert returned no row",
+			});
+		}
 		return ok({ run: row, plan });
 	} catch (e) {
 		return err({ kind: "store_error", operation: "insert_pipeline_run", message: String(e) });
@@ -337,7 +455,7 @@ const derive_state_from_row = (row: PipelineRun, plan: ResolvedPlan): RunState =
 	let last_deployed_index: number | null;
 	if (row.status === "queued") {
 		last_deployed_index = null;
-	} else if (row.status === "deploying") {
+	} else if (row.status === "deploying" || row.status === "unconfirmed") {
 		last_deployed_index = stage_index === 0 ? null : stage_index - 1;
 	} else {
 		last_deployed_index = stage_index;
@@ -347,37 +465,6 @@ const derive_state_from_row = (row: PipelineRun, plan: ResolvedPlan): RunState =
 		stage_index,
 		last_deployed_index,
 	};
-};
-
-const record_stage_event_row = async (
-	db: Database,
-	input: { run_id: string; stage_name: string; kind: StageEventKind; payload?: unknown },
-): Promise<Result<PipelineStageEvent, ServiceError>> => {
-	try {
-		const id = make_event_id();
-		const insert_values = {
-			id,
-			run_id: input.run_id,
-			stage_name: input.stage_name,
-			kind: input.kind,
-			payload: input.payload ?? null,
-			ts: new Date().toISOString(),
-		};
-		const inserted = await db
-			.insert(pipeline_stage_event)
-			.values(insert_values as never)
-			.returning();
-		const row = inserted.at(0);
-		if (!row)
-			return err({
-				kind: "store_error",
-				operation: "insert_pipeline_stage_event",
-				message: "insert returned no row",
-			});
-		return ok(row);
-	} catch (e) {
-		return err({ kind: "store_error", operation: "insert_pipeline_stage_event", message: String(e) });
-	}
 };
 
 export const record_stage_event = record_stage_event_row;
@@ -450,7 +537,12 @@ export const approve_stage = async (
 	return advance_run(
 		deps,
 		input.run_id,
-		{ kind: "gate_verdict", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason },
+		{
+			kind: "gate_verdict",
+			verdict: input.decision === "approved" ? "Pass" : "Fail",
+			reason: input.reason,
+			actor: input.user_id,
+		},
 		plan,
 	);
 };
@@ -464,6 +556,14 @@ const gate_deps_from = (deps: RunDeps): GateEvaluatorDeps => ({
 });
 
 /**
+ * Extract the human actor from a state-machine event when one carries it
+ * (approve / external rollback start / redispatch). Absent for machine
+ * paths — the `pipeline_dispatch.requested_by` audit column is then null.
+ */
+const actor_from_event = (event: RunEvent | undefined): string | undefined =>
+	event !== undefined && "actor" in event && typeof event.actor === "string" ? event.actor : undefined;
+
+/**
  * Execute the side-effect output produced by a transition. Returns the
  * next event to feed back (or `null` to stop).
  */
@@ -473,6 +573,7 @@ const execute_output = async (
 	plan: ResolvedPlan,
 	state: RunState,
 	output: TransitionOutput,
+	actor?: string,
 ): Promise<Result<{ output: TransitionOutput; next_event: RunEvent | null }, AdvanceError>> => {
 	if (output.kind === "done") {
 		return ok({ output, next_event: null });
@@ -490,19 +591,25 @@ const execute_output = async (
 	}
 
 	if (output.kind === "needs_deploy") {
+		// Executor seam (#155): the run's target kind picks the path.
+		// `version_set` → the existing Cloudflare deploy; `commit` → the
+		// external CI path (no Cloudflare touch at all).
+		if (output.target.kind === "commit")
+			return execute_external_deploy_output(deps, run_id, plan, state, output, actor);
+		const version_set_id = output.target.version_set_id;
 		const resolved = await package_script_for_stage(deps.db, run_id, output.stage.name);
 		if (!resolved.ok) return resolved;
 		const started_event = await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
 			kind: "deploy_started",
-			payload: { traffic: output.stage.traffic, version_set_id: output.version_set_id },
+			payload: { traffic: output.stage.traffic, version_set_id },
 		});
 		if (!started_event.ok) return started_event;
 		const deployed = await deploy_stage(deps.cf, deps.bundles, {
 			script_name: resolved.value.script_name,
 			stage: output.stage,
-			version_set_id: output.version_set_id,
+			version_set_id,
 			package_name: resolved.value.package_name,
 			environment: environment_for_stage(output.stage.name),
 		});
@@ -522,7 +629,7 @@ const execute_output = async (
 		const verdict = await evaluator.evaluate({
 			run_id,
 			package: "",
-			version_set_id: plan.version_set_id,
+			version_set_id: target_version_id(plan.target),
 			from_stage: output.from_stage.name,
 			to_stage: output.to_stage.name,
 			gate: output.gate,
@@ -648,7 +755,7 @@ export const advance_run = async (
 	const persisted = await update_run_state(deps.db, run_id, t.value.next, plan.stages);
 	if (!persisted.ok) return persisted;
 
-	const executed = await execute_output(deps, run_id, plan, t.value.next, t.value.emit);
+	const executed = await execute_output(deps, run_id, plan, t.value.next, t.value.emit, actor_from_event(event));
 	if (!executed.ok) return executed;
 
 	if (executed.value.next_event === null) return ok(executed.value.output);
@@ -689,4 +796,182 @@ export const request_rollback = async (
 	plan: ResolvedPlan,
 ): Promise<Result<TransitionOutput, AdvanceError>> => {
 	return advance_run(deps, run_id, { kind: "rollback_requested" }, plan);
+};
+
+/**
+ * External-mode stage deploy, driven from {@link execute_output}'s
+ * `needs_deploy` output when the run's target is a commit.
+ *
+ * - stage 0 (`staging`): CI already deployed staging before the run was
+ *   created — do nothing, don't move; the run waits in `deploying` for
+ *   CI's staging `deploy_completed` event.
+ * - other stages (`production`): claim the unique `(run_id, stage)`
+ *   dispatch row (a losing racer → `already` → do nothing), record
+ *   `dispatch_requested`, dispatch the CI workflow and mark the row
+ *   `dispatched`. On dispatch failure the row flips to `failed` + a
+ *   `dispatch_failed` event is recorded, and the run stays in
+ *   `deploying` (phase-2 UI offers re-dispatch).
+ */
+const execute_external_deploy_output = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+	state: RunState,
+	output: Extract<TransitionOutput, { kind: "needs_deploy" }>,
+	actor?: string,
+): Promise<Result<{ output: TransitionOutput; next_event: RunEvent | null }, AdvanceError>> => {
+	// Staging is CI-own territory for external deploy runs: CI deployed it
+	// before the run was created, so the orchestrator does nothing there
+	// and waits for CI's staging event. Rollback runs have no staging
+	// stage — their first (and only) stage is `production` and dispatches
+	// straight away.
+	if (output.stage.name === "staging") {
+		return ok({ output, next_event: null });
+	}
+	const run = await get_run(deps.db, run_id);
+	if (!run.ok) return run;
+	const pkg = await get_package(deps.db, run.value.package_id);
+	if (!pkg.ok) return pkg;
+	const external_target = parse_external_target(pkg.value.external_target);
+	if (!external_target.ok) return external_target;
+	const dispatch = await execute_external_dispatch(deps, {
+		run: run.value,
+		external_target: external_target.value,
+		stage_name: output.stage.name,
+		claim: "unique_insert",
+		actor,
+	});
+	if (!dispatch.ok) return dispatch;
+	return ok({ output, next_event: null });
+};
+
+/**
+ * Re-dispatch a FAILED `pipeline_dispatch` row for an external run. Only
+ * a human may do this (enforced at the route layer with
+ * `require_human_actor`); `actor` is recorded as `requested_by`.
+ */
+export const redispatch = async (
+	deps: RunDeps,
+	run_id: string,
+	actor: string,
+): Promise<Result<ExternalDispatchOutcome, AdvanceError>> => {
+	const run = await get_run(deps.db, run_id);
+	if (!run.ok) return run;
+	const target = run_target_of(run.value);
+	if (target === null || target.kind !== "commit") {
+		return err({
+			kind: "conflict",
+			resource: "pipeline_run",
+			id: run_id,
+			message: "redispatch applies only to external (commit-target) runs",
+		} satisfies ServiceError);
+	}
+	const pkg = await get_package(deps.db, run.value.package_id);
+	if (!pkg.ok) return pkg;
+	const external_target = parse_external_target(pkg.value.external_target);
+	if (!external_target.ok) return external_target;
+	return redispatch_failed(deps, run.value, external_target.value, actor);
+};
+
+/**
+ * Feed the DO's external-timeout alarm into the state machine: a run still
+ * `deploying` with no newer progress becomes `unconfirmed` plus a
+ * `timed_out` stage event for the record.
+ */
+export const tick_deploy_timeout = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+): Promise<Result<TransitionOutput, AdvanceError>> => {
+	const before = await get_run(deps.db, run_id);
+	const applied = await advance_run(deps, run_id, { kind: "deploy_timeout" }, plan);
+	if (!applied.ok) return applied;
+	const after = await get_run(deps.db, run_id);
+	if (after.ok && before.ok && before.value.status !== after.value.status) {
+		const timed_out = await record_stage_event_row(deps.db, {
+			run_id,
+			stage_name: after.value.current_stage ?? "staging",
+			kind: "timed_out",
+			payload: { stage: after.value.current_stage, sha: after.value.commit_sha },
+		});
+		if (!timed_out.ok) return timed_out;
+	}
+	return applied;
+};
+
+/**
+ * Adopt an externally-ingested CI stage event for a run. Accepts the event
+ * ONLY when the run is external (commit target), the reported stage is the
+ * run's current stage, and the reported SHA matches the run's
+ * `commit_sha`; otherwise a typed no-op reason is returned and nothing is
+ * done. Orchestrated runs ignore external events entirely.
+ */
+export type ExternalEventInput = {
+	event_kind: "deploy_completed" | "deploy_failed";
+	stage_name: string;
+	payload?: unknown;
+};
+
+export type ExternalEventNoOp = "orchestrated_run" | "malformed_payload" | "sha_mismatch" | "stage_mismatch";
+
+export type ExternalEventOutcome =
+	| { acted: true; output: TransitionOutput }
+	| { acted: false; reason: ExternalEventNoOp; terminal: boolean };
+
+const external_event_plan = async (deps: RunDeps, run: PipelineRun): Promise<Result<ResolvedPlan, AdvanceError>> => {
+	const pkg = await get_package(deps.db, run.package_id);
+	if (!pkg.ok) return pkg;
+	const external_target = parse_external_target(pkg.value.external_target);
+	if (!external_target.ok) {
+		return err({
+			kind: "validation_error",
+			field: "external_target",
+			message: `external run ${run.id} against a package without a valid external_target: ${external_target.error.message ?? ""}`,
+		} satisfies ServiceError);
+	}
+	return ok(external_plan(external_target.value, run.commit_sha ?? "", run.kind));
+};
+
+const external_event_sha_of = (payload: unknown): Result<string, ExternalEventNoOp> => {
+	if (payload === null || payload === undefined || typeof payload !== "object" || Array.isArray(payload)) {
+		return err("malformed_payload");
+	}
+	const sha = (payload as Record<string, unknown>).sha;
+	if (typeof sha !== "string" || sha.length === 0) return err("malformed_payload");
+	return ok(sha);
+};
+
+export const apply_external_event = async (
+	deps: RunDeps,
+	run_id: string,
+	input: ExternalEventInput,
+): Promise<Result<ExternalEventOutcome, AdvanceError>> => {
+	const run = await get_run(deps.db, run_id);
+	if (!run.ok) return run;
+	const target = run_target_of(run.value);
+	if (target === null || target.kind !== "commit") {
+		return ok({ acted: false, reason: "orchestrated_run", terminal: is_terminal_status(run.value.status) });
+	}
+	if (is_terminal_status(run.value.status)) {
+		return ok({ acted: false, reason: "orchestrated_run", terminal: true });
+	}
+	const sha = external_event_sha_of(input.payload);
+	if (!sha.ok) return ok({ acted: false, reason: sha.error, terminal: false });
+	if (sha.value !== target.commit_sha) {
+		return ok({ acted: false, reason: "sha_mismatch", terminal: false });
+	}
+	if (input.stage_name !== run.value.current_stage) {
+		return ok({ acted: false, reason: "stage_mismatch", terminal: false });
+	}
+	const plan = await external_event_plan(deps, run.value);
+	if (!plan.ok) return plan;
+
+	const applied = await advance_run(
+		deps,
+		run_id,
+		input.event_kind === "deploy_completed" ? { kind: "deploy_complete" } : { kind: "deploy_failed" },
+		plan.value,
+	);
+	if (!applied.ok) return applied;
+	return ok({ acted: true, output: applied.value });
 };

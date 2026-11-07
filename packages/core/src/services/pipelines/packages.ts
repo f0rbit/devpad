@@ -21,7 +21,7 @@
  *   must clean up runs explicitly before deleting.
  */
 
-import type { PipelinePackage } from "@devpad/schema";
+import type { ExternalTarget, PipelinePackage } from "@devpad/schema";
 import { pipeline_package, pipeline_run, project } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -83,6 +83,10 @@ export type CreatePackageInput = {
 	repo_url?: string | null;
 	project_id?: string | null;
 	default_template_ref?: string | null;
+	/** External deploy mode (#155). Setting `external` without
+	 * `external_target` is a validation error. */
+	deploy_mode?: "orchestrated" | "external";
+	external_target?: ExternalTarget | null;
 };
 
 /**
@@ -114,6 +118,13 @@ export const create_package = async (
 		}
 
 		const now = new Date().toISOString();
+		if (input.deploy_mode === "external" && input.external_target === undefined) {
+			return err({
+				kind: "validation_error",
+				field: "external_target",
+				message: "external packages require an external_target",
+			});
+		}
 		const insert_values = {
 			id: input.id,
 			owner_id: input.owner_id,
@@ -122,6 +133,8 @@ export const create_package = async (
 			project_id: input.project_id ?? null,
 			default_template_ref: input.default_template_ref ?? null,
 			script_name_overrides: null,
+			deploy_mode: input.deploy_mode ?? "orchestrated",
+			external_target: input.external_target ?? null,
 			created_at: now,
 			updated_at: now,
 			created_by: "api",
@@ -155,6 +168,8 @@ export type UpdatePackageInput = Partial<{
 	project_id: string | null;
 	default_template_ref: string | null;
 	script_name_overrides: Record<string, string> | null;
+	deploy_mode: "orchestrated" | "external";
+	external_target: ExternalTarget | null;
 }>;
 
 /**
@@ -181,6 +196,8 @@ export const update_package = async (
 		if ("project_id" in input) patch.project_id = input.project_id;
 		if ("default_template_ref" in input) patch.default_template_ref = input.default_template_ref;
 		if ("script_name_overrides" in input) patch.script_name_overrides = input.script_name_overrides;
+		if ("deploy_mode" in input) patch.deploy_mode = input.deploy_mode;
+		if ("external_target" in input) patch.external_target = input.external_target;
 
 		const updated = await db
 			.update(pipeline_package)
