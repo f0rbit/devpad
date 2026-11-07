@@ -228,19 +228,42 @@ describe("ingest_event — DO tick gating", () => {
 			h.deps,
 			base_input({ kind: "deploy_started", idempotency_key: "44444444-4444-4444-8444-444444444444" }),
 		);
+		await ingest_event(
+			h.deps,
+			base_input({ kind: "dispatch_requested", idempotency_key: "55555555-5555-4555-8555-555555555555" }),
+		);
+		await ingest_event(
+			h.deps,
+			base_input({ kind: "timed_out", idempotency_key: "66666666-6666-4666-8666-666666666666" }),
+		);
 		expect(h.do_router.calls).toHaveLength(0);
 	});
 
-	test("deploy_completed ticks the DO with /advance + external_event", async () => {
+	test("duplicate idempotency key goes through the unique-index path", async () => {
+		const input = base_input({ kind: "deploy_completed" });
+		const first = expect_ok(await ingest_event(h.deps, input));
+		const second = expect_ok(await ingest_event(h.deps, input));
+		expect(second.duplicated).toBe(true);
+		expect(second.event_id).toBe(first.event_id);
+		const all = await h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, SEEDED_RUN_ID));
+		expect(all).toHaveLength(1);
+	});
+
+	test("deploy_completed ticks the DO with /external-event + stage + payload", async () => {
 		await ingest_event(h.deps, base_input({ kind: "deploy_completed" }));
 		// Pulse emit + DO tick are fire-and-forget — give the event loop a
 		// chance to flush before asserting.
 		await Promise.resolve();
 		await Promise.resolve();
 		expect(h.do_router.calls).toHaveLength(1);
-		expect(h.do_router.calls[0]!.path).toBe("/advance");
+		expect(h.do_router.calls[0]!.path).toBe("/external-event");
 		expect(h.do_router.calls[0]!.run_id).toBe(SEEDED_RUN_ID);
-		expect(h.do_router.calls[0]!.body).toEqual({ kind: "external_event", event_kind: "deploy_completed" });
+		expect(h.do_router.calls[0]!.body).toEqual({
+			kind: "external_event",
+			event_kind: "deploy_completed",
+			stage_name: "staging",
+			payload: { detail: "hi" },
+		});
 	});
 
 	test("gate_verdict ticks the DO", async () => {
@@ -257,6 +280,14 @@ describe("ingest_event — DO tick gating", () => {
 		await Promise.resolve();
 		expect(h.do_router.calls).toHaveLength(1);
 		expect((h.do_router.calls[0]!.body as { event_kind: string }).event_kind).toBe("rollback_completed");
+	});
+
+	test("deploy_failed ticks the DO", async () => {
+		await ingest_event(h.deps, base_input({ kind: "deploy_failed" }));
+		await Promise.resolve();
+		await Promise.resolve();
+		expect(h.do_router.calls).toHaveLength(1);
+		expect((h.do_router.calls[0]!.body as { event_kind: string }).event_kind).toBe("deploy_failed");
 	});
 });
 
