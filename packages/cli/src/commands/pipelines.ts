@@ -1,8 +1,9 @@
 /**
  * @module @devpad/cli/commands/pipelines
  *
- * `devpad pipelines …` subcommand group: `init`, `runs start`, `approve`,
- * `cancel`, `rollback`, `artifacts upload`. `init` shells out to the scaffolder;
+ * `devpad pipelines …` subcommand group: `init`, `runs start`,
+ * `runs verify-dispatch`, `approve`, `cancel`, `rollback`, `artifacts upload`.
+ * `init` shells out to the scaffolder;
  * the others wrap `client.pipelines.*` so we never re-implement HTTP plumbing.
  */
 
@@ -20,7 +21,7 @@ import type { Command } from "commander";
 import { type AssetWalkError, type WalkedAssets, walk_assets_dir } from "../asset-walker";
 import { type BundleWalkError, type WalkedBundle, walk_bundle_dir } from "../bundle-walker";
 import { type CorpusBackendMode, selectCorpusBackend } from "../corpus-backend";
-import { upload_blob_to_store, upload_version_set } from "../corpus-http-backend";
+import { post_envelope, upload_blob_to_store, upload_version_set } from "../corpus-http-backend";
 import {
 	type ArtifactInputs,
 	build_asset_manifest_from_walk,
@@ -33,6 +34,13 @@ import {
 	type VersionSetOutput,
 	validate_artifact_paths,
 } from "../pipelines-artifacts-helpers";
+import {
+	evaluate_dispatch_verification,
+	fetch_dispatches_envelope,
+	is_sha_like,
+	type OrchestratorHttpInput,
+	resolve_runs_start_flags,
+} from "../pipelines-verify";
 import { fail_with, make_spinner, print_next_steps as print_next_steps_shared } from "../printer";
 import { type ScaffolderError, scaffold_package } from "../scaffolder/index";
 import type { DefaultGateKind, RolloutMode } from "../scaffolder/types";
@@ -716,18 +724,80 @@ const compile_and_upload_template = async (
 
 type RunsStartOptions = {
 	package: string;
-	versionSetId: string;
+	/** Orchestrated-package target: version set from corpus. Mutually
+	 * exclusive with `sha`. */
+	versionSetId?: string;
+	/** External-package target (#155): 40-hex commit SHA. Direct
+	 * orchestrator HTTP (`POST /runs` with `commit_sha`) — the ApiClient
+	 * path stays orchestrated-only. Mutually exclusive with
+	 * `versionSetId`. */
+	sha?: string;
+	/** Machine-readable envelope on stdout instead of the human line. */
+	json?: boolean;
+	/** Orchestrator base URL (external mode). Default: $DEVPAD_PIPELINES_URL. */
+	orchestratorUrl?: string;
+	/** Bearer token (external mode). Default: $DEVPAD_PIPELINES_TOKEN. */
+	token?: string;
+};
+
+const resolve_orchestrator_http = (options: {
+	orchestratorUrl?: string;
+	token?: string;
+}): { ok: true; value: OrchestratorHttpInput } | { ok: false; error: string } => {
+	const url = options.orchestratorUrl ?? process.env.DEVPAD_PIPELINES_URL;
+	const token = options.token ?? process.env.DEVPAD_PIPELINES_TOKEN;
+	if (url === undefined || url === "" || token === undefined || token === "") {
+		return {
+			ok: false,
+			error: "requires DEVPAD_PIPELINES_URL + DEVPAD_PIPELINES_TOKEN (env or --orchestrator-url/--token)",
+		};
+	}
+	return { ok: true, value: { pipelines_url: url, pipelines_token: token } };
+};
+
+const print_runs_start_result = (
+	spinner: ReturnType<typeof make_spinner>,
+	value: { run_id: string; status: string },
+	as_json: boolean,
+): void => {
+	if (as_json) console.log(JSON.stringify({ run_id: value.run_id, status: value.status }));
+	else {
+		spinner.succeed(`run ${value.run_id} (${value.status})`);
+		console.log(chalk.green(`Run ID: ${value.run_id}`));
+	}
 };
 
 const action_runs_start =
 	(client_factory: ClientFactory) =>
 	async (options: RunsStartOptions): Promise<void> => {
+		const targets = resolve_runs_start_flags(options);
 		const spinner = make_spinner("Starting pipeline run...").start();
+		if (!targets.ok) return fail_with(spinner, targets.error);
+
+		// External mode (#155) hits the orchestrator directly — CI
+		// authenticates with the admin bearer (or a session JWT) and the
+		// `POST /runs` commit branch validates deploy_mode on the package
+		// row. No ApiClient detour through the devpad main worker.
+		if (targets.value.kind === "external") {
+			const http = resolve_orchestrator_http(options);
+			if (!http.ok) return fail_with(spinner, `external run start ${http.error}`);
+			const posted = await post_envelope<{ run_id: string; status: string }>({
+				url: `${http.value.pipelines_url.replace(/\/$/, "")}/runs`,
+				headers: { authorization: `Bearer ${http.value.pipelines_token}`, "content-type": "application/json" },
+				body: JSON.stringify({ package_id: targets.value.package_id, commit_sha: targets.value.commit_sha }),
+			});
+			if (!posted.ok) return fail_with(spinner, `run start failed: ${format_http_error(posted.error)}`);
+			print_runs_start_result(spinner, posted.value, options.json ?? false);
+			return;
+		}
+
 		const client = client_factory();
-		const result = await client.pipelines.create({ package_id: options.package, version_set_id: options.versionSetId });
+		const result = await client.pipelines.create({
+			package_id: targets.value.package_id,
+			version_set_id: targets.value.version_set_id,
+		});
 		if (!result.ok) return fail_with(spinner, result.error.message);
-		spinner.succeed(`run ${result.value.run_id} (${result.value.status})`);
-		console.log(chalk.green(`Run ID: ${result.value.run_id}`));
+		print_runs_start_result(spinner, result.value, options.json ?? false);
 	};
 
 // ─── runs events subcommand actions (Phase 2.C) ────────────────────
@@ -742,11 +812,16 @@ type EventsIngestOptions = {
 	kind: string;
 	payloadFile?: string;
 	idempotencyKey?: string;
+	/** Commit SHA — merged into the payload as `payload.sha` (external
+	 * CI reports deploy_started|deploy_completed|deploy_failed with it;
+	 * wins over a `sha` present in `--payload-file`). */
+	sha?: string;
 };
 
 const STAGE_EVENT_KINDS = [
 	"deploy_started",
 	"deploy_completed",
+	"deploy_failed",
 	"bake_started",
 	"bake_completed",
 	"gate_verdict",
@@ -780,6 +855,10 @@ const action_runs_events_ingest =
 			} catch (e) {
 				return fail_with(spinner, `--payload-file is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
 			}
+		}
+		if (options.sha !== undefined && options.sha !== "") {
+			const base = typeof payload === "object" && payload !== null ? (payload as Record<string, unknown>) : {};
+			payload = { ...base, sha: options.sha };
 		}
 
 		let idempotency_key = options.idempotencyKey;
@@ -816,6 +895,47 @@ const action_runs_events_list =
 			console.log(`  ${chalk.dim(ev.ts)}  ${chalk.cyan(ev.kind)}  ${ev.stage_name}  ${chalk.dim(ev.id)}`);
 		}
 	};
+
+// ─── runs verify-dispatch (external deploy mode #155) ───────────────
+//
+// The guard chamber's production job runs FIRST: proves the run is the
+// expected commit's run, a devpad-approved dispatch row exists for the
+// stage, and the run is still in-flight. A manual GitHub
+// `workflow_dispatch` without a devpad approval never satisfies all
+// three — the guard exits non-zero and the deploy aborts.
+//
+// Reads `GET /runs/:id/dispatches` from the orchestrator directly
+// (admin bearer or CI session JWT — deliberately direct-orchestrator
+// HTTP, not the ApiClient's devpad-worker proxy: CI auth lives here).
+// The decision logic itself is the pure `evaluateDispatchVerification`
+// in `../pipelines-verify` (unit-tested in tests/unit/pipelines-verify).
+
+type RunsVerifyDispatchOptions = {
+	run: string;
+	sha: string;
+	stage: string;
+	json?: boolean;
+	orchestratorUrl?: string;
+	token?: string;
+};
+
+export const action_runs_verify_dispatch = async (options: RunsVerifyDispatchOptions): Promise<void> => {
+	const spinner = make_spinner(`Verifying dispatch for ${options.run}...`).start();
+
+	if (!is_sha_like(options.sha)) return fail_with(spinner, `--sha must be a 40-hex commit SHA; got "${options.sha}"`);
+
+	const http = resolve_orchestrator_http(options);
+	if (!http.ok) return fail_with(spinner, `verify-dispatch ${http.error}`);
+
+	const fetched = await fetch_dispatches_envelope(http.value, options.run);
+	if (!fetched.ok) return fail_with(spinner, fetched.error);
+	if (options.json ?? false) console.log(JSON.stringify(fetched.value));
+
+	const decision = evaluate_dispatch_verification(fetched.value, { sha: options.sha, stage: options.stage });
+	if (!decision.ok) return fail_with(spinner, `dispatch verification failed: ${decision.reason}`);
+
+	spinner.succeed(`dispatch verified: run ${options.run} @ ${options.sha.slice(0, 7)} (stage ${options.stage})`);
+};
 
 // ─── packages subcommand actions ───────────────────────────────────
 //
@@ -1512,10 +1632,32 @@ export const register_pipelines_commands = (
 
 	runs
 		.command("start")
-		.description("Start a pipeline run with an explicit version set")
+		.description(
+			"Start a pipeline run. Orchestrated packages target --version-set-id; external packages (#155) target --sha " +
+				"(40-hex, POSTs /runs with commit_sha directly to the orchestrator).",
+		)
 		.requiredOption("--package <name>", "Package name")
-		.requiredOption("--version-set-id <id>", "Version set ID from corpus")
+		.option("--version-set-id <id>", "Version set ID from corpus (orchestrated packages)")
+		.option("--sha <sha>", "40-hex commit SHA (external packages; mutually exclusive with --version-set-id)")
+		.option("--json", "Print the run id/status as JSON")
+		.option("--orchestrator-url <url>", "Orchestrator base URL (default: $DEVPAD_PIPELINES_URL) — external mode")
+		.option("--token <token>", "Bearer token (default: $DEVPAD_PIPELINES_TOKEN) — external mode")
 		.action(action_runs_start(client_factory));
+
+	runs
+		.command("verify-dispatch")
+		.description(
+			"Verify an external run's dispatch (run BEFORE a CI production deploy): the run targets --sha, a " +
+				"pipeline_dispatch row for --stage exists with status `dispatched`, and the run is in-flight. " +
+				"Exits 0 only when ALL hold — a manual workflow_dispatch without a devpad approval fails here.",
+		)
+		.requiredOption("--run <id>", "Pipeline run id")
+		.requiredOption("--sha <sha>", "Expected 40-hex commit SHA")
+		.option("--stage <name>", "Stage to verify the dispatch for", "production")
+		.option("--json", "Print the raw dispatches envelope as JSON")
+		.option("--orchestrator-url <url>", "Orchestrator base URL (default: $DEVPAD_PIPELINES_URL)")
+		.option("--token <token>", "Bearer token (default: $DEVPAD_PIPELINES_TOKEN)")
+		.action(action_runs_verify_dispatch);
 
 	const events = runs
 		.command("events")
@@ -1531,6 +1673,10 @@ export const register_pipelines_commands = (
 		.requiredOption("--stage <name>", "Stage the event is associated with")
 		.requiredOption(`--kind <kind>`, `Event kind — one of ${STAGE_EVENT_KINDS.join(", ")}`)
 		.option("--payload-file <path>", "Path to a JSON file used as the event payload")
+		.option(
+			"--sha <sha>",
+			"Commit SHA merged into the payload as payload.sha (deploy_started|deploy_completed|deploy_failed); wins over --payload-file's value",
+		)
 		.option("--idempotency-key <uuid>", "UUID idempotency key (defaults to a fresh randomUUID — non-replayable)")
 		.action(action_runs_events_ingest(client_factory));
 
