@@ -24,10 +24,13 @@ import type { Database } from "@devpad/schema/database/types";
 import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
+import { is_bearer_valid } from "../../src/auth";
 // Import from source modules directly (NOT `../../src/index.ts`) so the
 // test bundle skips `grants-rpc-entrypoint.ts`, which pulls in the
 // `cloudflare:workers` runtime-only module that bun can't resolve.
 import {
+	type AuthGate,
+	type AuthIdentity,
 	type LineageProvider,
 	type ManifestProvider,
 	make_routes,
@@ -35,6 +38,62 @@ import {
 	type TemplateResolver,
 } from "../../src/routes";
 import { make_run_handler } from "../../src/run-do";
+
+/**
+ * Token + header fixtures for the harness's default auth gate. The gate
+ * accepts `TEST_SESSION_TOKEN` as a session identity (claims configured
+ * per-harness) and `TEST_ADMIN_TOKEN` as the admin bearer.
+ */
+export const TEST_ADMIN_TOKEN = "test-pipelines-admin-token";
+export const TEST_SESSION_TOKEN = "test-pipelines-session-token";
+
+export const test_admin_headers = (): Record<string, string> => ({
+	authorization: `Bearer ${TEST_ADMIN_TOKEN}`,
+});
+
+/**
+ * devpad main Worker forwarding contract: admin bearer + the two
+ * `X-Devpad-Actor*` headers. Only `channel: "user"` is accepted by the
+ * human-actor gate.
+ */
+export const test_human_headers = (actor: string, channel: "user" | "api" = "user"): Record<string, string> => ({
+	...test_admin_headers(),
+	"x-devpad-actor": actor,
+	"x-devpad-actor-channel": channel,
+});
+
+export type TestSessionClaims = { scope: string[]; package_ids: string[] };
+
+/**
+ * Default `AuthGate` for harnesses: bearer admin token + optional bearer
+ * session token whose claims come from `session`. Mirrors the shape the
+ * production JWT gate resolves against (`AuthIdentity`).
+ */
+export const build_test_auth_gate = (session?: TestSessionClaims): AuthGate<AuthIdentity> => ({
+	check: async (request) => {
+		const header = request.headers.get("authorization");
+		if (is_bearer_valid(header, TEST_SESSION_TOKEN)) {
+			return ok({
+				kind: "session" as const,
+				package_ids: session?.package_ids ?? [],
+				scope: session?.scope ?? [],
+				trust_policy_id: "policy_test",
+				oidc: {
+					sub: "repo:owner/repo:ref:refs/heads/main",
+					repository: "owner/repo",
+					ref: "refs/heads/main",
+					sha: "abc123",
+					run_id: "123",
+					actor: "ci-bot",
+				},
+			});
+		}
+		if (is_bearer_valid(header, TEST_ADMIN_TOKEN)) {
+			return ok({ kind: "admin" as const, reason: "pipelines_token" as const });
+		}
+		return { ok: false as const, error: { code: "unauthorized" as const, message: "test: invalid token" } };
+	},
+});
 
 /**
  * Test helper mirroring `resolve_script_name`'s convention:
@@ -169,7 +228,15 @@ export type TestHarness = {
 	fire_alarm: (run_id: string) => Promise<void>;
 };
 
-export const build_harness = async (options?: { template?: PipelineTemplate }): Promise<TestHarness> => {
+export type TestHarnessOptions = {
+	template?: PipelineTemplate;
+	/** Session claims the default gate's session token carries. */
+	session?: TestSessionClaims;
+	/** Explicit gate override. Pass `null` to leave the Worker un-gated (503 paths). */
+	auth?: AuthGate<AuthIdentity> | null;
+};
+
+export const build_harness = async (options?: TestHarnessOptions): Promise<TestHarness> => {
 	const db = create_test_db();
 	const u = await seed_user(db);
 	const pkg = await seed_package(db, u.id);
@@ -217,7 +284,20 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 			return { fetch: (req: Request) => stub.fetch(req) };
 		},
 	};
-	const routes_deps: RoutesDeps = { db, do_router, templates, manifests, lineage };
+	const gate =
+		options === undefined || options.auth === undefined
+			? build_test_auth_gate(options?.session)
+			: options.auth === null
+				? undefined
+				: options.auth;
+	const routes_deps: RoutesDeps = {
+		db,
+		do_router,
+		templates,
+		manifests,
+		lineage,
+		auth: gate,
+	};
 	const app = make_routes(() => routes_deps);
 
 	return {
@@ -238,14 +318,20 @@ export const build_harness = async (options?: { template?: PipelineTemplate }): 
 
 export type Envelope<T> = { ok: boolean; value?: T; error?: unknown };
 
+/**
+ * POST helper. `headers` defaults to the harness's admin bearer — pass
+ * `test_human_headers(actor)` for human-gate routes, or `{}` to send an
+ * unauthenticated request (401/403 paths).
+ */
 export const post_json = async <T = unknown>(
 	app: ReturnType<typeof make_routes>,
 	path: string,
 	body: unknown,
+	headers: Record<string, string> = test_admin_headers(),
 ): Promise<{ status: number; body: Envelope<T> }> => {
 	const req = new Request(`http://run.local${path}`, {
 		method: "POST",
-		headers: { "content-type": "application/json" },
+		headers: { "content-type": "application/json", ...headers },
 		body: JSON.stringify(body),
 	});
 	const res = await app.fetch(req);
@@ -256,18 +342,29 @@ export const post_json = async <T = unknown>(
 export const get_json = async <T = unknown>(
 	app: ReturnType<typeof make_routes>,
 	path: string,
+	headers: Record<string, string> = test_admin_headers(),
 ): Promise<{ status: number; body: Envelope<T> }> => {
-	const req = new Request(`http://run.local${path}`, { method: "GET" });
+	const req = new Request(`http://run.local${path}`, { method: "GET", headers });
 	const res = await app.fetch(req);
 	const raw: unknown = await res.json();
 	return { status: res.status, body: raw as Envelope<T> };
 };
 
+/**
+ * Human-gate approve helper — always forwards the admin bearer plus the
+ * `X-Devpad-Actor`/channel headers. The approver travels in the HEADERS
+ * only; no `user_id` is ever sent in the body (the route ignores it).
+ */
 export const approve = async (
 	app: ReturnType<typeof make_routes>,
 	run_id: string,
 	stage_name: string,
 	decision: ApprovalDecision,
-	user_id = "user_test",
-	reason?: string,
-) => post_json(app, `/runs/${run_id}/approve`, { stage_name, decision, user_id, reason });
+	opts: { actor?: string; channel?: "user" | "api"; reason?: string; headers?: Record<string, string> } = {},
+) =>
+	post_json(
+		app,
+		`/runs/${run_id}/approve`,
+		{ stage_name, decision, reason: opts.reason },
+		opts.headers ?? test_human_headers(opts.actor ?? "user_test", opts.channel),
+	);

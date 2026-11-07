@@ -10,6 +10,7 @@ import {
 	get_json,
 	post_json,
 	SCRIPT_NAME_FOR,
+	test_human_headers,
 	type TestHarness,
 } from "./helpers";
 
@@ -246,11 +247,12 @@ describe("orchestrator routes — validation + errors", () => {
 		const h = await build_harness();
 		const create = await post_json(h.app, "/runs", { package_id: h.pkg.id, version_set_id: "vs_v1" });
 		const { run_id } = expect_ok<{ run_id: string }>(create.body);
-		const res = await post_json(h.app, `/runs/${run_id}/approve`, {
-			stage_name: "onebox",
-			decision: "maybe",
-			user_id: "user_test",
-		});
+		const res = await post_json(
+			h.app,
+			`/runs/${run_id}/approve`,
+			{ stage_name: "onebox", decision: "maybe" },
+			test_human_headers("user_test"),
+		);
 		expect(res.status).toBe(400);
 	});
 

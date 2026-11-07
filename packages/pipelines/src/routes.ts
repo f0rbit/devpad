@@ -68,19 +68,22 @@ export const create_run_body = z.object({
 	version_set_id: z.string().min(1),
 });
 
+/**
+ * Run-stage approval body. The approver NEVER comes from the body — it is
+ * always the `X-Devpad-Actor` header forwarded by the devpad main Worker
+ * after authenticating the human itself (see `require_human_actor`). An
+ * unknown `user_id` field in the body is ignored: zod strips it, it is
+ * never consulted.
+ */
 export const approve_body = z.object({
 	stage_name: z.string().min(1),
 	decision: z.enum(["approved", "denied"]),
-	user_id: z.string().min(1),
 	reason: z.string().optional(),
 });
 
-export const grant_approve_body = z.object({
-	user_id: z.string().min(1),
-});
+export const grant_approve_body = z.object({});
 
 export const grant_deny_body = z.object({
-	user_id: z.string().min(1),
 	reason: z.string().optional(),
 });
 
@@ -258,6 +261,7 @@ const STATUS_BY_CODE: Record<string, number> = {
 	unauthorized: 401,
 	forbidden: 403,
 	auth_unavailable: 503,
+	human_approval_required: 403,
 	insufficient_scope: 403,
 	package_scope_mismatch: 403,
 	backend_unavailable: 503,
@@ -370,32 +374,18 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const deps = c.get("deps");
 
-		// Phase 15: Enforce auth + scoping for session identities starting a run.
-		// When `deps.auth` is unset (legacy tests / Workers not configured for
-		// auth), skip the gate entirely — `POST /runs` historically didn't
-		// require auth and the auth-modes test exercises the gated path.
-		if (deps.auth !== undefined) {
-			const auth_result = await apply_auth(deps, c.req.raw);
-			if (auth_result instanceof Response) return auth_result;
-			const identity = auth_result.identity;
+		// Fail closed: every mutating route requires the auth gate. When
+		// `deps.auth` is unset (token not bound / not wired), apply_auth
+		// returns 503 `auth_unavailable` for admin-ish bearer flows too —
+		// no identity can mint a run.
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		const identity = auth_result.identity;
 
-			// Session identity must have runs:start scope and the package must be in their allowed list
-			if (identity.kind === "session") {
-				if (!identity.scope.includes("runs:start")) {
-					return wire_err({ code: "insufficient_scope", required: "runs:start", granted: identity.scope }, 403);
-				}
-				if (!identity.package_ids.includes(parsed.data.package_id)) {
-					return wire_err(
-						{
-							code: "package_scope_mismatch",
-							package_id: parsed.data.package_id,
-							allowed_package_ids: identity.package_ids,
-						},
-						403,
-					);
-				}
-			}
-		}
+		// Session identity must hold `runs:start` scope and the package
+		// must be in their allowed list.
+		const deny = session_scope_check(identity, "runs:start", parsed.data.package_id);
+		if (deny !== null) return deny;
 
 		const package_rows = await deps.db
 			.select()
@@ -548,11 +538,19 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	});
 
 	app.post("/runs/:id/approve", async (c) => {
+		const deps = c.get("deps");
+		const run_id = c.req.param("id");
+
+		// Manual-gate decisions are HUMAN ONLY: admin identity forwarding a
+		// `X-Devpad-Actor` user with channel `user`. The actor recorded on
+		// the approval is the header value; any `user_id` in the body is
+		// ignored (stripped by `approve_body`).
+		const human = await require_human_actor(deps, c.req.raw);
+		if (human instanceof Response) return human;
+
 		const body = await c.req.json().catch(() => null);
 		const parsed = approve_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
-		const deps = c.get("deps");
-		const run_id = c.req.param("id");
 
 		// We need the plan for the DO call — read it from D1 (resolved_rollout + resolved_gates).
 		const run = await get_run(deps.db, run_id);
@@ -564,15 +562,31 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
 		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 
-		const response = await do_call(deps, run_id, "approve", { ...parsed.data, plan });
+		const response = await do_call(deps, run_id, "approve", {
+			stage_name: parsed.data.stage_name,
+			decision: parsed.data.decision,
+			reason: parsed.data.reason,
+			actor: human.actor,
+			plan,
+		});
 		return normalise_do_response(response);
 	});
 
 	app.post("/runs/:id/cancel", async (c) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
+
+		// Cancel is machine-operable: admin identity is unscoped; a session
+		// identity (CI) must hold `runs:cancel` for the run's package.
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+
 		const run = await get_run(deps.db, run_id);
 		if (!run.ok) return wire_err(run.error);
+
+		const deny = session_scope_check(auth_result.identity, "runs:cancel", run.value.package_id);
+		if (deny !== null) return deny;
+
 		const plan = await reconstruct_plan(deps, run.value.package_id, run.value.version_set_id);
 		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 		const response = await do_call(deps, run_id, "cancel", { plan });
@@ -582,8 +596,17 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	app.post("/runs/:id/rollback", async (c) => {
 		const deps = c.get("deps");
 		const run_id = c.req.param("id");
+
+		// Rollback is machine-operable: admin identity is unscoped; a
+		// session identity (CI) must hold `runs:rollback` for the run's package.
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+
 		const source_run = await get_run(deps.db, run_id);
 		if (!source_run.ok) return wire_err(source_run.error);
+
+		const deny = session_scope_check(auth_result.identity, "runs:rollback", source_run.value.package_id);
+		if (deny !== null) return deny;
 
 		// Resolve the predecessor in lineage. If there is none, this run
 		// has nothing to roll back to and we refuse — the operator should
@@ -665,24 +688,36 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 	app.post("/grants/:id/approve", async (c) => {
 		const deps = c.get("deps");
+
+		// Grant decisions are HUMAN ONLY — same actor-header contract as
+		// run approvals (see `require_human_actor`).
+		const human = await require_human_actor(deps, c.req.raw);
+		if (human instanceof Response) return human;
+
 		const body = await c.req.json().catch(() => null);
-		const parsed = grant_approve_body.safeParse(body);
+		const parsed = grant_approve_body.safeParse(body ?? {});
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
 		const grant_id = c.req.param("id");
-		const result = await approve_grant(deps.db, grant_id, parsed.data.user_id);
+		const result = await approve_grant(deps.db, grant_id, human.actor);
 		if (!result.ok) return wire_err(result.error);
 		return json_ok(result.value);
 	});
 
 	app.post("/grants/:id/deny", async (c) => {
 		const deps = c.get("deps");
+
+		// Grant decisions are HUMAN ONLY — same actor-header contract as
+		// run approvals (see `require_human_actor`).
+		const human = await require_human_actor(deps, c.req.raw);
+		if (human instanceof Response) return human;
+
 		const body = await c.req.json().catch(() => null);
-		const parsed = grant_deny_body.safeParse(body);
+		const parsed = grant_deny_body.safeParse(body ?? {});
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
 		const grant_id = c.req.param("id");
-		const result = await deny_grant(deps.db, grant_id, parsed.data.user_id, parsed.data.reason);
+		const result = await deny_grant(deps.db, grant_id, human.actor, parsed.data.reason);
 		if (!result.ok) return wire_err(result.error);
 		return json_ok({ success: true });
 	});
@@ -718,6 +753,9 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const parsed = create_package_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
+		const deny = session_scope_check(auth_result.identity, "packages:write", null);
+		if (deny !== null) return deny;
+
 		const result = await create_package(deps.db, parsed.data);
 		if (!result.ok) return wire_err(result.error);
 		return json_ok(result.value);
@@ -732,6 +770,9 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const parsed = update_package_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
+		const deny = session_scope_check(auth_result.identity, "packages:write", c.req.param("id"));
+		if (deny !== null) return deny;
+
 		const result = await update_package(deps.db, c.req.param("id"), parsed.data);
 		if (!result.ok) return wire_err(result.error);
 		return json_ok(result.value);
@@ -741,6 +782,9 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const deps = c.get("deps");
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
+
+		const deny = session_scope_check(auth_result.identity, "packages:write", c.req.param("id"));
+		if (deny !== null) return deny;
 
 		const result = await delete_package(deps.db, c.req.param("id"));
 		if (!result.ok) return wire_err(result.error);
@@ -958,7 +1002,8 @@ const BLOB_STORE_ID_PATTERN = /^[a-z0-9-]{1,64}$/;
 
 const apply_auth = async (deps: RoutesDeps, request: Request): Promise<{ identity: AuthIdentity } | Response> => {
 	if (deps.auth === undefined) {
-		return wire_err({ code: "auth_unavailable", message: "artifact upload not configured on this Worker" }, 503);
+		// Fail closed: with no auth gate wired, NO mutating route may run.
+		return wire_err({ code: "auth_unavailable", message: "auth gate not configured on this Worker" }, 503);
 	}
 	const check = await deps.auth.check(request);
 	if (!check.ok) {
@@ -966,6 +1011,61 @@ const apply_auth = async (deps: RoutesDeps, request: Request): Promise<{ identit
 		return wire_err(check.error, status);
 	}
 	return { identity: check.value };
+};
+
+const ACTOR_HEADER = "x-devpad-actor";
+const ACTOR_CHANNEL_HEADER = "x-devpad-actor-channel";
+export const HUMAN_ACTOR_CHANNEL = "user";
+
+/**
+ * Session-identity policy for run/package mutations. Admin pass through
+ * untouched; sessions must hold `scope` and (when `package_id` is given)
+ * have that package in their allowed `package_ids`. Error shapes match
+ * `POST /runs` / `POST /runs/:id/events`. Returns `null` when allowed.
+ */
+const session_scope_check = (identity: AuthIdentity, scope: string, package_id: string | null): Response | null => {
+	if (identity.kind !== "session") return null;
+	if (!identity.scope.includes(scope))
+		return wire_err({ code: "insufficient_scope", required: scope, granted: identity.scope }, 403);
+	if (package_id !== null && !identity.package_ids.includes(package_id))
+		return wire_err({ code: "package_scope_mismatch", package_id, allowed_package_ids: identity.package_ids }, 403);
+	return null;
+};
+
+/**
+ * Gate for HUMAN-ONLY decisions (manual-gate run approvals, grant
+ * approve/deny). Only the devpad main Worker may act on behalf of a
+ * human: it authenticates the user itself, checks package ownership,
+ * and forwards with the admin bearer plus two headers:
+ *
+ *   `X-Devpad-Actor: <devpad user id>`        — who approved
+ *   `X-Devpad-Actor-Channel: user | api`      — how the user was
+ *                                               authenticated upstream
+ *
+ * The headers are honoured ONLY for the `admin` identity (the devpad
+ * Worker's bearer); session identities (GitHub Actions OIDC) are CI
+ * machines and can never represent a human, so they are rejected with
+ * `human_approval_required` regardless of headers. The recorded
+ * approver is always the header value — never a request-body field.
+ */
+const require_human_actor = async (deps: RoutesDeps, request: Request): Promise<{ actor: string } | Response> => {
+	const auth_result = await apply_auth(deps, request);
+	if (auth_result instanceof Response) return auth_result;
+
+	if (auth_result.identity.kind !== "admin")
+		return wire_err(
+			{ code: "human_approval_required", message: "manual decisions may only be forwarded by admin auth" },
+			403,
+		);
+
+	const actor = request.headers.get(ACTOR_HEADER)?.trim() ?? "";
+	if (actor === "")
+		return wire_err({ code: "human_approval_required", message: `missing ${ACTOR_HEADER} header` }, 403);
+
+	if (request.headers.get(ACTOR_CHANNEL_HEADER) !== HUMAN_ACTOR_CHANNEL)
+		return wire_err({ code: "human_approval_required", message: `${ACTOR_CHANNEL_HEADER} header must be "user"` }, 403);
+
+	return { actor };
 };
 
 const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<Response> => {
