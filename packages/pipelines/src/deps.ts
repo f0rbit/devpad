@@ -20,6 +20,11 @@
  *   optional: when bound it surfaces as `RunDeps.dispatcher` for
  *   external-deploy CI-workflow dispatch; when absent external runs
  *   fail fast with the typed `dispatcher` error.
+ * - Pulse observability (#158) is optional: `PULSE_PROJECT_ID` +
+ *   `PULSE_INGEST_KEY` drive the `POST /e` emitter (no-op when unbound),
+ *   `PULSE_READ_KEY` drives the `/events/:project_id` summary read-back
+ *   (typed `not_configured` when unbound). Secrets resolve lazily per
+ *   invocation like `CF_API_TOKEN`.
  *
  * The structure mirrors the in-memory test harness in
  * `__tests__/integration/helpers.ts` — production swaps in-memory
@@ -28,6 +33,7 @@
 
 import type { BundleProvider, Dispatcher, RunDeps } from "@devpad/core/services/pipelines";
 import type { CloudflareProvider, VersionBinding } from "@devpad/pipeline-fakes";
+import type { SecretsStoreSecret } from "@cloudflare/workers-types";
 import { createD1Database } from "@devpad/schema/database/d1";
 import type { Backend } from "@f0rbit/corpus";
 import { err, ok } from "@f0rbit/corpus";
@@ -156,6 +162,15 @@ const make_bundle_provider = (backend: Backend): BundleProvider =>
 	});
 
 /**
+ * Lazily resolve a Secrets Store secret binding. `undefined` when the
+ * binding isn't present on this Worker — the callers use that to signal
+ * "unconfigured" (pulse emitter no-ops, summary client returns typed
+ * `not_configured`). Never throws at construction.
+ */
+const make_lazy_secret = (env: PipelineEnv, key: keyof PipelineEnv): { get(): Promise<string> } | undefined =>
+	env[key] === undefined ? undefined : { get: () => (env[key] as SecretsStoreSecret).get() };
+
+/**
  * Shared core providers used by both the routes layer and the DO. Built
  * once per Worker invocation so the pulse emitter / approval store /
  * corpus backend instances are reused across requests.
@@ -167,8 +182,17 @@ const build_core = (env: PipelineEnv) => {
 	// shapes are runtime-compatible — corpus discards the return value.
 	const backend: Backend = create_cloudflare_backend({ d1: env.DB, r2: env.CORPUS_BUCKET as never });
 	const cf = make_lazy_cf_provider(env);
-	const pulse = make_pulse_emitter(env.PULSE);
-	const pulse_summary = make_pulse_summary_client(env.PULSE);
+	// #158: optional pulse observability — unbound config degrades to a
+	// no-op emitter + `not_configured` summary client (analysis gates
+	// keep their documented fail-open behaviour).
+	const pulse = make_pulse_emitter(env.PULSE, {
+		project_id: env.PULSE_PROJECT_ID,
+		ingest_key: make_lazy_secret(env, "PULSE_INGEST_KEY"),
+	});
+	const pulse_summary = make_pulse_summary_client(env.PULSE, {
+		project_id: env.PULSE_PROJECT_ID,
+		read_key: make_lazy_secret(env, "PULSE_READ_KEY"),
+	});
 	const approvals = make_d1_approval_store(db);
 	const manifests = make_corpus_manifest_provider(backend);
 	const bundles = make_bundle_provider(backend);

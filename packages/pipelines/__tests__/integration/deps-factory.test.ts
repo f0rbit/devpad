@@ -93,10 +93,8 @@ const make_fake_pulse_fetcher = () => {
 		fetch: async (url: string | Request, init?: RequestInit) => {
 			const u = typeof url === "string" ? url : url.url;
 			calls.push({ url: u, init });
-			if (u.includes("/summary")) {
-				return new Response(JSON.stringify({ metrics: {}, window_start_ms: 0, window_end_ms: 0, sample_count: 0 }), {
-					status: 200,
-				});
+			if (u.includes("/events/")) {
+				return new Response(JSON.stringify({ events: [], next_cursor: undefined }), { status: 200 });
 			}
 			return new Response("", { status: 204 });
 		},
@@ -176,9 +174,12 @@ describe("deps factory — production wiring shape", () => {
 		expect(read.value).toBe("approved");
 	});
 
-	test("pulse summary client decodes a real response shape", async () => {
+	test("pulse read-back client hits the /events route with bearer auth", async () => {
 		const { fetcher, calls } = make_fake_pulse_fetcher();
-		const client = make_pulse_summary_client(fetcher);
+		const client = make_pulse_summary_client(fetcher, {
+			project_id: "pulse_project_factory",
+			read_key: { get: async () => "dpk_factory" },
+		});
 		const result = await client.fetch({
 			package: "factory-pkg",
 			environment: "staging",
@@ -187,18 +188,26 @@ describe("deps factory — production wiring shape", () => {
 		});
 		expect(result.ok).toBe(true);
 		expect(calls).toHaveLength(1);
-		expect(calls[0].url).toContain("/summary");
-		expect(calls[0].url).toContain("window_ms=60000");
+		expect(calls[0]?.url).toContain("/events/pulse_project_factory");
+		expect(calls[0]?.url).toContain("limit=500");
+		expect(calls[0]?.init?.method).toBe("GET");
+		const auth_header = (calls[0]?.init?.headers as Record<string, string> | undefined)?.authorization;
+		expect(auth_header).toBe("Bearer dpk_factory");
 	});
 
 	test("pulse emitter posts events through the fetcher", async () => {
 		const { fetcher, calls } = make_fake_pulse_fetcher();
-		const emitter = make_pulse_emitter(fetcher);
+		const emitter = make_pulse_emitter(fetcher, {
+			project_id: "pulse_project_factory",
+			ingest_key: { get: async () => "pk_factory" },
+		});
 		const result = await emitter.emit({ event: "gate_pending_manual", run_id: "pipeline-run_x", stage: "onebox" });
 		expect(result.ok).toBe(true);
 		expect(calls).toHaveLength(1);
-		expect(calls[0].url).toContain("/ingest");
-		expect(calls[0].init?.method).toBe("POST");
+		expect(calls[0]?.url).toContain("/e");
+		expect(calls[0]?.init?.method).toBe("POST");
+		const headers = (calls[0]?.init?.headers ?? {}) as Record<string, string>;
+		expect(headers["X-Pulse-Key"]).toBe("pk_factory");
 	});
 
 	test("end-to-end: factory-shaped RunDeps drives a gradual run to awaiting_approval", async () => {
@@ -237,9 +246,15 @@ describe("deps factory — production wiring shape", () => {
 			db,
 			cf,
 			bundles: new InMemoryBundleProvider(),
-			pulse: make_pulse_emitter(fetcher),
+			pulse: make_pulse_emitter(fetcher, {
+				project_id: "pulse_project_factory",
+				ingest_key: { get: async () => "pk_factory" },
+			}),
 			approvals: make_d1_approval_store(db),
-			pulse_summary: make_pulse_summary_client(fetcher),
+			pulse_summary: make_pulse_summary_client(fetcher, {
+				project_id: "pulse_project_factory",
+				read_key: { get: async () => "dpk_factory" },
+			}),
 		};
 
 		const template = extendTemplate({});
@@ -344,9 +359,15 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 			db,
 			cf,
 			bundles: new InMemoryBundleProvider(),
-			pulse: make_pulse_emitter(fetcher),
+			pulse: make_pulse_emitter(fetcher, {
+				project_id: "pulse_project_factory",
+				ingest_key: { get: async () => "pk_factory" },
+			}),
 			approvals: make_d1_approval_store(db),
-			pulse_summary: make_pulse_summary_client(fetcher),
+			pulse_summary: make_pulse_summary_client(fetcher, {
+				project_id: "pulse_project_factory",
+				read_key: { get: async () => "dpk_factory" },
+			}),
 		};
 
 		const template = extendTemplate({});

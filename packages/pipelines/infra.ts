@@ -15,6 +15,11 @@
  *   holds the GitHub token; the `github:dispatch:<repo>/<workflow>`
  *   grant is enforced there against `(package_id, "production")`.
  * - `PULSE` — service binding to pulse for event emission.
+ * - `PULSE_PROJECT_ID` / `PULSE_INGEST_KEY` / `PULSE_READ_KEY` — #158,
+ *   OPTIONAL pulse observability (#158): plain var + two Secrets Store
+ *   secrets, bound only when all three env vars are set. NOT part of the
+ *   `require_deploy_secret` guard — unbound observability degrades to a
+ *   no-op emitter + `not_configured` summary, never blocks deploys.
  * - `CF_API_TOKEN` — Secrets Store secret. Token with `Workers Scripts:Edit`
  *   on the orchestrator's account. Required by the production CloudflareProvider
  *   to upload versions + create deployments for the managed Workers.
@@ -106,6 +111,15 @@ const pipeline_runs = DurableObjectNamespace<unknown>("PIPELINE_RUNS", {
 // silently deleted the `CF_API_TOKEN` secret yesterday and broke
 // orchestrated deploys; unconditional binding + the guard is the fix.
 //
+// NOTE: the #158 pulse secrets below are the OPPOSITE regime — optional
+// by design (unbound observability degrades to no-op emitter +
+// `not_configured` summary, never blocks deploys). They bind
+// conditionally on env presence. Trade-off consciously accepted: if the
+// env vars disappear after having been bound once, the Secret resource
+// drops and the binding is deleted — the same destructive path the
+// guard protects CF_API_TOKEN from. Operators re-provisioning must keep
+// the vars set, or re-set them before the next deploy.
+//
 // Cloudflare currently caps accounts at one Secrets Store. The account
 // already has the auto-provisioned `default_secrets_store` (shared with
 // vault on the same account). Adopt rather than fail on the cap.
@@ -147,6 +161,41 @@ const bindings: Bindings = {
 	CF_API_TOKEN: cf_api_token,
 	PIPELINES_TOKEN: pipelines_token,
 };
+
+// #158: pulse observability is OPTIONAL (never part of
+// `require_deploy_secret`) — the emitter no-ops and the summary client
+// returns `not_configured` when these are unbound. `PULSE_PROJECT_ID` is
+// a plain var (never sensitive); the two keys adopt the same shared
+// `default_secrets_store` as the required secrets above when set.
+//   PULSE_PROJECT_ID — pulse project receiving orchestrator events (must
+//                      match the project the ingest key is issued for).
+//   PULSE_INGEST_KEY — `pk_*` plaintext for the `X-Pulse-Key` header.
+//   PULSE_READ_KEY   — devpad API key (scope "pulse") for the bearer-auth
+//                      query routes.
+const pulse_project_id = process.env.PULSE_PROJECT_ID;
+
+if (
+	pulse_project_id !== undefined &&
+	pulse_project_id !== "" &&
+	process.env.PULSE_INGEST_KEY !== undefined &&
+	process.env.PULSE_INGEST_KEY !== "" &&
+	process.env.PULSE_READ_KEY !== undefined &&
+	process.env.PULSE_READ_KEY !== ""
+) {
+	const pulse_ingest_key = await Secret("PULSE_INGEST_KEY", {
+		name: "PULSE_INGEST_KEY",
+		store: secrets_store,
+		value: alchemy.secret.env.PULSE_INGEST_KEY,
+	});
+	const pulse_read_key = await Secret("PULSE_READ_KEY", {
+		name: "PULSE_READ_KEY",
+		store: secrets_store,
+		value: alchemy.secret.env.PULSE_READ_KEY,
+	});
+	bindings.PULSE_PROJECT_ID = pulse_project_id;
+	bindings.PULSE_INGEST_KEY = pulse_ingest_key;
+	bindings.PULSE_READ_KEY = pulse_read_key;
+}
 
 export const worker = await Worker("pipelines", {
 	name: worker_name,

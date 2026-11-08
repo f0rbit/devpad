@@ -55,6 +55,13 @@
 	"vars": {
 		"ENVIRONMENT": "production"
 	},
+	// Pulse observability (#158) is Alchemy-managed in infra.ts, NOT declared
+	// here: PULSE_PROJECT_ID (plain var) + PULSE_INGEST_KEY / PULSE_READ_KEY
+	// (Secrets Store secrets) bind only when their env vars are set at deploy
+	// time. Unbound = no-op emitter + `not_configured` summary (gates fail
+	// open). The roundtrip check script lives at
+	// packages/pipelines/scripts/pulse-roundtrip-check.ts (bun run
+	// pipelines:pulse-check).
 	"secrets_store_secrets": [
 		{
 			"binding": "PIPELINES_TOKEN",
