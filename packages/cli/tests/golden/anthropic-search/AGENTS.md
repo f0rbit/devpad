@@ -22,6 +22,23 @@ how runs roll out, but **does not deploy directly**.
 - **Grants registry is the source of truth.** Adding a scope to
   `grants.ts` does NOT auto-approve it. Run `devpad pipelines run` and
   watch the grants UI for the approval prompt.
+- **The orchestrator preserves the bindings your `infra.ts` declares
+  when it promotes (#160)**: before each promotion it reads the
+  bindings live on the target script and re-sends them with the
+  platform set (`ANTHROPIC`/`PULSE`/`CALLER_*`) overlaid on top.
+  Secrets ride `keep_bindings` — never re-sent explicitly. Your scripts
+  must exist in Cloudflare before the first orchestrated run (create
+  them once with your alchemy deploy); the orchestrator refuses to
+  bootstrap workers with a clear `script_not_found` error rather than
+  silently shipping a version without your bindings.
+- **Packages with their own infra should prefer `deploy_mode: external`.**
+  While orchestrated mode preserves your existing bindings on every
+  promotion (see above), it never *provisions* new bindings — a
+  binding declared in `infra.ts` but not yet live on Cloudflare won't
+  appear on promoted versions. Solutions that add, rename, or re-edge
+  bindings between deploys fit `deploy_mode: "external"` (see issue
+  #159): CI owns the deploy via alchemy, and the orchestrator gates +
+  records instead of touching the Worker.
 
 ## Layout
 

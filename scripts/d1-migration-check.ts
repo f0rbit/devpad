@@ -125,6 +125,13 @@ const run = (): void => {
 	copyFileSync(join(source_dir, target_migration), join(migrations_dir, target_migration));
 	apply();
 
+	const error_migration = "0024_run_error.sql";
+	console.log(`applying ${error_migration}`);
+	copyFileSync(join(source_dir, error_migration), join(migrations_dir, error_migration));
+	apply();
+	const run_columns = query("SELECT name FROM pragma_table_info('pipeline_run')").map((r) => r.name);
+	check("pipeline_run.error exists after 0024", run_columns.includes("error"), run_columns);
+
 	const after = snapshot();
 	check("pipeline_run rows + ids preserved", JSON.stringify(after.runs) === JSON.stringify(before.runs), after.runs);
 	check(
