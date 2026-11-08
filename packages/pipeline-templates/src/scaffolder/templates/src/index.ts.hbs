@@ -19,13 +19,15 @@
  * Pulse contract (see ~/dev/pulse/packages/schema/src/validation.ts):
  *   POST /e
  *   header X-Pulse-Key: pk_*
- *   body { project_id, events: [{ name: "event", package, environment,
- *            version_id, properties: { ... } }] }
+ *   body { project_id, events: [{ name: "event",
+ *            properties: { name, package, environment, version_id, ... } }] }
  *
- * `name: "event"` selects the generic custom_event variant; the per-version
- * dimensions (package, environment, version_id) hoist to the top level so
- * pulse's `GET /summary` can group on them. The emitter is fire-and-forget
- * — ingest failures must NEVER block a caller's request.
+ * `name: "event"` selects the generic custom_event variant. Pulse's event
+ * schema has no top-level dimension fields (unknown top-level keys are
+ * silently stripped), so the per-version dimensions (package, environment,
+ * version_id) live inside `properties` alongside the event label
+ * (`properties.name`). The emitter is fire-and-forget — ingest failures
+ * must NEVER block a caller's request.
  */
 
 import { WorkerEntrypoint } from "cloudflare:workers";
@@ -65,13 +67,16 @@ export const emit_pulse = async (env: Env, event_name: string, properties: Recor
 				events: [
 					{
 						name: "event",
-						// Pulse's wire-side dimension keeps the legacy `package` name
-						// (matches pulse's events table schema). Vault's identity arg
-						// uses `package_id` — translate here at the wire boundary.
-						package: identity.package_id,
-						environment: identity.environment,
-						version_id: identity.version_set_id,
-						properties: { name: event_name, ...properties },
+						// Dimensions ride in `properties` (pulse strips top-level
+						// extras). Vault's identity arg uses `package_id`; the wire
+						// dimension is named `package` — translate here.
+						properties: {
+							...properties,
+							name: event_name,
+							package: identity.package_id,
+							environment: identity.environment,
+							version_id: identity.version_set_id,
+						},
 					},
 				],
 			});

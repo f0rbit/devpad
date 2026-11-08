@@ -116,4 +116,20 @@ export type PipelineEnv = {
 	// Override for the OIDC issuer (defaults to the GitHub Actions
 	// issuer URL). Plain var; never sensitive.
 	GITHUB_OIDC_ISSUER?: string;
+	// Pulse observability (#158) — OPTIONAL, never in `require_deploy_secret`.
+	// Observability must not block deploys. `PULSE_PROJECT_ID` scopes both
+	// directions (ingest body field + query path param) and MUST match the
+	// project the ingest key was issued for.
+	//   PULSE_PROJECT_ID  — plain var; pulse project receiving events.
+	//   PULSE_INGEST_KEY  — Secrets Store secret, `pk_*` plaintext, sent as the
+	//                       `X-Pulse-Key` header on `POST /e`.
+	//   PULSE_READ_KEY    — Secrets Store secret, devpad API key (scope
+	//                       "pulse"), sent as `Authorization: Bearer` on the
+	//                       query routes (`GET /events/:project_id`).
+	// Unbound config degrades gracefully: the emitter no-ops (warns once),
+	// the summary client returns typed `not_configured` so analysis gates
+	// keep their fail-open-with-reason behaviour.
+	PULSE_PROJECT_ID?: string;
+	PULSE_INGEST_KEY?: SecretsStoreSecret;
+	PULSE_READ_KEY?: SecretsStoreSecret;
 };
