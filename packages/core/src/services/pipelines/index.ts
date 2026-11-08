@@ -19,6 +19,7 @@ export {
 	get_dashboard,
 	group_verdicts,
 } from "./dashboard.js";
+export { type BindingMergeInput, type MergedBindings, merge_bindings, SECRET_BINDING_TYPES } from "./bindings.js";
 export {
 	type BundleFetchError,
 	type BundlePayload,

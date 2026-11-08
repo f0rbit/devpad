@@ -17,7 +17,7 @@ import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { advance_run, approve_stage, create_run, request_rollback, tick_bake_complete } from "../../runs.js";
 import { resolve_script_name } from "../../script-name.js";
-import { create_test_db, make_deps, seed_package, seed_user } from "./helpers.js";
+import { create_test_db, make_deps, seed_package, seed_script_version, seed_user } from "./helpers.js";
 
 const PACKAGE_NAME = "anthropic-search";
 
@@ -89,6 +89,10 @@ describe("pipeline runs — caller-identity injection", () => {
 			script_name: prod_script(),
 			strategy: { strategy: "percentage", versions: [{ version_id: seed.value.id, percentage: 100 }] },
 		});
+
+		// #160: seed the staging script's existence — the orchestrator
+		// refuses to promote to a script with no observed live state.
+		await seed_script_version(deps.cf, staging_script());
 	});
 
 	test("gradual run uploads exactly one production version carrying the trio", async () => {
@@ -112,11 +116,12 @@ describe("pipeline runs — caller-identity injection", () => {
 		await tick_bake_complete(deps, run.id, plan);
 		await tick_bake_complete(deps, run.id, plan);
 
-		// Staging script — one version, staging trio.
+		// Staging script — the orchestration seed + one update with the
+		// staging trio (seed filtered out by its workers/tag annotation).
 		const staging_versions = await deps.cf.versions.list(staging_script());
 		expect(staging_versions.ok).toBe(true);
 		if (!staging_versions.ok) return;
-		const staging_uploads = staging_versions.value;
+		const staging_uploads = staging_versions.value.filter((v) => v.annotations?.["workers/tag"] === "vs_v1");
 		expect(staging_uploads).toHaveLength(1);
 		expect(collect_vars(staging_uploads[0].vars)).toEqual(trio_for("staging", "vs_v1"));
 

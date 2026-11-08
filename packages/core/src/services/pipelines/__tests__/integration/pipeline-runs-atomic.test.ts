@@ -5,7 +5,7 @@ import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { advance_run, approve_stage, create_run } from "../../runs.js";
-import { create_test_db, make_deps, script_name_for, seed_package, seed_user } from "./helpers.js";
+import { create_test_db, make_deps, script_name_for, seed_package, seed_script_version, seed_user } from "./helpers.js";
 
 const manifest: VersionSetManifest = {
 	package: "atomic-pkg",
@@ -34,6 +34,11 @@ describe("pipeline runs — user-declared atomic", () => {
 		if (!built.ok) throw new Error("template build failed");
 		template = built.value;
 		deps = make_deps(db);
+
+		// #160: seed the staging script's existence — the orchestrator
+		// refuses to promote to a script with no observed live state.
+		await seed_script_version(deps.cf, script_name_for({ stage_name: "staging" }));
+		await seed_script_version(deps.cf, script_name_for());
 	});
 
 	test("declared atomic produces shape='atomic' and exactly two deploys (staging + atomic-prod at 100%)", async () => {

@@ -36,6 +36,26 @@ export type WorkerVersion = {
 	annotations?: Record<string, string>;
 	vars?: WorkerVar[];
 	/**
+	 * The bindings carried on this version's upload, as the full
+	 * `metadata.bindings` wire array (explicit bindings + var-as-binding
+	 * entries). Recorded by the in-memory fake at upload time and
+	 * surfaced on reads (`versions.get` / `versions.list`) exactly like
+	 * the real CF Versions API returns them — this is what the
+	 * orchestrator's binding-preservation read (#160) consumes.
+	 *
+	 * Secret bindings arrive WITHOUT their values (Cloudflare strips
+	 * `secret_text`/`secret_key` values on read); passthrough records
+	 * preserve unknown binding types verbatim.
+	 */
+	bindings?: VersionBinding[];
+	/**
+	 * `metadata.keep_bindings` recorded at upload time (#160): binding
+	 * TYPES inherited from the previous version (secrets) instead of
+	 * being sent explicitly. Cloudflare errors on unknowable types
+	 * here — only `secret_text` / `secret_key` (and friends) are legal.
+	 */
+	keep_bindings?: string[];
+	/**
 	 * Bytes the orchestrator uploaded as the worker script. Recorded by
 	 * the in-memory fake so tests can assert the bundle round-trips. The
 	 * production provider doesn't surface this on read (CF doesn't return
@@ -160,6 +180,14 @@ export type UploadVersionInput =
 			/** Optional compat flags array (e.g. `["nodejs_compat"]`). */
 			compatibility_flags?: string[];
 			/**
+			 * Binding TYPES to inherit from the previous version instead of
+			 * sending explicitly (#160). Used for `secret_text` /
+			 * `secret_key` — secret VALUES never come back on reads, so
+			 * they cannot be re-sent and must ride `metadata.keep_bindings`.
+			 * Sent as `keep_bindings` in the multipart metadata.
+			 */
+			keepBindings?: string[];
+			/**
 			 * Non-`plain_text` bindings (service, kv_namespace,
 			 * durable_object_namespace, secret_text, …). Merged with the
 			 * `vars` mapping into the final `metadata.bindings` array on the
@@ -184,6 +212,9 @@ export type UploadVersionInput =
 			/** Required ISO date (CF rejects directory uploads without one). */
 			compatibility_date: string;
 			compatibility_flags?: string[];
+			/** See the `single_file` member — binding TYPES inherited from the
+			 * previous version (#160), sent as `keep_bindings` in metadata. */
+			keepBindings?: string[];
 			bindings?: VersionBinding[];
 			/**
 			 * Optional `ASSETS`-binding upload. When present, the provider
@@ -216,6 +247,13 @@ export type CloudflareProvider = {
 	versions: {
 		upload(input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>>;
 		list(script_name: string): Promise<Result<WorkerVersion[], CloudflareError>>;
+		/**
+		 * Read a single recorded version including its full
+		 * `metadata.bindings` array (#160: the orchestrator reads the
+		 * bindings of the versions referenced by the ACTIVE deployment
+		 * before every upload so package-owned bindings survive promotion).
+		 */
+		get(script_name: string, version_id: string): Promise<Result<WorkerVersion, CloudflareError>>;
 	};
 	deployments: {
 		create(input: CreateDeploymentInput): Promise<Result<WorkerDeployment, CloudflareError>>;

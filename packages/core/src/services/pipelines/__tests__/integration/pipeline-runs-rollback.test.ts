@@ -5,7 +5,7 @@ import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { advance_run, approve_stage, create_run, request_rollback } from "../../runs.js";
-import { create_test_db, make_deps, script_name_for, seed_package, seed_user } from "./helpers.js";
+import { create_test_db, make_deps, script_name_for, seed_package, seed_script_version, seed_user } from "./helpers.js";
 
 const manifest: VersionSetManifest = {
 	package: "rollback-pkg",
@@ -50,6 +50,10 @@ describe("pipeline runs — rollback", () => {
 			script_name: script,
 			strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
 		});
+
+		// #160: seed the staging script's existence — the orchestrator
+		// refuses to promote to a script with no observed live state.
+		await seed_script_version(deps.cf, script_name_for({ stage_name: "staging" }));
 	});
 
 	test("rollback during baking redeploys v0 at 100% via deployments.create", async () => {

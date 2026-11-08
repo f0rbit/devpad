@@ -33,7 +33,7 @@ import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary"
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
 import { type ExternalTarget } from "@devpad/schema/validation";
-import type { ApprovalDecision, PipelineRun, UpsertPipelineRun } from "@devpad/schema";
+import type { ApprovalDecision, PipelineRun, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
 import { pipeline_approval, pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
@@ -445,6 +445,70 @@ const update_run_state = async (
 	}
 };
 
+/**
+ * Stamp the human-readable failure reason onto the run row (#160). The
+ * reason is visible through `GET /runs/:id` and paired with a
+ * `deploy_failed` stage event carrying the same text in its payload.
+ */
+const set_run_error = async (db: Database, run_id: string, message: string): Promise<Result<void, ServiceError>> => {
+	try {
+		await db
+			.update(pipeline_run)
+			.set({ error: message, updated_at: new Date().toISOString(), modified_by: "api" })
+			.where(eq(pipeline_run.id, run_id));
+		return ok(undefined);
+	} catch (e) {
+		return err({ kind: "db_error", message: `failed to set error on pipeline_run ${run_id}: ${String(e)}` });
+	}
+};
+
+const format_advance_error = (error: AdvanceError): string => {
+	const code =
+		"code" in error && typeof error.code === "string" ? error.code : "kind" in error ? error.kind : "unknown";
+	const detail = "message" in error && typeof error.message === "string" ? error.message : JSON.stringify(error);
+	return `${code}: ${detail}`;
+};
+
+/**
+ * Record a deploy/rollback failure and drive the state machine to
+ * `failed` (#160). Previously a failing `deploy_stage` / `rollback_run`
+ * just bubbled its error result up, leaving the run stuck in
+ * `deploying` / `rolling_back` forever with no recorded reason.
+ *
+ * The failure is visible in three places: a stage event (kind
+ * `deploy_failed` for deploy stages, `error` with a
+ * `kind: "rollback_failed"` payload for rollbacks) whose payload carries
+ * the formatted error, the run row's `error` column, and the run status
+ * itself (`failed` + `finished_at`).
+ *
+ * The returned Result carries the ORIGINAL typed error so callers (DO,
+ * routes) still see the machine-readable failure; the run has already
+ * been driven to `failed` by the time it surfaces. If the event row
+ * itself fails to record, the original error is returned untouched and
+ * the run is retried from `deploying`/`rolling_back` on the next tick
+ * rather than silently losing the record.
+ */
+const fail_run_with_error = async (
+	deps: RunDeps,
+	run_id: string,
+	plan: ResolvedPlan,
+	input: { stage_name: string; event_kind: StageEventKind; payload: Record<string, unknown>; error: AdvanceError },
+): Promise<Result<TransitionOutput, AdvanceError>> => {
+	const message = format_advance_error(input.error);
+	const recorded = await record_stage_event_row(deps.db, {
+		run_id,
+		stage_name: input.stage_name,
+		kind: input.event_kind,
+		payload: { ...input.payload, error: message },
+	});
+	if (!recorded.ok) return err(input.error);
+	const applied = await advance_run(deps, run_id, { kind: "deploy_failed" }, plan);
+	if (!applied.ok) return applied;
+	const stamped = await set_run_error(deps.db, run_id, message);
+	if (!stamped.ok) return stamped;
+	return err(input.error);
+};
+
 const derive_state_from_row = (row: PipelineRun, plan: ResolvedPlan): RunState => {
 	const stage_index = row.current_stage
 		? Math.max(
@@ -598,7 +662,14 @@ const execute_output = async (
 			return execute_external_deploy_output(deps, run_id, plan, state, output, actor);
 		const version_set_id = output.target.version_set_id;
 		const resolved = await package_script_for_stage(deps.db, run_id, output.stage.name);
-		if (!resolved.ok) return resolved;
+		if (!resolved.ok) {
+			return fail_run_with_error(deps, run_id, plan, {
+				stage_name: output.stage.name,
+				event_kind: "deploy_failed",
+				payload: { kind: "deploy_failed", traffic: output.stage.traffic, version_set_id },
+				error: resolved.error,
+			});
+		}
 		const started_event = await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
@@ -613,7 +684,14 @@ const execute_output = async (
 			package_name: resolved.value.package_name,
 			environment: environment_for_stage(output.stage.name),
 		});
-		if (!deployed.ok) return deployed;
+		if (!deployed.ok) {
+			return fail_run_with_error(deps, run_id, plan, {
+				stage_name: output.stage.name,
+				event_kind: "deploy_failed",
+				payload: { kind: "deploy_failed", traffic: output.stage.traffic, version_set_id },
+				error: deployed.error,
+			});
+		}
 		const completed_event = await record_stage_event_row(deps.db, {
 			run_id,
 			stage_name: output.stage.name,
@@ -666,7 +744,14 @@ const execute_output = async (
 	// falling through a catch-all branch.
 	const stage_name = plan.stages[state.stage_index]?.name ?? "staging";
 	const resolved = await package_script_for_stage(deps.db, run_id, stage_name);
-	if (!resolved.ok) return resolved;
+	if (!resolved.ok) {
+		return fail_run_with_error(deps, run_id, plan, {
+			stage_name,
+			event_kind: "error",
+			payload: { kind: "rollback_failed", target_version_set_id: output.previous_version_set_id },
+			error: resolved.error,
+		});
+	}
 	const started_event = await record_stage_event_row(deps.db, {
 		run_id,
 		stage_name,
@@ -678,7 +763,14 @@ const execute_output = async (
 		script_name: resolved.value.script_name,
 		target_version_set_id: output.previous_version_set_id,
 	});
-	if (!result.ok) return result;
+	if (!result.ok) {
+		return fail_run_with_error(deps, run_id, plan, {
+			stage_name,
+			event_kind: "error",
+			payload: { kind: "rollback_failed", target_version_set_id: output.previous_version_set_id },
+			error: result.error,
+		});
+	}
 	const completed_event = await record_stage_event_row(deps.db, {
 		run_id,
 		stage_name: plan.stages[state.stage_index]?.name ?? "staging",

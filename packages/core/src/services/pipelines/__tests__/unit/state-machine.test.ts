@@ -289,7 +289,14 @@ describe("state-machine: rolling_back + deploy_complete", () => {
 		expect(r.emit.kind).toBe("done");
 	});
 
-	test("non-deploy event in rolling_back is invalid", () => {
+	test("deploy_failed in rolling_back → failed (#160 rollback failure)", () => {
+		const s: RunState = { status: "rolling_back", stage_index: 2, last_deployed_index: 2 };
+		const r = apply(s, { kind: "deploy_failed" });
+		expect(r.next.status).toBe("failed");
+		expect(r.emit.kind).toBe("done");
+	});
+
+	test("other events in rolling_back are still invalid", () => {
 		const s: RunState = { status: "rolling_back", stage_index: 2, last_deployed_index: 2 };
 		const r = transition(s, { kind: "bake_complete" }, plan_gradual());
 		expect(r.ok).toBe(false);

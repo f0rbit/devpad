@@ -5,7 +5,7 @@ import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { advance_run, approve_stage, create_run, tick_bake_complete } from "../../runs.js";
-import { create_test_db, make_deps, script_name_for, seed_package, seed_user } from "./helpers.js";
+import { create_test_db, make_deps, script_name_for, seed_package, seed_script_version, seed_user } from "./helpers.js";
 
 const default_manifest: VersionSetManifest = {
 	package: "test-pkg",
@@ -69,6 +69,11 @@ describe("pipeline runs — full gradual happy path", () => {
 				versions: [{ version_id: seed_version.value.id, percentage: 100 }],
 			},
 		});
+
+		// #160: the orchestrator refuses to deploy to a script it hasn't
+		// observed live. Seed the staging script's existence (version
+		// only, no deployment) so the staged staging deploy reads it.
+		await seed_script_version(deps.cf, script_name_for({ stage_name: "staging" }));
 	});
 
 	test("4 stages deploy in order with correct percentages, manual approval at staging→onebox", async () => {

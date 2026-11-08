@@ -224,6 +224,15 @@ describe("deps factory — production wiring shape", () => {
 		});
 		if (!deployment.ok) throw new Error("initial deployment failed");
 
+		// #160: seed the staging script's existence — the binding read
+		// refuses to promote to a script with no observed live state.
+		const staging = await cf.versions.upload({
+			kind: "single_file",
+			script_name: "factory-pkg-staging",
+			annotations: { "workers/tag": "orchestrator-seed" },
+		});
+		if (!staging.ok) throw new Error("staging seed failed");
+
 		const deps: RunDeps = {
 			db,
 			cf,
@@ -321,6 +330,15 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 			strategy: { strategy: "percentage", versions: [{ version_id: v0.value.id, percentage: 100 }] },
 		});
 		if (!deployment.ok) throw new Error("initial deployment failed");
+
+		// #160: seed the staging script's existence — the binding read
+		// refuses to promote to a script with no observed live state.
+		const staging_seed = await cf.versions.upload({
+			kind: "single_file",
+			script_name: "factory-pkg-staging",
+			annotations: { "workers/tag": "orchestrator-seed" },
+		});
+		if (!staging_seed.ok) throw new Error("staging seed failed");
 
 		const deps: RunDeps = {
 			db,

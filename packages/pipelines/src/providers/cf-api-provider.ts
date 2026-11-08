@@ -13,11 +13,18 @@
  * Endpoints used (Cloudflare v4):
  *   POST   /accounts/:account_id/workers/scripts/:script/versions
  *   GET    /accounts/:account_id/workers/scripts/:script/versions
+ *   GET    /accounts/:account_id/workers/scripts/:script/versions/:version
  *   POST   /accounts/:account_id/workers/scripts/:script/deployments
  *   GET    /accounts/:account_id/workers/scripts/:script/deployments
  *   GET    /accounts/:account_id/workers/scripts/:script
  *   POST   /accounts/:account_id/workers/scripts/:script/assets-upload-session
  *   POST   /accounts/:account_id/workers/assets/upload?base64=true
+ *
+ * The single-version GET (`versions/:version`) is the binding-preservation
+ * read (#160): the orchestrator resolves the script's ACTIVE deployment
+ * (deployments list, newest first), then reads each referenced version's
+ * `metadata.bindings` — never the script settings endpoint, which reflects
+ * the latest upload rather than what's live.
  *
  * `assert_version_key_header_routed` is a Transform-Rule simulation in the
  * fake. The real production check is "does the configured Transform Rule
@@ -163,8 +170,38 @@ type CfBinding = Record<string, unknown> & { type: string; name: string; text?: 
 type CfWorkerVersionResponse = {
 	id: string;
 	number: number;
-	metadata?: { created_on?: string; bindings?: CfBinding[] };
+	metadata?: { created_on?: string; bindings?: CfBinding[]; keep_bindings?: string[] };
+	resources?: { bindings?: CfBinding[] };
 	annotations?: Record<string, string>;
+};
+
+/**
+ * Cloudflare returns a version's bindings at `result.resources.bindings`
+ * (https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/versions/methods/get/);
+ * `metadata.bindings` is kept as a fallback for the upload-echo shape.
+ */
+const cf_bindings_of = (raw: CfWorkerVersionResponse): CfBinding[] | undefined =>
+	raw.resources?.bindings ?? raw.metadata?.bindings;
+
+/**
+ * Map a CF `metadata.bindings[]` entry to a {@link VersionBinding}. The
+ * orchestrator only relies on `type` + `name`; every other field rides a
+ * passthrough record so binding types we don't model (d1, r2_bucket,
+ * queue, ai, kv_namespace, vectorize, workflow, analytics_engine, …)
+ * are preserved verbatim on the promotion path (#160) instead of being
+ * dropped or rewritten.
+ */
+const to_version_binding = (b: CfBinding): VersionBinding | null => {
+	if (typeof b.type !== "string" || typeof b.name !== "string") return null;
+	const { type, name, text, ...rest } = b;
+	const passthrough: Record<string, unknown> = { ...rest };
+	if (typeof text === "string") passthrough.text = text;
+	return { ...passthrough, type, name };
+};
+
+const bindings_from_cf = (bindings: CfBinding[] | undefined): VersionBinding[] => {
+	if (!bindings) return [];
+	return bindings.map(to_version_binding).filter((b): b is VersionBinding => b !== null);
 };
 
 const bindings_to_vars = (bindings: CfBinding[] | undefined): WorkerVar[] | undefined => {
@@ -182,7 +219,9 @@ const to_worker_version = (script_name: string, raw: CfWorkerVersionResponse): W
 	number: raw.number,
 	created_on: raw.metadata?.created_on ?? new Date().toISOString(),
 	annotations: raw.annotations,
-	vars: bindings_to_vars(raw.metadata?.bindings),
+	vars: bindings_to_vars(cf_bindings_of(raw)),
+	bindings: bindings_from_cf(cf_bindings_of(raw)),
+	keep_bindings: raw.metadata?.keep_bindings,
 });
 
 type CfDeploymentResponse = {
@@ -214,6 +253,7 @@ const build_version_metadata = (input: {
 	compatibility_date: string;
 	compatibility_flags: string[];
 	annotations: Record<string, string>;
+	keep_bindings?: string[];
 	assets?: { jwt: string; config: AssetConfig };
 }): Record<string, unknown> => {
 	const vars_as_bindings: VersionBinding[] = input.vars.map((v) => ({ type: v.type, name: v.name, text: v.text }));
@@ -224,6 +264,16 @@ const build_version_metadata = (input: {
 		compatibility_flags: input.compatibility_flags,
 		annotations: input.annotations,
 	};
+	// #160: secret bindings can't be re-sent (values never come back on
+	// reads) — they ride `keep_bindings`, which Cloudflare resolves
+	// against the script's previous upload (CF: "binding types to keep
+	// from previous_upload"). Caveat documented in
+	// AGENTS.md: latest-version inheritance is fine in practice because
+	// every orchestrated upload already preserves secrets too, so the
+	// latest version always carries the same secret binding set.
+	if (input.keep_bindings !== undefined && input.keep_bindings.length > 0) {
+		metadata.keep_bindings = input.keep_bindings;
+	}
 	if (input.assets !== undefined) {
 		metadata.assets = { jwt: input.assets.jwt, config: input.assets.config };
 	}
@@ -340,6 +390,7 @@ const upload_single_file = async (
 		compatibility_date: input.compatibility_date ?? "2024-04-03",
 		compatibility_flags: input.compatibility_flags ?? [],
 		annotations: input.annotations ?? {},
+		keep_bindings: input.keepBindings,
 	});
 
 	const form = new FormData();
@@ -378,6 +429,7 @@ const upload_directory_bundle = async (
 		compatibility_date: input.compatibility_date,
 		compatibility_flags: input.compatibility_flags ?? [],
 		annotations: input.annotations ?? {},
+		keep_bindings: input.keepBindings,
 		assets: assets_meta,
 	});
 
@@ -410,6 +462,12 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 			if (!result.ok) return result;
 			const items = result.value.items ?? [];
 			return ok(items.map((v) => to_worker_version(script_name, v)));
+		},
+		get: async (script_name: string, version_id: string): Promise<Result<WorkerVersion, CloudflareError>> => {
+			const path = `/workers/scripts/${encodeURIComponent(script_name)}/versions/${encodeURIComponent(version_id)}`;
+			const result = await cf_call<CfWorkerVersionResponse>(config, path, { method: "GET" });
+			if (!result.ok) return result;
+			return ok(to_worker_version(script_name, result.value));
 		},
 	};
 

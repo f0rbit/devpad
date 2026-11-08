@@ -20,6 +20,7 @@ import {
 	script_name_for,
 	seed_analysis_template,
 	seed_package,
+	seed_script_version,
 	seed_user,
 } from "./helpers.js";
 
@@ -144,6 +145,10 @@ describe("cartesian gate × rollout matrix", () => {
 			script_name: script,
 			strategy: { strategy: "percentage", versions: [{ version_id: seed.value.id, percentage: 100 }] },
 		});
+
+		// #160: seed the staging script's existence — the orchestrator
+		// refuses to promote to a script with no observed live state.
+		await seed_script_version(deps.cf, script_name_for({ stage_name: "staging" }));
 	});
 
 	const rollouts: RolloutKind[] = ["gradual", "atomic"];
