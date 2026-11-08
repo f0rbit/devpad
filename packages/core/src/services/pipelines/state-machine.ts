@@ -23,6 +23,28 @@ import type { RunStatus } from "@devpad/schema";
 import { err, ok, type Result } from "@f0rbit/corpus";
 
 /**
+ * The version a run deploys. Runs are keyed EITHER by a corpus
+ * version-set (orchestrated mode — the orchestrator uploads versions and
+ * drives Cloudflare deployments) OR by a git commit SHA (external mode —
+ * CI performs the deploys, the orchestrator only gates + records). The
+ * `pipeline_run` row stores exactly one of `version_set_id` /
+ * `commit_sha`; {@link runs.ts}'s `run_target_of` parses the row into
+ * this union once at the boundary so no callee ever sees raw nullable
+ * pairs.
+ */
+export type RunTarget = { kind: "version_set"; version_set_id: string } | { kind: "commit"; commit_sha: string };
+
+/**
+ * The version-set-flavoured string for a target — the id for
+ * `version_set` targets, the SHA for `commit` ones. Only used where a
+ * downstream contract demands a single opaque version string (e.g.
+ * `StageContext.version_set_id` for gate evaluators; external runs only
+ * ever evaluate manual gates, which never read it).
+ */
+export const target_version_id = (target: RunTarget): string =>
+	target.kind === "version_set" ? target.version_set_id : target.commit_sha;
+
+/**
  * Resolved plan for an in-flight run. Snapshotted at run start onto
  * `pipeline_run.resolved_rollout` / `resolved_gates`; the state machine
  * reads from this snapshot, never the template.
@@ -31,8 +53,10 @@ export type ResolvedPlan = {
 	stages: Stage[];
 	gates: Record<TransitionKey, Gate>;
 	forced_reason: "do_migrations" | "asset_affinity_none" | null;
-	version_set_id: string;
+	target: RunTarget;
 	previous_version_set_id: string | null;
+	/** External runs: re-arm this alarm every time a deploy starts. */
+	external_timeout_ms: number | null;
 };
 
 /**
@@ -54,18 +78,30 @@ export type RunState = {
  * Inbound events to the state machine. Sources:
  *
  * - `start` — the run is created and the wrapper kicks it off.
- * - `deploy_complete` — the wrapper finished `deploy_stage` (success).
+ * - `deploy_complete` — the wrapper finished `deploy_stage` (success),
+ *   or CI reported `deploy_completed` for an external run.
+ * - `deploy_failed` — CI reported `deploy_failed` for an external run
+ *   (valid while `deploying` or `unconfirmed`).
+ * - `deploy_timeout` — the DO's external-timeout alarm fired while the
+ *   run was still `deploying` → the run becomes `unconfirmed`.
  * - `bake_complete` — a bake-window alarm fired.
  * - `gate_verdict` — the wrapper invoked a `GateEvaluator` (or received
  *   an external POST /approve) and is reporting the verdict back.
  * - `rollback_requested` — operator hit POST /rollback.
  * - `cancel` — operator hit POST /cancel.
+ *
+ * `actor` is the human the event was caused by (approve / external
+ * rollback / redispatch callers), threaded to side effects such as the
+ * `pipeline_dispatch.requested_by` audit column. Absent for machine
+ * paths.
  */
 export type RunEvent =
-	| { kind: "start" }
+	| { kind: "start"; actor?: string }
 	| { kind: "deploy_complete" }
+	| { kind: "deploy_failed" }
+	| { kind: "deploy_timeout" }
 	| { kind: "bake_complete" }
-	| { kind: "gate_verdict"; verdict: "Pass" | "Fail" | "Pending"; reason?: string }
+	| { kind: "gate_verdict"; verdict: "Pass" | "Fail" | "Pending"; reason?: string; actor?: string }
 	| { kind: "rollback_requested" }
 	| { kind: "cancel" };
 
@@ -85,7 +121,7 @@ export type RunEvent =
  *   the next external event (manual approval, alarm, etc.).
  */
 export type TransitionOutput =
-	| { kind: "needs_deploy"; stage: Stage; stage_index: number; version_set_id: string }
+	| { kind: "needs_deploy"; stage: Stage; stage_index: number; target: RunTarget }
 	| { kind: "needs_bake_schedule"; stage: Stage; stage_index: number; duration_ms: number }
 	| { kind: "needs_gate_eval"; gate: Gate; transition_key: TransitionKey; from_stage: Stage; to_stage: Stage }
 	| { kind: "needs_rollback"; previous_version_set_id: string }
@@ -123,7 +159,7 @@ const advance_to_deploy = (state: RunState, plan: ResolvedPlan, next_index: numb
 	const stage = plan.stages[next_index];
 	return {
 		next: { ...state, status: "deploying", stage_index: next_index },
-		emit: { kind: "needs_deploy", stage, stage_index: next_index, version_set_id: plan.version_set_id },
+		emit: { kind: "needs_deploy", stage, stage_index: next_index, target: plan.target },
 	};
 };
 
@@ -258,9 +294,45 @@ export const transition = (
 			if (event.kind === "deploy_complete") {
 				return post_deploy_step(state, plan);
 			}
+			if (event.kind === "deploy_failed") {
+				return ok({
+					next: { ...state, status: "failed" },
+					emit: { kind: "done" },
+				});
+			}
+			if (event.kind === "deploy_timeout") {
+				// External runs only: the CI dispatch has not reported back
+				// within `external_target.timeout_ms` — park the run in
+				// `unconfirmed` so a late deploy_completed/deploy_failed can
+				// still resolve it (or an operator can re-dispatch).
+				return ok({
+					next: { ...state, status: "unconfirmed" },
+					emit: { kind: "done" },
+				});
+			}
 			return err({
 				code: "invalid_event",
 				message: `event ${event.kind} invalid in state deploying`,
+				state: state.status,
+				event: event.kind,
+			});
+		}
+
+		case "unconfirmed": {
+			if (event.kind === "deploy_complete") {
+				// Late-but-valid CI arrival: resume exactly as from
+				// `deploying`.
+				return post_deploy_step(state, plan);
+			}
+			if (event.kind === "deploy_failed") {
+				return ok({
+					next: { ...state, status: "failed" },
+					emit: { kind: "done" },
+				});
+			}
+			return err({
+				code: "invalid_event",
+				message: `event ${event.kind} invalid in state unconfirmed`,
 				state: state.status,
 				event: event.kind,
 			});

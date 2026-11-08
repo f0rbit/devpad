@@ -9,12 +9,16 @@
  * `pipeline_run` rows — the DO is just an alarm host + last-event
  * scratchpad.
  *
- * Vault is bound as a service binding. The orchestrator only forwards
- * the binding to workload Workers via scaffolder templates — it does
- * not call vault directly. The canonical RPC contract lives in
- * `~/dev/vault/src/index.ts` + `~/dev/vault/src/types.ts`.
+ * Vault is bound as a service binding. `ANTHROPIC` is only forwarded to
+ * workload Workers via scaffolder templates; `GITHUB` (external deploy
+ * mode #155) is the one binding the orchestrator calls directly —
+ * vault's `GitHubVault.dispatch_workflow` RPC proxies the GitHub token.
+ * The canonical RPC contract lives in `~/dev/vault/src/index.ts` +
+ * `~/dev/vault/src/types.ts`; the `GitHubVaultBinding` type below is a
+ * local structural match (vault's types are never imported).
  */
 
+import type { Result } from "@f0rbit/corpus";
 import type {
 	D1Database,
 	DurableObjectNamespace,
@@ -22,6 +26,45 @@ import type {
 	R2Bucket,
 	SecretsStoreSecret,
 } from "@cloudflare/workers-types";
+
+// ─── Vault GitHub dispatch contract (#155) ──────────────────────────
+
+/**
+ * Structural match of vault's `GitHubVault` named-entrypoint RPC
+ * surface (`~/dev/vault/src/...`). Declared locally — per the
+ * cross-repo invariant the vault repo is a separate security boundary
+ * and its types are never imported. Vault checks the
+ * `github:dispatch:<owner/repo>/<workflow-file>` grant for
+ * `(identity.package_id, identity.environment)` before touching the
+ * GitHub token.
+ */
+export type GitHubUpstreamError =
+	| { kind: "rate_limited"; status: 429; message: string }
+	| { kind: "unauthorized"; status: number; message: string }
+	| { kind: "not_found"; status: 404; message: string }
+	| { kind: "validation"; status: number; message: string }
+	| { kind: "internal"; status: number; message: string }
+	| { kind: "network"; message: string }
+	| { kind: "decode"; message: string };
+
+export type GitHubVaultError =
+	| { kind: "identity_missing"; message: string }
+	| { kind: "grant_denied"; scope: string; reason?: string }
+	| { kind: "grant_check_failed"; message: string }
+	| { kind: "invalid_input"; message: string }
+	| { kind: "upstream_error"; cause: GitHubUpstreamError };
+
+export type GitHubVaultBinding = {
+	dispatch_workflow(
+		input: {
+			repo: string;
+			workflow: string;
+			ref: string;
+			inputs: Record<string, string>;
+		},
+		identity: { package_id: string; environment: "staging" | "production" },
+	): Promise<Result<{ dispatched: true; run_id?: number; run_url?: string }, GitHubVaultError>>;
+};
 
 // ─── Environment type ───────────────────────────────────────────────
 
@@ -33,6 +76,14 @@ export type PipelineEnv = {
 	// vault directly; the binding is propagated to workload Workers.
 	// For the typed RPC surface, see `~/dev/vault/src/types.ts`.
 	ANTHROPIC: Fetcher;
+	// GITHUB bound to vault Worker's `GitHubVault` named-entrypoint class
+	// (#155): CI-workflow dispatch for external-deploy packages. Vault
+	// holds the GitHub token and enforces the
+	// `github:dispatch:<owner/repo>/<workflow-file>` grant against
+	// `{ package_id, environment: "production" }`. Optional at the type
+	// level — without the binding external runs keep failing fast with
+	// the existing typed `dispatcher` error.
+	GITHUB?: GitHubVaultBinding;
 	PULSE: Fetcher;
 	ENVIRONMENT: "development" | "staging" | "production";
 	// Cloudflare account id the orchestrator deploys runs into. Optional

@@ -57,6 +57,8 @@ export type {
 	EdgeSummary,
 	MilestoneLensResponse,
 	MilestoneLensRow,
+	PipelineDispatchEntry,
+	PipelineDispatches,
 	PublicHook,
 	PullDocResponse,
 	PushInterfaceReportResult,

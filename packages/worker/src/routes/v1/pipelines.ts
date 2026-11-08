@@ -19,11 +19,13 @@
  *     or not found ⇒ 404 (never 403 — don't leak existence).
  *  3. Project-scoped API keys (`api_key_project_id`) fail closed: a route
  *     with no project to match against is invisible to them.
- *  4. Human-only at the proxy: approve + grant decisions reject
- *     api-channel callers with 403
+ *  4. Human-only at the proxy: approve, grant decisions, and re-dispatch
+ *     reject api-channel callers with 403
  *     `{ error: "human_approval_required" }` — defence in depth alongside
  *     the orchestrator's own check. Cancel/rollback are allowed for both
- *     channels.
+ *     channels; for EXTERNAL-package rollbacks the orchestrator additionally
+ *     enforces human-only itself, and that upstream 403 passes through this
+ *     proxy unchanged (same `{ error: code }` shape, preserved status).
  *  5. Forward `${pipelines_api_base}${path}` with the orchestrator bearer
  *     token, `X-Devpad-Actor: <user.id>` and
  *     `X-Devpad-Actor-Channel: <user|api>`. Client-supplied
@@ -392,6 +394,31 @@ app.post("/runs/:id/rollback", requireAuth, async (c) => {
 		method: "POST",
 		body: without_user_id(body),
 	});
+});
+
+/**
+ * Re-dispatch a failed external production dispatch — HUMAN ONLY (session
+ * (`user`) channel). Anything other than a genuinely failed dispatch row
+ * is a 4xx from the orchestrator; here we only enforce the channel rule
+ * and ownership.
+ */
+app.post("/runs/:id/redispatch", requireAuth, async (c) => {
+	const run_id = c.req.param("id");
+	const denied = await guard_owned_run(c, run_id);
+	if (denied) return denied;
+
+	const human_denial = guard_human_only(c);
+	if (human_denial) return human_denial;
+
+	return forward_to_pipelines(c, { upstream_path: `/runs/${run_id}/redispatch`, method: "POST", body: {} });
+});
+
+/** Dispatch ledger read — ownership-checked like every other run route. */
+app.get("/runs/:id/dispatches", requireAuth, async (c) => {
+	const run_id = c.req.param("id");
+	const denied = await guard_owned_run(c, run_id);
+	if (denied) return denied;
+	return forward_to_pipelines(c, { upstream_path: `/runs/${run_id}/dispatches`, method: "GET" });
 });
 
 /* ─── Grants ─────────────────────────────────────────────────────── */

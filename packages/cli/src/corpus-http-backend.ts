@@ -65,7 +65,11 @@ const bearer = (token: string): string => `Bearer ${token}`;
 type PostBody = string | Uint8Array | Buffer;
 type PostInput = { url: string; headers: Record<string, string>; body: PostBody };
 
-const post_envelope = async <T>(input: PostInput): Promise<Result<T, CorpusHttpUploadError>> => {
+/**
+ * POST a `{ ok, value }`-enveloped JSON body to the orchestrator.
+ * Exported for the external-deploy CLI surface (`runs start --sha`).
+ */
+export const post_envelope = async <T>(input: PostInput): Promise<Result<T, CorpusHttpUploadError>> => {
 	let response: Response;
 	try {
 		response = await fetch(input.url, {

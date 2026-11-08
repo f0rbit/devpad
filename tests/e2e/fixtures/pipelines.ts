@@ -39,11 +39,16 @@ import type { Database as DrizzleDatabase } from "@devpad/schema/database/types"
 import { eq } from "drizzle-orm";
 import {
 	E2E_AWAITING_STAGE,
+	E2E_COMMIT_SHA,
+	E2E_EXTERNAL_PROJECT_ID,
+	E2E_PKG_EXTERNAL_ID,
 	E2E_PKG_ID,
 	E2E_PROJECT_ID,
 	E2E_PROJECT_NO_PKG,
 	E2E_RUN_AWAITING,
 	E2E_RUN_COMPLETED,
+	E2E_RUN_EXT_AWAITING,
+	E2E_RUN_EXT_UNCONFIRMED,
 	E2E_SESSION_ID,
 	E2E_TEMPLATE_ID,
 	E2E_USER_ID,
@@ -56,11 +61,16 @@ import {
  */
 export {
 	E2E_AWAITING_STAGE,
+	E2E_COMMIT_SHA,
+	E2E_EXTERNAL_PROJECT_ID,
+	E2E_PKG_EXTERNAL_ID,
 	E2E_PKG_ID,
 	E2E_PROJECT_ID,
 	E2E_PROJECT_NO_PKG,
 	E2E_RUN_AWAITING,
 	E2E_RUN_COMPLETED,
+	E2E_RUN_EXT_AWAITING,
+	E2E_RUN_EXT_UNCONFIRMED,
 	E2E_SESSION_ID,
 	E2E_TEMPLATE_ID,
 	E2E_USER_ID,
@@ -182,6 +192,49 @@ export async function seed_pipeline_fixtures(db: DrizzleDatabase): Promise<void>
 		deleted: false,
 	} as never);
 
+	// External deploy mode (#155) project: CI owns the deploys, the
+	// orchestrator only holds the manual staging→production gate. The
+	// external_target JSON mirrors the Zod shape in
+	// `packages/schema/src/validation.ts` (`ref`/`timeout_ms`/`gate` are
+	// the emitted defaults since the json column stores the resolved value).
+	await db.insert(project).values({
+		id: E2E_EXTERNAL_PROJECT_ID,
+		project_id: E2E_EXTERNAL_PROJECT_ID,
+		owner_id: E2E_USER_ID,
+		name: "e2e-pipeline-external",
+		visibility: "PRIVATE",
+		status: "DEVELOPMENT",
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "user",
+		modified_by: "user",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	await db.insert(pipeline_package).values({
+		id: E2E_PKG_EXTERNAL_ID,
+		owner_id: E2E_USER_ID,
+		name: "e2e-pkg-external",
+		repo_url: "https://github.com/f0rbit/anthropic-search",
+		default_template_ref: null,
+		project_id: E2E_EXTERNAL_PROJECT_ID,
+		deploy_mode: "external",
+		external_target: {
+			repo: "f0rbit/anthropic-search",
+			workflow: "deploy.yml",
+			ref: "main",
+			timeout_ms: 2_700_000,
+			gate: { type: "manual" },
+		},
+		created_at: SEED_NOW,
+		updated_at: SEED_NOW,
+		created_by: "api",
+		modified_by: "api",
+		protected: false,
+		deleted: false,
+	} as never);
+
 	await db.insert(pipeline_run).values({
 		id: E2E_RUN_COMPLETED,
 		package_id: E2E_PKG_ID,
@@ -224,6 +277,57 @@ export async function seed_pipeline_fixtures(db: DrizzleDatabase): Promise<void>
 		deleted: false,
 	} as never);
 
+	// External runs target a COMMIT (`version_set_id` null, exactly-one
+	// invariant is code-enforced at the service boundary). The external
+	// plan walks staging (CI-own, skipped here) then production with an
+	// always-manual gate, so `awaiting_approval` sits on `production`.
+	await db.insert(pipeline_run).values({
+		id: E2E_RUN_EXT_AWAITING,
+		package_id: E2E_PKG_EXTERNAL_ID,
+		version_set_id: null,
+		commit_sha: E2E_COMMIT_SHA,
+		shape: "atomic",
+		kind: "deploy",
+		status: "awaiting_approval",
+		current_stage: "production",
+		resolved_rollout: { type: "atomic" } as never,
+		resolved_gates: { "staging→production": { type: "manual" } } as never,
+		forced_atomic_reason: null,
+		started_at: RUN_STARTED,
+		finished_at: null,
+		created_at: RUN_STARTED,
+		updated_at: RUN_STARTED,
+		created_by: "api",
+		modified_by: "api",
+		protected: false,
+		deleted: false,
+	} as never);
+
+	// `unconfirmed` (#155, non-terminal): CI never reported back within
+	// external_target.timeout_ms — outcome unknown until a late CI event
+	// or a human cancel resolves it.
+	await db.insert(pipeline_run).values({
+		id: E2E_RUN_EXT_UNCONFIRMED,
+		package_id: E2E_PKG_EXTERNAL_ID,
+		version_set_id: null,
+		commit_sha: E2E_COMMIT_SHA,
+		shape: "atomic",
+		kind: "deploy",
+		status: "unconfirmed",
+		current_stage: "production",
+		resolved_rollout: { type: "atomic" } as never,
+		resolved_gates: {} as never,
+		forced_atomic_reason: null,
+		started_at: RUN_STARTED,
+		finished_at: null,
+		created_at: RUN_STARTED,
+		updated_at: RUN_STARTED,
+		created_by: "api",
+		modified_by: "api",
+		protected: false,
+		deleted: false,
+	} as never);
+
 	await db.insert(pipeline_analysis_template).values({
 		id: E2E_TEMPLATE_ID,
 		owner_id: E2E_USER_ID,
@@ -243,10 +347,14 @@ export async function seed_pipeline_fixtures(db: DrizzleDatabase): Promise<void>
 async function delete_fixtures(db: DrizzleDatabase): Promise<void> {
 	await db.delete(pipeline_run).where(eq(pipeline_run.id, E2E_RUN_AWAITING));
 	await db.delete(pipeline_run).where(eq(pipeline_run.id, E2E_RUN_COMPLETED));
+	await db.delete(pipeline_run).where(eq(pipeline_run.id, E2E_RUN_EXT_AWAITING));
+	await db.delete(pipeline_run).where(eq(pipeline_run.id, E2E_RUN_EXT_UNCONFIRMED));
 	await db.delete(pipeline_analysis_template).where(eq(pipeline_analysis_template.id, E2E_TEMPLATE_ID));
 	await db.delete(pipeline_package).where(eq(pipeline_package.id, E2E_PKG_ID));
+	await db.delete(pipeline_package).where(eq(pipeline_package.id, E2E_PKG_EXTERNAL_ID));
 	await db.delete(project).where(eq(project.id, E2E_PROJECT_NO_PKG));
 	await db.delete(project).where(eq(project.id, E2E_PROJECT_ID));
+	await db.delete(project).where(eq(project.id, E2E_EXTERNAL_PROJECT_ID));
 	await db.delete(session).where(eq(session.id, E2E_SESSION_ID));
 	await db.delete(user).where(eq(user.id, E2E_USER_ID));
 }

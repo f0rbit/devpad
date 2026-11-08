@@ -208,4 +208,60 @@ describe("Pipelines proxy (issue #156)", () => {
 		// user_id stripped even on the body-less mutation path.
 		expect(call.body).not.toContain("user_id");
 	});
+
+	test("api-key redispatch is human-only — 403 human_approval_required, not forwarded", async () => {
+		resetPipelinesUpstreamCalls();
+		const result = await t.client.pipelines.redispatch(owned_run_id);
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.message).toBe("human_approval_required");
+		expect(result.error.status_code).toBe(403);
+		expect(upstream_calls_for("/redispatch").length).toBe(0);
+	});
+
+	test("cookie redispatch on an owned run forwards with actor headers (user channel)", async () => {
+		resetPipelinesUpstreamCalls();
+		const res = await fetch(`${TEST_BASE_URL}/runs/${owned_run_id}/redispatch`, {
+			method: "POST",
+			headers: { "content-type": "application/json", cookie: user_cookie },
+			body: JSON.stringify({}),
+		});
+		expect(res.status).toBe(200);
+
+		const calls = upstream_calls_for("/redispatch");
+		expect(calls.length).toBe(1);
+		const call = calls.at(0);
+		if (!call) throw new Error("no upstream call recorded");
+		expect(call.authorization).toBe("Bearer test-pipelines-token");
+		expect(call.actor).toBe(TEST_USER_ID);
+		expect(call.actor_channel).toBe("user");
+	});
+
+	test("dispatches GET on an unowned run → 404, not forwarded", async () => {
+		resetPipelinesUpstreamCalls();
+		const res = await fetch(`${TEST_BASE_URL}/runs/${unowned_run_id}/dispatches`, {
+			method: "GET",
+			headers: { "content-type": "application/json", cookie: user_cookie },
+		});
+		expect(res.status).toBe(404);
+		const body: unknown = await res.json();
+		expect(body).toMatchObject({ error: "Not found" });
+		expect(upstream_calls_for("/dispatches").length).toBe(0);
+	});
+
+	test("dispatches GET on an owned run forwards to the orchestrator", async () => {
+		resetPipelinesUpstreamCalls();
+		const res = await fetch(`${TEST_BASE_URL}/runs/${owned_run_id}/dispatches`, {
+			method: "GET",
+			headers: { "content-type": "application/json", cookie: user_cookie },
+		});
+		expect(res.status).toBe(200);
+
+		const calls = upstream_calls_for("/dispatches");
+		expect(calls.length).toBe(1);
+		const call = calls.at(0);
+		if (!call) throw new Error("no upstream call recorded");
+		expect(call.actor).toBe(TEST_USER_ID);
+		expect(call.actor_channel).toBe("user");
+	});
 });

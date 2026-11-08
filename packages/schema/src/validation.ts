@@ -192,6 +192,7 @@ export type RunKindZ = z.infer<typeof run_kind>;
 export const run_status = z.union([
 	z.literal("queued"),
 	z.literal("deploying"),
+	z.literal("unconfirmed"),
 	z.literal("baking"),
 	z.literal("awaiting_approval"),
 	z.literal("rolling_back"),
@@ -206,6 +207,10 @@ export const forced_atomic_reason = z.union([z.literal("do_migrations"), z.liter
 export const stage_event_kind = z.union([
 	z.literal("deploy_started"),
 	z.literal("deploy_completed"),
+	z.literal("deploy_failed"),
+	z.literal("dispatch_requested"),
+	z.literal("dispatch_failed"),
+	z.literal("timed_out"),
 	z.literal("bake_started"),
 	z.literal("bake_completed"),
 	z.literal("gate_verdict"),
@@ -217,6 +222,28 @@ export const stage_event_kind = z.union([
 ]);
 
 export const approval_decision = z.union([z.literal("approved"), z.literal("denied")]);
+
+export const deploy_mode = z.union([z.literal("orchestrated"), z.literal("external")]);
+
+/** Git commit SHA (SHA-1): 40 hex chars. */
+export const commit_sha = z.string().regex(/^[0-9a-f]{40}$/, "commit_sha must be a 40-hex SHA");
+
+/**
+ * External deploy target (#155). CI owns the actual deploys for these
+ * packages; the orchestrator holds the manual staging→production gate and
+ * the run record. `gate` is fixed `manual` for now but kept as a named
+ * field so future gate types don't need a shape migration.
+ */
+export const external_target = z.object({
+	repo: z.string().regex(/^[^/\s]+\/[^/\s]+$/, "repo must be owner/name"),
+	workflow: z.string().min(1).describe("workflow file name, e.g. deploy.yml"),
+	ref: z.string().min(1).default("main"),
+	timeout_ms: z.number().int().positive().default(2_700_000),
+	gate: z.object({ type: z.literal("manual") }).default({ type: "manual" }),
+});
+export type ExternalTarget = z.infer<typeof external_target>;
+
+export const dispatch_status = z.union([z.literal("claimed"), z.literal("dispatched"), z.literal("failed")]);
 
 // Scope format: {provider}:{action}[:{resource}]  e.g. anthropic:messages, github:read:my-org/*
 export const grant_scope = z.string().regex(/^[a-z0-9_-]+:[a-z0-9_-]+(:[^\s]+)?$/, "Invalid scope format");
@@ -253,12 +280,15 @@ export const upsert_pipeline_package = z.object({
 	default_template_ref: z.string().nullable().optional(),
 	script_name_overrides: z.record(z.string(), z.string()).nullable().optional(),
 	project_id: z.string().nullable().optional(),
+	deploy_mode: deploy_mode.optional(),
+	external_target: external_target.nullable().optional(),
 });
 
 export const upsert_pipeline_run = z.object({
 	id: z.string().optional().nullable(),
 	package_id: z.string(),
-	version_set_id: z.string(),
+	version_set_id: z.string().nullable(),
+	commit_sha: commit_sha.nullable().optional(),
 	shape: rollout_shape,
 	kind: run_kind.optional(),
 	status: run_status.optional(),
@@ -293,6 +323,16 @@ export const upsert_pipeline_approval = z.object({
 	reason: z.string().nullable().optional(),
 	decided_by: z.string().nullable().optional(),
 	decided_at: z.string().nullable().optional(),
+});
+
+export const upsert_pipeline_dispatch = z.object({
+	id: z.string().optional().nullable(),
+	run_id: z.string(),
+	stage_name: z.string(),
+	commit_sha: commit_sha,
+	status: dispatch_status.optional(),
+	error: z.string().nullable().optional(),
+	requested_by: z.string().nullable().optional(),
 });
 
 export const upsert_pipeline_analysis_template = z.object({

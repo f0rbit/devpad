@@ -1,5 +1,5 @@
 import { AiProvenance } from "@devpad/core/ui";
-import type { PipelineRun, Project } from "@devpad/schema";
+import type { PipelineRun, Project, RunStatus } from "@devpad/schema";
 import GithubIcon from "@/components/solid/github-icon";
 import { formatDueDate } from "@/utils/task-status";
 import { formatRelativeTime } from "@/utils/time-utils";
@@ -37,38 +37,49 @@ const STATUS_COLORS: Record<Project["status"], string> = {
 	STOPPED: "color-mix(in srgb, var(--fg-muted) 70%, orange)",
 };
 
-const PIPELINE_STATUS_ICONS: Record<string, string> = {
-	running: "●",
+/**
+ * Run-status vocab is a closed enum derived from the schema — a new RunStatus
+ * added to RUN_STATUSES makes these Records non-exhaustive and fails the
+ * typecheck, which is the point. `unconfirmed` (#155) is a warning tone: CI
+ * never reported back, outcome unknown — not an error.
+ */
+const PIPELINE_STATUS_ICONS: Record<RunStatus, string> = {
 	queued: "⏳",
-	staging: "▶",
+	deploying: "▶",
+	unconfirmed: "?",
 	baking: "⏳",
 	awaiting_approval: "⏸",
-	deploying: "▶",
-	succeeded: "✓",
-	failed: "✗",
+	rolling_back: "↩",
+	completed: "✓",
 	rolled_back: "↩",
+	failed: "✗",
 	cancelled: "◯",
-	idle: "○",
 };
 
-const PIPELINE_STATUS_COLORS: Record<string, string> = {
-	running: "var(--text-link)",
+const PIPELINE_STATUS_COLORS: Record<RunStatus, string> = {
 	queued: "var(--fg-muted)",
-	staging: "var(--text-link)",
+	deploying: "var(--text-link)",
+	unconfirmed: "color-mix(in srgb, var(--fg-muted) 70%, orange)",
 	baking: "var(--text-link)",
 	awaiting_approval: "color-mix(in srgb, var(--fg-muted) 70%, orange)",
-	deploying: "var(--text-link)",
-	succeeded: "color-mix(in srgb, var(--fg-muted) 70%, green)",
-	failed: "color-mix(in srgb, var(--fg-muted) 70%, red)",
+	rolling_back: "color-mix(in srgb, var(--fg-muted) 70%, orange)",
+	completed: "color-mix(in srgb, var(--fg-muted) 70%, green)",
 	rolled_back: "color-mix(in srgb, var(--fg-muted) 70%, orange)",
+	failed: "color-mix(in srgb, var(--fg-muted) 70%, red)",
 	cancelled: "var(--fg-muted)",
-	idle: "var(--fg-faint)",
 };
 
-const get_pipeline_status_label = (run: PipelineRun | null): string => {
+type PipelineState = RunStatus | "idle";
+
+const get_pipeline_status_label = (run: PipelineRun | null): PipelineState => {
 	if (!run) return "idle";
 	return run.status;
 };
+
+const pipeline_status_icon = (state: PipelineState): string => (state === "idle" ? "○" : PIPELINE_STATUS_ICONS[state]);
+
+const pipeline_status_color = (state: PipelineState): string =>
+	state === "idle" ? "var(--fg-faint)" : PIPELINE_STATUS_COLORS[state];
 
 export const ProjectCard = (props: Props) => {
 	const { project, pipeline_status } = props;
@@ -108,8 +119,8 @@ export const ProjectCard = (props: Props) => {
 					{(status) => {
 						const run = status().latest_run;
 						const run_status = get_pipeline_status_label(run);
-						const color = PIPELINE_STATUS_COLORS[run_status] || "var(--fg-muted)";
-						const icon = PIPELINE_STATUS_ICONS[run_status] || "○";
+						const color = pipeline_status_color(run_status);
+						const icon = pipeline_status_icon(run_status);
 						const relative_time = run?.finished_at ? formatRelativeTime(new Date(run.finished_at)) : "";
 
 						return (

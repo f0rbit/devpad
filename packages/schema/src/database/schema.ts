@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { index, int, integer, primaryKey, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { index, int, integer, primaryKey, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
 export const timestamps = () => ({
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -650,17 +650,23 @@ export type RolloutShape = (typeof ROLLOUT_SHAPES)[number];
 export const RUN_KINDS = ["deploy", "rollback"] as const;
 export type RunKind = (typeof RUN_KINDS)[number];
 
-export const RUN_STATUSES = ["queued", "deploying", "baking", "awaiting_approval", "rolling_back", "completed", "rolled_back", "failed", "cancelled"] as const;
+export const RUN_STATUSES = ["queued", "deploying", "unconfirmed", "baking", "awaiting_approval", "rolling_back", "completed", "rolled_back", "failed", "cancelled"] as const;
 export type RunStatus = (typeof RUN_STATUSES)[number];
 
 export const FORCED_ATOMIC_REASONS = ["do_migrations", "asset_affinity_none"] as const;
 export type ForcedAtomicReason = (typeof FORCED_ATOMIC_REASONS)[number];
 
-export const STAGE_EVENT_KINDS = ["deploy_started", "deploy_completed", "bake_started", "bake_completed", "gate_verdict", "approval_requested", "rollback_started", "rollback_completed", "warning", "error"] as const;
+export const STAGE_EVENT_KINDS = ["deploy_started", "deploy_completed", "deploy_failed", "dispatch_requested", "dispatch_failed", "timed_out", "bake_started", "bake_completed", "gate_verdict", "approval_requested", "rollback_started", "rollback_completed", "warning", "error"] as const;
 export type StageEventKind = (typeof STAGE_EVENT_KINDS)[number];
 
 export const APPROVAL_DECISIONS = ["approved", "denied"] as const;
 export type ApprovalDecision = (typeof APPROVAL_DECISIONS)[number];
+
+export const DEPLOY_MODES = ["orchestrated", "external"] as const;
+export type DeployMode = (typeof DEPLOY_MODES)[number];
+
+export const DISPATCH_STATUSES = ["claimed", "dispatched", "failed"] as const;
+export type DispatchStatus = (typeof DISPATCH_STATUSES)[number];
 
 export const pipeline_package = sqliteTable("pipeline_package", {
 	...entity("pipeline-package"),
@@ -672,6 +678,13 @@ export const pipeline_package = sqliteTable("pipeline_package", {
 	default_template_ref: text("default_template_ref"),
 	script_name_overrides: text("script_name_overrides", { mode: "json" }),
 	project_id: text("project_id").references(() => project.id),
+	// External deploy mode (#155): `external` packages let CI own the actual
+	// deploys; the orchestrator only holds the manual staging→production
+	// gate + run record. `external_target` carries repo/workflow/ref/timeout
+	// + gate — parsed+validated by `external_target` at the service
+	// boundary (raw JSON on the row is untrusted).
+	deploy_mode: text("deploy_mode", { enum: DEPLOY_MODES }).notNull().default("orchestrated"),
+	external_target: text("external_target", { mode: "json" }),
 });
 
 export const pipeline_run = sqliteTable("pipeline_run", {
@@ -679,7 +692,10 @@ export const pipeline_run = sqliteTable("pipeline_run", {
 	package_id: text("package_id")
 		.notNull()
 		.references(() => pipeline_package.id),
-	version_set_id: text("version_set_id").notNull(),
+	// Exactly one of `version_set_id` / `commit_sha` is set — the invariant is
+	// enforced in code (`run_target_of` in core runs.ts), not by a CHECK.
+	version_set_id: text("version_set_id"),
+	commit_sha: text("commit_sha"),
 	shape: text("shape", { enum: ROLLOUT_SHAPES }).notNull(),
 	kind: text("kind", { enum: RUN_KINDS }).notNull().default("deploy"),
 	status: text("status", { enum: RUN_STATUSES }).notNull().default("queued"),
@@ -691,17 +707,42 @@ export const pipeline_run = sqliteTable("pipeline_run", {
 	finished_at: text("finished_at"),
 });
 
-export const pipeline_stage_event = sqliteTable("pipeline_stage_event", {
-	...id("pipeline-stage-event"),
-	run_id: text("run_id")
-		.notNull()
-		.references(() => pipeline_run.id),
-	stage_name: text("stage_name").notNull(),
-	kind: text("kind", { enum: STAGE_EVENT_KINDS }).notNull(),
-	payload: text("payload", { mode: "json" }),
-	ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-	idempotency_hash: text("idempotency_hash"),
-});
+export const pipeline_stage_event = sqliteTable(
+	"pipeline_stage_event",
+	{
+		...id("pipeline-stage-event"),
+		run_id: text("run_id")
+			.notNull()
+			.references(() => pipeline_run.id),
+		stage_name: text("stage_name").notNull(),
+		kind: text("kind", { enum: STAGE_EVENT_KINDS }).notNull(),
+		payload: text("payload", { mode: "json" }),
+		ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
+		idempotency_hash: text("idempotency_hash"),
+	},
+	(table) => [
+		uniqueIndex("idx_pipeline_stage_event_idem_uniq")
+			.on(table.run_id, table.idempotency_hash)
+			.where(sql`idempotency_hash IS NOT NULL`),
+	],
+);
+
+export const pipeline_dispatch = sqliteTable(
+	"pipeline_dispatch",
+	{
+		...id("pipeline-dispatch"),
+		run_id: text("run_id")
+			.notNull()
+			.references(() => pipeline_run.id),
+		stage_name: text("stage_name").notNull(),
+		commit_sha: text("commit_sha").notNull(),
+		status: text("status", { enum: DISPATCH_STATUSES }).notNull().default("claimed"),
+		error: text("error"),
+		requested_by: text("requested_by"),
+		...timestamps(),
+	},
+	(table) => [unique("pipeline_dispatch_run_stage_unique").on(table.run_id, table.stage_name)],
+);
 
 export const pipeline_grant = sqliteTable("pipeline_grant", {
 	...entity("pipeline-grant"),
@@ -865,6 +906,11 @@ export const pipeline_run_relations = relations(pipeline_run, ({ one, many }) =>
 	package: one(pipeline_package, { fields: [pipeline_run.package_id], references: [pipeline_package.id] }),
 	events: many(pipeline_stage_event),
 	approvals: many(pipeline_approval),
+	dispatches: many(pipeline_dispatch),
+}));
+
+export const pipeline_dispatch_relations = relations(pipeline_dispatch, ({ one }) => ({
+	run: one(pipeline_run, { fields: [pipeline_dispatch.run_id], references: [pipeline_run.id] }),
 }));
 
 export const pipeline_stage_event_relations = relations(pipeline_stage_event, ({ one }) => ({

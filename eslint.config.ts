@@ -330,7 +330,7 @@ export default define_lint_config({
 			// scripts/build-unified.ts is a build script -- console.log/error is
 			// its user-facing terminal progress output (`bun run build:worker`),
 			// the same class as the CLI's output modules above.
-			files: ["scripts/build-unified.ts"],
+			files: ["scripts/build-unified.ts", "scripts/d1-migration-check.ts"],
 			rules: {
 				"no-console": "off",
 			},

@@ -16,6 +16,7 @@ import type {
 	milestone,
 	pipeline_analysis_template,
 	pipeline_approval,
+	pipeline_dispatch,
 	pipeline_grant,
 	pipeline_oidc_trust,
 	pipeline_package,
@@ -48,6 +49,7 @@ import type {
 	upsert_milestone,
 	upsert_pipeline_analysis_template,
 	upsert_pipeline_approval,
+	upsert_pipeline_dispatch,
 	upsert_pipeline_grant,
 	upsert_pipeline_oidc_trust,
 	upsert_pipeline_package,
@@ -62,6 +64,8 @@ export type {
 	ApprovalDecision,
 	CompletedVia,
 	CompletionPolicy,
+	DeployMode,
+	DispatchStatus,
 	DocumentKind,
 	DocumentStatus,
 	ForcedAtomicReason,
@@ -118,6 +122,7 @@ export type PipelineGrant = InferSelectModel<typeof pipeline_grant>;
 export type PipelineApproval = InferSelectModel<typeof pipeline_approval>;
 export type PipelineAnalysisTemplate = InferSelectModel<typeof pipeline_analysis_template>;
 export type PipelineOidcTrust = InferSelectModel<typeof pipeline_oidc_trust>;
+export type PipelineDispatch = InferSelectModel<typeof pipeline_dispatch>;
 
 export type UpsertPipelinePackage = z.infer<typeof upsert_pipeline_package>;
 export type UpsertPipelineRun = z.infer<typeof upsert_pipeline_run>;
@@ -126,6 +131,7 @@ export type UpsertPipelineGrant = z.infer<typeof upsert_pipeline_grant>;
 export type UpsertPipelineApproval = z.infer<typeof upsert_pipeline_approval>;
 export type UpsertPipelineAnalysisTemplate = z.infer<typeof upsert_pipeline_analysis_template>;
 export type UpsertPipelineOidcTrust = z.infer<typeof upsert_pipeline_oidc_trust>;
+export type UpsertPipelineDispatch = z.infer<typeof upsert_pipeline_dispatch>;
 
 // Validation schema types (inferred from Zod schemas)
 export type UpsertProject = z.infer<typeof upsert_project>;

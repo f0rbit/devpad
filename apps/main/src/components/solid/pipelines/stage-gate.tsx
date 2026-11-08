@@ -5,6 +5,8 @@ import { createSignal, Show } from "solid-js";
 
 type StageGateProps = {
 	run: PipelineRun;
+	/** When set (external deploy mode #155), approval dispatches a production deploy via this GitHub workflow. */
+	external?: { repo: string; workflow: string } | null;
 };
 
 type RunGate = {
@@ -138,6 +140,20 @@ export default function StageGate(props: StageGateProps) {
 								This stage requires manual approval before proceeding.
 							</div>
 						)}
+
+						<Show when={props.external && show_actions()}>
+							<div
+								class="text-xs"
+								data-testid="stage-gate-external-note"
+								style={{ "margin-top": "var(--space-xs)", color: "var(--warning, var(--item-yellow))" }}
+							>
+								Approving dispatches a production deploy via this package's GitHub workflow (
+								<code style={{ "font-family": "monospace" }}>
+									{props.external?.repo} / {props.external?.workflow}
+								</code>
+								).
+							</div>
+						</Show>
 
 						{gate_type() === "auto" && (
 							<div class="text-xs text-muted" style={{ "margin-top": "var(--space-xs)" }}>

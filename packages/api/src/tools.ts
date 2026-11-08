@@ -844,6 +844,16 @@ export const tools: Record<string, ToolDefinition> = {
 		execute: async (client, input) => unwrap(await client.pipelines.get(input.run_id)),
 	}),
 
+	devpad_pipelines_dispatches: define_tool({
+		name: "devpad_pipelines_dispatches",
+		description:
+			"List a pipeline run's dispatch ledger rows (external deploy mode #155): per-stage claim/dispatch status, error text, and requesting actor. Read-only.",
+		inputSchema: z.object({
+			run_id: z.string().describe("Pipeline run ID"),
+		}),
+		execute: async (client, input) => unwrap(await client.pipelines.dispatches(input.run_id)),
+	}),
+
 	devpad_pipelines_create: define_tool({
 		name: "devpad_pipelines_create",
 		description: "Create a new pipeline run",

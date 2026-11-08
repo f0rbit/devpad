@@ -48,24 +48,27 @@ const plan_gradual = (): ResolvedPlan => ({
 	stages: stages_gradual,
 	gates: gates_gradual,
 	forced_reason: null,
-	version_set_id: "vs_v1",
+	target: { kind: "version_set", version_set_id: "vs_v1" },
 	previous_version_set_id: "vs_v0",
+	external_timeout_ms: null,
 });
 
 const plan_atomic = (): ResolvedPlan => ({
 	stages: stages_atomic,
 	gates: gates_atomic,
 	forced_reason: null,
-	version_set_id: "vs_v1",
+	target: { kind: "version_set", version_set_id: "vs_v1" },
 	previous_version_set_id: "vs_v0",
+	external_timeout_ms: null,
 });
 
 const plan_zero_bake = (): ResolvedPlan => ({
 	stages: stages_zero_bake,
 	gates: gates_zero_bake,
 	forced_reason: null,
-	version_set_id: "vs_v1",
+	target: { kind: "version_set", version_set_id: "vs_v1" },
 	previous_version_set_id: "vs_v0",
+	external_timeout_ms: null,
 });
 
 const plan_no_prev = (): ResolvedPlan => ({ ...plan_gradual(), previous_version_set_id: null });
@@ -96,7 +99,7 @@ describe("state-machine: queued + start", () => {
 		if (r.emit.kind === "needs_deploy") {
 			expect(r.emit.stage.name).toBe("staging");
 			expect(r.emit.stage_index).toBe(0);
-			expect(r.emit.version_set_id).toBe("vs_v1");
+			expect(r.emit.target).toEqual({ kind: "version_set", version_set_id: "vs_v1" });
 		}
 	});
 
@@ -298,6 +301,7 @@ describe("state-machine: cancel", () => {
 		const states: RunState[] = [
 			{ status: "queued", stage_index: 0, last_deployed_index: null },
 			{ status: "deploying", stage_index: 0, last_deployed_index: null },
+			{ status: "unconfirmed", stage_index: 0, last_deployed_index: null },
 			{ status: "baking", stage_index: 1, last_deployed_index: 1 },
 			{ status: "awaiting_approval", stage_index: 0, last_deployed_index: 0 },
 			{ status: "rolling_back", stage_index: 2, last_deployed_index: 2 },
@@ -340,8 +344,9 @@ describe("state-machine: error cases", () => {
 			stages: [],
 			gates: {} as Record<TransitionKey, Gate>,
 			forced_reason: null,
-			version_set_id: "vs_v1",
+			target: { kind: "version_set", version_set_id: "vs_v1" },
 			previous_version_set_id: null,
+			external_timeout_ms: null,
 		};
 		const r = transition(initial_state(), { kind: "start" }, empty_plan);
 		expect(r.ok).toBe(false);
@@ -353,8 +358,9 @@ describe("state-machine: error cases", () => {
 			stages: stages_gradual,
 			gates: { "staging→onebox": { type: "manual" } } as Record<TransitionKey, Gate>,
 			forced_reason: null,
-			version_set_id: "vs_v1",
+			target: { kind: "version_set", version_set_id: "vs_v1" },
 			previous_version_set_id: null,
+			external_timeout_ms: null,
 		};
 		const s: RunState = { status: "baking", stage_index: 1, last_deployed_index: 1 };
 		const r = transition(s, { kind: "bake_complete" }, plan);
@@ -438,5 +444,50 @@ describe("state-machine: mid-rollout rollback", () => {
 		const r2 = apply(r1.next, { kind: "deploy_complete" }, plan);
 		expect(r2.next.status).toBe("rolled_back");
 		expect(r2.emit.kind).toBe("done");
+	});
+});
+
+describe("state-machine: external mode — deploy_failed / deploy_timeout / unconfirmed", () => {
+	test("deploy_failed from deploying → failed (emit done)", () => {
+		const s: RunState = { status: "deploying", stage_index: 1, last_deployed_index: 0 };
+		const r = apply(s, { kind: "deploy_failed" });
+		expect(r.next.status).toBe("failed");
+		expect(r.emit.kind).toBe("done");
+	});
+
+	test("deploy_timeout from deploying → unconfirmed (emit done)", () => {
+		const s: RunState = { status: "deploying", stage_index: 0, last_deployed_index: null };
+		const r = apply(s, { kind: "deploy_timeout" });
+		expect(r.next.status).toBe("unconfirmed");
+		expect(r.next.stage_index).toBe(0);
+		expect(r.emit.kind).toBe("done");
+	});
+
+	test("deploy_complete from unconfirmed resumes exactly as from deploying", () => {
+		const s: RunState = { status: "unconfirmed", stage_index: 0, last_deployed_index: null };
+		const r = apply(s, { kind: "deploy_complete" });
+		expect(r.next.status).toBe("awaiting_approval");
+		expect(r.next.last_deployed_index).toBe(0);
+		expect(r.emit.kind).toBe("needs_gate_eval");
+	});
+
+	test("deploy_failed from unconfirmed → failed", () => {
+		const s: RunState = { status: "unconfirmed", stage_index: 0, last_deployed_index: null };
+		const r = apply(s, { kind: "deploy_failed" });
+		expect(r.next.status).toBe("failed");
+	});
+
+	test("bake_complete in unconfirmed is invalid", () => {
+		const s: RunState = { status: "unconfirmed", stage_index: 0, last_deployed_index: null };
+		const r = transition(s, { kind: "bake_complete" }, plan_gradual());
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error.code).toBe("invalid_event");
+	});
+
+	test("gate_verdict in unconfirmed is invalid", () => {
+		const s: RunState = { status: "unconfirmed", stage_index: 0, last_deployed_index: null };
+		const r = transition(s, { kind: "gate_verdict", verdict: "Pass" }, plan_gradual());
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error.code).toBe("invalid_event");
 	});
 });

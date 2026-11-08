@@ -1,11 +1,16 @@
 ---
-import type { PipelineAnalysisTemplate, PipelineGrant, PipelinePackage, PipelineRun } from "@devpad/schema";
+import type { PipelineAnalysisTemplate, PipelineGrant, PipelinePackage, PipelineRun, RunStatus } from "@devpad/schema";
 import AnalysisTemplateList from "@/components/solid/pipelines/analysis-template-list";
 import GrantsList from "@/components/solid/pipelines/grants-list";
 import PipelineDashboard, { type PipelineDashboardData } from "@/components/solid/pipelines/pipeline-dashboard";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject } from "@/utils/api-client";
+import {
+	github_workflow_url,
+	parse_external_target,
+	short_sha,
+} from "@/utils/pipeline-external";
 
 const project_id = Astro.params.project_id!;
 
@@ -77,16 +82,48 @@ if (active_tab === "dashboard" && has_shell) {
 	else dashboard_error = dash_result.error?.message ?? "Failed to load dashboard";
 }
 
-const in_flight_statuses = new Set<string>(["queued", "deploying", "baking", "awaiting_approval", "rolling_back"]);
-const in_flight_runs = runs.filter(r => in_flight_statuses.has(r.status));
-const recent_runs = runs.filter(r => !in_flight_statuses.has(r.status));
+const EXT_PKG = pkg && pkg.deploy_mode === "external" ? pkg : null;
+const external_target = EXT_PKG ? parse_external_target(EXT_PKG.external_target) : null;
 
-const status_color = (status: string) => {
-	if (status === "completed" || status === "rolled_back") return { bg: "var(--success-bg)", fg: "var(--success)" };
-	if (status === "failed" || status === "cancelled") return { bg: "var(--error-bg)", fg: "var(--error)" };
-	if (status === "deploying" || status === "baking" || status === "rolling_back") return { bg: "var(--info-bg)", fg: "var(--info)" };
-	if (status === "awaiting_approval") return { bg: "var(--warning-bg, var(--bg-alt))", fg: "var(--warning, var(--item-yellow))" };
-	return { bg: "var(--bg-alt)", fg: "var(--fg-muted)" };
+// Status vocab is a closed enum derived from the schema — a new RunStatus
+// added to RUN_STATUSES makes this Record non-exhaustive and fails the
+// typecheck, which is the point.
+const IN_FLIGHT: Record<RunStatus, boolean> = {
+	queued: true,
+	deploying: true,
+	unconfirmed: true,
+	baking: true,
+	awaiting_approval: true,
+	rolling_back: true,
+	completed: false,
+	rolled_back: false,
+	failed: false,
+	cancelled: false,
+};
+const in_flight_runs = runs.filter(r => IN_FLIGHT[r.status]);
+const recent_runs = runs.filter(r => !IN_FLIGHT[r.status]);
+
+type Tone = { bg: string; fg: string };
+const NEUTRAL_TONE: Tone = { bg: "var(--bg-alt)", fg: "var(--fg-muted)" };
+const TONES: Record<RunStatus, Tone> = {
+	queued: NEUTRAL_TONE,
+	deploying: { bg: "var(--info-bg)", fg: "var(--info)" },
+	unconfirmed: { bg: "var(--warning-bg, var(--bg-alt))", fg: "var(--warning, var(--item-yellow))" },
+	baking: { bg: "var(--info-bg)", fg: "var(--info)" },
+	awaiting_approval: { bg: "var(--warning-bg, var(--bg-alt))", fg: "var(--warning, var(--item-yellow))" },
+	rolling_back: { bg: "var(--info-bg)", fg: "var(--info)" },
+	completed: { bg: "var(--success-bg)", fg: "var(--success)" },
+	rolled_back: { bg: "var(--success-bg)", fg: "var(--success)" },
+	failed: { bg: "var(--error-bg)", fg: "var(--error)" },
+	cancelled: { bg: "var(--error-bg)", fg: "var(--error)" },
+};
+const status_color = (status: string): Tone => (TONES as Record<string, Tone | undefined>)[status] ?? NEUTRAL_TONE;
+
+/** Run target line for a list card: deploy target (commit or version set) or a fallback. */
+const target_label = (run: PipelineRun): string => {
+	if (run.commit_sha) return `commit ${short_sha(run.commit_sha)}`;
+	if (run.version_set_id) return run.version_set_id;
+	return run.current_stage || "queued";
 };
 ---
 
@@ -151,6 +188,21 @@ const status_color = (status: string) => {
 												<code style="font-family: monospace; color: var(--fg-muted);">{pkg.default_template_ref}</code>
 											</div>
 										)}
+										{EXT_PKG && (
+											<div class="row row-sm" data-testid="package-external">
+												<span class="text-sm text-faint" style="min-width: 120px;">Deploy</span>
+												<span class="status-badge" style="padding: 0.15rem 0.6rem; border-radius: 0.25rem; font-size: 0.75rem; background: var(--info-bg); color: var(--info); border: 1px solid var(--info);">external · deployed by CI</span>
+												{external_target && (
+													<a
+														href={github_workflow_url(external_target)}
+														style="color: var(--text-link);"
+														data-testid="package-external-target"
+													>
+														<code style="font-family: monospace;">{external_target.repo} / {external_target.workflow}</code>
+													</a>
+												)}
+											</div>
+										)}
 									</div>
 								</div>
 							)}
@@ -168,7 +220,7 @@ const status_color = (status: string) => {
 															<div style="flex: 1;">
 																<h3 style="margin: 0; font-size: 0.95rem;">{run.id.substring(0, 8)}</h3>
 																<p class="text-xs text-faint" style="margin: 0.25rem 0 0 0;">
-																	{run.kind} · {run.current_stage || "queued"}
+																	{run.kind} · {run.current_stage || "queued"} · {target_label(run)}
 																</p>
 															</div>
 															<span class="status-badge" style={`padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.8rem; background: ${c.bg}; color: ${c.fg};`}>
@@ -200,7 +252,7 @@ const status_color = (status: string) => {
 															<div style="flex: 1;">
 																<h3 style="margin: 0; font-size: 0.95rem;">{run.id.substring(0, 8)}</h3>
 																<p class="text-xs text-faint" style="margin: 0.25rem 0 0 0;">
-																	{run.kind} · {run.current_stage || "queued"}
+																	{run.kind} · {run.current_stage || "queued"} · {target_label(run)}
 																</p>
 															</div>
 															<span class="status-badge" style={`padding: 0.25rem 0.75rem; border-radius: 0.25rem; font-size: 0.8rem; background: ${c.bg}; color: ${c.fg};`}>

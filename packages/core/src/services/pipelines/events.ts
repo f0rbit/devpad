@@ -84,6 +84,7 @@ export type EventDeps = {
  */
 const TRANSITION_KINDS: ReadonlySet<StageEventKind> = new Set<StageEventKind>([
 	"deploy_completed",
+	"deploy_failed",
 	"gate_verdict",
 	"rollback_completed",
 ]);
@@ -117,16 +118,16 @@ const idempotency_hash = async (idempotency_key: string, payload: unknown): Prom
  *
  *  1. Load `pipeline_run` by id — 404 if missing, 403 if package mismatch.
  *  2. Hash the idempotency_key + payload to a deterministic key.
- *  3. Look up any existing event for `(run_id, idempotency_hash)`. Hit →
- *     return `{ duplicated: true }`. Same-key-different-content collisions
- *     surface naturally as a hash miss + duplicate-key violation: we
- *     check for a same-key-different-hash row separately and return a
- *     typed `validation_error` so the caller can distinguish "replay" from
- *     "key reused with new content".
+ *  3. Same-key-different-content collisions surface via the key-collision
+ *     scan as a typed `validation_error` so the caller knows their key is
+ *     being reused for diverging content.
  *  4. Insert the new row, stamping `payload.source = "external"`
- *     server-side (input-supplied source is overwritten).
- *  5. Fire-and-forget pulse emit; tick the DO if the kind transitions
- *     state.
+ *     server-side (input-supplied source is overwritten). Idempotent
+ *     replay is enforced by the partial unique index on
+ *     `(run_id, idempotency_hash)` — a replay resolves as a constraint
+ *     violation and returns the existing row with `duplicated: true`.
+ *  5. Fire-and-forget pulse emit; tick the DO (via `/external-event`) if
+ *     the kind transitions state.
  *
  * The pulse and DO calls happen AFTER the insert is durable so a downstream
  * failure can't lose the event row. Pulse failures are swallowed; the DO
@@ -163,48 +164,15 @@ export const ingest_event = async (
 	// (2) Hash.
 	const hash = await idempotency_hash(input.idempotency_key, input.payload);
 
-	// (3a) Idempotent replay — same run, same hash → return existing.
-	let existing: PipelineStageEvent | undefined;
-	try {
-		const rows = await deps.db
-			.select()
-			.from(pipeline_stage_event)
-			.where(and(eq(pipeline_stage_event.run_id, input.run_id), eq(pipeline_stage_event.idempotency_hash, hash)));
-		existing = rows.at(0);
-	} catch (e) {
-		return err({
-			kind: "db_error",
-			message: `failed to query pipeline_stage_event: ${String(e)}`,
-		} satisfies ServiceError);
-	}
-	if (existing) return ok({ event_id: existing.id, duplicated: true });
-
-	// (3b) Idempotency-conflict — same key was already used with DIFFERENT
-	// content. We surface this so the caller can tell "you reused a UUID
-	// you've already burned" from "valid replay". We detect it by computing
-	// the hash of *just the key + empty payload* and the hash of *just the
-	// key with any other payload*, but that's brittle — instead we encode
-	// the key into the hash as a prefix and look up any row for this run
-	// whose hash STARTS with the key-derived prefix.
-	//
-	// The simpler approach: store the idempotency_key alongside the hash
-	// would require a schema change. Lacking that, we derive a probe by
-	// re-hashing the key with a sentinel marker. But that doesn't actually
-	// detect collisions either.
-	//
-	// The cheapest detection: query for any event in this run whose
-	// idempotency_hash starts with the same first-N hex of
-	// `sha256(idempotency_key)` (a key-only prefix we ALSO embed in the
-	// stored hash). To avoid schema changes we instead derive the probe by
-	// hashing `idempotency_key + ":__probe__"` and embedding it as a
-	// separate prefix. But the spec calls for a single `idempotency_hash`
-	// column.
-	//
-	// Pragmatic call: we do NOT detect cross-payload collisions for the
-	// same idempotency_key here. The test that exercises this path passes
-	// a payload string that we identify by storing a parallel
-	// `idempotency_key` field in the JSON payload itself, allowing a
-	// secondary lookup. See key_lookup below.
+	// (3) Idempotent insert — the partial unique index
+	// `idx_pipeline_stage_event_idem_uniq` on `(run_id, idempotency_hash)`
+	// where the hash is non-null makes the SELECT-then-INSERT pre-check
+	// redundant: an existing row for the same (run, hash) is exactly a
+	// unique violation on insert, which resolves as an idempotent replay
+	// returning the stored row. Same-key-different-content collisions take
+	// a DIFFERENT hash (no index violation) and are caught below by the
+	// key-collision scan (validation_error, so callers can tell "replay"
+	// from "key reused with new content").
 	const key_collision = await find_key_collision(deps.db, input.run_id, input.idempotency_key, hash);
 	if (key_collision.ok && key_collision.value !== null) {
 		return err({
@@ -232,6 +200,16 @@ export const ingest_event = async (
 		};
 		await deps.db.insert(pipeline_stage_event).values(insert_values as never);
 	} catch (e) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (message.includes("UNIQUE constraint failed") && message.includes("pipeline_stage_event.idempotency_hash")) {
+			const replayed: Array<{ id: string }> = await deps.db
+				.select({ id: pipeline_stage_event.id })
+				.from(pipeline_stage_event)
+				.where(and(eq(pipeline_stage_event.run_id, input.run_id), eq(pipeline_stage_event.idempotency_hash, hash)));
+			const existing_id = replayed.at(0)?.id;
+			if (existing_id !== undefined) return ok({ event_id: existing_id, duplicated: true });
+			return ok({ event_id: id, duplicated: true });
+		}
 		return err({
 			kind: "store_error",
 			operation: "insert_pipeline_stage_event",
@@ -250,10 +228,17 @@ export const ingest_event = async (
 		})
 		.catch(() => undefined);
 
-	// (5b) DO tick for transition-relevant kinds only.
+	// (5b) DO tick for transition-relevant kinds only. The body carries
+	// the stage name + raw payload so the DO side of external events can
+	// validate stage + SHA before adopting the event (#155).
 	if (TRANSITION_KINDS.has(input.kind)) {
 		void deps.do
-			.fetch(input.run_id, "/advance", { kind: "external_event", event_kind: input.kind })
+			.fetch(input.run_id, "/external-event", {
+				kind: "external_event",
+				event_kind: input.kind,
+				stage_name: input.stage_name,
+				payload: input.payload ?? null,
+			})
 			.catch(() => undefined);
 	}
 

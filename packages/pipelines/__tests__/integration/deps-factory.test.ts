@@ -245,8 +245,9 @@ describe("deps factory — production wiring shape", () => {
 			],
 			gates: template.value.gates,
 			forced_reason: null,
-			version_set_id: "vs_v1",
+			target: { kind: "version_set" as const, version_set_id: "vs_v1" },
 			previous_version_set_id: "vs_v0",
+			external_timeout_ms: null,
 		};
 
 		// Seed a queued run row directly so we can test `advance_run`.
@@ -342,8 +343,9 @@ describe("deps factory — DO + routes integration through factory-shaped wiring
 			],
 			gates: template.value.gates,
 			forced_reason: null,
-			version_set_id: "vs_v1",
+			target: { kind: "version_set" as const, version_set_id: "vs_v1" },
 			previous_version_set_id: "vs_v0",
+			external_timeout_ms: null,
 		};
 
 		const now = new Date().toISOString();

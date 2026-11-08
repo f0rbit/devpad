@@ -7,6 +7,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { BundleFetchError, BundlePayload, BundleProvider } from "../../deploy.js";
+import type { Dispatcher } from "../../dispatch.js";
 import { InMemoryApprovalStore, InMemoryPulseEmitter } from "../../gates/__tests__/helpers.js";
 import type { RunDeps } from "../../runs.js";
 
@@ -66,14 +67,16 @@ export async function seed_package(
 		name: overrides.name ?? "test-pkg",
 		repo_url: overrides.repo_url ?? null,
 		default_template_ref: overrides.default_template_ref ?? null,
+		deploy_mode: overrides.deploy_mode ?? "orchestrated",
+		external_target: overrides.external_target ?? null,
 		created_at: now,
 		updated_at: now,
 		created_by: "api",
 		modified_by: "api",
 		protected: false,
 		deleted: false,
-	} as never);
-	const rows = await db.select().from(pipeline_package);
+	});
+	const rows = await db.select().from(pipeline_package).where(eq(pipeline_package.id, id));
 	return rows[0]!;
 }
 
@@ -85,13 +88,13 @@ export type TestDeps = RunDeps & {
 	pulse_summary: InMemoryPulseSummaryProvider;
 };
 
-export function make_deps(db: Database, opts: { now?: () => number } = {}): TestDeps {
+export function make_deps(db: Database, opts: { now?: () => number; dispatcher?: Dispatcher } = {}): TestDeps {
 	const cf = new InMemoryCloudflareProvider();
 	const bundles = new InMemoryBundleProvider();
 	const pulse = new InMemoryPulseEmitter();
 	const approvals = new InMemoryApprovalStore();
 	const pulse_summary = new InMemoryPulseSummaryProvider();
-	return { db, cf, bundles, pulse, approvals, pulse_summary, now: opts.now };
+	return { db, cf, bundles, pulse, approvals, pulse_summary, dispatcher: opts.dispatcher, now: opts.now };
 }
 
 /**

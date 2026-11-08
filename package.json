@@ -24,7 +24,7 @@
 		"e2e:ui": "playwright test --ui",
 		"e2e:local": "TEST_ENV=local bun run tests/e2e/seed.ts && TEST_ENV=local playwright test",
 		"e2e:local:ui": "TEST_ENV=local playwright test --ui",
-		"e2e:ci": "TEST_ENV=local bun run tests/e2e/seed.ts && TEST_ENV=local playwright test pipelines-smoke.spec.ts pipelines-dashboard.spec.ts pipelines-render.spec.ts pipelines-degraded.spec.ts pages.spec.ts canvas-core.spec.ts canvas-projections.spec.ts",
+		"e2e:ci": "TEST_ENV=local bun run tests/e2e/seed.ts && TEST_ENV=local playwright test pipelines-smoke.spec.ts pipelines-dashboard.spec.ts pipelines-render.spec.ts pipelines-degraded.spec.ts pipelines-external.spec.ts pages.spec.ts canvas-core.spec.ts canvas-projections.spec.ts",
 		"coverage": "./scripts/test-coverage.sh",
 		"coverage:report": "./scripts/coverage-report.sh",
 		"coverage:view": "genhtml coverage/lcov.info -o coverage/html && open coverage/html/index.html",
@@ -38,6 +38,7 @@
 		"fmt:check": "oxfmt --check .",
 		"build:worker": "bun scripts/build-unified.ts",
 		"lint:sh": "shellcheck $(git ls-files \"*.sh\")",
+		"db:migration-check": "bun scripts/d1-migration-check.ts",
 		"gate": "bash scripts/gate.sh"
 	},
 	"dependencies": {

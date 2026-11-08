@@ -1,5 +1,6 @@
 ---
-import type { PipelinePackage } from "@devpad/schema";
+import type { PipelinePackage, RunStatus } from "@devpad/schema";
+import DispatchStatusPanel from "@/components/solid/pipelines/dispatch-status";
 import RollbackButton from "@/components/solid/pipelines/rollback-button";
 import RunProgress from "@/components/solid/pipelines/run-progress";
 import StageEventTimeline from "@/components/solid/pipelines/stage-event-timeline";
@@ -7,6 +8,13 @@ import StageGate from "@/components/solid/pipelines/stage-gate";
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject, rethrow } from "@/utils/api-client";
+import {
+	github_commit_url,
+	github_repo_from_url,
+	github_workflow_url,
+	parse_external_target,
+	short_sha,
+} from "@/utils/pipeline-external";
 
 // @ts-expect-error rethrow is used in conditional return path
 void rethrow;
@@ -25,15 +33,41 @@ const run_result = await client.pipelines.get(run_id);
 const unreachable = !run_result.ok && run_result.error.status_code === 503;
 if (!run_result.ok && !unreachable) return rethrow(run_result.error);
 const run = run_result.ok ? run_result.value : null;
+let run_package: PipelinePackage | null = null;
 
 if (run) {
 	// Authz cross-check: this run's package must belong to this project. Otherwise
 	// 404 (not 403 — don't leak the existence of cross-project run ids).
 	const packages_result = await client.pipelines.packages.list({ project_id: project.id });
 	if (!packages_result.ok) return rethrow(packages_result.error);
+	run_package = packages_result.value.find((pkg: PipelinePackage) => pkg.id === run.package_id) ?? null;
 	const owns_run = packages_result.value.some((pkg: PipelinePackage) => pkg.id === run.package_id);
 	if (!owns_run) return new Response(null, { status: 404, statusText: "Run not found" });
 }
+
+// External deploy mode (#155): resolve the package-derived GitHub link targets
+// used for commit/workflow deep-links. Defensive parse — the raw JSON column
+// is untrusted on read.
+const pkg: PipelinePackage | null = run ? run_package : null;
+const external_target = pkg && pkg.deploy_mode === "external" ? parse_external_target(pkg.external_target) : null;
+const repo = external_target?.repo ?? github_repo_from_url(pkg?.repo_url) ?? null;
+const commit_url = run && run.commit_sha && repo ? github_commit_url(repo, run.commit_sha) : null;
+
+// Status vocab is a closed enum derived from the schema — a new RunStatus
+// added to RUN_STATUSES makes this Record non-exhaustive and fails the
+// typecheck, which is the point.
+const ROLLBACK_ELIGIBLE: Record<RunStatus, boolean> = {
+	queued: true,
+	deploying: true,
+	unconfirmed: true,
+	baking: true,
+	awaiting_approval: true,
+	rolling_back: true,
+	completed: false,
+	rolled_back: false,
+	failed: false,
+	cancelled: false,
+};
 ---
 
 <PageLayout title={`Run ${run_id} - ${project_id}`}>
@@ -54,6 +88,28 @@ if (run) {
 					Status: <strong>{run.status}</strong> · Shape: <strong>{run.shape}</strong>
 				</p>
 
+				{run.status === "unconfirmed" && (
+					<div
+						data-testid="run-unconfirmed"
+						role="status"
+						class="stack stack-sm"
+						style="padding: 0.6rem 0.9rem; border: 1px solid var(--warning, var(--item-yellow)); background: var(--warning-bg, var(--bg-alt)); border-radius: var(--radius, 4px);"
+					>
+						<span class="text-sm" style="color: var(--warning, var(--item-yellow));">
+							CI never reported back — outcome unknown. Check the workflow run, then wait for CI or cancel.
+						</span>
+						{external_target && (
+							<a
+								class="text-sm"
+								href={github_workflow_url(external_target)}
+								style="color: var(--text-link);"
+							>
+								Open the workflow run on GitHub ({external_target.repo} / {external_target.workflow})
+							</a>
+						)}
+					</div>
+				)}
+
 				<div class="stack stack-lg">
 					<div class="stack stack-md">
 						<h2>stage progress</h2>
@@ -63,7 +119,14 @@ if (run) {
 					{run.current_stage && (
 						<div class="stack stack-md">
 							<h2>current stage gate</h2>
-							<StageGate client:load run={run} />
+							<StageGate client:load run={run} external={external_target && { repo: external_target.repo, workflow: external_target.workflow }} />
+						</div>
+					)}
+
+					{external_target && (
+						<div class="stack stack-md">
+							<h2>dispatches</h2>
+							<DispatchStatusPanel client:load run_id={run.id} />
 						</div>
 					)}
 
@@ -77,8 +140,12 @@ if (run) {
 							<h2 style="margin: 0;">actions</h2>
 						</div>
 						<div class="row" style="gap: var(--space-sm); flex-wrap: wrap;">
-							{(run.status === "deploying" || run.status === "baking" || run.status === "awaiting_approval") && (
-								<RollbackButton client:load run_id={run.id} />
+							{ROLLBACK_ELIGIBLE[run.status] && (
+								<RollbackButton
+									client:load
+									run_id={run.id}
+									external={external_target && { repo: external_target.repo, workflow: external_target.workflow }}
+								/>
 							)}
 						</div>
 					</div>
@@ -90,10 +157,24 @@ if (run) {
 								<span class="text-sm text-faint" style="min-width: 120px;">Run ID</span>
 								<code style="font-family: monospace; color: var(--fg-muted);">{run.id}</code>
 							</div>
-							<div class="row row-sm">
-								<span class="text-sm text-faint" style="min-width: 120px;">Version Set</span>
-								<code style="font-family: monospace; color: var(--fg-muted);">{run.version_set_id}</code>
-							</div>
+							{run.version_set_id && (
+								<div class="row row-sm" data-testid="run-version-set">
+									<span class="text-sm text-faint" style="min-width: 120px;">Version Set</span>
+									<code style="font-family: monospace; color: var(--fg-muted);">{run.version_set_id}</code>
+								</div>
+							)}
+							{run.commit_sha && (
+								<div class="row row-sm" data-testid="run-commit">
+									<span class="text-sm text-faint" style="min-width: 120px;">Commit</span>
+									{commit_url ? (
+										<a href={commit_url} style="color: var(--text-link);">
+											<code style="font-family: monospace;">{short_sha(run.commit_sha)}</code>
+										</a>
+									) : (
+										<code style="font-family: monospace; color: var(--fg-muted);">{short_sha(run.commit_sha)}</code>
+									)}
+								</div>
+							)}
 							<div class="row row-sm">
 								<span class="text-sm text-faint" style="min-width: 120px;">Rollout Shape</span>
 								<span style="color: var(--fg);">{run.shape}</span>

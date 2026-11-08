@@ -51,6 +51,7 @@ import type {
 	PipelinePackage,
 	PipelineRun,
 	PipelineStageEvent,
+	DispatchStatus,
 	Project,
 	SaveConfigRequest,
 	Signoff,
@@ -105,6 +106,28 @@ export type PushInterfaceReportResult = {
 	document: Document;
 	classification: InterfaceDiffClass;
 	signoff: Signoff | null;
+};
+
+/**
+ * Wire shape of `GET /v1/runs/:id/dispatches` (orchestrator proxy, #155) —
+ * the run's dispatch ledger rows. `commit_sha` is null on orchestrated
+ * (version-set-targeted) runs.
+ */
+export type PipelineDispatchEntry = {
+	stage_name: string;
+	commit_sha: string | null;
+	status: DispatchStatus;
+	error: string | null;
+	requested_by: string | null;
+	created_at: string;
+	updated_at: string;
+};
+
+export type PipelineDispatches = {
+	run_id: string;
+	run_status: string;
+	commit_sha: string | null;
+	dispatches: PipelineDispatchEntry[];
 };
 
 type FoldDiff =
@@ -1704,6 +1727,23 @@ export class ApiClient {
 		 */
 		rollback: (run_id: string): Promise<ApiResult<void>> =>
 			wrap(() => this.clients.pipelines.post(`/runs/${run_id}/rollback`, { body: {} })),
+
+		/**
+		 * Re-dispatch a FAILED external production dispatch (#155). Human-only:
+		 * only valid when the run's production dispatch row is `failed` —
+		 * any other state is a 4xx from the orchestrator. api-channel callers
+		 * get `403 human_approval_required` from the worker proxy; call from
+		 * the devpad web UI while signed in.
+		 */
+		redispatch: (run_id: string): Promise<ApiResult<void>> =>
+			wrap(() => this.clients.pipelines.post(`/runs/${run_id}/redispatch`, { body: {} })),
+
+		/**
+		 * Read a run's dispatch ledger (`GET /v1/runs/:id/dispatches`): one
+		 * row per stage with claim/dispatch status, error text and actor.
+		 */
+		dispatches: (run_id: string): Promise<ApiResult<PipelineDispatches>> =>
+			wrap(() => this.clients.pipelines.get<PipelineDispatches>(`/runs/${run_id}/dispatches`)),
 
 		/**
 		 * Stage-event namespace — Phase 2.C webhook ingestion + read-back.

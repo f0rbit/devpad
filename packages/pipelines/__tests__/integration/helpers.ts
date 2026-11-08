@@ -180,6 +180,8 @@ export const seed_package = async (
 		repo_url: overrides.repo_url ?? null,
 		default_template_ref: overrides.default_template_ref ?? null,
 		project_id: overrides.project_id ?? null,
+		deploy_mode: overrides.deploy_mode ?? "orchestrated",
+		external_target: overrides.external_target ?? null,
 		created_at: now,
 		updated_at: now,
 		created_by: "api",
