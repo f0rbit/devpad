@@ -80,8 +80,11 @@ export type RunState = {
  * - `start` — the run is created and the wrapper kicks it off.
  * - `deploy_complete` — the wrapper finished `deploy_stage` (success),
  *   or CI reported `deploy_completed` for an external run.
- * - `deploy_failed` — CI reported `deploy_failed` for an external run
- *   (valid while `deploying` or `unconfirmed`).
+ * - `deploy_failed` — CI reported `deploy_failed` for an external run,
+ *   OR an orchestrated `deploy_stage` / `rollback_run` errored in
+ *   `runs.ts` (#160: recorded as a stage event + the run's `error`
+ *   column, then the run is driven to `failed`). Valid while
+ *   `deploying`, `unconfirmed`, or `rolling_back`.
  * - `deploy_timeout` — the DO's external-timeout alarm fired while the
  *   run was still `deploying` → the run becomes `unconfirmed`.
  * - `bake_complete` — a bake-window alarm fired.
@@ -379,17 +382,28 @@ export const transition = (
 		}
 
 		case "rolling_back": {
-			if (event.kind !== "deploy_complete") {
-				return err({
-					code: "invalid_event",
-					message: `event ${event.kind} invalid in state rolling_back`,
-					state: state.status,
-					event: event.kind,
+			if (event.kind === "deploy_complete") {
+				return ok({
+					next: { ...state, status: "rolled_back" },
+					emit: { kind: "done" },
 				});
 			}
-			return ok({
-				next: { ...state, status: "rolled_back" },
-				emit: { kind: "done" },
+			// #160: a failing rollback deploy (error from `rollback_run`)
+			// must land the run in `failed`, not leave it stuck in
+			// `rolling_back`. The event reuses the external-mode
+			// `deploy_failed` kind — a rollback IS a deploy of the
+			// predecessor version-set.
+			if (event.kind === "deploy_failed") {
+				return ok({
+					next: { ...state, status: "failed" },
+					emit: { kind: "done" },
+				});
+			}
+			return err({
+				code: "invalid_event",
+				message: `event ${event.kind} invalid in state rolling_back`,
+				state: state.status,
+				event: event.kind,
 			});
 		}
 

@@ -346,4 +346,38 @@ describe("cf-api-provider — caller-identity vars", () => {
 		if (!result.ok) return;
 		expect(result.value[0].vars).toBeUndefined();
 	});
+
+	test("versions.get reads bindings from result.resources.bindings and passes unknown types through", async () => {
+		recorder.next_response(() => ({
+			success: true,
+			errors: [],
+			messages: [],
+			result: {
+				id: "ver_3",
+				number: 3,
+				metadata: { created_on: "2026-05-16T00:00:00Z" },
+				resources: {
+					bindings: [
+						{ type: "d1", name: "DB", id: "db-uuid" },
+						{ type: "r2_bucket", name: "CORPUS_BUCKET", bucket_name: "bucket" },
+						{ type: "secret_text", name: "API_KEY" },
+						{ type: "plain_text", name: "ENVIRONMENT", text: "production" },
+					],
+				},
+			},
+		}));
+		const provider = make_test_provider(recorder);
+
+		const result = await provider.versions.get("test-pkg", "ver_3");
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(recorder.requests[0].pathname).toEndWith("/workers/scripts/test-pkg/versions/ver_3");
+		expect(result.value.bindings).toEqual([
+			{ type: "d1", name: "DB", id: "db-uuid" },
+			{ type: "r2_bucket", name: "CORPUS_BUCKET", bucket_name: "bucket" },
+			{ type: "secret_text", name: "API_KEY" },
+			{ type: "plain_text", name: "ENVIRONMENT", text: "production" },
+		]);
+		expect(result.value.vars).toEqual([{ type: "plain_text", name: "ENVIRONMENT", text: "production" }]);
+	});
 });

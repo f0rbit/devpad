@@ -87,6 +87,7 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
 		versions: {
 			upload: async (input) => (await get_provider()).versions.upload(input),
 			list: async (script_name) => (await get_provider()).versions.list(script_name),
+			get: async (script_name, version_id) => (await get_provider()).versions.get(script_name, version_id),
 		},
 		deployments: {
 			create: async (input) => (await get_provider()).deployments.create(input),
@@ -116,6 +117,16 @@ const make_lazy_cf_provider = (env: PipelineEnv): CloudflareProvider => {
  * on pulse event tags. The demo Worker's own `staging`/`production`
  * split stays — it's only the upstream platform bindings that are
  * singletons.
+ *
+ * #160: this is NOT the complete binding set for a promotion. Cloudflare
+ * treats `metadata.bindings` as the full set, so `deploy_stage` reads
+ * the bindings live on the target script and overlays this platform
+ * list on top (name-replace, no duplicates) — see `merge_bindings` in
+ * `@devpad/core/services/pipelines/bindings`. Packages with their own
+ * D1/R2/Queue/AI infra must declare it in their alchemy `infra.ts`;
+ * the orchestrator preserves whatever is live, and
+ * `deploy_mode: "external"` is the preferred shape for packages that
+ * provision NEW bindings between deploys (#159).
  */
 const default_bindings_for = (_input: {
 	package_name: string;

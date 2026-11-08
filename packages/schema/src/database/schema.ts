@@ -705,6 +705,10 @@ export const pipeline_run = sqliteTable("pipeline_run", {
 	forced_atomic_reason: text("forced_atomic_reason", { enum: FORCED_ATOMIC_REASONS }),
 	started_at: text("started_at"),
 	finished_at: text("finished_at"),
+	// #160: human-readable failure reason, stamped when the run is driven
+	// to `failed` (deploy_stage / rollback_run errors). Paired with a
+	// `deploy_failed` stage event carrying the same text in its payload.
+	error: text("error"),
 });
 
 export const pipeline_stage_event = sqliteTable(

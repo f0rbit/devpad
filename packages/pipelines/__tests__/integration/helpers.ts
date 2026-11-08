@@ -263,6 +263,17 @@ export const build_harness = async (options?: TestHarnessOptions): Promise<TestH
 	});
 	if (!deployment.ok) throw new Error("initial deployment failed");
 
+	// #160: the binding read refuses to promote to a script the
+	// orchestrator hasn't observed live — seed the staging script's
+	// existence (version only, no deployment, so deployment-count
+	// assertions keep seeing only this run's deploys).
+	const staging_v0 = await deps.cf.versions.upload({
+		kind: "single_file",
+		script_name: SCRIPT_NAME_FOR({ stage_name: "staging" }),
+		annotations: { "workers/tag": "orchestrator-seed" },
+	});
+	if (!staging_v0.ok) throw new Error("staging seed failed");
+
 	// vs_v0 also has a manifest so the new rollback route (which creates
 	// a synthetic run targeting the predecessor) can reconstruct its plan.
 	const manifest_for = new Map<string, VersionSetManifest>([

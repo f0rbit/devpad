@@ -169,6 +169,13 @@
       "when": 1794420000000,
       "tag": "0023_external_deploy_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1794499200000,
+      "tag": "0024_run_error",
+      "breakpoints": true
     }
   ]
 }

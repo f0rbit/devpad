@@ -1,5 +1,6 @@
 import { Database as BunSqlite } from "bun:sqlite";
 import { InMemoryCloudflareProvider, InMemoryPulseSummaryProvider } from "@devpad/pipeline-fakes";
+import type { VersionBinding } from "@devpad/pipeline-fakes";
 import type { PipelinePackage, User } from "@devpad/schema";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { pipeline_analysis_template, pipeline_package, user } from "@devpad/schema/database/schema";
@@ -20,6 +21,8 @@ import type { RunDeps } from "../../runs.js";
  */
 export class InMemoryBundleProvider implements BundleProvider {
 	bytes: Uint8Array = new TextEncoder().encode("export default { fetch: () => new Response('test') };");
+	/** Platform bindings the bundle carries (vault/pulse in production). */
+	bindings: BundlePayload["bindings"] = undefined;
 	calls: Array<{ version_set_id: string; package_name: string; environment: "staging" | "production" }> = [];
 
 	async get(input: {
@@ -28,7 +31,7 @@ export class InMemoryBundleProvider implements BundleProvider {
 		environment: "staging" | "production";
 	}): Promise<Result<BundlePayload, BundleFetchError>> {
 		this.calls.push(input);
-		return ok({ kind: "single_file", bytes: this.bytes });
+		return ok({ kind: "single_file", bytes: this.bytes, bindings: this.bindings });
 	}
 }
 
@@ -95,6 +98,38 @@ export function make_deps(db: Database, opts: { now?: () => number; dispatcher?:
 	const approvals = new InMemoryApprovalStore();
 	const pulse_summary = new InMemoryPulseSummaryProvider();
 	return { db, cf, bundles, pulse, approvals, pulse_summary, dispatcher: opts.dispatcher, now: opts.now };
+}
+
+/**
+ * Read a run's stage events, newest last (insert order). Test-only
+ * convenience used by the binding/failure suites to assert on
+ * `deploy_failed` / `deploy_completed` payloads.
+ */
+export async function pipeline_stage_event_rows(db: Database, run_id: string) {
+	return db.query.pipeline_stage_event.findMany({ where: (tbl, { eq: matches }) => matches(tbl.run_id, run_id) });
+}
+
+/**
+ * Seed a script into existence in the in-memory CF fake WITHOUT creating
+ * a deployment (#160): the orchestrator's binding read treats a script
+ * with versions but no active deployment as "inherit from the latest
+ * version", so this gives staged deploys something live to read while
+ * keeping `deployments.list` counts untouched for existing suite
+ * assertions. Used for the staging script that real packages create via
+ * their own infra before the orchestrator ever promotes.
+ */
+export async function seed_script_version(
+	cf: TestDeps["cf"],
+	script_name: string,
+	opts: { bindings?: VersionBinding[] } = {},
+): Promise<void> {
+	const seed = await cf.versions.upload({
+		kind: "single_file",
+		script_name,
+		annotations: { "workers/tag": "orchestrator-seed" },
+		bindings: opts.bindings,
+	});
+	if (!seed.ok) throw new Error(`seed_script_version(${script_name}) failed: ${seed.error.message}`);
 }
 
 /**

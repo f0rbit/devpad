@@ -42,6 +42,24 @@ const ensure_script = (scripts: Map<string, ScriptState>, name: string): ScriptS
 export class InMemoryCloudflareProvider implements CloudflareProvider {
 	private readonly scripts = new Map<string, ScriptState>();
 	private version_counter = 0;
+	/**
+	 * Test-only failure injection (#160). When non-null, the next
+	 * `versions.upload` calls fail with this message until
+	 * `declare_upload_failure(null)` clears it. Lets integration tests
+	 * drive `deploy_stage` failures (e.g. a 500 from the CF API's
+	 * version-upload endpoint) through the same error path the
+	 * production provider produces.
+	 */
+	private upload_failure_message: string | null = null;
+
+	declare_upload_failure(message: string | null): void {
+		this.upload_failure_message = message;
+	}
+
+	private fail_if_declared(): CloudflareError | null {
+		if (this.upload_failure_message === null) return null;
+		return { code: "internal", message: this.upload_failure_message };
+	}
 
 	register_version_key(script_name: string, version_key: string, version_id: string): void {
 		ensure_script(this.scripts, script_name).version_keys.set(version_key, version_id);
@@ -187,6 +205,8 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 
 	readonly versions = {
 		upload: async (input: UploadVersionInput): Promise<Result<WorkerVersion, CloudflareError>> => {
+			const failure = this.fail_if_declared();
+			if (failure !== null) return err(failure);
 			if (input.kind === "directory_bundle") {
 				return this.record_directory_bundle(input);
 			}
@@ -196,6 +216,20 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			const state = this.scripts.get(script_name);
 			if (!state) return err({ code: "not_found", message: `script ${script_name} not found` });
 			return ok([...state.versions]);
+		},
+		get: async (script_name: string, version_id: string): Promise<Result<WorkerVersion, CloudflareError>> => {
+			const state = this.scripts.get(script_name);
+			if (!state) {
+				return err({ code: "not_found", message: `script ${script_name} not found` });
+			}
+			const version = state.versions.find((v) => v.id === version_id);
+			if (!version) {
+				return err({
+					code: "not_found",
+					message: `version ${version_id} not found on script ${script_name}`,
+				});
+			}
+			return ok(version);
 		},
 	};
 
@@ -211,6 +245,10 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			created_on: new Date().toISOString(),
 			annotations: input.annotations,
 			vars: input.vars,
+			// Mirrors the production provider's `build_version_metadata`:
+			// the wire `metadata.bindings` is explicit bindings + vars.
+			bindings: [...(input.bindings ?? []), ...(input.vars ?? [])],
+			keep_bindings: input.keepBindings,
 			bundle: input.bundle,
 		};
 		state.versions.push(version);
@@ -261,6 +299,10 @@ export class InMemoryCloudflareProvider implements CloudflareProvider {
 			created_on: new Date().toISOString(),
 			annotations: input.annotations,
 			vars: input.vars,
+			// Mirrors the production provider's `build_version_metadata`:
+			// the wire `metadata.bindings` is explicit bindings + vars.
+			bindings: [...(input.bindings ?? []), ...(input.vars ?? [])],
+			keep_bindings: input.keepBindings,
 			modules,
 			assets,
 		};

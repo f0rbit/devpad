@@ -9,6 +9,66 @@ const upload_two = async (cf: InMemoryCloudflareProvider, script: string) => {
 	return [v1.value, v2.value] as const;
 };
 
+describe("InMemoryCloudflareProvider — binding recording (#160)", () => {
+	test("records upload bindings (vars merged in, wire order) and keep_bindings", async () => {
+		const cf = new InMemoryCloudflareProvider();
+		const upload = await cf.versions.upload({
+			kind: "single_file",
+			script_name: "bound",
+			bindings: [
+				{ type: "d1", name: "DB", id: "d1_x" },
+				{ type: "secret_text", name: "SECRET" },
+			],
+			vars: [{ type: "plain_text", name: "CALLER_ENV", text: "production" }],
+			keepBindings: ["secret_text"],
+		});
+		if (!upload.ok) throw new Error("upload failed");
+		expect(upload.value.keep_bindings).toEqual(["secret_text"]);
+		const listed = await cf.versions.list("bound");
+		if (!listed.ok) throw new Error("list failed");
+		expect(listed.value[0].bindings).toEqual([
+			{ type: "d1", name: "DB", id: "d1_x" },
+			{ type: "secret_text", name: "SECRET" },
+			{ type: "plain_text", name: "CALLER_ENV", text: "production" },
+		]);
+	});
+
+	test("versions.get returns the uploaded version with its bindings; unknown ones not_found", async () => {
+		const cf = new InMemoryCloudflareProvider();
+		const upload = await cf.versions.upload({
+			kind: "single_file",
+			script_name: "bound",
+			bindings: [{ type: "r2_bucket", name: "BUCKET" }],
+		});
+		if (!upload.ok) throw new Error("upload failed");
+
+		const got = await cf.versions.get("bound", upload.value.id);
+		if (!got.ok) throw new Error("get failed");
+		expect(got.value.bindings).toEqual([{ type: "r2_bucket", name: "BUCKET" }]);
+
+		const missing = await cf.versions.get("bound", "version_ghost");
+		if (missing.ok) throw new Error("expected not_found");
+		expect(missing.error.code).toBe("not_found");
+
+		const script_missing = await cf.versions.get("ghost", "version_ghost");
+		if (script_missing.ok) throw new Error("expected not_found");
+		expect(script_missing.error.code).toBe("not_found");
+	});
+
+	test("declare_upload_failure injects errors until cleared", async () => {
+		const cf = new InMemoryCloudflareProvider();
+		cf.declare_upload_failure("cf api 500");
+		const upload = await cf.versions.upload({ kind: "single_file", script_name: "broken" });
+		if (upload.ok) throw new Error("expected failure");
+		expect(upload.error.code).toBe("internal");
+		expect(upload.error.message).toBe("cf api 500");
+
+		cf.declare_upload_failure(null);
+		const recovered = await cf.versions.upload({ kind: "single_file", script_name: "broken" });
+		expect(recovered.ok).toBe(true);
+	});
+});
+
 describe("InMemoryCloudflareProvider — happy paths", () => {
 	test("uploads versions and lists them in order", async () => {
 		const cf = new InMemoryCloudflareProvider();

@@ -23,16 +23,31 @@ import type {
 	CreateDeploymentInput,
 	ModuleUpload,
 	VersionBinding,
+	WorkerDeployment,
 	WorkerVar,
 	WorkerVersion,
 } from "@devpad/pipeline-fakes";
 import type { Stage } from "@devpad/pipeline-templates";
 import { err, ok, type Result } from "@f0rbit/corpus";
+import { merge_bindings } from "./bindings.js";
 import { compute_caller_identity_vars } from "./caller-identity.js";
 
 export type BundleFetchError = { code: "bundle_unavailable"; message: string };
 
-export type DeployError = CloudflareError | BundleFetchError | { code: "no_version_uploaded"; message: string };
+export type DeployError =
+	| CloudflareError
+	| BundleFetchError
+	| { code: "no_version_uploaded"; message: string }
+	/**
+	 * #160: the target script does not exist on Cloudflare (or its live
+	 * state is unreadable), so the orchestrator cannot determine the
+	 * bindings currently active on it. The orchestrator refuses to
+	 * bootstrap scripts — packages are created by their own infra
+	 * (alchemy / wrangler versions upload) first; uploading a
+	 * binding-less version here is exactly the failure mode #160
+	 * documents.
+	 */
+	| { code: "script_not_found"; message: string };
 
 /**
  * Read-side shape the orchestrator uses to fetch a compiled worker
@@ -181,6 +196,7 @@ const upload_version = async (
 	version_set_id: string,
 	vars: WorkerVar[],
 	bundle: BundlePayload,
+	merged: { bindings: VersionBinding[]; keep_bindings: string[] },
 ): Promise<Result<WorkerVersion, CloudflareError>> => {
 	const annotations = { [VERSION_KEY]: version_set_id };
 	if (bundle.kind === "directory_bundle") {
@@ -193,7 +209,8 @@ const upload_version = async (
 			main_module: bundle.main_module,
 			compatibility_date: bundle.compatibility_date,
 			compatibility_flags: bundle.compatibility_flags,
-			bindings: bundle.bindings,
+			bindings: merged.bindings,
+			keepBindings: merged.keep_bindings.length > 0 ? merged.keep_bindings : undefined,
 			assets: bundle.assets,
 		});
 	}
@@ -206,7 +223,8 @@ const upload_version = async (
 		main_module: bundle.main_module,
 		compatibility_date: bundle.compatibility_date,
 		compatibility_flags: bundle.compatibility_flags,
-		bindings: bundle.bindings,
+		bindings: merged.bindings,
+		keepBindings: merged.keep_bindings.length > 0 ? merged.keep_bindings : undefined,
 	});
 };
 
@@ -240,14 +258,113 @@ const lookup_previous_active_version = async (
 };
 
 /**
+ * Read the bindings of the versions currently ACTIVE on `script_name`
+ * (#160). The active deployment is the most recently created one; each
+ * version entry in its percentage strategy is read via
+ * `cf.versions.get` — never the script settings endpoint, which shows
+ * the latest upload rather than what's live.
+ *
+ * Fallbacks:
+ * - No deployments but the script has versions (uploaded, never
+ *   deployed — e.g. `wrangler versions upload` from CI): read the
+ *   LATEST version's bindings, mirroring Cloudflare's own
+ *   `keep_bindings` inheritance semantics. Never-deployed scripts are
+ *   rare — when this fires, the inheritance source equals what the
+ *   next deployment would act on anyway.
+ * - Script entirely missing (no deployments AND no versions) → typed
+ *   `script_not_found`: the orchestrator refuses to bootstrap a Worker
+ *   it knows nothing about (and would otherwise upload a version with
+ *   only the platform bindings — the #160 incident).
+ *
+ * Per-stage correctness is free: each stage's script was created by the
+ * package's own infra with its own resource ids, so read-then-merge
+ * keeps those ids alive without the orchestrator ever learning them.
+ */
+const newest_version = (versions: WorkerVersion[]): WorkerVersion | undefined =>
+	versions.reduce<WorkerVersion | undefined>(
+		(best, v) => (best === undefined || v.number > best.number ? v : best),
+		undefined,
+	);
+
+const read_live_bindings = async (
+	cf: CloudflareProvider,
+	script_name: string,
+): Promise<Result<{ bindings: VersionBinding[]; source: string }, DeployError>> => {
+	const deployments = await cf.deployments.list(script_name);
+	if (!deployments.ok) {
+		if (deployments.error.code !== "not_found") return deployments;
+		const versions = await cf.versions.list(script_name);
+		if (!versions.ok) {
+			return err({
+				code: "script_not_found",
+				message: `script ${script_name} does not exist on Cloudflare — create it via the package's own infra (alchemy/wrangler versions upload) before starting orchestrated runs`,
+			});
+		}
+		const latest = newest_version(versions.value);
+		if (!latest) {
+			return err({ code: "script_not_found", message: `script ${script_name} has no versions and no deployments` });
+		}
+		return ok({
+			bindings: latest.bindings ?? [],
+			source: `latest version ${latest.id} (no active deployment)`,
+		});
+	}
+
+	const active = deployments.value.reduce<WorkerDeployment | undefined>(
+		(best, d) => (best === undefined || d.created_on > best.created_on ? d : best),
+		undefined,
+	);
+	if (!active) {
+		// Script exists (deployments list ok) but zero deployments: fall
+		// back to the latest uploaded version's bindings.
+		const versions = await cf.versions.list(script_name);
+		if (!versions.ok) {
+			return err({
+				code: "script_not_found",
+				message: `script ${script_name} is unreadable: ${versions.error.message}`,
+			});
+		}
+		const latest = newest_version(versions.value);
+		if (!latest) {
+			return err({ code: "script_not_found", message: `script ${script_name} has no versions and no deployments` });
+		}
+		return ok({
+			bindings: latest.bindings ?? [],
+			source: `latest version ${latest.id} (no active deployment)`,
+		});
+	}
+
+	// Gather bindings from every version in the active strategy (a
+	// partial rollout has two live versions). Entries collect in strategy
+	// order; `merge_bindings` resolves same-name ties by last-read-wins.
+	const gathered: VersionBinding[] = [];
+	const sources: string[] = [];
+	for (const version of active.strategy.versions) {
+		const read = await cf.versions.get(script_name, version.version_id);
+		if (!read.ok) {
+			return err({
+				code: "script_not_found",
+				message: `active version ${version.version_id} of script ${script_name} is unreadable: ${read.error.message}`,
+			});
+		}
+		gathered.push(...(read.value.bindings ?? []));
+		sources.push(version.version_id);
+	}
+	return ok({ bindings: gathered, source: `active deployment ${active.id} (versions: ${sources.join(", ")})` });
+};
+
+/**
  * Deploy a stage. Sequence:
  *
  * 1. Look up or upload the worker version for this `version_set_id`
  *    (idempotent).
- * 2. For partial-traffic stages, look up the currently-active
+ * 2. For uploads: read the bindings live on the target script
+ *    (`read_live_bindings`) and merge them with the orchestrator's
+ *    platform set so package-owned bindings survive promotion (#160).
+ * 3. For partial-traffic stages, look up the currently-active
  *    predecessor version so the percentage strategy can ramp it down.
- * 3. Build the Cloudflare deployment payload via the pure helper.
- * 4. Create the deployment.
+ * 4. Build the Cloudflare deployment payload via the pure helper.
+ * 5. Create the deployment.
  *
  * Each step short-circuits on a typed error and bubbles up the same
  * {@link DeployError} union the helpers return. No throws — every
@@ -276,7 +393,28 @@ export const deploy_stage = async (
 	} else {
 		const bundle = await bundles.get({ version_set_id, package_name, environment });
 		if (!bundle.ok) return bundle;
-		version_result = await upload_version(cf, script_name, version_set_id, identity_vars, bundle.value);
+		// #160: preserve what's live. The platform set (bundle bindings +
+		// identity vars) wins name collisions; secrets ride keep_bindings.
+		const live = await read_live_bindings(cf, script_name);
+		if (!live.ok) return live;
+		const merged = merge_bindings({
+			live: live.value.bindings,
+			platform: [...(bundle.value.bindings ?? []), ...identity_vars],
+		});
+		// The identity vars ride the upload's `vars` (appended to the wire
+		// bindings by the provider); they took part in the merge only to
+		// evict stale same-named live entries, so drop them here or they'd
+		// be sent twice.
+		const identity_names = new Set(identity_vars.map((v) => v.name));
+		const upload_bindings = { ...merged, bindings: merged.bindings.filter((b) => !identity_names.has(b.name)) };
+		version_result = await upload_version(
+			cf,
+			script_name,
+			version_set_id,
+			identity_vars,
+			bundle.value,
+			upload_bindings,
+		);
 	}
 	if (!version_result.ok) return version_result;
 	const version = version_result.value;
