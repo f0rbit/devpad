@@ -26,6 +26,8 @@ API_URL = "https://devpad.tools"
 FRONTEND_URL = "https://devpad.tools"
 PULSE_API_BASE = "https://pulse.devpad.tools"
 DEVPAD_PROJECT_ID = "project_3f0035e0-8530-4542-a087-75a11a419ac3"
+# Orchestrator singleton the /v1 pipelines proxy forwards to (pair with the PIPELINES_TOKEN secret)
+PIPELINES_API_BASE = "https://devpad-pipelines.dev-818.workers.dev"
 
 [[d1_databases]]
 binding = "DB"
@@ -86,6 +88,9 @@ FRONTEND_URL = "https://staging.devpad.tools"
 # (apps/main/src/lib/pulse.ts) no-op instrumentation without that key.
 PULSE_API_BASE = "https://pulse.devpad.tools"
 DEVPAD_PROJECT_ID = "project_3f0035e0-8530-4542-a087-75a11a419ac3"
+# Staging deliberately has NO PIPELINES_API_BASE / PIPELINES_TOKEN: the preview D1 has no
+# pipeline packages and the orchestrator is a production singleton, so the pipelines
+# proxy stays degraded (503 pipelines_unreachable) here by design.
 
 [[env.preview.d1_databases]]
 binding = "DB"
@@ -137,6 +142,7 @@ invocation_logs = true
 # Pulse self-instrumentation (set once devpad is registered as a project on pulse):
 # PULSE_INTERNAL_KEY            (devpad bearer with scope=pulse, server-to-server proxy)
 # PULSE_DEVPAD_INGEST_KEY       (pk_* ingest key for devpad's project — write-only public key)
+# PIPELINES_TOKEN               (orchestrator admin bearer, production only — server-to-server pipelines proxy + hook pipeline action)
 # GIT_SHA                       (build-time, set in workflow env block — also as PUBLIC_GIT_SHA for the browser)
 #
 # All Pulse vars are graceful no-op if unset.
