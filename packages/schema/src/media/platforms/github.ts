@@ -39,12 +39,26 @@ export const GitHubRepoMetaSchema = z.object({
 	updated_at: z.string().datetime(),
 });
 
+export const GitHubRepoSyncStateSchema = z.object({
+	pushed_at: z.string().datetime().nullable(),
+	synced_at: z.string().datetime(),
+});
+
+export const GitHubSyncStateSchema = z.object({
+	repos: z.record(z.string(), GitHubRepoSyncStateSchema),
+	updated_at: z.string().datetime(),
+});
+
+export type GitHubRepoSyncState = z.infer<typeof GitHubRepoSyncStateSchema>;
+export type GitHubSyncState = z.infer<typeof GitHubSyncStateSchema>;
+
 export const GitHubMetaStoreSchema = z.object({
 	username: z.string(),
 	repositories: z.array(GitHubRepoMetaSchema),
 	total_repos_available: z.number(),
 	repos_fetched: z.number(),
 	fetched_at: z.string().datetime(),
+	sync_state: GitHubSyncStateSchema.optional(),
 });
 
 export type GitHubRepoMeta = z.infer<typeof GitHubRepoMetaSchema>;

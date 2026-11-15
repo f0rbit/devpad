@@ -39,7 +39,12 @@ export type StoreConfig<TIncoming, TStored> = {
 	getTotal: (merged: TStored) => number;
 };
 
-export type ProcessError = { kind: "fetch_failed"; message: string; original_kind?: string };
+export type ProcessError = {
+	kind: "fetch_failed";
+	message: string;
+	original_kind?: string;
+	retry_after_seconds?: number;
+};
 
 export type PlatformProvider<TFetch> = {
 	fetch(token: string): Promise<Result<TFetch, ProviderError>>;
@@ -119,8 +124,13 @@ export const createMerger =
 	(existing: TStore | null, incoming: TStore): MergeResult<T[]> =>
 		mergeByKey(existing?.[field] as T[] | null, incoming[field] as T[], getKey);
 
+// A real rate-limit response (429, or 403 with x-ratelimit-remaining: 0) is
+// carried as retry_after_seconds so sync.ts records the reset time instead of
+// counting a generic failure — quota exhaustion must not trip the circuit
+// breaker (#163).
 export const formatFetchError = (platform: string, error: ProviderError): ProcessError => ({
 	kind: "fetch_failed",
 	message: `${platform} fetch failed: ${error.kind}`,
 	original_kind: error.kind,
+	...(error.kind === "rate_limited" ? { retry_after_seconds: error.retry_after } : {}),
 });

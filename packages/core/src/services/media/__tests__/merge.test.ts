@@ -112,4 +112,35 @@ describe("mergeByKey", () => {
 		expect(result.newCount).toBe(300);
 		expect(result.merged.length).toBe(1300);
 	});
+
+	describe("prefer incoming", () => {
+		test("re-fetched items replace their stored copy on key collision", () => {
+			const existing: Item[] = [
+				{ id: "a", value: 1 },
+				{ id: "b", value: 2 },
+			];
+			const incoming: Item[] = [
+				{ id: "b", value: 20 },
+				{ id: "c", value: 3 },
+			];
+			const result = mergeByKey(existing, incoming, getKey, { prefer: "incoming" });
+			expect(result.merged).toEqual([
+				{ id: "a", value: 1 },
+				{ id: "b", value: 20 },
+				{ id: "c", value: 3 },
+			]);
+			expect(result.newCount).toBe(1);
+		});
+
+		test("incoming items absent from existing are appended", () => {
+			const existing: Item[] = [{ id: "a", value: 1 }];
+			const incoming: Item[] = [{ id: "b", value: 2 }];
+			const result = mergeByKey(existing, incoming, getKey, { prefer: "incoming" });
+			expect(result.merged).toEqual([
+				{ id: "a", value: 1 },
+				{ id: "b", value: 2 },
+			]);
+			expect(result.newCount).toBe(1);
+		});
+	});
 });

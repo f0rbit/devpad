@@ -24,6 +24,10 @@ export const isCircuitOpen = (state: RateLimitState): boolean => {
 	return new Date() < state.circuit_open_until;
 };
 
+export const GITHUB_QUOTA_RESERVE_RATIO = 0.2;
+export const GITHUB_MIN_SYNC_INTERVAL_MINUTES = 30;
+export const GITHUB_DEFAULT_RATE_LIMIT = 5000;
+
 const isRateLimited = (state: RateLimitState): boolean => {
 	if (state.remaining === null) return false;
 	if (state.remaining > 0) return false;
@@ -31,9 +35,22 @@ const isRateLimited = (state: RateLimitState): boolean => {
 	return new Date() < state.reset_at;
 };
 
+// Quota reserve: the connected user's GitHub REST quota is shared with other
+// OAuth apps (#163) — stop syncing before it dips below the reserve and block
+// until reset_at so `gh`/CI keep their share.
+const isBelowQuotaReserve = (state: RateLimitState): boolean => {
+	if (state.remaining === null) return false;
+	const limit = state.limit_total ?? GITHUB_DEFAULT_RATE_LIMIT;
+	if (limit <= 0) return false;
+	if (state.remaining >= limit * GITHUB_QUOTA_RESERVE_RATIO) return false;
+	if (!state.reset_at) return false;
+	return new Date() < state.reset_at;
+};
+
 export const shouldFetch = (state: RateLimitState): boolean => {
 	if (isCircuitOpen(state)) return false;
 	if (isRateLimited(state)) return false;
+	if (isBelowQuotaReserve(state)) return false;
 	return true;
 };
 

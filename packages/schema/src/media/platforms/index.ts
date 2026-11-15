@@ -11,6 +11,10 @@ export {
 	GitHubRepoPRSchema,
 	type GitHubRepoPRsStore,
 	GitHubRepoPRsStoreSchema,
+	type GitHubRepoSyncState,
+	GitHubRepoSyncStateSchema,
+	type GitHubSyncState,
+	GitHubSyncStateSchema,
 } from "./github.js";
 
 export {
