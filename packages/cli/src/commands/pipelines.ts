@@ -218,6 +218,50 @@ const action_grants_deny =
 		spinner.succeed(`denied grant ${grant_id}`);
 	};
 
+type GrantsRequestOptions = {
+	package: string;
+	stage: string;
+	scope: string;
+	json?: boolean;
+	/** Orchestrator base URL. Default: $DEVPAD_PIPELINES_URL. */
+	orchestratorUrl?: string;
+	/** Bearer token. Default: $DEVPAD_PIPELINES_TOKEN. */
+	token?: string;
+};
+
+/**
+ * `grants request` — admin-only, direct-orchestrator HTTP (`POST /grants`
+ * is not proxied by the devpad main Worker, so the ApiClient path can't
+ * reach it). Creates a PENDING grant a human approves in the devpad web
+ * UI; the same (package, stage, scope) requested twice returns the
+ * existing row (200) instead of a duplicate.
+ */
+const action_grants_request =
+	() =>
+	async (options: GrantsRequestOptions): Promise<void> => {
+		const spinner = make_spinner("Requesting grant...").start();
+		if (options.stage !== "staging" && options.stage !== "production")
+			return fail_with(spinner, '--stage must be "staging" or "production"');
+
+		const http = resolve_orchestrator_http(options);
+		if (!http.ok) return fail_with(spinner, `grant request ${http.error}`);
+
+		const posted = await post_envelope<{ id: string; stage_name: string; scope: string; granted_at: string | null }>({
+			url: `${http.value.pipelines_url.replace(/\/$/, "")}/grants`,
+			headers: { authorization: `Bearer ${http.value.pipelines_token}`, "content-type": "application/json" },
+			body: JSON.stringify({ package_id: options.package, stage_name: options.stage, scope: options.scope }),
+		});
+		if (!posted.ok) return fail_with(spinner, `grant request failed: ${format_http_error(posted.error)}`);
+
+		const grant = posted.value;
+		const state = grant.granted_at === null ? chalk.yellow("pending") : chalk.green("granted");
+		if (options.json === true) console.log(JSON.stringify(grant));
+		else {
+			spinner.succeed(`grant ${grant.id} (${state})`);
+			console.log(`  ${chalk.bold(grant.id)}  ${grant.stage_name}  ${chalk.cyan(grant.scope)}  ${state}`);
+		}
+	};
+
 type ArtifactsUploadOptions = {
 	package: string;
 	/** Legacy single-file Worker bundle path. Mutually exclusive with `bundleDir`. */
@@ -1707,6 +1751,19 @@ export const register_pipelines_commands = (
 		)
 		.option("--reason <text>", "Optional denial reason")
 		.action(action_grants_deny(client_factory));
+
+	grants
+		.command("request")
+		.description(
+			"Request a new vault grant (admin-only, direct orchestrator via $DEVPAD_PIPELINES_URL/$DEVPAD_PIPELINES_TOKEN). Creates a PENDING grant a human approves in the devpad web UI; re-requesting the same (package, stage, scope) returns the existing grant.",
+		)
+		.requiredOption("--package <id>", "Package ID to request the grant for")
+		.requiredOption("--stage <name>", 'Stage the grant applies to ("staging" | "production")')
+		.requiredOption("--scope <scope>", 'Grant scope, e.g. "github:dispatch:owner/repo/deploy.yml"')
+		.option("--json", "Machine-readable JSON output instead of the human line")
+		.option("--orchestrator-url <url>", "Orchestrator base URL (default: $DEVPAD_PIPELINES_URL)")
+		.option("--token <token>", "Bearer token (default: $DEVPAD_PIPELINES_TOKEN)")
+		.action(action_grants_request);
 
 	const packages = pipelines
 		.command("packages")

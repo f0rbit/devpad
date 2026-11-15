@@ -41,7 +41,7 @@ import {
 	list_analysis_templates,
 	update_analysis_template,
 } from "@devpad/core/services/pipelines/analysis-templates";
-import { approve_grant, deny_grant, list_grants } from "@devpad/core/services/pipelines/grants";
+import { approve_grant, deny_grant, list_grants, request_grant } from "@devpad/core/services/pipelines/grants";
 import {
 	create_trust_policy,
 	delete_trust_policy,
@@ -121,6 +121,22 @@ export const grant_approve_body = z.object({});
 
 export const grant_deny_body = z.object({
 	reason: z.string().optional(),
+});
+
+/**
+ * `POST /grants` body (admin-only grant request, #155 onboarding).
+ * `stage_name` is restricted to the two literals `CALLER_ENV` can ever
+ * resolve to; `scope` mirrors the vault grant grammar — lowercase vendor
+ * prefix followed by colon-separated segments (e.g.
+ * `github:dispatch:owner/repo/deploy.yml`).
+ */
+export const create_grant_body = z.object({
+	package_id: z.string().min(1),
+	stage_name: z.enum(["staging", "production"]),
+	scope: z
+		.string()
+		.max(200)
+		.regex(/^[a-z0-9_-]+(:[A-Za-z0-9_./-]+)+$/, "scope must be colon-segmented, e.g. vendor:action[:detail]"),
 });
 
 export const create_package_body = z.object({
@@ -845,6 +861,48 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const grants_result = await list_grants(deps.db, package_id);
 		if (!grants_result.ok) return wire_err(grants_result.error);
 		return json_ok(grants_result.value);
+	});
+
+	// ─── POST /grants (admin-only grant request) ─────────────────────
+	//
+	// #155 onboarding: registering a NEW (package, stage, scope) grant
+	// starts as a PENDING row that a human approves in the devpad web UI
+	// via `POST /grants/:id/approve` (human-only, see below). Like
+	// `/oidc-trust`, this route requires the admin identity (literal
+	// `PIPELINES_TOKEN`) — a session JWT must never be able to mint
+	// itself broader vault access, and the devpad main-Worker proxy
+	// deliberately does NOT forward it (admin/ops surface only).
+	app.post("/grants", async (c) => {
+		const deps = c.get("deps");
+		const auth_result = await apply_auth(deps, c.req.raw);
+		if (auth_result instanceof Response) return auth_result;
+		if (auth_result.identity.kind !== "admin")
+			return wire_err({ code: "forbidden", message: "grant requests require admin auth" }, 403);
+
+		const body = await c.req.json().catch(() => null);
+		const parsed = create_grant_body.safeParse(body);
+		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
+		const { package_id, stage_name, scope } = parsed.data;
+
+		const package_rows = await deps.db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
+		if (first_row(package_rows) === undefined)
+			return wire_err({ code: "not_found", resource: "pipeline_package", id: package_id });
+
+		// Idempotent: an existing grant for the same (package, stage,
+		// scope) is returned as-is (200) instead of inserting a duplicate
+		// row — `pipeline_grant` has no unique key on that triple, so the
+		// check is code-level.
+		const existing = await list_grants(deps.db, package_id);
+		if (!existing.ok) return wire_err(existing.error);
+		const duplicate = existing.value.find((g) => g.stage_name === stage_name && g.scope === scope);
+		if (duplicate !== undefined) return json_ok(duplicate);
+
+		const created = await request_grant(deps.db, package_id, stage_name, scope);
+		if (!created.ok) return wire_err(created.error);
+		return new Response(JSON.stringify({ ok: true, value: created.value }), {
+			status: 201,
+			headers: { "content-type": "application/json" },
+		});
 	});
 
 	app.post("/grants/:id/approve", async (c) => {
