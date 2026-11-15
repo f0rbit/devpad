@@ -623,7 +623,8 @@ const processGitHubRefresh = async (
 ): Promise<RefreshSingleResult> => {
 	const backgroundTask: BackgroundTask = async () => {
 		try {
-			const snapshot = await processAccount(ctx, account);
+			// Manual refresh bypasses the fetch interval (user intent); quota gates stay active.
+			const snapshot = await processAccount(ctx, account, { force: true });
 			if (snapshot) {
 				const allUserAccounts = await fetchActiveAccountsForUser(ctx.db, userId);
 				await regenerateTimeline(ctx, userId, allUserAccounts);

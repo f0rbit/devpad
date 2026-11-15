@@ -266,6 +266,9 @@ export const store = {
 };
 
 export {
+	GITHUB_MIN_SYNC_INTERVAL_MINUTES,
+	GITHUB_DEFAULT_RATE_LIMIT,
+	GITHUB_QUOTA_RESERVE_RATIO,
 	initialState,
 	isCircuitOpen,
 	type RateLimitState,

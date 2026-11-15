@@ -23,7 +23,7 @@ import { GitHubProvider, normalizeBluesky, normalizeDevpad, normalizeYouTube } f
 import { RedditProvider } from "./platforms/reddit";
 import { TwitterProvider } from "./platforms/twitter";
 import type { ProviderError } from "./platforms/types";
-import { type RateLimitState, type RawData, shouldFetch, store } from "./storage";
+import { GITHUB_MIN_SYNC_INTERVAL_MINUTES, type RateLimitState, type RawData, shouldFetch, store } from "./storage";
 import { timeline as tl } from "./timeline";
 import { secrets, uuid } from "./utils";
 
@@ -57,11 +57,19 @@ export type PlatformGroups = {
 export type PlatformProcessResult = {
 	meta_version: string;
 	stats: Record<string, unknown>;
+	rate_limit?: SyncRateLimitSnapshot;
+};
+
+export type SyncRateLimitSnapshot = {
+	remaining: number | null;
+	limit_total: number | null;
+	reset_at: string | null;
 };
 
 export type ProcessingError = {
 	kind: string;
 	message?: string;
+	retry_after_seconds?: number;
 };
 
 export type CronProcessor = {
@@ -78,10 +86,11 @@ export type CronProcessor = {
 
 type PlatformCapabilities = {
 	fetchIntervalDays?: number;
+	fetchIntervalMinutes?: number;
 };
 
 const PLATFORM_CAPABILITIES: Record<Platform, PlatformCapabilities> = {
-	github: {},
+	github: { fetchIntervalMinutes: GITHUB_MIN_SYNC_INTERVAL_MINUTES },
 	reddit: {},
 	twitter: { fetchIntervalDays: 3 },
 	bluesky: {},
@@ -101,6 +110,7 @@ const logAccount = createLogger("sync:account");
 
 type RateLimitRow = {
 	remaining: number | null;
+	limit_total: number | null;
 	reset_at: string | null;
 	consecutive_failures: number | null;
 	circuit_open_until: string | null;
@@ -108,19 +118,24 @@ type RateLimitRow = {
 
 const parseDate = (iso: string | null): Date | null => (iso ? new Date(iso) : null);
 
+const toMilliseconds = (capabilities: PlatformCapabilities): number | null => {
+	if (capabilities.fetchIntervalDays !== undefined) return capabilities.fetchIntervalDays * 24 * 60 * 60 * 1000;
+	if (capabilities.fetchIntervalMinutes !== undefined) return capabilities.fetchIntervalMinutes * 60 * 1000;
+	return null;
+};
+
 export const shouldFetchForPlatform = (platform: Platform, lastFetchedAt: string | null): boolean => {
-	const capabilities = getPlatformCapabilities(platform);
-	if (!capabilities.fetchIntervalDays) return true;
+	const intervalMs = toMilliseconds(getPlatformCapabilities(platform));
+	if (intervalMs === null) return true;
 	if (!lastFetchedAt) return true;
 	const lastFetch = new Date(lastFetchedAt);
 	const now = new Date();
-	const daysSinceLastFetch = (now.getTime() - lastFetch.getTime()) / (1000 * 60 * 60 * 24);
-	return daysSinceLastFetch >= capabilities.fetchIntervalDays;
+	return now.getTime() - lastFetch.getTime() >= intervalMs;
 };
 
 const toRateLimitState = (row: RateLimitRow | null): RateLimitState => ({
 	remaining: row?.remaining ?? null,
-	limit_total: null,
+	limit_total: row?.limit_total ?? null,
 	reset_at: parseDate(row?.reset_at ?? null),
 	consecutive_failures: row?.consecutive_failures ?? 0,
 	last_failure_at: null,
@@ -191,22 +206,68 @@ export const recordFailure = async (db: Database, accountId: string): Promise<vo
 		});
 };
 
-export const recordSuccess = async (db: Database, accountId: string): Promise<void> => {
+// A real rate-limit response (429 / 403 with remaining 0): record remaining=0
+// and the reset time so shouldFetch blocks until reset — WITHOUT incrementing
+// consecutive_failures, since shared-quota exhaustion isn't the account's fault
+// and must not open the circuit breaker (#163).
+export const recordRateLimited = async (db: Database, accountId: string, retryAfterSeconds: number): Promise<void> => {
 	const now = new Date().toISOString();
+	const reset_at = new Date(Date.now() + retryAfterSeconds * 1000).toISOString();
+	await db
+		.insert(rateLimits)
+		.values({
+			id: uuid(),
+			account_id: accountId,
+			remaining: 0,
+			reset_at,
+			last_failure_at: now,
+			updated_at: now,
+		})
+		.onConflictDoUpdate({
+			target: rateLimits.account_id,
+			set: {
+				remaining: 0,
+				reset_at,
+				last_failure_at: now,
+				updated_at: now,
+			},
+		});
+};
+
+type SuccessRateLimit = {
+	remaining: number | null;
+	limit_total: number | null;
+	reset_at: string | null;
+};
+
+export const recordSuccess = async (db: Database, accountId: string, rate_limit?: SuccessRateLimit): Promise<void> => {
+	const now = new Date().toISOString();
+	const base_set = {
+		consecutive_failures: 0,
+		updated_at: now,
+	};
+	const rate_limit_set = rate_limit
+		? {
+				remaining: rate_limit.remaining,
+				limit_total: rate_limit.limit_total,
+				reset_at: rate_limit.reset_at,
+			}
+		: {};
+
 	await db
 		.insert(rateLimits)
 		.values({
 			id: uuid(),
 			account_id: accountId,
 			consecutive_failures: 0,
+			remaining: rate_limit?.remaining ?? null,
+			limit_total: rate_limit?.limit_total ?? null,
+			reset_at: rate_limit?.reset_at ?? null,
 			updated_at: now,
 		})
 		.onConflictDoUpdate({
 			target: rateLimits.account_id,
-			set: {
-				consecutive_failures: 0,
-				updated_at: now,
-			},
+			set: { ...base_set, ...rate_limit_set },
 		});
 	await db.update(accounts).set({ last_fetched_at: now, updated_at: now }).where(eq(accounts.id, accountId));
 };
@@ -252,9 +313,13 @@ const processPlatformAccountWithProcessor = async (
 		})
 		.tap_err(async (e) => {
 			logAccount.error("Processing failed", { platform, account_id: account.id, error: e });
-			await recordFailure(ctx.db, account.id);
+			if (e.retry_after_seconds !== undefined) {
+				await recordRateLimited(ctx.db, account.id, e.retry_after_seconds);
+			} else {
+				await recordFailure(ctx.db, account.id);
+			}
 		})
-		.tap(() => recordSuccess(ctx.db, account.id))
+		.tap((result) => recordSuccess(ctx.db, account.id, result.rate_limit))
 		.map(
 			(result): RawSnapshot => ({
 				account_id: account.id,
@@ -304,10 +369,21 @@ const processGenericAccount = async (ctx: AppContext, account: AccountWithUser):
 		.unwrap_or(null as unknown as RawSnapshot)
 		.then((r) => r as RawSnapshot | null);
 
-export const processAccount = async (ctx: AppContext, account: AccountWithUser): Promise<RawSnapshot | null> => {
+export type ProcessAccountOptions = {
+	// Bypasses the platform fetch interval (manual single-account refresh).
+	// The quota-reserve / rate-limit gates always stay active.
+	force?: boolean;
+};
+
+export const processAccount = async (
+	ctx: AppContext,
+	account: AccountWithUser,
+	options: ProcessAccountOptions = {},
+): Promise<RawSnapshot | null> => {
 	const rateLimitRow = await ctx.db
 		.select({
 			remaining: rateLimits.remaining,
+			limit_total: rateLimits.limit_total,
 			reset_at: rateLimits.reset_at,
 			consecutive_failures: rateLimits.consecutive_failures,
 			circuit_open_until: rateLimits.circuit_open_until,
@@ -324,6 +400,9 @@ export const processAccount = async (ctx: AppContext, account: AccountWithUser):
 
 	switch (platform) {
 		case "github": {
+			if (!options.force && !shouldFetchForPlatform("github", account.last_fetched_at ?? null)) {
+				return null;
+			}
 			const provider = ctx.gitHubProvider ?? new GitHubProvider();
 			const processor: CronProcessor = {
 				shouldFetch: () => true,
@@ -343,7 +422,7 @@ export const processAccount = async (ctx: AppContext, account: AccountWithUser):
 			return processPlatformAccountWithProcessor(ctx, account, processor, platform);
 		}
 		case "twitter": {
-			if (!shouldFetchForPlatform("twitter", account.last_fetched_at ?? null)) {
+			if (!options.force && !shouldFetchForPlatform("twitter", account.last_fetched_at ?? null)) {
 				return null;
 			}
 			const provider = ctx.twitterProvider ?? new TwitterProvider();

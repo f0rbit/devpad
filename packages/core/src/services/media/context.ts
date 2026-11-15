@@ -1,14 +1,14 @@
 import type { Result } from "@f0rbit/corpus";
 import type { Backend } from "@f0rbit/corpus/cloudflare";
 import type { Database } from "./db";
-import type { GitHubFetchResult } from "./platforms/github";
+import type { GitHubFetchInput, GitHubFetchResult } from "./platforms/github";
 import type { TwitterFetchResult } from "./platforms/twitter";
 import type { ProviderError, ProviderFactory } from "./platforms/types";
 
 export type DrizzleDB = Database;
 
 export type GitHubProviderLike = {
-	fetch(token: string): Promise<Result<GitHubFetchResult, ProviderError>>;
+	fetch(token: string, input?: GitHubFetchInput): Promise<Result<GitHubFetchResult, ProviderError>>;
 };
 
 export type TwitterProviderLike = {

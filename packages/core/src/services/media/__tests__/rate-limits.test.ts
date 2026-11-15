@@ -110,10 +110,19 @@ describe("rate-limits", () => {
 			expect(shouldFetch(state)).toBe(true);
 		});
 
-		test("returns true when remaining > 0", () => {
+		test("returns false when remaining > 0 but below the quota reserve", () => {
 			const state: RateLimitState = {
 				...initialState(),
 				remaining: 10,
+				reset_at: new Date(Date.now() + 60_000),
+			};
+			expect(shouldFetch(state)).toBe(false);
+		});
+
+		test("returns true when remaining is above the quota reserve", () => {
+			const state: RateLimitState = {
+				...initialState(),
+				remaining: 2000,
 				reset_at: new Date(Date.now() + 60_000),
 			};
 			expect(shouldFetch(state)).toBe(true);

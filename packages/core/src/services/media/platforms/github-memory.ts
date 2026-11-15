@@ -34,10 +34,16 @@ export class GitHubMemoryProvider extends BaseMemoryProvider<GitHubFetchResult> 
 			repos_fetched: repos.length,
 			fetched_at: new Date().toISOString(),
 		};
+		const repoData =
+			this.config.repoData ?? new Map<string, { commits: GitHubRepoCommitsStore; prs: GitHubRepoPRsStore }>();
 
 		return {
 			meta,
-			repos: this.config.repoData ?? new Map(),
+			repos: repoData,
+			completed: Array.from(repoData.keys()),
+			skipped: [],
+			rate_limit: { remaining: null, limit_total: null, reset_at: null },
+			stopped_early: null,
 		};
 	}
 

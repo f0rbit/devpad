@@ -1,9 +1,15 @@
-import type { GitHubMetaStore, GitHubRepoCommitsStore, GitHubRepoPRsStore } from "@devpad/schema/media";
+import type {
+	GitHubMetaStore,
+	GitHubRepoCommitsStore,
+	GitHubRepoPRsStore,
+	GitHubRepoSyncState,
+	GitHubSyncState,
+} from "@devpad/schema/media";
 import type { Backend } from "@f0rbit/corpus";
 import { err, ok, pipe, type Result, to_nullable } from "@f0rbit/corpus";
 import { createLogger } from "../../../../utils/logger";
 import { mergeByKey } from "../../merge";
-import type { GitHubFetchResult } from "../../platforms/github";
+import type { GitHubFetchInput, GitHubFetchResult, GitHubRateLimitSnapshot } from "../../platforms/github";
 import type { ProviderError } from "../../platforms/types";
 import { store } from "../../storage";
 import { formatFetchError, storeMeta as genericStoreMeta, type ProcessError } from "../platform-processor";
@@ -15,12 +21,15 @@ export type GitHubProcessResult = {
 	meta_version: string;
 	commit_stores: Array<{ owner: string; repo: string; version: string }>;
 	pr_stores: Array<{ owner: string; repo: string; version: string }>;
+	rate_limit: GitHubRateLimitSnapshot;
 	stats: {
 		repos_processed: number;
+		repos_skipped: number;
 		total_commits: number;
 		total_prs: number;
 		new_commits: number;
 		new_prs: number;
+		stopped_early: "quota_reserve" | "rate_limited" | null;
 	};
 };
 
@@ -42,12 +51,17 @@ const mergeCommits = (
 	};
 };
 
+// prefer: "incoming" — a PR re-fetched this run (state/title/commits changed)
+// must replace its stored copy, not lose to the stale one.
 const mergePRs = (
 	existing: GitHubRepoPRsStore | null,
 	incoming: GitHubRepoPRsStore,
 ): { merged: GitHubRepoPRsStore; newCount: number } => {
-	const { merged: pull_requests, newCount } = mergeByKey(existing?.pull_requests, incoming.pull_requests, (pr) =>
-		String(pr.number),
+	const { merged: pull_requests, newCount } = mergeByKey(
+		existing?.pull_requests,
+		incoming.pull_requests,
+		(pr) => String(pr.number),
+		{ prefer: "incoming" },
 	);
 	return {
 		merged: {
@@ -62,7 +76,7 @@ const mergePRs = (
 };
 
 type GitHubProvider = {
-	fetch(token: string): Promise<Result<GitHubFetchResult, ProviderError>>;
+	fetch(token: string, input?: GitHubFetchInput): Promise<Result<GitHubFetchResult, ProviderError>>;
 };
 
 type RepoStoreStats = { owner: string; repo: string; version: string; newCount: number; total: number };
@@ -73,6 +87,42 @@ const defaultRepoStats = (owner: string, repo: string): RepoStoreStats => ({
 	newCount: 0,
 	total: 0,
 });
+
+type PrevSyncState = { meta: GitHubMetaStore | null; sync_state: GitHubSyncState | null };
+
+const loadPrevState = async (backend: Backend, accountId: string): Promise<PrevSyncState> => {
+	const metaResult = store.github.meta(backend, accountId);
+	if (!metaResult.ok) return { meta: null, sync_state: null };
+
+	const latest = to_nullable(await metaResult.value.store.get_latest());
+	const meta = latest?.data ?? null;
+	return { meta, sync_state: meta?.sync_state ?? null };
+};
+
+// Repos fully fetched this run advance to the freshly-observed pushed_at;
+// everything else (unchanged, over the per-run cap, quota-stopped, or partially
+// failed) keeps its previous state so the next run picks it up.
+const buildSyncState = (
+	meta: GitHubMetaStore,
+	completed: string[],
+	prevState: GitHubSyncState | null,
+): GitHubSyncState => {
+	const now = new Date().toISOString();
+	const completedSet = new Set(completed);
+	const prevRepos: Partial<Record<string, GitHubRepoSyncState>> = prevState?.repos ?? {};
+
+	const repos: GitHubSyncState["repos"] = {};
+	for (const repo of meta.repositories) {
+		const prev = prevRepos[repo.full_name];
+		if (completedSet.has(repo.full_name)) {
+			repos[repo.full_name] = { pushed_at: repo.pushed_at, synced_at: now };
+		} else if (prev) {
+			repos[repo.full_name] = prev;
+		}
+	}
+
+	return { repos, updated_at: now };
+};
 
 const storeMeta = (backend: Backend, accountId: string, meta: GitHubMetaStore): Promise<string> =>
 	genericStoreMeta(backend, accountId, store.github.meta, meta);
@@ -131,12 +181,19 @@ export async function processGitHubAccount(
 ): Promise<Result<GitHubProcessResult, ProcessError>> {
 	log.info("Processing account", { account_id: accountId });
 
-	const fetchResult = await provider.fetch(token);
+	const prevState = await loadPrevState(backend, accountId);
+	const fetchInput: GitHubFetchInput = { sync_state: prevState.sync_state, previous_meta: prevState.meta };
+
+	const fetchResult = await provider.fetch(token, fetchInput);
 	if (!fetchResult.ok) {
 		return err(formatFetchError("GitHub", fetchResult.error));
 	}
 
-	const { meta, repos } = fetchResult.value;
+	const { meta: freshMeta, repos, completed, skipped, rate_limit, stopped_early } = fetchResult.value;
+	const meta: GitHubMetaStore = {
+		...freshMeta,
+		sync_state: buildSyncState(freshMeta, completed, prevState.sync_state),
+	};
 	const metaVersion = await storeMeta(backend, accountId, meta);
 
 	const commitStores: Array<{ owner: string; repo: string; version: string }> = [];
@@ -168,10 +225,12 @@ export async function processGitHubAccount(
 	log.info("Processing complete", {
 		account_id: accountId,
 		repos: repos.size,
+		skipped: skipped.length,
 		total_commits: totalCommits,
 		new_commits: newCommits,
 		total_prs: totalPRs,
 		new_prs: newPRs,
+		stopped_early,
 	});
 
 	return ok({
@@ -179,12 +238,15 @@ export async function processGitHubAccount(
 		meta_version: metaVersion,
 		commit_stores: commitStores,
 		pr_stores: prStores,
+		rate_limit,
 		stats: {
 			repos_processed: repos.size,
+			repos_skipped: skipped.length,
 			total_commits: totalCommits,
 			total_prs: totalPRs,
 			new_commits: newCommits,
 			new_prs: newPRs,
+			stopped_early,
 		},
 	});
 }
