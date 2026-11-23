@@ -11,14 +11,16 @@
  * the worker proxy enforces `auth_channel === "user"` server-side anyway).
  * On success the page reloads to show the resulting state.
  *
- * Deps: unreachable orchestrator / non-dispatch runs render nothing —
- * the page-level degraded banner owns that failure surface.
+ * Deps: unreachable orchestrator surfaces the fetch error in the panel;
+ * non-dispatch runs render the empty state — the page-level degraded banner
+ * owns the total-failure surface.
  */
 
 import type { PipelineDispatchEntry, PipelineDispatches } from "@devpad/api";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import { Badge, Button, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 import { short_sha } from "@/utils/pipeline-external";
 
 type DispatchStatusPanelProps = {
@@ -34,6 +36,14 @@ const status_variant = (status: PipelineDispatchEntry["status"]): BadgeVariant =
 };
 
 export default function DispatchStatusPanel(props: DispatchStatusPanelProps) {
+	return (
+		<IslandBoundary component="DispatchStatusPanel" run_id={props.run_id}>
+			<DispatchStatusPanelContent {...props} />
+		</IslandBoundary>
+	);
+}
+
+const DispatchStatusPanelContent = (props: DispatchStatusPanelProps) => {
 	const [result, setResult] = createSignal<PipelineDispatches | null>(null);
 	const [loading, setLoading] = createSignal(true);
 	const [redispatching, setRedispatching] = createSignal(false);
@@ -43,7 +53,10 @@ export default function DispatchStatusPanel(props: DispatchStatusPanelProps) {
 		const client = getBrowserClient();
 		const outcome = await client.pipelines.dispatches(props.run_id);
 		setLoading(false);
-		if (!outcome.ok) return;
+		if (!outcome.ok) {
+			setError(outcome.error.message);
+			return;
+		}
 		setResult(outcome.value);
 	};
 
@@ -116,4 +129,4 @@ export default function DispatchStatusPanel(props: DispatchStatusPanelProps) {
 			</Show>
 		</div>
 	);
-}
+};

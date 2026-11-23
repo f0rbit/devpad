@@ -2,6 +2,8 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineRun } from "@devpad/schema";
 import { Button } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import IslandBoundary, { report_island_error } from "@/components/solid/pipelines/island-boundary";
+import { GATE_READ_ERROR, gate_for_stage, read_gates, target_stage_of } from "@/utils/pipeline-plan";
 
 type StageGateProps = {
 	run: PipelineRun;
@@ -9,51 +11,41 @@ type StageGateProps = {
 	external?: { repo: string; workflow: string } | null;
 };
 
-type RunGate = {
-	type?: string;
-	verdict?: string | null;
-};
-
-export default function StageGate(props: StageGateProps) {
+const StageGateContent = (props: StageGateProps) => {
 	const [loading, setLoading] = createSignal<"approve" | "deny" | null>(null);
 	const [error, setError] = createSignal<string | null>(null);
 	const [showReason, setShowReason] = createSignal(false);
 	const [reason, setReason] = createSignal("");
 
-	const gate_config = (() => {
-		try {
-			const raw: unknown = JSON.parse(props.run.resolved_gates as string);
-			const gates = raw as Record<string, RunGate> | null;
-			if (!props.run.current_stage || !gates) return null;
+	// `resolved_gates` is an already-parsed object on the wire (drizzle
+	// `mode: "json"`). Never JSON.parse it — that throw, swallowed by a
+	// silent catch, is why Approve/Deny never rendered for
+	// `awaiting_approval` runs. A read failure is reported once and
+	// rendered inline, never swallowed.
+	const gates_read = read_gates(props.run.resolved_gates);
+	if (!gates_read.ok) {
+		report_island_error(
+			{ component: "StageGate", run_id: props.run.id, package_id: props.run.package_id },
+			new Error(`resolved_gates read failed: ${gates_read.reason}`),
+		);
+	}
 
-			for (const [key, gate] of Object.entries(gates)) {
-				if (key.includes(props.run.current_stage)) {
-					return { key, gate };
-				}
-			}
-			return null;
-		} catch {
-			return null;
-		}
-	})();
-
-	const gate_type = (() => {
-		if (!gate_config) return null;
-		return gate_config.gate.type || "unknown";
-	})();
-
-	const gate_verdict = (() => {
-		if (!gate_config) return null;
-		return gate_config.gate.verdict || null;
-	})();
+	const gate_config = () => {
+		if (!gates_read.ok || props.run.current_stage === null) return null;
+		return gate_for_stage(gates_read.value, props.run.current_stage);
+	};
+	const gate_type = () => gate_config()?.gate.type ?? null;
+	const gate_verdict = () => gate_config()?.gate.verdict ?? null;
 
 	const show_actions = () =>
-		props.run.status === "awaiting_approval" && gate_type() === "manual" && !gate_verdict() && !!gate_config;
+		props.run.status === "awaiting_approval" &&
+		gate_type() === "manual" &&
+		gate_verdict() === null &&
+		gate_config() !== null;
 
 	const target_stage_name = () => {
-		if (!gate_config) return null;
-		const parts = gate_config.key.split("→");
-		return parts[1] ?? null;
+		const config = gate_config();
+		return config ? target_stage_of(config.key) : null;
 	};
 
 	const submit_decision = async (decision: "approved" | "denied") => {
@@ -86,10 +78,20 @@ export default function StageGate(props: StageGateProps) {
 	return (
 		<div class="stack stack-md">
 			<div class="card card-flat stack stack-md">
-				<Show
-					when={gate_config}
-					fallback={<div class="text-sm text-muted">No gate configured for this stage transition.</div>}
-				>
+				<Show when={!gates_read.ok}>
+					<div
+						data-testid="stage-gate-read-error"
+						role="alert"
+						class="text-sm"
+						style={{ color: "var(--error, var(--item-red))" }}
+					>
+						{GATE_READ_ERROR}
+					</div>
+				</Show>
+				<Show when={gates_read.ok && gate_config() === null}>
+					<div class="text-sm text-muted">No gate configured for this stage transition.</div>
+				</Show>
+				<Show when={gate_config()}>
 					<div class="stack stack-sm">
 						<div class="row row-between">
 							<span class="text-sm text-faint">Gate Type</span>
@@ -247,5 +249,13 @@ export default function StageGate(props: StageGateProps) {
 				</div>
 			</Show>
 		</div>
+	);
+};
+
+export default function StageGate(props: StageGateProps) {
+	return (
+		<IslandBoundary component="StageGate" run_id={props.run.id} package_id={props.run.package_id}>
+			<StageGateContent {...props} />
+		</IslandBoundary>
 	);
 }

@@ -31,6 +31,15 @@ const { client, project } = guard;
 // Genuine not-found / not-owned stay 404.
 const run_result = await client.pipelines.get(run_id);
 const unreachable = !run_result.ok && run_result.error.status_code === 503;
+if (!run_result.ok) {
+	// The degraded banner below is the user surface; log the underlying
+	// cause (with the run id) so silent degradation is observable in CF
+	// Workers Logs — a truncated page stream has no status-code signal,
+	// which is how the stage-gate bug class escaped detection.
+	console.error(
+		`[run-detail] run ${run_id} fetch failed (${run_result.error.code ?? run_result.error.status_code ?? "unknown"}): ${run_result.error.message}`,
+	);
+}
 if (!run_result.ok && !unreachable) return rethrow(run_result.error);
 const run = run_result.ok ? run_result.value : null;
 let run_package: PipelinePackage | null = null;
@@ -50,6 +59,9 @@ if (run) {
 // is untrusted on read.
 const pkg: PipelinePackage | null = run ? run_package : null;
 const external_target = pkg && pkg.deploy_mode === "external" ? parse_external_target(pkg.external_target) : null;
+if (pkg && pkg.deploy_mode === "external" && external_target === null) {
+	console.error(`[run-detail] run ${run_id}: external package ${pkg.id} has an unparseable external_target`);
+}
 const repo = external_target?.repo ?? github_repo_from_url(pkg?.repo_url) ?? null;
 const commit_url = run && run.commit_sha && repo ? github_commit_url(repo, run.commit_sha) : null;
 
