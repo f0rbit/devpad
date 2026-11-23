@@ -177,13 +177,15 @@ Workload Workers (scaffolded packages such as `anthropic-search`, `anthropic-sum
 | Vault        | `vault`            | (RPC-only, no public URL)                                             | yes       |
 | Pulse        | `pulse-api`        | `https://pulse-api.dev-818.workers.dev` (custom `pulse.devpad.tools`) | yes       |
 
-Deploy via Alchemy from the **devpad repo root**:
+Deploy with the dedicated verb (run it from the main checkout — NOT a linked worktree; the script resolves the primary worktree itself, so invoking it from anywhere inside the repo is safe):
 
 ```
-ALCHEMY_CI_STATE_STORE_CHECK=false bunx alchemy deploy ./packages/pipelines/infra.ts --stage production --env-file ./.env --profile default
+bun run deploy:orchestrator [--ref <git-ref-or-sha>]
 ```
 
-The orchestrator deploys with `--stage production` only. The `--stage staging` path was removed in Phase 13.C — `infra.ts` no longer branches on the stage; it always binds the production D1 + R2. The deploy adopts (never creates) the existing `devpad-unified-db` D1 and `devpad-corpus` R2 bucket shared with the main `devpad-unified` Worker.
+Default ref is `origin/main`; `--dry-run` prints the full plan (root, state dir, resolved SHA, steps) without deploying. The orchestrator deploys with `--stage production` only. The `--stage staging` path was removed in Phase 13.C — `infra.ts` no longer branches on the stage; it always binds the production D1 + R2. The deploy adopts (never creates) the existing `devpad-unified-db` D1 and `devpad-corpus` R2 bucket shared with the main `devpad-unified` Worker.
+
+- **State-sync rule (`scripts/deploy-orchestrator.ts`, `bun run deploy:orchestrator`)**: the MAIN checkout's `.alchemy/` is the ONLY Alchemy state. Never deploy from a linked worktree with a hand-rolled `bunx alchemy deploy` — recent deploys did exactly that, never copied `.alchemy` back, and the main state froze at 2026-05-17, so every deploy re-created `CF_API_TOKEN`/`OIDC_SESSION_SIGNING_KEY`. The script makes it impossible to get wrong: preflight (main `.env` has non-empty `CF_API_TOKEN`/`PIPELINES_TOKEN`/`OIDC_SESSION_SIGNING_KEY` — values never printed; `.alchemy/devpad-pipelines/production` exists — deploying with no state re-creates/adopts every resource, so it refuses; `--ref` resolved to a SHA after `git fetch`), then a detached temp worktree at that SHA with `.alchemy` copied in, `bun install --frozen-lockfile`, `@devpad/schema` build, and the alchemy deploy run with `--env-file <main>/.env --profile default` (output teed to a log file under the OS temp dir AND stdout). ALWAYS — via try/finally, success or failure — the main `.alchemy` is backed up to `.alchemy.bak-<timestamp>` (last 3 kept, older deleted), the worktree's state is copied back over it, and the worktree is removed; if the copy-back itself fails, the worktree is deliberately KEPT (it holds the only copy of the new state) and the error says so. After a green deploy it verifies via the CF API that all eight required bindings (`CF_API_TOKEN`, `PIPELINES_TOKEN`, `OIDC_SESSION_SIGNING_KEY`, `OIDC_EXPECTED_AUDIENCE`, `GITHUB`, `DB`, `CORPUS_BUCKET`, `PIPELINE_RUNS`) exist, that unauthenticated `POST /runs/x/cancel` → 401, and that `GET /health` → 200 — exiting non-zero on any failure. Because the state was frozen at 2026-05-17 before this fix, the FIRST script run adopts/re-creates the Secrets once — expected, not an incident.
 
 ### Deploy gotchas (carry-over from vault)
 

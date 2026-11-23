@@ -333,7 +333,17 @@ export default define_lint_config({
 			// packages/pipelines/scripts/pulse-roundtrip-check.ts (`bun run
 			// pipelines:pulse-check`, #158) is the same class: a user-facing
 			// ops check script whose stdout/stderr IS the report.
-			files: ["scripts/build-unified.ts", "scripts/d1-migration-check.ts", "packages/pipelines/scripts/**"],
+			// scripts/d1-migration-check.ts (`bun run db:migration-check`) and
+			// scripts/deploy-orchestrator.ts (`bun run deploy:orchestrator`)
+			// are the same class again -- local ops scripts whose stdout IS
+			// their report (PASS/FAIL lines, deploy log path, verification
+			// summary).
+			files: [
+				"scripts/build-unified.ts",
+				"scripts/d1-migration-check.ts",
+				"scripts/deploy-orchestrator.ts",
+				"packages/pipelines/scripts/**",
+			],
 			rules: {
 				"no-console": "off",
 			},
