@@ -6,8 +6,8 @@
  * mismatch, and DO-tick gating by event kind.
  *
  * Substrate: bun:sqlite + migrate (via `create_test_db`), an in-memory
- * pulse capturer, and an in-memory DO router that records each `/advance`
- * call so we can assert the tick contract without spinning up a real DO.
+ * pulse capturer, and an in-memory DO router that records each tick call
+ * so we can assert the tick contract without spinning up a real DO.
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
@@ -30,9 +30,18 @@ class CapturingPulseEmitter implements EventPulseEmitter {
 
 class RecordingDoRouter implements EventDoRouter {
 	public calls: Array<{ run_id: string; path: string; body: unknown }> = [];
+	/** Outcome body the next tick fetch returns; settable per-test. */
+	public next_value: unknown = { acted: true, output: {} };
+	public next_status = 200;
+	/** When set, the next tick fetch throws instead of responding. */
+	public next_error: Error | null = null;
+
 	async fetch(run_id: string, path: string, body: unknown): Promise<Response> {
 		this.calls.push({ run_id, path, body });
-		return new Response(JSON.stringify({ ok: true, value: {} }), { status: 200 });
+		if (this.next_error !== null) throw this.next_error;
+		const failed = this.next_status >= 400;
+		const envelope = failed ? { ok: false, error: this.next_value } : { ok: true, value: this.next_value };
+		return new Response(JSON.stringify(envelope), { status: this.next_status });
 	}
 }
 
@@ -250,11 +259,7 @@ describe("ingest_event — DO tick gating", () => {
 	});
 
 	test("deploy_completed ticks the DO with /external-event + stage + payload", async () => {
-		await ingest_event(h.deps, base_input({ kind: "deploy_completed" }));
-		// Pulse emit + DO tick are fire-and-forget — give the event loop a
-		// chance to flush before asserting.
-		await Promise.resolve();
-		await Promise.resolve();
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "deploy_completed" })));
 		expect(h.do_router.calls).toHaveLength(1);
 		expect(h.do_router.calls[0]!.path).toBe("/external-event");
 		expect(h.do_router.calls[0]!.run_id).toBe(SEEDED_RUN_ID);
@@ -264,30 +269,80 @@ describe("ingest_event — DO tick gating", () => {
 			stage_name: "staging",
 			payload: { detail: "hi" },
 		});
+		// The tick is awaited and its outcome surfaces in the result.
+		expect(out.tick).toBe("applied");
 	});
 
 	test("gate_verdict ticks the DO", async () => {
-		await ingest_event(h.deps, base_input({ kind: "gate_verdict" }));
-		await Promise.resolve();
-		await Promise.resolve();
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "gate_verdict" })));
 		expect(h.do_router.calls).toHaveLength(1);
 		expect((h.do_router.calls[0]!.body as { event_kind: string }).event_kind).toBe("gate_verdict");
+		expect(out.tick).toBe("applied");
 	});
 
 	test("rollback_completed ticks the DO", async () => {
-		await ingest_event(h.deps, base_input({ kind: "rollback_completed" }));
-		await Promise.resolve();
-		await Promise.resolve();
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "rollback_completed" })));
 		expect(h.do_router.calls).toHaveLength(1);
 		expect((h.do_router.calls[0]!.body as { event_kind: string }).event_kind).toBe("rollback_completed");
+		expect(out.tick).toBe("applied");
 	});
 
 	test("deploy_failed ticks the DO", async () => {
-		await ingest_event(h.deps, base_input({ kind: "deploy_failed" }));
-		await Promise.resolve();
-		await Promise.resolve();
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "deploy_failed" })));
 		expect(h.do_router.calls).toHaveLength(1);
 		expect((h.do_router.calls[0]!.body as { event_kind: string }).event_kind).toBe("deploy_failed");
+		expect(out.tick).toBe("applied");
+	});
+});
+
+describe("ingest_event — awaited tick outcomes", () => {
+	let h: Harness;
+	beforeEach(async () => {
+		h = await build_harness();
+	});
+
+	test("informational events report skipped:informational without touching the DO", async () => {
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "warning" })));
+		expect(out.tick).toBe("skipped:informational");
+		expect(h.do_router.calls).toHaveLength(0);
+	});
+
+	test("idempotent replay reports skipped:duplicated and does NOT re-tick", async () => {
+		const input = base_input({ kind: "deploy_completed" });
+		expect_ok(await ingest_event(h.deps, input));
+		expect(h.do_router.calls).toHaveLength(1);
+		const second = expect_ok(await ingest_event(h.deps, input));
+		expect(second.duplicated).toBe(true);
+		expect(second.tick).toBe("skipped:duplicated");
+		expect(h.do_router.calls).toHaveLength(1);
+	});
+
+	test("DO noop reason surfaces as noop:<reason>; ingest still succeeds", async () => {
+		h.do_router.next_value = { acted: false, reason: "sha_mismatch", terminal: false };
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "deploy_completed" })));
+		expect(out.tick).toBe("noop:sha_mismatch");
+		expect(h.do_router.calls).toHaveLength(1);
+	});
+
+	test("DO non-2xx maps to failed:<message>; event row stays durable and result stays ok", async () => {
+		h.do_router.next_status = 500;
+		h.do_router.next_value = { code: "conflict", message: "invalid transition" };
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "deploy_completed" })));
+		expect(out.tick).toBe("failed:invalid transition");
+		const rows = await h.db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, SEEDED_RUN_ID));
+		expect(rows).toHaveLength(1);
+	});
+
+	test("DO fetch rejection maps to failed:<message> and never rejects the ingest", async () => {
+		h.do_router.next_error = new Error("do stub unreachable");
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "deploy_completed" })));
+		expect(out.tick).toBe("failed:do stub unreachable");
+	});
+
+	test("DO 2xx body without ExternalEventOutcome maps to failed:unreadable_tick_response", async () => {
+		h.do_router.next_value = {};
+		const out = expect_ok(await ingest_event(h.deps, base_input({ kind: "deploy_completed" })));
+		expect(out.tick).toBe("failed:unreadable_tick_response");
 	});
 });
 

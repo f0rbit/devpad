@@ -924,7 +924,7 @@ const action_runs_events_ingest =
 		});
 		if (!result.ok) return fail_with(spinner, result.error.message);
 		const label = result.value.duplicated ? "replayed (existing)" : "inserted";
-		spinner.succeed(`${label} event ${result.value.event_id}`);
+		spinner.succeed(`${label} event ${result.value.event_id} (tick: ${result.value.tick})`);
 	};
 
 const action_runs_events_list =
