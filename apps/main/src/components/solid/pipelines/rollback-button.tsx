@@ -1,6 +1,7 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 
 type RollbackButtonProps = {
 	run_id: string;
@@ -9,6 +10,14 @@ type RollbackButtonProps = {
 };
 
 export default function RollbackButton(props: RollbackButtonProps) {
+	return (
+		<IslandBoundary component="RollbackButton" run_id={props.run_id}>
+			<RollbackButtonContent {...props} />
+		</IslandBoundary>
+	);
+}
+
+const RollbackButtonContent = (props: RollbackButtonProps) => {
 	const [loading, setLoading] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
 	const [show_confirmation, setShowConfirmation] = createSignal(false);
@@ -105,4 +114,4 @@ export default function RollbackButton(props: RollbackButtonProps) {
 			</Modal>
 		</div>
 	);
-}
+};

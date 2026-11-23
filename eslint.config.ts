@@ -361,7 +361,16 @@ export default define_lint_config({
 			// tag-editor.tsx, task-status.ts, task-sorter.tsx, task-editor.tsx,
 			// config-editor.tsx, task-card.tsx, goal-selector.tsx,
 			// goal-quick-form.tsx in this same wave). No override needed for
-			// apps/main -- every call site was migrated for real.
+			// apps/main -- every call site was migrated for real, with one
+			// scoped exception: island-boundary.tsx.
+			//
+			// apps/main/src/components/solid/pipelines/island-boundary.tsx is
+			// the shared ErrorBoundary wrapper for the run-detail Solid
+			// islands. Its report_island_error() runs in BOTH environments:
+			// in the browser it reports to pulse via log.error, but during
+			// SSR there is no browser pulse, and console.error is the channel
+			// CF Workers Logs captures -- the observability path this
+			// boundary exists for.
 			//
 			// apps/blog and apps/media have no equivalent client-side pulse
 			// wiring yet, so their handful of `console.error("[Component] ...")`
@@ -370,6 +379,7 @@ export default define_lint_config({
 			files: [
 				"apps/blog/src/components/post/project-selector.tsx",
 				"apps/blog/src/components/post/post-editor.tsx",
+				"apps/main/src/components/solid/pipelines/island-boundary.tsx",
 				"apps/media/src/utils/error-logger.ts",
 				"apps/media/src/components/solid/profile-selector.tsx",
 				"apps/media/src/components/solid/profile-list.tsx",

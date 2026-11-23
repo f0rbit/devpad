@@ -1,35 +1,42 @@
 import type { PipelineRun } from "@devpad/schema";
 import { For, Show } from "solid-js";
+import IslandBoundary, { report_island_error } from "@/components/solid/pipelines/island-boundary";
+import { ROLLOUT_READ_ERROR, read_rollout, stages_for_run } from "@/utils/pipeline-plan";
 
 type RunProgressProps = {
 	run: PipelineRun;
 };
 
-type RolloutStage = {
-	name: string;
-};
+const RunProgressContent = (props: RunProgressProps) => {
+	// `resolved_rollout` is an already-parsed object on the wire (drizzle
+	// `mode: "json"`). Never JSON.parse it — the silent catch that swallowed
+	// that throw is why the stage circles rendered empty.
+	const rollout_read = read_rollout(props.run.resolved_rollout);
+	if (!rollout_read.ok) {
+		report_island_error(
+			{ component: "RunProgress", run_id: props.run.id, package_id: props.run.package_id },
+			new Error(`resolved_rollout read failed: ${rollout_read.reason}`),
+		);
+	}
 
-type ResolvedRollout = {
-	stages?: RolloutStage[];
-};
-
-export default function RunProgress(props: RunProgressProps) {
-	const stages = (() => {
-		try {
-			const raw: unknown = JSON.parse(props.run.resolved_rollout as string);
-			const rollout = raw as ResolvedRollout;
-			return rollout.stages ?? [];
-		} catch {
-			return [];
-		}
-	})();
-
-	const current_stage_idx = stages.findIndex((s) => s.name === props.run.current_stage);
+	const progress = () => (rollout_read.ok ? stages_for_run(props.run, rollout_read.value) : null);
+	const stages = () => progress()?.stages ?? [];
+	const current_stage_idx = () => progress()?.current_index ?? -1;
 
 	return (
 		<div class="stack stack-md">
+			<Show when={!rollout_read.ok}>
+				<div
+					data-testid="run-progress-read-error"
+					role="alert"
+					class="text-sm"
+					style={{ color: "var(--error, var(--item-red))" }}
+				>
+					{ROLLOUT_READ_ERROR}
+				</div>
+			</Show>
 			<div class="row" style="gap: var(--space-xs); overflow-x: auto; padding-bottom: var(--space-xs);">
-				<For each={stages}>
+				<For each={stages()}>
 					{(stage, idx) => (
 						<div
 							style={{
@@ -46,16 +53,16 @@ export default function RunProgress(props: RunProgressProps) {
 									height: "44px",
 									"border-radius": "50%",
 									border: `2px solid ${
-										idx() < current_stage_idx
+										idx() < current_stage_idx()
 											? "var(--success)"
-											: idx() === current_stage_idx
+											: idx() === current_stage_idx()
 												? "var(--info)"
 												: "var(--border)"
 									}`,
 									background:
-										idx() < current_stage_idx
+										idx() < current_stage_idx()
 											? "var(--success-bg)"
-											: idx() === current_stage_idx
+											: idx() === current_stage_idx()
 												? "var(--info-bg)"
 												: "var(--bg-alt)",
 									display: "flex",
@@ -64,14 +71,14 @@ export default function RunProgress(props: RunProgressProps) {
 									"font-size": "0.85rem",
 									"font-weight": "600",
 									color:
-										idx() < current_stage_idx
+										idx() < current_stage_idx()
 											? "var(--success)"
-											: idx() === current_stage_idx
+											: idx() === current_stage_idx()
 												? "var(--info)"
 												: "var(--fg-muted)",
 								}}
 							>
-								{idx() < current_stage_idx ? (
+								{idx() < current_stage_idx() ? (
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="20"
@@ -98,14 +105,14 @@ export default function RunProgress(props: RunProgressProps) {
 									"word-break": "break-word",
 								}}
 							>
-								{stage.name}
+								{stage}
 							</div>
 						</div>
 					)}
 				</For>
 			</div>
 
-			<Show when={stages.length > 0}>
+			<Show when={stages().length > 0}>
 				<div class="card card-flat">
 					<div class="stack stack-xs">
 						<div class="text-sm text-faint">Current Stage</div>
@@ -114,5 +121,13 @@ export default function RunProgress(props: RunProgressProps) {
 				</div>
 			</Show>
 		</div>
+	);
+};
+
+export default function RunProgress(props: RunProgressProps) {
+	return (
+		<IslandBoundary component="RunProgress" run_id={props.run.id} package_id={props.run.package_id}>
+			<RunProgressContent {...props} />
+		</IslandBoundary>
 	);
 }

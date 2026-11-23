@@ -20,6 +20,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineStageEvent, StageEventKind } from "@devpad/schema";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 
 type StageEventTimelineProps = {
 	run_id: string;
@@ -91,6 +92,14 @@ const stringify_payload = (payload: unknown): string => {
 };
 
 export default function StageEventTimeline(props: StageEventTimelineProps) {
+	return (
+		<IslandBoundary component="StageEventTimeline" run_id={props.run_id}>
+			<StageEventTimelineContent {...props} />
+		</IslandBoundary>
+	);
+}
+
+const StageEventTimelineContent = (props: StageEventTimelineProps) => {
 	const [events, setEvents] = createSignal<PipelineStageEvent[]>([]);
 	const [loading, setLoading] = createSignal<boolean>(true);
 	const [error, setError] = createSignal<string | null>(null);
@@ -218,4 +227,4 @@ export default function StageEventTimeline(props: StageEventTimelineProps) {
 			</For>
 		</div>
 	);
-}
+};
