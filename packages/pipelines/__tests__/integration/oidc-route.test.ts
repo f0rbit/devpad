@@ -55,6 +55,8 @@ const seed_trust_policy = async (
 		allowed_refs: string[];
 		expected_audience: string;
 		allowed_actions: string[];
+		repository_id: string | null;
+		repository_owner_id: string | null;
 	}> = {},
 ): Promise<{ id: string }> => {
 	const now = new Date().toISOString();
@@ -71,6 +73,8 @@ const seed_trust_policy = async (
 		allowed_actions: overrides.allowed_actions ?? ["artifacts:upload", "runs:start"],
 		session_ttl_seconds: 900,
 		last_used_at: null,
+		repository_id: overrides.repository_id ?? null,
+		repository_owner_id: overrides.repository_owner_id ?? null,
 		created_at: now,
 		updated_at: now,
 		created_by: "api",
@@ -305,5 +309,75 @@ describe("POST /auth/github-oidc — error mapping", () => {
 		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
 		expect(res.status).toBe(503);
 		expect(res.body.error?.code).toBe("auth_unavailable");
+	});
+});
+
+describe("POST /auth/github-oidc — immutable subjects (#171)", () => {
+	const make_immutable_claims = (overrides: Partial<VerifiedOidcClaims> = {}): VerifiedOidcClaims =>
+		make_branch_claims({
+			sub: "repo:f0rbit@123/my-pkg@456:ref:refs/heads/main",
+			repository_id: "456",
+			repository_owner_id: "123",
+			...overrides,
+		});
+
+	test("200 for an immutable sub whose ids agree with the claims", async () => {
+		const claims = make_immutable_claims();
+		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
+		await seed_trust_policy(setup.db, setup.owner_id);
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
+
+		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
+		expect(res.status).toBe(200);
+		expect(res.body.ok).toBe(true);
+	});
+
+	test("401 invalid_oidc_token when sub ids disagree with repository_id", async () => {
+		const claims = make_immutable_claims({ repository_id: "999" });
+		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
+		await seed_trust_policy(setup.db, setup.owner_id);
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
+
+		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
+		expect(res.status).toBe(401);
+		expect(res.body.error?.code).toBe("invalid_oidc_token");
+	});
+
+	test("401 invalid_oidc_token when immutable sub carries ids but claims lack them", async () => {
+		const claims = make_immutable_claims({ repository_id: undefined, repository_owner_id: undefined });
+		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
+		await seed_trust_policy(setup.db, setup.owner_id);
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
+
+		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
+		expect(res.status).toBe(401);
+		expect(res.body.error?.code).toBe("invalid_oidc_token");
+	});
+
+	test("403 trust_policy_failed when the policy is pinned to a different repository_id", async () => {
+		const claims = make_immutable_claims();
+		const setup = await build_setup({ claims_by_jwt: new Map([["good_jwt", claims]]) });
+		await seed_trust_policy(setup.db, setup.owner_id, { repository_id: "111" });
+		await seed_package(setup.db, setup.owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
+
+		const res = await post_oidc(setup.app, { jwt: "good_jwt", package_id: "pipeline-package_my-pkg" });
+		expect(res.status).toBe(403);
+		expect(res.body.error?.code).toBe("trust_policy_failed");
 	});
 });

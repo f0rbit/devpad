@@ -803,6 +803,8 @@ export const pipeline_oidc_trust = sqliteTable("pipeline_oidc_trust", {
 	allowed_actions: text("allowed_actions", { mode: "json" }).$type<string[]>().notNull().default(sql`'["artifacts:upload","runs:start"]'`),
 	session_ttl_seconds: integer("session_ttl_seconds").notNull().default(900),
 	last_used_at: text("last_used_at"),
+	repository_id: text("repository_id"),
+	repository_owner_id: text("repository_owner_id"),
 });
 
 // relations

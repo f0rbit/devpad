@@ -359,6 +359,8 @@ export const upsert_pipeline_oidc_trust = z.object({
 	allowed_actions: z.array(z.string()).optional(),
 	session_ttl_seconds: z.number().int().positive().optional(),
 	last_used_at: z.string().nullable().optional(),
+	repository_id: z.string().regex(/^\d+$/, "must be a numeric GitHub repository id").nullable().optional(),
+	repository_owner_id: z.string().regex(/^\d+$/, "must be a numeric GitHub owner id").nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------

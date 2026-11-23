@@ -26,23 +26,73 @@ import { z } from "zod";
 // ─── OidcSubject ────────────────────────────────────────────────────
 
 export type OidcSubject =
-	| { kind: "branch"; owner: string; repo: string; branch: string }
-	| { kind: "tag"; owner: string; repo: string; tag: string }
-	| { kind: "pull_request"; owner: string; repo: string }
-	| { kind: "environment"; owner: string; repo: string; environment: string };
+	| {
+			kind: "branch";
+			owner: string;
+			repo: string;
+			branch: string;
+			owner_id?: string;
+			repo_id?: string;
+	  }
+	| {
+			kind: "tag";
+			owner: string;
+			repo: string;
+			tag: string;
+			owner_id?: string;
+			repo_id?: string;
+	  }
+	| {
+			kind: "pull_request";
+			owner: string;
+			repo: string;
+			owner_id?: string;
+			repo_id?: string;
+	  }
+	| {
+			kind: "environment";
+			owner: string;
+			repo: string;
+			environment: string;
+			owner_id?: string;
+			repo_id?: string;
+	  };
 
 export type SubjectParseError = { kind: "subject_parse_failed"; sub: string; reason: string };
 
 const SUB_REPO_PREFIX = "repo:";
 
 /**
+ * Split an optional immutable-subject id suffix off a `sub` segment.
+ * GitHub's immutable subject format appends `@<numeric_id>` to both the
+ * owner and the repo segments (`repo:o@123/r@456:...`); the plain
+ * format has no suffix. Only `@` followed by ONLY digits is an id —
+ * any other `@` usage is a parse error, not a name character.
+ */
+const split_segment_id = (segment: string): Result<{ name: string; id?: string }, string> => {
+	const at = segment.indexOf("@");
+	if (at === -1) return ok({ name: segment });
+	const name = segment.slice(0, at);
+	const id = segment.slice(at + 1);
+	if (id === "" || !/^\d+$/.test(id)) return err(`'@' suffix must be digits, got '${id}'`);
+	return ok({ name, id });
+};
+
+/**
  * Parse a GitHub Actions OIDC `sub` claim into a typed `OidcSubject`.
- * Accepts the four documented formats:
+ * Accepts the four documented plain formats:
  *
  * - `repo:<owner>/<repo>:ref:refs/heads/<branch>`
  * - `repo:<owner>/<repo>:ref:refs/tags/<tag>`
  * - `repo:<owner>/<repo>:pull_request`
  * - `repo:<owner>/<repo>:environment:<env>`
+ *
+ * plus the immutable-subject variants of all four, where BOTH segments
+ * carry a `@<numeric_id>` suffix (`repo:<owner>@<owner_id>/<repo>@<repo_id>:...`)
+ * and `repository` / `repository_owner` claims stay plain. When the
+ * immutable form is used the parsed result carries `owner_id` / `repo_id`
+ * so the exchange cross-check can bind them to the token's
+ * `repository_id` / `repository_owner_id` claims.
  *
  * Returns `err` for any other shape — the trust matcher refuses to act
  * on a `sub` it can't classify.
@@ -59,25 +109,38 @@ export const parse_oidc_subject = (sub: string): Result<OidcSubject, SubjectPars
 	const context = rest.slice(first_colon + 1);
 	const slash = repo_full.indexOf("/");
 	if (slash === -1) return err({ kind: "subject_parse_failed", sub, reason: "expected '<owner>/<repo>'" });
-	const owner = repo_full.slice(0, slash);
-	const repo = repo_full.slice(slash + 1);
+	const owner_segment = repo_full.slice(0, slash);
+	const repo_segment = repo_full.slice(slash + 1);
+	const owner_split = split_segment_id(owner_segment);
+	if (!owner_split.ok)
+		return err({ kind: "subject_parse_failed", sub, reason: `invalid owner segment: ${owner_split.error}` });
+	const repo_split = split_segment_id(repo_segment);
+	if (!repo_split.ok)
+		return err({ kind: "subject_parse_failed", sub, reason: `invalid repo segment: ${repo_split.error}` });
+	const owner = owner_split.value.name;
+	const repo = repo_split.value.name;
 	if (owner === "" || repo === "") return err({ kind: "subject_parse_failed", sub, reason: "empty owner or repo" });
 
-	if (context === "pull_request") return ok({ kind: "pull_request", owner, repo });
+	const subject_ids = (): { owner_id?: string; repo_id?: string } => ({
+		...(owner_split.value.id !== undefined ? { owner_id: owner_split.value.id } : {}),
+		...(repo_split.value.id !== undefined ? { repo_id: repo_split.value.id } : {}),
+	});
+
+	if (context === "pull_request") return ok({ kind: "pull_request", owner, repo, ...subject_ids() });
 	if (context.startsWith("ref:refs/heads/")) {
 		const branch = context.slice("ref:refs/heads/".length);
 		if (branch === "") return err({ kind: "subject_parse_failed", sub, reason: "empty branch" });
-		return ok({ kind: "branch", owner, repo, branch });
+		return ok({ kind: "branch", owner, repo, branch, ...subject_ids() });
 	}
 	if (context.startsWith("ref:refs/tags/")) {
 		const tag = context.slice("ref:refs/tags/".length);
 		if (tag === "") return err({ kind: "subject_parse_failed", sub, reason: "empty tag" });
-		return ok({ kind: "tag", owner, repo, tag });
+		return ok({ kind: "tag", owner, repo, tag, ...subject_ids() });
 	}
 	if (context.startsWith("environment:")) {
 		const environment = context.slice("environment:".length);
 		if (environment === "") return err({ kind: "subject_parse_failed", sub, reason: "empty environment" });
-		return ok({ kind: "environment", owner, repo, environment });
+		return ok({ kind: "environment", owner, repo, environment, ...subject_ids() });
 	}
 	return err({ kind: "subject_parse_failed", sub, reason: `unrecognised context '${context}'` });
 };
@@ -101,6 +164,8 @@ export const verified_oidc_claims_schema = z.object({
 	sub: z.string().min(1),
 	repository: z.string().regex(/^[^/]+\/[^/]+$/, "repository must be '<owner>/<repo>'"),
 	repository_owner: z.string().min(1),
+	repository_id: z.string().min(1).optional(),
+	repository_owner_id: z.string().min(1).optional(),
 	ref: z.string().optional(),
 	environment: z.string().optional(),
 	event_name: z.string().optional(),

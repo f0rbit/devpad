@@ -150,6 +150,30 @@ describe("POST /oidc-trust", () => {
 		expect(created.allowed_actions).toEqual(["artifacts:upload", "runs:start"]);
 	});
 
+	test("creates a policy with repository id pins (#171)", async () => {
+		const { app } = await build_setup();
+		const res = await send_json(
+			app,
+			"POST",
+			"/oidc-trust",
+			valid_create_body({ repository_id: "456", repository_owner_id: "123" }),
+			{ authorization: auth_header(PIPELINES_TOKEN) },
+		);
+		expect(res.status).toBe(200);
+		const created = res.body.value as { repository_id: string | null; repository_owner_id: string | null };
+		expect(created.repository_id).toBe("456");
+		expect(created.repository_owner_id).toBe("123");
+	});
+
+	test("non-numeric repository id pin returns 400 invalid_body", async () => {
+		const { app } = await build_setup();
+		const res = await send_json(app, "POST", "/oidc-trust", valid_create_body({ repository_id: "not-digits" }), {
+			authorization: auth_header(PIPELINES_TOKEN),
+		});
+		expect(res.status).toBe(400);
+		expect(res.body.error?.code).toBe("invalid_body");
+	});
+
 	test("malformed body returns 400 invalid_body", async () => {
 		const { app } = await build_setup();
 		const res = await send_json(

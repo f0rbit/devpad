@@ -165,6 +165,8 @@ export const oidc_exchange_body = z.object({
 	requested_scope: z.array(z.string().min(1)).optional(),
 });
 
+const oidc_trust_repo_id = z.string().regex(/^\d+$/, "must be a numeric GitHub id").nullable().optional();
+
 export const create_oidc_trust_body = z.object({
 	owner_id: z.string().min(1),
 	github_owner: z.string().min(1).max(200),
@@ -175,6 +177,8 @@ export const create_oidc_trust_body = z.object({
 	expected_audience: z.string().min(1),
 	allowed_actions: z.array(z.string()).optional(),
 	session_ttl_seconds: z.number().int().positive().optional(),
+	repository_id: oidc_trust_repo_id,
+	repository_owner_id: oidc_trust_repo_id,
 });
 
 export const update_oidc_trust_body = z.object({
@@ -187,6 +191,8 @@ export const update_oidc_trust_body = z.object({
 	expected_audience: z.string().min(1).optional(),
 	allowed_actions: z.array(z.string()).optional(),
 	session_ttl_seconds: z.number().int().positive().optional(),
+	repository_id: oidc_trust_repo_id,
+	repository_owner_id: oidc_trust_repo_id,
 });
 
 export const list_oidc_trust_query = z.object({

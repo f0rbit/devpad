@@ -10,7 +10,7 @@
 
 import { beforeEach, describe, expect, test } from "bun:test";
 import type { OidcSessionClaims, VerifiedOidcClaims } from "@devpad/core/services/pipelines";
-import { exchange_oidc_for_session, match_trust_policy } from "@devpad/core/services/pipelines";
+import { exchange_oidc_for_session, match_trust_policy, parse_oidc_subject } from "@devpad/core/services/pipelines";
 import { pipeline_oidc_trust } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -77,6 +77,8 @@ const seed_trust_policy = async (
 		allowed_actions: string[];
 		session_ttl_seconds: number;
 		created_at: string;
+		repository_id: string | null;
+		repository_owner_id: string | null;
 	}> = {},
 ): Promise<{ id: string }> => {
 	const now = overrides.created_at ?? new Date().toISOString();
@@ -93,6 +95,8 @@ const seed_trust_policy = async (
 		allowed_actions: overrides.allowed_actions ?? (["artifacts:upload", "runs:start"] as string[]),
 		session_ttl_seconds: overrides.session_ttl_seconds ?? 900,
 		last_used_at: null,
+		repository_id: overrides.repository_id ?? null,
+		repository_owner_id: overrides.repository_owner_id ?? null,
 		created_at: now,
 		updated_at: now,
 		created_by: "api",
@@ -581,5 +585,227 @@ describe("match_trust_policy — direct tests", () => {
 
 		const bad = match_trust_policy(make_branch_claims({ repository: "f0rbit/astro-thing" }), [policy]);
 		expect(bad.ok).toBe(false);
+	});
+});
+
+describe("parse_oidc_subject — immutable subjects (#171)", () => {
+	test("plain branch subject parses without ids", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit/my-pkg:ref:refs/heads/main");
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.value).toEqual({ kind: "branch", owner: "f0rbit", repo: "my-pkg", branch: "main" });
+	});
+
+	test("plain pull_request subject parses without ids", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit/my-pkg:pull_request");
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.value).toEqual({ kind: "pull_request", owner: "f0rbit", repo: "my-pkg" });
+	});
+
+	test("immutable branch subject returns plain names + numeric ids", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit@123/my-pkg@456:ref:refs/heads/main");
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.value).toEqual({
+			kind: "branch",
+			owner: "f0rbit",
+			repo: "my-pkg",
+			branch: "main",
+			owner_id: "123",
+			repo_id: "456",
+		});
+	});
+
+	test("immutable pull_request subject returns plain names + numeric ids", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit@123/my-pkg@456:pull_request");
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.value.kind).toBe("pull_request");
+		if (parsed.value.kind !== "pull_request") return;
+		expect(parsed.value.owner).toBe("f0rbit");
+		expect(parsed.value.repo).toBe("my-pkg");
+		expect(parsed.value.owner_id).toBe("123");
+		expect(parsed.value.repo_id).toBe("456");
+	});
+
+	test("immutable environment subject returns plain names + numeric ids", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit@123/my-pkg@456:environment:production");
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.value).toEqual({
+			kind: "environment",
+			owner: "f0rbit",
+			repo: "my-pkg",
+			environment: "production",
+			owner_id: "123",
+			repo_id: "456",
+		});
+	});
+
+	test("partial immutable subject carries only the id that is present", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit/my-pkg@456:ref:refs/heads/main");
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(parsed.value).toEqual({
+			kind: "branch",
+			owner: "f0rbit",
+			repo: "my-pkg",
+			branch: "main",
+			repo_id: "456",
+		});
+	});
+
+	test("non-digit id suffix stays a parse error", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit@x/my-pkg@456:ref:refs/heads/main");
+		expect(parsed.ok).toBe(false);
+		if (parsed.ok) return;
+		expect(parsed.error.kind).toBe("subject_parse_failed");
+	});
+
+	test("empty id suffix stays a parse error", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit@/my-pkg:ref:refs/heads/main");
+		expect(parsed.ok).toBe(false);
+	});
+
+	test("id suffix with trailing garbage stays a parse error", () => {
+		const parsed = parse_oidc_subject("repo:f0rbit@123/my-pkg@456x:ref:refs/heads/main");
+		expect(parsed.ok).toBe(false);
+	});
+});
+
+describe("exchange_oidc_for_session — immutable subjects (#171)", () => {
+	let db: Database;
+	let owner_id: string;
+	beforeEach(async () => {
+		db = create_test_db();
+		const u = await seed_user(db);
+		owner_id = u.id;
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
+		await seed_trust_policy(db, owner_id);
+	});
+
+	const make_immutable_claims = (overrides: Partial<VerifiedOidcClaims> = {}): VerifiedOidcClaims =>
+		make_branch_claims({
+			sub: "repo:f0rbit@123/my-pkg@456:ref:refs/heads/main",
+			repository_id: "456",
+			repository_owner_id: "123",
+			...overrides,
+		});
+
+	const exchange = async (claims: VerifiedOidcClaims) => {
+		const verifier = make_fake_verifier(new Map([["jwt_a", claims]]));
+		const signer = make_fake_signer();
+		return exchange_oidc_for_session(
+			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
+		);
+	};
+
+	test("immutable sub whose ids agree with the claims mints a session", async () => {
+		const result = await exchange(make_immutable_claims());
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.package_ids).toEqual(["pipeline-package_my-pkg"]);
+	});
+
+	test("immutable sub repo id disagreeing with repository_id claim is rejected", async () => {
+		const result = await exchange(make_immutable_claims({ repository_id: "999" }));
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("invalid_oidc_token");
+		if (result.error.kind !== "invalid_oidc_token") return;
+		expect(result.error.reason).toContain("repository_id");
+	});
+
+	test("immutable sub owner id disagreeing with repository_owner_id claim is rejected", async () => {
+		const result = await exchange(make_immutable_claims({ repository_owner_id: "999" }));
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("invalid_oidc_token");
+		if (result.error.kind !== "invalid_oidc_token") return;
+		expect(result.error.reason).toContain("repository_owner_id");
+	});
+
+	test("immutable sub without id claims is rejected (missing, not wildcard)", async () => {
+		const result = await exchange(make_immutable_claims({ repository_id: undefined, repository_owner_id: undefined }));
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("invalid_oidc_token");
+	});
+});
+
+describe("exchange_oidc_for_session — trust policy id pinning (#171)", () => {
+	let db: Database;
+	let owner_id: string;
+	beforeEach(async () => {
+		db = create_test_db();
+		const u = await seed_user(db);
+		owner_id = u.id;
+		await seed_package(db, owner_id, {
+			id: "pipeline-package_my-pkg",
+			name: "my-pkg",
+			repo_url: "https://github.com/f0rbit/my-pkg",
+		});
+	});
+
+	const exchange = async (claims: VerifiedOidcClaims) => {
+		const verifier = make_fake_verifier(new Map([["jwt_a", claims]]));
+		const signer = make_fake_signer();
+		return exchange_oidc_for_session(
+			{ db, verify_oidc: verifier.verify, sign_session: signer.sign, now: () => new Date(), new_jti: next_jti },
+			{ jwt: "jwt_a", package_id: "pipeline-package_my-pkg" },
+		);
+	};
+
+	test("policy pinned to repository_id accepts the matching id", async () => {
+		await seed_trust_policy(db, owner_id, { repository_id: "456" });
+		const claims = make_branch_claims({ repository_id: "456" });
+		const result = await exchange(claims);
+		expect(result.ok).toBe(true);
+	});
+
+	test("policy pinned to repository_id rejects a different id", async () => {
+		await seed_trust_policy(db, owner_id, { repository_id: "456" });
+		const claims = make_branch_claims({ repository_id: "999" });
+		const result = await exchange(claims);
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("trust_policy_failed");
+	});
+
+	test("policy pinned to repository_id rejects a token without the claim", async () => {
+		await seed_trust_policy(db, owner_id, { repository_id: "456" });
+		const claims = make_branch_claims({ repository_id: undefined });
+		const result = await exchange(claims);
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("trust_policy_failed");
+	});
+
+	test("policy pinned to repository_owner_id accepts the matching id", async () => {
+		await seed_trust_policy(db, owner_id, { repository_owner_id: "123" });
+		const claims = make_branch_claims({ repository_owner_id: "123" });
+		const result = await exchange(claims);
+		expect(result.ok).toBe(true);
+	});
+
+	test("policy pinned to repository_owner_id rejects a different id", async () => {
+		await seed_trust_policy(db, owner_id, { repository_owner_id: "123" });
+		const claims = make_branch_claims({ repository_owner_id: "999" });
+		const result = await exchange(claims);
+		expect(result.ok).toBe(false);
+		if (result.ok) return;
+		expect(result.error.kind).toBe("trust_policy_failed");
+	});
+
+	test("unpinned policy is unaffected by id claims (null = no pin)", async () => {
+		await seed_trust_policy(db, owner_id);
+		const result = await exchange(make_branch_claims());
+		expect(result.ok).toBe(true);
 	});
 });

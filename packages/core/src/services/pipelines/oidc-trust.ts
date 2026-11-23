@@ -136,6 +136,8 @@ export const create_trust_policy = async (
 			allowed_actions: data.allowed_actions ?? [...DEFAULT_ALLOWED_ACTIONS],
 			session_ttl_seconds: data.session_ttl_seconds ?? DEFAULT_SESSION_TTL_SECONDS,
 			last_used_at: data.last_used_at ?? null,
+			repository_id: data.repository_id ?? null,
+			repository_owner_id: data.repository_owner_id ?? null,
 			created_at: now,
 			updated_at: now,
 			created_by: "api",
@@ -190,6 +192,9 @@ export const update_trust_policy = async (
 		allowed_actions: input.allowed_actions ?? existing.value.allowed_actions,
 		session_ttl_seconds: input.session_ttl_seconds ?? existing.value.session_ttl_seconds,
 		last_used_at: input.last_used_at ?? existing.value.last_used_at,
+		repository_id: input.repository_id !== undefined ? input.repository_id : existing.value.repository_id,
+		repository_owner_id:
+			input.repository_owner_id !== undefined ? input.repository_owner_id : existing.value.repository_owner_id,
 	};
 
 	const parsed = upsert_pipeline_oidc_trust.safeParse(merged);
@@ -213,6 +218,8 @@ export const update_trust_policy = async (
 		if (input.allowed_actions !== undefined) patch.allowed_actions = input.allowed_actions;
 		if (input.session_ttl_seconds !== undefined) patch.session_ttl_seconds = input.session_ttl_seconds;
 		if (input.last_used_at !== undefined) patch.last_used_at = input.last_used_at;
+		if (input.repository_id !== undefined) patch.repository_id = input.repository_id;
+		if (input.repository_owner_id !== undefined) patch.repository_owner_id = input.repository_owner_id;
 
 		const updated = await db
 			.update(pipeline_oidc_trust)
