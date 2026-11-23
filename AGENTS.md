@@ -258,6 +258,10 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 
 **Hand-written ALTER migrations don't generate paired snapshots.** When you add a column via a hand-written SQL migration (e.g. adding `window_ms` to `pipeline_analysis_template`), drizzle-kit doesn't auto-produce a paired entry in `meta/<n>_snapshot.json`. The migration still applies correctly at runtime since `_journal.json` is the source of truth — but the next time someone runs `drizzle-kit generate`, the snapshot may drift. Run `bunx drizzle-kit generate` after the next schema change to reconcile.
 
+**Multi-statement hand-written migrations need `--> statement-breakpoint` between statements.** The drizzle migrator splits a file on that marker and runs each chunk as one statement; without it a second `ALTER` in the same file is never executed. `0026_oidc_trust_repo_ids.sql` shipped without it and only the first `ADD` ran in tests — the second column was silently missing. Put the marker on its own line after every statement but the last, and assert every new column exists in the migration's test.
+
+**The journal `when` must be strictly greater than the previous entry's.** `_journal.json` entries are ordered by `when` (ms epoch), and drizzle skips any migration whose `when` is not newer than the last applied one — a hand-written entry with a stale or copy-pasted timestamp is silently never applied. Check the new entry against its predecessor before committing.
+
 ### Formatting style for status enums
 
 `packages/schema/src/database/schema.ts` uses single-line const arrays for status enums (e.g. `RUN_STATUSES`, `STAGE_EVENT_KINDS`). Don't break this style — oxfmt (`bun run fmt:check`) enforces it.
