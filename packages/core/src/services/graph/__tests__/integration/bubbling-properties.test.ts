@@ -8,7 +8,7 @@ import { SqlCompletionEngine } from "../../completion.js";
 import { set_parent, subtree } from "../../graph.js";
 import { refresh_rollup_chain } from "../../rollup.js";
 import { sweep_graph } from "../../sweeper.js";
-import { create_test_db, seed_task, seed_user } from "./helpers.js";
+import { create_test_db, seed_project, seed_task, seed_user } from "./helpers.js";
 
 /**
  * The property suite (task A2.5) — THE automation gate. Phase A3 (hooks)
@@ -294,7 +294,7 @@ describe("bubbling property suite — random trees, random interleavings", () =>
 				const rng = mulberry32(seed * 2654435761);
 				const db = create_test_db();
 				const owner_id = (await seed_user(db)).id;
-				const project_id = `project_test_${String(seed)}`;
+				const project_id = (await seed_project(db, owner_id)).id;
 				const engine = new SqlCompletionEngine(db);
 
 				const nodes = await generate_random_tree(rng, db, owner_id, project_id, random_int(rng, 4, 12));
@@ -314,7 +314,7 @@ describe("bubbling property suite — permutation-order independence", () => {
 				const rng = mulberry32(seed * 40503);
 				const db = create_test_db();
 				const owner_id = (await seed_user(db)).id;
-				const project_id = `project_test_${String(seed)}`;
+				const project_id = (await seed_project(db, owner_id)).id;
 				const engine = new SqlCompletionEngine(db);
 
 				const n_children = random_int(rng, 2, 4);
@@ -357,7 +357,7 @@ describe("bubbling property suite — sweeper convergence on injected crash stat
 				const rng = mulberry32(seed * 747796405);
 				const db = create_test_db();
 				const owner_id = (await seed_user(db)).id;
-				const project_id = `project_test_${String(seed)}`;
+				const project_id = (await seed_project(db, owner_id)).id;
 				const engine = new SqlCompletionEngine(db);
 
 				const grandparent = await seed_task(db, owner_id, { project_id, completion_policy: "auto_children" });

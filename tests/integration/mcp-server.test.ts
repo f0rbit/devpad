@@ -26,6 +26,7 @@ describe("MCP Server Integration", () => {
 	let apiClient: ApiClient;
 	let cleanupManager: CleanupManager;
 	let testProjectId: string;
+	let testProjectRowId: string;
 
 	beforeAll(async () => {
 		// Get shared test API client from existing setup
@@ -124,6 +125,8 @@ describe("MCP Server Integration", () => {
 
 		const project = extractMCPResponse(projectResponse);
 		cleanupManager.registerProject(project);
+		// `task.project_id` is a FK to `project.id` (the row id), not the slug.
+		testProjectRowId = project.id;
 
 		// Create tasks with different statuses using TestDataFactory for better structure
 		const taskData = [
@@ -133,7 +136,7 @@ describe("MCP Server Integration", () => {
 				progress: "UNSTARTED" as const,
 				priority: "HIGH" as const,
 				owner_id: TEST_USER_ID,
-				project_id: testProjectId,
+				project_id: testProjectRowId,
 				visibility: "PRIVATE" as const,
 			}),
 			TestDataFactory.createTask({
@@ -142,7 +145,7 @@ describe("MCP Server Integration", () => {
 				progress: "IN_PROGRESS" as const,
 				priority: "MEDIUM" as const,
 				owner_id: TEST_USER_ID,
-				project_id: testProjectId,
+				project_id: testProjectRowId,
 				visibility: "PRIVATE" as const,
 			}),
 			TestDataFactory.createTask({
@@ -151,7 +154,7 @@ describe("MCP Server Integration", () => {
 				progress: "COMPLETED" as const,
 				priority: "LOW" as const,
 				owner_id: TEST_USER_ID,
-				project_id: testProjectId,
+				project_id: testProjectRowId,
 				visibility: "PRIVATE" as const,
 			}),
 		];
@@ -184,7 +187,7 @@ describe("MCP Server Integration", () => {
 	test("should list and filter tasks", async () => {
 		// List all tasks for the project
 		const listResponse = await mcpClient.callTool("devpad_tasks_list", {
-			project_id: testProjectId,
+			project_id: testProjectRowId,
 		});
 
 		expect(listResponse.result).toBeDefined();

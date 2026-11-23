@@ -184,6 +184,8 @@ describe("fold backfill migration", () => {
 	});
 
 	test("orphan handling: a goal whose milestone is missing is skipped, not migrated", async () => {
+		// Deliberately construct a dangling reference — FKs off just for the seed.
+		sqlite.exec("PRAGMA foreign_keys = OFF");
 		const dangling_goal_id = await seed_goal("milestone_does_not_exist", { name: "Orphan goal" });
 
 		apply_fold_migration(sqlite);
@@ -193,6 +195,8 @@ describe("fold backfill migration", () => {
 	});
 
 	test("orphan handling: a task with a dangling goal_id keeps its existing parent_id untouched", async () => {
+		// Deliberately construct a dangling reference — FKs off just for the seed.
+		sqlite.exec("PRAGMA foreign_keys = OFF");
 		const dangling_task_id = await seed_legacy_task({ goal_id: "goal_does_not_exist", parent_id: null });
 
 		apply_fold_migration(sqlite);

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { SqlCompletionEngine } from "../../completion.js";
 import { refresh_rollup_chain } from "../../rollup.js";
 import { sweep_graph } from "../../sweeper.js";
-import { create_test_db, seed_task, seed_user } from "./helpers.js";
+import { create_test_db, seed_project, seed_task, seed_user } from "./helpers.js";
 
 let db: Database;
 let owner_id: string;
@@ -21,7 +21,7 @@ async function events_for(id: string) {
 
 describe("sweep_graph — cascade crash repair", () => {
 	test("a constructed mid-cascade state (child COMPLETED, auto parent stale-open) is repaired in one sweep", async () => {
-		const project_id = `project_test_${crypto.randomUUID()}`;
+		const project_id = (await seed_project(db, owner_id)).id;
 		const parent = await seed_task(db, owner_id, { project_id, completion_policy: "auto_children" });
 		// Simulates a crash: the child was marked COMPLETED but the cascade
 		// that should have completed `parent` never ran (no engine call here).
@@ -41,7 +41,7 @@ describe("sweep_graph — cascade crash repair", () => {
 	});
 
 	test("a manual-policy parent with a recently-completed child is left alone (not a crash)", async () => {
-		const project_id = `project_test_${crypto.randomUUID()}`;
+		const project_id = (await seed_project(db, owner_id)).id;
 		const parent = await seed_task(db, owner_id, { project_id, completion_policy: "manual" });
 		await seed_task(db, owner_id, { project_id, parent_id: parent.id, progress: "COMPLETED", completed_via: "user" });
 
@@ -58,7 +58,7 @@ describe("sweep_graph — cascade crash repair", () => {
 
 describe("sweep_graph — rollup drift repair", () => {
 	test("detects and repairs a corrupted cached rollup row", async () => {
-		const project_id = `project_test_${crypto.randomUUID()}`;
+		const project_id = (await seed_project(db, owner_id)).id;
 		const parent = await seed_task(db, owner_id, { project_id, completion_policy: "manual" });
 		await seed_task(db, owner_id, { project_id, parent_id: parent.id, progress: "COMPLETED" });
 		await seed_task(db, owner_id, { project_id, parent_id: parent.id });
@@ -82,7 +82,7 @@ describe("sweep_graph — rollup drift repair", () => {
 
 describe("sweep_graph — rank rebalance", () => {
 	test("rewrites an oversized sibling set's ranks, bumping rev, and leaves a short one alone", async () => {
-		const project_id = `project_test_${crypto.randomUUID()}`;
+		const project_id = (await seed_project(db, owner_id)).id;
 		const parent = await seed_task(db, owner_id, { project_id });
 		const oversized_rank = "i".padEnd(35, "0");
 		const stale = await seed_task(db, owner_id, { project_id, parent_id: parent.id, rank: oversized_rank });
@@ -117,7 +117,7 @@ describe("sweep_graph — rank rebalance", () => {
 
 describe("sweep_graph — idempotent no-op on a clean tree", () => {
 	test("performs zero writes when nothing is stale", async () => {
-		const project_id = `project_test_${crypto.randomUUID()}`;
+		const project_id = (await seed_project(db, owner_id)).id;
 		const engine = new SqlCompletionEngine(db);
 		const parent = await seed_task(db, owner_id, { project_id, completion_policy: "auto_children" });
 		const leaf = await seed_task(db, owner_id, { project_id, parent_id: parent.id });

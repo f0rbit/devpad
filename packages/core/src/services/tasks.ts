@@ -8,6 +8,7 @@ import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
 import type { ServiceError } from "./errors.js";
 import { SqlCompletionEngine } from "./graph/completion.js";
 import { get_task_row, type GraphConflictError } from "./graph/graph.js";
+import { legacy_goal_id } from "./graph/legacy-goal.js";
 import { type EmitEventInput, write_with_event } from "./graph/outbox.js";
 import { refresh_rollup_chain } from "./graph/rollup.js";
 import { getTaskTags, upsertTag } from "./tags.js";
@@ -60,7 +61,30 @@ async function fetchTasksWithDetails(
 		}
 	}
 
+	await derive_goal_ids(db, tasks);
+
 	return ok(tasks);
+}
+
+/**
+ * `task.goal_id` is only physically written for pre-fold goals (see
+ * `legacy_goal_id`); a task under a post-fold goal links through
+ * `parent_id`. Surface the same `goal_id` the API always exposed by
+ * deriving it from a goal-kind parent.
+ */
+async function derive_goal_ids(db: Database, tasks: Task[]): Promise<void> {
+	const unlinked = tasks.filter((t) => t.task.goal_id === null && t.task.parent_id !== null);
+	if (unlinked.length === 0) return;
+	const parent_ids = [...new Set(unlinked.map((t) => t.task.parent_id).filter((id) => id !== null))];
+	const parents = await batchedQuery(
+		parent_ids,
+		(condition) => db.select({ id: task.id, kind: task.kind }).from(task).where(condition),
+		task.id,
+	);
+	const goal_parents = new Set(parents.filter((p) => p.kind === "goal").map((p) => p.id));
+	for (const t of unlinked) {
+		if (t.task.parent_id !== null && goal_parents.has(t.task.parent_id)) t.task.goal_id = t.task.parent_id;
+	}
 }
 
 export async function getUserTasks(db: Database, user_id: string): Promise<Result<Task[], ServiceError>> {
@@ -251,6 +275,7 @@ export async function upsertTask(
 			fields.parent_id = null;
 		}
 	}
+	if (fields.goal_id) fields.goal_id = await legacy_goal_id(db, fields.goal_id);
 	const id = raw_id === "" || raw_id == null ? undefined : raw_id;
 	const protection = auth_channel === "user" ? { protected: true } : data.force ? { protected: false } : {};
 	const provenance = exists

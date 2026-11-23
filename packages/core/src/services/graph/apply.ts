@@ -6,6 +6,7 @@ import { z } from "zod";
 import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
+import { legacy_goal_id } from "./legacy-goal.js";
 import { SqlCompletionEngine } from "./completion.js";
 import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent } from "./graph.js";
 import { type EmitEventInput, write_with_event } from "./outbox.js";
@@ -57,6 +58,7 @@ async function insert_task_row(
 	}
 
 	const target_parent = data.parent_id ? await get_task_row(db, data.parent_id) : null;
+	const goal_id = await legacy_goal_id(db, data.goal_id);
 
 	return write_with_event(
 		db,
@@ -69,7 +71,7 @@ async function insert_task_row(
 					created_at, updated_at, deleted, created_by, modified_by, protected
 				) VALUES (
 					${id}, ${owner_id}, ${data.title ?? "Untitled"}, ${data.progress ?? "UNSTARTED"}, ${data.visibility ?? "PRIVATE"}, ${data.priority ?? "LOW"}, ${data.parent_id ?? null}, ${data.rank ?? ""}, 0,
-					${data.kind ?? "task"}, ${data.completion_policy ?? "manual"}, ${data.project_id ?? null}, ${data.goal_id ?? null}, ${data.description ?? null}, ${data.start_time ?? null}, ${data.end_time ?? null}, ${data.summary ?? null},
+					${data.kind ?? "task"}, ${data.completion_policy ?? "manual"}, ${data.project_id ?? null}, ${goal_id}, ${data.description ?? null}, ${data.start_time ?? null}, ${data.end_time ?? null}, ${data.summary ?? null},
 					${now}, ${now}, 0, 'api', 'api', 0
 				)
 			`);

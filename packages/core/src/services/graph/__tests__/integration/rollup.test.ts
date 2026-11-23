@@ -5,7 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { SqlCompletionEngine } from "../../completion.js";
 import { set_parent, subtree } from "../../graph.js";
 import { rebuild_rollup, refresh_rollup_chain, rollups_for } from "../../rollup.js";
-import { create_test_db, seed_task, seed_user } from "./helpers.js";
+import { create_test_db, seed_project, seed_task, seed_user } from "./helpers.js";
 
 let db: Database;
 let owner_id: string;
@@ -15,7 +15,7 @@ let engine: SqlCompletionEngine;
 beforeEach(async () => {
 	db = create_test_db();
 	owner_id = (await seed_user(db)).id;
-	project_id = `project_test_${crypto.randomUUID()}`;
+	project_id = (await seed_project(db, owner_id)).id;
 	engine = new SqlCompletionEngine(db);
 });
 
@@ -122,7 +122,7 @@ describe("rebuild_rollup — converges an intentionally corrupted cache", () => 
 	});
 
 	test("scopes to the given project only", async () => {
-		const other_project_id = `project_test_${crypto.randomUUID()}`;
+		const other_project_id = (await seed_project(db, owner_id)).id;
 		const in_scope = await seed_task(db, owner_id, { project_id });
 		await seed_task(db, owner_id, { project_id, parent_id: in_scope.id, progress: "COMPLETED" });
 		const out_of_scope = await seed_task(db, owner_id, { project_id: other_project_id });
