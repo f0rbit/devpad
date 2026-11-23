@@ -24,9 +24,19 @@
  *   on the orchestrator's account. Required by the production CloudflareProvider
  *   to upload versions + create deployments for the managed Workers.
  *   ALWAYS bound — the deploy guard at the top of this file refuses to
- *   deploy when either this or `PIPELINES_TOKEN` is missing from the
- *   env (a half-provisioned deploy silently deleted the secret and
- *   broke orchestration).
+ *   deploy when this, `PIPELINES_TOKEN`, or `OIDC_SESSION_SIGNING_KEY`
+ *   is missing from the env (a half-provisioned deploy silently deleted
+ *   the secret and broke orchestration).
+ * - `PIPELINES_TOKEN` — Secrets Store secret. Admin bearer guarding the
+ *   mutating orchestrator routes. ALWAYS bound (same guard).
+ * - `OIDC_SESSION_SIGNING_KEY` — Secrets Store secret. HS256 key
+ *   (64 random bytes, base64) for orchestrator-minted CI session JWTs
+ *   (`POST /auth/github-oidc`). ALWAYS bound — without it the exchange
+ *   route 503s `auth_unavailable` and chamber CI can never obtain a
+ *   session.
+ * - `OIDC_EXPECTED_AUDIENCE` — plain var. Expected `aud` claim on GitHub
+ *   Actions OIDC tokens; must equal the `audience` CI requests (the
+ *   orchestrator URL) and the trust policies' `expected_audience`.
  * - `CF_ACCOUNT_ID` — plain var, the account the orchestrator deploys runs into.
  *
  * The Worker exports TWO entrypoints:
@@ -58,11 +68,11 @@ import {
 } from "alchemy/cloudflare";
 
 /**
- * Deploy guard (#155 follow-up): refuse to deploy unless BOTH secrets
- * are present in the env, BEFORE any resource is declared. A deploy
- * without `CF_API_TOKEN` silently DELETED the existing secret from the
- * Secrets Store and broke every orchestrated deploy — binding an
- * optional secret is not optional in practice, it's destructive
+ * Deploy guard (#155 follow-up): refuse to deploy unless ALL required
+ * secrets are present in the env, BEFORE any resource is declared. A
+ * deploy without `CF_API_TOKEN` silently DELETED the existing secret
+ * from the Secrets Store and broke every orchestrated deploy — binding
+ * an optional secret is not optional in practice, it's destructive
  * when half-provisioned. Fail loudly instead. (Throwing at module top
  * runs before Alchemy adopts/creates anything.)
  */
@@ -71,14 +81,16 @@ const require_deploy_secret = (key: string): string => {
 	if (value === undefined || value === "") {
 		throw new Error(
 			`refusing to deploy devpad-pipelines: ${key} is missing/empty in the env. ` +
-				"Both CF_API_TOKEN and PIPELINES_TOKEN must be set (devpad/.env) — " +
-				"deploying without them silently deletes the bound secret and breaks orchestration.",
+				"CF_API_TOKEN, PIPELINES_TOKEN, and OIDC_SESSION_SIGNING_KEY must all be set " +
+				"(devpad/.env) — deploying without them silently deletes the bound secret " +
+				"and breaks orchestration.",
 		);
 	}
 	return value;
 };
 require_deploy_secret("CF_API_TOKEN");
 require_deploy_secret("PIPELINES_TOKEN");
+require_deploy_secret("OIDC_SESSION_SIGNING_KEY");
 
 const app = await alchemy("devpad-pipelines");
 
@@ -106,10 +118,11 @@ const pipeline_runs = DurableObjectNamespace<unknown>("PIPELINE_RUNS", {
 });
 
 // Secrets are ALWAYS bound — the deploy guard above aborts the deploy
-// when either `CF_API_TOKEN` or `PIPELINES_TOKEN` is missing from the
-// env, so no conditional wiring remains. A half-provisioned deploy
-// silently deleted the `CF_API_TOKEN` secret yesterday and broke
-// orchestrated deploys; unconditional binding + the guard is the fix.
+// when `CF_API_TOKEN`, `PIPELINES_TOKEN`, or `OIDC_SESSION_SIGNING_KEY`
+// is missing from the env, so no conditional wiring remains. A
+// half-provisioned deploy silently deleted the `CF_API_TOKEN` secret
+// yesterday and broke orchestrated deploys; unconditional binding +
+// the guard is the fix.
 //
 // NOTE: the #158 pulse secrets below are the OPPOSITE regime — optional
 // by design (unbound observability degrades to no-op emitter +
@@ -137,6 +150,11 @@ const pipelines_token = await Secret("PIPELINES_TOKEN", {
 	store: secrets_store,
 	value: alchemy.secret.env.PIPELINES_TOKEN,
 });
+const oidc_session_signing_key = await Secret("OIDC_SESSION_SIGNING_KEY", {
+	name: "OIDC_SESSION_SIGNING_KEY",
+	store: secrets_store,
+	value: alchemy.secret.env.OIDC_SESSION_SIGNING_KEY,
+});
 
 const github_vault_binding = { type: "service", service: "vault", __entrypoint__: "GitHubVault" };
 
@@ -158,6 +176,10 @@ const bindings: Bindings = {
 	GITHUB: github_vault_binding as ReturnType<typeof WorkerRef>,
 	PULSE: WorkerRef({ service: "pulse-api" }),
 	CF_ACCOUNT_ID: process.env.CF_ACCOUNT_ID ?? "81874bc21b868deba3276f551acde354",
+	// Must equal the `audience` CI requests (chamber's `devpad-session`
+	// action uses the orchestrator URL) and the trust policies' `expected_audience`.
+	OIDC_EXPECTED_AUDIENCE: process.env.OIDC_EXPECTED_AUDIENCE ?? "https://devpad-pipelines.dev-818.workers.dev",
+	OIDC_SESSION_SIGNING_KEY: oidc_session_signing_key,
 	CF_API_TOKEN: cf_api_token,
 	PIPELINES_TOKEN: pipelines_token,
 };
