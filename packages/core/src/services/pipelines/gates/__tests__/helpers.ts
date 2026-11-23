@@ -27,7 +27,13 @@ export class InMemoryApprovalStore implements ApprovalStore {
 		return ok(decision ?? null);
 	}
 
-	async write_decision(run_id: string, stage: string, decision: Decision): Promise<Result<void, StoreError>> {
+	async write_decision(
+		run_id: string,
+		stage: string,
+		decision: Decision,
+		_decided_by: string,
+		_reason?: string,
+	): Promise<Result<void, StoreError>> {
 		const key = `${run_id}:${stage}`;
 		this.decisions.set(key, decision);
 		return ok(undefined);

@@ -149,9 +149,33 @@ const error_to_status = (error: AdvanceError): number => {
 	return STATUS_BY_CODE[code] ?? 500;
 };
 
-const result_to_response = <T>(result: Result<T, AdvanceError>): Response => {
+/**
+ * Workers Logs breadcrumb for 5xx from the DO. The bare `code` alone
+ * (e.g. store_error) is not enough to root-cause a D1 failure — carry
+ * operation + message; DB error strings are SQLite messages, safe to
+ * log (no secrets or tokens).
+ */
+const log_5xx = (route: string, run_id: string | undefined, status: number, error: AdvanceError): void => {
+	const wire = to_wire_error(error);
+	console.error(
+		JSON.stringify({
+			scope: "pipelines:do",
+			status,
+			route,
+			run_id,
+			error: { code: wire.code, operation: wire.operation, message: wire.message },
+		}),
+	);
+};
+
+const result_to_response = <T>(
+	result: Result<T, AdvanceError>,
+	context?: { route: string; run_id?: string },
+): Response => {
 	if (result.ok) return json_ok(result.value);
-	return json_err(error_to_status(result.error), result.error);
+	const status = error_to_status(result.error);
+	if (context !== undefined && status >= 500) log_5xx(context.route, context.run_id, status, result.error);
+	return json_err(status, result.error);
 };
 
 /**
@@ -213,7 +237,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 		const plan = await load_plan_or_body(parsed.data.plan);
 		if (plan === null) return json_err(400, { code: "missing_plan" });
 		const result = await advance(plan, { kind: "start", actor: parsed.data.actor });
-		return result_to_response(result);
+		return result_to_response(result, { route: "advance", run_id });
 	};
 
 	const handle_approve = async (body: unknown): Promise<Response> => {
@@ -233,7 +257,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 			plan,
 		);
 		if (result.ok) await schedule_alarm_if_needed(result.value, plan);
-		return result_to_response(result);
+		return result_to_response(result, { route: "approve", run_id });
 	};
 
 	const handle_cancel = async (body: unknown): Promise<Response> => {
@@ -243,7 +267,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 		if (plan === null) return json_err(400, { code: "missing_plan" });
 		const result = await cancel_run(services.deps.db, run_id, plan);
 		await ctx.storage.deleteAlarm();
-		if (!result.ok) return json_err(error_to_status(result.error), result.error);
+		if (!result.ok) return result_to_response(result, { route: "cancel", run_id });
 		return json_ok({ kind: "done" });
 	};
 
@@ -254,7 +278,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 		if (plan === null) return json_err(400, { code: "missing_plan" });
 		const result = await request_rollback(services.deps, run_id, plan);
 		await ctx.storage.deleteAlarm();
-		return result_to_response(result);
+		return result_to_response(result, { route: "rollback", run_id });
 	};
 
 	/**
@@ -280,7 +304,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 			payload: parsed.data.payload,
 		};
 		const result = await apply_external_event(services.deps, run_id, input);
-		return result_to_response(result);
+		return result_to_response(result, { route: "external-event", run_id });
 	};
 
 	/**
@@ -292,7 +316,7 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 		const parsed = z.object({ actor: z.string().min(1) }).safeParse(body);
 		if (!parsed.success) return json_err(400, { code: "invalid_body", issues: parsed.error.issues });
 		const result = await redispatch(services.deps, run_id, parsed.data.actor);
-		return result_to_response(result);
+		return result_to_response(result, { route: "redispatch", run_id });
 	};
 
 	const handle_state = async (): Promise<Response> => {
@@ -357,11 +381,13 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 			if (!run.ok || run.value.status !== "deploying") return;
 			const timed_out = await tick_deploy_timeout(services.deps, run_id, plan);
 			if (timed_out.ok) await schedule_alarm_if_needed(timed_out.value, plan);
+			else log_5xx("alarm:external_timeout", run_id, error_to_status(timed_out.error), timed_out.error);
 			return;
 		}
 
 		const result = await tick_bake_complete(services.deps, run_id, plan);
 		if (result.ok) await schedule_alarm_if_needed(result.value, plan);
+		else log_5xx("alarm:bake", run_id, error_to_status(result.error), result.error);
 	};
 
 	return { handle, fire_alarm, persist_plan, advance };

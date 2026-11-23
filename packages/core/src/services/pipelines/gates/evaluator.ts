@@ -21,7 +21,20 @@ export type PulseEmitter = {
 export type ApprovalStore = {
 	write_pending(run_id: string, stage: string, scope?: string): Promise<Result<void, StoreError>>;
 	read_decision(run_id: string, stage: string): Promise<Result<Decision | null, StoreError>>;
-	write_decision(run_id: string, stage: string, decision: Decision): Promise<Result<void, StoreError>>;
+	/**
+	 * THE only writer of `pipeline_approval` rows. `decided_by` must be a
+	 * real user id — the column carries a FOREIGN KEY to `user.id`, so a
+	 * sentinel string ("system", "auto") fails on D1. Callers that have a
+	 * human actor (approve/redispatch routes) MUST pass it; the store owns
+	 * the insert.
+	 */
+	write_decision(
+		run_id: string,
+		stage: string,
+		decision: Decision,
+		decided_by: string,
+		reason?: string,
+	): Promise<Result<void, StoreError>>;
 };
 
 export type PulseEvent =

@@ -164,12 +164,36 @@ describe("deps factory — production wiring shape", () => {
 
 	test("D1 approval store reads back the latest written decision", async () => {
 		const db = make_db();
-		await seed_pkg(db);
+		const pkg_id = await seed_pkg(db);
+		// FK: `pipeline_approval.run_id` references `pipeline_run`, and
+		// `decided_by` references `user.id` — seed both before writing.
+		const now = new Date().toISOString();
+		const run_id = "pipeline-run_factory";
+		const run_row: typeof pipeline_run.$inferInsert = {
+			id: run_id,
+			package_id: pkg_id,
+			version_set_id: "vs_v1",
+			shape: "atomic",
+			status: "queued",
+			current_stage: "staging",
+			resolved_rollout: { type: "atomic" },
+			resolved_gates: {},
+			forced_atomic_reason: null,
+			started_at: now,
+			finished_at: null,
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		};
+		await db.insert(pipeline_run).values(run_row);
 		const store = make_d1_approval_store(db);
-		const written = await store.write_decision("pipeline-run_factory", "onebox", "approved");
+		const written = await store.write_decision(run_id, "onebox", "approved", "user_factory");
 		expect(written.ok).toBe(true);
 
-		const read = await store.read_decision("pipeline-run_factory", "onebox");
+		const read = await store.read_decision(run_id, "onebox");
 		if (!read.ok) throw new Error("read failed");
 		expect(read.value).toBe("approved");
 	});

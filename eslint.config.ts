@@ -300,6 +300,17 @@ export default define_lint_config({
 			},
 		},
 		{
+			// The orchestrator Worker's 5xx breadcrumbs (routes.ts `log_5xx`,
+			// run-do.ts `log_5xx`) are single-line JSON written to console.error:
+			// Workers Logs captures the console stream, and the pipelines package
+			// has no logger wrapper. The bare wire code alone could not root-cause
+			// the #155 approve failure, so this channel is deliberate, not debt.
+			files: ["packages/pipelines/src/routes.ts", "packages/pipelines/src/run-do.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
 			// packages/mcp/src/index.ts is a stdio MCP server -- stdout carries
 			// JSON-RPC framing, so console.error (stderr) is the only place this
 			// process can legitimately report its own status/errors. Permanent,

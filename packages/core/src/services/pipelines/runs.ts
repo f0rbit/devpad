@@ -15,8 +15,8 @@
  *   plan JSON onto the row.
  * - `get_run` — read by id.
  * - `cancel_run` — emit a `cancel` event and persist the cancelled state.
- * - `approve_stage` — write a `pipeline_approval` row and fire a
- *   `gate_verdict` event.
+ * - `approve_stage` — record the decision via the approval store (the
+ *   single `pipeline_approval` writer) and fire a `gate_verdict` event.
  * - `record_stage_event` — append to `pipeline_stage_event`.
  * - `advance_run` — apply a single state-machine event to a run and
  *   execute the resulting `TransitionOutput` side effect (deploy,
@@ -34,7 +34,7 @@ import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipel
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
 import { type ExternalTarget } from "@devpad/schema/validation";
 import type { ApprovalDecision, PipelineRun, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
-import { pipeline_approval, pipeline_run } from "@devpad/schema/database/schema";
+import { pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -178,7 +178,6 @@ const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Recor
 };
 
 const make_id = (): string => `pipeline-run_${crypto.randomUUID()}`;
-const make_approval_id = (): string => `pipeline-approval_${crypto.randomUUID()}`;
 
 /**
  * Persist a freshly-created run row, snapshotting the resolved plan
@@ -556,36 +555,23 @@ export const cancel_run = async (
 };
 
 /**
- * Record a manual-gate approval decision. Writes a `pipeline_approval`
- * row and feeds the verdict back through {@link advance_run}.
+ * Record a manual-gate approval decision. The approval store is the
+ * SINGLE writer of `pipeline_approval` rows — `decided_by` is the human
+ * actor (a real `user.id`; the column carries a FK to `user`). The
+ * verdict is then fed back through {@link advance_run}.
  */
 export const approve_stage = async (
 	deps: RunDeps,
 	input: { run_id: string; stage_name: string; decision: ApprovalDecision; user_id: string; reason?: string },
 	plan: ResolvedPlan,
 ): Promise<Result<TransitionOutput, AdvanceError>> => {
-	const now = new Date().toISOString();
-	try {
-		const insert_values = {
-			id: make_approval_id(),
-			run_id: input.run_id,
-			stage_name: input.stage_name,
-			decision: input.decision,
-			reason: input.reason ?? null,
-			decided_by: input.user_id,
-			decided_at: now,
-			created_at: now,
-			updated_at: now,
-		};
-		await deps.db.insert(pipeline_approval).values(insert_values as never);
-	} catch (e) {
-		return err({ kind: "store_error", operation: "insert_pipeline_approval", message: String(e) });
-	}
-
-	// Mirror the decision into the approval store so re-evaluating a
-	// manual gate sees it. The in-memory store is the source of truth
-	// the manual evaluator reads.
-	const write = await deps.approvals.write_decision(input.run_id, input.stage_name, input.decision);
+	const write = await deps.approvals.write_decision(
+		input.run_id,
+		input.stage_name,
+		input.decision,
+		input.user_id,
+		input.reason,
+	);
 	if (!write.ok) return write;
 
 	// Record the resolved verdict as a stage event so downstream

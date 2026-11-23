@@ -340,6 +340,25 @@ const STATUS_BY_CODE: Record<string, number> = {
 const status_for_code = (code: string): number => STATUS_BY_CODE[code] ?? 500;
 
 /**
+ * Workers Logs breadcrumb for 5xx wire errors. SQLite/DB error messages
+ * are safe (no secrets/tokens); operation + route + run_id are what an
+ * operator needs — the bare `store_error` code alone was not enough to
+ * root-cause the #155 approval FK failure.
+ */
+const log_5xx = (wire: WireError, status: number, context?: { run_id?: string; route?: string }): void => {
+	if (status < 500) return;
+	console.error(
+		JSON.stringify({
+			scope: "pipelines",
+			status,
+			route: context?.route,
+			run_id: context?.run_id,
+			error: { code: wire.code, operation: wire.operation, message: wire.message },
+		}),
+	);
+};
+
+/**
  * Normalise a service-layer error (`kind` discriminator, corpus convention)
  * into the public wire shape (`code` discriminator). Strips any outer
  * Result wrapping so a `{ ok, value | error }` envelope is never
@@ -367,10 +386,15 @@ const json_err_raw = (status: number, error: WireError): Response =>
 /**
  * Emit a wire error from a service/Result error (or a literal
  * `WireError`). If `status` is omitted it's derived from the code.
+ * The wire body carries the error's `operation` + `message` fields
+ * verbatim (via the rest spread below) so UI/CLI callers see e.g.
+ * "FOREIGN KEY constraint failed (write_decision)", not just `code`.
  */
-const wire_err = (input: unknown, status?: number): Response => {
+const wire_err = (input: unknown, status?: number, context?: { run_id?: string; route?: string }): Response => {
 	const wire = to_wire_error(input);
-	return json_err_raw(status ?? status_for_code(wire.code), wire);
+	const resolved = status ?? status_for_code(wire.code);
+	log_5xx(wire, resolved, context);
+	return json_err_raw(resolved, wire);
 };
 
 const json_ok = (value: unknown) =>
@@ -492,7 +516,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 				external_target: external_target.value,
 				kind: "deploy",
 			});
-			if (!created.ok) return wire_err(created.error);
+			if (!created.ok) return wire_err(created.error, undefined, { route: "POST /runs" });
 
 			const { run, plan } = created.value;
 			const advance_res = await do_call(deps, run.id, "advance", { plan });
@@ -503,7 +527,8 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			} catch {
 				advance_body = null;
 			}
-			if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
+			if (advance_res.status >= 400)
+				return wire_err(advance_body, advance_res.status, { run_id: run.id, route: "POST /runs" });
 			return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
 		}
 
@@ -524,7 +549,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			version_set_id,
 			previous_version_set_id,
 		});
-		if (!created.ok) return wire_err(created.error);
+		if (!created.ok) return wire_err(created.error, undefined, { route: "POST /runs" });
 
 		const { run, plan } = created.value;
 		const advance_res = await do_call(deps, run.id, "advance", { plan });
@@ -535,7 +560,8 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		} catch {
 			advance_body = null;
 		}
-		if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
+		if (advance_res.status >= 400)
+			return wire_err(advance_body, advance_res.status, { run_id: run.id, route: "POST /runs" });
 
 		return json_ok({ run_id: run.id, status: run.status, plan, advance: advance_body });
 	});
@@ -733,7 +759,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			actor: human.actor,
 			plan,
 		});
-		return normalise_do_response(response);
+		return normalise_do_response(response, { run_id, route: "POST /runs/:id/approve" });
 	});
 
 	// ─── External deploy mode (#155) — redispatch ─────────────────────
@@ -754,7 +780,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (!run.ok) return wire_err(run.error);
 
 		const response = await do_call(deps, run_id, "redispatch", { actor: human.actor });
-		return normalise_do_response(response);
+		return normalise_do_response(response, { run_id, route: "POST /runs/:id/redispatch" });
 	});
 
 	app.post("/runs/:id/cancel", async (c) => {
@@ -775,7 +801,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const plan = await reconstruct_plan_for_run(deps, run.value);
 		if (plan === null) return wire_err({ code: "plan_unavailable", run_id });
 		const response = await do_call(deps, run_id, "cancel", { plan });
-		return normalise_do_response(response);
+		return normalise_do_response(response, { run_id, route: "POST /runs/:id/cancel" });
 	});
 
 	app.post("/runs/:id/rollback", async (c) => {
@@ -1541,7 +1567,10 @@ const generate_version = (): string => {
  * unwrap and re-emit via {@link wire_err} so the discriminator is
  * normalised to `code` and the response is single-wrapped.
  */
-const normalise_do_response = async (response: Response): Promise<Response> => {
+const normalise_do_response = async (
+	response: Response,
+	context?: { run_id?: string; route?: string },
+): Promise<Response> => {
 	const text = await response.text();
 	if (response.status < 400) {
 		return new Response(text, { status: response.status, headers: { "content-type": "application/json" } });
@@ -1556,7 +1585,7 @@ const normalise_do_response = async (response: Response): Promise<Response> => {
 						return null;
 					}
 				})();
-	return wire_err(parsed, response.status);
+	return wire_err(parsed, response.status, context);
 };
 
 /**
@@ -1692,7 +1721,8 @@ const finish_rollback_response = async (
 	} catch {
 		advance_body = null;
 	}
-	if (advance_res.status >= 400) return wire_err(advance_body, advance_res.status);
+	if (advance_res.status >= 400)
+		return wire_err(advance_body, advance_res.status, { run_id: run.id, route: "rollback" });
 
 	return json_ok({
 		run_id: run.id,
