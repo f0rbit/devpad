@@ -183,6 +183,13 @@
       "when": 1794585600000,
       "tag": "0025_grant_auto_approved",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1794672000000,
+      "tag": "0026_oidc_trust_repo_ids",
+      "breakpoints": true
     }
   ]
 }

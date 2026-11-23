@@ -139,6 +139,17 @@ const run = (): void => {
 	const grant_columns = query("SELECT name FROM pragma_table_info('pipeline_grant')").map((r) => r.name);
 	check("pipeline_grant.auto_approved exists after 0025", grant_columns.includes("auto_approved"), grant_columns);
 
+	const trust_migration = "0026_oidc_trust_repo_ids.sql";
+	console.log(`applying ${trust_migration}`);
+	copyFileSync(join(source_dir, trust_migration), join(migrations_dir, trust_migration));
+	apply();
+	const trust_columns = query("SELECT name FROM pragma_table_info('pipeline_oidc_trust')").map((r) => r.name);
+	check(
+		"pipeline_oidc_trust.repository_id + repository_owner_id exist after 0026",
+		trust_columns.includes("repository_id") && trust_columns.includes("repository_owner_id"),
+		trust_columns,
+	);
+
 	const after = snapshot();
 	check("pipeline_run rows + ids preserved", JSON.stringify(after.runs) === JSON.stringify(before.runs), after.runs);
 	check(

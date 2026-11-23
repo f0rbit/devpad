@@ -82,6 +82,18 @@ export const match_trust_policy = (
 		if (policy.expected_audience !== claims.aud) continue;
 		if (policy.github_owner.toLowerCase() !== owner) continue;
 
+		// Optional immutable-subject id pins. A non-empty pin requires the
+		// token to carry the matching `repository_id` / `repository_owner_id`
+		// claim — a token without the claim doesn't match (fail closed),
+		// which is the whole point of pinning: a recreated repo reusing the
+		// plain name can't satisfy the numeric id.
+		if (typeof policy.repository_owner_id === "string" && policy.repository_owner_id !== "") {
+			if (claims.repository_owner_id !== policy.repository_owner_id) continue;
+		}
+		if (typeof policy.repository_id === "string" && policy.repository_id !== "") {
+			if (claims.repository_id !== policy.repository_id) continue;
+		}
+
 		const repo_regex = compile_glob(policy.repo_pattern);
 		if (!repo_regex.test(repo)) continue;
 
@@ -218,6 +230,10 @@ export const exchange_oidc_for_session = async (
 
 	// Cross-check the parsed `sub` agrees with `repository` / `repository_owner`.
 	// This catches a forged claim where the structured fields disagree.
+	// Immutable subjects additionally carry `owner_id` / `repo_id` from the
+	// `sub` — those must agree with the token's `repository_id` /
+	// `repository_owner_id` claims, which is what defends against a
+	// recreated repo reusing a plain name.
 	const subject = parse_oidc_subject(claims.sub);
 	if (subject.ok) {
 		const subj = subject.value;
@@ -230,6 +246,18 @@ export const exchange_oidc_for_session = async (
 		}
 		if (subj.owner.toLowerCase() !== claims.repository_owner.toLowerCase()) {
 			return err({ kind: "invalid_oidc_token", reason: `sub owner disagrees with claim 'repository_owner'` });
+		}
+		if (subj.owner_id !== undefined && claims.repository_owner_id !== subj.owner_id) {
+			return err({
+				kind: "invalid_oidc_token",
+				reason: `sub owner id '${subj.owner_id}' disagrees with claim 'repository_owner_id' '${claims.repository_owner_id ?? "missing"}'`,
+			});
+		}
+		if (subj.repo_id !== undefined && claims.repository_id !== subj.repo_id) {
+			return err({
+				kind: "invalid_oidc_token",
+				reason: `sub repo id '${subj.repo_id}' disagrees with claim 'repository_id' '${claims.repository_id ?? "missing"}'`,
+			});
 		}
 	}
 
