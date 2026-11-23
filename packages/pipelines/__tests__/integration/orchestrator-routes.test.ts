@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { extendTemplate } from "@devpad/pipeline-templates";
-import { pipeline_package, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
+import { pipeline_package, pipeline_run, pipeline_stage_event, project } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { eq } from "drizzle-orm";
 import {
@@ -441,9 +441,21 @@ describe("orchestrator routes — GET /packages", () => {
 
 	test("filters by project_id query param", async () => {
 		const h = await build_harness();
-		// Link the seeded package to a project id. The FK is nullable; the row
-		// need not exist in `project` because bun:sqlite has FK enforcement off
-		// by default (matches D1's behaviour for the read path under test).
+		// Link the seeded package to a real project row (FKs are enforced in
+		// test DBs, matching D1).
+		const now = new Date().toISOString();
+		await h.db.insert(project).values({
+			id: "project_alpha",
+			project_id: "project_alpha",
+			owner_id: h.pkg.owner_id,
+			name: "project_alpha",
+			created_at: now,
+			updated_at: now,
+			created_by: "api",
+			modified_by: "api",
+			protected: false,
+			deleted: false,
+		});
 		await h.db.update(pipeline_package).set({ project_id: "project_alpha" }).where(eq(pipeline_package.id, h.pkg.id));
 
 		const alpha = await get_json(h.app, "/packages?project_id=project_alpha");

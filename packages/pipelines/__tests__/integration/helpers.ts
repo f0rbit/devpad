@@ -38,6 +38,7 @@ import {
 	type RoutesDeps,
 	type TemplateResolver,
 } from "../../src/routes";
+import { make_d1_approval_store } from "../../src/providers/approval-store";
 import { make_run_handler } from "../../src/run-do";
 
 /**
@@ -140,7 +141,13 @@ export class InMemoryApprovalStore {
 	async read_decision(run_id: string, stage: string): Promise<Result<Decision | null, StoreError>> {
 		return ok(this.decisions.get(`${run_id}:${stage}`) ?? null);
 	}
-	async write_decision(run_id: string, stage: string, decision: Decision): Promise<Result<void, StoreError>> {
+	async write_decision(
+		run_id: string,
+		stage: string,
+		decision: Decision,
+		_decided_by: string,
+		_reason?: string,
+	): Promise<Result<void, StoreError>> {
 		this.decisions.set(`${run_id}:${stage}`, decision);
 		return ok(undefined);
 	}
@@ -221,7 +228,7 @@ export const make_run_deps = (
 
 export type TestHarness = {
 	db: Database;
-	deps: ReturnType<typeof make_run_deps>;
+	deps: ReturnType<typeof make_run_deps> & { approvals: ReturnType<typeof make_d1_approval_store> };
 	template: PipelineTemplate;
 	pkg: PipelinePackage;
 	manifest_for: Map<string, VersionSetManifest>;
@@ -244,7 +251,10 @@ export const build_harness = async (options?: TestHarnessOptions): Promise<TestH
 	const db = create_test_db();
 	const u = await seed_user(db);
 	const pkg = await seed_package(db, u.id);
-	const deps = make_run_deps(db);
+	// Production wiring: the D1 store is the single writer of
+	// `pipeline_approval` rows — route tests that assert approval rows
+	// from D1 read what the state machine actually wrote.
+	const deps = { ...make_run_deps(db), approvals: make_d1_approval_store(db) };
 
 	const built = options?.template !== undefined ? { ok: true as const, value: options.template } : extendTemplate({});
 	if (!built.ok) throw new Error(`template build failed: ${JSON.stringify(built.error)}`);

@@ -9,6 +9,7 @@ const build_mock_grant = (overrides: Partial<PipelineGrant> = {}): PipelineGrant
 	scope: "anthropic:messages",
 	granted_by: "user_123",
 	granted_at: "2024-01-01T00:00:00Z",
+	auto_approved: false,
 	created_at: "2024-01-01T00:00:00Z",
 	updated_at: "2024-01-01T00:00:00Z",
 	created_by: "user",

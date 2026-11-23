@@ -170,7 +170,10 @@ describe("POST /grants — admin-only grant request", () => {
 		});
 		expect(res.status).toBe(201);
 		const grant = res.body.value as PipelineGrant;
-		expect(grant.granted_by).toBe("system:auto-approve");
+		// `granted_by` has a FK to user.id — auto-approval marks the row
+		// with the `auto_approved` flag and leaves `granted_by` null.
+		expect(grant.granted_by).toBeNull();
+		expect(grant.auto_approved).toBe(true);
 		expect(grant.granted_at).not.toBeNull();
 	});
 });

@@ -757,6 +757,9 @@ export const pipeline_grant = sqliteTable("pipeline_grant", {
 	scope: text("scope").notNull(),
 	granted_by: text("granted_by").references(() => user.id),
 	granted_at: text("granted_at"),
+	// Policy-table auto-approvals have no human grantor: `granted_by` stays
+	// null (it carries a FK to `user.id`) and this flag marks the row.
+	auto_approved: integer("auto_approved", { mode: "boolean" }).notNull().default(false),
 });
 
 export const pipeline_approval = sqliteTable("pipeline_approval", {

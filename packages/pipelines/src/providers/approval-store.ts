@@ -4,9 +4,10 @@
  * Production {@link ApprovalStore} backed by D1 via Drizzle. Reads and
  * writes the `pipeline_approval` table.
  *
- * The orchestrator's `approve_stage` service writes the row directly
- * for audit, but the manual-gate evaluator reads/writes via this store
- * — keeping the gate code unaware of D1.
+ * This store is the SINGLE writer of approval rows: `approve_stage`
+ * records the human decision through here (with the actor from the
+ * `X-Devpad-Actor` header), and the manual-gate evaluator reads back via
+ * `read_decision` — keeping the gate code unaware of D1.
  *
  * `write_pending` is a no-op today: pending state is implicit in the
  * absence of a decision row. Kept on the interface so a future
@@ -61,7 +62,13 @@ export const make_d1_approval_store = (db: Database): ApprovalStore => ({
 		}
 	},
 
-	write_decision: async (run_id: string, stage: string, decision: Decision): Promise<Result<void, StoreError>> => {
+	write_decision: async (
+		run_id: string,
+		stage: string,
+		decision: Decision,
+		decided_by: string,
+		reason?: string,
+	): Promise<Result<void, StoreError>> => {
 		try {
 			const now = new Date().toISOString();
 			await db.insert(pipeline_approval).values({
@@ -69,8 +76,8 @@ export const make_d1_approval_store = (db: Database): ApprovalStore => ({
 				run_id,
 				stage_name: stage,
 				decision: decision_to_db(decision),
-				reason: null,
-				decided_by: "system",
+				reason: reason ?? null,
+				decided_by,
 				decided_at: now,
 				created_at: now,
 				updated_at: now,

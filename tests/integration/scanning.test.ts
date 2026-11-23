@@ -70,14 +70,15 @@ async function seed_open_task(overrides: Partial<typeof task.$inferInsert> = {})
 }
 
 async function seed_codebase_task(id: string, file: string): Promise<void> {
-	const { codebase_tasks } = await import("@devpad/schema/database/schema");
+	const { codebase_tasks, tracker_result } = await import("@devpad/schema/database/schema");
+	const scan = await db.insert(tracker_result).values({ project_id, data: "[]" }).returning();
 	await db.insert(codebase_tasks).values({
 		id,
 		text: "// TODO existing",
 		line: 1,
 		file,
 		type: "todo",
-		recent_scan_id: 1,
+		recent_scan_id: scan[0].id,
 	});
 }
 
