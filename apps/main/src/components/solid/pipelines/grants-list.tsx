@@ -1,4 +1,3 @@
-import { AUTO_APPROVE_USER } from "@devpad/core/services/pipelines/grants";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineGrant } from "@devpad/schema";
 import { Badge, Button, Empty } from "@f0rbit/ui";
@@ -22,7 +21,7 @@ const format_date = (dateString: string | null) => {
 };
 
 const is_pending = (grant: PipelineGrant) => grant.granted_at === null;
-const is_auto_approved = (grant: PipelineGrant) => grant.granted_by === AUTO_APPROVE_USER;
+const is_auto_approved = (grant: PipelineGrant) => grant.auto_approved;
 
 export default function GrantsList(props: GrantsListProps) {
 	const [grants, setGrants] = createSignal<PipelineGrant[]>(props.grants);

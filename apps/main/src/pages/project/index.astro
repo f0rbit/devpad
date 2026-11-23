@@ -38,10 +38,12 @@ if (user) {
 			const runs_result = await client.pipelines.list({ package_id: pkg.id, limit: 1 });
 			const latest_run = runs_result.ok ? runs_result.value[0] : null;
 
-			// Fetch all pending approvals for this package to count them
+			// Fetch all pending approvals for this package to count them.
+			// Pending = no decision yet (`granted_at` null) — NOT
+			// `granted_by` null, which also matches auto-approved grants.
 			const grants_result = await client.pipelines.grants.list(pkg.id);
 			const pending_count = grants_result.ok
-				? grants_result.value.filter(g => g.granted_by === null).length
+				? grants_result.value.filter(g => g.granted_at === null).length
 				: 0;
 
 			pipeline_status_map.set(project.id, {

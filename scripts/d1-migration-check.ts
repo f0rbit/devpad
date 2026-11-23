@@ -132,6 +132,13 @@ const run = (): void => {
 	const run_columns = query("SELECT name FROM pragma_table_info('pipeline_run')").map((r) => r.name);
 	check("pipeline_run.error exists after 0024", run_columns.includes("error"), run_columns);
 
+	const grant_migration = "0025_grant_auto_approved.sql";
+	console.log(`applying ${grant_migration}`);
+	copyFileSync(join(source_dir, grant_migration), join(migrations_dir, grant_migration));
+	apply();
+	const grant_columns = query("SELECT name FROM pragma_table_info('pipeline_grant')").map((r) => r.name);
+	check("pipeline_grant.auto_approved exists after 0025", grant_columns.includes("auto_approved"), grant_columns);
+
 	const after = snapshot();
 	check("pipeline_run rows + ids preserved", JSON.stringify(after.runs) === JSON.stringify(before.runs), after.runs);
 	check(

@@ -10,7 +10,12 @@ import { evaluate_grant_check, is_auto_approvable } from "./grants-domain.js";
 export type { GrantVerdict } from "./grants-domain.js";
 export { evaluate_grant_check, is_auto_approvable, is_grant_match } from "./grants-domain.js";
 
-export const AUTO_APPROVE_USER = "system:auto-approve";
+/**
+ * `pipeline_grant.granted_by` carries a FK to `user.id` — an auto-approved
+ * grant has no human grantor, so `granted_by` stays null and
+ * `auto_approved` marks the row instead. Never write a sentinel string
+ * ("system", "system:auto-approve") into a FK'd identity column.
+ */
 
 const log = createLogger("pipelines:grants");
 
@@ -64,12 +69,16 @@ export async function request_grant(
 		const now = new Date().toISOString();
 		const auto_approvable = is_auto_approvable(scope, stage_name);
 
+		// `pipeline_grant.granted_by` carries a FK to `user.id` — an
+		// auto-approved grant has no human grantor, so `granted_by` stays
+		// null and `auto_approved` marks the row instead.
 		const grant_data: UpsertPipelineGrant = {
 			package_id,
 			stage_name,
 			scope,
 			granted_at: auto_approvable ? now : null,
-			granted_by: auto_approvable ? AUTO_APPROVE_USER : null,
+			granted_by: null,
+			auto_approved: auto_approvable,
 		};
 
 		const inserted = await db
@@ -119,6 +128,7 @@ export async function approve_grant(
 			.set({
 				granted_at: now,
 				granted_by: user_id,
+				auto_approved: false,
 				updated_at: now,
 				modified_by: "user",
 			})
@@ -159,6 +169,7 @@ export async function deny_grant(
 			.set({
 				granted_at: null,
 				granted_by: null,
+				auto_approved: false,
 				updated_at: now,
 				modified_by: "user",
 			})
