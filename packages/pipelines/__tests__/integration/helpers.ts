@@ -25,6 +25,7 @@ import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { is_bearer_valid } from "../../src/auth";
+import type { DoRouter, DoStub } from "../../src/do-router";
 // Import from source modules directly (NOT `../../src/index.ts`) so the
 // test bundle skips `grants-rpc-entrypoint.ts`, which pulls in the
 // `cloudflare:workers` runtime-only module that bun can't resolve.
@@ -227,6 +228,7 @@ export type TestHarness = {
 	app: ReturnType<typeof make_routes>;
 	namespace: InMemoryDurableObjectNamespace<{ deps: RunDeps }>;
 	previous_for: Map<string, string>;
+	do_router: AsyncFaithfulDoRouter;
 	fire_alarm: (run_id: string) => Promise<void>;
 };
 
@@ -290,13 +292,13 @@ export const build_harness = async (options?: TestHarnessOptions): Promise<TestH
 	const templates: TemplateResolver = { resolve: async (_pkg, _vs) => template };
 	const manifests: ManifestProvider = { get: async (id) => manifest_for.get(id) ?? null };
 	const lineage: LineageProvider = { previous: async (_pkg, vs) => previous_for.get(vs) ?? null };
-	const do_router = {
+	const do_router = make_async_faithful_do_router({
 		get(run_id: string) {
 			const id = namespace.idFromName(run_id);
 			const stub = namespace.get(id);
 			return { fetch: (req: Request) => stub.fetch(req) };
 		},
-	};
+	});
 	const gate =
 		options === undefined || options.auth === undefined
 			? build_test_auth_gate(options?.session)
@@ -322,6 +324,7 @@ export const build_harness = async (options?: TestHarnessOptions): Promise<TestH
 		previous_for,
 		app,
 		namespace,
+		do_router,
 		fire_alarm: async (run_id) => {
 			const stub = namespace.get(namespace.idFromName(run_id));
 			await stub.manualFireAlarm();
@@ -330,6 +333,44 @@ export const build_harness = async (options?: TestHarnessOptions): Promise<TestH
 };
 
 export type Envelope<T> = { ok: boolean; value?: T; error?: unknown };
+
+/**
+ * Async-faithful DO router wrapper (#155 tick regression). The
+ * in-memory DO resolves synchronously, so a fire-and-forget
+ * `void deps.do.fetch(...)` in `ingest_event` still completes before
+ * the route responds and tests can't tell the difference — production
+ * Workers CANCEL that promise once the route returns. This wrapper
+ * delays each DO fetch's resolution to a later macrotask and counts
+ * started vs resolved calls: after an awaited response,
+ * `resolved === started`; if the tick were fire-and-forget, the route
+ * would respond before the macrotask fires and `resolved < started`
+ * (plus the response's `tick` field could not be `applied`).
+ */
+export type AsyncFaithfulDoRouter = DoRouter & {
+	readonly do_stats: { started: number; resolved: number };
+};
+
+export const make_async_faithful_do_router = (inner: DoRouter): AsyncFaithfulDoRouter => {
+	const stats = { started: 0, resolved: 0 };
+	return {
+		do_stats: stats,
+		get(run_id: string): DoStub {
+			const stub = inner.get(run_id);
+			return {
+				fetch: (req: Request) => {
+					stats.started += 1;
+					return new Promise<Response>((resolve) => {
+						setTimeout(() => {
+							const result = stub.fetch(req);
+							stats.resolved += 1;
+							resolve(result);
+						}, 0);
+					});
+				},
+			};
+		},
+	};
+};
 
 /**
  * POST helper. `headers` defaults to the harness's admin bearer — pass

@@ -566,7 +566,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	//   session's allowed `package_ids`. Body parsed via
 	//   `webhook_event_body` Zod schema from `@devpad/schema/validation`;
 	//   `idempotency_key` may also be supplied via header
-	//   `X-Idempotency-Key` (header takes precedence).
+	//   `X-Idempotency-Key` (header takes precedence). The value carries a
+	//   `tick` field (#155): the AWAITED outcome of the DO
+	//   `/external-event` call (`applied` / `noop:<reason>` /
+	//   `failed:<message>` / `skipped:*`) so CI logs can tell whether the
+	//   run actually advanced.
 	//
 	// `GET /runs/:id/events`
 	//   Read-only listing of stored events for a run, newest-first. Auth

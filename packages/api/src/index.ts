@@ -59,6 +59,7 @@ export type {
 	MilestoneLensRow,
 	PipelineDispatchEntry,
 	PipelineDispatches,
+	PipelineIngestTick,
 	PublicHook,
 	PullDocResponse,
 	PushInterfaceReportResult,

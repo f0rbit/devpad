@@ -22,6 +22,7 @@ import { eq } from "drizzle-orm";
 import {
 	build_test_auth_gate,
 	create_test_db,
+	make_async_faithful_do_router,
 	make_run_deps,
 	post_json,
 	seed_package,
@@ -29,6 +30,7 @@ import {
 	test_admin_headers,
 	test_human_headers,
 	TEST_SESSION_TOKEN,
+	type AsyncFaithfulDoRouter,
 	type TestSessionClaims,
 } from "./helpers";
 import {
@@ -59,6 +61,7 @@ type Harness = {
 	deps: ReturnType<typeof make_run_deps> & { dispatcher: InMemoryDispatcher };
 	app: ReturnType<typeof make_routes>;
 	namespace: InMemoryDurableObjectNamespace<{ deps: RunDeps }>;
+	do_router: AsyncFaithfulDoRouter;
 	fire_alarm: (run_id: string) => Promise<void>;
 };
 
@@ -96,15 +99,21 @@ async function build_harness(): Promise<Harness> {
 		return { fetch: handler.handle, alarm: handler.fire_alarm };
 	});
 
+	// Async-faithful DO router (#155): each DO fetch resolves on a later
+	// macrotask, so a fire-and-forget tick in `ingest_event` would return
+	// from the route before the DO ever ran — `do_stats.resolved <
+	// do_stats.started` and `tick` could not be "applied".
+	const do_router = make_async_faithful_do_router({
+		get(run_id: string) {
+			return {
+				fetch: (req: Request) => namespace.get(namespace.idFromName(run_id)).fetch(req),
+			};
+		},
+	});
+
 	const routes_deps: RoutesDeps = {
 		db,
-		do_router: {
-			get(run_id: string) {
-				return {
-					fetch: (req: Request) => namespace.get(namespace.idFromName(run_id)).fetch(req),
-				};
-			},
-		},
+		do_router,
 		manifests: manifest_in,
 		templates,
 		lineage,
@@ -118,6 +127,7 @@ async function build_harness(): Promise<Harness> {
 		deps,
 		app,
 		namespace,
+		do_router,
 		fire_alarm: async (run_id) => {
 			const stub = namespace.get(namespace.idFromName(run_id));
 			await stub.manualFireAlarm();
@@ -289,6 +299,88 @@ describe("external mode — full CI acceptance flow over the routes", () => {
 		await Bun.sleep(30);
 		const row = await run_of(h.db, run_id);
 		expect(row.status).toBe("deploying");
+	});
+});
+
+// #155 tick regression: `ingest_event` must AWAIT the DO tick and surface
+// its outcome in the response's `tick` field. With the async-faithful
+// router above, a fire-and-forget tick would resolve AFTER the route
+// responded — these assertions (immediate run-status reads, resolved ===
+// started, `tick: "applied"`) can only pass if the tick completed inside
+// the request.
+describe("POST /runs/:id/events — tick is awaited and its outcome surfaced", () => {
+	let h: Harness;
+	beforeEach(async () => {
+		h = await build_harness();
+	});
+
+	const create_run = async (): Promise<string> => {
+		const created = await post_json(h.app, "/runs", { package_id: EXTERNAL_PACKAGE_ID, commit_sha: COMMIT_A });
+		expect(created.status).toBe(200);
+		const run_id = (created.body.value as { run_id: string }).run_id;
+		await wait_until_status(h.db, run_id, "deploying");
+		return run_id;
+	};
+
+	test("matching sha → tick applied; run is awaiting_approval BEFORE any polling", async () => {
+		const run_id = await create_run();
+		const started = h.do_router.do_stats.started;
+
+		const staged = await post_event(h.app, run_id, valid_event());
+		expect(staged.status).toBe(201);
+		const value = staged.body.value as { event_id: string; duplicated: boolean; tick: string };
+		expect(value.tick).toBe("applied");
+		expect(h.do_router.do_stats.resolved).toBe(started + 1);
+
+		// No wait loop — the tick completed inside the request, so the run
+		// has already advanced by the time the response arrived.
+		const row = await run_of(h.db, run_id);
+		expect(row.status).toBe("awaiting_approval");
+	});
+
+	test("wrong sha → tick noop:sha_mismatch; run still deploying, no extra DO call", async () => {
+		const run_id = await create_run();
+		const started = h.do_router.do_stats.started;
+
+		const wrong = await post_event(
+			h.app,
+			run_id,
+			valid_event({ payload: { sha: COMMIT_B }, idempotency_key: "33333333-3333-4333-8333-333333333333" }),
+		);
+		expect(wrong.status).toBe(201);
+		expect((wrong.body.value as { tick: string }).tick).toBe("noop:sha_mismatch");
+		expect(h.do_router.do_stats.resolved).toBe(started + 1);
+
+		const row = await run_of(h.db, run_id);
+		expect(row.status).toBe("deploying");
+	});
+
+	test("informational kind → tick skipped:informational, zero DO calls", async () => {
+		const run_id = await create_run();
+		const started = h.do_router.do_stats.started;
+
+		const res = await post_event(
+			h.app,
+			run_id,
+			valid_event({ kind: "deploy_started", idempotency_key: "44444444-4444-4444-8444-444444444444" }),
+		);
+		expect(res.status).toBe(201);
+		expect((res.body.value as { tick: string }).tick).toBe("skipped:informational");
+		expect(h.do_router.do_stats.started).toBe(started);
+	});
+
+	test("idempotent replay → tick skipped:duplicated, no extra DO call", async () => {
+		const run_id = await create_run();
+		const first = await post_event(h.app, run_id, valid_event());
+		expect(first.status).toBe(201);
+		const started = h.do_router.do_stats.started;
+
+		const replay = await post_event(h.app, run_id, valid_event());
+		expect(replay.status).toBe(200);
+		const value = replay.body.value as { duplicated: boolean; tick: string };
+		expect(value.duplicated).toBe(true);
+		expect(value.tick).toBe("skipped:duplicated");
+		expect(h.do_router.do_stats.started).toBe(started);
 	});
 });
 

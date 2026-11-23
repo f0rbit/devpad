@@ -47,6 +47,7 @@ export {
 	type EventValidationError,
 	type IngestEventInput,
 	type IngestEventOutput,
+	type IngestTick,
 	ingest_event,
 } from "./events.js";
 export * from "./grants.js";

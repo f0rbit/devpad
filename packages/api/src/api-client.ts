@@ -130,6 +130,22 @@ export type PipelineDispatches = {
 	dispatches: PipelineDispatchEntry[];
 };
 
+/**
+ * Outcome of the orchestrator's AWAITED DO tick, returned in
+ * `events.ingest` responses (#155): `applied` (run state machine moved),
+ * `noop:<reason>` (DO refused — sha/stage mismatch, orchestrated run,
+ * malformed payload), `failed:<message>` (tick broke; event row still
+ * durable), or `skipped:*` (informational kind / idempotent replay).
+ * Mirrors `IngestTick` in `packages/core/src/services/pipelines/events.ts`
+ * (defined locally — `@devpad/api` doesn't depend on `@devpad/core`).
+ */
+export type PipelineIngestTick =
+	| "applied"
+	| `noop:${string}`
+	| `failed:${string}`
+	| "skipped:informational"
+	| "skipped:duplicated";
+
 type FoldDiff =
 	| { kind: "missing_row"; entity: "milestone" | "goal"; id: string }
 	| {
@@ -1761,11 +1777,14 @@ export class ApiClient {
 			ingest: (
 				run_id: string,
 				input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string },
-			): Promise<ApiResult<{ event_id: string; duplicated: boolean }>> =>
+			): Promise<ApiResult<{ event_id: string; duplicated: boolean; tick: PipelineIngestTick }>> =>
 				wrap(() =>
-					this.clients.pipelines.post<{ event_id: string; duplicated: boolean }>(`/runs/${run_id}/events`, {
-						body: input,
-					}),
+					this.clients.pipelines.post<{ event_id: string; duplicated: boolean; tick: PipelineIngestTick }>(
+						`/runs/${run_id}/events`,
+						{
+							body: input,
+						},
+					),
 				),
 
 			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> =>

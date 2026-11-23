@@ -8,8 +8,9 @@
  * Surface:
  *
  * - `ingest_event(deps, input)` — idempotently insert a row into
- *   `pipeline_stage_event`, fire-and-forget a pulse signal, and tick the
- *   run's Durable Object iff the kind is state-transition-relevant.
+ *   `pipeline_stage_event`, fire-and-forget a pulse signal, and — iff the
+ *   kind is state-transition-relevant — AWAIT the run's Durable Object
+ *   tick and return its outcome in `tick`.
  *
  * Idempotency: per `(run_id, idempotency_key, payload)` triple. We hash
  * the key + JSON-serialised payload into a content-addressed
@@ -27,7 +28,11 @@ import { pipeline_run, pipeline_stage_event } from "@devpad/schema/database/sche
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
+import { z } from "zod";
+import { createLogger } from "../../utils/logger.js";
 import type { ServiceError } from "../errors.js";
+
+const logger = createLogger("pipelines.events");
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -49,7 +54,30 @@ export type IngestEventInput = {
 export type IngestEventOutput = {
 	event_id: string;
 	duplicated: boolean;
+	/**
+	 * Outcome of the awaited DO tick (transition kinds only). Surfaced so
+	 * CI logs can tell whether the run actually advanced: `applied` (state
+	 * machine moved), `noop:<reason>` (DO refused — sha/stage mismatch,
+	 * orchestrated run, malformed payload), `failed:<message>` (tick
+	 * request itself broke — the event row is still durable), or
+	 * `skipped:*` (no tick attempted: informational kind, or idempotent
+	 * replay whose original insert already completed its tick).
+	 */
+	tick: IngestTick;
 };
+
+/**
+ * Tick outcome string returned in {@link IngestEventOutput.tick}. The
+ * `noop:` variant carries the DO's `ExternalEventNoOp` reason
+ * (`orchestrated_run` | `malformed_payload` | `sha_mismatch` |
+ * `stage_mismatch`); `failed:` carries the error message.
+ */
+export type IngestTick =
+	| "applied"
+	| `noop:${string}`
+	| `failed:${string}`
+	| "skipped:informational"
+	| "skipped:duplicated";
 
 /**
  * Minimal Durable Object namespace surface the service relies on for
@@ -126,14 +154,20 @@ const idempotency_hash = async (idempotency_key: string, payload: unknown): Prom
  *     replay is enforced by the partial unique index on
  *     `(run_id, idempotency_hash)` — a replay resolves as a constraint
  *     violation and returns the existing row with `duplicated: true`.
- *  5. Fire-and-forget pulse emit; tick the DO (via `/external-event`) if
- *     the kind transitions state.
+ *  5. Fire-and-forget pulse emit; AWAIT the DO tick (via
+ *     `/external-event`) if the kind transitions state.
  *
  * The pulse and DO calls happen AFTER the insert is durable so a downstream
- * failure can't lose the event row. Pulse failures are swallowed; the DO
- * tick is also fire-and-forget — `/advance` errors don't bubble back
- * because the event itself has been recorded and the next DO request will
- * pick up the new state.
+ * failure can't lose the event row. Pulse failures are swallowed. The DO
+ * tick is AWAITED — a fire-and-forget tick here is cancelled by the
+ * Workers runtime once the route returns, silently stranding the run in
+ * `deploying` (#155 production incident: CI's `deploy_completed` was
+ * recorded `ok:true` but the run never advanced). Tick failures never
+ * fail the ingest (the event row is durable); they surface as
+ * `tick: "failed:<message>"` in the response body plus a logged error
+ * instead. With the tick awaited, a `duplicated: true` replay always
+ * implies the original request's tick already completed — replays never
+ * re-tick.
  */
 export const ingest_event = async (
 	deps: EventDeps,
@@ -207,8 +241,8 @@ export const ingest_event = async (
 				.from(pipeline_stage_event)
 				.where(and(eq(pipeline_stage_event.run_id, input.run_id), eq(pipeline_stage_event.idempotency_hash, hash)));
 			const existing_id = replayed.at(0)?.id;
-			if (existing_id !== undefined) return ok({ event_id: existing_id, duplicated: true });
-			return ok({ event_id: id, duplicated: true });
+			if (existing_id !== undefined) return ok({ event_id: existing_id, duplicated: true, tick: "skipped:duplicated" });
+			return ok({ event_id: id, duplicated: true, tick: "skipped:duplicated" });
 		}
 		return err({
 			kind: "store_error",
@@ -228,21 +262,71 @@ export const ingest_event = async (
 		})
 		.catch(() => undefined);
 
-	// (5b) DO tick for transition-relevant kinds only. The body carries
-	// the stage name + raw payload so the DO side of external events can
-	// validate stage + SHA before adopting the event (#155).
+	// (5b) AWAITED DO tick for transition-relevant kinds only. The body
+	// carries the stage name + raw payload so the DO side of external
+	// events can validate stage + SHA before adopting the event (#155).
+	// The tick must complete BEFORE this route responds: an unawaited
+	// promise is cancelled by the Workers runtime once the response is
+	// returned, so fire-and-forget here silently strands the run. The
+	// outcome is parsed from the DO's `ExternalEventOutcome` body and
+	// returned in `tick` so CI logs show whether the run advanced.
+	let tick: IngestTick = "skipped:informational";
 	if (TRANSITION_KINDS.has(input.kind)) {
-		void deps.do
-			.fetch(input.run_id, "/external-event", {
+		try {
+			const response = await deps.do.fetch(input.run_id, "/external-event", {
 				kind: "external_event",
 				event_kind: input.kind,
 				stage_name: input.stage_name,
 				payload: input.payload ?? null,
-			})
-			.catch(() => undefined);
+			});
+			tick = await tick_outcome_from(response);
+		} catch (e) {
+			tick = `failed:${e instanceof Error ? e.message : String(e)}`;
+		}
+		if (tick !== "applied" && !tick.startsWith("noop:")) {
+			logger.error("external event tick did not apply", {
+				run_id: input.run_id,
+				kind: input.kind,
+				stage_name: input.stage_name,
+				tick,
+			});
+		}
 	}
 
-	return ok({ event_id: id, duplicated: false });
+	return ok({ event_id: id, duplicated: false, tick });
+};
+
+/**
+ * Map a DO `/external-event` response to a tick outcome. 2xx bodies carry
+ * the `ExternalEventOutcome` (`{ acted: true, output }` or
+ * `{ acted: false, reason }`); anything else — non-2xx status or an
+ * unparseable body — is a `failed:` outcome with the best message
+ * available.
+ */
+const TickErrorEnvelopeSchema = z.object({ error: z.object({ message: z.string() }).partial().optional() });
+const TickValueEnvelopeSchema = z.object({
+	value: z.object({ acted: z.boolean(), reason: z.string().optional() }).optional(),
+});
+
+const tick_outcome_from = async (response: Response): Promise<IngestTick> => {
+	let body: unknown = null;
+	try {
+		const parsed_body: unknown = await response.json();
+		body = parsed_body;
+	} catch {
+		body = null;
+	}
+	if (!response.ok) {
+		const parsed = TickErrorEnvelopeSchema.safeParse(body);
+		const message = parsed.success ? parsed.data.error?.message : undefined;
+		return `failed:${message ?? `status_${String(response.status)}`}`;
+	}
+	const parsed = TickValueEnvelopeSchema.safeParse(body);
+	const value = parsed.success ? parsed.data.value : undefined;
+	if (value === undefined) return "failed:unreadable_tick_response";
+	if (value.acted) return "applied";
+	if (value.reason !== undefined) return `noop:${value.reason}`;
+	return "failed:unreadable_tick_response";
 };
 
 // ─── Internal helpers ───────────────────────────────────────────────
