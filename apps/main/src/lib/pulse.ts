@@ -26,10 +26,21 @@
  * Importing this module in a browser context eagerly initializes — no manual call needed.
  */
 
-import { createPulse, type Pulse } from "@f0rbit/pulse-client";
+import { createPulse, type Pulse, type LogLevel as PulseLogLevel } from "@f0rbit/pulse-client";
 import { startSpan, type Span } from "@f0rbit/pulse-client/spans";
 
-type LogLevel = "raw" | "debug" | "info" | "notice" | "warning" | "error" | "critical";
+/** devpad's severity ladder mapped onto pulse's own LogLevel enum —
+ * pulse accepts only debug|info|warn|error|critical. Adding an entry whose
+ * value isn't a valid pulse level is a compile error. */
+const PULSE_LEVEL = {
+	raw: "debug",
+	debug: "debug",
+	info: "info",
+	notice: "info",
+	warning: "warn",
+} as const satisfies Record<string, PulseLogLevel>;
+
+type DevpadLogLevel = keyof typeof PULSE_LEVEL;
 
 let pulse_instance: Pulse | null = null;
 let initialized = false;
@@ -84,12 +95,12 @@ const install_browser_handlers = (p: Pulse): void => {
 const isError = (x: unknown): x is Error =>
 	x instanceof Error || (typeof x === "object" && x !== null && "stack" in (x as Record<string, unknown>));
 
-const emit = (level: LogLevel, message: string, attrs?: Record<string, unknown>): void => {
-	ensureInitialized()?.log(level as never, message, attrs);
+const emit = (level: DevpadLogLevel, message: string, attrs?: Record<string, unknown>): void => {
+	ensureInitialized()?.log(PULSE_LEVEL[level], message, attrs);
 };
 
 const error_or_critical =
-	(level: "error" | "critical") =>
+	(level: Extract<PulseLogLevel, "error" | "critical">) =>
 	(message: string, err_or_attrs?: unknown, attrs?: Record<string, unknown>): void => {
 		const p = ensureInitialized();
 		if (!p) return;

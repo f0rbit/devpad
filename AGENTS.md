@@ -426,6 +426,10 @@ devpad federates with `@f0rbit/pulse` (analytics + observability, separate Cloud
 - `AppVariables.api_key_scope` is `null` for cookie-auth (browser sessions) and a scope literal (`"pulse"`, `"all"`, etc.) for API-key auth. Routes that branch on scope must handle `null`.
 - `getUserAndScopeByApiKey()` in `packages/core/src/auth/keys.ts` returns both user_id and scope; auth middleware exposes scope via `c.set("api_key_scope", ...)`.
 
+### Log levels
+
+- devpad's severity ladder (`raw/debug/info/notice/warning/error/critical`) maps onto pulse's enum (`debug|info|warn|error|critical`) via a typed record (`PULSE_LEVEL`) derived from pulse-client's own `LogLevel` — never cast the level (`as never` once made a whole batch 422 on `POST /e`). See `packages/worker/src/lib/log.ts` + `apps/main/src/lib/pulse.ts`.
+
 ### Worker proxy — `/v1/pulse/*`
 
 - `packages/worker/src/routes/v1/pulse.ts` is a server-to-server forwarder. It holds `pulse_internal_key` (config-injected) and forwards to `pulse_api_base` after rewriting `/v1/pulse/<rest>` → `/<rest>`.
