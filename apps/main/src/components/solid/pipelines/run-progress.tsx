@@ -22,6 +22,8 @@ const RunProgressContent = (props: RunProgressProps) => {
 	const progress = () => (rollout_read.ok ? stages_for_run(props.run, rollout_read.value) : null);
 	const stages = () => progress()?.stages ?? [];
 	const current_stage_idx = () => progress()?.current_index ?? -1;
+	const done_through = () => progress()?.done_count ?? current_stage_idx();
+	const is_done = (idx: number) => idx < done_through();
 
 	return (
 		<div class="stack stack-md">
@@ -53,32 +55,26 @@ const RunProgressContent = (props: RunProgressProps) => {
 									height: "44px",
 									"border-radius": "50%",
 									border: `2px solid ${
-										idx() < current_stage_idx()
-											? "var(--success)"
-											: idx() === current_stage_idx()
-												? "var(--info)"
-												: "var(--border)"
+										is_done(idx()) ? "var(--success)" : idx() === current_stage_idx() ? "var(--info)" : "var(--border)"
 									}`,
-									background:
-										idx() < current_stage_idx()
-											? "var(--success-bg)"
-											: idx() === current_stage_idx()
-												? "var(--info-bg)"
-												: "var(--bg-alt)",
+									background: is_done(idx())
+										? "var(--success-bg)"
+										: idx() === current_stage_idx()
+											? "var(--info-bg)"
+											: "var(--bg-alt)",
 									display: "flex",
 									"align-items": "center",
 									"justify-content": "center",
 									"font-size": "0.85rem",
 									"font-weight": "600",
-									color:
-										idx() < current_stage_idx()
-											? "var(--success)"
-											: idx() === current_stage_idx()
-												? "var(--info)"
-												: "var(--fg-muted)",
+									color: is_done(idx())
+										? "var(--success)"
+										: idx() === current_stage_idx()
+											? "var(--info)"
+											: "var(--fg-muted)",
 								}}
 							>
-								{idx() < current_stage_idx() ? (
+								{is_done(idx()) ? (
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="20"

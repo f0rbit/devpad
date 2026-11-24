@@ -169,7 +169,13 @@ describe("approvals — single writer + FK-enforced decided_by", () => {
 		const events = await stage_events_of(h.db, run_id);
 		const verdicts = events.filter((e) => e.kind === "gate_verdict");
 		expect(verdicts).toHaveLength(1);
-		expect(verdicts[0].payload).toEqual({ type: "manual", verdict: "Pass", reason: "looks good" });
+		expect(verdicts[0].payload).toEqual({
+			type: "manual",
+			verdict: "Pass",
+			reason: "looks good",
+			decided_by: "user_test",
+			decided_at: expect.any(String),
+		});
 
 		await wait_until_status(h.db, run_id, "deploying");
 		expect(h.dispatcher.dispatched).toHaveLength(1);

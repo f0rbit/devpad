@@ -111,7 +111,7 @@ const parse_args = (argv: string[]): { ref: string; dry_run: boolean } => {
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		if (arg === "--dry-run") dry_run = true;
-		else if (arg === "--ref") ref = argv[i + 1] ?? fail("--ref requires a value");
+		else if (arg === "--ref") ref = argv[++i] ?? fail("--ref requires a value");
 		else if (arg.startsWith("--ref=")) ref = arg.slice("--ref=".length);
 		else fail(`unknown argument: ${arg}`);
 	}
