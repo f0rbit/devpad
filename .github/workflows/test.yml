@@ -105,7 +105,8 @@ jobs:
   # auth — separate rot, tracked as a follow-up). Including them would make this job
   # perpetually red and destroy its value as a signal.
   e2e:
-    runs-on: ubuntu-latest
+    # Playwright 1.60 does not support ubuntu-26.04 (what ubuntu-latest resolves to); revisit when the locked Playwright supports it.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
 
     steps:

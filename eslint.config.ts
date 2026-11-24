@@ -97,6 +97,11 @@ export default define_lint_config({
 			ignores: ["packages/cli/tests/golden/**"],
 		},
 		{
+			// Alchemy deploy state (.alchemy/, .alchemy-quarantine/) and the timestamped
+			// backups deploy:orchestrator leaves behind (.alchemy.bak-*) -- not source.
+			ignores: [".alchemy*/**"],
+		},
+		{
 			// Handlebars template stubs (*.hbs) for `devpad pipelines init` scaffolding.
 			// The ts_files glob only matches real .ts/.tsx extensions so this is a
 			// no-op in practice; listed explicitly so the scope boundary is documented.

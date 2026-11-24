@@ -13,10 +13,18 @@
  *   const span = log.span("github_scan"); ...; span.end({ items });
  */
 
-import type { Pulse } from "@f0rbit/pulse-client";
+import type { Pulse, LogLevel as PulseLogLevel } from "@f0rbit/pulse-client";
 import { startSpan, type Span } from "@f0rbit/pulse-client/spans";
 
-type LogLevel = "raw" | "debug" | "info" | "notice" | "warning" | "error" | "critical";
+const PULSE_LEVEL = {
+	raw: "debug",
+	debug: "debug",
+	info: "info",
+	notice: "info",
+	warning: "warn",
+} as const satisfies Record<string, PulseLogLevel>;
+
+type DevpadLogLevel = keyof typeof PULSE_LEVEL;
 
 const isError = (x: unknown): x is Error =>
 	x instanceof Error || (typeof x === "object" && x !== null && "stack" in (x as Record<string, unknown>));
@@ -52,12 +60,12 @@ export const noop_log: PulseLog = {
 	flush: async () => {},
 };
 
-const emit_level = (pulse: Pulse, level: LogLevel) => (msg: string, attrs?: Record<string, unknown>) => {
-	pulse.log(level as never, msg, attrs);
+const emit_level = (pulse: Pulse, level: DevpadLogLevel) => (msg: string, attrs?: Record<string, unknown>) => {
+	pulse.log(PULSE_LEVEL[level], msg, attrs);
 };
 
 const emit_error =
-	(pulse: Pulse, level: "error" | "critical") =>
+	(pulse: Pulse, level: Extract<PulseLogLevel, "error" | "critical">) =>
 	(message: string, err_or_attrs?: unknown, attrs?: Record<string, unknown>): void => {
 		if (isError(err_or_attrs)) {
 			pulse.captureError(err_or_attrs, { message, level, ...attrs });
