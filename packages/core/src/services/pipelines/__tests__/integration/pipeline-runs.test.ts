@@ -260,6 +260,22 @@ describe("pipeline runs — full gradual happy path", () => {
 		);
 		expect(denied.ok).toBe(true);
 
+		// The gate_verdict event payload carries the human decision for the
+		// run-detail gate panel (decided_by/decided_at are additive; the
+		// UI tolerates older events without them).
+		const events = await events_for(db, run.id);
+		const verdict_event = events.find((e) => e.kind === "gate_verdict" && e.stage_name === "onebox");
+		expect(verdict_event).toBeDefined();
+		const payload =
+			typeof verdict_event?.payload === "object" && verdict_event.payload !== null
+				? (verdict_event.payload as Record<string, unknown>)
+				: {};
+		expect(payload.verdict).toBe("Fail");
+		expect(payload.reason).toBe("looks dodgy");
+		expect(payload.decided_by).toBe("user_test");
+		expect(typeof payload.decided_at).toBe("string");
+		expect(Number.isNaN(new Date(String(payload.decided_at)).getTime())).toBe(false);
+
 		const final = await run_status(db, run.id);
 		expect(final.status).toBe("failed");
 	});

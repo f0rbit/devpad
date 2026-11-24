@@ -576,11 +576,19 @@ export const approve_stage = async (
 
 	// Record the resolved verdict as a stage event so downstream
 	// observers see the human decision, not just the prior Pending.
+	// `decided_by`/`decided_at` (run-detail gate panel) are additive —
+	// older events without them stay readable.
 	const verdict_event = await record_stage_event_row(deps.db, {
 		run_id: input.run_id,
 		stage_name: input.stage_name,
 		kind: "gate_verdict",
-		payload: { type: "manual", verdict: input.decision === "approved" ? "Pass" : "Fail", reason: input.reason },
+		payload: {
+			type: "manual",
+			verdict: input.decision === "approved" ? "Pass" : "Fail",
+			reason: input.reason,
+			decided_by: input.user_id,
+			decided_at: new Date().toISOString(),
+		},
 	});
 	if (!verdict_event.ok) return verdict_event;
 

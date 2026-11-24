@@ -24,7 +24,7 @@ const run_id = Astro.params.run_id!;
 
 const guard = await getProject(Astro);
 if (guard instanceof Response) return guard;
-const { client, project } = guard;
+const { client, project, user } = guard;
 
 // Graceful degradation: when the orchestrator is unreachable (503 from the proxy)
 // render the shell with a degraded banner instead of propagating the 5xx.
@@ -53,6 +53,12 @@ if (run) {
 	const owns_run = packages_result.value.some((pkg: PipelinePackage) => pkg.id === run.package_id);
 	if (!owns_run) return new Response(null, { status: 404, statusText: "Run not found" });
 }
+
+// The run's stage events feed both the StageGate decision line and the
+// timeline island (the latter fetches its own copy client-side). Failure
+// degrades to no decision shown — the gate prompt still renders.
+const events_result = run ? await client.pipelines.events.list(run.id) : null;
+const run_events = events_result && events_result.ok ? events_result.value : [];
 
 // External deploy mode (#155): resolve the package-derived GitHub link targets
 // used for commit/workflow deep-links. Defensive parse — the raw JSON column
@@ -131,7 +137,13 @@ const ROLLBACK_ELIGIBLE: Record<RunStatus, boolean> = {
 					{run.current_stage && (
 						<div class="stack stack-md">
 							<h2>current stage gate</h2>
-							<StageGate client:load run={run} external={external_target && { repo: external_target.repo, workflow: external_target.workflow }} />
+							<StageGate
+							client:load
+							run={run}
+							events={run_events}
+							viewer_id={user.id}
+							external={external_target && { repo: external_target.repo, workflow: external_target.workflow }}
+						/>
 						</div>
 					)}
 

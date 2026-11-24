@@ -1,14 +1,42 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { PipelineRun } from "@devpad/schema";
-import { Button } from "@f0rbit/ui";
+import type { PipelineRun, PipelineStageEvent } from "@devpad/schema";
+import { Badge, Button } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
 import IslandBoundary, { report_island_error } from "@/components/solid/pipelines/island-boundary";
-import { GATE_READ_ERROR, gate_for_stage, read_gates, target_stage_of } from "@/utils/pipeline-plan";
+import {
+	decision_for_transition,
+	GATE_READ_ERROR,
+	gate_for_stage,
+	type GateDecision,
+	read_gates,
+	target_stage_of,
+} from "@/utils/pipeline-plan";
 
 type StageGateProps = {
 	run: PipelineRun;
 	/** When set (external deploy mode #155), approval dispatches a production deploy via this GitHub workflow. */
 	external?: { repo: string; workflow: string } | null;
+	/** The run's stage events (fetched by the page) — the source for an already-recorded gate decision. */
+	events?: PipelineStageEvent[] | null;
+	/** Signed-in user's id — renders as "you" in the decision line when they made the call. */
+	viewer_id?: string | null;
+};
+
+/** Coarse relative time for the decision line (absolute ISO in the title attr). */
+const format_relative = (iso: string): string => {
+	const then = new Date(iso).getTime();
+	if (Number.isNaN(then)) return iso;
+	const diff_ms = Math.max(0, Date.now() - then);
+	const seconds = Math.floor(diff_ms / 1000);
+	if (seconds < 5) return "just now";
+	if (seconds < 60) return `${String(seconds)}s ago`;
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) return `${String(minutes)}m ago`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${String(hours)}h ago`;
+	const days = Math.floor(hours / 24);
+	if (days < 30) return `${String(days)}d ago`;
+	return new Date(iso).toLocaleDateString();
 };
 
 const StageGateContent = (props: StageGateProps) => {
@@ -37,16 +65,36 @@ const StageGateContent = (props: StageGateProps) => {
 	const gate_type = () => gate_config()?.gate.type ?? null;
 	const gate_verdict = () => gate_config()?.gate.verdict ?? null;
 
-	const show_actions = () =>
-		props.run.status === "awaiting_approval" &&
-		gate_type() === "manual" &&
-		gate_verdict() === null &&
-		gate_config() !== null;
-
 	const target_stage_name = () => {
 		const config = gate_config();
 		return config ? target_stage_of(config.key) : null;
 	};
+
+	// The human decision recorded as a gate_verdict stage event (null on
+	// old events / undecided gates). Passed from the page, which already
+	// fetches events for the timeline.
+	const recorded_decision = () => decision_for_transition(props.events ?? null, target_stage_name() ?? "");
+
+	const decision_who = (decided_by: string | undefined): string | null => {
+		if (decided_by === undefined) return null;
+		return decided_by === props.viewer_id ? "you" : decided_by;
+	};
+
+	/** " by you · 5m ago — looks good" — each part omitted when absent (old events). */
+	const decision_line = (d: GateDecision): string => {
+		const who = decision_who(d.decided_by);
+		const by = who !== null ? ` by ${who}` : "";
+		const at = d.decided_at !== undefined ? `${by === "" ? "" : " ·"} ${format_relative(d.decided_at)}` : "";
+		const why = d.reason !== undefined && d.reason !== "" ? ` — ${d.reason}` : "";
+		return `${by}${at}${why}`.trim();
+	};
+
+	const show_actions = () =>
+		props.run.status === "awaiting_approval" &&
+		gate_type() === "manual" &&
+		gate_verdict() === null &&
+		gate_config() !== null &&
+		recorded_decision() === null;
 
 	const submit_decision = async (decision: "approved" | "denied") => {
 		const stage_name = target_stage_name();
@@ -137,11 +185,30 @@ const StageGateContent = (props: StageGateProps) => {
 							</div>
 						</Show>
 
-						{gate_type() === "manual" && (
+						<Show
+							when={
+								gate_type() === "manual" && props.run.status === "awaiting_approval" && recorded_decision() === null
+							}
+						>
 							<div class="text-xs text-muted" style={{ "margin-top": "var(--space-xs)" }}>
 								This stage requires manual approval before proceeding.
 							</div>
-						)}
+						</Show>
+
+						<Show when={gate_type() === "manual" && recorded_decision()} keyed>
+							{(d) => (
+								<div
+									class="row row-sm"
+									data-testid={d.verdict === "Pass" ? "stage-gate-decision-pass" : "stage-gate-decision-fail"}
+									style={{ "margin-top": "var(--space-xs)", "flex-wrap": "wrap" }}
+								>
+									<Badge variant={d.verdict === "Pass" ? "success" : "error"}>
+										{d.verdict === "Pass" ? "Approved" : "Denied"}
+									</Badge>
+									<span class="text-xs text-muted">{decision_line(d)}</span>
+								</div>
+							)}
+						</Show>
 
 						<Show when={props.external && show_actions()}>
 							<div
