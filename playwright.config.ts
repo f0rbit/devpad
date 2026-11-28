@@ -67,8 +67,12 @@ export default defineConfig({
 	fullyParallel: true,
 	/* Fail the build on CI if you accidentally left test.only in the source code. */
 	forbidOnly: !!process.env.CI,
-	/* Retry on CI only */
-	retries: process.env.CI ? 2 : 0,
+	/* Retry once on CI. A test that only passes on retry is a FLAKE and fails the run
+	   (failOnFlakyTests), so CI is red whenever a spec is unstable. Locally: 0. */
+	retries: process.env.CI ? 1 : 0,
+	/* Fail the CI run if any test is reported flaky (passed after a retry).
+	   Playwright >= 1.43; default is already true when no retries are configured. */
+	failOnFlakyTests: !!process.env.CI,
 	/* Opt out of parallel tests on CI. */
 	workers: process.env.CI ? 1 : undefined,
 	/* Global timeout for each test */
@@ -84,8 +88,9 @@ export default defineConfig({
 	use: {
 		/* Base URL to use in actions like `await page.goto('/')` */
 		baseURL: config.baseURL,
-		/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-		trace: "on-first-retry",
+		/* Keep a trace for the FAILED attempt even when a later retry passes, so a
+		   flaky test's first failure (the one that fails the CI run) is inspectable. */
+		trace: "retain-on-failure",
 	},
 
 	/* Run your local dev server before starting the tests (only for local environment) */
