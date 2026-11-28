@@ -7,10 +7,11 @@
 	// and (c) the governing project for the handful of loose root-level .ts files
 	// (scripts/, playwright configs) that don't belong to any package.
 	"compilerOptions": {
-		"target": "ES2022",
-		"lib": ["ES2022"],
+		"target": "ES2023",
+		"lib": ["ES2023"],
 		"module": "ESNext",
 		"moduleResolution": "bundler",
+		"customConditions": ["source"],
 		"moduleDetection": "force",
 		"resolveJsonModule": true,
 		"isolatedModules": true,

@@ -9,6 +9,7 @@
 		"schema": "cd ../../packages/schema && bunx drizzle-kit generate",
 		"build": "bun --bun astro build",
 		"check": "bun --bun astro check",
+		"typecheck": "bun --bun astro check",
 		"preview": "bun --bun astro preview",
 		"astro": "astro",
 		"push": "bunx --bun drizzle-kit push:sqlite"
