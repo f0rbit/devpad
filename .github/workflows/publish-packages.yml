@@ -115,6 +115,12 @@ jobs:
             node -e "
               const fs = require('fs');
               const pkg = JSON.parse(fs.readFileSync('packages/${package}/package.json', 'utf8'));
+              const strip_source = (node) => {
+                if (node === null || typeof node !== 'object') return;
+                delete node.source;
+                Object.values(node).forEach(strip_source);
+              };
+              strip_source(pkg.exports);
               for (const depType of ['dependencies', 'devDependencies', 'peerDependencies']) {
                 if (pkg[depType]) {
                   for (const dep in pkg[depType]) {
@@ -133,17 +139,35 @@ jobs:
       - name: Publish @devpad/api
         if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/api
-        run: npm publish --access public
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if npm view "@devpad/api@${VERSION}" version >/dev/null 2>&1; then
+            echo "@devpad/api@${VERSION} already on the registry, skipping"
+            exit 0
+          fi
+          npm publish --access public
 
       - name: Publish @devpad/cli
         if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/cli
-        run: npm publish --access public
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if npm view "@devpad/cli@${VERSION}" version >/dev/null 2>&1; then
+            echo "@devpad/cli@${VERSION} already on the registry, skipping"
+            exit 0
+          fi
+          npm publish --access public
 
       - name: Publish @devpad/mcp
         if: ${{ github.event.inputs.dry_run != 'true' }}
         working-directory: packages/mcp
-        run: npm publish --access public
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          if npm view "@devpad/mcp@${VERSION}" version >/dev/null 2>&1; then
+            echo "@devpad/mcp@${VERSION} already on the registry, skipping"
+            exit 0
+          fi
+          npm publish --access public
 
       - name: Dry run - show what would be published
         if: ${{ github.event.inputs.dry_run == 'true' }}
