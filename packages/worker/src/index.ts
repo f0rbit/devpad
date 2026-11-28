@@ -22,6 +22,7 @@ import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { createPulse } from "@f0rbit/pulse-client";
 import { pulseTracing } from "@f0rbit/pulse-client/hono";
 import { make_log, noop_log } from "./lib/log.js";
+import { strip_internal_auth_headers } from "./lib/strip-internal-headers.js";
 import { corpus_r2 } from "./corpus-r2.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -252,13 +253,22 @@ function parseCookie(request: Request, name: string): string | undefined {
 	return match?.[1];
 }
 
-async function resolveAuth(request: Request, env: Bindings): Promise<{ request: Request; session_cookie?: string }> {
-	if (!env.DB) return { request };
+type OpenDb = (env: Bindings) => Database | undefined;
+
+const openD1: OpenDb = (env) => (env.DB ? createD1Database(env.DB) : undefined);
+
+/** `request` MUST already have been through `strip_internal_auth_headers`. */
+async function resolveAuth(
+	request: Request,
+	env: Bindings,
+	open_db: OpenDb,
+): Promise<{ request: Request; session_cookie?: string }> {
+	const db = open_db(env);
+	if (!db) return { request };
 
 	const session_id = parseCookie(request, getSessionCookieName());
 	if (!session_id) return { request };
 
-	const db = createD1Database(env.DB);
 	const result = await validateSession(db, session_id);
 	if (!result.ok) {
 		return { request };
@@ -360,11 +370,13 @@ async function runGraphSweep(db: Database): Promise<void> {
 	}
 }
 
-export function createUnifiedWorker(handlers: UnifiedHandlers) {
+export function createUnifiedWorker(handlers: UnifiedHandlers, deps: { open_db?: OpenDb } = {}) {
 	const api = createApi();
+	const open_db = deps.open_db ?? openD1;
 
 	return {
-		async fetch(request: Request, env: Bindings, ctx: ExecutionContext): Promise<Response> {
+		async fetch(inbound: Request, env: Bindings, ctx: ExecutionContext): Promise<Response> {
+			const request = strip_internal_auth_headers(inbound);
 			const hostname = hostnameFor(request);
 			const path = new URL(request.url).pathname;
 
@@ -374,7 +386,7 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 				return api.fetch(request, enriched_env, ctx);
 			}
 
-			const auth = await resolveAuth(request, env);
+			const auth = await resolveAuth(request, env, open_db);
 
 			const handler = hostname.startsWith("blog.")
 				? handlers.blog

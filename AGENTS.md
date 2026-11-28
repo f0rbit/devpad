@@ -277,6 +277,7 @@ If `drizzle-kit generate` auto-numbers a migration whose prefix collides with a 
 - `packages/core` never imports Cloudflare types -- it only sees `Database` and corpus `Backend`
 - D1/R2 bindings are optional in the `Bindings` type -- dev/test don't provide them
 - `createApi(options)` accepts injectable `db`, `config`, `oauth_secrets`, `blogContext`, `mediaContext` -- dev/test inject directly, production reads from `c.env`
+- **The unified edge strips every inbound `X-Auth-*`, `X-Devpad-*` and `X-Test-User` header (`strip_internal_auth_headers`, `packages/worker/src/lib/strip-internal-headers.ts`) as the FIRST step of `createUnifiedWorker().fetch`, before `resolveAuth`.** Astro's `resolveAuth` (`packages/core/src/ui/middleware.ts`) trusts `X-Auth-User` blindly and is safe ONLY because of that strip + the edge re-setting it after a validated session (the early-return paths of the edge `resolveAuth` used to forward client headers intact: a forged `X-Auth-User` with no cookie became the victim's identity during SSR). Any NEW server-set trust header must use one of those prefixes (or be added to the strip list). `createUnifiedWorker(handlers, { open_db })` is the test seam for a real-session edge test (`__tests__/edge-auth.test.ts`). The strip deletes on a `new Request(request)` copy — Bun ignores an EMPTY `init.headers` in `new Request(req, { headers })` and keeps the original headers (the test caught a lone forged header surviving).
 
 ## Test Infrastructure
 
