@@ -1,0 +1,8 @@
+{
+	"ok": false,
+	"error": {
+		"kind": "grant_denied",
+		"scope": "cloudflare:observability:read",
+		"reason": "no grant for (devpad, production)"
+	}
+}

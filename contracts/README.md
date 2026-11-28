@@ -7,12 +7,14 @@ a Zod schema in `packages/schema/src/contracts/` and exercised by
 `valid/` must parse, everything under `invalid/` must fail, and every
 contract has at least one fixture on each side.
 
-| Directory         | Boundary                                                              | Schema module (source of truth)                    |
-| ----------------- | --------------------------------------------------------------------- | -------------------------------------------------- |
-| `grants-check`    | vault → orchestrator `PipelinesGrantsEndpoint.check(caller, scope)`   | `packages/schema/src/contracts/grants-check.ts`    |
-| `github-dispatch` | orchestrator → vault `GitHubVault.dispatch_workflow(input, identity)` | `packages/schema/src/contracts/github-dispatch.ts` |
-| `external-events` | chamber CI → orchestrator `POST /runs/:id/events`                     | `packages/schema/src/contracts/external-events.ts` |
-| `oidc-exchange`   | chamber CI → orchestrator `POST /auth/github-oidc`                    | `packages/schema/src/contracts/oidc-exchange.ts`   |
+| Directory                  | Boundary                                                                       | Schema module (source of truth)                             |
+| -------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `grants-check`             | vault → orchestrator `PipelinesGrantsEndpoint.check(caller, scope)`            | `packages/schema/src/contracts/grants-check.ts`             |
+| `github-dispatch`          | orchestrator → vault `GitHubVault.dispatch_workflow(input, identity)`          | `packages/schema/src/contracts/github-dispatch.ts`          |
+| `external-events`          | chamber CI → orchestrator `POST /runs/:id/events`                              | `packages/schema/src/contracts/external-events.ts`          |
+| `oidc-exchange`            | chamber CI → orchestrator `POST /auth/github-oidc`                             | `packages/schema/src/contracts/oidc-exchange.ts`            |
+| `cloudflare-observability` | orchestrator → vault `CloudflareVault.observability_query(input, identity)`    | `packages/schema/src/contracts/cloudflare-observability.ts` |
+| `session-introspection`    | devpad main worker → orchestrator `PipelinesSessionEndpoint.introspect(token)` | `packages/schema/src/contracts/session-introspection.ts`    |
 
 ## Fixture naming
 
@@ -31,6 +33,26 @@ Files are `<key>.<description>.json`; `key` selects the schema through
   (generic wire error envelope).
 - `oidc-exchange`: `request` (`{ jwt, package_id?, requested_scope? }`),
   `response` (`ok:true` session or `ok:false` wire error).
+- `cloudflare-observability`: `input` (`{ script, since }`; `script` is
+  the fixed allowlist `devpad-unified | devpad-unified-preview |
+devpad-pipelines`, `since` an ISO datetime no more than 24h old),
+  `identity` (`{ package_id, environment }`), `output` (`{ script,
+since, exception_count, samples ≤5 }`), `error` (the `CloudflareVault`
+  error union: `identity_missing | grant_denied | grant_check_failed |
+invalid_input | upstream_error{cause}`), `result` (the `ok/value`/
+  `ok/error` envelope). Grant scope: `cloudflare:observability:read`.
+  **Consumer: vault** (its `CloudflareVault` adapter).
+- `session-introspection`: `input` (`{ token }`), `result`
+  (`{ active: true, sub, scope[], package_ids[], trust_policy_id,
+expires_at }` or `{ active: false, reason }`). **Consumer: the devpad
+  main worker** (`PIPELINES_SESSIONS` binding → `introspect`).
+
+The 24h window of `cloudflare-observability/input` depends on the clock,
+so its fixtures are validated at the fixed clock
+`observability_fixture_now` (`2026-11-28T12:00:00Z`) exported from
+`contracts/cloudflare-observability.ts`; consumers replaying them must
+inject the same `now`, not the wall clock. Runtime validation uses
+`cloudflare_observability_query_input_at(now)`.
 
 The test fails on any fixture whose `key` has no registered schema, so a
 new fixture file only takes effect once its schema is registered.

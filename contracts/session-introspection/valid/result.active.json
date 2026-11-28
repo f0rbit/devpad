@@ -1,0 +1,8 @@
+{
+	"active": true,
+	"sub": "repo:f0rbit/devpad:ref:refs/heads/main",
+	"scope": ["check:read"],
+	"package_ids": ["devpad"],
+	"trust_policy_id": "trust_abc123",
+	"expires_at": "2026-11-28T12:15:00.000Z"
+}

@@ -1,0 +1,8 @@
+{
+	"active": true,
+	"sub": "repo:f0rbit/chamber:ref:refs/tags/v2.6.11",
+	"scope": ["check:read", "runs:events"],
+	"package_ids": ["chamber", "devpad"],
+	"trust_policy_id": "trust_def456",
+	"expires_at": "2026-11-28T12:15:00+00:00"
+}

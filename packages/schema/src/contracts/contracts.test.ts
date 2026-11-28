@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "bun:test";
-import { contracts_registry } from "./index.js";
+import { cloudflare_observability_query_input_at, contracts_registry, observability_since_window_ms } from "./index.js";
 
 const contracts_dir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..", "contracts");
 
@@ -70,5 +70,25 @@ describe("contracts regression: vault #14 caller keyed by `package`", () => {
 
 		const unrecognized = result.error.issues.find((issue) => issue.message.toLowerCase().includes("unrecognized"));
 		expect(unrecognized).toBeDefined();
+	});
+});
+
+describe("cloudflare-observability: 24h `since` window is relative to the injected clock", () => {
+	const now = new Date("2031-06-15T08:00:00.000Z");
+	const schema = cloudflare_observability_query_input_at(now);
+	const since_at = (offset_ms: number) => new Date(now.getTime() - offset_ms).toISOString();
+
+	test("accepts since at the boundary and inside the window", () => {
+		expect(schema.safeParse({ script: "devpad-unified", since: since_at(observability_since_window_ms) }).success).toBe(
+			true,
+		);
+		expect(schema.safeParse({ script: "devpad-unified", since: since_at(60_000) }).success).toBe(true);
+	});
+
+	test("rejects since 1ms past the window, naming the since field", () => {
+		const result = schema.safeParse({ script: "devpad-unified", since: since_at(observability_since_window_ms + 1) });
+		expect(result.success).toBe(false);
+		if (result.success) return;
+		expect(result.error.issues.some((issue) => issue.path.join(".") === "since")).toBe(true);
 	});
 });
