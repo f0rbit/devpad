@@ -46,8 +46,9 @@ export const authMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	const session_id = getCookie(c, getSessionCookieName());
 	if (session_id) {
 		const session_result = await validateSession(db, session_id);
-		if (session_result.ok && session_result.value.user.github_id !== null && session_result.value.user.name !== null) {
-			const { user: session_user, session: session_data } = session_result.value;
+		const session_user = session_result.ok ? session_result.value.user : null;
+		const session_data = session_result.ok ? session_result.value.session : null;
+		if (session_user && session_data && session_user.github_id !== null && session_user.name !== null) {
 			c.set("user", {
 				id: session_user.id,
 				github_id: session_user.github_id,

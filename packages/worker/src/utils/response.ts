@@ -1,4 +1,3 @@
-import type { ServiceError } from "@devpad/schema/errors";
 import type { Result } from "@f0rbit/corpus";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -34,7 +33,17 @@ export const ERROR_MAPPINGS: Record<string, ErrorMapping | undefined> = {
 	provider_error: { status: 502, code: "PROVIDER_ERROR", defaultMessage: "External provider error" },
 };
 
-type ExtendedError = ServiceError & Record<string, unknown>;
+/**
+ * Every service in this worker maps errors by `kind` (see ERROR_MAPPINGS) —
+ * not by membership in schema's `ServiceError` union. Blog's
+ * `CategoryServiceError`/`PostServiceError` and the media timeline's local
+ * error unions carry kinds (`slug_conflict`, `has_children`, `has_posts`,
+ * `parent_not_found`, `corpus_error`, kind-only `store_error`/`not_found`)
+ * that are NOT in schema's union, so accepting only `ServiceError` rejected
+ * Results those mappings were written for. The structural floor below is
+ * what every mapping actually needs.
+ */
+type ExtendedError = { kind: string; message?: string } & Record<string, unknown>;
 
 const ERROR_NAMES: Record<number, string | undefined> = {
 	400: "Bad request",
@@ -83,9 +92,9 @@ export const mapErrorToResponse = (error: ExtendedError): ErrorResponse => {
 	return { status: mapping.status, body };
 };
 
-export const handleResult = <T>(
+export const handleResult = <T, E extends ExtendedError>(
 	c: Context,
-	result: Result<T, ServiceError>,
+	result: Result<T, E>,
 	successStatus: ContentfulStatusCode = 200,
 ): Response => {
 	if (!result.ok) {
@@ -95,9 +104,9 @@ export const handleResult = <T>(
 	return c.json(result.value as object, successStatus);
 };
 
-export const handleResultWith = <T>(
+export const handleResultWith = <T, E extends ExtendedError>(
 	c: Context,
-	result: Result<T, ServiceError>,
+	result: Result<T, E>,
 	mapper: (value: T) => unknown,
 	successStatus: ContentfulStatusCode = 200,
 ): Response => {
@@ -108,7 +117,7 @@ export const handleResultWith = <T>(
 	return c.json(mapper(result.value) as object, successStatus);
 };
 
-export const handleResultNoContent = <T>(c: Context, result: Result<T, ServiceError>): Response => {
+export const handleResultNoContent = <T, E extends ExtendedError>(c: Context, result: Result<T, E>): Response => {
 	if (!result.ok) {
 		const { status, body } = mapErrorToResponse(result.error);
 		return c.json(body, status);
@@ -130,15 +139,18 @@ export const conflict = (c: Context, message: string) => httpError(c, 409, messa
 export const serverError = (c: Context, message: string) => httpError(c, 500, message);
 
 export const response = {
-	result: <T>(c: Context, result: Result<T, ServiceError>, successStatus: ContentfulStatusCode = 200): Response =>
-		handleResult(c, result, successStatus),
-	with: <T>(
+	result: <T, E extends ExtendedError>(
 		c: Context,
-		result: Result<T, ServiceError>,
+		result: Result<T, E>,
+		successStatus: ContentfulStatusCode = 200,
+	): Response => handleResult(c, result, successStatus),
+	with: <T, E extends ExtendedError>(
+		c: Context,
+		result: Result<T, E>,
 		mapper: (value: T) => unknown,
 		successStatus: ContentfulStatusCode = 200,
 	): Response => handleResultWith(c, result, mapper, successStatus),
-	empty: <T>(c: Context, result: Result<T, ServiceError>): Response => handleResultNoContent(c, result),
+	empty: <T, E extends ExtendedError>(c: Context, result: Result<T, E>): Response => handleResultNoContent(c, result),
 };
 
 export const errorMap = {

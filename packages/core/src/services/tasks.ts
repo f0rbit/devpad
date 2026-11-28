@@ -314,9 +314,17 @@ export async function upsertTask(
 				}
 				return ok(update_result[0]);
 			}
+			// `upsert_todo.title` is optional for PATCH-style updates, but a
+			// fresh INSERT has no row to inherit it from — the title column
+			// is NOT NULL. Surface that as a typed bad_request instead of a
+			// driver-level constraint failure.
+			const { title, ...insert_rest } = write_payload;
+			if (title == null) {
+				return err({ kind: "bad_request", message: "Task title is required when creating a task" });
+			}
 			const insert_result = await db
 				.insert(task)
-				.values(write_payload)
+				.values({ ...insert_rest, title })
 				.onConflictDoUpdate({ target: [task.id], set: write_payload })
 				.returning();
 			if (insert_result.length === 0) return ok(null);

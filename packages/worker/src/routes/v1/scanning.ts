@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { isProjectScopeDenied, projectScopeDeniedResponse } from "../../middleware/scope-guard.js";
+import { noop_log } from "../../lib/log.js";
 
 const app = new Hono<AppContext>();
 
@@ -30,7 +31,7 @@ app.post("/scan", requireAuth, async (c) => {
 	const scoped_project = await projects.getProject(db, auth_user.id, project_id);
 	if (scoped_project.ok && isProjectScopeDenied(c, scoped_project.value.id)) return projectScopeDeniedResponse(c);
 
-	const log = c.get("log");
+	const log = c.get("log") ?? noop_log;
 	const span = log.span("github_scan");
 	return stream(c, async (s) => {
 		try {

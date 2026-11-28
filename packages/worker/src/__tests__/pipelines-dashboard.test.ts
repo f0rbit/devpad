@@ -124,13 +124,16 @@ const build_app = (
 	const captured: Array<{ url: string; method: string }> = [];
 	const original_fetch = globalThis.fetch;
 	if (opts.pulse_upstream !== undefined) {
-		globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-			const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-			const method = init?.method ?? "GET";
-			captured.push({ url, method });
-			if (opts.pulse_upstream === null) throw new Error("pulse unreachable");
-			return opts.pulse_upstream!({ url, method });
-		};
+		globalThis.fetch = Object.assign(
+			async (input: RequestInfo | URL, init?: RequestInit) => {
+				const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+				const method = init?.method ?? "GET";
+				captured.push({ url, method });
+				if (opts.pulse_upstream === null) throw new Error("pulse unreachable");
+				return opts.pulse_upstream!({ url, method });
+			},
+			{ preconnect: () => {} },
+		);
 	}
 
 	const app = new Hono<AppContext>();

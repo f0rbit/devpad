@@ -23,7 +23,7 @@ export default function ConnectionCard(props: Props) {
 		setDeleting(true);
 		setError(null);
 
-		const result = await getClient().media.connections.delete(props.connection.account_id);
+		const result = await getClient().media.connections.delete(props.connection.id);
 
 		if (!result.ok) {
 			setError(result.error.message);
@@ -38,7 +38,7 @@ export default function ConnectionCard(props: Props) {
 		setRefreshing(true);
 		setError(null);
 
-		const result = await getClient().media.connections.refresh(props.connection.account_id);
+		const result = await getClient().media.connections.refresh(props.connection.id);
 
 		if (!result.ok) {
 			setError(result.error.message);

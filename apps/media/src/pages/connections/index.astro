@@ -16,14 +16,14 @@ if (Astro.locals.user) {
 		const profilesResult = await client.media.profiles.list();
 
 		if (profilesResult.ok) {
-			initialProfiles = profilesResult.value as ProfileSummary[];
+			initialProfiles = profilesResult.value;
 
 			if (profileSlug) {
 				const currentProfile = initialProfiles.find(p => p.slug === profileSlug);
 				if (currentProfile) {
 					const connectionsResult = await client.media.connections.list(currentProfile.id, { include_settings: true });
 					if (connectionsResult.ok) {
-						initialConnections = connectionsResult.value as ConnectionWithSettings[];
+						initialConnections = connectionsResult.value;
 					}
 				}
 			}

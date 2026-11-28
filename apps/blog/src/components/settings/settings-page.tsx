@@ -1,5 +1,5 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { AccessKey, User as SchemaUser } from "@devpad/schema/blog";
+import type { AuthUser } from "@devpad/schema/bindings";
 import { Button } from "@f0rbit/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
 import { unwrap } from "@/lib/client";
@@ -8,16 +8,18 @@ import DevpadConnection from "./devpad-connection";
 import TokenForm from "./token-form";
 import TokenList from "./token-list";
 
-type User = Omit<SchemaUser, "created_at" | "updated_at"> & {
-	created_at: string;
-	updated_at: string;
+type User = NonNullable<AuthUser> & {
+	username?: string;
+	email?: string | null;
+	created_at?: string;
+	updated_at?: string;
 };
 
 type Token = {
-	id: AccessKey["id"];
-	name: AccessKey["name"];
-	note: AccessKey["note"];
-	enabled: AccessKey["enabled"];
+	id: string;
+	name: string | null;
+	note: string | null;
+	enabled: boolean;
 	created_at: string;
 };
 
@@ -56,7 +58,7 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const fetchTokens = async () => {
 		try {
 			const data = unwrap(await getBrowserClient().blog.tokens.list());
-			setTokens(data.tokens as Token[]);
+			setTokens(data.tokens);
 		} catch {
 			setTokensError("Failed to fetch tokens");
 		} finally {
@@ -70,20 +72,20 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		void fetchTokens();
 	};
 
-	const handleToggle = async (id: number, enabled: boolean) => {
+	const handleToggle = async (id: string, enabled: boolean) => {
 		setTokensError(null);
 		try {
-			unwrap(await getBrowserClient().blog.tokens.update(String(id), { enabled }));
+			unwrap(await getBrowserClient().blog.tokens.update(id, { enabled }));
 			refetchTokens();
 		} catch {
 			setTokensError("Failed to update token");
 		}
 	};
 
-	const handleDelete = async (id: number) => {
+	const handleDelete = async (id: string) => {
 		setTokensError(null);
 		try {
-			unwrap(await getBrowserClient().blog.tokens.delete(String(id)));
+			unwrap(await getBrowserClient().blog.tokens.delete(id));
 			refetchTokens();
 		} catch {
 			setTokensError("Failed to delete token");
@@ -106,7 +108,7 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 							<>
 								<div class="profile-row">
 									<span class="profile-row__label">Username</span>
-									<span class="profile-row__value">{userData.username}</span>
+									<span class="profile-row__value">{userData.username ?? userData.name}</span>
 								</div>
 								<div class="profile-row">
 									<span class="profile-row__label">Email</span>
@@ -116,10 +118,14 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 									<span class="profile-row__label">User ID</span>
 									<span class="profile-row__value font-mono text-sm">{userData.id}</span>
 								</div>
-								<div class="profile-row">
-									<span class="profile-row__label">Created</span>
-									<span class="profile-row__value">{date.format(userData.created_at)}</span>
-								</div>
+								<Show when={userData.created_at} keyed>
+									{(createdAt) => (
+										<div class="profile-row">
+											<span class="profile-row__label">Created</span>
+											<span class="profile-row__value">{date.format(createdAt)}</span>
+										</div>
+									)}
+								</Show>
 								<div class="profile-note">
 									<p class="text-sm text-muted">Profile is managed by DevPad.</p>
 									<a href="https://devpad.tools/settings" target="_blank" rel="noopener noreferrer" class="text-sm">

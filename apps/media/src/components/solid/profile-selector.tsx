@@ -25,7 +25,7 @@ const fetchAuthAndProfiles = async (initial?: AuthState): Promise<AuthState> => 
 
 	const result = await getClient().media.profiles.list();
 	if (!result.ok) {
-		if (result.error.status === 401) {
+		if (result.error.status_code === 401) {
 			return { authenticated: false };
 		}
 		console.error("[ProfileSelector] Failed to fetch profiles:", result.error);

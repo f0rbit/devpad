@@ -51,10 +51,6 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 			if (!result.ok) throw new Error(result.error.message);
 			return result.value.task;
 		},
-		showSuccessToast: false, // No toast for quick actions
-		showErrorToast: true,
-		successMessage: "Task progress updated",
-		errorTitle: "Failed to update task",
 		onSuccess: (updatedTask) => {
 			// Notify parent component of successful update
 			props.onUpdate?.(updatedTask.id, { progress: updatedTask.progress });

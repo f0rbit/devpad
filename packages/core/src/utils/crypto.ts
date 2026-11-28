@@ -6,7 +6,7 @@ const hex = (buffer: ArrayBuffer): string =>
 const hash = async (token: string): Promise<string> => {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(token);
-	const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", data);
+	const hashBuffer = await crypto.subtle.digest("SHA-256", data);
 	return hex(hashBuffer);
 };
 

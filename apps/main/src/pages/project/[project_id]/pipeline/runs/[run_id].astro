@@ -16,9 +16,6 @@ import {
 	short_sha,
 } from "@/utils/pipeline-external";
 
-// @ts-expect-error rethrow is used in conditional return path
-void rethrow;
-
 const project_id = Astro.params.project_id!;
 const run_id = Astro.params.run_id!;
 

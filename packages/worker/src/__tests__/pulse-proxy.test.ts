@@ -48,25 +48,28 @@ const build_app = (
 ): { app: Hono<AppContext>; captured: Captured[] } => {
 	const captured: Captured[] = [];
 	const original_fetch = globalThis.fetch;
-	const fake_fetch: typeof fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-		const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-		const method = init?.method ?? (input instanceof Request ? input.method : "GET");
-		const headers_obj: Record<string, string> = {};
-		const headers_init = init?.headers ?? (input instanceof Request ? input.headers : undefined);
-		if (headers_init instanceof Headers) {
-			headers_init.forEach((v, k) => {
-				headers_obj[k] = v;
-			});
-		} else if (Array.isArray(headers_init)) {
-			for (const [k, v] of headers_init) headers_obj[k] = v;
-		} else if (headers_init && typeof headers_init === "object") {
-			for (const [k, v] of Object.entries(headers_init as Record<string, string>)) headers_obj[k] = v;
-		}
-		const body = typeof init?.body === "string" ? init.body : null;
-		const cap: Captured = { url, method, headers: headers_obj, body };
-		captured.push(cap);
-		return upstream(cap);
-	};
+	const fake_fetch: typeof fetch = Object.assign(
+		async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+			const method = init?.method ?? (input instanceof Request ? input.method : "GET");
+			const headers_obj: Record<string, string> = {};
+			const headers_init = init?.headers ?? (input instanceof Request ? input.headers : undefined);
+			if (headers_init instanceof Headers) {
+				headers_init.forEach((v, k) => {
+					headers_obj[k] = v;
+				});
+			} else if (Array.isArray(headers_init)) {
+				for (const [k, v] of headers_init) headers_obj[k] = v;
+			} else if (headers_init && typeof headers_init === "object") {
+				for (const [k, v] of Object.entries(headers_init as Record<string, string>)) headers_obj[k] = v;
+			}
+			const body = typeof init?.body === "string" ? init.body : null;
+			const cap: Captured = { url, method, headers: headers_obj, body };
+			captured.push(cap);
+			return upstream(cap);
+		},
+		{ preconnect: () => {} },
+	);
 	globalThis.fetch = fake_fetch;
 
 	// Stub project-ownership at the module boundary by injecting a tiny db

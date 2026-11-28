@@ -6,9 +6,8 @@ import { unwrap } from "@/lib/client";
 type Project = {
 	id: string;
 	name: string;
-	project_id: string;
 	description: string | null;
-	icon_url: string | null;
+	icon_url?: string | null;
 };
 
 type ProjectSelectorProps = {

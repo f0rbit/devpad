@@ -65,7 +65,7 @@ export default function ConnectionList(props: ConnectionListProps) {
 			setHasFetched(true);
 			const result = await getClient().media.connections.list(id, { include_settings: true });
 			if (!result.ok) throw new Error(result.error.message);
-			return result.value as ConnectionWithSettings[];
+			return result.value;
 		},
 		{
 			initialValue: props.initialConnections ?? [],

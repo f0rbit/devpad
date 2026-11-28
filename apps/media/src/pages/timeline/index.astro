@@ -13,7 +13,7 @@ if (profileSlug && Astro.locals.user) {
 		const client = getServerApiClient(Astro.locals);
 		const result = await client.media.profiles.timeline(profileSlug);
 		if (result.ok) {
-			initialGroups = result.value.data.groups as TimelineGroup[];
+			initialGroups = result.value.groups;
 		}
 	} catch {
 		// SSR fetch failed, component will fetch client-side

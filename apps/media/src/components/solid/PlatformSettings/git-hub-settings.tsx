@@ -1,7 +1,6 @@
 import { Checkbox, Collapsible } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { getClient } from "@/utils/client";
-import type { GitHubRepo } from "@/utils/types";
 import { AsyncState } from "../resource-state";
 import { useSettings } from "./use-settings";
 
@@ -20,7 +19,7 @@ export default function GitHubSettings(props: Props) {
 	const [repos] = createResource(async () => {
 		const result = await getClient().media.connections.repos(props.accountId);
 		if (!result.ok) return [];
-		return result.value as GitHubRepo[];
+		return result.value;
 	});
 
 	const hiddenRepos = () => new Set(props.settings?.hidden_repos ?? []);

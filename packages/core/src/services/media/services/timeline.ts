@@ -1,5 +1,4 @@
 import { accounts, DateGroupSchema, errors, profiles } from "@devpad/schema/media";
-import type { CorpusError as LibCorpusError } from "@f0rbit/corpus";
 import { err, ok, pipe, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -36,7 +35,7 @@ type TimelineGetError =
 	| { kind: "not_found"; status: 404 }
 	| { kind: "parse_error"; status: 500 };
 
-type RawRouteError = CorpusError | LibCorpusError | { kind: "parse_error"; message: string };
+type RawRouteError = CorpusError | { kind: "parse_error"; message: string };
 
 type TimelineOptions = {
 	from?: string;
@@ -132,9 +131,6 @@ const getRaw = async (
 
 	if (!result.ok) {
 		const error = result.error;
-		if (error.kind === "store_error") {
-			return errors.storeError("create_raw_store", "Failed to create raw store");
-		}
 		if (error.kind === "parse_error") {
 			return errors.parseError("Invalid raw data format");
 		}

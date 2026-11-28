@@ -109,6 +109,11 @@ export function open_test_db(file: string): { sqlite: Database; db: DrizzleDatab
 	const sqlite = new Database(file);
 	migrateBunDatabase(sqlite);
 	const db = createBunDatabase(sqlite);
+	// createBunDatabase turns FKs on (D1 parity), but the fixtures are
+	// delete-then-insert across independently-seeded suites sharing one user:
+	// re-seeding an existing file would otherwise trip on children of the
+	// deleted user. The seed connection alone opts out; the worker keeps FKs on.
+	sqlite.run("PRAGMA foreign_keys = OFF");
 	return { sqlite, db };
 }
 

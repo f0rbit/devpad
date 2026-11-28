@@ -346,7 +346,7 @@ const processGenericAccount = async (ctx: AppContext, account: AccountWithUser):
 		})
 		.flat_map((raw_data) =>
 			pipe(store.raw(ctx.backend, account.platform, account.id))
-				.map_err((e): CronError => ({ kind: "store_error", operation: "create", message: e.message ?? "unknown" }))
+				.map_err((e): CronError => ({ kind: "store_error", operation: "create", message: formatCorpusError(e) }))
 				.map(({ store: s }) => ({ raw_data, store: s }))
 				.result(),
 		)

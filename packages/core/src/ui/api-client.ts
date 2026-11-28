@@ -31,7 +31,7 @@ export function getServerApiClient(locals: AstroLocals): ApiClient {
 
 	const custom_fetch = api_app
 		? ((async (input: string | Request, init?: RequestInit): Promise<Response> => {
-				const request = new Request(input as string, init);
+				const request = new Request(input, init);
 				const ctx = runtime.ctx ?? { waitUntil: () => {}, passThroughOnException: () => {} };
 				return api_app.fetch(request, runtime.env, ctx);
 			}) as unknown as typeof fetch)

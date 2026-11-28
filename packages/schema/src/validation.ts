@@ -144,7 +144,6 @@ export const update_user = z.object({
 	name: z.string().optional(),
 	image_url: z.string().optional(),
 	task_view: z.union([z.literal("list"), z.literal("grid")]).optional(),
-	email_verified: z.boolean().optional(),
 });
 
 export const config_schema = z.object({
@@ -314,7 +313,7 @@ export const upsert_pipeline_grant = z.object({
 	scope: grant_scope,
 	granted_by: z.string().nullable().optional(),
 	granted_at: z.string().nullable().optional(),
-	auto_approved: z.boolean().nullable().optional(),
+	auto_approved: z.boolean().optional(),
 });
 
 export const upsert_pipeline_approval = z.object({

@@ -309,7 +309,7 @@ export const aggregate_rows = (rows: PulseEventRow[], query: PulseSummaryQuery, 
  * function). Never throws — rejection propagates to the caller's
  * `try_catch_async` wrap.
  */
-export const read_json_body = async (response: Response): Promise<unknown> => response.json();
+export const read_json_body = async (response: { json(): Promise<unknown> }): Promise<unknown> => response.json();
 
 const error_status_code = (status: number): PulseError["code"] => {
 	if (status === 401 || status === 403) return "unauthorized";

@@ -2,17 +2,9 @@ import { Button, Empty, FormField, Input, Modal, ModalBody, ModalHeader, ModalTi
 import { X } from "lucide-solid";
 import { createMemo, createResource, createSignal, For, Show } from "solid-js";
 import { getClient } from "@/utils/client";
+import type { FilterKey, ProfileFilter } from "@devpad/schema/media";
 import PlatformIcon from "./platform-icon";
 import { ErrorDisplay, Loading } from "./resource-state";
-
-type Filter = {
-	id: string;
-	account_id: string;
-	platform: string;
-	filter_type: "include" | "exclude";
-	filter_key: string;
-	filter_value: string;
-};
 
 type Account = {
 	id: string;
@@ -27,6 +19,10 @@ type FilterEditorProps = {
 	onClose: () => void;
 };
 
+const FILTER_KEYS: FilterKey[] = ["repo", "subreddit", "keyword", "twitter_account"];
+
+const toFilterKey = (value: string): FilterKey => FILTER_KEYS.find((k) => k === value) ?? "keyword";
+
 const FILTER_KEYS_BY_PLATFORM: Record<string, string[]> = {
 	github: ["repo", "keyword"],
 	reddit: ["subreddit", "keyword"],
@@ -40,10 +36,10 @@ const FILTER_KEY_LABELS: Record<string, string> = {
 	twitter_account: "Account",
 };
 
-const fetchFilters = async (profileId: string): Promise<Filter[]> => {
+const fetchFilters = async (profileId: string): Promise<ProfileFilter[]> => {
 	const result = await getClient().media.profiles.filters.list(profileId);
 	if (!result.ok) throw new Error(result.error.message);
-	return result.value as Filter[];
+	return result.value;
 };
 
 const getPlatformForAccount = (accounts: Account[], accountId: string): string | undefined =>
@@ -51,7 +47,7 @@ const getPlatformForAccount = (accounts: Account[], accountId: string): string |
 
 const getFilterKeysForPlatform = (platform: string): string[] => FILTER_KEYS_BY_PLATFORM[platform] ?? ["keyword"];
 
-const formatFilterDescription = (filter: Filter): string => {
+const formatFilterDescription = (filter: ProfileFilter): string => {
 	const keyLabel = FILTER_KEY_LABELS[filter.filter_key] ?? filter.filter_key;
 	return `${keyLabel}: ${filter.filter_value}`;
 };
@@ -68,7 +64,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 
 	const [accountId, setAccountId] = createSignal(props.accounts[0]?.id ?? "");
 	const [filterType, setFilterType] = createSignal<"include" | "exclude">("include");
-	const [filterKey, setFilterKey] = createSignal("keyword");
+	const [filterKey, setFilterKey] = createSignal<FilterKey>("keyword");
 	const [filterValue, setFilterValue] = createSignal("");
 	const [adding, setAdding] = createSignal(false);
 	const [error, setError] = createSignal<string | null>(null);
@@ -82,7 +78,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 		const platform = getPlatformForAccount(props.accounts, newAccountId);
 		const keys = getFilterKeysForPlatform(platform ?? "");
 		if (!keys.includes(filterKey())) {
-			setFilterKey(keys[0] ?? "keyword");
+			setFilterKey(toFilterKey(keys[0] ?? "keyword"));
 		}
 	};
 
@@ -199,7 +195,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 					</FormField>
 
 					<FormField label="Filter Key">
-						<Select value={filterKey()} onChange={(e) => setFilterKey(e.currentTarget.value)}>
+						<Select value={filterKey()} onChange={(e) => setFilterKey(toFilterKey(e.currentTarget.value))}>
 							<For each={availableFilterKeys()}>
 								{(key) => <option value={key}>{FILTER_KEY_LABELS[key] ?? key}</option>}
 							</For>
@@ -228,7 +224,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 }
 
 type FilterItemProps = {
-	filter: Filter;
+	filter: ProfileFilter;
 	accounts: Account[];
 	onRemove: () => void;
 };
@@ -240,7 +236,7 @@ function FilterItem(props: FilterItemProps) {
 	return (
 		<div class={`filter-item ${isInclude() ? "filter-item-include" : "filter-item-exclude"}`}>
 			<div class="filter-item-icon">
-				<PlatformIcon platform={props.filter.platform} size={16} />
+				<PlatformIcon platform={account()?.platform ?? ""} size={16} />
 			</div>
 			<div class="filter-item-content">
 				<span class={`filter-item-type ${isInclude() ? "filter-type-include" : "filter-type-exclude"}`}>

@@ -60,7 +60,7 @@ const sanitize = (t: BlogApiKeyRow): SanitizedToken => ({
 	created_at: t.created_at,
 });
 
-const generate = (): string => `blog_${globalThis.crypto.randomUUID()}`;
+const generate = (): string => `blog_${crypto.randomUUID()}`;
 
 export const token = {
 	sanitize,
