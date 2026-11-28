@@ -13,21 +13,31 @@ import type {
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import {
+	pipeline_analysis_template_list_wire,
+	pipeline_analysis_template_wire,
 	pipeline_dispatch_ledger_wire,
 	pipeline_grant_list_wire,
 	pipeline_grant_wire,
 	pipeline_ingest_response_wire,
+	pipeline_oidc_trust_list_wire,
+	pipeline_oidc_trust_wire,
 	pipeline_package_list_wire,
 	pipeline_package_wire,
 	pipeline_run_list_wire,
+	pipeline_run_start_wire,
 	pipeline_run_wire,
 	pipeline_stage_event_list_wire,
+	pipelines_dashboard_wire,
+	pipelines_deleted_wire,
+	pipelines_deny_wire,
 	type PipelineDispatches,
 	type PipelineGrantWire,
 	type PipelineIngestResponseWire,
 	type PipelinePackageWire,
+	type PipelineRunStartWire,
 	type PipelineRunWire,
 	type PipelineStageEventWire,
+	type PipelinesDashboardWire,
 } from "@devpad/schema/pipelines";
 import {
 	type PulseErrorsResult,
@@ -84,7 +94,6 @@ import type {
 	ApplyRequest,
 	ClaimRequest,
 	CreateThreadRequest,
-	DashboardResponse,
 	DecideCheckpointRequest,
 	DoneRequest,
 	HookActionPublic,
@@ -130,6 +139,8 @@ export type {
 	PipelineDispatchEntryWire as PipelineDispatchEntry,
 	PipelineDispatches,
 	PipelineIngestTick,
+	PipelineRunStartWire as PipelineRunStart,
+	PipelinesDashboardWire as PipelinesDashboard,
 } from "@devpad/schema/pipelines";
 
 /** Filter for `client.pipelines.list` — mirrors the orchestrator's `GET /runs` query. */
@@ -393,7 +404,7 @@ export class ApiClient {
 				}
 
 				// Handle new clean interface: update(id, changes)
-				const id = idOrData as string;
+				const id = typeof idOrData === "string" ? idOrData : (idOrData.id ?? "");
 				if (!changes) {
 					throw new Error("Changes parameter required for update");
 				}
@@ -1655,17 +1666,11 @@ export class ApiClient {
 		 * Cache: `public, max-age=30`.
 		 */
 		dashboard: {
-			get: (input: {
-				project_id: string;
-				window_ms?: number;
-			}): Promise<ApiResult<DashboardResponse & { pulse: Record<string, unknown> | null }>> => {
+			get: (input: { project_id: string; window_ms?: number }): Promise<ApiResult<PipelinesDashboardWire>> => {
 				const query: Record<string, string> = { project_id: input.project_id };
 				if (input.window_ms !== undefined) query.window_ms = String(input.window_ms);
-				return wrap(() =>
-					this.clients.pipelines.get<DashboardResponse & { pulse: Record<string, unknown> | null }>(
-						"/pipelines/dashboard",
-						{ query },
-					),
+				return wrap(async () =>
+					pipelines_dashboard_wire.parse(await this.clients.pipelines.get<unknown>("/pipelines/dashboard", { query })),
 				);
 			},
 		},
@@ -1700,14 +1705,9 @@ export class ApiClient {
 		/**
 		 * Create a new pipeline run
 		 */
-		create: (input: {
-			package_id: string;
-			version_set_id: string;
-		}): Promise<ApiResult<{ run_id: string; status: string }>> =>
-			wrap(() =>
-				this.clients.pipelines.post<{ run_id: string; status: string }>("/runs", {
-					body: input,
-				}),
+		create: (input: { package_id: string; version_set_id: string }): Promise<ApiResult<PipelineRunStartWire>> =>
+			wrap(async () =>
+				pipeline_run_start_wire.parse(await this.clients.pipelines.post<unknown>("/runs", { body: input })),
 			),
 
 		/**
@@ -1822,11 +1822,13 @@ export class ApiClient {
 			 * Deny a pending grant. Human-only — same actor resolution as
 			 * `approve`.
 			 */
-			deny: (grant_id: string, reason?: string): Promise<ApiResult<{ success: boolean }>> =>
-				wrap(() =>
-					this.clients.pipelines.post<{ success: boolean }>(`/grants/${grant_id}/deny`, {
-						body: reason !== undefined ? { reason } : {},
-					}),
+			deny: (grant_id: string, reason?: string): Promise<ApiResult<{ success: true }>> =>
+				wrap(async () =>
+					pipelines_deny_wire.parse(
+						await this.clients.pipelines.post<unknown>(`/grants/${grant_id}/deny`, {
+							body: reason !== undefined ? { reason } : {},
+						}),
+					),
 				),
 		},
 
@@ -1901,7 +1903,9 @@ export class ApiClient {
 			 * reference the package — clean up runs first.
 			 */
 			delete: (package_id: string): Promise<ApiResult<{ deleted: true }>> =>
-				wrap(() => this.clients.pipelines.delete<{ deleted: true }>(`/packages/${package_id}`)),
+				wrap(async () =>
+					pipelines_deleted_wire.parse(await this.clients.pipelines.delete<unknown>(`/packages/${package_id}`)),
+				),
 		},
 
 		/**
@@ -1917,10 +1921,12 @@ export class ApiClient {
 			 * List templates for an owner.
 			 */
 			list: (input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate[]>> =>
-				wrap(() =>
-					this.clients.pipelines.get<PipelineAnalysisTemplate[]>("/analysis-templates", {
-						query: { owner_id: input.owner_id },
-					}),
+				wrap(async () =>
+					pipeline_analysis_template_list_wire.parse(
+						await this.clients.pipelines.get<unknown>("/analysis-templates", {
+							query: { owner_id: input.owner_id },
+						}),
+					),
 				),
 
 			/**
@@ -1928,10 +1934,12 @@ export class ApiClient {
 			 * unknown or owned by a different user.
 			 */
 			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineAnalysisTemplate>> =>
-				wrap(() =>
-					this.clients.pipelines.get<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, {
-						query: { owner_id: input.owner_id },
-					}),
+				wrap(async () =>
+					pipeline_analysis_template_wire.parse(
+						await this.clients.pipelines.get<unknown>(`/analysis-templates/${id}`, {
+							query: { owner_id: input.owner_id },
+						}),
+					),
 				),
 
 			/**
@@ -1947,7 +1955,11 @@ export class ApiClient {
 				query_dsl?: unknown;
 				window_ms?: number;
 			}): Promise<ApiResult<PipelineAnalysisTemplate>> =>
-				wrap(() => this.clients.pipelines.post<PipelineAnalysisTemplate>("/analysis-templates", { body: input })),
+				wrap(async () =>
+					pipeline_analysis_template_wire.parse(
+						await this.clients.pipelines.post<unknown>("/analysis-templates", { body: input }),
+					),
+				),
 
 			/**
 			 * Partial patch — only the supplied fields are touched.
@@ -1964,8 +1976,10 @@ export class ApiClient {
 					window_ms?: number;
 				},
 			): Promise<ApiResult<PipelineAnalysisTemplate>> =>
-				wrap(() =>
-					this.clients.pipelines.patch<PipelineAnalysisTemplate>(`/analysis-templates/${id}`, { body: input }),
+				wrap(async () =>
+					pipeline_analysis_template_wire.parse(
+						await this.clients.pipelines.patch<unknown>(`/analysis-templates/${id}`, { body: input }),
+					),
 				),
 
 			/**
@@ -1975,10 +1989,12 @@ export class ApiClient {
 			 * in-flight runs.
 			 */
 			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> =>
-				wrap(() =>
-					this.clients.pipelines.delete<{ deleted: true }>(`/analysis-templates/${id}`, {
-						query: { owner_id: input.owner_id },
-					}),
+				wrap(async () =>
+					pipelines_deleted_wire.parse(
+						await this.clients.pipelines.delete<unknown>(`/analysis-templates/${id}`, {
+							query: { owner_id: input.owner_id },
+						}),
+					),
 				),
 		},
 
@@ -1996,8 +2012,10 @@ export class ApiClient {
 			 * shows the policy that would be picked first.
 			 */
 			list: (input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust[]>> =>
-				wrap(() =>
-					this.clients.pipelines.get<PipelineOidcTrust[]>("/oidc-trust", { query: { owner_id: input.owner_id } }),
+				wrap(async () =>
+					pipeline_oidc_trust_list_wire.parse(
+						await this.clients.pipelines.get<unknown>("/oidc-trust", { query: { owner_id: input.owner_id } }),
+					),
 				),
 
 			/**
@@ -2005,8 +2023,10 @@ export class ApiClient {
 			 * unknown, soft-deleted, or owned by a different user.
 			 */
 			get: (id: string, input: { owner_id: string }): Promise<ApiResult<PipelineOidcTrust>> =>
-				wrap(() =>
-					this.clients.pipelines.get<PipelineOidcTrust>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } }),
+				wrap(async () =>
+					pipeline_oidc_trust_wire.parse(
+						await this.clients.pipelines.get<unknown>(`/oidc-trust/${id}`, { query: { owner_id: input.owner_id } }),
+					),
 				),
 
 			/**
@@ -2025,7 +2045,9 @@ export class ApiClient {
 				allowed_actions?: string[];
 				session_ttl_seconds?: number;
 			}): Promise<ApiResult<PipelineOidcTrust>> =>
-				wrap(() => this.clients.pipelines.post<PipelineOidcTrust>("/oidc-trust", { body: input })),
+				wrap(async () =>
+					pipeline_oidc_trust_wire.parse(await this.clients.pipelines.post<unknown>("/oidc-trust", { body: input })),
+				),
 
 			/**
 			 * Partial patch — only the supplied fields are touched. Validation
@@ -2044,7 +2066,11 @@ export class ApiClient {
 					session_ttl_seconds?: number;
 				},
 			): Promise<ApiResult<PipelineOidcTrust>> =>
-				wrap(() => this.clients.pipelines.patch<PipelineOidcTrust>(`/oidc-trust/${id}`, { body: input })),
+				wrap(async () =>
+					pipeline_oidc_trust_wire.parse(
+						await this.clients.pipelines.patch<unknown>(`/oidc-trust/${id}`, { body: input }),
+					),
+				),
 
 			/**
 			 * Soft-delete a policy (sets `deleted = true`; row preserved for
@@ -2052,10 +2078,12 @@ export class ApiClient {
 			 * rows.
 			 */
 			delete: (id: string, input: { owner_id: string }): Promise<ApiResult<{ deleted: true }>> =>
-				wrap(() =>
-					this.clients.pipelines.delete<{ deleted: true }>(`/oidc-trust/${id}`, {
-						query: { owner_id: input.owner_id },
-					}),
+				wrap(async () =>
+					pipelines_deleted_wire.parse(
+						await this.clients.pipelines.delete<unknown>(`/oidc-trust/${id}`, {
+							query: { owner_id: input.owner_id },
+						}),
+					),
 				),
 		},
 	};

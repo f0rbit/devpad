@@ -80,6 +80,7 @@ export {
 	compile_glob,
 	OIDC_SESSION_SCOPES,
 	type OidcAudit,
+	oidc_session_claims_schema,
 	type OidcExchangeError,
 	type OidcExchangeInput,
 	type OidcExchangeOutput,

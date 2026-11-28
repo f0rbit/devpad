@@ -39,7 +39,7 @@ export class PipelineRunDO implements PipelineRunDOLike {
 	}
 }
 
-const app = make_routes((env) => build_routes_deps_from_env(env as PipelineEnv));
+const app = make_routes((env: PipelineEnv) => build_routes_deps_from_env(env));
 
 export default {
 	fetch: app.fetch,

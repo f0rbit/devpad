@@ -24,6 +24,7 @@ export const BUN_MIGRATIONS_DIR: string = resolve(dirname(fileURLToPath(import.m
  */
 export const createBunDatabase = (sqlite: BunSqliteDatabase): Database => {
 	sqlite.run("PRAGMA foreign_keys = ON");
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- DB construction boundary: bun-sqlite's drizzle is sync (`"sync"`) while `Database` is the async `BaseSQLiteDatabase` D1 shares; the sync-to-async bridge is the one place the two modes are reconciled (see AGENTS.md "Database Type Architecture").
 	return drizzle(sqlite, { schema: fullSchema }) as unknown as Database;
 };
 

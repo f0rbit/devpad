@@ -86,6 +86,7 @@ import {
 } from "@devpad/schema/pipelines";
 import type { AuthError, AuthIdentity } from "./auth";
 import type { DoRouter } from "./do-router";
+import { is_record, read_json } from "./record";
 
 export const create_run_body = z.object({
 	package_id: z.string().min(1),
@@ -107,10 +108,10 @@ type CreateRunBranch = { kind: "version_set"; version_set_id: string } | { kind:
  */
 const classify_create_run = (body: z.infer<typeof create_run_body>): Result<CreateRunBranch, "both" | "neither"> => {
 	const { version_set_id, commit_sha } = body;
-	if (version_set_id !== undefined && commit_sha !== undefined) return err("both");
-	if (version_set_id === undefined && commit_sha === undefined) return err("neither");
-	if (commit_sha !== undefined) return ok({ kind: "commit", commit_sha });
-	return ok({ kind: "version_set", version_set_id: version_set_id as string });
+	if (version_set_id !== undefined) {
+		return commit_sha !== undefined ? err("both") : ok({ kind: "version_set", version_set_id });
+	}
+	return commit_sha !== undefined ? ok({ kind: "commit", commit_sha }) : err("neither");
 };
 
 /**
@@ -304,7 +305,7 @@ export type RoutesDeps = {
 	oidc?: OidcDeps;
 };
 
-type AppCtx = { Variables: { deps: RoutesDeps } };
+type AppCtx<Env extends object> = { Bindings: Env; Variables: { deps: RoutesDeps } };
 
 /**
  * Public wire envelope. Errors land here as a single flat object —
@@ -380,15 +381,14 @@ const log_5xx = (wire: WireError, status: number, context?: { run_id?: string; r
  * double-wrapped when bubbled through the route layer.
  */
 const to_wire_error = (input: unknown): WireError => {
-	if (input === null || typeof input !== "object") return { code: "unknown", message: String(input) };
-	const rec = input as Record<string, unknown>;
+	if (!is_record(input)) return { code: "unknown", message: String(input) };
 
 	// Strip any accidental Result-envelope wrapping (input was already
 	// `{ ok: false, error: ... }`). Always unwrap to the underlying error.
-	if (rec.ok === false && "error" in rec) return to_wire_error(rec.error);
+	if (input.ok === false && "error" in input) return to_wire_error(input.error);
 
-	const code = typeof rec.code === "string" ? rec.code : typeof rec.kind === "string" ? rec.kind : "unknown";
-	const { kind: _kind, code: _code, ok: _ok, ...rest } = rec;
+	const code = typeof input.code === "string" ? input.code : typeof input.kind === "string" ? input.kind : "unknown";
+	const { kind: _kind, code: _code, ok: _ok, ...rest } = input;
 	return { code, ...rest };
 };
 
@@ -457,8 +457,8 @@ const do_call = async (deps: RoutesDeps, run_id: string, action: string, body: u
 	return stub.fetch(req);
 };
 
-export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
-	const app = new Hono<AppCtx>();
+export const make_routes = <Env extends object = object>(deps_factory: (env: Env) => RoutesDeps) => {
+	const app = new Hono<AppCtx<Env>>();
 
 	app.use("*", async (c, next) => {
 		const deps = deps_factory(c.env);
@@ -467,7 +467,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	});
 
 	app.post("/runs", async (c) => {
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_run_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const deps = c.get("deps");
@@ -626,7 +626,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result instanceof Response) return auth_result;
 		const identity = auth_result.identity;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = webhook_event_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -747,7 +747,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const human = await require_human_actor(deps, c.req.raw);
 		if (human instanceof Response) return human;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = approve_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -918,7 +918,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "grant requests require admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_grant_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const { package_id, stage_name, scope } = parsed.data;
@@ -952,7 +952,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const human = await require_human_actor(deps, c.req.raw);
 		if (human instanceof Response) return human;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = grant_approve_body.safeParse(body ?? {});
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -970,7 +970,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const human = await require_human_actor(deps, c.req.raw);
 		if (human instanceof Response) return human;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = grant_deny_body.safeParse(body ?? {});
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1007,7 +1007,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_package_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1024,7 +1024,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = update_package_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1105,7 +1105,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_oidc_trust_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1121,7 +1121,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = update_oidc_trust_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1192,7 +1192,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_analysis_template_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1208,7 +1208,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = update_analysis_template_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 

@@ -31,6 +31,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createLogger } from "../../utils/logger.js";
 import type { ServiceError } from "../errors.js";
+import { is_record } from "./is-record.js";
 import { parse_run_row } from "./row-parse.js";
 
 const logger = createLogger("pipelines.events");
@@ -345,10 +346,7 @@ const tick_outcome_from = async (response: Response): Promise<IngestTick> => {
  * `source` field, we overwrite. Same for `idempotency_key`.
  */
 const stamp_external_source = (payload: unknown, idempotency_key: string): Record<string, unknown> => {
-	const base =
-		payload === undefined || payload === null || typeof payload !== "object" || Array.isArray(payload)
-			? { value: payload ?? null }
-			: { ...(payload as Record<string, unknown>) };
+	const base = is_record(payload) ? { ...payload } : { value: payload ?? null };
 	return { ...base, source: "external", idempotency_key };
 };
 

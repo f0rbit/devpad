@@ -19,10 +19,11 @@ import {
 } from "@devpad/schema/validation";
 import { z } from "zod";
 import type { ApiClient } from "./api-client";
+import type { ApiResult } from "./result";
 
-function unwrap<T>(result: { ok: boolean; value?: T; error?: { message: string } }): T {
-	if (!result.ok) throw new Error(result.error?.message ?? "Unknown error");
-	return result.value as T;
+function unwrap<T>(result: ApiResult<T>): T {
+	if (!result.ok) throw new Error(result.error.message);
+	return result.value;
 }
 
 // Filter schemas that aren't in @devpad/schema yet

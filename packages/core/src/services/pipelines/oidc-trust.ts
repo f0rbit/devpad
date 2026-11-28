@@ -26,7 +26,7 @@
  * service layer — routes pass `owner_id` along with the policy id.
  */
 
-import type { PipelineOidcTrust, UpsertPipelineOidcTrust } from "@devpad/schema";
+import type { InsertPipelineOidcTrust, PipelineOidcTrust, UpsertPipelineOidcTrust } from "@devpad/schema";
 import { pipeline_oidc_trust } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { upsert_pipeline_oidc_trust } from "@devpad/schema/validation";
@@ -125,7 +125,7 @@ export const create_trust_policy = async (
 	const data = parsed.data;
 	try {
 		const now = new Date().toISOString();
-		const insert_values = {
+		const insert_values: InsertPipelineOidcTrust = {
 			owner_id: data.owner_id,
 			provider: data.provider ?? "github",
 			github_owner: data.github_owner,
@@ -145,10 +145,7 @@ export const create_trust_policy = async (
 			protected: false,
 			deleted: false,
 		};
-		const inserted = await db
-			.insert(pipeline_oidc_trust)
-			.values(insert_values as never)
-			.returning();
+		const inserted = await db.insert(pipeline_oidc_trust).values(insert_values).returning();
 		const row = inserted.at(0);
 		if (!row)
 			return err({
@@ -208,7 +205,7 @@ export const update_trust_policy = async (
 	}
 
 	try {
-		const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), modified_by: "api" };
+		const patch: Partial<InsertPipelineOidcTrust> = { updated_at: new Date().toISOString(), modified_by: "api" };
 		if (input.provider !== undefined) patch.provider = input.provider;
 		if (input.github_owner !== undefined) patch.github_owner = input.github_owner;
 		if (input.repo_pattern !== undefined) patch.repo_pattern = input.repo_pattern;
@@ -223,7 +220,7 @@ export const update_trust_policy = async (
 
 		const updated = await db
 			.update(pipeline_oidc_trust)
-			.set(patch as never)
+			.set(patch)
 			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id)))
 			.returning();
 		const row = updated.at(0);
@@ -259,10 +256,14 @@ export const delete_trust_policy = async (
 	const existing = await get_trust_policy(db, input);
 	if (!existing.ok) return existing;
 	try {
-		const patch = { deleted: true, updated_at: new Date().toISOString(), modified_by: "api" };
+		const patch: Partial<InsertPipelineOidcTrust> = {
+			deleted: true,
+			updated_at: new Date().toISOString(),
+			modified_by: "api",
+		};
 		await db
 			.update(pipeline_oidc_trust)
-			.set(patch as never)
+			.set(patch)
 			.where(and(eq(pipeline_oidc_trust.id, input.id), eq(pipeline_oidc_trust.owner_id, input.owner_id)));
 		return ok(undefined);
 	} catch (e) {

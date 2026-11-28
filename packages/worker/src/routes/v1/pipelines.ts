@@ -57,12 +57,16 @@ import {
 	pipeline_run_wire,
 	pipeline_stage_event_list_wire,
 } from "@devpad/schema/pipelines";
+import { try_catch } from "@f0rbit/corpus";
 import { eq, inArray, or } from "drizzle-orm";
 import { type Context, Hono } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { ZodTypeAny } from "zod";
 import { pipeline_grant, pipeline_package, project } from "@devpad/schema";
 import type { AppContext } from "../../bindings.js";
+import { is_record } from "../../lib/is-record.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { contentful_status } from "../../utils/response.js";
 
 const app = new Hono<AppContext>();
 
@@ -82,8 +86,22 @@ const without_owner_id = (body: Record<string, unknown>): Record<string, unknown
 	return rest;
 };
 
-const parse_body = async (c: Context<AppContext>): Promise<Record<string, unknown>> =>
-	(await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+const parse_json = (text: string): unknown => {
+	const parsed = try_catch(
+		() => {
+			const raw: unknown = JSON.parse(text);
+			return raw;
+		},
+		(cause) => String(cause),
+	);
+	return parsed.ok ? parsed.value : null;
+};
+
+/** The request body as a plain object; a missing / non-object / malformed body reads as `{}`. */
+const parse_body = async (c: Context<AppContext>): Promise<Record<string, unknown>> => {
+	const body = parse_json(await c.req.text());
+	return is_record(body) ? body : {};
+};
 
 /* ─── Guards ─────────────────────────────────────────────────────── */
 
@@ -196,14 +214,18 @@ const list_ownership_filter =
 	(owned: Set<string>, key: string) =>
 	(value: unknown): unknown => {
 		if (!Array.isArray(value)) return value;
-		const rows = value as Array<Record<string, unknown>>;
-		return rows.filter((row) => {
+		return value.filter((row: unknown) => {
+			if (!is_record(row)) return false;
 			const pid = row[key];
 			return typeof pid === "string" && owned.has(pid);
 		});
 	};
 
 /* ─── Forwarding ─────────────────────────────────────────────────── */
+
+/** Relay an already-validated `unknown` JSON value as the response body (no re-typing, no cast). */
+const relay_json = (c: Context<AppContext>, value: unknown, status: ContentfulStatusCode): Response =>
+	c.body(JSON.stringify(value ?? null), status, { "content-type": "application/json" });
 
 type ForwardOpts = {
 	upstream_path: string;
@@ -276,23 +298,14 @@ const forward_to_pipelines = async (c: Context<AppContext>, opts: ForwardOpts): 
 	if (upstream.status === 204) return c.body(null, 204);
 
 	const text = await upstream.text();
-	let parsed: unknown = null;
-	try {
-		const candidate: unknown = JSON.parse(text);
-		parsed = candidate;
-	} catch {
-		parsed = null;
-	}
+	const parsed = parse_json(text);
+	const status = contentful_status(upstream.status);
 
-	const envelope =
-		typeof parsed === "object" && parsed !== null && "ok" in parsed
-			? (parsed as { ok: boolean; value?: unknown; error?: unknown })
-			: null;
-	if (envelope !== null) {
+	if (is_record(parsed) && "ok" in parsed) {
 		// Unwrap `{ ok: true, value }` — ApiClient callers expect the raw
 		// value (`PipelineRun[]` etc.), not the orchestrator's envelope.
-		if (envelope.ok) {
-			let value: unknown = envelope.value;
+		if (parsed.ok === true) {
+			let value: unknown = parsed.value;
 			if (opts.value_schema !== undefined) {
 				const parsed_value = opts.value_schema.safeParse(value);
 				if (!parsed_value.success) {
@@ -307,28 +320,21 @@ const forward_to_pipelines = async (c: Context<AppContext>, opts: ForwardOpts): 
 				}
 				value = parsed_value.data;
 			}
-			const filtered = opts.filter !== undefined ? opts.filter(value) : value;
-			return c.json(filtered as Record<string, unknown>, upstream.status as 200);
+			return relay_json(c, opts.filter !== undefined ? opts.filter(value) : value, status);
 		}
 		// `{ ok: false, error: { code, message?, ... } }` → devpad's plain
 		// `{ error: "<code>", message }` — the shape ApiClient's error
 		// handlers surface to callers.
-		const err = (typeof envelope.error === "object" && envelope.error !== null ? envelope.error : {}) as {
-			code?: unknown;
-			message?: unknown;
-		};
+		const detail = is_record(parsed.error) ? parsed.error : {};
 		const rest: Record<string, unknown> = {
-			error: typeof err.code === "string" ? err.code : "pipelines_error",
+			error: typeof detail.code === "string" ? detail.code : "pipelines_error",
 		};
-		if (typeof err.message === "string") rest.message = err.message;
-		return c.json(rest, upstream.status as 400);
+		if (typeof detail.message === "string") rest.message = detail.message;
+		return c.json(rest, status);
 	}
 
-	if (parsed !== null) {
-		const value = opts.filter !== undefined ? opts.filter(parsed) : parsed;
-		return c.json(value as Record<string, unknown>, upstream.status as 200);
-	}
-	return c.text(text, upstream.status as 200);
+	if (parsed !== null) return relay_json(c, opts.filter !== undefined ? opts.filter(parsed) : parsed, status);
+	return c.text(text, status);
 };
 
 /* ─── Runs ───────────────────────────────────────────────────────── */

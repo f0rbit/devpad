@@ -19,7 +19,8 @@ export function getProjectContext(): ProjectContext | null {
 	const raw = sessionStorage.getItem(STORAGE_KEY);
 	if (!raw) return null;
 	try {
-		const result = ProjectContextSchema.safeParse(JSON.parse(raw));
+		const raw_json: unknown = JSON.parse(raw);
+		const result = ProjectContextSchema.safeParse(raw_json);
 		return result.success ? result.data : null;
 	} catch {
 		return null;

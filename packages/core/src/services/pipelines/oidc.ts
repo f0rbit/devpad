@@ -53,6 +53,8 @@ export type MatchedPolicy = {
 	granted_scope: OidcSessionScope[];
 };
 
+const is_session_scope = (value: string): value is OidcSessionScope => OIDC_SESSION_SCOPES.some((s) => s === value);
+
 const repo_basename = (repository: string): string => {
 	const slash = repository.indexOf("/");
 	return slash === -1 ? repository : repository.slice(slash + 1);
@@ -111,7 +113,7 @@ export const match_trust_policy = (
 			if (!list_includes_ci(allowed_envs, claims.environment)) continue;
 		}
 
-		const allowed_actions = policy.allowed_actions as OidcSessionScope[];
+		const allowed_actions = policy.allowed_actions.filter(is_session_scope);
 		return ok({ policy, granted_scope: allowed_actions });
 	}
 
@@ -182,9 +184,8 @@ const load_trust_policies = async (db: Database, owner: string): Promise<Pipelin
 };
 
 const intersect_scope = (granted: OidcSessionScope[], requested: string[] | undefined): OidcSessionScope[] => {
-	const known: ReadonlySet<OidcSessionScope> = new Set(OIDC_SESSION_SCOPES);
 	if (requested === undefined || requested.length === 0) return granted;
-	const requested_set = new Set(requested.filter((s): s is OidcSessionScope => known.has(s as OidcSessionScope)));
+	const requested_set = new Set(requested.filter(is_session_scope));
 	return granted.filter((s) => requested_set.has(s));
 };
 

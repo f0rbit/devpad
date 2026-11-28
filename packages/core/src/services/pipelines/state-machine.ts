@@ -148,6 +148,15 @@ export const is_terminal_status = (status: RunStatus): boolean => TERMINAL.has(s
 
 const transition_key_for = (from: Stage, to: Stage): TransitionKey => `${from.name}→${to.name}`;
 
+/**
+ * `Record<TransitionKey, Gate>` over-promises completeness for the
+ * template-literal key type -- a transition key computed from arbitrary
+ * stage names can genuinely miss the map (that's exactly what
+ * `missing_gate` reports). The `Partial` PARAMETER type widens the read
+ * honestly (a Record is assignable to its Partial) with no cast.
+ */
+const gate_for = (gates: Partial<Record<TransitionKey, Gate>>, key: TransitionKey): Gate | undefined => gates[key];
+
 const has_bake = (stage: Stage): boolean => stage.bake !== null && stage.bake.ms > 0;
 
 const is_last_stage = (state: RunState, plan: ResolvedPlan): boolean => state.stage_index >= plan.stages.length - 1;
@@ -207,12 +216,7 @@ const request_gate_eval = (state: RunState, plan: ResolvedPlan): Result<Transiti
 	const from = plan.stages[state.stage_index];
 	const to = plan.stages[state.stage_index + 1];
 	const key = transition_key_for(from, to);
-	// `Record<TransitionKey, Gate>` over-promises completeness for the
-	// template-literal key type -- a transition key computed from arbitrary
-	// stage names can genuinely miss the map (that's exactly what
-	// `missing_gate` below reports), so read through a `Partial` view here
-	// rather than trusting the non-optional element type.
-	const gate = (plan.gates as Partial<Record<TransitionKey, Gate>>)[key];
+	const gate = gate_for(plan.gates, key);
 	if (gate === undefined) {
 		return err({
 			code: "missing_gate",

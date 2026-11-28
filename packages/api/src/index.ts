@@ -60,6 +60,8 @@ export type {
 	PipelineDispatchEntry,
 	PipelineDispatches,
 	PipelineIngestTick,
+	PipelineRunStart,
+	PipelinesDashboard,
 	PublicHook,
 	PullDocResponse,
 	PushInterfaceReportResult,

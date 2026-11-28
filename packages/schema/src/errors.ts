@@ -12,7 +12,14 @@ export type ApiError = BaseError & { kind: "api_error"; status: number };
 export type ParseError = BaseError & { kind: "parse_error" };
 export type EncryptionError = BaseError & { kind: "encryption_error"; operation: "encrypt" | "decrypt" };
 export type DatabaseError = BaseError & { kind: "db_error" };
-export type ConflictError = BaseError & { kind: "conflict"; resource?: string };
+export type ConflictError = BaseError & {
+	kind: "conflict";
+	resource?: string;
+	id?: string;
+	/** Machine-readable cause (e.g. `active_runs`) + the count behind it, when the conflict has one. */
+	reason?: string;
+	count?: number;
+};
 export type ProtectedError = BaseError & {
 	kind: "protected";
 	entity_id?: string;

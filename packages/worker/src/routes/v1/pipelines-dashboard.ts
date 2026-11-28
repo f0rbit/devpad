@@ -28,6 +28,7 @@ import type { DashboardResponse } from "@devpad/schema/validation";
 import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AppContext } from "../../bindings.js";
+import { is_record } from "../../lib/is-record.js";
 import { requireAuth } from "../../middleware/auth.js";
 
 const app = new Hono<AppContext>();
@@ -40,7 +41,10 @@ const app = new Hono<AppContext>();
  * render even when pulse is unreachable — see the route handler for the
  * surrounding logic.
  */
-const try_pulse_summary = async (c: Context<AppContext>, project_id: string): Promise<unknown> => {
+const try_pulse_summary = async (
+	c: Context<AppContext>,
+	project_id: string,
+): Promise<Record<string, unknown> | null> => {
 	const config = c.get("config");
 	const pulse_api_base = config.pulse_api_base;
 	const pulse_internal_key = config.pulse_internal_key;
@@ -71,8 +75,8 @@ const try_pulse_summary = async (c: Context<AppContext>, project_id: string): Pr
 	if (!content_type.includes("application/json")) return null;
 
 	try {
-		const body = await response.json();
-		return body;
+		const body: unknown = await response.json();
+		return is_record(body) ? body : null;
 	} catch {
 		return null;
 	}

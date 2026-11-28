@@ -17,14 +17,14 @@ export type DoRouter = {
 };
 
 /**
- * Production router. Wraps the real `DurableObjectNamespace`. The
- * `unknown` type sidesteps the workers-types vs. test-types friction;
- * the production wiring passes the actual namespace through and the
- * test wiring passes the in-memory fake.
+ * Production router. Wraps the real `DurableObjectNamespace`. Generic
+ * over the namespace's id type so the production wiring passes the
+ * actual namespace and the test wiring passes the in-memory fake — no
+ * cast on either side.
  */
-export const make_cf_router = (namespace: {
-	idFromName(name: string): unknown;
-	get(id: unknown): { fetch(request: Request): Promise<Response> };
+export const make_cf_router = <Id>(namespace: {
+	idFromName(name: string): Id;
+	get(id: Id): { fetch(request: Request): Promise<Response> };
 }): DoRouter => ({
 	get(run_id) {
 		const id = namespace.idFromName(run_id);

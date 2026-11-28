@@ -41,6 +41,7 @@
  */
 
 import { err, ok, type Result } from "@f0rbit/corpus";
+import { z } from "zod";
 import type {
 	AssetConfig,
 	AssetUpload,
@@ -62,12 +63,12 @@ export type CfApiConfig = {
 	base_url?: string;
 };
 
-type CfEnvelope<T> = {
-	success: boolean;
-	errors: Array<{ code: number; message: string }>;
-	messages: Array<{ code: number; message: string }>;
-	result: T;
-};
+// CF API envelope; `result` is parsed per-endpoint by the caller's schema.
+const cf_envelope = z.object({
+	success: z.boolean(),
+	errors: z.array(z.object({ code: z.number(), message: z.string() })).default([]),
+	result: z.unknown(),
+});
 
 const CF_API_BASE = "https://api.cloudflare.com/client/v4";
 
@@ -85,7 +86,10 @@ const cf_url = (config: CfApiConfig, path: string): string => {
 	return `${base}/accounts/${config.account_id}${path}`;
 };
 
-const interpret_response = async <T>(response: Response): Promise<Result<T, CloudflareError>> => {
+const interpret_response = async <T>(
+	response: Response,
+	schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+): Promise<Result<T, CloudflareError>> => {
 	const body_text = await response.text().catch(() => "");
 	if (response.status === 404) return err({ code: "not_found", message: body_text || "cf api 404" });
 	if (response.status === 409) return err({ code: "conflict", message: body_text || "cf api 409" });
@@ -93,18 +97,26 @@ const interpret_response = async <T>(response: Response): Promise<Result<T, Clou
 		return err({ code: "validation", message: body_text || `cf api ${String(response.status)}` });
 	if (response.status >= 500)
 		return err({ code: "internal", message: body_text || `cf api ${String(response.status)}` });
-	let parsed: CfEnvelope<T>;
+	let raw: unknown;
 	try {
-		const raw: unknown = JSON.parse(body_text);
-		parsed = raw as CfEnvelope<T>;
+		const decoded: unknown = JSON.parse(body_text);
+		raw = decoded;
 	} catch (e) {
 		return err({ code: "internal", message: `cf api decode failed: ${String(e)}` });
 	}
-	if (!parsed.success) {
-		const message = parsed.errors[0]?.message ?? "cf api unsuccessful";
+	const envelope = cf_envelope.safeParse(raw);
+	if (!envelope.success) {
+		return err({ code: "internal", message: `cf api envelope invalid: ${envelope.error.message}` });
+	}
+	if (!envelope.data.success) {
+		const message = envelope.data.errors[0]?.message ?? "cf api unsuccessful";
 		return err({ code: "internal", message });
 	}
-	return ok(parsed.result);
+	const result = schema.safeParse(envelope.data.result);
+	if (!result.success) {
+		return err({ code: "internal", message: `cf api result invalid: ${result.error.message}` });
+	}
+	return ok(result.data);
 };
 
 // `init.headers` is `RequestInit["headers"]` — may be a `Headers` instance
@@ -122,6 +134,7 @@ const cf_call = async <T>(
 	config: CfApiConfig,
 	path: string,
 	init: RequestInit & { method: string },
+	schema: z.ZodType<T, z.ZodTypeDef, unknown>,
 ): Promise<Result<T, CloudflareError>> => {
 	const url = cf_url(config, path);
 	let response: Response;
@@ -132,7 +145,7 @@ const cf_call = async <T>(
 	} catch (e) {
 		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
 	}
-	return interpret_response<T>(response);
+	return interpret_response(response, schema);
 };
 
 /**
@@ -154,6 +167,7 @@ const cf_upload_multipart = async <T>(
 	config: CfApiConfig,
 	path: string,
 	form: FormData,
+	schema: z.ZodType<T, z.ZodTypeDef, unknown>,
 ): Promise<Result<T, CloudflareError>> => {
 	const url = cf_url(config, path);
 	let response: Response;
@@ -162,18 +176,48 @@ const cf_upload_multipart = async <T>(
 	} catch (e) {
 		return err({ code: "internal", message: `cf api fetch failed: ${String(e)}` });
 	}
-	return interpret_response<T>(response);
+	return interpret_response(response, schema);
 };
 
-type CfBinding = Record<string, unknown> & { type: string; name: string; text?: string };
+// Bindings stay an open record: the orchestrator only relies on `type` +
+// `name`, every other field passes through verbatim (#160), so entries are
+// narrowed field-by-field in `to_version_binding` rather than modelled.
+const cf_binding = z.record(z.string(), z.unknown());
+type CfBinding = z.infer<typeof cf_binding>;
 
-type CfWorkerVersionResponse = {
-	id: string;
-	number: number;
-	metadata?: { created_on?: string; bindings?: CfBinding[]; keep_bindings?: string[] };
-	resources?: { bindings?: CfBinding[] };
-	annotations?: Record<string, string>;
-};
+const cf_worker_version = z.object({
+	id: z.string(),
+	number: z.number(),
+	metadata: z
+		.object({
+			created_on: z.string().nullish(),
+			bindings: z.array(cf_binding).nullish(),
+			keep_bindings: z.array(z.string()).nullish(),
+		})
+		.nullish(),
+	resources: z.object({ bindings: z.array(cf_binding).nullish() }).nullish(),
+	annotations: z.record(z.string(), z.string()).nullish(),
+});
+type CfWorkerVersionResponse = z.infer<typeof cf_worker_version>;
+
+const cf_worker_versions_list = z.object({ items: z.array(cf_worker_version).nullish() });
+
+const cf_deployment = z.object({
+	id: z.string(),
+	created_on: z.string().nullish(),
+	strategy: z.string().nullish(),
+	versions: z.array(z.object({ version_id: z.string(), percentage: z.number() })).nullish(),
+});
+type CfDeploymentResponse = z.infer<typeof cf_deployment>;
+
+const cf_deployments_list = z.object({ deployments: z.array(cf_deployment).nullish() });
+
+const cf_script_meta = z.object({ created_on: z.string().nullish() });
+
+const cf_asset_session = z.object({
+	jwt: z.string(),
+	buckets: z.array(z.array(z.string())).default([]),
+});
 
 /**
  * Cloudflare returns a version's bindings at `result.resources.bindings`
@@ -181,7 +225,7 @@ type CfWorkerVersionResponse = {
  * `metadata.bindings` is kept as a fallback for the upload-echo shape.
  */
 const cf_bindings_of = (raw: CfWorkerVersionResponse): CfBinding[] | undefined =>
-	raw.resources?.bindings ?? raw.metadata?.bindings;
+	raw.resources?.bindings ?? raw.metadata?.bindings ?? undefined;
 
 /**
  * Map a CF `metadata.bindings[]` entry to a {@link VersionBinding}. The
@@ -192,11 +236,9 @@ const cf_bindings_of = (raw: CfWorkerVersionResponse): CfBinding[] | undefined =
  * dropped or rewritten.
  */
 const to_version_binding = (b: CfBinding): VersionBinding | null => {
-	if (typeof b.type !== "string" || typeof b.name !== "string") return null;
 	const { type, name, text, ...rest } = b;
-	const passthrough: Record<string, unknown> = { ...rest };
-	if (typeof text === "string") passthrough.text = text;
-	return { ...passthrough, type, name };
+	if (typeof type !== "string" || typeof name !== "string") return null;
+	return { ...rest, ...(typeof text === "string" ? { text } : {}), type, name };
 };
 
 const bindings_from_cf = (bindings: CfBinding[] | undefined): VersionBinding[] => {
@@ -206,11 +248,12 @@ const bindings_from_cf = (bindings: CfBinding[] | undefined): VersionBinding[] =
 
 const bindings_to_vars = (bindings: CfBinding[] | undefined): WorkerVar[] | undefined => {
 	if (!bindings) return undefined;
-	const plain = bindings.filter(
-		(b): b is CfBinding & { text: string } => b.type === "plain_text" && typeof b.text === "string",
+	const plain = bindings.flatMap((b): WorkerVar[] =>
+		b.type === "plain_text" && typeof b.name === "string" && typeof b.text === "string"
+			? [{ type: "plain_text", name: b.name, text: b.text }]
+			: [],
 	);
-	if (plain.length === 0) return undefined;
-	return plain.map((b) => ({ type: "plain_text" as const, name: b.name, text: b.text }));
+	return plain.length === 0 ? undefined : plain;
 };
 
 const to_worker_version = (script_name: string, raw: CfWorkerVersionResponse): WorkerVersion => ({
@@ -218,18 +261,11 @@ const to_worker_version = (script_name: string, raw: CfWorkerVersionResponse): W
 	script_name,
 	number: raw.number,
 	created_on: raw.metadata?.created_on ?? new Date().toISOString(),
-	annotations: raw.annotations,
+	annotations: raw.annotations ?? undefined,
 	vars: bindings_to_vars(cf_bindings_of(raw)),
 	bindings: bindings_from_cf(cf_bindings_of(raw)),
-	keep_bindings: raw.metadata?.keep_bindings,
+	keep_bindings: raw.metadata?.keep_bindings ?? undefined,
 });
-
-type CfDeploymentResponse = {
-	id: string;
-	created_on?: string;
-	strategy?: string;
-	versions?: Array<{ version_id: string; percentage: number }>;
-};
 
 const to_worker_deployment = (script_name: string, raw: CfDeploymentResponse): WorkerDeployment => ({
 	id: raw.id,
@@ -280,11 +316,6 @@ const build_version_metadata = (input: {
 	return metadata;
 };
 
-type AssetSessionResponse = {
-	jwt: string;
-	buckets: string[][];
-};
-
 /**
  * Encode a byte array as a base64 string. CF's assets/upload endpoint
  * expects raw base64 (no data URI prefix) when called with `?base64=true`.
@@ -323,10 +354,15 @@ const upload_asset_session = async (
 	}
 
 	const session_path = `/workers/scripts/${encodeURIComponent(script_name)}/assets-upload-session`;
-	const session = await cf_call<AssetSessionResponse>(config, session_path, {
-		method: "POST",
-		body: JSON.stringify({ manifest }),
-	});
+	const session = await cf_call(
+		config,
+		session_path,
+		{
+			method: "POST",
+			body: JSON.stringify({ manifest }),
+		},
+		cf_asset_session,
+	);
 	if (!session.ok) return session;
 
 	if (assets.length === 0) {
@@ -397,7 +433,7 @@ const upload_single_file = async (
 	form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
 	form.append(main_module, new Blob([input.bundle], { type: "application/javascript+module" }), main_module);
 
-	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
+	const result = await cf_upload_multipart(config, path, form, cf_worker_version);
 	if (!result.ok) return result;
 	return ok(to_worker_version(input.script_name, result.value));
 };
@@ -439,7 +475,7 @@ const upload_directory_bundle = async (
 		form.append(module.name, new Blob([module.content], { type: module.mime_type }), module.name);
 	}
 
-	const result = await cf_upload_multipart<CfWorkerVersionResponse>(config, path, form);
+	const result = await cf_upload_multipart(config, path, form, cf_worker_version);
 	if (!result.ok) return result;
 	return ok(to_worker_version(input.script_name, result.value));
 };
@@ -458,14 +494,14 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 		},
 		list: async (script_name: string): Promise<Result<WorkerVersion[], CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}/versions`;
-			const result = await cf_call<{ items?: CfWorkerVersionResponse[] }>(config, path, { method: "GET" });
+			const result = await cf_call(config, path, { method: "GET" }, cf_worker_versions_list);
 			if (!result.ok) return result;
 			const items = result.value.items ?? [];
 			return ok(items.map((v) => to_worker_version(script_name, v)));
 		},
 		get: async (script_name: string, version_id: string): Promise<Result<WorkerVersion, CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}/versions/${encodeURIComponent(version_id)}`;
-			const result = await cf_call<CfWorkerVersionResponse>(config, path, { method: "GET" });
+			const result = await cf_call(config, path, { method: "GET" }, cf_worker_version);
 			if (!result.ok) return result;
 			return ok(to_worker_version(script_name, result.value));
 		},
@@ -474,19 +510,24 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 	const deployments = {
 		create: async (input: CreateDeploymentInput): Promise<Result<WorkerDeployment, CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(input.script_name)}/deployments`;
-			const result = await cf_call<CfDeploymentResponse>(config, path, {
-				method: "POST",
-				body: JSON.stringify({
-					strategy: "percentage",
-					versions: input.strategy.versions,
-				}),
-			});
+			const result = await cf_call(
+				config,
+				path,
+				{
+					method: "POST",
+					body: JSON.stringify({
+						strategy: "percentage",
+						versions: input.strategy.versions,
+					}),
+				},
+				cf_deployment,
+			);
 			if (!result.ok) return result;
 			return ok(to_worker_deployment(input.script_name, result.value));
 		},
 		list: async (script_name: string): Promise<Result<WorkerDeployment[], CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}/deployments`;
-			const result = await cf_call<{ deployments?: CfDeploymentResponse[] }>(config, path, { method: "GET" });
+			const result = await cf_call(config, path, { method: "GET" }, cf_deployments_list);
 			if (!result.ok) return result;
 			const items = result.value.deployments ?? [];
 			return ok(items.map((d) => to_worker_deployment(script_name, d)));
@@ -496,7 +537,7 @@ export const make_cf_api_provider = (config: CfApiConfig): CloudflareProvider =>
 	const workers = {
 		get: async (script_name: string): Promise<Result<WorkerMeta, CloudflareError>> => {
 			const path = `/workers/scripts/${encodeURIComponent(script_name)}`;
-			const result = await cf_call<{ created_on?: string }>(config, path, { method: "GET" });
+			const result = await cf_call(config, path, { method: "GET" }, cf_script_meta);
 			if (!result.ok) return result;
 			return ok({ script_name, created_on: result.value.created_on ?? new Date().toISOString() });
 		},

@@ -27,7 +27,7 @@
 
 import type { Fetcher } from "@cloudflare/workers-types";
 import { err, ok, pipe, try_catch_async, type Result } from "@f0rbit/corpus";
-import type { EmitError, PulseEmitter, PulseEvent } from "@devpad/core/services/pipelines/gates";
+import type { EmitError, PulseEmitter } from "@devpad/core/services/pipelines/gates";
 import { createLogger } from "@devpad/core/utils/logger";
 import type {
 	MetricSnapshot,
@@ -75,6 +75,18 @@ export const chunk_events = <T>(events: readonly T[], max: number): T[][] =>
  * unconfigured behaviour (emitter no-op / summary `not_configured`).
  */
 export type PulseSecretRef = { get(): Promise<string> } | undefined;
+
+/** Free-form `{ event, ...dims }` bag — route-level events (artifact_uploaded, …) aren't in the typed gate-event union. */
+export type LoosePulseEvent = { event: string } & Record<string, unknown>;
+
+/**
+ * The orchestrator-wide emitter: typed gate events (`PulseEmitter`) plus
+ * the free-form route events. One implementation, two views — the
+ * overload set is satisfied by a single loose-parameter function.
+ */
+export type OrchestratorPulseEmitter = PulseEmitter & {
+	emit(event: LoosePulseEvent): Promise<Result<void, EmitError>>;
+};
 
 export type PulseEmitterConfig = {
 	/** Body `project_id` for `POST /e` — must match the ingest key's project. */
@@ -158,7 +170,7 @@ const send_pulse_events = async (
  * fire-and-forget telemetry, so unconfigured observability must not spam the
  * caller's log path with noise it cannot act on. Warns once per emitter.
  */
-const not_configured_emitter = (): PulseEmitter => {
+const not_configured_emitter = (): OrchestratorPulseEmitter => {
 	let warned = false;
 	return {
 		emit: async () => {
@@ -189,14 +201,14 @@ const build_key_loader = (secret_ref: NonNullable<PulseSecretRef>): (() => Promi
  * service binding. Without `project_id` or the ingest key the emitter
  * degrades to the silent no-op.
  */
-export const make_pulse_emitter = (pulse: Fetcher, config: PulseEmitterConfig): PulseEmitter => {
+export const make_pulse_emitter = (pulse: Fetcher, config: PulseEmitterConfig): OrchestratorPulseEmitter => {
 	if (config.project_id === undefined || config.project_id === "" || config.ingest_key === undefined) {
 		return not_configured_emitter();
 	}
 	const project_id = config.project_id;
 	const load_key = build_key_loader(config.ingest_key);
 	return {
-		emit: async (event: PulseEvent): Promise<Result<void, EmitError>> => {
+		emit: async (event: LoosePulseEvent): Promise<Result<void, EmitError>> => {
 			const key_result = await load_key();
 			if (!key_result.ok) {
 				return err({ kind: "emit_error", message: `pulse ingest key unavailable: ${key_result.error}` });

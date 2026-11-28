@@ -33,7 +33,13 @@ import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary"
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
 import { type ExternalTarget, type ResolvedGates, type ResolvedRollout } from "@devpad/schema/validation";
-import type { ApprovalDecision, PipelineRun, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
+import type {
+	ApprovalDecision,
+	InsertPipelineRun,
+	PipelineRun,
+	StageEventKind,
+	UpsertPipelineRun,
+} from "@devpad/schema";
 import { pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
@@ -53,6 +59,7 @@ import {
 	parse_external_target,
 	redispatch_failed,
 } from "./external-deploy.js";
+import { is_record } from "./is-record.js";
 import { get_package } from "./packages.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
 import { parse_run_row } from "./row-parse.js";
@@ -168,8 +175,7 @@ const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "at
 
 const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): ResolvedGates => {
 	const out: ResolvedGates = {};
-	for (const key of Object.keys(gates)) {
-		const g = gates[key as TransitionKey];
+	for (const [key, g] of Object.entries(gates)) {
 		if (g.type === "analysis") out[key] = { type: "analysis", template: g.template.template_id };
 		else if (g.type === "auto")
 			out[key] = g.afterBake !== undefined ? { type: "auto", afterBake: g.afterBake } : { type: "auto" };
@@ -179,6 +185,25 @@ const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Resol
 };
 
 const make_id = (): string => `pipeline-run_${crypto.randomUUID()}`;
+
+/**
+ * The upsert shape allows a null/absent `id`; the insert model doesn't —
+ * the explicit `id` override (and the `current_stage` default) is what
+ * makes the spread a valid {@link InsertPipelineRun}, checked by the
+ * compiler rather than silenced.
+ */
+const run_insert_values = (upsert: UpsertPipelineRun, row_id: string, now: string): InsertPipelineRun => ({
+	...upsert,
+	id: row_id,
+	current_stage: upsert.current_stage ?? null,
+	started_at: now,
+	created_at: now,
+	updated_at: now,
+	created_by: "api",
+	modified_by: "api",
+	protected: false,
+	deleted: false,
+});
 
 /**
  * Persist a freshly-created run row, snapshotting the resolved plan
@@ -244,21 +269,9 @@ export const create_run = async (
 	};
 
 	try {
-		const insert_values = {
-			...upsert,
-			id: row_id,
-			current_stage: upsert.current_stage ?? null,
-			started_at: now,
-			created_at: now,
-			updated_at: now,
-			created_by: "api",
-			modified_by: "api",
-			protected: false,
-			deleted: false,
-		};
 		const inserted = await db
 			.insert(pipeline_run)
-			.values(insert_values as never)
+			.values(run_insert_values(upsert, row_id, now))
 			.returning();
 		const row = inserted.at(0);
 		if (!row) {
@@ -339,21 +352,9 @@ export const create_external_run = async (
 	};
 
 	try {
-		const insert_values = {
-			...upsert,
-			id: row_id,
-			current_stage: upsert.current_stage ?? null,
-			started_at: now,
-			created_at: now,
-			updated_at: now,
-			created_by: "api",
-			modified_by: "api",
-			protected: false,
-			deleted: false,
-		};
 		const inserted = await db
 			.insert(pipeline_run)
-			.values(insert_values as never)
+			.values(run_insert_values(upsert, row_id, now))
 			.returning();
 		const row = inserted.at(0);
 		if (!row) {
@@ -1025,10 +1026,8 @@ const external_event_plan = async (deps: RunDeps, run: PipelineRun): Promise<Res
 };
 
 const external_event_sha_of = (payload: unknown): Result<string, ExternalEventNoOp> => {
-	if (payload === null || payload === undefined || typeof payload !== "object" || Array.isArray(payload)) {
-		return err("malformed_payload");
-	}
-	const sha = (payload as Record<string, unknown>).sha;
+	if (!is_record(payload)) return err("malformed_payload");
+	const sha = payload.sha;
 	if (typeof sha !== "string" || sha.length === 0) return err("malformed_payload");
 	return ok(sha);
 };

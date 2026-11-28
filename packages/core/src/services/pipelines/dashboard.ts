@@ -23,6 +23,7 @@ import type { DashboardResponse, ResolvedGates } from "@devpad/schema/validation
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, gte } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
+import { is_record } from "./is-record.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -53,11 +54,9 @@ type VerdictValue = (typeof VERDICT_VALUES)[number];
 const GATE_TYPES = ["manual", "auto", "analysis"] as const;
 type GateType = (typeof GATE_TYPES)[number];
 
-const is_verdict_value = (v: unknown): v is VerdictValue =>
-	typeof v === "string" && (VERDICT_VALUES as readonly string[]).includes(v);
+const is_verdict_value = (v: unknown): v is VerdictValue => VERDICT_VALUES.some((known) => known === v);
 
-const is_gate_type = (v: unknown): v is GateType =>
-	typeof v === "string" && (GATE_TYPES as readonly string[]).includes(v);
+const is_gate_type = (v: unknown): v is GateType => GATE_TYPES.some((known) => known === v);
 
 // ─── Pure helpers ───────────────────────────────────────────────────
 
@@ -122,8 +121,8 @@ export const group_verdicts = (
 };
 
 const extract_verdict = (payload: unknown): VerdictValue | null => {
-	if (payload === null || typeof payload !== "object") return null;
-	const raw = (payload as Record<string, unknown>).verdict;
+	if (!is_record(payload)) return null;
+	const raw = payload.verdict;
 	return is_verdict_value(raw) ? raw : null;
 };
 
@@ -131,8 +130,8 @@ const lookup_gate_type = (resolved_gates: Record<string, unknown>, from_stage: s
 	const prefix = `${from_stage}→`;
 	for (const [key, value] of Object.entries(resolved_gates)) {
 		if (!key.startsWith(prefix)) continue;
-		if (value === null || typeof value !== "object") continue;
-		const t = (value as Record<string, unknown>).type;
+		if (!is_record(value)) continue;
+		const t = value.type;
 		if (is_gate_type(t)) return t;
 	}
 	return null;

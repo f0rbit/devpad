@@ -46,6 +46,8 @@ import type {
 } from "@devpad/core/services/pipelines";
 import type { Result } from "@f0rbit/corpus";
 import { z } from "zod";
+import { resolved_plan_schema } from "./plan-schema";
+import { is_record } from "./record";
 
 const plan_body = z.object({ plan: z.unknown(), actor: z.string().optional() });
 
@@ -79,7 +81,8 @@ export type AlarmPurpose = "bake" | "external_timeout";
  * `DurableObjectState` and the in-memory fake.
  */
 export type DoCtx = {
-	id: { toString(): string };
+	/** `name` is set when the id came from `idFromName` (the route layer always does). */
+	id: { name?: string; toString(): string };
 	storage: {
 		get<T = unknown>(key: string): Promise<T | undefined>;
 		put(key: string, value: unknown): Promise<void>;
@@ -123,11 +126,10 @@ const json_ok = (value: unknown): Response => json({ ok: true, value });
 type WireError = { code: string; message?: string } & Record<string, unknown>;
 
 const to_wire_error = (input: unknown): WireError => {
-	if (input === null || typeof input !== "object") return { code: "unknown", message: String(input) };
-	const rec = input as Record<string, unknown>;
-	if (rec.ok === false && "error" in rec) return to_wire_error(rec.error);
-	const code = typeof rec.code === "string" ? rec.code : typeof rec.kind === "string" ? rec.kind : "unknown";
-	const { kind: _kind, code: _code, ok: _ok, ...rest } = rec;
+	if (!is_record(input)) return { code: "unknown", message: String(input) };
+	if (input.ok === false && "error" in input) return to_wire_error(input.error);
+	const code = typeof input.code === "string" ? input.code : typeof input.kind === "string" ? input.kind : "unknown";
+	const { kind: _kind, code: _code, ok: _ok, ...rest } = input;
 	return { code, ...rest };
 };
 
@@ -189,21 +191,22 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 	// Prefer `id.name` so the run_id matches the D1 row id used by the
 	// orchestrator route (`idFromName(row_id)`). Falls back to the hex
 	// id for in-memory tests that construct DoCtx directly.
-	const ctx_id = ctx.id as { name?: string; toString: () => string };
-	const run_id = ctx_id.name ?? ctx_id.toString();
+	const run_id = ctx.id.name ?? ctx.id.toString();
 
 	const persist_plan = async (plan: ResolvedPlan): Promise<void> => {
 		await ctx.storage.put(STORAGE_KEYS.plan, plan);
 	};
 
+	// Body and stored plans are both untyped at this boundary — parse, never trust.
 	const load_plan_or_body = async (body_plan: unknown): Promise<ResolvedPlan | null> => {
 		if (body_plan !== undefined && body_plan !== null) {
-			const plan = body_plan as ResolvedPlan;
-			await persist_plan(plan);
-			return plan;
+			const parsed = resolved_plan_schema.safeParse(body_plan);
+			if (!parsed.success) return null;
+			await persist_plan(parsed.data);
+			return parsed.data;
 		}
-		const stored = await ctx.storage.get<ResolvedPlan>(STORAGE_KEYS.plan);
-		return stored ?? null;
+		const stored = resolved_plan_schema.safeParse(await ctx.storage.get(STORAGE_KEYS.plan));
+		return stored.success ? stored.data : null;
 	};
 
 	const schedule_alarm_if_needed = async (output: TransitionOutput, plan: ResolvedPlan): Promise<void> => {
@@ -320,7 +323,8 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 	};
 
 	const handle_state = async (): Promise<Response> => {
-		const plan = (await ctx.storage.get<ResolvedPlan>(STORAGE_KEYS.plan)) ?? null;
+		const stored_plan = resolved_plan_schema.safeParse(await ctx.storage.get(STORAGE_KEYS.plan));
+		const plan = stored_plan.success ? stored_plan.data : null;
 		const last_alarm_ms = (await ctx.storage.get<number>(STORAGE_KEYS.last_alarm_ms)) ?? null;
 		return json_ok({ run_id, plan, last_alarm_ms });
 	};

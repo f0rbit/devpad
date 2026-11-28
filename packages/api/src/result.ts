@@ -10,15 +10,19 @@ export type ApiResult<T> = Result<T, ApiResultError>;
 
 // HTTP client errors (from `fetch`, third-party SDKs, etc.) aren't typed --
 // narrow structurally instead of trusting a shape via `any`/`as`.
+const field_of = (value: unknown, key: string): unknown => {
+	if (typeof value !== "object" || value === null) return undefined;
+	const field: unknown = Reflect.get(value, key);
+	return field;
+};
+
 const string_field = (value: unknown, key: string): string | undefined => {
-	if (typeof value !== "object" || value === null || !(key in value)) return undefined;
-	const field = (value as Record<string, unknown>)[key];
+	const field = field_of(value, key);
 	return typeof field === "string" ? field : undefined;
 };
 
 const number_field = (value: unknown, key: string): number | undefined => {
-	if (typeof value !== "object" || value === null || !(key in value)) return undefined;
-	const field = (value as Record<string, unknown>)[key];
+	const field = field_of(value, key);
 	return typeof field === "number" ? field : undefined;
 };
 

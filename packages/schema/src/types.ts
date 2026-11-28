@@ -1,4 +1,4 @@
-import type { InferSelectModel } from "drizzle-orm";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { z } from "zod";
 import type {
 	ActionType,
@@ -123,6 +123,14 @@ export type PipelineApproval = InferSelectModel<typeof pipeline_approval>;
 export type PipelineAnalysisTemplate = InferSelectModel<typeof pipeline_analysis_template>;
 export type PipelineOidcTrust = InferSelectModel<typeof pipeline_oidc_trust>;
 export type PipelineDispatch = InferSelectModel<typeof pipeline_dispatch>;
+
+// Insert models — what `db.insert(...).values(...)` accepts. Services build
+// their insert objects against these so the compiler checks every field
+// (the old `as never` casts silenced exactly that check).
+export type InsertPipelinePackage = InferInsertModel<typeof pipeline_package>;
+export type InsertPipelineRun = InferInsertModel<typeof pipeline_run>;
+export type InsertPipelineAnalysisTemplate = InferInsertModel<typeof pipeline_analysis_template>;
+export type InsertPipelineOidcTrust = InferInsertModel<typeof pipeline_oidc_trust>;
 
 export type UpsertPipelinePackage = z.infer<typeof upsert_pipeline_package>;
 export type UpsertPipelineRun = z.infer<typeof upsert_pipeline_run>;

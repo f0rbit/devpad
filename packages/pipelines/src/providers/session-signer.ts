@@ -15,7 +15,7 @@
  *   it to 503 instead of leaking a generic 500.
  */
 
-import type { OidcSessionClaims } from "@devpad/core/services/pipelines";
+import { type OidcSessionClaims, oidc_session_claims_schema } from "@devpad/core/services/pipelines";
 import type { SecretsStoreSecret } from "@cloudflare/workers-types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { errors as jose_errors, jwtVerify, SignJWT } from "jose";
@@ -116,7 +116,9 @@ export const make_session_signer = (env: { OIDC_SESSION_SIGNING_KEY?: SecretsSto
 				audience: SESSION_AUDIENCE,
 				algorithms: ["HS256"],
 			});
-			return ok(payload as unknown as OidcSessionClaims);
+			const claims = oidc_session_claims_schema.safeParse(payload);
+			if (!claims.success) return err({ reason: `session claims invalid: ${claims.error.message}` });
+			return ok(claims.data);
 		} catch (e) {
 			return err(map_verify_error(e));
 		}

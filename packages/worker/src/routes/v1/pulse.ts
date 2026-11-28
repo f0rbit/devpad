@@ -1,8 +1,11 @@
 import { projects } from "@devpad/core/services";
+import { try_catch } from "@f0rbit/corpus";
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { z } from "zod";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { contentful_status } from "../../utils/response.js";
 
 const app = new Hono<AppContext>();
 
@@ -14,6 +17,20 @@ type ForwardOpts = {
 	forward_query?: boolean;
 	/** Extra query params merged AFTER the inbound forward (caller wins). */
 	extra_query?: Record<string, string>;
+};
+
+/**
+ * Pass an upstream pulse response through verbatim (status + body). The proxy
+ * never interprets the body, so it relays the text rather than re-serialising
+ * an `unknown` parse; content-type is normalised to JSON-or-text as before.
+ */
+const relay_upstream = async (c: Context<AppContext>, response: Response): Promise<Response> => {
+	if (response.status === 204) return c.body(null, 204);
+	const is_json = (response.headers.get("content-type") ?? "").includes("application/json");
+	const text = await response.text();
+	return c.body(text, contentful_status(response.status), {
+		"content-type": is_json ? "application/json" : "text/plain; charset=UTF-8",
+	});
 };
 
 /**
@@ -67,16 +84,23 @@ const forward_to_pulse = async (c: Context<AppContext>, opts: ForwardOpts): Prom
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
-	const content_type = response.headers.get("content-type") ?? "";
-	if (response.status === 204) return c.body(null, 204);
+	return relay_upstream(c, response);
+};
 
-	if (content_type.includes("application/json")) {
-		const data: unknown = await response.json();
-		return c.json(data as Record<string, unknown>, response.status as 200);
-	}
+const project_body = z.object({ project_id: z.string().optional() });
 
-	const text = await response.text();
-	return c.text(text, response.status as 200);
+/** Read a JSON request body once: the raw text (forwarded verbatim) plus its `project_id`, if any. */
+const read_project_body = async (c: Context<AppContext>): Promise<{ text: string; project_id: string | undefined }> => {
+	const text = await c.req.text();
+	const parsed = try_catch(
+		() => {
+			const raw: unknown = JSON.parse(text);
+			return raw;
+		},
+		(cause) => String(cause),
+	);
+	const body = parsed.ok ? project_body.safeParse(parsed.value) : null;
+	return { text, project_id: body?.success ? body.data.project_id : undefined };
 };
 
 const project_param = (c: Context<AppContext>): string | null => c.req.param("project_id") ?? null;
@@ -170,8 +194,7 @@ app.get("/admin/subs/:id", requireAuth, async (c) => {
 });
 
 app.post("/admin/subs", requireAuth, async (c) => {
-	const body = (await c.req.json().catch(() => ({}))) as { project_id?: string };
-	const project_id = body.project_id;
+	const { text, project_id } = await read_project_body(c);
 	if (!project_id) return c.json({ error: "Project ID required in body" }, 400);
 
 	const guard = await guard_project_owner(c, project_id);
@@ -190,22 +213,14 @@ app.post("/admin/subs", requireAuth, async (c) => {
 				Authorization: `Bearer ${config.pulse_internal_key}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(body),
+			body: text,
 		});
 	} catch {
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
 	if (response.status === 502 || response.status === 503) return c.json({ error: "pulse_unreachable" }, 503);
-	if (response.status === 204) return c.body(null, 204);
-
-	const content_type = response.headers.get("content-type") ?? "";
-	if (content_type.includes("application/json")) {
-		const data: unknown = await response.json();
-		return c.json(data as Record<string, unknown>, response.status as 200);
-	}
-	const text = await response.text();
-	return c.text(text, response.status as 200);
+	return relay_upstream(c, response);
 });
 
 app.patch("/admin/subs/:id", requireAuth, async (c) => {
@@ -225,8 +240,7 @@ app.delete("/admin/subs/:id", requireAuth, async (c) => {
 /* --------------------------------------------------------- ingest key admin */
 
 app.post("/admin/keys", requireAuth, async (c) => {
-	const body = (await c.req.json().catch(() => ({}))) as { project_id?: string };
-	const project_id = body.project_id;
+	const { text, project_id } = await read_project_body(c);
 	if (!project_id) return c.json({ error: "Project ID required in body" }, 400);
 
 	const guard = await guard_project_owner(c, project_id);
@@ -245,20 +259,14 @@ app.post("/admin/keys", requireAuth, async (c) => {
 				Authorization: `Bearer ${config.pulse_internal_key}`,
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(body),
+			body: text,
 		});
 	} catch {
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
 	if (response.status === 502 || response.status === 503) return c.json({ error: "pulse_unreachable" }, 503);
-	const content_type = response.headers.get("content-type") ?? "";
-	if (content_type.includes("application/json")) {
-		const data: unknown = await response.json();
-		return c.json(data as Record<string, unknown>, response.status as 200);
-	}
-	const text = await response.text();
-	return c.text(text, response.status as 200);
+	return relay_upstream(c, response);
 });
 
 app.get("/admin/keys", requireAuth, async (c) => {

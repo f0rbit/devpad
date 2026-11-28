@@ -213,6 +213,34 @@ export type OidcSessionClaims = {
 	oidc: OidcAudit;
 };
 
+/**
+ * Zod mirror of {@link OidcSessionClaims} for the verify path: a JWT
+ * payload that passed signature/`iss`/`aud`/`exp` checks is still
+ * untyped JSON, so the custom claims are parsed here. `satisfies` ties
+ * the schema's output to the type — drift is a compile error.
+ */
+export const oidc_session_claims_schema = z.object({
+	iss: z.literal("devpad-pipelines"),
+	aud: z.literal("devpad-pipelines"),
+	exp: z.number(),
+	iat: z.number(),
+	jti: z.string(),
+	sub: z.custom<`package:${string}` | `owner:${string}`>(
+		(value) => typeof value === "string" && (value.startsWith("package:") || value.startsWith("owner:")),
+	),
+	scope: z.array(z.enum(OIDC_SESSION_SCOPES)),
+	package_ids: z.array(z.string()),
+	trust_policy_id: z.string(),
+	oidc: z.object({
+		sub: z.string(),
+		repository: z.string(),
+		ref: z.string().nullable(),
+		sha: z.string().nullable(),
+		run_id: z.string().nullable(),
+		actor: z.string().nullable(),
+	}),
+}) satisfies z.ZodType<OidcSessionClaims, z.ZodTypeDef, unknown>;
+
 // ─── Exchange wire types ────────────────────────────────────────────
 
 export type OidcExchangeInput = {

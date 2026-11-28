@@ -1,12 +1,26 @@
-import type { ZodIssue } from "zod";
+import { z, type ZodIssue } from "zod";
 import { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
 
 // Shape of a parsed HTTP error body -- genuinely unknown JSON from the wire,
-// narrowed just enough to detect the Zod validation-error envelope the
-// worker's `zValidator` middleware emits.
-type ParsedErrorBody = {
-	error?: string | { name?: string; issues?: ZodIssue[] };
-	issues?: ZodIssue[];
+// Zod-parsed just enough to detect the validation-error envelope the
+// worker's `zValidator` middleware emits. Issues are checked structurally
+// (an object with a `path` array); their finer shape is Zod's own.
+const zod_issue = z.custom<ZodIssue>(
+	(value) => typeof value === "object" && value !== null && "path" in value && Array.isArray(value.path),
+);
+
+const parsed_error_body = z.object({
+	error: z
+		.union([z.string(), z.object({ name: z.string().optional(), issues: z.array(zod_issue).optional() })])
+		.optional(),
+	issues: z.array(zod_issue).optional(),
+});
+
+type ParsedErrorBody = z.infer<typeof parsed_error_body>;
+
+const parse_error_body = (raw: unknown): ParsedErrorBody | null => {
+	const parsed = parsed_error_body.safeParse(raw);
+	return parsed.success ? parsed.data : null;
 };
 
 /**
@@ -59,7 +73,7 @@ export async function handleResponseError(response: Response): Promise<never> {
 	let parsedError: ParsedErrorBody | null = null;
 	try {
 		const raw: unknown = JSON.parse(errorText);
-		parsedError = raw as ParsedErrorBody;
+		parsedError = parse_error_body(raw);
 	} catch {
 		// Not JSON, use raw text
 	}
@@ -115,14 +129,14 @@ function tryParseZodErrorString(errorMessage: string): ParsedErrorBody | null {
 	if (!zodErrorMatch?.[1]) return null;
 	try {
 		const raw: unknown = JSON.parse(zodErrorMatch[1]);
-		return raw as ParsedErrorBody;
+		return parse_error_body(raw);
 	} catch {
 		// If still not JSON, try to extract from the message
 		const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
 		if (!issuesMatch?.[1]) return null;
 		try {
 			const raw_issues: unknown = JSON.parse(issuesMatch[1]);
-			return { issues: raw_issues as ZodIssue[] };
+			return parse_error_body({ issues: raw_issues });
 		} catch {
 			// Fall back to basic parsing
 			return null;
@@ -139,7 +153,7 @@ export function parseZodErrors(errorMessage: string): string {
 		let parsedError: ParsedErrorBody | null = null;
 		try {
 			const raw: unknown = JSON.parse(errorMessage);
-			parsedError = raw as ParsedErrorBody;
+			parsedError = parse_error_body(raw);
 		} catch {
 			// If not JSON, try to extract Zod error details from the error message
 			parsedError = tryParseZodErrorString(errorMessage);
