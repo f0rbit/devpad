@@ -54,7 +54,7 @@ export const find_rollback_target = (
 		.toSorted((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : 0));
 
 	const target = candidates[0];
-	if (target === undefined) {
+	if (candidates.length === 0) {
 		return err({
 			code: "no_rollback_target",
 			message: `no deployed predecessor to roll back to from ${current_version_set_id}`,

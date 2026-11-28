@@ -281,7 +281,7 @@ export class GitHubProvider {
 
 		return pipe
 			.try(
-				async () => {
+				async (): Promise<GitHubFetchResult> => {
 					const tracker = createQuotaTracker();
 					const octokit = this.createOctokit(token, tracker);
 
@@ -320,15 +320,16 @@ export class GitHubProvider {
 					const skipped = [...plan.unchanged, ...plan.deferred, ...unprocessed, ...abortedOrDeferred];
 
 					const { meta, repos, completed } = this.assembleResult(username, listedRepos, outcomes, input);
+					const stopped_early = tracker.is_hard_limited()
+						? "rate_limited"
+						: tracker.is_below_reserve()
+							? "quota_reserve"
+							: null;
 					log.info("Fetch complete", {
 						listed: listedRepos.length,
 						fetched: completed.length,
 						skipped: skipped.length,
-						stopped_early: tracker.is_hard_limited()
-							? "rate_limited"
-							: tracker.is_below_reserve()
-								? "quota_reserve"
-								: null,
+						stopped_early,
 					});
 
 					return {
@@ -337,11 +338,7 @@ export class GitHubProvider {
 						completed,
 						skipped,
 						rate_limit: tracker.snapshot(),
-						stopped_early: tracker.is_hard_limited()
-							? "rate_limited"
-							: tracker.is_below_reserve()
-								? "quota_reserve"
-								: null,
+						stopped_early,
 					};
 				},
 				(error): ProviderError => {
@@ -366,7 +363,7 @@ export class GitHubProvider {
 
 		octokit.hook.wrap("request", async (request, options) => {
 			try {
-				const response = (await request(options)) as OctokitResponse<unknown>;
+				const response = await request(options);
 				tracker.record(response.headers, response.status);
 				return response;
 			} catch (error) {

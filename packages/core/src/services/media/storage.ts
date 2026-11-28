@@ -16,7 +16,6 @@ import {
 	RedditMetaStoreSchema,
 	type RedditPostsStore,
 	RedditPostsStoreSchema,
-	type StoreError,
 	TimelineSchema,
 	type TwitterMetaStore,
 	TwitterMetaStoreSchema,
@@ -26,6 +25,7 @@ import {
 } from "@devpad/schema/media";
 import {
 	type Backend,
+	type CorpusError,
 	create_corpus,
 	define_store,
 	json_codec,
@@ -38,7 +38,10 @@ import { z } from "zod";
 
 const STORAGE_PREFIX = "media";
 
-export type CorpusError = StoreError | ParseError;
+// The corpus layer's full error union — store ops (put/get_latest/…) propagate
+// it verbatim, so narrowing it here (e.g. to StoreError|ParseError) misstates
+// every Result these helpers hand back.
+export type { CorpusError };
 
 const createTypedStore = <TData, TId extends string>(
 	backend: Backend,

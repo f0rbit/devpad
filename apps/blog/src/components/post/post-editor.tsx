@@ -43,8 +43,8 @@ type PostFormData = {
 type Project = {
 	id: string;
 	name: string;
-	project_id: string;
 	description: string | null;
+	icon_url?: string | null;
 };
 
 type PostEditorProps = {
@@ -206,7 +206,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 					type="text"
 					class="post-editor__title-input"
 					placeholder="Post title..."
-					prop:value={title()}
+					value={title()}
 					onInput={(e) => {
 						handleTitleChange(e.currentTarget.value);
 					}}
@@ -216,17 +216,12 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 				<div class="post-editor__metadata">
 					<div class="post-editor__field">
 						<label>Slug</label>
-						<input
-							type="text"
-							prop:value={slug()}
-							onInput={(e) => setSlug(e.currentTarget.value)}
-							placeholder="post-slug"
-						/>
+						<input type="text" value={slug()} onInput={(e) => setSlug(e.currentTarget.value)} placeholder="post-slug" />
 					</div>
 
 					<div class="post-editor__field">
 						<label>Category</label>
-						<select prop:value={category()} onChange={(e) => setCategory(e.currentTarget.value)}>
+						<select value={category()} onChange={(e) => setCategory(e.currentTarget.value)}>
 							<option value="root">root</option>
 							<For each={categories().filter((c) => c.name !== "root")}>
 								{(c) => <option value={c.name}>{c.parent ? `${c.parent}/${c.name}` : c.name}</option>}
@@ -236,7 +231,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 
 					<div class="post-editor__field">
 						<label>Format</label>
-						<select prop:value={format()} onChange={(e) => setFormat(e.currentTarget.value as "md" | "adoc")}>
+						<select value={format()} onChange={(e) => setFormat(e.currentTarget.value as "md" | "adoc")}>
 							<option value="md">Markdown</option>
 							<option value="adoc">AsciiDoc</option>
 						</select>
@@ -246,7 +241,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 						<label>Publish at</label>
 						<input
 							type="datetime-local"
-							prop:value={formatDateForInput(publishAt())}
+							value={formatDateForInput(publishAt())}
 							onInput={(e) => {
 								handlePublishAtChange(e.currentTarget.value);
 							}}
@@ -257,7 +252,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 						<label>Description</label>
 						<input
 							type="text"
-							prop:value={description()}
+							value={description()}
 							onInput={(e) => setDescription(e.currentTarget.value)}
 							placeholder="Brief description..."
 						/>
@@ -330,7 +325,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 				<textarea
 					class="post-editor__content"
 					placeholder="Write your content..."
-					prop:value={content()}
+					value={content()}
 					onInput={(e) => setContent(e.currentTarget.value)}
 				/>
 			</Show>

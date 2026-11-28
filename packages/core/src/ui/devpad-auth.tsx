@@ -11,7 +11,7 @@ export function DevpadAuth(props: DevpadAuthProps) {
 
 	const login = () => {
 		setLoading(true);
-		window.location.href = `${String(window.location.origin)}/api/auth/login`;
+		window.location.href = `${window.location.origin}/api/auth/login`;
 	};
 
 	if (!props.user) {

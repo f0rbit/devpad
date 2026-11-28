@@ -80,21 +80,21 @@ function ActiveConnectionSettings(props: ActiveConnectionSettingsProps) {
 		<Switch>
 			<Match when={props.platform === "github"}>
 				<GitHubSettings
-					accountId={props.connection.account_id}
+					accountId={props.connection.id}
 					settings={props.connection.settings as { hidden_repos?: string[] } | null}
 					onUpdate={props.onUpdate}
 				/>
 			</Match>
 			<Match when={props.platform === "bluesky"}>
 				<BlueskySettings
-					accountId={props.connection.account_id}
+					accountId={props.connection.id}
 					settings={props.connection.settings as { include_replies?: boolean; include_reposts?: boolean } | null}
 					onUpdate={props.onUpdate}
 				/>
 			</Match>
 			<Match when={props.platform === "youtube"}>
 				<YouTubeSettings
-					accountId={props.connection.account_id}
+					accountId={props.connection.id}
 					settings={
 						props.connection.settings as {
 							include_watch_history?: boolean;
@@ -107,14 +107,14 @@ function ActiveConnectionSettings(props: ActiveConnectionSettingsProps) {
 			</Match>
 			<Match when={props.platform === "devpad"}>
 				<DevpadSettings
-					accountId={props.connection.account_id}
+					accountId={props.connection.id}
 					settings={props.connection.settings as { hidden_projects?: string[]; all_projects?: boolean } | null}
 					onUpdate={props.onUpdate}
 				/>
 			</Match>
 			<Match when={props.platform === "reddit"}>
 				<RedditSettings
-					accountId={props.connection.account_id}
+					accountId={props.connection.id}
 					settings={
 						props.connection.settings as {
 							include_posts?: boolean;
@@ -127,7 +127,7 @@ function ActiveConnectionSettings(props: ActiveConnectionSettingsProps) {
 			</Match>
 			<Match when={props.platform === "twitter"}>
 				<TwitterSettings
-					accountId={props.connection.account_id}
+					accountId={props.connection.id}
 					settings={
 						props.connection.settings as {
 							include_retweets?: boolean;
@@ -183,8 +183,8 @@ export default function PlatformCard(props: Props) {
 					<Show when={props.connection} keyed>
 						{(connection) => (
 							<ConnectionActions
-								accountId={connection.account_id}
-								isActive={connection.is_active}
+								accountId={connection.id}
+								isActive={connection.is_active ?? false}
 								state={state() as "active" | "inactive"}
 								onAction={props.onConnectionChange}
 							/>

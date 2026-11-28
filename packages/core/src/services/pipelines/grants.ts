@@ -85,6 +85,9 @@ export async function request_grant(
 			.insert(pipeline_grant)
 			.values({
 				...grant_data,
+				// column is NOT NULL (defaults false) while the upsert schema
+				// permits null — a null/absent value means "not auto-approved".
+				auto_approved: grant_data.auto_approved ?? false,
 				id: `pipeline-grant_${crypto.randomUUID()}`,
 				created_at: now,
 				updated_at: now,

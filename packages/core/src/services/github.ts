@@ -6,7 +6,7 @@ import type { Endpoints } from "@octokit/types";
 import { batchedQuery } from "./batch.js";
 import type { ServiceError } from "./errors.js";
 
-type GitHubBranchFromAPI = Endpoints["GET /repos/{owner}/{repo}/branches"]["response"]["data"][0];
+type GitHubBranchFromAPI = Awaited<ReturnType<Octokit["rest"]["repos"]["listBranches"]>>["data"][number];
 type GitHubRepoListItem = Endpoints["GET /user/repos"]["response"]["data"][0];
 type GitHubRepoMetadata = Endpoints["GET /repos/{owner}/{repo}"]["response"]["data"];
 
@@ -24,6 +24,20 @@ export type GitHubBranch = {
 function createOctokit(access_token: string): Octokit {
 	return new Octokit({ auth: access_token });
 }
+
+// DB rows carry a nullable author_name; the enriched-commit shape the
+// branch list consumes requires a string — coalesce at this boundary,
+// matching what the fetch path does for the same field.
+const to_commit_info = (row: typeof commit_detail.$inferSelect) => ({
+	sha: row.sha,
+	url: row.url,
+	message: row.message,
+	avatar_url: row.avatar_url,
+	author_user: row.author_user,
+	author_name: row.author_name ?? "",
+	author_email: row.author_email,
+	date: row.date,
+});
 
 export async function getRepos(access_token: string): Promise<Result<GitHubRepoListItem[], ServiceError>> {
 	const octokit = createOctokit(access_token);
@@ -110,7 +124,7 @@ async function getCommitDetails(
 	const existing_shas = new Set(existing.map((c) => c.sha));
 	const missing_shas = Array.from(shas.filter((sha) => !existing_shas.has(sha)));
 
-	let commits = [...existing];
+	let commits = existing.map(to_commit_info);
 
 	if (missing_shas.length > 0) {
 		const octokit = createOctokit(access_token);

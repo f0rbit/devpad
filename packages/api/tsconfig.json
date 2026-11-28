@@ -1,12 +1,9 @@
 {
 	"compilerOptions": {
-		"target": "ES2020",
+		"target": "ES2023",
 		"module": "ESNext",
-		"lib": ["ES2020"],
-		"declaration": true,
-		"declarationMap": true,
-		"outDir": "./dist",
-		"rootDir": "./src",
+		"lib": ["ES2023"],
+		"customConditions": ["source"],
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -28,8 +25,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@/*": ["./src/*"],
-			"@devpad/schema": ["../schema/dist/index.d.ts"],
-			"@devpad/schema/*": ["../schema/dist/*"]
+			"@devpad/schema": ["../schema/src/index.ts"],
+			"@devpad/schema/*": ["../schema/src/*"]
 		}
 	},
 	"include": ["src/**/*"],

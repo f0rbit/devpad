@@ -40,6 +40,12 @@ function handleError(error: unknown) {
 	process.exit(1);
 }
 
+type NamedEntity = { name: string; id: string };
+
+function is_named_entity(value: unknown): value is NamedEntity {
+	return typeof value === "object" && value !== null && "name" in value && "id" in value;
+}
+
 async function formatOutput(data: unknown, format: string = "json") {
 	if (format === "json") {
 		const output = JSON.stringify(data, null, 2) + "\n";
@@ -124,8 +130,9 @@ projects
 				description: options.description,
 				private: options.private,
 			});
-			spinner.succeed(`Project "${String(result.name)}" created`);
-			console.log(chalk.green(`ID: ${String(result.id)}`));
+			if (!is_named_entity(result)) throw new Error("Unexpected response from tool");
+			spinner.succeed(`Project "${result.name}" created`);
+			console.log(chalk.green(`ID: ${result.id}`));
 		} catch (error) {
 			spinner.fail("Failed to create project");
 			handleError(error);
@@ -440,8 +447,9 @@ milestones
 				target_time: options.targetTime,
 				target_version: options.targetVersion,
 			});
-			spinner.succeed(`Milestone "${String(result.name)}" created`);
-			console.log(chalk.green(`ID: ${String(result.id)}`));
+			if (!is_named_entity(result)) throw new Error("Unexpected response from tool");
+			spinner.succeed(`Milestone "${result.name}" created`);
+			console.log(chalk.green(`ID: ${result.id}`));
 		} catch (error) {
 			spinner.fail("Failed to create milestone");
 			handleError(error);
@@ -491,8 +499,9 @@ goals
 				description: options.description,
 				target_time: options.targetTime,
 			});
-			spinner.succeed(`Goal "${String(result.name)}" created`);
-			console.log(chalk.green(`ID: ${String(result.id)}`));
+			if (!is_named_entity(result)) throw new Error("Unexpected response from tool");
+			spinner.succeed(`Goal "${result.name}" created`);
+			console.log(chalk.green(`ID: ${result.id}`));
 		} catch (error) {
 			spinner.fail("Failed to create goal");
 			handleError(error);

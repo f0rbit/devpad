@@ -45,15 +45,7 @@ export default function Dashboard(props: DashboardProps) {
 			if (!slug) return null;
 			const result = await getClient().media.profiles.timeline(slug);
 			if (!result.ok) throw new Error(result.error.message);
-			return {
-				meta: {
-					profile_id: "",
-					profile_slug: slug,
-					profile_name: "",
-					generated_at: result.value.generated_at,
-				},
-				data: { groups: result.value.groups },
-			};
+			return result.value;
 		},
 		{
 			initialValue: props.initialTimeline ?? undefined,
@@ -89,7 +81,7 @@ type DashboardContentProps = {
 function DashboardContent(props: DashboardContentProps) {
 	const [selectedDate, setSelectedDate] = createSignal<string | null>(null);
 
-	const groups = () => props.response.data.groups;
+	const groups = () => props.response.groups;
 	const stats = (): Stats => calculateDashboardStats(groups());
 	const platforms = () => calculatePlatformDistribution(groups());
 	const activity = () => calculateActivityByWeek(groups(), 52);

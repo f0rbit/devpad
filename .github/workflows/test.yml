@@ -34,8 +34,14 @@ jobs:
       - name: Install shellcheck
         run: sudo apt-get update && sudo apt-get install -y shellcheck
 
+      # Mirrors scripts/gate.sh order: manifest check -> typecheck -> package builds
+      # -> unified worker build -> migration lint/check -> unit -> integration ->
+      # lint -> lint:sh -> lint:actions -> fmt:check -> blocking build.
       - name: Lint config drift check
         run: bunx f0rbit-lint check
+
+      - name: Type check
+        run: bun run typecheck
 
       - name: Build packages
         run: |
@@ -43,6 +49,18 @@ jobs:
           cd packages/api && bun run build && cd ../..
           cd packages/cli && bun run build && cd ../..
           cd packages/mcp && bun run build && cd ../..
+
+      - name: Build unified worker
+        run: bun run build:worker
+        env:
+          NODE_ENV: production
+          PUBLIC_API_SERVER_URL: https://devpad.tools/api/v1
+
+      - name: Migration lint
+        run: bun run db:migration-lint
+
+      - name: Migration rebuild check
+        run: bun run db:migration-check
 
       - name: Run unit tests
         run: bun run test:unit
@@ -56,10 +74,17 @@ jobs:
           DATABASE_FILE: ./test.db
           NODE_ENV: test
 
+      - name: Install actionlint
+        run: |
+          mkdir -p "$HOME/bin"
+          curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest "$HOME/bin"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
       - name: Lint
         run: |
           bun run lint
           bun run lint:sh
+          bun run lint:actions
           bun run fmt:check
 
       - name: Generate coverage report
@@ -72,16 +97,6 @@ jobs:
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
 
-      - name: Type check
-        run: |
-          cd apps/main
-          bun run check
-        continue-on-error: true
-
-      - name: Format check
-        run: bun run format:check
-        continue-on-error: true
-
       - name: Build check
         run: bun run build
         env:
@@ -91,13 +106,9 @@ jobs:
   # Pipelines E2E (Playwright). Runs the two-server harness (Astro :3000 + worker :3001)
   # and the green, meaningful pipeline specs only.
   #
-  # INTENTIONALLY NON-BLOCKING: this job is NOT in the repo's required status checks /
-  # branch protection, so a red `e2e` does NOT gate merges. Browser + dual-server boot
-  # has a different flakiness profile than the unit/integration lane, and we want the
-  # signal in CI without coupling it to the fast feedback gate. The `test` job above
-  # remains the sole required gate.
-  # TODO: Promote `e2e` to a required check (add it to branch protection) once it has
-  # been observed stable across several runs.
+  # Flake policy (playwright.config.ts): CI runs retries: 1 + failOnFlakyTests: true,
+  # so a test that only passes on retry FAILS this job. A spec may join e2e:ci only
+  # with zero flakes. Promoted to a required check after 5 consecutive green main runs.
   #
   # Spec selection: `e2e:ci` runs only the green pipeline specs + pages.spec. It EXCLUDES
   # happy-path.spec.ts and pulse.spec.ts, which are pre-existing failures unrelated to

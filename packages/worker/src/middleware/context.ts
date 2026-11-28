@@ -5,6 +5,7 @@ import { createD1Database } from "@devpad/schema/database/d1";
 import { create_cloudflare_backend as create_media_backend } from "@f0rbit/corpus/cloudflare";
 import { createMiddleware } from "hono/factory";
 import type { AppContext } from "../bindings.js";
+import { corpus_r2 } from "../corpus-r2.js";
 
 export const unifiedContextMiddleware = createMiddleware<AppContext>(async (c, next) => {
 	const env = c.env;
@@ -15,7 +16,7 @@ export const unifiedContextMiddleware = createMiddleware<AppContext>(async (c, n
 
 	const db = createD1Database(env.DB);
 
-	const blog_backend = create_cloudflare_backend({ d1: env.DB, r2: env.BLOG_CORPUS_BUCKET });
+	const blog_backend = create_cloudflare_backend({ d1: env.DB, r2: corpus_r2(env.BLOG_CORPUS_BUCKET) });
 	const blog_context = createBlogContext({
 		db,
 		backend: blog_backend,
@@ -24,7 +25,7 @@ export const unifiedContextMiddleware = createMiddleware<AppContext>(async (c, n
 	});
 	c.set("blogContext", blog_context);
 
-	const media_backend = create_media_backend({ d1: env.DB, r2: env.MEDIA_CORPUS_BUCKET });
+	const media_backend = create_media_backend({ d1: env.DB, r2: corpus_r2(env.MEDIA_CORPUS_BUCKET) });
 	const media_context = createMediaContext({
 		db,
 		backend: media_backend,

@@ -4,6 +4,8 @@
 	"scripts": {
 		"dev": "bunx --bun astro dev",
 		"build": "astro build",
+		"check": "bunx --bun astro check",
+		"typecheck": "bunx --bun astro check",
 		"preview": "astro preview"
 	},
 	"dependencies": {

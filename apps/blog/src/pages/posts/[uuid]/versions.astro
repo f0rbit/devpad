@@ -15,7 +15,7 @@ type VersionInfo = {
 
 type PostInfo = {
 	slug: string;
-	corpus_version: string;
+	corpus_version: string | null;
 };
 
 const normalizeHash = (hash: string): string => {
@@ -32,10 +32,10 @@ const client = getServerApiClient(Astro.locals);
 const versionsResult = await client.blog.posts.versions(uuid!);
 
 if (versionsResult.ok) {
-	versions = (versionsResult.value.versions ?? []).map((v: VersionInfo) => ({
-		...v,
+	versions = (versionsResult.value.versions ?? []).map((v) => ({
 		hash: normalizeHash(v.hash),
 		parent: v.parent ? normalizeHash(v.parent) : null,
+		created_at: new Date(v.created_at).toISOString(),
 	}));
 } else {
 	error = "Post not found";
@@ -44,11 +44,11 @@ if (versionsResult.ok) {
 if (versions.length > 0) {
 	const postsResult = await client.blog.posts.list({ limit: 100 });
 	if (postsResult.ok) {
-		const post = postsResult.value.posts?.find((p: any) => p.uuid === uuid);
+		const post = postsResult.value.posts?.find((p) => p.uuid === uuid);
 		if (post) {
 			postInfo = {
 				slug: post.slug,
-				corpus_version: normalizeHash((post as any).corpus_version),
+				corpus_version: post.corpus_version ? normalizeHash(post.corpus_version) : null,
 			};
 		}
 	}

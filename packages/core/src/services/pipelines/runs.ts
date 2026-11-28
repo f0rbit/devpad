@@ -492,7 +492,7 @@ const fail_run_with_error = async (
 	run_id: string,
 	plan: ResolvedPlan,
 	input: { stage_name: string; event_kind: StageEventKind; payload: Record<string, unknown>; error: AdvanceError },
-): Promise<Result<TransitionOutput, AdvanceError>> => {
+): Promise<Result<never, AdvanceError>> => {
 	const message = format_advance_error(input.error);
 	const recorded = await record_stage_event_row(deps.db, {
 		run_id,
@@ -948,8 +948,7 @@ export const redispatch = async (
 		return err({
 			kind: "conflict",
 			resource: "pipeline_run",
-			id: run_id,
-			message: "redispatch applies only to external (commit-target) runs",
+			message: `redispatch applies only to external (commit-target) runs (run ${run_id})`,
 		} satisfies ServiceError);
 	}
 	const pkg = await get_package(deps.db, run.value.package_id);

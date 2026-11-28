@@ -11,6 +11,9 @@ export async function updateUserPreferences(
 	updates: UpdateUser,
 ): Promise<Result<User, ServiceError>> {
 	const { id: _, ...fields } = updates;
+	// `user.email_verified` is a TEXT timestamp column owned by the OAuth
+	// signup flow, not a client-settable preference — the UpdateUser schema
+	// carries no such field, so it can never reach this write via the spread.
 	const result = await db.update(user).set(fields).where(eq(user.id, user_id)).returning();
 
 	if (!result[0]) return err({ kind: "not_found", resource: "user", id: user_id });

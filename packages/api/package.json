@@ -32,18 +32,22 @@
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
+			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
 		"./schema": {
+			"source": "./src/schema/index.ts",
 			"types": "./dist/schema/index.d.ts",
 			"import": "./dist/schema/index.js"
 		},
 		"./schema/blog": {
+			"source": "./src/schema/blog.ts",
 			"types": "./dist/schema/blog.d.ts",
 			"import": "./dist/schema/blog.js"
 		},
 		"./schema/media": {
+			"source": "./src/schema/media.ts",
 			"types": "./dist/schema/media.d.ts",
 			"import": "./dist/schema/media.js"
 		}
@@ -55,6 +59,7 @@
 	"scripts": {
 		"build": "bunx tsup",
 		"build:watch": "bunx tsup --watch",
+		"typecheck": "tsc --noEmit -p .",
 		"test": "bun test",
 		"test:unit": "bun test tests/unit/",
 		"test:integration": "bun test tests/integration/",

@@ -29,6 +29,9 @@ export async function getTaskTags(db: Database, task_id: string): Promise<Result
 			created_at: tag.created_at,
 			updated_at: tag.updated_at,
 			deleted: tag.deleted,
+			created_by: tag.created_by,
+			modified_by: tag.modified_by,
+			protected: tag.protected,
 		})
 		.from(task_tag)
 		.innerJoin(tag, eq(task_tag.tag_id, tag.id))

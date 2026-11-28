@@ -1,6 +1,7 @@
 ---
 import type { PulseErrorIssue, PulseEventRow, PulseLatencyResult, PulseSummary } from "@devpad/api";
 import { pulseSummaryHasData } from "@devpad/api";
+import { z } from "zod";
 import PulseCreateIngestKey from "@/components/solid/pulse/pulse-create-ingest-key";
 import PulseErrors from "@/components/solid/pulse/pulse-errors";
 import PulseLogs from "@/components/solid/pulse/pulse-logs";
@@ -82,13 +83,18 @@ if (!unreachable && active_tab === "subscriptions") {
 }
 
 // Empty-state SDK helper: look up an ingest key (only if no data yet AND on overview).
+// The pulse proxy returns the key rows as `unknown[]` — parse the one field used here.
+const IngestKeySchema = z.object({ id: z.string() });
 let ingest_key_id: string | null = null;
 let has_ingest_key = false;
 if (!unreachable && !has_any_data && active_tab === "overview") {
 	const keys_result = await client.pulse.keys.list({ project_id: project.id });
-	if (keys_result.ok && Array.isArray(keys_result.value) && keys_result.value.length > 0) {
-		has_ingest_key = true;
-		ingest_key_id = keys_result.value[0]?.id ?? null;
+	if (keys_result.ok && Array.isArray(keys_result.value)) {
+		const keys = IngestKeySchema.array().catch([]).parse(keys_result.value);
+		if (keys.length > 0) {
+			has_ingest_key = true;
+			ingest_key_id = keys[0].id;
+		}
 	}
 }
 

@@ -22,6 +22,7 @@ import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { createPulse } from "@f0rbit/pulse-client";
 import { pulseTracing } from "@f0rbit/pulse-client/hono";
 import { make_log, noop_log } from "./lib/log.js";
+import { corpus_r2 } from "./corpus-r2.js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { AppConfig, AppContext, OAuthSecrets } from "./bindings.js";
@@ -200,7 +201,7 @@ export const createApi = (options?: ApiOptions) => {
 		const backend =
 			options?.docsBackend ??
 			(c.env.DB && c.env.DOCS_CORPUS_BUCKET
-				? create_cloudflare_backend({ d1: c.env.DB, r2: c.env.DOCS_CORPUS_BUCKET })
+				? create_cloudflare_backend({ d1: c.env.DB, r2: corpus_r2(c.env.DOCS_CORPUS_BUCKET) })
 				: undefined);
 		if (backend) c.set("docsBackend", backend);
 		await next();
@@ -402,7 +403,7 @@ export function createUnifiedWorker(handlers: UnifiedHandlers) {
 			if (!env.MEDIA_CORPUS_BUCKET) {
 				return;
 			}
-			const media_backend = create_cloudflare_backend({ d1: env.DB, r2: env.MEDIA_CORPUS_BUCKET });
+			const media_backend = create_cloudflare_backend({ d1: env.DB, r2: corpus_r2(env.MEDIA_CORPUS_BUCKET) });
 			const app_ctx = createMediaContext({
 				db,
 				backend: media_backend,

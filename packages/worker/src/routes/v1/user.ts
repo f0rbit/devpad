@@ -23,7 +23,6 @@ app.patch("/preferences", requireAuth, zValidator("json", update_user), async (c
 		id: auth_user.id,
 		task_view: data.task_view,
 		name: data.name,
-		email_verified: data.email_verified,
 	});
 	if (!update_result.ok) return c.json({ error: update_result.error.kind }, 500);
 

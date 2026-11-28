@@ -7,62 +7,152 @@
 	"types": "dist/index.d.ts",
 	"exports": {
 		".": {
+			"source": "./src/index.ts",
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
 		},
 		"./database": {
+			"source": "./src/database/index.ts",
 			"types": "./dist/database/index.d.ts",
 			"import": "./dist/database/index.js"
 		},
 		"./database/d1": {
+			"source": "./src/database/d1.ts",
 			"types": "./dist/database/d1.d.ts",
 			"import": "./dist/database/d1.js"
 		},
 		"./database/bun": {
+			"source": "./src/database/bun.ts",
 			"types": "./dist/database/bun.d.ts",
 			"import": "./dist/database/bun.js"
 		},
 		"./database/schema": {
+			"source": "./src/database/schema.ts",
 			"types": "./dist/database/schema.d.ts",
 			"import": "./dist/database/schema.js"
 		},
 		"./database/blog": {
+			"source": "./src/database/blog.ts",
 			"types": "./dist/database/blog.d.ts",
 			"import": "./dist/database/blog.js"
 		},
 		"./database/media": {
+			"source": "./src/database/media.ts",
 			"types": "./dist/database/media.d.ts",
 			"import": "./dist/database/media.js"
 		},
 		"./database/types": {
+			"source": "./src/database/types.ts",
 			"types": "./dist/database/types.d.ts",
 			"import": "./dist/database/types.js"
 		},
+		"./database/full-schema": {
+			"source": "./src/database/full-schema.ts",
+			"types": "./dist/database/full-schema.d.ts",
+			"import": "./dist/database/full-schema.js"
+		},
+		"./rank": {
+			"source": "./src/rank.ts",
+			"types": "./dist/rank.d.ts",
+			"import": "./dist/rank.js"
+		},
 		"./blog": {
+			"source": "./src/blog/index.ts",
 			"types": "./dist/blog/index.d.ts",
 			"import": "./dist/blog/index.js"
 		},
+		"./blog/types": {
+			"source": "./src/blog/types.ts",
+			"types": "./dist/blog/types.d.ts",
+			"import": "./dist/blog/types.js"
+		},
+		"./blog/corpus": {
+			"source": "./src/blog/corpus.ts",
+			"types": "./dist/blog/corpus.d.ts",
+			"import": "./dist/blog/corpus.js"
+		},
+		"./blog/corpus-shim": {
+			"source": "./src/blog/corpus-shim.ts",
+			"types": "./dist/blog/corpus-shim.d.ts",
+			"import": "./dist/blog/corpus-shim.js"
+		},
 		"./media": {
+			"source": "./src/media/index.ts",
 			"types": "./dist/media/index.d.ts",
 			"import": "./dist/media/index.js"
 		},
+		"./media/types": {
+			"source": "./src/media/types.ts",
+			"types": "./dist/media/types.d.ts",
+			"import": "./dist/media/types.js"
+		},
+		"./media/branded": {
+			"source": "./src/media/branded.ts",
+			"types": "./dist/media/branded.d.ts",
+			"import": "./dist/media/branded.js"
+		},
+		"./media/profiles": {
+			"source": "./src/media/profiles.ts",
+			"types": "./dist/media/profiles.d.ts",
+			"import": "./dist/media/profiles.js"
+		},
+		"./media/settings": {
+			"source": "./src/media/settings.ts",
+			"types": "./dist/media/settings.d.ts",
+			"import": "./dist/media/settings.js"
+		},
+		"./media/timeline": {
+			"source": "./src/media/timeline.ts",
+			"types": "./dist/media/timeline.d.ts",
+			"import": "./dist/media/timeline.js"
+		},
+		"./media/platforms": {
+			"source": "./src/media/platforms/index.ts",
+			"types": "./dist/media/platforms/index.d.ts",
+			"import": "./dist/media/platforms/index.js"
+		},
+		"./media/platforms/index": {
+			"source": "./src/media/platforms/index.ts",
+			"types": "./dist/media/platforms/index.d.ts",
+			"import": "./dist/media/platforms/index.js"
+		},
+		"./media/platforms/github": {
+			"source": "./src/media/platforms/github.ts",
+			"types": "./dist/media/platforms/github.d.ts",
+			"import": "./dist/media/platforms/github.js"
+		},
+		"./media/platforms/reddit": {
+			"source": "./src/media/platforms/reddit.ts",
+			"types": "./dist/media/platforms/reddit.d.ts",
+			"import": "./dist/media/platforms/reddit.js"
+		},
+		"./media/platforms/twitter": {
+			"source": "./src/media/platforms/twitter.ts",
+			"types": "./dist/media/platforms/twitter.d.ts",
+			"import": "./dist/media/platforms/twitter.js"
+		},
 		"./pulse": {
+			"source": "./src/pulse/index.ts",
 			"types": "./dist/pulse/index.d.ts",
 			"import": "./dist/pulse/index.js"
 		},
 		"./bindings": {
+			"source": "./src/bindings.ts",
 			"types": "./dist/bindings.d.ts",
 			"import": "./dist/bindings.js"
 		},
 		"./validation": {
+			"source": "./src/validation.ts",
 			"types": "./dist/validation.d.ts",
 			"import": "./dist/validation.js"
 		},
 		"./types": {
+			"source": "./src/types.ts",
 			"types": "./dist/types.d.ts",
 			"import": "./dist/types.js"
 		},
 		"./errors": {
+			"source": "./src/errors.ts",
 			"types": "./dist/errors.d.ts",
 			"import": "./dist/errors.js"
 		}
@@ -71,6 +161,7 @@
 		"build": "tsc && cp -r src/database/drizzle dist/database/",
 		"dev": "tsc --watch",
 		"clean": "rm -rf dist",
+		"typecheck": "tsc --noEmit",
 		"generate": "bunx drizzle-kit generate"
 	},
 	"dependencies": {

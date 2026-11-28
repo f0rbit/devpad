@@ -43,6 +43,7 @@ const mapTaskToDevpadTask = (t: tasks.Task): DevpadTask => ({
 export class DevpadProvider implements Provider<DevpadRaw> {
 	readonly platform = "devpad";
 	private readonly db: Database;
+	private readonly user_id: string;
 
 	constructor(db: Database, user_id: string) {
 		this.db = db;

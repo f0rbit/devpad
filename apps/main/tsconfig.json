@@ -4,6 +4,7 @@
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
 		"baseUrl": ".",
+		"customConditions": ["source"],
 		"composite": true,
 		"declaration": true,
 		"declarationMap": true,

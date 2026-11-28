@@ -2,6 +2,7 @@
 	"extends": "astro/tsconfigs/strict",
 	"compilerOptions": {
 		"baseUrl": ".",
+		"customConditions": ["source"],
 		"paths": {
 			"@/*": ["src/*"],
 			"@devpad/schema/media": ["../../packages/schema/src/media/index.ts"],

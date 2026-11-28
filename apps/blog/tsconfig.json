@@ -10,6 +10,7 @@
 		"strict": true,
 		"skipLibCheck": true,
 		"baseUrl": ".",
+		"customConditions": ["source"],
 		"paths": {
 			"@/*": ["src/*"],
 			"@devpad/schema/blog": ["../../packages/schema/src/blog/index.ts"],

@@ -1,20 +1,19 @@
-import type { AccessKey } from "@devpad/schema/blog";
 import { Button, Empty } from "@f0rbit/ui";
 import { type Component, For, Show } from "solid-js";
 import { date } from "../../lib/date-utils";
 
 type Token = {
-	id: AccessKey["id"];
-	name: AccessKey["name"];
-	note: AccessKey["note"];
-	enabled: AccessKey["enabled"];
+	id: string;
+	name: string | null;
+	note: string | null;
+	enabled: boolean;
 	created_at: string;
 };
 
 type TokenListProps = {
 	tokens: Token[];
-	onToggle: (id: number, enabled: boolean) => void;
-	onDelete: (id: number) => void;
+	onToggle: (id: string, enabled: boolean) => void;
+	onDelete: (id: string) => void;
 };
 
 const TokenList: Component<TokenListProps> = (props) => {

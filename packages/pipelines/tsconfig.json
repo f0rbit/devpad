@@ -3,6 +3,7 @@
 		"target": "ES2022",
 		"module": "ESNext",
 		"lib": ["ES2023"],
+		"customConditions": ["source"],
 		"types": ["@cloudflare/workers-types", "bun-types"],
 		"strict": true,
 		"noEmit": true,

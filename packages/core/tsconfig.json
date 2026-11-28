@@ -1,7 +1,8 @@
 {
 	"compilerOptions": {
-		"target": "ES2022",
+		"target": "ES2023",
 		"module": "ESNext",
+		"customConditions": ["source"],
 		"noEmit": true,
 		"strict": true,
 		"esModuleInterop": true,
@@ -14,7 +15,7 @@
 		"allowSyntheticDefaultImports": true,
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
-		"lib": ["ES2022"]
+		"lib": ["ES2023", "DOM", "DOM.Iterable"]
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "**/*.test.ts", "src/data/adapters/database.ts"]

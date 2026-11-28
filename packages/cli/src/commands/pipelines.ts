@@ -1763,7 +1763,7 @@ export const register_pipelines_commands = (
 		.option("--json", "Machine-readable JSON output instead of the human line")
 		.option("--orchestrator-url <url>", "Orchestrator base URL (default: $DEVPAD_PIPELINES_URL)")
 		.option("--token <token>", "Bearer token (default: $DEVPAD_PIPELINES_TOKEN)")
-		.action(action_grants_request);
+		.action(action_grants_request());
 
 	const packages = pipelines
 		.command("packages")

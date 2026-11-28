@@ -3,6 +3,7 @@ import "../utils/error-logger";
 import { DevpadFooter, DevpadHeader } from "@devpad/core/ui";
 import { getServerApiClient } from "@devpad/core/ui/api-client";
 import ProfileSelector from "../components/solid/profile-selector.tsx";
+import type { ProfileSummary } from "../utils/types";
 import Layout from "./Layout.astro";
 
 interface Props {
@@ -24,7 +25,7 @@ const buildUrl = (path: string) => {
 
 const user = Astro.locals.user;
 const isAuthenticated = !!user;
-let initialProfiles: { id: string; slug: string; name: string; description: string | null; created_at: string }[] = [];
+let initialProfiles: ProfileSummary[] = [];
 
 if (isAuthenticated) {
 	try {

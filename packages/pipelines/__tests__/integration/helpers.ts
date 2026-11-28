@@ -24,14 +24,13 @@ import type { Database } from "@devpad/schema/database/types";
 import type { Result, VersionSetManifest } from "@f0rbit/corpus";
 import { ok } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
-import { is_bearer_valid } from "../../src/auth";
+import { is_bearer_valid, type AuthIdentity } from "../../src/auth";
 import type { DoRouter, DoStub } from "../../src/do-router";
 // Import from source modules directly (NOT `../../src/index.ts`) so the
 // test bundle skips `grants-rpc-entrypoint.ts`, which pulls in the
 // `cloudflare:workers` runtime-only module that bun can't resolve.
 import {
 	type AuthGate,
-	type AuthIdentity,
 	type LineageProvider,
 	type ManifestProvider,
 	make_routes,
@@ -226,9 +225,16 @@ export const make_run_deps = (
 	return { db, cf, bundles, pulse, approvals };
 };
 
+export type TestHarnessDeps = RunDeps & {
+	cf: InMemoryCloudflareProvider;
+	bundles: InMemoryBundleProvider;
+	pulse: InMemoryPulseEmitter;
+	approvals: ReturnType<typeof make_d1_approval_store>;
+};
+
 export type TestHarness = {
 	db: Database;
-	deps: ReturnType<typeof make_run_deps> & { approvals: ReturnType<typeof make_d1_approval_store> };
+	deps: TestHarnessDeps;
 	template: PipelineTemplate;
 	pkg: PipelinePackage;
 	manifest_for: Map<string, VersionSetManifest>;
@@ -342,7 +348,7 @@ export const build_harness = async (options?: TestHarnessOptions): Promise<TestH
 	};
 };
 
-export type Envelope<T> = { ok: boolean; value?: T; error?: unknown };
+export type Envelope<T> = { ok: boolean; value?: T; error?: { code: string } & Record<string, unknown> };
 
 /**
  * Async-faithful DO router wrapper (#155 tick regression). The

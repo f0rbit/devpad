@@ -1,12 +1,11 @@
 {
 	"compilerOptions": {
-		"target": "ES2022",
+		"target": "ES2023",
 		"module": "ESNext",
-		"lib": ["ES2022"],
-		"types": ["@cloudflare/workers-types"],
-		"declaration": true,
-		"outDir": "./dist",
-		"rootDir": "./src",
+		"lib": ["ES2023"],
+		"customConditions": ["source"],
+		"types": ["@cloudflare/workers-types", "bun-types"],
+		"noEmit": true,
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -16,10 +15,7 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noUnusedLocals": false,
-		"noUnusedParameters": false,
-		"paths": {
-			"@devpad/schema/*": ["../schema/src/*"]
-		}
+		"noUnusedParameters": false
 	},
 	"include": ["src/**/*"],
 	"exclude": ["node_modules", "dist"]
