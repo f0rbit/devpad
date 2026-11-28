@@ -1,0 +1,4 @@
+{
+	"ok": false,
+	"error": { "kind": "upstream_error", "cause": { "kind": "not_found", "status": 404, "message": "no such script" } }
+}

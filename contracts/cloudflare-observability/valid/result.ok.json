@@ -1,0 +1,9 @@
+{
+	"ok": true,
+	"value": {
+		"script": "devpad-unified",
+		"since": "2026-11-28T11:30:00.000Z",
+		"exception_count": 3,
+		"samples": [{ "ts": "2026-11-28T11:45:00.000Z", "message": "Error: boom" }]
+	}
+}

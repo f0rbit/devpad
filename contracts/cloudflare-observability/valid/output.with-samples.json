@@ -1,0 +1,9 @@
+{
+	"script": "devpad-pipelines",
+	"since": "2026-11-28T08:15:30Z",
+	"exception_count": 42,
+	"samples": [
+		{ "ts": "2026-11-28T09:01:12.345Z", "message": "TypeError: Cannot read properties of undefined (reading 'id')" },
+		{ "ts": "2026-11-28T09:01:15.002Z", "message": "D1_ERROR: no such column: error" }
+	]
+}

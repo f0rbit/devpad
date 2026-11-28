@@ -1,0 +1,13 @@
+{
+	"script": "devpad-unified",
+	"since": "2026-11-28T11:30:00.000Z",
+	"exception_count": 6,
+	"samples": [
+		{ "ts": "2026-11-28T11:40:00.000Z", "message": "Error 0" },
+		{ "ts": "2026-11-28T11:41:00.000Z", "message": "Error 1" },
+		{ "ts": "2026-11-28T11:42:00.000Z", "message": "Error 2" },
+		{ "ts": "2026-11-28T11:43:00.000Z", "message": "Error 3" },
+		{ "ts": "2026-11-28T11:44:00.000Z", "message": "Error 4" },
+		{ "ts": "2026-11-28T11:45:00.000Z", "message": "Error 5" }
+	]
+}
