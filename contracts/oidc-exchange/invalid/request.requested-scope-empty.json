@@ -1,0 +1,4 @@
+{
+	"jwt": "eyJhbGciOiJSUzI1NiJ9.x.y",
+	"requested_scope": [""]
+}

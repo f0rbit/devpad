@@ -1,0 +1,8 @@
+{
+	"caller": {
+		"package_id": "pipeline-package_anthropic-search",
+		"environment": "prod",
+		"version_set_id": "version-set_01h8xdq0k9m3vq"
+	},
+	"scope": "anthropic:messages"
+}

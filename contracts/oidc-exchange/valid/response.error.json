@@ -1,0 +1,7 @@
+{
+	"ok": false,
+	"error": {
+		"code": "trust_policy_failed",
+		"message": "ref refs/heads/feature is not allowed by trust policy pipeline-oidc-trust_01h8"
+	}
+}

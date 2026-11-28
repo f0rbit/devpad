@@ -56,6 +56,11 @@
 			"types": "./dist/rank.d.ts",
 			"import": "./dist/rank.js"
 		},
+		"./contracts": {
+			"source": "./src/contracts/index.ts",
+			"types": "./dist/contracts/index.d.ts",
+			"import": "./dist/contracts/index.js"
+		},
 		"./blog": {
 			"source": "./src/blog/index.ts",
 			"types": "./dist/blog/index.d.ts",

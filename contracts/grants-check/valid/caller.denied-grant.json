@@ -1,0 +1,8 @@
+{
+	"caller": {
+		"package_id": "pipeline-package_anthropic-search",
+		"environment": "production",
+		"version_set_id": "version-set_01h8xdq0k9m3vq"
+	},
+	"scope": "github:dispatch:acme/my-pkg/deploy.yml"
+}

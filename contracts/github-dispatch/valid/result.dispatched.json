@@ -1,0 +1,8 @@
+{
+	"ok": true,
+	"value": {
+		"dispatched": true,
+		"run_id": 42,
+		"run_url": "https://github.com/acme/my-pkg/actions/runs/42"
+	}
+}

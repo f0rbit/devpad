@@ -1,0 +1,9 @@
+{
+	"stage_name": "production",
+	"kind": "deploy_failed",
+	"payload": {
+		"sha": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0",
+		"error": "workflow run failed"
+	},
+	"idempotency_key": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+}

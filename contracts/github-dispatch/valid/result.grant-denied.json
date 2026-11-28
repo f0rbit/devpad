@@ -1,0 +1,7 @@
+{
+	"ok": false,
+	"error": {
+		"kind": "grant_denied",
+		"scope": "github:dispatch:acme/my-pkg/deploy.yml"
+	}
+}

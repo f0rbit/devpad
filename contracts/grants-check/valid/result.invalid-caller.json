@@ -1,0 +1,7 @@
+{
+	"ok": false,
+	"error": {
+		"kind": "invalid_caller",
+		"message": "caller.package_id missing"
+	}
+}
