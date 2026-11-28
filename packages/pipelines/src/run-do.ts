@@ -47,7 +47,7 @@ import type {
 import type { Result } from "@f0rbit/corpus";
 import { z } from "zod";
 import { resolved_plan_schema } from "./plan-schema";
-import { is_record } from "./record";
+import { header_pairs, is_record } from "./record";
 
 const plan_body = z.object({ plan: z.unknown(), actor: z.string().optional() });
 
@@ -102,10 +102,7 @@ export type RunDoServices = {
 // `init.headers` is `ResponseInit["headers"]` — may be a `Headers` instance
 // (not a plain object), so spreading it directly can silently drop entries.
 const response_header_entries = (h: ResponseInit["headers"]): Array<[string, string]> => {
-	if (h === undefined) return [];
-	if (h instanceof Headers) return [...h.entries()];
-	if (Array.isArray(h)) return h;
-	return Object.entries(h);
+	return header_pairs(h);
 };
 
 const json = (value: unknown, init?: ResponseInit): Response => {

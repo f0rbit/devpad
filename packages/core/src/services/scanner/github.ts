@@ -1,6 +1,6 @@
 import { err, ok, type Result, try_catch_async } from "@f0rbit/corpus";
 import { z } from "zod";
-import { createLogger } from "../../../utils/logger.js";
+import { createLogger } from "../../utils/logger";
 import { parseFileContent, shouldIgnorePath } from "./parser.js";
 import type { GitHubTreeEntry, ParsedTask, ScanConfig, ScannerError } from "./types.js";
 

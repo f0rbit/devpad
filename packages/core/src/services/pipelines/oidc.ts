@@ -31,7 +31,7 @@ import { pipeline_oidc_trust, pipeline_package } from "@devpad/schema/database/s
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { desc, eq } from "drizzle-orm";
-import { createLogger } from "../../../utils/logger.js";
+import { createLogger } from "../../utils/logger";
 import {
 	compile_glob,
 	OIDC_SESSION_SCOPES,

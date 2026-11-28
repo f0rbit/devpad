@@ -89,7 +89,7 @@ export const github_branches = z.object({
 export type ToolDefinition = {
 	name: string;
 	description: string;
-	inputSchema: z.ZodTypeAny;
+	inputSchema: z.ZodType<unknown, z.ZodTypeDef, unknown>;
 	execute: (client: ApiClient, input: unknown) => Promise<unknown>;
 };
 

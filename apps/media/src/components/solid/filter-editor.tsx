@@ -5,7 +5,7 @@ import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 import type { FilterKey, ProfileFilter } from "@devpad/schema/media";
 import PlatformIcon from "./platform-icon";
-import { ErrorDisplay, Loading } from "./resource-state";
+import { ErrorDisplay, error_of, Loading } from "./resource-state";
 
 type Account = {
 	id: string;
@@ -134,7 +134,7 @@ export default function FilterEditor(props: FilterEditorProps) {
 					<Loading size="sm" message="Loading filters..." />
 				</Show>
 
-				<Show when={filters.error}>
+				<Show when={error_of(filters)}>
 					<ErrorDisplay message="Failed to load filters" />
 				</Show>
 

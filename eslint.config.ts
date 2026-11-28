@@ -32,7 +32,7 @@ const BOUNDARY_FILES = [
 // Repo-wide (all non-test source) `no-restricted-syntax` selectors: `as never` /
 // `as any` (and the angle-bracket forms) are how incident 10 shipped. `no-restricted-syntax`
 // takes ONE options array per file, so sibling tasks that add selectors (2.3b's
-// swallowed-catch ones) must spread into the same array, not add a second object.
+// swallowed-catch ones, SWALLOWED_CATCH_SELECTORS) are spread into the same array, not a second object.
 const NEVER_ANY_CAST_SELECTORS = [
 	{
 		selector: "TSAsExpression > TSNeverKeyword",
@@ -50,6 +50,27 @@ const NEVER_ANY_CAST_SELECTORS = [
 	{
 		selector: "TSTypeAssertion > TSAnyKeyword",
 		message: "`<any>x` silences the compiler wholesale — derive the type from its source of truth or Zod-parse.",
+	},
+];
+
+// Swallowed-error selectors (2.3b). Same rule as above: `no-restricted-syntax`
+// takes ONE options array per file, so the non-test block at the end of this
+// config spreads BOTH selector lists; test files only match the 2.3b block.
+const SWALLOWED_CATCH_SELECTORS = [
+	{
+		selector: "CatchClause[param=null]",
+		message:
+			'catch without a binding discards the error -- bind it (`catch (error)`) and log through the sanctioned channel (worker: c.get("log"); core: createLogger; browser: @/lib/pulse log.error; scripts/CLI: stderr), or convert to try_catch/try_catch_async/pipe.try returning a Result.',
+	},
+	{
+		selector: "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[params.length=0]",
+		message:
+			".catch(() => ...) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
+	},
+	{
+		selector: "CallExpression[callee.property.name='catch'] > FunctionExpression[params.length=0]",
+		message:
+			".catch(function () { ... }) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
 	},
 ];
 
@@ -189,24 +210,7 @@ export default define_lint_config({
 			// catch's error visible -- they never force a new try/catch.
 			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 			rules: {
-				"no-restricted-syntax": [
-					"error",
-					{
-						selector: "CatchClause[param=null]",
-						message:
-							'catch without a binding discards the error -- bind it (`catch (error)`) and log through the sanctioned channel (worker: c.get("log"); core: createLogger; browser: @/lib/pulse log.error; scripts/CLI: stderr), or convert to try_catch/try_catch_async/pipe.try returning a Result.',
-					},
-					{
-						selector: "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[params.length=0]",
-						message:
-							".catch(() => ...) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
-					},
-					{
-						selector: "CallExpression[callee.property.name='catch'] > FunctionExpression[params.length=0]",
-						message:
-							".catch(function () { ... }) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
-					},
-				],
+				"no-restricted-syntax": ["error", ...SWALLOWED_CATCH_SELECTORS],
 				"@typescript-eslint/no-unused-vars": [
 					"error",
 					{
@@ -553,6 +557,8 @@ export default define_lint_config({
 			files: [
 				"apps/blog/src/components/post/project-selector.tsx",
 				"apps/blog/src/components/post/post-editor.tsx",
+				"apps/blog/src/components/category/categories-page.tsx",
+				"apps/blog/src/components/settings/settings-page.tsx",
 				"apps/main/src/components/solid/pipelines/island-boundary.tsx",
 				"apps/media/src/utils/error-logger.ts",
 				"apps/media/src/components/solid/profile-selector.tsx",
@@ -606,7 +612,7 @@ export default define_lint_config({
 			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
 			ignores: TEST_GLOBS,
 			rules: {
-				"no-restricted-syntax": ["error", ...NEVER_ANY_CAST_SELECTORS],
+				"no-restricted-syntax": ["error", ...NEVER_ANY_CAST_SELECTORS, ...SWALLOWED_CATCH_SELECTORS],
 			},
 		},
 	],

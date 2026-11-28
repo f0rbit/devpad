@@ -91,8 +91,8 @@ const CategoriesPage: Component<Props> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.categories.delete(encodeURIComponent(name)));
 			refreshCategories();
-		} catch (error) {
-			console.error("[categories] delete failed:", error);
+		} catch (cause) {
+			console.error("[categories] delete failed:", cause);
 			setError("Failed to delete category");
 		}
 	};
@@ -112,8 +112,8 @@ const CategoriesPage: Component<Props> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.categories.create(data));
 			refreshCategories();
-		} catch (error) {
-			console.error("[categories] create failed:", error);
+		} catch (cause) {
+			console.error("[categories] create failed:", cause);
 			setError("Failed to create category");
 		}
 	};
@@ -143,7 +143,7 @@ const CategoriesPage: Component<Props> = (props) => {
 				<Spinner size="sm" />
 			</Show>
 
-			<Show when={categories.error}>
+			<Show when={categories.error !== undefined}>
 				<div
 					style={{
 						padding: "0.5rem 0.75rem",

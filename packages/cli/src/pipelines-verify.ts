@@ -104,7 +104,10 @@ type EnvelopeResponse = { ok?: boolean; value?: unknown; error?: { message?: str
 
 const read_envelope = async (response: Response): Promise<EnvelopeResponse | null> => {
 	const parsed = await try_catch_async(
-		(): Promise<unknown> => response.json(),
+		async (): Promise<unknown> => {
+			const json: unknown = await response.json();
+			return json;
+		},
 		(e: unknown) => e,
 	);
 	if (!parsed.ok) {

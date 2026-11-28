@@ -56,6 +56,7 @@ import type {
 	WorkerVar,
 	WorkerVersion,
 } from "@devpad/pipeline-fakes";
+import { header_pairs } from "../record";
 
 export type CfApiConfig = {
 	account_id: string;
@@ -131,10 +132,7 @@ const interpret_response = async <T>(
 // directly (`{ ...init.headers }`) can silently drop entries. Normalise to
 // tuples first so every shape merges into `headers` correctly.
 const header_entries = (h: RequestInit["headers"]): Array<[string, string]> => {
-	if (h === undefined) return [];
-	if (h instanceof Headers) return [...h.entries()];
-	if (Array.isArray(h)) return h;
-	return Object.entries(h);
+	return header_pairs(h);
 };
 
 const cf_call = async <T>(

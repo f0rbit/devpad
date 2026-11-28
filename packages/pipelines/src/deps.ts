@@ -41,7 +41,7 @@ import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { authenticate_request, type AuthIdentity, type SessionVerifier } from "./auth";
 import type { PipelineEnv } from "./bindings";
 import { corpus_r2 } from "./corpus-r2";
-import { make_cf_router } from "./do-router";
+import { make_workers_router } from "./do-router";
 import { make_d1_approval_store } from "./providers/approval-store";
 import { make_cf_api_provider } from "./providers/cf-api-provider";
 import {
@@ -272,7 +272,7 @@ export const build_routes_deps_from_env = (env: PipelineEnv, verify_session?: Se
 	};
 	return {
 		db: core.db,
-		do_router: make_cf_router(env.PIPELINE_RUNS),
+		do_router: make_workers_router(env.PIPELINE_RUNS),
 		manifests: core.manifests,
 		templates: make_corpus_template_resolver(core.backend, core.manifests),
 		lineage: make_corpus_lineage_provider(core.backend),

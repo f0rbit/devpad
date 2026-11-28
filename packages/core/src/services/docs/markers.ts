@@ -16,7 +16,7 @@
 
 import { type ThreadMarker, thread_marker } from "@devpad/schema/validation";
 
-import { createLogger } from "../../../utils/logger.js";
+import { createLogger } from "../../utils/logger";
 
 const BEGIN_KEYWORD = "devpad:thread:begin";
 const END_KEYWORD = "devpad:thread:end";

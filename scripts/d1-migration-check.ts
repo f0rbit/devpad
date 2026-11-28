@@ -65,9 +65,7 @@ const query = (sql: string): Row[] => {
 		} catch (error) {
 			// Re-throw with the offending output attached -- the cause is
 			// carried in the new error, never discarded.
-			throw new Error(
-				`unparseable JSON from: ${sql} (${error instanceof Error ? error.message : String(error)})\n${res.out}`,
-			);
+			throw new Error(`unparseable JSON from: ${sql}\n${res.out}`, { cause: error });
 		}
 	})();
 	if (!Array.isArray(parsed)) throw new Error(`unexpected output: ${res.out}`);

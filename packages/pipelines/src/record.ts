@@ -17,3 +17,32 @@ export const read_json = async (req: { json(): Promise<unknown> }): Promise<unkn
 	);
 	return body.ok ? body.value : null;
 };
+
+/**
+ * Normalise any `HeadersInit` shape (a `Headers` instance, a tuple list, a
+ * plain record) to string pairs. Takes `unknown` on purpose: this package
+ * loads both workers-types and bun-types globals, whose `HeadersInit`
+ * declarations differ, so the caller's type can't be relied on — runtime
+ * checks narrow instead (a spread of a `Headers` instance silently drops
+ * entries, hence the explicit normalisation).
+ */
+export const header_pairs = (headers: unknown): Array<[string, string]> => {
+	if (headers === undefined || headers === null) return [];
+	if (headers instanceof Headers) return [...headers.entries()];
+	const pairs: Array<[string, string]> = [];
+	if (Array.isArray(headers)) {
+		for (const item of headers) {
+			const entry: unknown = item;
+			if (!Array.isArray(entry)) continue;
+			const key: unknown = entry[0];
+			const value: unknown = entry[1];
+			if (typeof key === "string" && typeof value === "string") pairs.push([key, value]);
+		}
+		return pairs;
+	}
+	if (!is_record(headers)) return pairs;
+	for (const [key, value] of Object.entries(headers)) {
+		if (typeof value === "string") pairs.push([key, value]);
+	}
+	return pairs;
+};

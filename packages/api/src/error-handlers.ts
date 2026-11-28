@@ -7,7 +7,7 @@ import { ApiError, AuthenticationError, NetworkError, ValidationError } from "./
 // worker's `zValidator` middleware emits. Issues are checked structurally
 // (an object with a `path` array); their finer shape is Zod's own.
 const zod_issue = z.custom<ZodIssue>(
-	(value) => typeof value === "object" && value !== null && "path" in value && Array.isArray(value.path),
+	(value: unknown) => typeof value === "object" && value !== null && "path" in value && Array.isArray(value.path),
 );
 
 const parsed_error_body = z.object({

@@ -59,11 +59,11 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 				window_ms: windowMs(),
 			});
 			if (!result.ok) {
-				const err = result.error as { code?: string; field?: string; message?: string };
-				if (err.code === "validation_error" && err.field === "threshold_dsl") {
-					setThresholdError(err.message ?? "Invalid threshold DSL");
+				const err = result.error;
+				if (err.code === "validation_error" && err.message.includes("threshold_dsl")) {
+					setThresholdError(err.message);
 				} else {
-					setGeneralError(err.message ?? "Failed to create template");
+					setGeneralError(err.message);
 				}
 				setLoading(false);
 				return;
@@ -86,11 +86,11 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 			window_ms: windowMs(),
 		});
 		if (!result.ok) {
-			const err = result.error as { code?: string; field?: string; message?: string };
-			if (err.code === "validation_error" && err.field === "threshold_dsl") {
-				setThresholdError(err.message ?? "Invalid threshold DSL");
+			const err = result.error;
+			if (err.code === "validation_error" && err.message.includes("threshold_dsl")) {
+				setThresholdError(err.message);
 			} else {
-				setGeneralError(err.message ?? "Failed to update template");
+				setGeneralError(err.message);
 			}
 			setLoading(false);
 			return;

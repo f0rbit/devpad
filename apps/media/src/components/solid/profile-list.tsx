@@ -16,7 +16,7 @@ import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
 import { run_task } from "@/lib/run-task";
 import { apiUrls, getClient } from "@/utils/client";
-import { ErrorDisplay, Loading } from "./resource-state";
+import { ErrorDisplay, error_of, Loading } from "./resource-state";
 
 type ProfileFilter = {
 	id: string;
@@ -146,8 +146,8 @@ export default function ProfileList(props: ProfileListProps) {
 				<Loading message="Loading profiles..." />
 			</Show>
 
-			<Show when={profiles.error}>
-				<ErrorDisplay prefix="Failed to load profiles" message={profiles.error.message} />
+			<Show when={error_of(profiles)}>
+				{(failure) => <ErrorDisplay prefix="Failed to load profiles" message={failure().message} />}
 			</Show>
 
 			<Show when={!profiles.loading && !profiles.error && profiles().length === 0}>

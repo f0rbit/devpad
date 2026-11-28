@@ -48,7 +48,13 @@ import { join } from "node:path";
 import { compute_asset_hash } from "../../../cli/src/asset-walker";
 import { action_artifacts_upload } from "../../../cli/src/commands/pipelines";
 import { AssetManifest, BundleManifest, InMemoryCloudflareProvider } from "@devpad/pipeline-fakes";
-import { type Backend, create_memory_backend, type VersionSetManifest, version_set_store } from "@f0rbit/corpus";
+import {
+	type Backend,
+	create_memory_backend,
+	try_catch,
+	type VersionSetManifest,
+	version_set_store,
+} from "@f0rbit/corpus";
 import { make_corpus_bundle_provider } from "../../src/providers/corpus-providers";
 
 const VALID_TOKEN = "test-e2e-token";
@@ -151,15 +157,16 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				}
 				if (url === "/artifacts/version-set" && req.method === "POST") {
 					const buf = await read_body(req);
-					let parsed: unknown;
-					try {
-						const raw_parsed: unknown = JSON.parse(buf.toString("utf8"));
-						parsed = raw_parsed;
-					} catch (_error) {
-						// Visible to the caller as 400 invalid_body below.
+					const body_probe = try_catch(
+						(): unknown => JSON.parse(buf.toString("utf8")),
+						(e: unknown) => e,
+					);
+					if (!body_probe.ok) {
+						// Visible to the caller as 400 invalid_body.
 						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 						return;
 					}
+					const parsed = body_probe.value;
 					if (parsed === null || typeof parsed !== "object") {
 						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 						return;

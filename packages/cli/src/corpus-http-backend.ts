@@ -87,7 +87,10 @@ export const post_envelope = async <T>(input: PostInput): Promise<Result<T, Corp
 	}
 	let raw_body: unknown = null;
 	const parsed = await try_catch_async(
-		() => response.json(),
+		async (): Promise<unknown> => {
+			const json: unknown = await response.json();
+			return json;
+		},
 		(e: unknown) => e,
 	);
 	if (parsed.ok) raw_body = parsed.value;

@@ -125,10 +125,10 @@ export function build_manifest(
 		const git_sha = inputs.git_sha || "0000000000000000000000000000000000000000";
 		const compatibility_date = inputs.compatibility_date || "2025-05-01";
 
-		let manifest_data = artifacts.manifest;
-		if (typeof manifest_data === "string") {
+		if (typeof artifacts.manifest === "string") {
+			const manifest_text = artifacts.manifest;
 			const parsed = try_catch(
-				(): unknown => JSON.parse(manifest_data),
+				(): unknown => JSON.parse(manifest_text),
 				(e: unknown) => e,
 			);
 			if (!parsed.ok) {
@@ -137,7 +137,6 @@ export function build_manifest(
 					message: `manifest.json is not valid JSON: ${parsed.error instanceof Error ? parsed.error.message : String(parsed.error)}`,
 				});
 			}
-			manifest_data = parsed.value as typeof artifacts.manifest;
 		}
 
 		const has_single_file = artifacts.bundle_ref !== undefined;

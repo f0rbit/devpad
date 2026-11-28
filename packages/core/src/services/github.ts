@@ -5,7 +5,7 @@ import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
 import { batchedQuery } from "./batch.js";
 import type { ServiceError } from "./errors.js";
-import { createLogger } from "../../utils/logger";
+import { createLogger } from "../utils/logger";
 
 const github_log = createLogger("core.github");
 

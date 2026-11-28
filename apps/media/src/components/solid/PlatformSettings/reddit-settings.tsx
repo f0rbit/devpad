@@ -2,7 +2,7 @@ import { Checkbox, Collapsible } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
-import { AsyncState } from "../resource-state";
+import { AsyncState, error_of } from "../resource-state";
 import { useSettings } from "./use-settings";
 
 type RedditSettingsData = {
@@ -90,7 +90,7 @@ export default function RedditSettings(props: Props) {
 					</h6>
 					<AsyncState
 						loading={subreddits.loading}
-						error={subreddits.error}
+						error={error_of(subreddits)}
 						data={subreddits()}
 						loadingFallback={<p class="muted text-sm">Loading subreddits...</p>}
 						errorPrefix="Failed to load subreddits"

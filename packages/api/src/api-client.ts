@@ -194,6 +194,7 @@ export type BubbleStep = { task: Task; via: CompletedVia };
 export type DoneResponse = { completed: Task; bubbled: BubbleStep[]; hooks_fired: string[] };
 import { ApiError } from "./errors";
 import { HTTP_STATUS } from "./error-handlers";
+import { ApiClient as HttpClient } from "./request";
 import { type ApiResult, wrap } from "./result";
 
 type TagWithCount = { tag: string; count: number };

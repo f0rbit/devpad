@@ -14,6 +14,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import type { Server } from "bun";
 import type { WorkerVar } from "@devpad/pipeline-fakes";
+import { try_catch } from "@f0rbit/corpus";
 import { make_cf_api_provider } from "../../src/providers/cf-api-provider";
 
 type RecordedRequest = {
@@ -122,12 +123,12 @@ const start_recorder = (): RecorderHandle => {
 				const text = await req.text();
 				body = text;
 				if (text.length > 0) {
-					try {
-						const raw_body: unknown = JSON.parse(text);
-						body = raw_body;
-					} catch (_error) {
-						// Not JSON -- leave as string; the probe IS the control flow.
-					}
+					// Not JSON -- leave as string; the probe IS the control flow.
+					const probe = try_catch(
+						(): unknown => JSON.parse(text),
+						(e: unknown) => e,
+					);
+					if (probe.ok) body = probe.value;
 				}
 			}
 			const record: RecordedRequest = {
