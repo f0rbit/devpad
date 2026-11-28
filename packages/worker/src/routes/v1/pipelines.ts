@@ -38,11 +38,28 @@
  *     `{ error: code, message }` shape.
  *  6. Orchestrator unreachable / not configured ⇒ 503
  *     `{ error: "pipelines_unreachable" }`. No caching.
+ *  7. Contract enforcement (verification-hardening 2.2): every route
+ *     with a wire DTO parses the upstream value with the matching
+ *     schema from `@devpad/schema/pipelines`; a mismatch ⇒ 502
+ *     `{ error: "pipelines_contract_violation" }` (route + Zod issue
+ *     paths logged) — a broken upstream body never reaches a page.
  */
 
 import { pipelines, projects } from "@devpad/core/services";
+import {
+	pipeline_dispatch_ledger_wire,
+	pipeline_grant_list_wire,
+	pipeline_grant_wire,
+	pipeline_ingest_response_wire,
+	pipeline_package_list_wire,
+	pipeline_package_wire,
+	pipeline_run_list_wire,
+	pipeline_run_wire,
+	pipeline_stage_event_list_wire,
+} from "@devpad/schema/pipelines";
 import { eq, inArray, or } from "drizzle-orm";
 import { type Context, Hono } from "hono";
+import type { ZodTypeAny } from "zod";
 import { pipeline_grant, pipeline_package, project } from "@devpad/schema";
 import type { AppContext } from "../../bindings.js";
 import { requireAuth } from "../../middleware/auth.js";
@@ -197,6 +214,15 @@ type ForwardOpts = {
 	body?: unknown;
 	/** Optional ownership filter applied to an upstream list envelope. */
 	filter?: (value: unknown) => unknown;
+	/**
+	 * Wire schema for the upstream `{ ok: true, value }` value
+	 * (verification-hardening 2.2, from `@devpad/schema/pipelines`). When
+	 * set, a value that fails the schema is a contract violation: the
+	 * proxy answers 502 `pipelines_contract_violation` (route + Zod issue
+	 * paths logged, no body dump) instead of passing the broken body
+	 * through to a silently-wrong page.
+	 */
+	value_schema?: ZodTypeAny;
 };
 
 /**
@@ -266,8 +292,23 @@ const forward_to_pipelines = async (c: Context<AppContext>, opts: ForwardOpts): 
 		// Unwrap `{ ok: true, value }` — ApiClient callers expect the raw
 		// value (`PipelineRun[]` etc.), not the orchestrator's envelope.
 		if (envelope.ok) {
-			const value = opts.filter !== undefined ? opts.filter(envelope.value) : envelope.value;
-			return c.json(value as Record<string, unknown>, upstream.status as 200);
+			let value: unknown = envelope.value;
+			if (opts.value_schema !== undefined) {
+				const parsed_value = opts.value_schema.safeParse(value);
+				if (!parsed_value.success) {
+					const issue_paths = parsed_value.error.issues.map(
+						(issue) => `${issue.path.map(String).join(".")}: ${issue.message}`,
+					);
+					c.get("log")?.warning("pipelines_contract_violation", {
+						upstream_path: opts.upstream_path,
+						issues: issue_paths,
+					});
+					return c.json({ error: "pipelines_contract_violation" }, 502);
+				}
+				value = parsed_value.data;
+			}
+			const filtered = opts.filter !== undefined ? opts.filter(value) : value;
+			return c.json(filtered as Record<string, unknown>, upstream.status as 200);
 		}
 		// `{ ok: false, error: { code, message?, ... } }` → devpad's plain
 		// `{ error: "<code>", message }` — the shape ApiClient's error
@@ -326,21 +367,35 @@ app.get("/runs", requireAuth, async (c) => {
 	const scoped_denial = guard_scoped_key(c, null);
 	if (scoped_denial) return scoped_denial;
 	const filter = list_ownership_filter(await owned_package_ids(c), "package_id");
-	return forward_to_pipelines(c, { upstream_path: "/runs", method: "GET", query: forward_query(c), filter });
+	return forward_to_pipelines(c, {
+		upstream_path: "/runs",
+		method: "GET",
+		query: forward_query(c),
+		filter,
+		value_schema: pipeline_run_list_wire,
+	});
 });
 
 app.get("/runs/:id/events", requireAuth, async (c) => {
 	const run_id = c.req.param("id");
 	const denied = await guard_owned_run(c, run_id);
 	if (denied) return denied;
-	return forward_to_pipelines(c, { upstream_path: `/runs/${run_id}/events`, method: "GET" });
+	return forward_to_pipelines(c, {
+		upstream_path: `/runs/${run_id}/events`,
+		method: "GET",
+		value_schema: pipeline_stage_event_list_wire,
+	});
 });
 
 app.get("/runs/:id", requireAuth, async (c) => {
 	const run_id = c.req.param("id");
 	const denied = await guard_owned_run(c, run_id);
 	if (denied) return denied;
-	return forward_to_pipelines(c, { upstream_path: `/runs/${run_id}`, method: "GET" });
+	return forward_to_pipelines(c, {
+		upstream_path: `/runs/${run_id}`,
+		method: "GET",
+		value_schema: pipeline_run_wire,
+	});
 });
 
 app.post("/runs/:id/events", requireAuth, async (c) => {
@@ -352,6 +407,7 @@ app.post("/runs/:id/events", requireAuth, async (c) => {
 		upstream_path: `/runs/${run_id}/events`,
 		method: "POST",
 		body: without_user_id(body),
+		value_schema: pipeline_ingest_response_wire,
 	});
 });
 
@@ -418,7 +474,11 @@ app.get("/runs/:id/dispatches", requireAuth, async (c) => {
 	const run_id = c.req.param("id");
 	const denied = await guard_owned_run(c, run_id);
 	if (denied) return denied;
-	return forward_to_pipelines(c, { upstream_path: `/runs/${run_id}/dispatches`, method: "GET" });
+	return forward_to_pipelines(c, {
+		upstream_path: `/runs/${run_id}/dispatches`,
+		method: "GET",
+		value_schema: pipeline_dispatch_ledger_wire,
+	});
 });
 
 /* ─── Grants ─────────────────────────────────────────────────────── */
@@ -428,12 +488,22 @@ app.get("/grants", requireAuth, async (c) => {
 	if (package_id) {
 		const denied = await guard_owned_package(c, package_id);
 		if (denied) return denied;
-		return forward_to_pipelines(c, { upstream_path: "/grants", method: "GET", query: { package_id } });
+		return forward_to_pipelines(c, {
+			upstream_path: "/grants",
+			method: "GET",
+			query: { package_id },
+			value_schema: pipeline_grant_list_wire,
+		});
 	}
 	const scoped_denial = guard_scoped_key(c, null);
 	if (scoped_denial) return scoped_denial;
 	const filter = list_ownership_filter(await owned_package_ids(c), "package_id");
-	return forward_to_pipelines(c, { upstream_path: "/grants", method: "GET", filter });
+	return forward_to_pipelines(c, {
+		upstream_path: "/grants",
+		method: "GET",
+		filter,
+		value_schema: pipeline_grant_list_wire,
+	});
 });
 
 /** Grant approval — HUMAN ONLY (session (`user`) channel). */
@@ -445,7 +515,12 @@ app.post("/grants/:id/approve", requireAuth, async (c) => {
 	const human_denial = guard_human_only(c);
 	if (human_denial) return human_denial;
 
-	return forward_to_pipelines(c, { upstream_path: `/grants/${grant_id}/approve`, method: "POST", body: {} });
+	return forward_to_pipelines(c, {
+		upstream_path: `/grants/${grant_id}/approve`,
+		method: "POST",
+		body: {},
+		value_schema: pipeline_grant_wire,
+	});
 });
 
 /** Grant denial — HUMAN ONLY (session (`user`) channel). */
@@ -475,19 +550,33 @@ app.get("/packages", requireAuth, async (c) => {
 			c.get("log")?.warning("pipelines_proxy_not_owned", { project_id, user_id: user.id });
 			return c.json({ error: "Not found" }, 404);
 		}
-		return forward_to_pipelines(c, { upstream_path: "/packages", method: "GET", query: { project_id } });
+		return forward_to_pipelines(c, {
+			upstream_path: "/packages",
+			method: "GET",
+			query: { project_id },
+			value_schema: pipeline_package_list_wire,
+		});
 	}
 	const scoped_denial = guard_scoped_key(c, null);
 	if (scoped_denial) return scoped_denial;
 	const filter = list_ownership_filter(await owned_package_ids(c), "id");
-	return forward_to_pipelines(c, { upstream_path: "/packages", method: "GET", filter });
+	return forward_to_pipelines(c, {
+		upstream_path: "/packages",
+		method: "GET",
+		filter,
+		value_schema: pipeline_package_list_wire,
+	});
 });
 
 app.get("/packages/:id", requireAuth, async (c) => {
 	const package_id = c.req.param("id");
 	const denied = await guard_owned_package(c, package_id);
 	if (denied) return denied;
-	return forward_to_pipelines(c, { upstream_path: `/packages/${package_id}`, method: "GET" });
+	return forward_to_pipelines(c, {
+		upstream_path: `/packages/${package_id}`,
+		method: "GET",
+		value_schema: pipeline_package_wire,
+	});
 });
 
 app.post("/packages", requireAuth, async (c) => {
@@ -512,6 +601,7 @@ app.post("/packages", requireAuth, async (c) => {
 		upstream_path: "/packages",
 		method: "POST",
 		body: { ...without_owner_id(body), owner_id: user.id },
+		value_schema: pipeline_package_wire,
 	});
 });
 
@@ -535,6 +625,7 @@ app.patch("/packages/:id", requireAuth, async (c) => {
 		upstream_path: `/packages/${package_id}`,
 		method: "PATCH",
 		body: without_owner_id(body),
+		value_schema: pipeline_package_wire,
 	});
 });
 

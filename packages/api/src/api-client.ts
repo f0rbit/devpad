@@ -13,6 +13,23 @@ import type {
 import type { PlatformSettings } from "@devpad/schema/media/settings";
 import type { Timeline } from "@devpad/schema/media/timeline";
 import {
+	pipeline_dispatch_ledger_wire,
+	pipeline_grant_list_wire,
+	pipeline_grant_wire,
+	pipeline_ingest_response_wire,
+	pipeline_package_list_wire,
+	pipeline_package_wire,
+	pipeline_run_list_wire,
+	pipeline_run_wire,
+	pipeline_stage_event_list_wire,
+	type PipelineDispatches,
+	type PipelineGrantWire,
+	type PipelineIngestResponseWire,
+	type PipelinePackageWire,
+	type PipelineRunWire,
+	type PipelineStageEventWire,
+} from "@devpad/schema/pipelines";
+import {
 	type PulseErrorsResult,
 	PulseErrorsResultSchema,
 	type PulseEventsPage,
@@ -46,12 +63,7 @@ import type {
 	HookDeliveryStatus,
 	Milestone,
 	PipelineAnalysisTemplate,
-	PipelineGrant,
 	PipelineOidcTrust,
-	PipelinePackage,
-	PipelineRun,
-	PipelineStageEvent,
-	DispatchStatus,
 	Project,
 	SaveConfigRequest,
 	Signoff,
@@ -109,42 +121,19 @@ export type PushInterfaceReportResult = {
 };
 
 /**
- * Wire shape of `GET /v1/runs/:id/dispatches` (orchestrator proxy, #155) —
- * the run's dispatch ledger rows. `commit_sha` is null on orchestrated
- * (version-set-targeted) runs.
+ * Wire shapes of the pipelines orchestrator's dispatch ledger
+ * (`GET /v1/runs/:id/dispatches`, #155) and event-ingest tick —
+ * Zod-inferred from the single wire schema in
+ * `@devpad/schema/pipelines` (verification-hardening 2.2).
  */
-export type PipelineDispatchEntry = {
-	stage_name: string;
-	commit_sha: string | null;
-	status: DispatchStatus;
-	error: string | null;
-	requested_by: string | null;
-	created_at: string;
-	updated_at: string;
-};
+export type {
+	PipelineDispatchEntryWire as PipelineDispatchEntry,
+	PipelineDispatches,
+	PipelineIngestTick,
+} from "@devpad/schema/pipelines";
 
-export type PipelineDispatches = {
-	run_id: string;
-	run_status: string;
-	commit_sha: string | null;
-	dispatches: PipelineDispatchEntry[];
-};
-
-/**
- * Outcome of the orchestrator's AWAITED DO tick, returned in
- * `events.ingest` responses (#155): `applied` (run state machine moved),
- * `noop:<reason>` (DO refused — sha/stage mismatch, orchestrated run,
- * malformed payload), `failed:<message>` (tick broke; event row still
- * durable), or `skipped:*` (informational kind / idempotent replay).
- * Mirrors `IngestTick` in `packages/core/src/services/pipelines/events.ts`
- * (defined locally — `@devpad/api` doesn't depend on `@devpad/core`).
- */
-export type PipelineIngestTick =
-	| "applied"
-	| `noop:${string}`
-	| `failed:${string}`
-	| "skipped:informational"
-	| "skipped:duplicated";
+/** Filter for `client.pipelines.list` — mirrors the orchestrator's `GET /runs` query. */
+type PipelinesListFilter = { package_id?: string; status?: string; limit?: number };
 
 type FoldDiff =
 	| { kind: "missing_row"; entity: "milestone" | "goal"; id: string }
@@ -1684,23 +1673,29 @@ export class ApiClient {
 		/**
 		 * List pipeline runs ordered by `created_at` DESC. Optional filters
 		 * narrow by package and/or status; `limit` defaults to 50 server-side
-		 * and is capped at 200.
+		 * and is capped at 200. Response is Zod-parsed with the wire schema
+		 * (`pipeline_run_list_wire`) — a contract-violating body surfaces as
+		 * an `ApiResult` error, never as a typed lie.
 		 */
-		list: (filter?: { package_id?: string; status?: string; limit?: number }): Promise<ApiResult<PipelineRun[]>> => {
+		list: (filter?: PipelinesListFilter): Promise<ApiResult<PipelineRunWire[]>> => {
 			const query: Record<string, string> = {};
 			if (filter?.package_id !== undefined) query.package_id = filter.package_id;
 			if (filter?.status !== undefined) query.status = filter.status;
 			if (filter?.limit !== undefined) query.limit = String(filter.limit);
-			return wrap(() =>
-				this.clients.pipelines.get<PipelineRun[]>("/runs", Object.keys(query).length > 0 ? { query } : undefined),
-			);
+			return wrap(async () => {
+				const raw = await this.clients.pipelines.get<unknown>(
+					"/runs",
+					Object.keys(query).length > 0 ? { query } : undefined,
+				);
+				return pipeline_run_list_wire.parse(raw);
+			});
 		},
 
 		/**
 		 * Get a pipeline run by ID
 		 */
-		get: (run_id: string): Promise<ApiResult<PipelineRun>> =>
-			wrap(() => this.clients.pipelines.get<PipelineRun>(`/runs/${run_id}`)),
+		get: (run_id: string): Promise<ApiResult<PipelineRunWire>> =>
+			wrap(async () => pipeline_run_wire.parse(await this.clients.pipelines.get<unknown>(`/runs/${run_id}`))),
 
 		/**
 		 * Create a new pipeline run
@@ -1759,7 +1754,9 @@ export class ApiClient {
 		 * row per stage with claim/dispatch status, error text and actor.
 		 */
 		dispatches: (run_id: string): Promise<ApiResult<PipelineDispatches>> =>
-			wrap(() => this.clients.pipelines.get<PipelineDispatches>(`/runs/${run_id}/dispatches`)),
+			wrap(async () =>
+				pipeline_dispatch_ledger_wire.parse(await this.clients.pipelines.get<unknown>(`/runs/${run_id}/dispatches`)),
+			),
 
 		/**
 		 * Stage-event namespace — Phase 2.C webhook ingestion + read-back.
@@ -1777,18 +1774,19 @@ export class ApiClient {
 			ingest: (
 				run_id: string,
 				input: { stage_name: string; kind: StageEventKind; payload?: unknown; idempotency_key: string },
-			): Promise<ApiResult<{ event_id: string; duplicated: boolean; tick: PipelineIngestTick }>> =>
-				wrap(() =>
-					this.clients.pipelines.post<{ event_id: string; duplicated: boolean; tick: PipelineIngestTick }>(
-						`/runs/${run_id}/events`,
-						{
+			): Promise<ApiResult<PipelineIngestResponseWire>> =>
+				wrap(async () =>
+					pipeline_ingest_response_wire.parse(
+						await this.clients.pipelines.post<unknown>(`/runs/${run_id}/events`, {
 							body: input,
-						},
+						}),
 					),
 				),
 
-			list: (run_id: string): Promise<ApiResult<PipelineStageEvent[]>> =>
-				wrap(() => this.clients.pipelines.get<PipelineStageEvent[]>(`/runs/${run_id}/events`)),
+			list: (run_id: string): Promise<ApiResult<PipelineStageEventWire[]>> =>
+				wrap(async () =>
+					pipeline_stage_event_list_wire.parse(await this.clients.pipelines.get<unknown>(`/runs/${run_id}/events`)),
+				),
 		},
 
 		/**
@@ -1798,23 +1796,26 @@ export class ApiClient {
 			/**
 			 * List grants for a package
 			 */
-			list: (package_id?: string): Promise<ApiResult<PipelineGrant[]>> =>
-				wrap(() =>
-					this.clients.pipelines.get<PipelineGrant[]>("/grants", {
+			list: (package_id?: string): Promise<ApiResult<PipelineGrantWire[]>> =>
+				wrap(async () => {
+					const raw = await this.clients.pipelines.get<unknown>("/grants", {
 						query: package_id ? { package_id } : {},
-					}),
-				),
+					});
+					return pipeline_grant_list_wire.parse(raw);
+				}),
 
 			/**
 			 * Approve a pending grant. Human-only — the actor is resolved
 			 * server-side by the worker proxy; api-channel callers get
 			 * `403 human_approval_required`.
 			 */
-			approve: (grant_id: string): Promise<ApiResult<PipelineGrant>> =>
-				wrap(() =>
-					this.clients.pipelines.post<PipelineGrant>(`/grants/${grant_id}/approve`, {
-						body: {},
-					}),
+			approve: (grant_id: string): Promise<ApiResult<PipelineGrantWire>> =>
+				wrap(async () =>
+					pipeline_grant_wire.parse(
+						await this.clients.pipelines.post<unknown>(`/grants/${grant_id}/approve`, {
+							body: {},
+						}),
+					),
 				),
 
 			/**
@@ -1839,22 +1840,25 @@ export class ApiClient {
 			 * List packages, optionally filtered by linked devpad project.
 			 * Packages with `project_id = null` are not yet linked.
 			 */
-			list: (filter?: { project_id?: string }): Promise<ApiResult<PipelinePackage[]>> => {
+			list: (filter?: { project_id?: string }): Promise<ApiResult<PipelinePackageWire[]>> => {
 				const query: Record<string, string> = {};
 				if (filter?.project_id !== undefined) query.project_id = filter.project_id;
-				return wrap(() =>
-					this.clients.pipelines.get<PipelinePackage[]>(
+				return wrap(async () => {
+					const raw = await this.clients.pipelines.get<unknown>(
 						"/packages",
 						Object.keys(query).length > 0 ? { query } : undefined,
-					),
-				);
+					);
+					return pipeline_package_list_wire.parse(raw);
+				});
 			},
 
 			/**
 			 * Get a single package by id
 			 */
-			get: (package_id: string): Promise<ApiResult<PipelinePackage>> =>
-				wrap(() => this.clients.pipelines.get<PipelinePackage>(`/packages/${package_id}`)),
+			get: (package_id: string): Promise<ApiResult<PipelinePackageWire>> =>
+				wrap(async () =>
+					pipeline_package_wire.parse(await this.clients.pipelines.get<unknown>(`/packages/${package_id}`)),
+				),
 
 			/**
 			 * Register a new pipeline package. `id` is canonically the same as
@@ -1868,8 +1872,10 @@ export class ApiClient {
 				repo_url?: string | null;
 				project_id?: string | null;
 				default_template_ref?: string | null;
-			}): Promise<ApiResult<PipelinePackage>> =>
-				wrap(() => this.clients.pipelines.post<PipelinePackage>("/packages", { body: input })),
+			}): Promise<ApiResult<PipelinePackageWire>> =>
+				wrap(async () =>
+					pipeline_package_wire.parse(await this.clients.pipelines.post<unknown>("/packages", { body: input })),
+				),
 
 			/**
 			 * Partially update a package row. Missing keys preserve existing
@@ -1883,8 +1889,12 @@ export class ApiClient {
 					default_template_ref?: string | null;
 					script_name_overrides?: Record<string, string> | null;
 				},
-			): Promise<ApiResult<PipelinePackage>> =>
-				wrap(() => this.clients.pipelines.patch<PipelinePackage>(`/packages/${package_id}`, { body: input })),
+			): Promise<ApiResult<PipelinePackageWire>> =>
+				wrap(async () =>
+					pipeline_package_wire.parse(
+						await this.clients.pipelines.patch<unknown>(`/packages/${package_id}`, { body: input }),
+					),
+				),
 
 			/**
 			 * Remove a package. Refuses (409) if pipeline_run rows still

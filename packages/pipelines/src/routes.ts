@@ -75,6 +75,15 @@ import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { deploy_mode as deploy_mode_zod, external_target as external_target_zod } from "@devpad/schema/validation";
+import {
+	wire_dispatch_entry,
+	wire_grant,
+	wire_package,
+	wire_run,
+	wire_stage_event,
+	type PipelineDispatches,
+	type PipelineIngestResponseWire,
+} from "@devpad/schema/pipelines";
 import type { AuthError, AuthIdentity } from "./auth";
 import type { DoRouter } from "./do-router";
 
@@ -579,14 +588,14 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const result = await list_runs(deps.db, filter.value);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(result.value.map(wire_run));
 	});
 
 	app.get("/runs/:id", async (c) => {
 		const deps = c.get("deps");
 		const run = await get_run(deps.db, c.req.param("id"));
 		if (!run.ok) return wire_err(run.error);
-		return json_ok(run.value);
+		return json_ok(wire_run(run.value));
 	});
 
 	// ─── Phase 2.C — webhook event ingestion ────────────────────────
@@ -658,7 +667,8 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (!result.ok) return wire_err(result.error);
 
 		const status = result.value.duplicated ? 200 : 201;
-		return new Response(JSON.stringify({ ok: true, value: result.value }), {
+		const value = result.value satisfies PipelineIngestResponseWire;
+		return new Response(JSON.stringify({ ok: true, value }), {
 			status,
 			headers: { "content-type": "application/json" },
 		});
@@ -679,7 +689,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 				.from(pipeline_stage_event)
 				.where(eq(pipeline_stage_event.run_id, run_id))
 				.orderBy(desc(pipeline_stage_event.ts));
-			return json_ok(rows);
+			return json_ok(rows.map(wire_stage_event));
 		} catch (e) {
 			return wire_err({ code: "db_error", message: `failed to list pipeline_stage_event: ${String(e)}` }, 500);
 		}
@@ -714,20 +724,13 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		try {
 			const rows = await deps.db.select().from(pipeline_dispatch).where(eq(pipeline_dispatch.run_id, run_id));
-			return json_ok({
+			const ledger = {
 				run_id: run.value.id,
 				run_status: run.value.status,
 				commit_sha: run.value.commit_sha,
-				dispatches: rows.map((row) => ({
-					stage_name: row.stage_name,
-					commit_sha: row.commit_sha,
-					status: row.status,
-					error: row.error,
-					requested_by: row.requested_by,
-					created_at: row.created_at,
-					updated_at: row.updated_at,
-				})),
-			});
+				dispatches: rows.map(wire_dispatch_entry),
+			} satisfies PipelineDispatches;
+			return json_ok(ledger);
 		} catch (e) {
 			return wire_err({ code: "db_error", message: `failed to list pipeline_dispatch: ${String(e)}` }, 500);
 		}
@@ -896,7 +899,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const grants_result = await list_grants(deps.db, package_id);
 		if (!grants_result.ok) return wire_err(grants_result.error);
-		return json_ok(grants_result.value);
+		return json_ok(grants_result.value.map(wire_grant));
 	});
 
 	// ─── POST /grants (admin-only grant request) ─────────────────────
@@ -931,11 +934,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const existing = await list_grants(deps.db, package_id);
 		if (!existing.ok) return wire_err(existing.error);
 		const duplicate = existing.value.find((g) => g.stage_name === stage_name && g.scope === scope);
-		if (duplicate !== undefined) return json_ok(duplicate);
+		if (duplicate !== undefined) return json_ok(wire_grant(duplicate));
 
 		const created = await request_grant(deps.db, package_id, stage_name, scope);
 		if (!created.ok) return wire_err(created.error);
-		return new Response(JSON.stringify({ ok: true, value: created.value }), {
+		return new Response(JSON.stringify({ ok: true, value: wire_grant(created.value) }), {
 			status: 201,
 			headers: { "content-type": "application/json" },
 		});
@@ -956,7 +959,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const grant_id = c.req.param("id");
 		const result = await approve_grant(deps.db, grant_id, human.actor);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_grant(result.value));
 	});
 
 	app.post("/grants/:id/deny", async (c) => {
@@ -982,14 +985,14 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const project_id = c.req.query("project_id");
 		const result = await list_packages(deps.db, project_id !== undefined ? { project_id } : {});
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(result.value.map(wire_package));
 	});
 
 	app.get("/packages/:id", async (c) => {
 		const deps = c.get("deps");
 		const result = await get_package(deps.db, c.req.param("id"));
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_package(result.value));
 	});
 
 	// ─── Package write routes (auth-gated) ──────────────────────────
@@ -1013,7 +1016,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const result = await create_package(deps.db, parsed.data);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_package(result.value));
 	});
 
 	app.patch("/packages/:id", async (c) => {
@@ -1030,7 +1033,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const result = await update_package(deps.db, c.req.param("id"), parsed.data);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_package(result.value));
 	});
 
 	app.delete("/packages/:id", async (c) => {

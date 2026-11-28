@@ -95,7 +95,7 @@ const DispatchStatusPanelContent = (props: DispatchStatusPanelProps) => {
 			<For each={result()?.dispatches ?? []}>
 				{(d) => (
 					<div class="row row-sm" data-testid={`dispatch-row-${d.stage_name}`} style={{ "flex-wrap": "wrap" }}>
-						<span class="font-mono text-sm" title={d.commit_sha ?? undefined}>
+						<span class="font-mono text-sm" title={d.commit_sha}>
 							{d.stage_name}
 						</span>
 						<Badge variant={status_variant(d.status)}>{d.status}</Badge>
