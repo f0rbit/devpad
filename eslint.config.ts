@@ -63,6 +63,26 @@ export default define_lint_config({
 	module_resolution: "bundler",
 	overrides: [
 		{
+			// --- Floating-promise ban (verification-hardening 2.3a, incident #175) ---
+			// The factory ships no-floating-promises at error with the default
+			// `ignoreVoid: true`, which made `void somePromise()` a legal escape:
+			// incident #175 was exactly that — a `void deps.do.fetch(...)` inside a
+			// Worker request handler was CANCELLED by the runtime when the response
+			// returned, stranding the run. Setting `ignoreVoid: false` makes every
+			// `void <promise>` site an error: browser handlers must go through
+			// `run_task()` (apps/*/src/lib/run-task.ts — awaits + reports rejections
+			// to the app's logging channel), worker-side sites must `await` or hand
+			// the promise to `ctx.waitUntil(...)`, and tests must `await`.
+			// `no-misused-promises` is restated at error alongside it (it is already
+			// error-tier via strictTypeChecked; restated so this block is the single
+			// self-contained statement of the "no fire-and-forget promises" policy).
+			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			rules: {
+				"@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: false }],
+				"@typescript-eslint/no-misused-promises": "error",
+			},
+		},
+		{
 			// f0rbit/require-d1-wrapper (0.4.0) targets RPC-entrypoint callers that
 			// must route through createD1Database before touching drizzle.
 			// database/d1.ts IS that wrapper (create_d1_database's own definition --

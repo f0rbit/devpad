@@ -1,6 +1,7 @@
 import { Button } from "@f0rbit/ui";
 import { Pause, Play, RefreshCw, Trash2 } from "lucide-solid";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 
 type Props = {
@@ -61,17 +62,35 @@ export default function ConnectionActions(props: Props) {
 						icon
 						variant="ghost"
 						label="Refresh data"
-						onClick={() => void handleRefresh()}
+						onClick={() => {
+							run_task(handleRefresh(), { component: "connection-actions", action: "refresh" });
+						}}
 						disabled={refreshing()}
 					>
 						<RefreshCw size={16} class={refreshing() ? "animate-spin" : ""} />
 					</Button>
-					<Button icon variant="ghost" label="Pause syncing" onClick={() => void handleToggle()} disabled={toggling()}>
+					<Button
+						icon
+						variant="ghost"
+						label="Pause syncing"
+						onClick={() => {
+							run_task(handleToggle(), { component: "connection-actions", action: "toggle" });
+						}}
+						disabled={toggling()}
+					>
 						<Pause size={16} />
 					</Button>
 				</Show>
 				<Show when={props.state === "inactive"}>
-					<Button icon variant="ghost" label="Resume syncing" onClick={() => void handleToggle()} disabled={toggling()}>
+					<Button
+						icon
+						variant="ghost"
+						label="Resume syncing"
+						onClick={() => {
+							run_task(handleToggle(), { component: "connection-actions", action: "toggle" });
+						}}
+						disabled={toggling()}
+					>
 						<Play size={16} />
 					</Button>
 				</Show>
@@ -79,7 +98,9 @@ export default function ConnectionActions(props: Props) {
 					icon
 					variant="ghost"
 					label="Remove connection"
-					onClick={() => void handleDelete()}
+					onClick={() => {
+						run_task(handleDelete(), { component: "connection-actions", action: "delete" });
+					}}
 					disabled={deleting()}
 				>
 					<Trash2 size={16} />

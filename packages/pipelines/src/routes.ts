@@ -16,6 +16,7 @@
 import type {
 	EventDoRouter,
 	EventPulseEmitter,
+	EventWaitUntil,
 	OidcSessionClaims,
 	ResolvedPlan,
 	RunTarget,
@@ -70,7 +71,7 @@ import type { PipelineRun, ServiceError } from "@devpad/schema";
 import type { ExternalTarget } from "@devpad/schema/validation";
 import { webhook_event_body } from "@devpad/schema/validation";
 import type { Backend, Result, SnapshotMeta, VersionSetManifest } from "@f0rbit/corpus";
-import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
+import { err, ok, try_catch, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -435,13 +436,40 @@ const json_ok = (value: unknown) =>
 const first_row = <T>(rows: T[]): T | undefined => rows[0];
 
 /**
+ * The request's `waitUntil`, when this Worker execution context has one.
+ * Hono's `c.executionCtx` getter THROWS when the app was fetched without a
+ * Cloudflare execution context (bun dev, integration tests driving
+ * `app.fetch(req, env)` two-arg), so the absence probe goes through
+ * `try_catch` — no try/catch statement, no empty catch (2.3b's selectors).
+ * Absence means "no background lifetime available": the service awaits
+ * its emit instead.
+ */
+const execution_wait_until = (c: {
+	executionCtx: { waitUntil: (promise: Promise<unknown>) => void };
+}): EventWaitUntil | undefined => {
+	const ctx = try_catch(
+		() => c.executionCtx,
+		(cause) => String(cause),
+	);
+	if (!ctx.ok) return undefined;
+	return (promise: Promise<unknown>) => {
+		ctx.value.waitUntil(promise);
+	};
+};
+
+/**
  * Build the `EventDeps` bundle the `ingest_event` service expects.
  * Wires the route layer's `do_router` (per-run stub) into the simpler
- * `(run_id, path, body) → Response` shape the service uses, and
- * promotes the optional pulse emitter to a no-op when absent so the
- * service can always call it.
+ * `(run_id, path, body) → Response` shape the service uses, promotes the
+ * optional pulse emitter to a no-op when absent so the service can always
+ * call it, and threads the request's `waitUntil` (when this Worker
+ * execution context has one) so pulse emits survive past the response
+ * instead of being cancelled by the runtime (#175).
  */
-const make_event_deps = (deps: RoutesDeps): { db: Database; pulse: EventPulseEmitter; do: EventDoRouter } => {
+const make_event_deps = (
+	deps: RoutesDeps,
+	wait_until?: EventWaitUntil,
+): { db: Database; pulse: EventPulseEmitter; do: EventDoRouter; wait_until?: EventWaitUntil } => {
 	const pulse: EventPulseEmitter = deps.pulse ?? { emit: async () => undefined };
 	const do_adapter: EventDoRouter = {
 		fetch: async (run_id, path, body) => {
@@ -455,7 +483,7 @@ const make_event_deps = (deps: RoutesDeps): { db: Database; pulse: EventPulseEmi
 			);
 		},
 	};
-	return { db: deps.db, pulse, do: do_adapter };
+	return { db: deps.db, pulse, do: do_adapter, wait_until };
 };
 
 const do_call = async (deps: RoutesDeps, run_id: string, action: string, body: unknown): Promise<Response> => {
@@ -674,7 +702,7 @@ export const make_routes = <Env extends object = object>(deps_factory: (env: Env
 		const header_key = c.req.header("x-idempotency-key");
 		const idempotency_key = header_key !== undefined && header_key !== "" ? header_key : parsed.data.idempotency_key;
 
-		const event_deps = make_event_deps(deps);
+		const event_deps = make_event_deps(deps, execution_wait_until(c));
 		const result = await ingest_event(event_deps, {
 			run_id,
 			package_id: run.value.package_id,

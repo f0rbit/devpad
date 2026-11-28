@@ -1,5 +1,5 @@
 import { Database as BunSqlite } from "bun:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it } from "bun:test";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { pipeline_package, pipeline_run, project, user } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -212,7 +212,7 @@ describe("/v1/pipelines/dashboard", () => {
 		const db = make_db();
 		await seed_baseline(db, { with_runs: true });
 		// Different user, not the project owner.
-		const { app, restore } = build_app(db, {
+		const { restore } = build_app(db, {
 			authed: true,
 			pulse_api_base: "https://pulse.test",
 			pulse_internal_key: "internal_secret",
@@ -245,7 +245,6 @@ describe("/v1/pipelines/dashboard", () => {
 
 		const res = await app2.fetch(new Request(`http://test/v1/pipelines/dashboard?project_id=${PROJECT_ID}`));
 		expect(res.status).toBe(403);
-		void app;
 	});
 
 	it("401: no user → unauthorized, no upstream fetch", async () => {
@@ -338,5 +337,3 @@ describe("/v1/pipelines/dashboard", () => {
 		expect(res.status).toBe(400);
 	});
 });
-
-void beforeEach;

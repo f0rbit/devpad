@@ -161,11 +161,11 @@ const deploy = async (worktree: string, env_path: string, log_path: string): Pro
 		for await (const chunk of stream) {
 			const text = decoder.decode(chunk, { stream: true });
 			process.stdout.write(text);
-			void writer.write(text);
+			await writer.write(text);
 		}
 	};
 	await Promise.all([pump(proc.stdout as ReadableStream<Uint8Array>), pump(proc.stderr as ReadableStream<Uint8Array>)]);
-	void writer.end();
+	await writer.end();
 	await proc.exited;
 	console.log(`deploy log: ${log_path}`);
 	return proc.exitCode;

@@ -10,6 +10,7 @@ import { curveBumpX, curveBumpY, line } from "d3-shape";
 import ChevronRight from "lucide-solid/icons/chevron-right";
 import RotateCcw from "lucide-solid/icons/rotate-ccw";
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { CAMERA_LEVELS, create_camera, type CameraLevel, type ViewportSize } from "./camera";
 import CanvasNode from "./canvas-node";
 import {
@@ -292,7 +293,10 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		if (level !== "node" && level !== "detail") return;
 		if (projections_loaded) return;
 		projections_loaded = true;
-		void fetch_node_projections(getBrowserClient(), props.projectId, data().tasks, data().links).then(setProjections);
+		run_task(
+			fetch_node_projections(getBrowserClient(), props.projectId, data().tasks, data().links).then(setProjections),
+			{ component: "canvas-surface", action: "load-projections" },
+		);
 	});
 
 	// P3.3 — one-time placement cue for agent-created nodes the instant the
@@ -322,11 +326,14 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	// "unsaved" instead of implying the pin persisted.
 	const [saveFailed, setSaveFailed] = createSignal(false);
 	const save_view_state = (next_layout: ProjectViewLayoutInput) => {
-		void getBrowserClient()
-			.projects.putViewState(props.projectId, next_layout)
-			.then((result) => {
-				setSaveFailed(!result.ok);
-			});
+		run_task(
+			getBrowserClient()
+				.projects.putViewState(props.projectId, next_layout)
+				.then((result) => {
+					setSaveFailed(!result.ok);
+				}),
+			{ component: "canvas-surface", action: "save-view-state" },
+		);
 	};
 
 	let save_timer: ReturnType<typeof setTimeout> | undefined;
@@ -379,12 +386,15 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 		});
 
 		camera.fit();
-		void revalidate();
-		void getBrowserClient()
-			.projects.getViewState(props.projectId)
-			.then((result) => {
-				if (result.ok) setPins(result.value.pins);
-			});
+		run_task(revalidate(), { component: "canvas-surface", action: "revalidate" });
+		run_task(
+			getBrowserClient()
+				.projects.getViewState(props.projectId)
+				.then((result) => {
+					if (result.ok) setPins(result.value.pins);
+				}),
+			{ component: "canvas-surface", action: "load-view-state" },
+		);
 	});
 
 	let dragging = false;
@@ -485,7 +495,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 	const travel_up = () => {
 		const parent = ancestors().at(0) ?? null;
 		if (parent) {
-			void travel_to(parent.id);
+			run_task(travel_to(parent.id), { component: "canvas-surface", action: "travel" });
 			return;
 		}
 		setSelectedId(null);
@@ -508,7 +518,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 			clearTimeout(pending_timer);
 			pending_timer = undefined;
 			pending_id = null;
-			void travel_to(id);
+			run_task(travel_to(id), { component: "canvas-surface", action: "travel" });
 			return;
 		}
 		pending_id = id;
@@ -601,7 +611,7 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 				}
 				if (e.key === "Enter" && selectedId() !== null) {
 					const id = selectedId();
-					if (id) void travel_to(id);
+					if (id) run_task(travel_to(id), { component: "canvas-surface", action: "travel" });
 					return;
 				}
 				camera.handle_key(e);
@@ -622,7 +632,13 @@ export default function CanvasSurface(props: CanvasSurfaceProps) {
 						{(ancestor) => (
 							<>
 								<ChevronRight class="canvas-icon" size={12} aria-hidden="true" />
-								<button type="button" class="canvas-crumb-btn" onClick={() => void travel_to(ancestor.id)}>
+								<button
+									type="button"
+									class="canvas-crumb-btn"
+									onClick={() => {
+										run_task(travel_to(ancestor.id), { component: "canvas-surface", action: "travel" });
+									}}
+								>
 									{ancestor.title}
 								</button>
 							</>

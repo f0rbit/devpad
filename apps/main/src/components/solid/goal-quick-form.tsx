@@ -6,6 +6,7 @@ import X from "lucide-solid/icons/x";
 import { createSignal, For, Show } from "solid-js";
 import { createStore } from "solid-js/store";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 type Props = {
 	mode: "create" | "edit";
@@ -91,7 +92,7 @@ export function GoalQuickForm({ mode, goal, milestones, onSuccess, onCancel }: P
 
 			<form
 				onSubmit={(e) => {
-					void handleSubmit(e);
+					run_task(handleSubmit(e), { component: "goal-quick-form", action: "submit" });
 				}}
 				class="stack stack-sm"
 			>

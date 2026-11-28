@@ -1,5 +1,6 @@
 import { Button, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Textarea } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 export type Profile = {
 	id: string;
@@ -89,7 +90,12 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 			</ModalHeader>
 
 			<ModalBody>
-				<form onSubmit={(e) => void handleSubmit(e)} class="stack gap-md">
+				<form
+					onSubmit={(e) => {
+						run_task(handleSubmit(e), { component: "profile-editor", action: "submit" });
+					}}
+					class="stack gap-md"
+				>
 					<FormField label="Name" required>
 						<Input
 							value={name()}
@@ -145,7 +151,12 @@ export default function ProfileEditor(props: ProfileEditorProps) {
 				<Button variant="secondary" onClick={props.onClose} disabled={saving()}>
 					Cancel
 				</Button>
-				<Button onClick={(e) => void handleSubmit(e)} disabled={!canSubmit()}>
+				<Button
+					onClick={(e) => {
+						run_task(handleSubmit(e), { component: "profile-editor", action: "submit" });
+					}}
+					disabled={!canSubmit()}
+				>
 					{saving() ? "Saving..." : isEditMode() ? "Save Changes" : "Create Profile"}
 				</Button>
 			</ModalFooter>

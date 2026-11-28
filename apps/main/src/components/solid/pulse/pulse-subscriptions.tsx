@@ -14,6 +14,7 @@ import {
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 type Subscription = {
 	id: string;
@@ -239,7 +240,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 						</Button>
 						<Button
 							onClick={() => {
-								void handleCreate();
+								run_task(handleCreate(), { component: "pulse-subscriptions", action: "create" });
 							}}
 							disabled={loading()}
 							data-testid="pulse-sub-submit"
@@ -268,7 +269,7 @@ export default function PulseSubscriptions(props: PulseSubscriptionsProps) {
 						<Button
 							variant="danger"
 							onClick={() => {
-								void handleDelete();
+								run_task(handleDelete(), { component: "pulse-subscriptions", action: "delete" });
 							}}
 							disabled={loading()}
 						>

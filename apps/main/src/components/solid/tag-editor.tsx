@@ -9,6 +9,7 @@ import Trash from "lucide-solid/icons/trash";
 import X from "lucide-solid/icons/x";
 import { type Accessor, createSignal, For } from "solid-js";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 /* solid-js component that takes a list of tags and gives create, update, and delete options to the user. */
 
@@ -79,7 +80,7 @@ export function TagEditor({ tags, owner_id }: { tags: Tag[]; owner_id: string })
 			<a
 				role="button"
 				onClick={() => {
-					void save();
+					run_task(save(), { component: "tag-editor", action: "save" });
 				}}
 				class="row row-sm"
 				style="margin-top: 10px"

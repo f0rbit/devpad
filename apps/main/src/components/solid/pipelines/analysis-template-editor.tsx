@@ -3,6 +3,7 @@ import type { PipelineAnalysisTemplate } from "@devpad/schema";
 import { try_catch } from "@f0rbit/corpus";
 import { Button, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
 import { createEffect, createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 type AnalysisTemplateEditorProps = {
 	open: boolean;
@@ -170,7 +171,7 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 				</Button>
 				<Button
 					onClick={() => {
-						void handleSave();
+						run_task(handleSave(), { component: "analysis-template-editor", action: "save" });
 					}}
 					disabled={loading() || name().trim() === "" || thresholdDsl().trim() === ""}
 				>

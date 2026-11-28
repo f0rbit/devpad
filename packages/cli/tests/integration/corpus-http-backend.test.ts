@@ -152,7 +152,12 @@ const start_test_server = async (): Promise<ServerHandle> => {
 		}
 	};
 	const server = http.createServer((req, res) => {
-		void handle_request(req, res);
+		// createServer's callback can't await. `handle_request` catches
+		// internally, so a rejection is a test-harness bug — rethrow so bun
+		// surfaces it instead of the promise being dropped.
+		handle_request(req, res).catch((e: unknown) => {
+			throw e;
+		});
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();

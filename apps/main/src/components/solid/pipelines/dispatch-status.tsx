@@ -20,6 +20,7 @@ import type { PipelineDispatchEntry, PipelineDispatches } from "@devpad/api";
 import { getBrowserClient } from "@devpad/core/ui/client";
 import { Badge, Button, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 import { short_sha } from "@/utils/pipeline-external";
 
@@ -61,7 +62,7 @@ const DispatchStatusPanelContent = (props: DispatchStatusPanelProps) => {
 	};
 
 	onMount(() => {
-		void load();
+		run_task(load(), { component: "dispatch-status", action: "load" });
 	});
 
 	const has_failed_dispatch = () =>
@@ -120,7 +121,7 @@ const DispatchStatusPanelContent = (props: DispatchStatusPanelProps) => {
 						disabled={redispatching()}
 						data-testid="dispatch-redispatch"
 						onClick={() => {
-							void redispatch();
+							run_task(redispatch(), { component: "dispatch-status", action: "redispatch" });
 						}}
 					>
 						Re-dispatch

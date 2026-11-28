@@ -1,5 +1,6 @@
 import { Checkbox, Collapsible } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 import { AsyncState } from "../resource-state";
 import { useSettings } from "./use-settings";
@@ -45,11 +46,15 @@ export default function RedditSettings(props: Props) {
 	};
 
 	const toggleHideComments = () => {
-		void updateSetting<RedditSettingsData>("hide_comments", !hideComments(), props.settings);
+		run_task(updateSetting<RedditSettingsData>("hide_comments", !hideComments(), props.settings), {
+			component: "reddit-settings",
+		});
 	};
 
 	const toggleHideNsfw = () => {
-		void updateSetting<RedditSettingsData>("hide_nsfw", !hideNsfw(), props.settings);
+		run_task(updateSetting<RedditSettingsData>("hide_nsfw", !hideNsfw(), props.settings), {
+			component: "reddit-settings",
+		});
 	};
 
 	const visibleCount = () => {
@@ -104,7 +109,9 @@ export default function RedditSettings(props: Props) {
 												<div class={`repo-item ${isHidden() ? "repo-hidden" : ""}`}>
 													<Checkbox
 														checked={!isHidden()}
-														onChange={() => void toggleSubreddit(subreddit)}
+														onChange={() => {
+															run_task(toggleSubreddit(subreddit), { component: "reddit-settings" });
+														}}
 														disabled={isUpdating()}
 														label={`r/${subreddit}`}
 													/>

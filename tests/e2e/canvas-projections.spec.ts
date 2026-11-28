@@ -230,9 +230,9 @@ test.describe("canvas home — P3 verification", () => {
 		await inject_test_user(context);
 
 		let docs_requests = 0;
-		await page.route("**/docs?**", (route) => {
+		await page.route("**/docs?**", async (route) => {
 			docs_requests++;
-			void route.continue();
+			await route.continue();
 		});
 
 		await openCanvas(page);

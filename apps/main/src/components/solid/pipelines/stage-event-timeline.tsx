@@ -21,6 +21,7 @@ import type { PipelineStageEvent, StageEventKind } from "@devpad/schema";
 import { try_catch } from "@f0rbit/corpus";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 
 type StageEventTimelineProps = {
@@ -128,7 +129,7 @@ const StageEventTimelineContent = (props: StageEventTimelineProps) => {
 	};
 
 	onMount(() => {
-		void load();
+		run_task(load(), { component: "stage-event-timeline", action: "load" });
 	});
 
 	return (

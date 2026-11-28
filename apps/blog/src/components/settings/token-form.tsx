@@ -1,5 +1,6 @@
 import { Button, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Textarea } from "@f0rbit/ui";
 import { type Component, createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { form } from "../../lib/form-utils";
 
 type TokenFormProps = {
@@ -72,7 +73,12 @@ const TokenForm: Component<TokenFormProps> = (props) => {
 									<label>API Key (copy now - shown only once)</label>
 									<div class="row" style={{ gap: "8px" }}>
 										<input type="text" value={generatedKey() ?? ""} readonly class="font-mono" style={{ flex: 1 }} />
-										<Button variant="secondary" onClick={() => void copyToClipboard()}>
+										<Button
+											variant="secondary"
+											onClick={() => {
+												run_task(copyToClipboard(), { component: "token-form", action: "copy" });
+											}}
+										>
 											Copy
 										</Button>
 									</div>
@@ -91,7 +97,12 @@ const TokenForm: Component<TokenFormProps> = (props) => {
 				}
 			>
 				<ModalBody>
-					<form onSubmit={(e) => void handleSubmit(e)} class="modal-form">
+					<form
+						onSubmit={(e) => {
+							run_task(handleSubmit(e), { component: "token-form", action: "submit" });
+						}}
+						class="modal-form"
+					>
 						<Show when={formState.error()}>
 							<div
 								style={{

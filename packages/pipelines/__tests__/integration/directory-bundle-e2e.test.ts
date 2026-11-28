@@ -104,7 +104,7 @@ const start_test_server = async (): Promise<ServerHandle> => {
 	const backend = create_memory_backend();
 	const puts_by_store = new Map<string, number>();
 	const server = http.createServer((req, res) => {
-		void (async () => {
+		const handled = (async () => {
 			try {
 				const url = req.url ?? "/";
 				const auth = req.headers.authorization ?? "";
@@ -200,6 +200,12 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				send_json(res, 500, { ok: false, error: { code: "internal", message: String(e) } });
 			}
 		})();
+		// createServer's callback can't await. The handler above catches
+		// internally, so a rejection here is a test-harness bug — rethrow so
+		// bun surfaces it instead of the promise being dropped.
+		handled.catch((e: unknown) => {
+			throw e;
+		});
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();

@@ -4,6 +4,7 @@ import Edit from "lucide-solid/icons/edit";
 import X from "lucide-solid/icons/x";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 import { GoalQuickForm } from "./goal-quick-form";
 
 type Props = {
@@ -28,7 +29,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 	// Load milestones and goals when project changes
 	createEffect(() => {
 		if (project_id) {
-			void loadMilestonesAndGoals();
+			run_task(loadMilestonesAndGoals(), { component: "goal-selector", action: "load" });
 		} else {
 			setMilestones([]);
 			setSelected("");
@@ -87,7 +88,7 @@ export function GoalSelector({ project_id, goal_id, onChange, disabled = false }
 
 	const handleQuickFormSuccess = (goal: Goal) => {
 		setShowQuickForm(false);
-		void loadMilestonesAndGoals(); // Refresh data
+		run_task(loadMilestonesAndGoals(), { component: "goal-selector", action: "load" }); // Refresh data
 		setSelected(goal.id);
 		onChange(goal.id);
 	};

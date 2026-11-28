@@ -3,6 +3,7 @@ import type { PulseSummary } from "@devpad/api";
 import type { Document, Signoff, Task } from "@devpad/schema";
 import { Badge, Button } from "@f0rbit/ui";
 import { createSignal, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { diffLines } from "@/utils/text-diff";
 
 export type CheckpointsProps = { task: Task };
@@ -47,10 +48,13 @@ function latest_doc_of_kind(docs: Document[], kind: Document["kind"]): Document 
 function useDocForTask(task: Task, kind: Document["kind"]): () => Document | undefined {
 	const [doc, setDoc] = createSignal<Document | undefined>(undefined);
 	onMount(() => {
-		void (async () => {
-			const result = await getBrowserClient().docs.list({ project_id: task.project_id ?? "", task_id: task.id });
-			if (result.ok) setDoc(latest_doc_of_kind(result.value, kind));
-		})();
+		run_task(
+			(async () => {
+				const result = await getBrowserClient().docs.list({ project_id: task.project_id ?? "", task_id: task.id });
+				if (result.ok) setDoc(latest_doc_of_kind(result.value, kind));
+			})(),
+			{ component: "checkpoints", action: "load-doc" },
+		);
 	});
 	return doc;
 }
@@ -64,10 +68,13 @@ function useStageDecision(task: Task, checkpoint: "plan" | "types") {
 	const [error, setError] = createSignal<string | null>(null);
 
 	onMount(() => {
-		void (async () => {
-			const result = await client.signoffs.findPending({ subject_kind: "stage", subject_id: task.id, checkpoint });
-			if (result.ok) setPending(result.value);
-		})();
+		run_task(
+			(async () => {
+				const result = await client.signoffs.findPending({ subject_kind: "stage", subject_id: task.id, checkpoint });
+				if (result.ok) setPending(result.value);
+			})(),
+			{ component: "checkpoints", action: "load-signoff" },
+		);
 	});
 
 	async function decide(decision: "approved" | "changes_requested"): Promise<void> {
@@ -123,7 +130,7 @@ function PlanCheckpointCard(props: { task: Task }) {
 						data-testid="checkpoint-approve-plan"
 						disabled={submitting()}
 						onClick={() => {
-							void decide("approved");
+							run_task(decide("approved"), { component: "checkpoints", action: "decide" });
 						}}
 					>
 						Approve
@@ -132,7 +139,7 @@ function PlanCheckpointCard(props: { task: Task }) {
 						variant="ghost"
 						disabled={submitting()}
 						onClick={() => {
-							void decide("changes_requested");
+							run_task(decide("changes_requested"), { component: "checkpoints", action: "decide" });
 						}}
 					>
 						Request changes
@@ -153,47 +160,53 @@ function TypesCheckpointCard(props: { task: Task }) {
 	const [metricName, setMetricName] = createSignal<string | null>(null);
 
 	onMount(() => {
-		void (async () => {
-			const near_result = await client.tasks.near(props.task.id, 1);
-			if (near_result.ok) {
-				const edge = near_result.value.links.find((l) => l.kind === "tracks_metric" && l.src_id === props.task.id);
-				// `task_link.ref` is a typed json column: the metric variant is `{ type: "metric", name }`.
-				const ref = edge?.ref;
-				if (ref?.type === "metric") setMetricName(ref.name);
-			}
+		run_task(
+			(async () => {
+				const near_result = await client.tasks.near(props.task.id, 1);
+				if (near_result.ok) {
+					const edge = near_result.value.links.find((l) => l.kind === "tracks_metric" && l.src_id === props.task.id);
+					// `task_link.ref` is a typed json column: the metric variant is `{ type: "metric", name }`.
+					const ref = edge?.ref;
+					if (ref?.type === "metric") setMetricName(ref.name);
+				}
 
-			if (props.task.project_id) {
-				const summary_result = await client.pulse.summary({ project_id: props.task.project_id, range: "24h" });
-				if (summary_result.ok) setPulse(summary_result.value);
-				else setPulseError(true);
-			}
-		})();
+				if (props.task.project_id) {
+					const summary_result = await client.pulse.summary({ project_id: props.task.project_id, range: "24h" });
+					if (summary_result.ok) setPulse(summary_result.value);
+					else setPulseError(true);
+				}
+			})(),
+			{ component: "checkpoints", action: "load-metrics" },
+		);
 	});
 
 	onMount(() => {
-		void (async () => {
-			const result = await client.docs.list({ project_id: props.task.project_id ?? "", task_id: props.task.id });
-			if (!result.ok) return;
-			const interface_doc = latest_doc_of_kind(result.value, "interface");
-			if (!interface_doc) return;
-			const versions = await client.docs.versions(interface_doc.id);
-			if (!versions.ok || versions.value.length === 0) return;
-			if (versions.value.length < 2) {
-				setClassification("single-version");
-				return;
-			}
-			const [newer, older] = versions.value;
-			const [newer_content, older_content] = await Promise.all([
-				client.docs.pull(interface_doc.id, newer.version),
-				client.docs.pull(interface_doc.id, older.version),
-			]);
-			if (!newer_content.ok || !older_content.ok || !newer_content.value.content || !older_content.value.content)
-				return;
-			const lines = diffLines(older_content.value.content.html, newer_content.value.content.html);
-			if (lines.every((l) => l.kind === "same")) setClassification("unchanged");
-			else if (lines.some((l) => l.kind === "remove")) setClassification("breaking");
-			else setClassification("additive");
-		})();
+		run_task(
+			(async () => {
+				const result = await client.docs.list({ project_id: props.task.project_id ?? "", task_id: props.task.id });
+				if (!result.ok) return;
+				const interface_doc = latest_doc_of_kind(result.value, "interface");
+				if (!interface_doc) return;
+				const versions = await client.docs.versions(interface_doc.id);
+				if (!versions.ok || versions.value.length === 0) return;
+				if (versions.value.length < 2) {
+					setClassification("single-version");
+					return;
+				}
+				const [newer, older] = versions.value;
+				const [newer_content, older_content] = await Promise.all([
+					client.docs.pull(interface_doc.id, newer.version),
+					client.docs.pull(interface_doc.id, older.version),
+				]);
+				if (!newer_content.ok || !older_content.ok || !newer_content.value.content || !older_content.value.content)
+					return;
+				const lines = diffLines(older_content.value.content.html, newer_content.value.content.html);
+				if (lines.every((l) => l.kind === "same")) setClassification("unchanged");
+				else if (lines.some((l) => l.kind === "remove")) setClassification("breaking");
+				else setClassification("additive");
+			})(),
+			{ component: "checkpoints", action: "classify-interface" },
+		);
 	});
 
 	return (
@@ -260,7 +273,7 @@ function TypesCheckpointCard(props: { task: Task }) {
 						data-testid="checkpoint-approve-types"
 						disabled={submitting()}
 						onClick={() => {
-							void decide("approved");
+							run_task(decide("approved"), { component: "checkpoints", action: "decide" });
 						}}
 					>
 						Approve
@@ -269,7 +282,7 @@ function TypesCheckpointCard(props: { task: Task }) {
 						variant="ghost"
 						disabled={submitting()}
 						onClick={() => {
-							void decide("changes_requested");
+							run_task(decide("changes_requested"), { component: "checkpoints", action: "decide" });
 						}}
 					>
 						Request changes

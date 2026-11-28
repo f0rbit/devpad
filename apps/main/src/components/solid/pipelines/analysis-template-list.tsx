@@ -6,6 +6,7 @@ import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import AnalysisTemplateEditor from "./analysis-template-editor";
 
 type AnalysisTemplateListProps = {
@@ -154,7 +155,7 @@ export default function AnalysisTemplateList(props: AnalysisTemplateListProps) {
 										variant="ghost"
 										disabled={deletingId() === t.id}
 										onClick={() => {
-											void handleDelete(t);
+											run_task(handleDelete(t), { component: "analysis-template-list", action: "delete" });
 										}}
 										data-testid="analysis-template-delete"
 									>

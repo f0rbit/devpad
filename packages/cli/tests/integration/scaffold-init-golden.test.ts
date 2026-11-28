@@ -10,7 +10,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, test } from "bun:test";
@@ -220,7 +220,3 @@ describe("scaffold_package — typecheck", () => {
 		await rm(path.dirname(target), { recursive: true, force: true });
 	}, 60_000);
 });
-
-// Silence unused-import warning when stat is dead-stripped — keep it
-// available for future tree-comparison improvements.
-void stat;

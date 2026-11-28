@@ -4,6 +4,7 @@ import { Badge, Empty } from "@f0rbit/ui";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import { checkpointForDocKind } from "@/utils/checkpoint";
 import { diffLines, docContentForDiff, type DiffLine } from "@/utils/text-diff";
+import { run_task } from "@/lib/run-task";
 import AnnotationRail from "./annotation-rail";
 
 export type DocViewerProps = {
@@ -150,7 +151,10 @@ export default function DocViewer(props: DocViewerProps) {
 										title="Diff vs previous version"
 										aria-label="Diff vs previous version"
 										onClick={() => {
-											void showDiff(v.version, versions()[i() + 1]?.version ?? v.version);
+											run_task(showDiff(v.version, versions()[i() + 1]?.version ?? v.version), {
+												component: "doc-viewer",
+												action: "diff",
+											});
 										}}
 									>
 										⇆
@@ -209,7 +213,7 @@ export default function DocViewer(props: DocViewerProps) {
 							checkpoint={checkpoint()}
 							getIframe={() => iframeRef}
 							onChanged={(fresh) => {
-								void handleAnnotationChange(fresh);
+								run_task(handleAnnotationChange(fresh), { component: "doc-viewer", action: "annotation-change" });
 							}}
 						/>
 					</Show>

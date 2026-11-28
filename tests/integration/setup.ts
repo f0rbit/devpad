@@ -301,11 +301,19 @@ const cleanup = async () => {
 	await performCleanup();
 };
 
-process.on("exit", () => void cleanup());
-process.on("SIGINT", () => void cleanup());
-process.on("SIGTERM", () => void cleanup());
-process.on("uncaughtException", () => void cleanup());
-process.on("unhandledRejection", () => void cleanup());
+// Process-event handlers can't await — hand the promise a rejection handler
+// that logs, so a failed cleanup is visible rather than dropped.
+const run_cleanup = (): void => {
+	cleanup().catch((error: unknown) => {
+		log(`cleanup failed: ${String(error)}`);
+	});
+};
+
+process.on("exit", run_cleanup);
+process.on("SIGINT", run_cleanup);
+process.on("SIGTERM", run_cleanup);
+process.on("uncaughtException", run_cleanup);
+process.on("unhandledRejection", run_cleanup);
 
 async function startHonoServer(): Promise<void> {
 	log("Starting shared Hono server in-process...");

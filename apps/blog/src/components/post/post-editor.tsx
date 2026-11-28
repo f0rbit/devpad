@@ -2,6 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button, ChipInput } from "@f0rbit/ui";
 import type { Component } from "solid-js";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { unwrap } from "../../lib/client";
 import { date } from "../../lib/date-utils";
 import { form } from "../../lib/form-utils";
@@ -144,7 +145,7 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 		}
 	};
 	onMount(() => {
-		void initPostEditor();
+		run_task(initPostEditor(), { component: "post-editor", action: "init" });
 	});
 
 	const isEditing = () => !!props.post;
@@ -292,7 +293,9 @@ const PostEditor: Component<PostEditorProps> = (props) => {
 					<div class="post-editor__actions">
 						<Button
 							variant="primary"
-							onClick={() => void handleSave()}
+							onClick={() => {
+								run_task(handleSave(), { component: "post-editor", action: "save" });
+							}}
 							disabled={formState.submitting()}
 							loading={formState.submitting()}
 						>

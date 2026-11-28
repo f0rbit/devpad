@@ -1,6 +1,7 @@
 import type { Category as SchemaCategory } from "@devpad/schema/blog";
 import { Button, Dropdown, DropdownItem, DropdownMenu, DropdownTrigger, Input } from "@f0rbit/ui";
 import { type Component, createEffect, createSignal, For } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { form } from "../../lib/form-utils";
 
 type Category = Pick<SchemaCategory, "id" | "name" | "parent">;
@@ -49,7 +50,12 @@ const CategoryForm: Component<CategoryFormProps> = (props) => {
 			classList={{ "category-form-section--highlighted": props.highlighted }}
 		>
 			<h3 class="category-form-title">New Category</h3>
-			<form onSubmit={(e) => void handleSubmit(e)} class="category-form">
+			<form
+				onSubmit={(e) => {
+					run_task(handleSubmit(e), { component: "category-form", action: "submit" });
+				}}
+				class="category-form"
+			>
 				<div class="form-row">
 					<label for="category-name" class="text-xs text-subtle">
 						Name

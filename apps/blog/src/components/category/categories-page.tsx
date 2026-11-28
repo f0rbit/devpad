@@ -3,6 +3,7 @@ import type { Category as SchemaCategory } from "@devpad/schema/blog";
 import { Button, buildTree, Spinner, Tree } from "@f0rbit/ui";
 import { type Component, createMemo, createResource, createSignal, Show } from "solid-js";
 import { unwrap } from "@/lib/client";
+import { run_task } from "@/lib/run-task";
 import CategoryForm from "./category-form";
 
 type Category = Pick<SchemaCategory, "id" | "name" | "parent">;
@@ -184,7 +185,9 @@ const CategoriesPage: Component<Props> = (props) => {
 												variant="ghost"
 												icon
 												size="sm"
-												onClick={() => void handleDelete(node.id)}
+												onClick={() => {
+													run_task(handleDelete(node.id), { component: "categories-page", action: "delete" });
+												}}
 												label={`Delete ${node.label}`}
 											>
 												<IconMinus />

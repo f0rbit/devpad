@@ -1,5 +1,6 @@
 import { FormField, Input } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 import { format } from "@/utils/formatters";
 
@@ -76,7 +77,12 @@ export default function PlatformSetupForm(props: Props) {
 	};
 
 	return (
-		<form onSubmit={(e) => void handleSubmit(e)} class="setup-form">
+		<form
+			onSubmit={(e) => {
+				run_task(handleSubmit(e), { component: "platform-setup-form", action: "submit" });
+			}}
+			class="setup-form"
+		>
 			<FormField label={config().tokenLabel} id="platform-token" required>
 				<Input
 					id="platform-token"

@@ -3,6 +3,7 @@ import type { AuthUser } from "@devpad/schema/bindings";
 import { Button } from "@f0rbit/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
 import { unwrap } from "@/lib/client";
+import { run_task } from "@/lib/run-task";
 import { date } from "../../lib/date-utils";
 import DevpadConnection from "./devpad-connection";
 import TokenForm from "./token-form";
@@ -70,7 +71,7 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const refetchTokens = () => {
 		setTokensLoading(true);
 		setTokensError(null);
-		void fetchTokens();
+		run_task(fetchTokens(), { component: "settings-page", action: "fetch-tokens" });
 	};
 
 	const handleToggle = async (id: string, enabled: boolean) => {
@@ -213,8 +214,12 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 						{(tokenList) => (
 							<TokenList
 								tokens={tokenList}
-								onToggle={(id, enabled) => void handleToggle(id, enabled)}
-								onDelete={(id) => void handleDelete(id)}
+								onToggle={(id, enabled) => {
+									run_task(handleToggle(id, enabled), { component: "settings-page", action: "toggle" });
+								}}
+								onDelete={(id) => {
+									run_task(handleDelete(id), { component: "settings-page", action: "delete" });
+								}}
 							/>
 						)}
 					</Show>

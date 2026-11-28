@@ -2,6 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineRun, PipelineStageEvent } from "@devpad/schema";
 import { Badge, Button } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import IslandBoundary, { report_island_error } from "@/components/solid/pipelines/island-boundary";
 import {
 	decision_for_transition,
@@ -247,7 +248,7 @@ const StageGateContent = (props: StageGateProps) => {
 							variant="primary"
 							disabled={loading() !== null}
 							onClick={() => {
-								void submit_decision("approved");
+								run_task(submit_decision("approved"), { component: "stage-gate", action: "approve" });
 							}}
 							data-testid="stage-gate-approve"
 						>
@@ -258,7 +259,7 @@ const StageGateContent = (props: StageGateProps) => {
 							variant="danger"
 							disabled={loading() !== null}
 							onClick={() => {
-								void submit_decision("denied");
+								run_task(submit_decision("denied"), { component: "stage-gate", action: "deny" });
 							}}
 							data-testid="stage-gate-deny"
 						>

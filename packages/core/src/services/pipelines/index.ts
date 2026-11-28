@@ -45,6 +45,7 @@ export {
 	type EventDoRouter,
 	type EventPulseEmitter,
 	type EventValidationError,
+	type EventWaitUntil,
 	type IngestEventInput,
 	type IngestEventOutput,
 	type IngestTick,

@@ -3,6 +3,7 @@ import type { PublicHook } from "@devpad/api";
 import type { HookDelivery, HookDeliveryStatus } from "@devpad/schema";
 import { Badge, Select } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 export type HookDeliveriesProps = { projectId: string };
 
@@ -44,7 +45,9 @@ export default function HookDeliveries(props: HookDeliveriesProps) {
 		setHooks(result.value);
 		await loadDeliveries(result.value, statusFilter());
 	}
-	onMount(() => void load());
+	onMount(() => {
+		run_task(load(), { component: "hook-deliveries", action: "load" });
+	});
 
 	async function changeFilter(status: HookDeliveryStatus | "all"): Promise<void> {
 		setStatusFilter(status);
@@ -72,7 +75,10 @@ export default function HookDeliveries(props: HookDeliveriesProps) {
 					data-testid="hook-delivery-status-filter"
 					value={statusFilter()}
 					onChange={(e) => {
-						void changeFilter(e.currentTarget.value as HookDeliveryStatus | "all");
+						run_task(changeFilter(e.currentTarget.value as HookDeliveryStatus | "all"), {
+							component: "hook-deliveries",
+							action: "filter",
+						});
 					}}
 				>
 					<For each={STATUS_OPTIONS}>{(status) => <option value={status}>{status}</option>}</For>
@@ -99,7 +105,7 @@ export default function HookDeliveries(props: HookDeliveriesProps) {
 								class="thread-action-link"
 								data-testid="hook-toggle-enabled"
 								onClick={() => {
-									void toggle(hook);
+									run_task(toggle(hook), { component: "hook-deliveries", action: "toggle" });
 								}}
 							>
 								{hook.enabled ? "disable" : "enable"}

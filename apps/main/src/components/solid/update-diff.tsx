@@ -7,6 +7,7 @@ import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 type Props = {
 	items: UpdateData[];
@@ -141,7 +142,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				<a
 					role="button"
 					onClick={() => {
-						void saveActions();
+						run_task(saveActions(), { component: "update-diff", action: "save" });
 					}}
 					class="row row-sm"
 				>
@@ -150,7 +151,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				<a
 					role="button"
 					onClick={() => {
-						void ignoreUpdate();
+						run_task(ignoreUpdate(), { component: "update-diff", action: "ignore" });
 					}}
 					class="row row-sm"
 				>

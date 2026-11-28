@@ -1,5 +1,6 @@
 import { Checkbox } from "@f0rbit/ui";
 import { createSignal } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 
 type Props = {
@@ -35,13 +36,17 @@ export default function BlueskySettings(props: Props) {
 				<Checkbox checked={true} onChange={() => {}} label="Include my posts" disabled />
 				<Checkbox
 					checked={includeReplies()}
-					onChange={() => void updateSetting("include_replies", !includeReplies())}
+					onChange={() => {
+						run_task(updateSetting("include_replies", !includeReplies()), { component: "bluesky-settings" });
+					}}
 					label="Include replies"
 					disabled={updating()}
 				/>
 				<Checkbox
 					checked={includeReposts()}
-					onChange={() => void updateSetting("include_reposts", !includeReposts())}
+					onChange={() => {
+						run_task(updateSetting("include_reposts", !includeReposts()), { component: "bluesky-settings" });
+					}}
 					label="Include reposts"
 					disabled={updating()}
 				/>

@@ -14,6 +14,7 @@ import {
 import { Check, Copy, Eye, Pencil, Plus, Trash2 } from "lucide-solid";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
+import { run_task } from "@/lib/run-task";
 import { apiUrls, getClient } from "@/utils/client";
 import { ErrorDisplay, Loading } from "./resource-state";
 
@@ -169,8 +170,12 @@ export default function ProfileList(props: ProfileListProps) {
 										handleViewTimeline(profile.slug);
 									}}
 									onEdit={() => setEditingProfile(profile)}
-									onDelete={() => void handleDelete(profile)}
-									onCopy={() => void handleCopy(profile.slug)}
+									onDelete={() => {
+										run_task(handleDelete(profile), { component: "profile-list", action: "delete" });
+									}}
+									onCopy={() => {
+										run_task(handleCopy(profile.slug), { component: "profile-list", action: "copy" });
+									}}
 									copied={copiedSlug() === profile.slug}
 								/>
 							}
@@ -179,7 +184,7 @@ export default function ProfileList(props: ProfileListProps) {
 								profile={profile}
 								onSuccess={() => {
 									setEditingProfile(null);
-									void refetch();
+									run_task(Promise.resolve(refetch()), { component: "profile-list", action: "refetch" });
 								}}
 								onCancel={() => setEditingProfile(null)}
 							/>
@@ -305,7 +310,11 @@ function CreateProfileForm(props: CreateProfileFormProps) {
 
 	return (
 		<Card>
-			<form onSubmit={(e) => void handleSubmit(e)}>
+			<form
+				onSubmit={(e) => {
+					run_task(handleSubmit(e), { component: "profile-list", action: "submit" });
+				}}
+			>
 				<CardHeader>
 					<CardTitle>Create New Profile</CardTitle>
 				</CardHeader>
@@ -399,7 +408,11 @@ function EditProfileForm(props: EditProfileFormProps) {
 
 	return (
 		<Card>
-			<form onSubmit={(e) => void handleSubmit(e)}>
+			<form
+				onSubmit={(e) => {
+					run_task(handleSubmit(e), { component: "profile-list", action: "submit" });
+				}}
+			>
 				<CardHeader>
 					<CardTitle>Edit Profile</CardTitle>
 				</CardHeader>

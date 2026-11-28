@@ -5,6 +5,7 @@ import Copy from "lucide-solid/icons/copy";
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
 import { track } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 type PulseCreateIngestKeyProps = {
 	projectId: string;
@@ -37,7 +38,7 @@ export default function PulseCreateIngestKey(props: PulseCreateIngestKeyProps) {
 	const handleCopy = () => {
 		const key = createdKey();
 		if (!key) return;
-		void navigator.clipboard.writeText(key);
+		run_task(navigator.clipboard.writeText(key), { component: "pulse-create-ingest-key", action: "copy" });
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
 	};
@@ -46,7 +47,7 @@ export default function PulseCreateIngestKey(props: PulseCreateIngestKeyProps) {
 		<div class="stack stack-sm">
 			<Button
 				onClick={() => {
-					void handleCreate();
+					run_task(handleCreate(), { component: "pulse-create-ingest-key", action: "create" });
 				}}
 				disabled={loading()}
 				data-testid="pulse-create-key"

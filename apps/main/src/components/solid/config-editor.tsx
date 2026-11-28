@@ -9,6 +9,7 @@ import X from "lucide-solid/icons/x";
 import { type Accessor, createEffect, createSignal, For, Index } from "solid-js";
 import { createStore } from "solid-js/store";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 // Default configurations for helper tags
 const DEFAULT_CONFIGS = {
@@ -349,7 +350,7 @@ const TodoScannerConfig = ({
 				<a
 					role="button"
 					onClick={() => {
-						void save();
+						run_task(save(), { component: "config-editor", action: "save" });
 					}}
 					title="Export Config"
 					class="row row-sm"
