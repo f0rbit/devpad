@@ -1347,7 +1347,7 @@ export const action_analysis_templates_list =
 			return;
 		}
 		for (const t of result.value) {
-			const dsl_text = typeof t.threshold_dsl === "string" ? t.threshold_dsl : JSON.stringify(t.threshold_dsl ?? "");
+			const dsl_text = t.threshold_dsl;
 			const dsl_lines = dsl_text.split("\n").filter((l: string) => l.trim().length > 0).length;
 			console.log(
 				`  ${chalk.bold(t.id)}  ${chalk.cyan(t.name)}  ${String(dsl_lines)} threshold(s)  ${String(t.window_ms)}ms`,

@@ -447,7 +447,7 @@ export async function seed_outline_fixtures(db: DrizzleDatabase): Promise<void> 
 		src_id: E2E_TASK_STAGE_REVIEW,
 		dst_id: null,
 		kind: "tracks_metric",
-		ref: { metric_name: "error_rate" },
+		ref: { type: "metric", name: "error_rate" },
 		note: null,
 		created_at: SEED_NOW,
 		updated_at: SEED_NOW,

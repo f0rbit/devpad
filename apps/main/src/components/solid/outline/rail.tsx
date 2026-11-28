@@ -1,6 +1,5 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { Task, TaskLink } from "@devpad/schema";
-import { external_ref } from "@devpad/schema";
+import type { ExternalRef, Task, TaskLink } from "@devpad/schema";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Ring } from "./ring";
 import type { RollupCounts } from "./types";
@@ -15,10 +14,8 @@ type RailProps = {
 
 type NearState = { links: TaskLink[]; tasksById: Partial<Record<string, Task>> };
 
-const refLabel = (raw: unknown): string | null => {
-	const parsed = external_ref.safeParse(raw);
-	if (!parsed.success) return null;
-	const ref = parsed.data;
+const refLabel = (ref: ExternalRef | null): string | null => {
+	if (ref === null) return null;
 	switch (ref.type) {
 		case "pr":
 			return `PR ${ref.url}`;

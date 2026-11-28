@@ -32,7 +32,7 @@ import type { CloudflareProvider } from "@devpad/pipeline-fakes";
 import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
-import { type ExternalTarget } from "@devpad/schema/validation";
+import { type ExternalTarget, type ResolvedGates, type ResolvedRollout } from "@devpad/schema/validation";
 import type { ApprovalDecision, PipelineRun, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
 import { pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -55,6 +55,7 @@ import {
 } from "./external-deploy.js";
 import { get_package } from "./packages.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
+import { parse_run_row } from "./row-parse.js";
 import { resolve_script_name } from "./script-name.js";
 import { record_stage_event_row } from "./stage-events.js";
 import {
@@ -155,7 +156,7 @@ export const external_plan = (
 	external_timeout_ms: external_target.timeout_ms,
 });
 
-const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "atomic"): unknown => {
+const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "atomic"): ResolvedRollout => {
 	if (shape === "atomic") return { type: "atomic" };
 	return {
 		type: "gradual",
@@ -165,8 +166,8 @@ const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "at
 	};
 };
 
-const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Record<string, unknown> => {
-	const out: Record<string, unknown> = {};
+const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): ResolvedGates => {
+	const out: ResolvedGates = {};
 	for (const key of Object.keys(gates)) {
 		const g = gates[key as TransitionKey];
 		if (g.type === "analysis") out[key] = { type: "analysis", template: g.template.template_id };
@@ -235,8 +236,8 @@ export const create_run = async (
 		kind,
 		status: "queued",
 		current_stage: plan.stages[0]?.name ?? null,
-		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape) as never,
-		resolved_gates: gates_to_resolved_gates_json(plan.gates) as never,
+		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape),
+		resolved_gates: gates_to_resolved_gates_json(plan.gates),
 		forced_atomic_reason: plan.forced_reason,
 		started_at: now,
 		finished_at: null,
@@ -330,8 +331,8 @@ export const create_external_run = async (
 		kind,
 		status: "queued",
 		current_stage: plan.stages[0]?.name ?? null,
-		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape) as never,
-		resolved_gates: gates_to_resolved_gates_json(plan.gates) as never,
+		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape),
+		resolved_gates: gates_to_resolved_gates_json(plan.gates),
 		forced_atomic_reason: plan.forced_reason,
 		started_at: now,
 		finished_at: null,
@@ -373,7 +374,7 @@ export const get_run = async (db: Database, run_id: string): Promise<Result<Pipe
 		const rows = await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id));
 		const row = rows.at(0);
 		if (!row) return err({ kind: "not_found", resource: "pipeline_run", id: run_id });
-		return ok(row);
+		return parse_run_row(row);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to read pipeline_run ${run_id}: ${String(e)}` });
 	}
@@ -409,7 +410,13 @@ export const list_runs = async (
 					? base.where(conditions[0])
 					: base.where(and(...conditions));
 		const rows = await where.orderBy(desc(pipeline_run.created_at)).limit(limit);
-		return ok(rows);
+		const parsed: PipelineRun[] = [];
+		for (const row of rows) {
+			const checked = parse_run_row(row);
+			if (!checked.ok) return checked;
+			parsed.push(checked.value);
+		}
+		return ok(parsed);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to list pipeline_run: ${String(e)}` });
 	}
@@ -798,7 +805,7 @@ const package_script_for_stage = async (
 		const script_name = resolve_script_name({
 			package: {
 				name: pkg.name,
-				script_name_overrides: pkg.script_name_overrides as Record<string, string> | null,
+				script_name_overrides: pkg.script_name_overrides,
 			},
 			stage_name,
 		});

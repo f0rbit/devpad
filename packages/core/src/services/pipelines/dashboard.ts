@@ -19,7 +19,7 @@
 
 import { pipeline_approval, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import type { DashboardResponse } from "@devpad/schema/validation";
+import type { DashboardResponse, ResolvedGates } from "@devpad/schema/validation";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, gte } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
@@ -265,7 +265,7 @@ export const get_dashboard = async (
 		status: string;
 		started_at: string | null;
 		finished_at: string | null;
-		resolved_gates: unknown;
+		resolved_gates: ResolvedGates;
 	}>;
 	try {
 		runs = await deps.db
@@ -284,9 +284,7 @@ export const get_dashboard = async (
 	}
 
 	const run_ids = runs.map((r) => r.id);
-	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(
-		runs.map((r) => [r.id, (r.resolved_gates as Record<string, unknown> | null) ?? {}]),
-	);
+	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(runs.map((r) => [r.id, r.resolved_gates]));
 
 	// (2) gate_verdict events for those runs.
 	let verdict_events: Array<{ run_id: string; stage_name: string; payload: unknown }> = [];

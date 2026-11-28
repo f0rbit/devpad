@@ -72,14 +72,14 @@ describe("Pipelines proxy (issue #156)", () => {
 					package_id: OWNED_PACKAGE_ID,
 					version_set_id: "vs_proxy_owned",
 					shape: "gradual",
-					resolved_rollout: {},
+					resolved_rollout: { type: "atomic" },
 					resolved_gates: {},
 				},
 				{
 					package_id: OTHER_PACKAGE_ID,
 					version_set_id: "vs_proxy_other",
 					shape: "gradual",
-					resolved_rollout: {},
+					resolved_rollout: { type: "atomic" },
 					resolved_gates: {},
 				},
 			])

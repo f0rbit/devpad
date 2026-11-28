@@ -31,6 +31,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createLogger } from "../../utils/logger.js";
 import type { ServiceError } from "../errors.js";
+import { parse_run_row } from "./row-parse.js";
 
 const logger = createLogger("pipelines.events");
 
@@ -187,6 +188,9 @@ export const ingest_event = async (
 	if (!run_row) {
 		return err({ kind: "not_found", resource: "pipeline_run", id: input.run_id } satisfies ServiceError);
 	}
+	const checked_run = parse_run_row(run_row);
+	if (!checked_run.ok) return checked_run;
+	run_row = checked_run.value;
 	if (run_row.package_id !== input.package_id) {
 		return err({
 			kind: "forbidden",
@@ -232,7 +236,7 @@ export const ingest_event = async (
 			ts: now,
 			idempotency_hash: hash,
 		};
-		await deps.db.insert(pipeline_stage_event).values(insert_values as never);
+		await deps.db.insert(pipeline_stage_event).values(insert_values);
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		if (message.includes("UNIQUE constraint failed") && message.includes("pipeline_stage_event.idempotency_hash")) {
@@ -368,7 +372,7 @@ const find_key_collision = async (
 		const rows = await db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
 		for (const row of rows) {
 			if (row.idempotency_hash === current_hash) continue;
-			const payload = row.payload as Record<string, unknown> | null;
+			const payload = row.payload;
 			if (payload && payload.idempotency_key === idempotency_key) {
 				return ok(row);
 			}

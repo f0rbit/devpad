@@ -1,5 +1,6 @@
 import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { GateVerdict, StageContext } from "@devpad/pipeline-templates";
+import { analysis_threshold_dsl } from "@devpad/schema/validation";
 import {
 	pipeline_analysis_template,
 	pipeline_package,
@@ -46,10 +47,17 @@ const read_analysis_template = async (
 			.where(eq(pipeline_analysis_template.id, template_id));
 		const row = rows.at(0);
 		if (!row) return ok(null);
-		const threshold_dsl = typeof row.threshold_dsl === "string" ? row.threshold_dsl : JSON.stringify(row.threshold_dsl);
+		const threshold = analysis_threshold_dsl.safeParse(row.threshold_dsl);
+		if (!threshold.success) {
+			return err({
+				kind: "store_error",
+				operation: "read_analysis_template",
+				message: `pipeline_analysis_template ${row.id} threshold_dsl failed schema: expected the DSL string`,
+			});
+		}
 		return ok({
 			template_id: row.id,
-			threshold_dsl,
+			threshold_dsl: threshold.data,
 			window_ms: row.window_ms,
 		});
 	} catch (e) {
@@ -105,8 +113,8 @@ const read_run_coordinates = async (
 				message: `no deploy_completed event for ${run_id}/${from_stage}`,
 			});
 
-		const payload = (deploy_row.payload as { version_id?: string } | null) ?? {};
-		if (!payload.version_id)
+		const version_id = deploy_row.payload?.version_id;
+		if (typeof version_id !== "string")
 			return err({
 				kind: "store_error",
 				operation: "read_deploy_event",
@@ -115,7 +123,7 @@ const read_run_coordinates = async (
 
 		return ok({
 			package_name: pkg_row.name,
-			version_id: payload.version_id,
+			version_id,
 			deploy_completed_at_ms: Date.parse(deploy_row.ts),
 		});
 	} catch (e) {

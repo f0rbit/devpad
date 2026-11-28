@@ -155,7 +155,13 @@ export const script_name_for = (opts: { name?: string; stage_name?: string } = {
 export async function seed_analysis_template(
 	db: Database,
 	owner_id: string,
-	overrides: { id?: string; name?: string; threshold_dsl?: string; query_dsl?: unknown; window_ms?: number } = {},
+	overrides: {
+		id?: string;
+		name?: string;
+		threshold_dsl?: string;
+		query_dsl?: Record<string, unknown>;
+		window_ms?: number;
+	} = {},
 ): Promise<{ id: string }> {
 	const now = new Date().toISOString();
 	const id = overrides.id ?? "pipeline-analysis-template_default";
@@ -163,8 +169,8 @@ export async function seed_analysis_template(
 		id,
 		owner_id,
 		name: overrides.name ?? "default-analysis",
-		query_dsl: (overrides.query_dsl ?? {}) as never,
-		threshold_dsl: (overrides.threshold_dsl ?? "error_rate < 0.01") as never,
+		query_dsl: overrides.query_dsl ?? {},
+		threshold_dsl: overrides.threshold_dsl ?? "error_rate < 0.01",
 		window_ms: overrides.window_ms ?? 600_000,
 		created_at: now,
 		updated_at: now,

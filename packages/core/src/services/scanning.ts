@@ -1,4 +1,5 @@
-import type { ScanDiffProposal, TodoUpdate, TrackerResult, UpsertTodo } from "@devpad/schema";
+import type { ScanDiffProposal, ScanDiffResult, TodoUpdate, TrackerResult, UpsertTodo } from "@devpad/schema";
+import { scan_diff_results_stored, scan_parsed_tasks_stored } from "@devpad/schema/validation";
 import { action, codebase_tasks, project, task, todo_updates, tracker_result } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -96,7 +97,7 @@ export async function* initiateScan(
 		.insert(tracker_result)
 		.values({
 			project_id,
-			data: JSON.stringify(parsed_tasks),
+			data: parsed_tasks,
 		})
 		.returning();
 
@@ -152,13 +153,13 @@ export async function* initiateScan(
 		project_id,
 		new_id,
 		old_id: old_result[0]?.id ?? null,
-		data: JSON.stringify(diff_results_with_proposals),
+		data: diff_results_with_proposals,
 	});
 
 	yield "done\n";
 }
 
-function createCodebaseTaskValues(update_item: DiffResult, new_id: number) {
+function createCodebaseTaskValues(update_item: ScanDiffResult, new_id: number) {
 	const new_text = update_item.data.new?.text || "";
 	return {
 		id: update_item.id,
@@ -166,13 +167,13 @@ function createCodebaseTaskValues(update_item: DiffResult, new_id: number) {
 		line: update_item.data.new?.line || 0,
 		file: update_item.data.new?.file || "unknown",
 		type: update_item.tag || "todo",
-		context: update_item.data.new?.context ? JSON.stringify(update_item.data.new.context) : null,
+		context: update_item.data.new?.context ?? null,
 		recent_scan_id: new_id,
 		updated_at: new Date().toISOString(),
 	};
 }
 
-async function upsertCodebaseTask(db: Database, update_item: DiffResult, new_id: number): Promise<void> {
+async function upsertCodebaseTask(db: Database, update_item: ScanDiffResult, new_id: number): Promise<void> {
 	const values = createCodebaseTaskValues(update_item, new_id);
 	await db
 		.insert(codebase_tasks)
@@ -182,7 +183,7 @@ async function upsertCodebaseTask(db: Database, update_item: DiffResult, new_id:
 
 async function handleCreateAction(
 	db: Database,
-	update_item: DiffResult,
+	update_item: ScanDiffResult,
 	titles: Record<string, string>,
 	user_id: string,
 	project_id: string,
@@ -240,7 +241,7 @@ async function handleCreateAction(
 
 async function processScanItem(
 	db: Database,
-	update_item: DiffResult,
+	update_item: ScanDiffResult,
 	actions_map: Record<string, string[]>,
 	titles: Record<string, string>,
 	user_id: string,
@@ -351,11 +352,15 @@ export async function processScanResults(
 
 	if (!approved) return ok({ success: true });
 
-	const update_items = ((): DiffResult[] => {
-		if (typeof update_data.data !== "string") return update_data.data as DiffResult[];
-		const raw: unknown = JSON.parse(update_data.data);
-		return raw as DiffResult[];
-	})();
+	const parsed_items = scan_diff_results_stored.safeParse(update_data.data);
+	if (!parsed_items.success) {
+		return err({
+			kind: "store_error",
+			operation: "read_todo_updates",
+			message: `todo_updates ${String(update_id)} data failed schema: ${parsed_items.error.message}`,
+		});
+	}
+	const update_items: ScanDiffResult[] = parsed_items.data;
 
 	for (const update_item of update_items) {
 		await processScanItem(db, update_item, actions_map, titles, user_id, project_id, new_id);
@@ -384,7 +389,13 @@ export async function getPendingUpdates(
 		.where(and(eq(todo_updates.project_id, project_id), eq(todo_updates.status, "PENDING")))
 		.orderBy(desc(todo_updates.created_at));
 
-	return ok(result);
+	const decoded: TodoUpdate[] = [];
+	for (const row of result) {
+		const item = decode_todo_update(row);
+		if (!item.ok) return item;
+		decoded.push(item.value);
+	}
+	return ok(decoded);
 }
 
 export async function getScanHistory(
@@ -407,5 +418,30 @@ export async function getScanHistory(
 		.where(eq(tracker_result.project_id, project_id))
 		.orderBy(desc(tracker_result.created_at));
 
-	return ok(result);
+	const decoded: TrackerResult[] = [];
+	for (const row of result) {
+		const parsed = scan_parsed_tasks_stored.safeParse(row.data);
+		if (!parsed.success) {
+			return err({
+				kind: "store_error",
+				operation: "read_tracker_result",
+				message: `tracker_result ${String(row.id)} data failed schema: ${parsed.error.message}`,
+			});
+		}
+		decoded.push({ ...row, data: parsed.data });
+	}
+	return ok(decoded);
+}
+
+/** Legacy rows written before the writer stopped double-encoding store a JSON string — decode before validating. */
+export function decode_todo_update(row: TodoUpdate): Result<TodoUpdate, ServiceError> {
+	const parsed = scan_diff_results_stored.safeParse(row.data);
+	if (!parsed.success) {
+		return err({
+			kind: "store_error",
+			operation: "read_todo_updates",
+			message: `todo_updates ${String(row.id)} data failed schema: ${parsed.error.message}`,
+		});
+	}
+	return ok({ ...row, data: parsed.data });
 }

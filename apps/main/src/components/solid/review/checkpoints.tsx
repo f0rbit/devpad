@@ -157,8 +157,9 @@ function TypesCheckpointCard(props: { task: Task }) {
 			const near_result = await client.tasks.near(props.task.id, 1);
 			if (near_result.ok) {
 				const edge = near_result.value.links.find((l) => l.kind === "tracks_metric" && l.src_id === props.task.id);
-				const ref = edge?.ref as { metric_name?: string } | null;
-				if (ref?.metric_name) setMetricName(ref.metric_name);
+				// `task_link.ref` is a typed json column: the metric variant is `{ type: "metric", name }`.
+				const ref = edge?.ref;
+				if (ref?.type === "metric") setMetricName(ref.name);
 			}
 
 			if (props.task.project_id) {

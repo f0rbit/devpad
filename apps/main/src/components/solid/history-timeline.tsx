@@ -2,7 +2,7 @@
 // we want to add pagination as well.
 // using solidjs
 
-import type { HistoryAction, ScanStatus } from "@devpad/schema";
+import type { HistoryAction } from "@devpad/schema";
 import ArrowRight from "lucide-solid/icons/arrow-right";
 import Bot from "lucide-solid/icons/bot";
 import FileMinus2 from "lucide-solid/icons/file-minus-2";
@@ -168,7 +168,8 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 	const Data = () => {
 		switch (action.type) {
 			case "SCAN": {
-				const { message, status } = action.data as { message: string; status: Omit<ScanStatus, "PENDING"> };
+				const message = action.data?.message ?? "";
+				const status = action.data?.status ?? "";
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
 						<GitBranch size={16} />
@@ -180,7 +181,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 			}
 			case "UPDATE_TASK": {
 				if (view === "task") return null;
-				const { title } = action.data as { title: string };
+				const title = action.data?.title;
 				if (!title) return null;
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">
@@ -192,7 +193,7 @@ function TimelineItem({ action, view }: { action: HistoryAction; view: "project"
 			case "CREATE_PROJECT":
 			case "UPDATE_PROJECT":
 			case "DELETE_PROJECT": {
-				const { name, href } = action.data as { name: string | null; href: string | null };
+				const { name, href } = action.data ?? {};
 				if (!name || !href) return null;
 				return (
 					<div style="display: grid; grid-template-columns: min-content auto; align-items: center; gap: 5px;">

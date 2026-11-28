@@ -5,7 +5,7 @@ import type { DiffResult } from "@devpad/core/services/scanner";
 import { createBunDatabase, migrateBunDatabase } from "@devpad/schema/database/bun";
 import { GRAPH_DEPTH_CAP, task, task_link } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 const { processScanResults } = scanning;
 
@@ -71,7 +71,7 @@ async function seed_open_task(overrides: Partial<typeof task.$inferInsert> = {})
 
 async function seed_codebase_task(id: string, file: string): Promise<void> {
 	const { codebase_tasks, tracker_result } = await import("@devpad/schema/database/schema");
-	const scan = await db.insert(tracker_result).values({ project_id, data: "[]" }).returning();
+	const scan = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
 	await db.insert(codebase_tasks).values({
 		id,
 		text: "// TODO existing",
@@ -84,13 +84,13 @@ async function seed_codebase_task(id: string, file: string): Promise<void> {
 
 async function seed_pending_update(diff_results: DiffResult[]): Promise<number> {
 	const { todo_updates, tracker_result } = await import("@devpad/schema/database/schema");
-	const tracker = await db.insert(tracker_result).values({ project_id, data: "[]" }).returning();
+	const tracker = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
 	const rows = await db
 		.insert(todo_updates)
 		.values({
 			project_id,
 			new_id: tracker[0].id,
-			data: JSON.stringify(diff_results),
+			data: diff_results,
 			status: "PENDING",
 		})
 		.returning();
@@ -187,5 +187,53 @@ describe("scanner reconciliation", () => {
 
 		const edges = await db.select().from(task_link).where(eq(task_link.src_id, new_rows[0].id));
 		expect(edges.length).toBe(0);
+	});
+});
+
+describe("legacy double-encoded scanner rows", () => {
+	test("getPendingUpdates decodes a todo_updates.data row stored as a JSON string", async () => {
+		const { tracker_result } = await import("@devpad/schema/database/schema");
+		const tracker = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
+		const diff_item = new_diff_item("codebase_legacy", "src/legacy.ts");
+		// Pre-fix writers passed JSON.stringify(...) into the json column, so the
+		// stored TEXT is a JSON string whose content is itself JSON.
+		const double_encoded = JSON.stringify(JSON.stringify([diff_item]));
+		await db.run(
+			sql`INSERT INTO todo_updates (project_id, new_id, data, status) VALUES (${project_id}, ${tracker[0].id}, ${double_encoded}, 'PENDING')`,
+		);
+
+		const result = await scanning.getPendingUpdates(db, project_id, owner_id);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.value.length).toBe(1);
+		expect(result.value[0]?.data).toEqual([diff_item]);
+	});
+
+	test("a corrupt todo_updates.data row surfaces as an error, not a silent value", async () => {
+		const { tracker_result } = await import("@devpad/schema/database/schema");
+		const tracker = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
+		await db.run(
+			sql`INSERT INTO todo_updates (project_id, new_id, data, status) VALUES (${project_id}, ${tracker[0].id}, ${JSON.stringify("not-an-array")}, 'PENDING')`,
+		);
+		const result = await scanning.getPendingUpdates(db, project_id, owner_id);
+		expect(result.ok).toBe(false);
+	});
+
+	test("task reads decode a codebase_tasks.context row stored as a JSON string", async () => {
+		const { tracker_result } = await import("@devpad/schema/database/schema");
+		const tracker = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
+		const double_encoded = JSON.stringify(JSON.stringify(["line one", "line two"]));
+		await db.run(
+			sql`INSERT INTO codebase_tasks (id, text, file, line, type, recent_scan_id, context) VALUES ('codebase_legacy_ctx', '// TODO x', 'src/a.ts', 1, 'todo', ${tracker[0].id}, ${double_encoded})`,
+		);
+		const task_id = await seed_open_task({ title: "Linked legacy" });
+		await db.update(task).set({ codebase_task_id: "codebase_legacy_ctx" }).where(eq(task.id, task_id));
+
+		const { tasks } = await import("@devpad/core/services");
+		const result = await tasks.getProjectTasks(db, project_id);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		const linked = result.value.find((t) => t.task.id === task_id);
+		expect(linked?.codebase_tasks?.context).toEqual(["line one", "line two"]);
 	});
 });

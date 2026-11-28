@@ -53,7 +53,7 @@ const EXTERNAL_TARGET = {
 	workflow: "deploy.yml",
 	ref: "main",
 	timeout_ms: 2_700_000,
-	gate: { type: "manual" },
+	gate: { type: "manual" as const },
 };
 
 type Harness = {

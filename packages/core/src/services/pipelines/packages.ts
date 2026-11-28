@@ -27,6 +27,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
+import { parse_package_row } from "./row-parse.js";
 
 export type ListPackagesFilter = {
 	project_id?: string;
@@ -52,7 +53,13 @@ export const list_packages = async (
 					? base.where(conditions[0])
 					: base.where(and(...conditions));
 		const rows = await where;
-		return ok(rows);
+		const parsed: PipelinePackage[] = [];
+		for (const row of rows) {
+			const checked = parse_package_row(row);
+			if (!checked.ok) return checked;
+			parsed.push(checked.value);
+		}
+		return ok(parsed);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to list pipeline_package: ${String(e)}` });
 	}
@@ -67,7 +74,7 @@ export const get_package = async (db: Database, package_id: string): Promise<Res
 		const rows = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
 		const row = rows.at(0);
 		if (!row) return err({ kind: "not_found", resource: "pipeline_package", id: package_id });
-		return ok(row);
+		return parse_package_row(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",

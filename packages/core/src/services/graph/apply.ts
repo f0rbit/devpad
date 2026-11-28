@@ -1,8 +1,8 @@
 import type { ApplyOp, ApplyRequest, UpsertTodo } from "@devpad/schema";
+import { apply_log_response, type ApplyLogResponse } from "@devpad/schema/validation";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { sql } from "drizzle-orm";
-import { z } from "zod";
 import type { DatabaseError } from "../errors.js";
 import { errors, type ServiceError } from "../errors.js";
 import { run_atomic } from "./atomic.js";
@@ -12,14 +12,8 @@ import { add_link, claim, type GraphError, get_task_row, remove_link, set_parent
 import { type EmitEventInput, write_with_event } from "./outbox.js";
 import { refresh_rollup_chain } from "./rollup.js";
 
-const apply_op_result_schema = z.object({
-	op: z.enum(["create", "update", "reparent", "link", "unlink", "claim", "complete"]),
-	id: z.string(),
-});
-const apply_response_schema = z.object({ idempotency_key: z.string(), results: z.array(apply_op_result_schema) });
-
-export type ApplyOpResult = { op: ApplyOp["op"]; id: string };
-export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
+export type ApplyOpResult = ApplyLogResponse["results"][number];
+export type ApplyResponse = ApplyLogResponse;
 export type ApplyOpFailedError = { kind: "apply_op_failed"; op_index: number; error: GraphError };
 export type ApplyError = ServiceError | GraphError | ApplyOpFailedError;
 
@@ -221,7 +215,7 @@ export async function apply(
 		sql`SELECT response FROM apply_log WHERE idempotency_key = ${input.idempotency_key} AND owner_id = ${ctx.owner_id} LIMIT 1`,
 	);
 	if (existing.length > 0) {
-		return ok(apply_response_schema.parse(JSON.parse(existing[0].response)));
+		return ok(apply_log_response.parse(JSON.parse(existing[0].response)));
 	}
 
 	const handles = new Map<string, string>();

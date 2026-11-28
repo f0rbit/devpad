@@ -32,7 +32,9 @@ const pending_updates = updates_result.ok ? updates_result.value : null;
 
 const update = pending_updates && pending_updates.length > 0 ? pending_updates[0] : null;
 
-const update_data = update?.data ? (typeof update.data === "string" ? JSON.parse(update.data) : update.data) : null;
+// `todo_updates.data` is decoded + Zod-validated at the core read boundary
+// (`scanning.ts`'s `decode_todo_update`) — consume the typed array directly.
+const update_data = update?.data ?? null;
 ---
 
 <PageLayout title={`Update Codebase - ${project_id}`}>

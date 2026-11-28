@@ -182,46 +182,44 @@ const StageEventTimelineContent = (props: StageEventTimelineProps) => {
 							</span>
 						</div>
 
-						<Show when={ev.payload !== null && ev.payload !== undefined}>
-							<div class="stack stack-xs">
-								<button
-									type="button"
-									onClick={() => {
-										toggle(ev.id);
-									}}
+						<div class="stack stack-xs">
+							<button
+								type="button"
+								onClick={() => {
+									toggle(ev.id);
+								}}
+								style={{
+									"align-self": "flex-start",
+									background: "none",
+									border: "none",
+									color: "var(--text-link)",
+									cursor: "pointer",
+									padding: "0",
+									"font-size": "0.8rem",
+								}}
+							>
+								{expanded().has(ev.id) ? "▾ payload" : "▸ payload"}
+							</button>
+							<Show when={expanded().has(ev.id)}>
+								<pre
 									style={{
-										"align-self": "flex-start",
-										background: "none",
-										border: "none",
-										color: "var(--text-link)",
-										cursor: "pointer",
-										padding: "0",
-										"font-size": "0.8rem",
+										margin: "0",
+										padding: "0.5rem",
+										"background-color": "var(--bg-alt)",
+										"border-radius": "var(--radius)",
+										"font-size": "0.75rem",
+										"font-family": "monospace",
+										"max-height": "240px",
+										"overflow-y": "auto",
+										"overflow-x": "auto",
+										"white-space": "pre-wrap",
+										"word-break": "break-word",
 									}}
 								>
-									{expanded().has(ev.id) ? "▾ payload" : "▸ payload"}
-								</button>
-								<Show when={expanded().has(ev.id)}>
-									<pre
-										style={{
-											margin: "0",
-											padding: "0.5rem",
-											"background-color": "var(--bg-alt)",
-											"border-radius": "var(--radius)",
-											"font-size": "0.75rem",
-											"font-family": "monospace",
-											"max-height": "240px",
-											"overflow-y": "auto",
-											"overflow-x": "auto",
-											"white-space": "pre-wrap",
-											"word-break": "break-word",
-										}}
-									>
-										{stringify_payload(ev.payload)}
-									</pre>
-								</Show>
-							</div>
-						</Show>
+									{stringify_payload(ev.payload)}
+								</pre>
+							</Show>
+						</div>
 					</div>
 				)}
 			</For>

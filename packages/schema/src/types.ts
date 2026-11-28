@@ -38,11 +38,11 @@ import type {
 } from "./database/schema.js";
 import type {
 	config_schema,
-	external_ref,
 	insert_pipeline_stage_event,
 	project_config,
-	save_config_request,
 	scan_diff_proposal,
+	ScanDiffResult,
+	save_config_request,
 	update_action,
 	update_user,
 	upsert_goal,
@@ -139,7 +139,6 @@ export type UpsertTodo = z.infer<typeof upsert_todo>;
 export type UpsertTag = z.infer<typeof upsert_tag>;
 export type UpsertMilestone = z.infer<typeof upsert_milestone>;
 export type UpsertGoal = z.infer<typeof upsert_goal>;
-export type ExternalRef = z.infer<typeof external_ref>;
 export type UpsertTaskLink = z.infer<typeof upsert_task_link>;
 export type UpdateAction = z.infer<typeof update_action>;
 export type ProjectConfig = z.infer<typeof project_config>;
@@ -201,25 +200,10 @@ export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & {
 	type: ActionType | "SCAN";
 };
 
-// Update data type for project scanning
-export type UpdateData = {
-	id: string;
-	tag: string;
-	type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
-	data: {
-		old: {
-			text: string;
-			line: number;
-			file: string;
-			context?: string[];
-		};
-		new: {
-			text: string;
-			line: number;
-			file: string;
-			context?: string[];
-		};
-	};
+// Update data type for project scanning — the honest DiffResult shape the
+// scanner stores in `todo_updates.data` (old/new nullable; only NEW items
+// carry a placement proposal), augmented with the matched task for the UI.
+export type UpdateData = ScanDiffResult & {
 	task?: TaskWithDetails;
 };
 

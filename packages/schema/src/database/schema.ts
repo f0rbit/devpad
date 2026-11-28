@@ -1,5 +1,20 @@
 import { relations, sql } from "drizzle-orm";
 import { index, int, integer, primaryKey, sqliteTable, text, unique, uniqueIndex } from "drizzle-orm/sqlite-core";
+import type {
+	ActionData,
+	ApplyLogResponse,
+	ExternalRef,
+	ExternalTarget,
+	HookActionStored,
+	HookTrigger,
+	ResolvedGates,
+	ResolvedRollout,
+	ScanDiffResult,
+	ScanParsedTask,
+	ScriptNameOverrides,
+	StageEventPayload,
+	TaskEventPayload,
+} from "../validation.js";
 export const timestamps = () => ({
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 	updated_at: text("updated_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
@@ -159,7 +174,7 @@ export const action = sqliteTable("action", {
 	...owned_entity("action"),
 	type: text("type", { enum: ACTIONS }).notNull(),
 	description: text("description").notNull(),
-	data: text("data", { mode: "json" }),
+	data: text("data", { mode: "json" }).$type<ActionData>(),
 	channel: text("channel", { enum: ["user", "api"] })
 		.notNull()
 		.default("user"),
@@ -171,7 +186,7 @@ export const tracker_result = sqliteTable("tracker_result", {
 		.notNull()
 		.references(() => project.id),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
-	data: text("data", { mode: "json" }).notNull(),
+	data: text("data", { mode: "json" }).$type<ScanParsedTask[]>().notNull(),
 	accepted: integer("accepted", { mode: "boolean" }).notNull().default(false),
 });
 
@@ -185,7 +200,7 @@ export const todo_updates = sqliteTable("todo_updates", {
 	new_id: integer("new_id")
 		.notNull()
 		.references(() => tracker_result.id),
-	data: text("data", { mode: "json" }).notNull(),
+	data: text("data", { mode: "json" }).$type<ScanDiffResult[]>().notNull(),
 	status: text("status", { enum: ["PENDING", "ACCEPTED", "REJECTED", "IGNORED"] })
 		.notNull()
 		.default("PENDING"),
@@ -305,7 +320,7 @@ export const task_link = sqliteTable(
 			.references(() => task.id),
 		dst_id: text("dst_id").references(() => task.id),
 		kind: text("kind", { enum: TASK_LINK_KINDS }).notNull(),
-		ref: text("ref", { mode: "json" }),
+		ref: text("ref", { mode: "json" }).$type<ExternalRef>(),
 		note: text("note"),
 	},
 	table => [
@@ -330,7 +345,7 @@ export const apply_log = sqliteTable("apply_log", {
 	owner_id: text("owner_id")
 		.notNull()
 		.references(() => user.id),
-	response: text("response", { mode: "json" }).notNull(),
+	response: text("response", { mode: "json" }).$type<ApplyLogResponse>().notNull(),
 	created_at: text("created_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 });
 
@@ -379,7 +394,7 @@ export const task_event = sqliteTable(
 		subject_id: text("subject_id").notNull(),
 		project_id: text("project_id"),
 		actor: text("actor", { enum: TASK_EVENT_ACTORS }).notNull(),
-		payload: text("payload", { mode: "json" }).notNull(),
+		payload: text("payload", { mode: "json" }).$type<TaskEventPayload>().notNull(),
 		occurred_at: text("occurred_at").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 		dispatch_status: text("dispatch_status", { enum: TASK_EVENT_DISPATCH_STATUSES }).notNull().default("pending"),
 		dispatched_at: text("dispatched_at"),
@@ -407,9 +422,9 @@ export const hook = sqliteTable(
 			.references(() => project.id),
 		enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
 		// HookTrigger: { kinds: TaskEventKind[], selector: { subject_kind?, tag?, ancestor_id? } }
-		trigger: text("trigger", { mode: "json" }).notNull(),
+		trigger: text("trigger", { mode: "json" }).$type<HookTrigger>().notNull(),
 		// HookAction: { kind: "webhook", url, secret_encrypted? } | { kind: "vault", scope, op, args? } | { kind: "pipeline", package_id }
-		action: text("action", { mode: "json" }).notNull(),
+		action: text("action", { mode: "json" }).$type<HookActionStored>().notNull(),
 	},
 	(table) => [index("hook_project_id_idx").on(table.project_id)],
 );
@@ -579,7 +594,7 @@ export const codebase_tasks = sqliteTable("codebase_tasks", {
 	text: text("text"),
 	file: text("file"),
 	line: integer("line"),
-	context: text("context", { mode: "json" }),
+	context: text("context", { mode: "json" }).$type<string[]>(),
 	recent_scan_id: integer("recent_scan_id").references(() => tracker_result.id),
 });
 
@@ -676,7 +691,7 @@ export const pipeline_package = sqliteTable("pipeline_package", {
 	name: text("name").notNull(),
 	repo_url: text("repo_url"),
 	default_template_ref: text("default_template_ref"),
-	script_name_overrides: text("script_name_overrides", { mode: "json" }),
+	script_name_overrides: text("script_name_overrides", { mode: "json" }).$type<ScriptNameOverrides>(),
 	project_id: text("project_id").references(() => project.id),
 	// External deploy mode (#155): `external` packages let CI own the actual
 	// deploys; the orchestrator only holds the manual staging→production
@@ -684,7 +699,7 @@ export const pipeline_package = sqliteTable("pipeline_package", {
 	// + gate — parsed+validated by `external_target` at the service
 	// boundary (raw JSON on the row is untrusted).
 	deploy_mode: text("deploy_mode", { enum: DEPLOY_MODES }).notNull().default("orchestrated"),
-	external_target: text("external_target", { mode: "json" }),
+	external_target: text("external_target", { mode: "json" }).$type<ExternalTarget>(),
 });
 
 export const pipeline_run = sqliteTable("pipeline_run", {
@@ -700,8 +715,8 @@ export const pipeline_run = sqliteTable("pipeline_run", {
 	kind: text("kind", { enum: RUN_KINDS }).notNull().default("deploy"),
 	status: text("status", { enum: RUN_STATUSES }).notNull().default("queued"),
 	current_stage: text("current_stage"),
-	resolved_rollout: text("resolved_rollout", { mode: "json" }).notNull(),
-	resolved_gates: text("resolved_gates", { mode: "json" }).notNull(),
+	resolved_rollout: text("resolved_rollout", { mode: "json" }).$type<ResolvedRollout>().notNull(),
+	resolved_gates: text("resolved_gates", { mode: "json" }).$type<ResolvedGates>().notNull(),
 	forced_atomic_reason: text("forced_atomic_reason", { enum: FORCED_ATOMIC_REASONS }),
 	started_at: text("started_at"),
 	finished_at: text("finished_at"),
@@ -720,7 +735,7 @@ export const pipeline_stage_event = sqliteTable(
 			.references(() => pipeline_run.id),
 		stage_name: text("stage_name").notNull(),
 		kind: text("kind", { enum: STAGE_EVENT_KINDS }).notNull(),
-		payload: text("payload", { mode: "json" }),
+		payload: text("payload", { mode: "json" }).$type<StageEventPayload>(),
 		ts: text("ts").notNull().default(sql`(CURRENT_TIMESTAMP)`),
 		idempotency_hash: text("idempotency_hash"),
 	},
@@ -781,8 +796,8 @@ export const pipeline_analysis_template = sqliteTable("pipeline_analysis_templat
 		.notNull()
 		.references(() => user.id),
 	name: text("name").notNull(),
-	query_dsl: text("query_dsl", { mode: "json" }).notNull(),
-	threshold_dsl: text("threshold_dsl", { mode: "json" }).notNull(),
+	query_dsl: text("query_dsl", { mode: "json" }).$type<unknown>().notNull(),
+	threshold_dsl: text("threshold_dsl", { mode: "json" }).$type<string>().notNull(),
 	window_ms: integer("window_ms").notNull().default(600_000),
 });
 

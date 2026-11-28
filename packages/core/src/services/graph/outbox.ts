@@ -44,7 +44,11 @@ export async function emit_event(
 		VALUES (${event_id}, ${input.kind}, ${input.subject_id}, ${input.project_id}, ${input.actor}, ${JSON.stringify(parsed.data)}, CURRENT_TIMESTAMP, 'pending')
 		RETURNING *
 	`);
-	return ok(rows[0]);
+	// Raw-SQL RETURNING skips drizzle's json-column decode: `payload` comes
+	// back as raw TEXT. We know exactly what was written — the Zod-parsed
+	// payload — so stitch it onto the row rather than letting callers see a
+	// string behind the typed column.
+	return ok({ ...rows[0], payload: parsed.data });
 }
 
 /**
