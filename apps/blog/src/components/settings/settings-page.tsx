@@ -59,7 +59,8 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		try {
 			const data = unwrap(await getBrowserClient().blog.tokens.list());
 			setTokens(data.tokens);
-		} catch {
+		} catch (error) {
+			console.error("[settings] token fetch failed:", error);
 			setTokensError("Failed to fetch tokens");
 		} finally {
 			setTokensLoading(false);
@@ -77,7 +78,8 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.tokens.update(id, { enabled }));
 			refetchTokens();
-		} catch {
+		} catch (error) {
+			console.error("[settings] token update failed:", error);
 			setTokensError("Failed to update token");
 		}
 	};
@@ -87,7 +89,8 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.tokens.delete(id));
 			refetchTokens();
-		} catch {
+		} catch (error) {
+			console.error("[settings] token delete failed:", error);
 			setTokensError("Failed to delete token");
 		}
 	};

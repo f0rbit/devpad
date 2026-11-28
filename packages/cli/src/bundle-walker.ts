@@ -20,7 +20,7 @@
 
 import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { err, ok, type Result } from "@f0rbit/corpus";
+import { err, ok, try_catch, type Result } from "@f0rbit/corpus";
 
 export type WorkerModuleMimeType = "application/javascript+module" | "application/javascript" | "application/wasm";
 
@@ -114,12 +114,12 @@ const to_posix = (p: string): string => (sep === "/" ? p : p.split(sep).join("/"
  *    misconfiguration; fail fast rather than upload an empty manifest).
  */
 export const walk_bundle_dir = (bundle_dir: string): Result<WalkedBundle, BundleWalkError> => {
-	let st: ReturnType<typeof statSync>;
-	try {
-		st = statSync(bundle_dir);
-	} catch {
-		return err({ kind: "not_a_directory", path: bundle_dir });
-	}
+	const st_result = try_catch(
+		() => statSync(bundle_dir),
+		(e: unknown) => e,
+	);
+	if (!st_result.ok) return err({ kind: "not_a_directory", path: bundle_dir });
+	const st = st_result.value;
 	if (!st.isDirectory()) {
 		return err({ kind: "not_a_directory", path: bundle_dir });
 	}

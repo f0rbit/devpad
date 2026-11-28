@@ -30,6 +30,8 @@ import {
 	type CorpusError,
 	err,
 	ok,
+	try_catch,
+	try_catch_async,
 	type Result,
 	type SnapshotMeta,
 	type VersionSetManifest,
@@ -84,12 +86,12 @@ export const post_envelope = async <T>(input: PostInput): Promise<Result<T, Corp
 		return err<CorpusHttpUploadError>({ kind: "http", status: response.status, status_text: response.statusText });
 	}
 	let raw_body: unknown = null;
-	try {
-		const parsed: unknown = await response.json();
-		raw_body = parsed;
-	} catch {
-		raw_body = null;
-	}
+	const parsed = await try_catch_async(
+		() => response.json(),
+		(e: unknown) => e,
+	);
+	if (parsed.ok) raw_body = parsed.value;
+	else console.error(`[corpus-http] response body was not JSON: ${String(parsed.error)}`);
 	const body = raw_body as { ok?: boolean; value?: T; error?: unknown } | null;
 	if (body === null || body.ok !== true || body.value === undefined) {
 		return err<CorpusHttpUploadError>({ kind: "decode", message: "unexpected response envelope" });
@@ -276,11 +278,11 @@ export const create_corpus_http_backend = (input: CorpusHttpBackendInput): Backe
 };
 
 const safe_parse_json = (text: string): unknown => {
-	try {
-		return JSON.parse(text);
-	} catch {
-		return null;
-	}
+	const parsed = try_catch(
+		(): unknown => JSON.parse(text),
+		(e: unknown) => e,
+	);
+	return parsed.ok ? parsed.value : null;
 };
 
 const to_bytes = async (data: ReadableStream<Uint8Array> | Uint8Array): Promise<Uint8Array> => {

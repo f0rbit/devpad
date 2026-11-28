@@ -342,7 +342,9 @@ export const make_run_handler = (ctx: DoCtx, services: RunDoServices) => {
 		try {
 			const parsed_body: unknown = await request.json();
 			body = parsed_body;
-		} catch {
+		} catch (error) {
+			// Surfaced to the caller as 400 invalid_json below; logged so it is visible.
+			console.error("[run-do] request body was not JSON:", error instanceof Error ? error.message : String(error));
 			body = null;
 		}
 		if (body === null) return json_err(400, { code: "invalid_json" });

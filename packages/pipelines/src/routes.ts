@@ -375,6 +375,17 @@ const log_5xx = (wire: WireError, status: number, context?: { run_id?: string; r
 };
 
 /**
+ * Swallowed-error guard (verification-hardening 2.3b): a promise fallback
+ * (`p.catch(() => fallback)`) must never discard the rejection silently --
+ * every use logs it before degrading to the fallback value.
+ */
+const caught_fallback = <T, F>(p: Promise<T>, fallback: F, context: string): Promise<T | F> =>
+	p.catch((e: unknown) => {
+		console.warn(`[pipelines] ${context}:`, e instanceof Error ? e.message : String(e));
+		return fallback;
+	});
+
+/**
  * Normalise a service-layer error (`kind` discriminator, corpus convention)
  * into the public wire shape (`code` discriminator). Strips any outer
  * Result wrapping so a `{ ok, value | error }` envelope is never
@@ -539,7 +550,11 @@ export const make_routes = <Env extends object = object>(deps_factory: (env: Env
 			try {
 				const advance_json: unknown = await advance_res.json();
 				advance_body = advance_json;
-			} catch {
+			} catch (error) {
+				console.warn(
+					"[pipelines] advance response body was not JSON:",
+					error instanceof Error ? error.message : String(error),
+				);
 				advance_body = null;
 			}
 			if (advance_res.status >= 400)
@@ -572,7 +587,11 @@ export const make_routes = <Env extends object = object>(deps_factory: (env: Env
 		try {
 			const advance_json: unknown = await advance_res.json();
 			advance_body = advance_json;
-		} catch {
+		} catch (error) {
+			console.warn(
+				"[pipelines] advance response body was not JSON:",
+				error instanceof Error ? error.message : String(error),
+			);
 			advance_body = null;
 		}
 		if (advance_res.status >= 400)
@@ -862,7 +881,11 @@ export const make_routes = <Env extends object = object>(deps_factory: (env: Env
 		if (!is_terminal_status(source.status)) {
 			const source_plan = await reconstruct_plan_for_run(deps, source);
 			if (source_plan !== null) {
-				await do_call(deps, run_id, "cancel", { plan: source_plan }).catch(() => null);
+				await caught_fallback(
+					do_call(deps, run_id, "cancel", { plan: source_plan }),
+					null,
+					"best-effort source cancel failed",
+				);
 			}
 		}
 
@@ -1334,7 +1357,11 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 	try {
 		const parsed_body: unknown = await request.json();
 		body = parsed_body;
-	} catch {
+	} catch (error) {
+		console.warn(
+			"[pipelines] oidc exchange body was not JSON:",
+			error instanceof Error ? error.message : String(error),
+		);
 		body = null;
 	}
 	const parsed = oidc_exchange_body.safeParse(body);
@@ -1353,15 +1380,17 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 	if (!result.ok) return wire_err(result.error);
 
 	if (deps.pulse !== undefined) {
-		await deps.pulse
-			.emit({
+		await caught_fallback(
+			deps.pulse.emit({
 				event: "oidc_exchange",
 				trust_policy_id: result.value.trust_policy_id,
 				package_id: result.value.package_ids[0] ?? null,
 				scope: result.value.scope,
 				status: "ok",
-			})
-			.catch(() => undefined);
+			}),
+			undefined,
+			"pulse emit failed for oidc_exchange",
+		);
 	}
 
 	return json_ok({
@@ -1403,7 +1432,7 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 		);
 	}
 
-	const buffer = await request.arrayBuffer().catch(() => null);
+	const buffer = await caught_fallback(request.arrayBuffer(), null, "could not read request body");
 	if (buffer === null) return wire_err({ code: "invalid_body", message: "could not read body" }, 400);
 	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES)
 		return wire_err(
@@ -1437,7 +1466,11 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	if (!put_meta.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put_meta.error) });
 
 	if (deps.pulse !== undefined)
-		await deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }).catch(() => undefined);
+		await caught_fallback(
+			deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }),
+			undefined,
+			"pulse emit failed for artifact_uploaded",
+		);
 
 	return json_ok({ version, content_hash, store_id, ref: data_key });
 };
@@ -1485,7 +1518,8 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	try {
 		const parsed_body: unknown = await request.json();
 		body = parsed_body;
-	} catch {
+	} catch (error) {
+		console.warn("[pipelines] version-set body was not JSON:", error instanceof Error ? error.message : String(error));
 		body = null;
 	}
 	if (body === null) return wire_err({ code: "invalid_body", message: "request body is not valid JSON" }, 400);
@@ -1525,15 +1559,17 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	if (!put.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put.error) });
 
 	if (deps.pulse !== undefined)
-		await deps.pulse
-			.emit({
+		await caught_fallback(
+			deps.pulse.emit({
 				event: "artifact_uploaded",
 				store_id: "version-sets",
 				content_hash: put.value.content_hash,
 				kind: "version_set",
 				package: manifest.package,
-			})
-			.catch(() => undefined);
+			}),
+			undefined,
+			"pulse emit failed for version_set upload",
+		);
 
 	return json_ok({
 		version_set_id: put.value.version,
@@ -1590,7 +1626,11 @@ const normalise_do_response = async (
 			: ((): unknown => {
 					try {
 						return JSON.parse(text);
-					} catch {
+					} catch (error) {
+						console.warn(
+							"[pipelines] upstream error body was not JSON:",
+							error instanceof Error ? error.message : String(error),
+						);
 						return null;
 					}
 				})();
@@ -1684,7 +1724,11 @@ const apply_external_rollback = async (deps: RoutesDeps, source: PipelineRun, ac
 	if (!is_terminal_status(source.status)) {
 		const source_plan = await reconstruct_plan_for_run(deps, source);
 		if (source_plan !== null) {
-			await do_call(deps, source.id, "cancel", { plan: source_plan }).catch(() => null);
+			await caught_fallback(
+				do_call(deps, source.id, "cancel", { plan: source_plan }),
+				null,
+				"best-effort source cancel failed",
+			);
 		}
 	}
 
@@ -1727,7 +1771,11 @@ const finish_rollback_response = async (
 	try {
 		const advance_json: unknown = await advance_res.json();
 		advance_body = advance_json;
-	} catch {
+	} catch (error) {
+		console.warn(
+			"[pipelines] advance response body was not JSON:",
+			error instanceof Error ? error.message : String(error),
+		);
 		advance_body = null;
 	}
 	if (advance_res.status >= 400)

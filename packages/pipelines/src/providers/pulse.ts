@@ -145,7 +145,13 @@ const emit_chunk = async (
 		)
 		.flat_map(async (response): Promise<Result<void, EmitError>> => {
 			if (response.status >= 400) {
-				const text = await response.text().catch(() => "");
+				const text = await response.text().catch((e: unknown) => {
+					log.warn("pulse ingest error body read failed", {
+						status: response.status,
+						error: e instanceof Error ? e.message : String(e),
+					});
+					return "";
+				});
 				return err({ kind: "emit_error", message: `pulse ingest ${String(response.status)}: ${text}` });
 			}
 			return ok(undefined);
@@ -356,7 +362,13 @@ const read_events_page = async (
 		.flat_map(
 			async (response): Promise<Result<{ events: PulseEventRow[]; next_cursor: string | undefined }, PulseError>> => {
 				if (response.status >= 400) {
-					const text = await response.text().catch(() => "");
+					const text = await response.text().catch((e: unknown) => {
+						log.warn("pulse events error body read failed", {
+							status: response.status,
+							error: e instanceof Error ? e.message : String(e),
+						});
+						return "";
+					});
 					return err({
 						code: error_status_code(response.status),
 						message: text || `pulse events ${String(response.status)}`,

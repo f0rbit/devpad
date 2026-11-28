@@ -35,7 +35,7 @@
 
 import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join, relative, sep } from "node:path";
-import { err, ok, type Result } from "@f0rbit/corpus";
+import { err, ok, try_catch, type Result } from "@f0rbit/corpus";
 import * as blake3 from "blake3-wasm";
 import ignore_factory from "ignore";
 
@@ -138,12 +138,13 @@ const list_files_recursive = (root: string): Result<string[], AssetWalkError> =>
 
 const read_assetsignore = (assets_dir: string): string[] => {
 	const path = join(assets_dir, CF_ASSETS_IGNORE_FILENAME);
-	try {
-		const contents = readFileSync(path, "utf8");
-		return contents.split("\n");
-	} catch {
-		return [];
-	}
+	// A missing .assetsignore is the normal case -- the error is carried in
+	// the Result and mapped to "no ignore entries" rather than discarded.
+	const contents = try_catch(
+		() => readFileSync(path, "utf8"),
+		(e: unknown) => e,
+	);
+	return contents.ok ? contents.value.split("\n") : [];
 };
 
 /**
@@ -162,12 +163,12 @@ export const walk_assets_dir = (
 	assets_dir: string,
 	options: WalkAssetsOptions = {},
 ): Result<WalkedAssets, AssetWalkError> => {
-	let st: ReturnType<typeof statSync>;
-	try {
-		st = statSync(assets_dir);
-	} catch {
-		return err({ kind: "not_a_directory", path: assets_dir });
-	}
+	const st_result = try_catch(
+		() => statSync(assets_dir),
+		(e: unknown) => e,
+	);
+	if (!st_result.ok) return err({ kind: "not_a_directory", path: assets_dir });
+	const st = st_result.value;
 	if (!st.isDirectory()) {
 		return err({ kind: "not_a_directory", path: assets_dir });
 	}

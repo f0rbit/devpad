@@ -3,6 +3,8 @@
  * Shared between frontend and backend for consistency
  */
 
+import { createLogger } from "./logger";
+
 /**
  * Parses context data from various formats into a string array.
  * Handles JSON strings, arrays, objects, and invalid data gracefully.
@@ -24,8 +26,12 @@ export function parseContextToArray(context: unknown): string[] {
 			const parsed = JSON.parse(context);
 			// Recursively call to handle the parsed result
 			return parseContextToArray(parsed);
-		} catch {
-			// If parsing fails, return the string as a single-element array
+		} catch (error) {
+			// Not JSON -- degrade to treating the string as a single literal element,
+			// now with a visible breadcrumb instead of a silent discard.
+			createLogger("core.context").debug("context string is not JSON, using literal", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 			return [context];
 		}
 	}

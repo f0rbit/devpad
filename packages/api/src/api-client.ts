@@ -192,7 +192,8 @@ type ApplyOpResult = { op: ApplyOp["op"]; id: string };
 export type ApplyResponse = { idempotency_key: string; results: ApplyOpResult[] };
 export type BubbleStep = { task: Task; via: CompletedVia };
 export type DoneResponse = { completed: Task; bubbled: BubbleStep[]; hooks_fired: string[] };
-import { ApiClient as HttpClient } from "./request";
+import { ApiError } from "./errors";
+import { HTTP_STATUS } from "./error-handlers";
 import { type ApiResult, wrap } from "./result";
 
 type TagWithCount = { tag: string; count: number };
@@ -599,8 +600,12 @@ export class ApiClient {
 			wrap(async () => {
 				try {
 					return await this.clients.milestones.get<Milestone>(`/milestones/${id}`);
-				} catch {
-					return null;
+				} catch (error) {
+					// A missing milestone IS the "null" answer; anything else
+					// (network, auth, server) must surface as an ApiResult error
+					// instead of masquerading as "not found".
+					if (error instanceof ApiError && error.statusCode === HTTP_STATUS.NOT_FOUND) return null;
+					throw error;
 				}
 			}),
 

@@ -31,6 +31,7 @@ import { pipeline_oidc_trust, pipeline_package } from "@devpad/schema/database/s
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { desc, eq } from "drizzle-orm";
+import { createLogger } from "../../../utils/logger.js";
 import {
 	compile_glob,
 	OIDC_SESSION_SCOPES,
@@ -204,8 +205,12 @@ const touch_last_used = async (db: Database, policy_id: string, when: Date): Pro
 			.update(pipeline_oidc_trust)
 			.set({ last_used_at: when.toISOString() })
 			.where(eq(pipeline_oidc_trust.id, policy_id));
-	} catch {
-		// Audit field — never block the exchange if this fails.
+	} catch (error) {
+		// Audit field -- never block the exchange if this fails, but keep it visible.
+		createLogger("pipelines.oidc").warn("failed to touch oidc trust last_used_at", {
+			policy_id,
+			error: error instanceof Error ? error.message : String(error),
+		});
 	}
 };
 

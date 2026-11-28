@@ -28,6 +28,15 @@ export type Spinner = {
 };
 
 /**
+ * Best-effort stderr diagnostic for CLI modules without their own console
+ * override (verification-hardening 2.3b): catch sites that degrade must log
+ * through this channel instead of discarding the error.
+ */
+export const log_diag = (...args: unknown[]): void => {
+	console.error(...args);
+};
+
+/**
  * Build a spinner that no-ops when stdout isn't a TTY (CI). In non-TTY
  * mode `.fail(msg)` still logs the message to stderr so CI logs aren't
  * blank when the CLI exits non-zero.

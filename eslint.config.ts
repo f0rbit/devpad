@@ -146,6 +146,78 @@ export default define_lint_config({
 			},
 		},
 		{
+			// --- Swallowed-error escapes (verification-hardening 2.3b, incident 2) ---
+			// A `catch { return null }` hid a JSON.parse failure and the run-detail
+			// Approve button never rendered (the #157-class silent-degradation
+			// incident). Three rules close every swallow shape:
+			//   1. optional catch binding (`catch {`) -- the error vanishes with no
+			//      way to log it;
+			//   2. zero-param `.catch(() => ...)` -- the same discard on the promise
+			//      path;
+			//   3. no-unused-vars with caughtErrors:"all" -- `catch (e) {}` that
+			//      binds but ignores `e` is the same swallow one step removed.
+			// Every site must route the error through a sanctioned channel (worker:
+			// `c.get("log")`; core: `createLogger`; browser: `@/lib/pulse`
+			// `log.error`; scripts + CLI: stderr) AND degrade exactly as before but
+			// visibly, or convert to `try_catch`/`try_catch_async`/`pipe.try` from
+			// @f0rbit/corpus returning a Result. A `_`-prefixed binding stays the
+			// sanctioned deliberate-discard escape for the rare site that truly has
+			// nothing to do with the error.
+			// No conflict with the functional/no-try-statements warn tier: that
+			// rule stays warn (the try/catch -> Result migration is tracked
+			// separately by task_90024e9a), and these rules only make an EXISTING
+			// catch's error visible -- they never force a new try/catch.
+			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			rules: {
+				"no-restricted-syntax": [
+					"error",
+					{
+						selector: "CatchClause[param=null]",
+						message:
+							'catch without a binding discards the error -- bind it (`catch (error)`) and log through the sanctioned channel (worker: c.get("log"); core: createLogger; browser: @/lib/pulse log.error; scripts/CLI: stderr), or convert to try_catch/try_catch_async/pipe.try returning a Result.',
+					},
+					{
+						selector: "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[params.length=0]",
+						message:
+							".catch(() => ...) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
+					},
+					{
+						selector: "CallExpression[callee.property.name='catch'] > FunctionExpression[params.length=0]",
+						message:
+							".catch(function () { ... }) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
+					},
+				],
+				"@typescript-eslint/no-unused-vars": [
+					"error",
+					{
+						argsIgnorePattern: "^_",
+						varsIgnorePattern: "^_",
+						caughtErrors: "all",
+						caughtErrorsIgnorePattern: "^_",
+					},
+				],
+			},
+		},
+		{
+			// 2.3b companion: pipelines integration test fixtures now log
+			// best-effort fixture-cleanup failures instead of discarding them;
+			// test-diagnostic console output is the sanctioned channel here.
+			files: ["packages/pipelines/__tests__/**"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// 2.3b companion: apps/main's SSR middleware has no browser pulse
+			// client, so its nav-history-cookie degradation logs through
+			// console.error (the CF Workers Logs channel, island-boundary
+			// precedent).
+			files: ["apps/main/src/middleware.ts"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
 			// Golden fixtures are scaffolder OUTPUT snapshots asserted byte-for-byte by
 			// packages/cli's tests -- each ships its own full lint toolchain wiring
 			// (own eslint.config.ts/tsconfig.json). Linting them from the root would

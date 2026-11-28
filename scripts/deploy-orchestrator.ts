@@ -200,7 +200,11 @@ const status_of = async (url: string, init?: RequestInit): Promise<number | null
 	try {
 		const res = await fetch(url, init);
 		return res.status;
-	} catch {
+	} catch (error) {
+		console.error(
+			`[deploy-orchestrator] probe failed for ${url}:`,
+			error instanceof Error ? error.message : String(error),
+		);
 		return null;
 	}
 };
@@ -216,7 +220,11 @@ const fetch_bound_names = async (token: string): Promise<Set<string> | null> => 
 			.map((binding) => binding.name)
 			.filter((name): name is string => typeof name === "string");
 		return new Set(names);
-	} catch {
+	} catch (error) {
+		console.error(
+			"[deploy-orchestrator] bindings settings fetch failed:",
+			error instanceof Error ? error.message : String(error),
+		);
 		return null;
 	}
 };

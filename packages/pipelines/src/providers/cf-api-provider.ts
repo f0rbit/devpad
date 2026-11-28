@@ -41,6 +41,7 @@
  */
 
 import { err, ok, type Result } from "@f0rbit/corpus";
+import { createLogger } from "@devpad/core/utils/logger";
 import { z } from "zod";
 import type {
 	AssetConfig,
@@ -90,7 +91,13 @@ const interpret_response = async <T>(
 	response: Response,
 	schema: z.ZodType<T, z.ZodTypeDef, unknown>,
 ): Promise<Result<T, CloudflareError>> => {
-	const body_text = await response.text().catch(() => "");
+	const body_text = await response.text().catch((e: unknown) => {
+		createLogger("pipelines:cf-api").warn("error-response body read failed", {
+			status: response.status,
+			error: e instanceof Error ? e.message : String(e),
+		});
+		return "";
+	});
 	if (response.status === 404) return err({ code: "not_found", message: body_text || "cf api 404" });
 	if (response.status === 409) return err({ code: "conflict", message: body_text || "cf api 409" });
 	if (response.status >= 400 && response.status < 500)
@@ -396,7 +403,13 @@ const upload_asset_session = async (
 			return err({ code: "assets_upload_failed", message: `assets/upload fetch failed: ${String(e)}` });
 		}
 		if (response.status >= 400) {
-			const body_text = await response.text().catch(() => "");
+			const body_text = await response.text().catch((e: unknown) => {
+				createLogger("pipelines:cf-api").warn("assets/upload error body read failed", {
+					status: response.status,
+					error: e instanceof Error ? e.message : String(e),
+				});
+				return "";
+			});
 			return err({
 				code: "assets_upload_failed",
 				message: `assets/upload returned ${String(response.status)}: ${body_text || "<no body>"}`,

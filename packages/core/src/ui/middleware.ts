@@ -1,6 +1,10 @@
 import { AuthUserSchema, type AuthUser } from "@devpad/schema/bindings";
 import { z } from "zod";
 
+import { createLogger } from "../utils/logger";
+
+const auth_log = createLogger("ui.auth");
+
 const SessionCheckResponseSchema = z.object({
 	authenticated: z.boolean(),
 	user: AuthUserSchema,
@@ -30,7 +34,11 @@ export async function resolveAuth(
 		try {
 			user = AuthUserSchema.parse(JSON.parse(authUserHeader));
 			session = { id: request.headers.get("X-Auth-Session-Id") ?? "injected" };
-		} catch {}
+		} catch (error) {
+			auth_log.warn("X-Auth-User header failed validation, degrading to anonymous", {
+				error: error instanceof Error ? error.message : String(error),
+			});
+		}
 		return { user, session };
 	}
 
@@ -65,7 +73,11 @@ export async function resolveAuth(
 				session = { id: "verified" };
 			}
 		}
-	} catch {}
+	} catch (error) {
+		auth_log.warn("session check failed, degrading to anonymous", {
+			error: error instanceof Error ? error.message : String(error),
+		});
+	}
 
 	return { user, session };
 }

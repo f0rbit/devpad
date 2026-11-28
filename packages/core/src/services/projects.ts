@@ -12,6 +12,7 @@ import {
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, not, sql } from "drizzle-orm";
+import { createLogger } from "../utils/logger";
 import type { ServiceError } from "./errors.js";
 
 export async function getUserProjects(db: Database, user_id: string): Promise<Result<Project[], ServiceError>> {
@@ -198,7 +199,14 @@ export async function upsertProject(
 			const repo = slices.at(-1);
 			const owner = slices.at(-2);
 			if (repo && owner) {
-				data.specification = await github_client.getSpecification(owner, repo, access_token).catch(() => null);
+				data.specification = await github_client.getSpecification(owner, repo, access_token).catch((e: unknown) => {
+					createLogger("core.projects").warn("specification fetch failed, continuing without spec", {
+						owner,
+						repo,
+						error: e instanceof Error ? e.message : String(e),
+					});
+					return null;
+				});
 			}
 		}
 	}

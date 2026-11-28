@@ -61,8 +61,11 @@ const try_pulse_summary = async (
 				"Content-Type": "application/json",
 			},
 		});
-	} catch {
-		c.get("log")?.warning("dashboard_pulse_unreachable", { project_id });
+	} catch (error) {
+		c.get("log")?.warning("dashboard_pulse_unreachable", {
+			project_id,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return null;
 	}
 
@@ -77,7 +80,11 @@ const try_pulse_summary = async (
 	try {
 		const body: unknown = await response.json();
 		return is_record(body) ? body : null;
-	} catch {
+	} catch (error) {
+		c.get("log")?.warning("dashboard_pulse_body_not_json", {
+			project_id,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return null;
 	}
 };

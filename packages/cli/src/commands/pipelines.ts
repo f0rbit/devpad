@@ -10,6 +10,7 @@
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
+import { try_catch } from "@f0rbit/corpus";
 import { type ApiClient, ApiClient as ApiClientCtor } from "@devpad/api";
 import {
 	derive_template_vars,
@@ -683,12 +684,14 @@ const upload_assets_directory = async (
 };
 
 const try_parse_json_object = (text: string): object | null => {
-	try {
-		const parsed: unknown = JSON.parse(text);
-		return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed) ? parsed : null;
-	} catch {
-		return null;
-	}
+	const parsed = try_catch(
+		(): unknown => JSON.parse(text),
+		(e: unknown) => e,
+	);
+	if (!parsed.ok) return null;
+	return typeof parsed.value === "object" && parsed.value !== null && !Array.isArray(parsed.value)
+		? parsed.value
+		: null;
 };
 
 const parse_asset_config = (raw: string | undefined): { ok: true; value: object } | { ok: false; error: string } => {
@@ -699,13 +702,18 @@ const parse_asset_config = (raw: string | undefined): { ok: true; value: object 
 	// error.
 	const inline = try_parse_json_object(raw);
 	if (inline !== null) return { ok: true, value: inline };
-	let file_text: string;
-	try {
-		file_text = readFileSync(raw, "utf8");
-	} catch {
-		return { ok: false, error: `--asset-config is neither valid JSON nor a readable file path: ${raw}` };
+	const file_text = try_catch(
+		() => readFileSync(raw, "utf8"),
+		(e: unknown) => e,
+	);
+	if (!file_text.ok) {
+		const cause = file_text.error instanceof Error ? file_text.error.message : String(file_text.error);
+		return {
+			ok: false,
+			error: `--asset-config is neither valid JSON nor a readable file path (${cause}): ${raw}`,
+		};
 	}
-	const from_file = try_parse_json_object(file_text);
+	const from_file = try_parse_json_object(file_text.value);
 	if (from_file === null) return { ok: false, error: `--asset-config file does not contain a JSON object: ${raw}` };
 	return { ok: true, value: from_file };
 };
@@ -723,7 +731,11 @@ const derive_bundle_ignore_pattern = (assets_dir: string, bundle_dir: string | u
 	try {
 		assets_real = statSync(assets_dir).isDirectory() ? path.resolve(assets_dir) : assets_dir;
 		bundle_real = statSync(bundle_dir).isDirectory() ? path.resolve(bundle_dir) : bundle_dir;
-	} catch {
+	} catch (error) {
+		console.error(
+			"[pipelines] bundle-in-assets ignore pattern not derivable, stat failed:",
+			error instanceof Error ? error.message : String(error),
+		);
 		return [];
 	}
 	const rel = path.relative(assets_real, bundle_real);

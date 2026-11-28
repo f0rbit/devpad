@@ -265,7 +265,12 @@ export const ingest_event = async (
 			stage_name: input.stage_name,
 			kind: input.kind,
 		})
-		.catch(() => undefined);
+		.catch((error: unknown) => {
+			logger.warn("pulse emit failed for external stage event", {
+				run_id: input.run_id,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		});
 
 	// (5b) AWAITED DO tick for transition-relevant kinds only. The body
 	// carries the stage name + raw payload so the DO side of external
@@ -318,7 +323,10 @@ const tick_outcome_from = async (response: Response): Promise<IngestTick> => {
 	try {
 		const parsed_body: unknown = await response.json();
 		body = parsed_body;
-	} catch {
+	} catch (error) {
+		logger.debug("tick response body was not JSON", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		body = null;
 	}
 	if (!response.ok) {

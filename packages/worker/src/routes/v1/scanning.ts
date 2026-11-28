@@ -39,7 +39,8 @@ app.post("/scan", requireAuth, async (c) => {
 				await s.write(chunk);
 			}
 			span.end({ status: "ok", project_id });
-		} catch {
+		} catch (error) {
+			log.error("github scan stream failed", error, { project_id });
 			span.end({ status: "error", project_id });
 			await s.write("error: scan failed\n");
 		}

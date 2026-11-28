@@ -155,7 +155,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 					try {
 						const raw_parsed: unknown = JSON.parse(buf.toString("utf8"));
 						parsed = raw_parsed;
-					} catch {
+					} catch (_error) {
+						// Visible to the caller as 400 invalid_body below.
 						send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 						return;
 					}
@@ -299,8 +300,9 @@ const setup_fixtures = (): Fixtures => {
 const cleanup_fixtures = (fx: Fixtures): void => {
 	try {
 		rmSync(fx.dir, { recursive: true, force: true });
-	} catch {
-		// best-effort
+	} catch (error) {
+		// best-effort cleanup, but visible
+		console.warn("[test] fixture cleanup failed:", error);
 	}
 };
 

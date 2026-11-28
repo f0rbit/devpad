@@ -11,8 +11,9 @@ const getUserId = (): string | undefined => {
 			const parsed = raw as { id?: string; user_id?: string };
 			return parsed.id || parsed.user_id;
 		}
-	} catch {
-		// ignore
+	} catch (error) {
+		// Degrade to an anonymous session id -- but visibly.
+		console.warn("[error-logger] stored user payload was not valid JSON:", error);
 	}
 	return undefined;
 };

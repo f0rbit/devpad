@@ -1,5 +1,6 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineAnalysisTemplate } from "@devpad/schema";
+import { try_catch } from "@f0rbit/corpus";
 import { Button, Empty } from "@f0rbit/ui";
 import Pencil from "lucide-solid/icons/pencil";
 import Plus from "lucide-solid/icons/plus";
@@ -15,11 +16,11 @@ type AnalysisTemplateListProps = {
 const to_display_string = (raw: unknown): string => {
 	if (typeof raw === "string") return raw;
 	if (raw === null || raw === undefined) return "";
-	try {
-		return JSON.stringify(raw);
-	} catch {
-		return "";
-	}
+	const serialized = try_catch(
+		() => JSON.stringify(raw),
+		(e: unknown) => e,
+	);
+	return serialized.ok ? serialized.value : "";
 };
 
 const threshold_line_count = (raw: unknown): number => {

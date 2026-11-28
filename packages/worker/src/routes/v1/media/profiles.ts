@@ -25,7 +25,12 @@ profileRoutes.post("/", async (c) => {
 	const auth = getAuth(c);
 	const ctx = getContext(c);
 
-	const body = await c.req.json().catch(() => ({}));
+	const body = await c.req.json().catch((e: unknown) => {
+		c.get("log")?.warning("profile request body was not JSON", {
+			error: e instanceof Error ? e.message : String(e),
+		});
+		return {};
+	});
 	const parseResult = CreateProfileSchema.safeParse(body);
 
 	if (!parseResult.success) {
@@ -50,7 +55,12 @@ profileRoutes.patch("/:id", async (c) => {
 	const ctx = getContext(c);
 	const profId = profileId(c.req.param("id"));
 
-	const body = await c.req.json().catch(() => ({}));
+	const body = await c.req.json().catch((e: unknown) => {
+		c.get("log")?.warning("profile request body was not JSON", {
+			error: e instanceof Error ? e.message : String(e),
+		});
+		return {};
+	});
 	const parseResult = UpdateProfileSchema.safeParse(body);
 
 	if (!parseResult.success) {

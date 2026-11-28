@@ -1,5 +1,6 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineAnalysisTemplate } from "@devpad/schema";
+import { try_catch } from "@f0rbit/corpus";
 import { Button, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
 import { createEffect, createSignal, Show } from "solid-js";
 
@@ -15,11 +16,11 @@ type AnalysisTemplateEditorProps = {
 const threshold_dsl_string = (raw: unknown): string => {
 	if (typeof raw === "string") return raw;
 	if (raw === null || raw === undefined) return "";
-	try {
-		return JSON.stringify(raw);
-	} catch {
-		return "";
-	}
+	const serialized = try_catch(
+		() => JSON.stringify(raw),
+		(e: unknown) => e,
+	);
+	return serialized.ok ? serialized.value : "";
 };
 
 export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProps) {

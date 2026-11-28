@@ -35,7 +35,11 @@ export const onRequest: MiddlewareHandler = defineMiddleware(async (context, nex
 				const raw_history: unknown = JSON.parse(decodeURIComponent(historyCookie));
 				history = raw_history as string[];
 			}
-		} catch {
+		} catch (error) {
+			// Corrupt nav-history cookie -- degrade to empty history, visibly.
+			// SSR: no browser pulse here; console.error is the CF Workers Logs
+			// channel (same precedent as island-boundary.tsx's SSR fallback).
+			console.error("[middleware] nav-history cookie was not valid JSON, resetting history:", error);
 			history = [];
 		}
 

@@ -55,8 +55,9 @@ describe("MCP Extended Tools Integration", () => {
 					const result = await api_client.goals.delete(resource.id);
 					if (!result.ok) console.warn(`Failed to cleanup goal ${resource.id}: ${result.error.message}`);
 				}
-			} catch {
-				// Ignore cleanup errors
+			} catch (error) {
+				// Best-effort cleanup, but visible.
+				console.warn("cleanup failed:", error);
 			}
 		}
 		await mcp_client.stop();

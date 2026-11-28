@@ -74,8 +74,11 @@ const forward_to_pulse = async (c: Context<AppContext>, opts: ForwardOpts): Prom
 	let response: Response;
 	try {
 		response = await fetch(url.toString(), fetch_options);
-	} catch {
-		c.get("log")?.warning("pulse_proxy_unreachable", { pulse_path: opts.pulse_path });
+	} catch (error) {
+		c.get("log")?.warning("pulse_proxy_unreachable", {
+			pulse_path: opts.pulse_path,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
@@ -99,6 +102,9 @@ const read_project_body = async (c: Context<AppContext>): Promise<{ text: string
 		},
 		(cause) => String(cause),
 	);
+	if (!parsed.ok && text !== "") {
+		c.get("log")?.warning("pulse admin request body was not JSON", { error: parsed.error });
+	}
 	const body = parsed.ok ? project_body.safeParse(parsed.value) : null;
 	return { text, project_id: body?.success ? body.data.project_id : undefined };
 };
@@ -215,7 +221,10 @@ app.post("/admin/subs", requireAuth, async (c) => {
 			},
 			body: text,
 		});
-	} catch {
+	} catch (error) {
+		c.get("log")?.warning("pulse_proxy_unreachable", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 
@@ -261,7 +270,10 @@ app.post("/admin/keys", requireAuth, async (c) => {
 			},
 			body: text,
 		});
-	} catch {
+	} catch (error) {
+		c.get("log")?.warning("pulse_proxy_unreachable", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return c.json({ error: "pulse_unreachable" }, 503);
 	}
 

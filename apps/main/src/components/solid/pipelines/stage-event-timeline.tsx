@@ -18,6 +18,7 @@
 
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineStageEvent, StageEventKind } from "@devpad/schema";
+import { try_catch } from "@f0rbit/corpus";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
 import IslandBoundary from "@/components/solid/pipelines/island-boundary";
@@ -84,11 +85,11 @@ const format_relative = (iso: string): string => {
 
 const stringify_payload = (payload: unknown): string => {
 	if (payload === null || payload === undefined) return "null";
-	try {
-		return JSON.stringify(payload, null, 2);
-	} catch {
-		return "[unserializable payload]";
-	}
+	const serialized = try_catch(
+		() => JSON.stringify(payload, null, 2),
+		(e: unknown) => e,
+	);
+	return serialized.ok ? serialized.value : "[unserializable payload]";
 };
 
 export default function StageEventTimeline(props: StageEventTimelineProps) {

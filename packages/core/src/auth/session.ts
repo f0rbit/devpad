@@ -3,6 +3,8 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 
+import { createLogger } from "../utils/logger";
+
 export type SessionUser = {
 	id: string;
 	github_id: number | null;
@@ -112,7 +114,11 @@ export async function validateSession(
 			.update(session)
 			.set({ expiresAt: new_expires_at })
 			.where(eq(session.id, session_id))
-			.catch(() => {});
+			.catch((e: unknown) => {
+				createLogger("auth.session").warn("session refresh write failed", {
+					error: e instanceof Error ? e.message : String(e),
+				});
+			});
 
 		return ok({
 			user: {

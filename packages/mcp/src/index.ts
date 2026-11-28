@@ -57,8 +57,9 @@ function zodToMCPSchema(schema: Parameters<typeof zodToJsonSchema>[0]): JsonSche
 			},
 			required: [],
 		};
-	} catch {
-		// Fallback for problematic schemas
+	} catch (error) {
+		// Fallback for problematic schemas -- keep the cause visible on stderr.
+		console.error("[mcp] tool json-schema conversion failed, using open schema:", error);
 		return {
 			type: "object",
 			properties: {},

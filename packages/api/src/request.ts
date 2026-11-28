@@ -1,3 +1,4 @@
+import { try_catch } from "@f0rbit/corpus";
 import { HTTP_STATUS, handleHttpResponse, handleNetworkError, handleResponseError } from "./error-handlers";
 import { ApiError, AuthenticationError } from "./errors";
 
@@ -130,12 +131,17 @@ export class ApiClient {
 		if (response.status === HTTP_STATUS.NO_CONTENT) return undefined;
 		const text = await response.text();
 		if (!text || text.trim() === "" || text.trim() === "null") return undefined;
-		try {
-			const raw: unknown = JSON.parse(text);
-			return raw;
-		} catch {
-			return text;
+		const parsed = try_catch(
+			(): unknown => JSON.parse(text),
+			(error: unknown) => error,
+		);
+		if (parsed.ok) return parsed.value;
+		if (this.debug) {
+			console.log(`[DEBUG][${this.category}] response body is not JSON, returning raw text`, {
+				error: parsed.error instanceof Error ? parsed.error.message : String(parsed.error),
+			});
 		}
+		return text;
 	}
 
 	private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {

@@ -138,8 +138,11 @@ export const createApi = (options?: ApiOptions) => {
 		await pulseTracing({ pulse })(c, next);
 		try {
 			c.executionCtx.waitUntil(pulse.flush());
-		} catch {
+		} catch (error) {
 			// executionCtx unavailable in some local/test contexts — skip waitUntil.
+			c.get("log")?.debug("executionCtx unavailable, skipping pulse flush waitUntil", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 		}
 	});
 
@@ -153,8 +156,10 @@ export const createApi = (options?: ApiOptions) => {
 			});
 			try {
 				c.executionCtx.waitUntil(pulse.flush());
-			} catch {
-				// no-op
+			} catch (error) {
+				c.get("log")?.debug("executionCtx unavailable, skipping onError flush waitUntil", {
+					error: error instanceof Error ? error.message : String(error),
+				});
 			}
 		}
 		c.get("log")?.error("unhandled error", err);
@@ -189,7 +194,10 @@ export const createApi = (options?: ApiOptions) => {
 		const drain_task = hooks.drain_pending_events(db, dispatch);
 		try {
 			c.executionCtx.waitUntil(drain_task);
-		} catch {
+		} catch (error) {
+			c.get("log")?.debug("executionCtx unavailable, awaiting outbox drain inline", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 			await drain_task;
 		}
 	});

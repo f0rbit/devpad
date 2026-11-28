@@ -86,7 +86,7 @@ const without_owner_id = (body: Record<string, unknown>): Record<string, unknown
 	return rest;
 };
 
-const parse_json = (text: string): unknown => {
+const parse_json = (c: Context<AppContext>, text: string, event: string): unknown => {
 	const parsed = try_catch(
 		() => {
 			const raw: unknown = JSON.parse(text);
@@ -94,12 +94,14 @@ const parse_json = (text: string): unknown => {
 		},
 		(cause) => String(cause),
 	);
-	return parsed.ok ? parsed.value : null;
+	if (parsed.ok) return parsed.value;
+	if (text !== "") c.get("log")?.warning(event, { error: parsed.error });
+	return null;
 };
 
 /** The request body as a plain object; a missing / non-object / malformed body reads as `{}`. */
 const parse_body = async (c: Context<AppContext>): Promise<Record<string, unknown>> => {
-	const body = parse_json(await c.req.text());
+	const body = parse_json(c, await c.req.text(), "pipelines proxy body was not JSON");
 	return is_record(body) ? body : {};
 };
 
@@ -283,8 +285,11 @@ const forward_to_pipelines = async (c: Context<AppContext>, opts: ForwardOpts): 
 	let upstream: Response;
 	try {
 		upstream = await fetch(url.toString(), fetch_options);
-	} catch {
-		c.get("log")?.warning("pipelines_proxy_unreachable", { upstream_path: opts.upstream_path });
+	} catch (error) {
+		c.get("log")?.warning("pipelines_proxy_unreachable", {
+			upstream_path: opts.upstream_path,
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return c.json({ error: "pipelines_unreachable" }, 503);
 	}
 
@@ -298,7 +303,7 @@ const forward_to_pipelines = async (c: Context<AppContext>, opts: ForwardOpts): 
 	if (upstream.status === 204) return c.body(null, 204);
 
 	const text = await upstream.text();
-	const parsed = parse_json(text);
+	const parsed = parse_json(c, text, "pipelines_proxy_upstream_body_not_json");
 	const status = contentful_status(upstream.status);
 
 	if (is_record(parsed) && "ok" in parsed) {

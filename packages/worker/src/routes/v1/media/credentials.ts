@@ -88,7 +88,10 @@ const authenticateWithReddit = async (
 	let tokenData: z.infer<typeof RedditTokenResponseSchema>;
 	try {
 		tokenData = RedditTokenResponseSchema.parse(await tokenResponse.json());
-	} catch {
+	} catch (error) {
+		createLogger("worker.media.credentials").warn("reddit token response parse failed", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return { ok: false, error: "Malformed response from Reddit" };
 	}
 
@@ -215,7 +218,12 @@ credentialRoutes.post("/:platform", async (c) => {
 		return badRequest(c, "Invalid platform");
 	}
 
-	const body = await c.req.json().catch(() => ({}));
+	const body = await c.req.json().catch((e: unknown) => {
+		c.get("log")?.warning("credentials request body was not JSON", {
+			error: e instanceof Error ? e.message : String(e),
+		});
+		return {};
+	});
 	const parseResult = SaveCredentialsBodySchema.safeParse(body);
 
 	if (!parseResult.success) {

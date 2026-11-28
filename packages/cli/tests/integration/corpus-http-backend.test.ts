@@ -124,7 +124,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				try {
 					const raw_body: unknown = JSON.parse(buf.toString("utf8"));
 					parsed_body = raw_body;
-				} catch {
+				} catch (error) {
+					console.error("[test] version-set request body was not JSON:", error);
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
 				}
@@ -209,7 +210,8 @@ describe("selectCorpusBackend", () => {
 		let threw = false;
 		try {
 			await selectCorpusBackend({ mode: "cloudflare-http" });
-		} catch {
+		} catch (error) {
+			console.error("[test] selectCorpusBackend threw:", error);
 			threw = true;
 		}
 		expect(threw).toBe(true);

@@ -1,3 +1,4 @@
+import { try_catch } from "@f0rbit/corpus";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
@@ -817,12 +818,12 @@ export const scan_parsed_tasks = z.array(scan_parsed_task);
 
 const decode_legacy_json_string = (value: unknown): unknown => {
 	if (typeof value !== "string") return value;
-	try {
-		const decoded: unknown = JSON.parse(value);
-		return decoded;
-	} catch {
-		return value;
-	}
+	const decoded = try_catch(
+		(): unknown => JSON.parse(value),
+		(e: unknown) => e,
+	);
+	// Not JSON -- it wasn't double-encoded; keep the raw string.
+	return decoded.ok ? decoded.value : value;
 };
 
 export const scan_diff_results_stored = z.preprocess(decode_legacy_json_string, scan_diff_results);

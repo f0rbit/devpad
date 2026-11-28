@@ -15,6 +15,9 @@
  * fails the guard.
  */
 
+import { try_catch_async } from "@f0rbit/corpus";
+import { log_diag } from "./printer.js";
+
 export type OrchestratorHttpInput = { pipelines_url: string; pipelines_token: string };
 
 const SHA_PATTERN = /^[0-9a-f]{40}$/;
@@ -100,12 +103,18 @@ export const evaluate_dispatch_verification = (
 type EnvelopeResponse = { ok?: boolean; value?: unknown; error?: { message?: string } | string };
 
 const read_envelope = async (response: Response): Promise<EnvelopeResponse | null> => {
-	try {
-		const parsed: unknown = await response.json();
-		return parsed as EnvelopeResponse;
-	} catch {
+	const parsed = await try_catch_async(
+		(): Promise<unknown> => response.json(),
+		(e: unknown) => e,
+	);
+	if (!parsed.ok) {
+		log_diag(
+			"[pipelines-verify] dispatch envelope body was not JSON:",
+			parsed.error instanceof Error ? parsed.error.message : String(parsed.error),
+		);
 		return null;
 	}
+	return parsed.value as EnvelopeResponse;
 };
 
 /**

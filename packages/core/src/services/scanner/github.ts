@@ -1,5 +1,6 @@
 import { err, ok, type Result, try_catch_async } from "@f0rbit/corpus";
 import { z } from "zod";
+import { createLogger } from "../../../utils/logger.js";
 import { parseFileContent, shouldIgnorePath } from "./parser.js";
 import type { GitHubTreeEntry, ParsedTask, ScanConfig, ScannerError } from "./types.js";
 
@@ -39,7 +40,13 @@ const handle_error_response = async (response: Response): Promise<ScannerError> 
 		return { kind: "rate_limited", retry_after };
 	}
 
-	const body = await response.text().catch(() => "unknown error");
+	const body = await response.text().catch((e: unknown) => {
+		createLogger("scanner.github").debug("error-response body read failed", {
+			status: response.status,
+			error: e instanceof Error ? e.message : String(e),
+		});
+		return "unknown error";
+	});
 	return { kind: "github_api_error", status: response.status, message: body };
 };
 

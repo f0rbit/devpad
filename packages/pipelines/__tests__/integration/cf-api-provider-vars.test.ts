@@ -125,8 +125,8 @@ const start_recorder = (): RecorderHandle => {
 					try {
 						const raw_body: unknown = JSON.parse(text);
 						body = raw_body;
-					} catch {
-						/* leave as string */
+					} catch (_error) {
+						// Not JSON -- leave as string; the probe IS the control flow.
 					}
 				}
 			}

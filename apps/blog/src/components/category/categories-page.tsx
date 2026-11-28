@@ -90,7 +90,8 @@ const CategoriesPage: Component<Props> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.categories.delete(encodeURIComponent(name)));
 			refreshCategories();
-		} catch {
+		} catch (error) {
+			console.error("[categories] delete failed:", error);
 			setError("Failed to delete category");
 		}
 	};
@@ -110,7 +111,8 @@ const CategoriesPage: Component<Props> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.categories.create(data));
 			refreshCategories();
-		} catch {
+		} catch (error) {
+			console.error("[categories] create failed:", error);
 			setError("Failed to create category");
 		}
 	};
