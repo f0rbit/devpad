@@ -10,6 +10,7 @@ import remarkHtml from "remark-html";
 import { createEffect, createSignal } from "solid-js";
 import GithubIcon from "@/components/solid/github-icon";
 import { LoadingIndicator, type LoadingState } from "@/components/solid/loading-indicator";
+import { run_task } from "@/lib/run-task";
 
 type Props = {
 	project_id: string;
@@ -95,7 +96,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 	// Parse markdown when editing is turned off
 	createEffect(() => {
 		if (!isEditing()) {
-			void parseMarkdown(markdown());
+			run_task(parseMarkdown(markdown()), { component: "specification-editor", action: "parse" });
 		}
 	}, isEditing);
 
@@ -107,7 +108,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 						<a
 							role="button"
 							onClick={() => {
-								void save();
+								run_task(save(), { component: "specification-editor", action: "save" });
 							}}
 						>
 							<LoadingIndicator state={saving} idle={<Save size={16} />} />
@@ -117,7 +118,7 @@ const SpecificationEditor = ({ project_id, initial, has_github }: Props) => {
 							<a
 								role="button"
 								onClick={() => {
-									void fetchSpecification();
+									run_task(fetchSpecification(), { component: "specification-editor", action: "fetch" });
 								}}
 							>
 								<LoadingIndicator state={fetching} idle={<GithubIcon size={16} />} />

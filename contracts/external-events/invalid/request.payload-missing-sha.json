@@ -1,0 +1,8 @@
+{
+	"stage_name": "production",
+	"kind": "deploy_completed",
+	"payload": {
+		"status": "success"
+	},
+	"idempotency_key": "3f2504e0-4f89-11d3-9a0c-0305e82c3301"
+}

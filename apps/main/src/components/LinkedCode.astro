@@ -31,7 +31,7 @@ const build_context = (context: string[]) => {
 	return context.map(line => line.slice(min_whitespace)).join("\n");
 };
 
-const _context = code.context ? build_context(code.context as string[]) : null;
+const _context = code.context ? build_context(code.context) : null;
 
 /** @note had to set these to 'any' to avoid type error on <Code /> lang attribute */
 let _file_type = "" as any;

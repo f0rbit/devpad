@@ -9,6 +9,7 @@
 
 import { type ApiClient, getTool } from "@devpad/api";
 import { apply_request } from "@devpad/schema/validation";
+import { try_catch } from "@f0rbit/corpus";
 import chalk from "chalk";
 import type { Command } from "commander";
 import { fail_with, make_spinner } from "./printer.js";
@@ -146,9 +147,9 @@ export function register_graph_commands(program: Command, tasks: Command, get_cl
 }
 
 function try_json_parse(text: string): unknown {
-	try {
-		return JSON.parse(text) as unknown;
-	} catch {
-		return undefined;
-	}
+	const parsed = try_catch(
+		(): unknown => JSON.parse(text),
+		(e: unknown) => e,
+	);
+	return parsed.ok ? parsed.value : undefined;
 }

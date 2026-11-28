@@ -1,0 +1,5 @@
+{
+	"jwt": "eyJhbGciOiJSUzI1NiIsIng1YyI6WyJ4Il19.eyJpc3MiOiJodHRwczovL3Rva2VuLmFjdGlvbnMuZ2l0aHViLmNvbSIsInN1YiI6InJlcG86YWNtZS9teS1wa2ciLCJhdWQiOiJodHRwczovL2RldnBhZC1waXBlbGluZXMuZGV2LTgxOC53b3JrZXJzLmRldiJ9.x",
+	"package_id": "pipeline-package_anthropic-search",
+	"requested_scope": ["runs:events"]
+}

@@ -86,7 +86,7 @@ const seed_run_row = async (db: Database, package_id: string, run_id = "pipeline
 		shape: "atomic",
 		status: "queued",
 		current_stage: null,
-		resolved_rollout: { type: "atomic", stages: [] },
+		resolved_rollout: { type: "atomic" },
 		resolved_gates: {},
 		forced_atomic_reason: null,
 		started_at: now,

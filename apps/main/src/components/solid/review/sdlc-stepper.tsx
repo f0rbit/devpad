@@ -3,6 +3,7 @@ import type { SdlcStage, Task } from "@devpad/schema";
 import { SDLC_STAGES } from "@devpad/schema/database";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle, Step, Stepper } from "@f0rbit/ui";
 import { createEffect, createSignal, For, onCleanup, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 function LockIcon() {
 	return (
@@ -114,7 +115,9 @@ export default function SdlcStepper(props: SdlcStepperProps) {
 			setNextStageLocked(types_locked || design_locked);
 		}
 	}
-	onMount(() => void refreshLockState());
+	onMount(() => {
+		run_task(refreshLockState(), { component: "sdlc-stepper", action: "refresh-locks" });
+	});
 
 	async function attemptAdvance(override: boolean, reason?: string): Promise<void> {
 		const to = nextStage();
@@ -145,7 +148,9 @@ export default function SdlcStepper(props: SdlcStepperProps) {
 							data-stage={stage}
 							data-locked={stage === nextStage() && nextStageLocked() ? "true" : undefined}
 							onClick={() => {
-								if (stage === nextStage()) void attemptAdvance(false);
+								if (stage === nextStage()) {
+									run_task(attemptAdvance(false), { component: "sdlc-stepper", action: "advance" });
+								}
 							}}
 						/>
 					)}
@@ -195,7 +200,10 @@ export default function SdlcStepper(props: SdlcStepperProps) {
 						data-testid="sdlc-override-submit"
 						disabled={submitting() || overrideReason().trim().length === 0}
 						onClick={() => {
-							void attemptAdvance(true, overrideReason().trim());
+							run_task(attemptAdvance(true, overrideReason().trim()), {
+								component: "sdlc-stepper",
+								action: "override-advance",
+							});
 						}}
 					>
 						Override & advance

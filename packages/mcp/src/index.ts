@@ -30,20 +30,20 @@ type MCPResponse = {
 	result: MCPResult;
 };
 
-// Helper to convert Zod schema to JSON Schema for MCP.
-// `schema` is typed `unknown` (rather than `z.ZodType`) deliberately: annotating
-// it as an actual Zod type here makes `zodToJsonSchema`'s call below hit
-// "type instantiation is excessively deep" under this repo's zod /
-// zod-to-json-schema version pairing (reproduced in isolation, unrelated to
-// @devpad/api) — the cast at the call site keeps that structural comparison
-// from ever happening while `zodToJsonSchema`'s own declared parameter type
-// still governs what's actually passed through.
-function zodToMCPSchema(schema: unknown): JsonSchemaObject {
+const is_json_schema_object = (value: unknown): value is JsonSchemaObject =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+// Helper to convert Zod schema to JSON Schema for MCP. The parameter is
+// zod-to-json-schema's OWN declared parameter type (no assertion): the
+// converter's output is narrowed with a runtime guard instead of a cast.
+function zodToMCPSchema(schema: Parameters<typeof zodToJsonSchema>[0]): JsonSchemaObject {
 	try {
-		const jsonSchema = zodToJsonSchema(schema as Parameters<typeof zodToJsonSchema>[0], {
+		const converted: unknown = zodToJsonSchema(schema, {
 			target: "openApi3",
 			$refStrategy: "none",
-		}) as JsonSchemaObject;
+		});
+		if (!is_json_schema_object(converted)) throw new Error("zod-to-json-schema returned a non-object schema");
+		const jsonSchema = converted;
 		// Remove the $schema property that zod-to-json-schema adds
 		const { $schema: _, ...cleanSchema } = jsonSchema;
 
@@ -57,8 +57,9 @@ function zodToMCPSchema(schema: unknown): JsonSchemaObject {
 			},
 			required: [],
 		};
-	} catch {
-		// Fallback for problematic schemas
+	} catch (error) {
+		// Fallback for problematic schemas -- keep the cause visible on stderr.
+		console.error("[mcp] tool json-schema conversion failed, using open schema:", error);
 		return {
 			type: "object",
 			properties: {},

@@ -34,22 +34,18 @@ describe("read_gates", () => {
 		}
 	});
 
-	test("accepts a JSON string defensively", () => {
-		const read = read_gates(JSON.stringify(LIVE_EXTERNAL_RUN.resolved_gates));
-		expect(read.ok).toBe(true);
-		if (read.ok) {
-			expect(read.value["staging→production"].type).toBe("manual");
-		}
-	});
-
 	test("malformed object → typed error with reason, no throw", () => {
 		const read = read_gates({ "staging→production": { type: "nonsense" } });
 		expect(read.ok).toBe(false);
 		if (!read.ok) expect(read.reason.length).toBeGreaterThan(0);
 	});
 
-	test("malformed JSON string → typed error", () => {
-		const read = read_gates("{not json");
+	// The defensive JSON-string fallback was removed with verification-hardening
+	// 2.1: the columns are typed end-to-end and Zod-validated at the core read
+	// boundary, so a string on the wire is a bug — it must read as a failure,
+	// not silently re-parse.
+	test("a JSON string is no longer accepted — typed error", () => {
+		const read = read_gates(JSON.stringify(LIVE_EXTERNAL_RUN.resolved_gates));
 		expect(read.ok).toBe(false);
 	});
 });
@@ -87,9 +83,9 @@ describe("read_rollout", () => {
 		if (read.ok) expect(read.value.type).toBe("gradual");
 	});
 
-	test("accepts a JSON string defensively", () => {
+	test("a JSON string is no longer accepted — typed error", () => {
 		const read = read_rollout(JSON.stringify(LIVE_EXTERNAL_RUN.resolved_rollout));
-		expect(read.ok).toBe(true);
+		expect(read.ok).toBe(false);
 	});
 
 	test("atomic rollout reads fine (no stages)", () => {

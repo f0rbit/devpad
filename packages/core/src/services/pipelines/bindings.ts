@@ -68,7 +68,7 @@ export type MergedBindings = {
 };
 
 const is_secret_binding = (binding: VersionBinding): boolean =>
-	(SECRET_BINDING_TYPES as readonly string[]).includes(binding.type);
+	SECRET_BINDING_TYPES.some((secret_type) => secret_type === binding.type);
 
 export const merge_bindings = (input: BindingMergeInput): MergedBindings => {
 	const platform_names = new Set(input.platform.map((b) => b.name));

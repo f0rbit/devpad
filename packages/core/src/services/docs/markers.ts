@@ -16,6 +16,8 @@
 
 import { type ThreadMarker, thread_marker } from "@devpad/schema/validation";
 
+import { createLogger } from "../../utils/logger";
+
 const BEGIN_KEYWORD = "devpad:thread:begin";
 const END_KEYWORD = "devpad:thread:end";
 
@@ -105,7 +107,10 @@ function decode_marker(id: string | undefined, payload: string | undefined): Thr
 		const decoded = decode_payload(payload);
 		const result = thread_marker.safeParse(decoded);
 		return result.success ? result.data : null;
-	} catch {
+	} catch (error) {
+		createLogger("docs.markers").debug("marker payload decode failed", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return null;
 	}
 }

@@ -9,6 +9,7 @@ import Target from "lucide-solid/icons/target";
 import Zap from "lucide-solid/icons/zap";
 import { type Component, createEffect, createSignal, Show } from "solid-js";
 import { Dynamic } from "solid-js/web";
+import { run_task } from "@/lib/run-task";
 import { Ring } from "./ring";
 import type { OutlineStore } from "./store";
 import { hasChildren as computeHasChildren } from "./types";
@@ -44,12 +45,17 @@ export function OutlineRow(props: OutlineRowProps) {
 		if (isRenaming()) setDraft(task().title);
 	});
 
-	const commitRename = () => void props.store.commitRename(task().id, draft());
+	const commitRename = () => {
+		run_task(props.store.commitRename(task().id, draft()), { component: "outline-row", action: "rename" });
+	};
 
 	const onBulletClick = (e: MouseEvent) => {
 		e.stopPropagation();
-		if (isChildful()) props.onZoom(task().id);
-		else void props.store.advance(task().id);
+		if (isChildful()) {
+			props.onZoom(task().id);
+			return;
+		}
+		run_task(props.store.advance(task().id), { component: "outline-row", action: "advance" });
 	};
 
 	return (
@@ -177,7 +183,7 @@ export function OutlineRow(props: OutlineRowProps) {
 						aria-label={`Reopen ${task().title}`}
 						onClick={(e) => {
 							e.stopPropagation();
-							void props.store.reopen(task().id);
+							run_task(props.store.reopen(task().id), { component: "outline-row", action: "reopen" });
 						}}
 					>
 						<RotateCcw size={11} /> reopen

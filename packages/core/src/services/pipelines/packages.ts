@@ -21,12 +21,13 @@
  *   must clean up runs explicitly before deleting.
  */
 
-import type { ExternalTarget, PipelinePackage } from "@devpad/schema";
+import type { ExternalTarget, InsertPipelinePackage, PipelinePackage } from "@devpad/schema";
 import { pipeline_package, pipeline_run, project } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
+import { parse_package_row } from "./row-parse.js";
 
 export type ListPackagesFilter = {
 	project_id?: string;
@@ -52,7 +53,13 @@ export const list_packages = async (
 					? base.where(conditions[0])
 					: base.where(and(...conditions));
 		const rows = await where;
-		return ok(rows);
+		const parsed: PipelinePackage[] = [];
+		for (const row of rows) {
+			const checked = parse_package_row(row);
+			if (!checked.ok) return checked;
+			parsed.push(checked.value);
+		}
+		return ok(parsed);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to list pipeline_package: ${String(e)}` });
 	}
@@ -67,7 +74,7 @@ export const get_package = async (db: Database, package_id: string): Promise<Res
 		const rows = await db.select().from(pipeline_package).where(eq(pipeline_package.id, package_id));
 		const row = rows.at(0);
 		if (!row) return err({ kind: "not_found", resource: "pipeline_package", id: package_id });
-		return ok(row);
+		return parse_package_row(row);
 	} catch (e) {
 		return err({
 			kind: "db_error",
@@ -101,13 +108,12 @@ export const create_package = async (
 	try {
 		const existing = await db.select().from(pipeline_package).where(eq(pipeline_package.id, input.id));
 		if (existing[0]) {
-			const conflict_error = {
+			return err({
 				kind: "conflict",
 				resource: "pipeline_package",
 				id: input.id,
 				message: `pipeline_package "${input.id}" already exists`,
-			};
-			return err(conflict_error as ServiceError);
+			});
 		}
 
 		if (input.project_id !== undefined && input.project_id !== null) {
@@ -125,7 +131,7 @@ export const create_package = async (
 				message: "external packages require an external_target",
 			});
 		}
-		const insert_values = {
+		const insert_values: InsertPipelinePackage = {
 			id: input.id,
 			owner_id: input.owner_id,
 			name: input.name,
@@ -142,10 +148,7 @@ export const create_package = async (
 			protected: false,
 			deleted: false,
 		};
-		const inserted = await db
-			.insert(pipeline_package)
-			.values(insert_values as never)
-			.returning();
+		const inserted = await db.insert(pipeline_package).values(insert_values).returning();
 
 		const row = inserted.at(0);
 		if (!row)
@@ -191,7 +194,7 @@ export const update_package = async (
 			if (!project_row[0]) return err({ kind: "not_found", resource: "project", id: input.project_id });
 		}
 
-		const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), modified_by: "api" };
+		const patch: Partial<InsertPipelinePackage> = { updated_at: new Date().toISOString(), modified_by: "api" };
 		if ("repo_url" in input) patch.repo_url = input.repo_url;
 		if ("project_id" in input) patch.project_id = input.project_id;
 		if ("default_template_ref" in input) patch.default_template_ref = input.default_template_ref;
@@ -199,11 +202,7 @@ export const update_package = async (
 		if ("deploy_mode" in input) patch.deploy_mode = input.deploy_mode;
 		if ("external_target" in input) patch.external_target = input.external_target;
 
-		const updated = await db
-			.update(pipeline_package)
-			.set(patch as never)
-			.where(eq(pipeline_package.id, package_id))
-			.returning();
+		const updated = await db.update(pipeline_package).set(patch).where(eq(pipeline_package.id, package_id)).returning();
 		const row = updated.at(0);
 		if (!row)
 			return err({
@@ -235,15 +234,14 @@ export const delete_package = async (db: Database, package_id: string): Promise<
 			.from(pipeline_run)
 			.where(eq(pipeline_run.package_id, package_id));
 		if (runs.length > 0) {
-			const conflict_error = {
+			return err({
 				kind: "conflict",
 				resource: "pipeline_package",
 				id: package_id,
 				reason: "active_runs",
 				count: runs.length,
 				message: `pipeline_package "${package_id}" still has ${String(runs.length)} run(s); delete them first`,
-			};
-			return err(conflict_error as ServiceError);
+			});
 		}
 
 		await db.delete(pipeline_package).where(eq(pipeline_package.id, package_id));

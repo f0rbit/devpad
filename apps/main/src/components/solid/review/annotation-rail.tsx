@@ -3,6 +3,7 @@ import type { PullDocResponse } from "@devpad/api";
 import type { Signoff, ThreadMarker } from "@devpad/schema";
 import { Button } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { anchorFromRange } from "@/utils/dom-text-range";
 
 export type AnnotationRailProps = {
@@ -70,7 +71,9 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 		});
 		setPendingSignoff(result.ok ? result.value : null);
 	}
-	onMount(() => void loadPendingSignoff());
+	onMount(() => {
+		run_task(loadPendingSignoff(), { component: "annotation-rail", action: "load-signoff" });
+	});
 
 	/**
 	 * B3 fast-follow #4 — "anchor connection". The render route wraps each
@@ -126,7 +129,7 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 							class="thread-action-link"
 							data-testid="thread-resolve"
 							onClick={() => {
-								void resolveThread(thread.id);
+								run_task(resolveThread(thread.id), { component: "annotation-rail", action: "resolve" });
 							}}
 						>
 							resolve
@@ -136,7 +139,10 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 							class="thread-action-link"
 							data-testid="thread-toggle-blocking"
 							onClick={() => {
-								void toggleBlocking(thread.id, !thread.blocking);
+								run_task(toggleBlocking(thread.id, !thread.blocking), {
+									component: "annotation-rail",
+									action: "toggle-blocking",
+								});
 							}}
 						>
 							{thread.blocking ? "unmark blocking" : "mark blocking"}
@@ -155,7 +161,7 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 							data-testid="thread-reply-send"
 							disabled={saving() || replyBody(thread.id).trim().length === 0}
 							onClick={() => {
-								void sendReply(thread.id);
+								run_task(sendReply(thread.id), { component: "annotation-rail", action: "reply" });
 							}}
 						>
 							Send
@@ -298,7 +304,7 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 							data-testid="verdict-approve"
 							disabled={saving() || blockingOpenThreads().length > 0}
 							onClick={() => {
-								void decide("approved");
+								run_task(decide("approved"), { component: "annotation-rail", action: "decide" });
 							}}
 						>
 							Approve
@@ -308,7 +314,7 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 							data-testid="verdict-request-changes"
 							disabled={saving()}
 							onClick={() => {
-								void decide("changes_requested");
+								run_task(decide("changes_requested"), { component: "annotation-rail", action: "decide" });
 							}}
 						>
 							Request changes
@@ -368,7 +374,7 @@ export default function AnnotationRail(props: AnnotationRailProps) {
 									data-testid="thread-save"
 									disabled={saving() || composerBody().trim().length === 0}
 									onClick={() => {
-										void saveThread();
+										run_task(saveThread(), { component: "annotation-rail", action: "save-thread" });
 									}}
 								>
 									Save

@@ -1,16 +1,12 @@
 /**
  * External deploy mode (#155) helpers for the pipeline pages.
  *
- * `pipeline_package.external_target` is a raw JSON column — the orchestrator
- * validates it at the service boundary, but the read arrives untyped, so every
- * consumer parses defensively here and gets `null` on any malformed shape.
+ * `pipeline_package.external_target` is a typed json column
+ * (`.$type<ExternalTarget>()`) whose value is Zod-validated at the core read
+ * boundary (`services/pipelines/row-parse.ts`), so consumers use the typed
+ * value directly — no defensive re-parse here.
  */
-import { external_target, type ExternalTarget } from "@devpad/schema";
-
-export const parse_external_target = (value: unknown): ExternalTarget | null => {
-	const parsed = external_target.safeParse(value);
-	return parsed.success ? parsed.data : null;
-};
+import type { ExternalTarget } from "@devpad/schema";
 
 export const github_workflow_url = (target: ExternalTarget): string =>
 	`https://github.com/${target.repo}/actions/workflows/${target.workflow}`;

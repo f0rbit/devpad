@@ -53,6 +53,106 @@ export const resetPipelinesUpstreamCalls = (): void => {
 
 const pipelines_stub_json = (value: unknown, status = 200): Response =>
 	new Response(JSON.stringify({ ok: true, value }), { status, headers: { "content-type": "application/json" } });
+export const pipelinesStubJson = pipelines_stub_json;
+
+/* ─── Path-aware stub values ─────────────────────────────────────── */
+
+/**
+ * Schema-valid stand-ins for the orchestrator's wire DTOs
+ * (`@devpad/schema/pipelines`) — the proxy now parses upstream bodies
+ * per route (verification-hardening 2.2), so the stub must return
+ * realistic shapes instead of a generic `{ recorded }` for the parsed
+ * routes.
+ */
+const STUB_TIMESTAMP = "2026-01-01T00:00:00.000Z";
+
+export const pipelines_stub_run = (): Record<string, unknown> => ({
+	id: "pipeline-run_stub",
+	package_id: "pipeline-package_stub",
+	version_set_id: "vs_stub",
+	commit_sha: null,
+	shape: "gradual",
+	kind: "deploy",
+	status: "queued",
+	current_stage: null,
+	resolved_rollout: { type: "atomic" },
+	resolved_gates: {},
+	forced_atomic_reason: null,
+	started_at: null,
+	finished_at: null,
+	error: null,
+	created_at: STUB_TIMESTAMP,
+	updated_at: STUB_TIMESTAMP,
+	deleted: false,
+	created_by: "user",
+	modified_by: "user",
+	protected: false,
+});
+
+const pipelines_stub_grant = (): Record<string, unknown> => ({
+	id: "pipeline-grant_stub",
+	package_id: "pipeline-package_stub",
+	stage_name: "production",
+	scope: "anthropic:messages",
+	granted_by: null,
+	granted_at: null,
+	auto_approved: false,
+	created_at: STUB_TIMESTAMP,
+	updated_at: STUB_TIMESTAMP,
+	deleted: false,
+	created_by: "user",
+	modified_by: "user",
+	protected: false,
+});
+
+const pipelines_stub_package = (): Record<string, unknown> => ({
+	id: "pipeline-package_stub",
+	owner_id: "user_stub",
+	name: "stub",
+	repo_url: null,
+	default_template_ref: null,
+	script_name_overrides: null,
+	project_id: null,
+	deploy_mode: "orchestrated",
+	external_target: null,
+	created_at: STUB_TIMESTAMP,
+	updated_at: STUB_TIMESTAMP,
+	deleted: false,
+	created_by: "user",
+	modified_by: "user",
+	protected: false,
+});
+
+const stub_value_for = (method: string, pathname: string): unknown => {
+	if (pathname.endsWith("/dispatches"))
+		return { run_id: "pipeline-run_stub", run_status: "deploying", commit_sha: null, dispatches: [] };
+	if (/\/runs\/[^/]+$/.test(pathname)) return pipelines_stub_run();
+	if (pathname === "/runs") return [];
+	if (/\/runs\/[^/]+\/events$/.test(pathname))
+		return method === "POST" ? { event_id: "pipeline-stage-event_stub", duplicated: false, tick: "applied" } : [];
+	if (pathname === "/grants") return [];
+	if (/\/grants\/[^/]+\/approve$/.test(pathname)) return pipelines_stub_grant();
+	if (pathname === "/packages") return method === "GET" ? [] : pipelines_stub_package();
+	if (/^\/packages(\/|$)/.test(pathname)) return pipelines_stub_package();
+	return { recorded: method };
+};
+
+/**
+ * Test-only override: when set, its response wins for the requests it
+ * answers (return `null` to fall through to the path-aware defaults).
+ */
+export type PipelinesStubResponder = (context: {
+	method: string;
+	pathname: string;
+	url: URL;
+	request: Request;
+}) => Response | null;
+
+let pipelines_stub_responder: PipelinesStubResponder | null = null;
+
+export const setPipelinesStubResponder = (responder: PipelinesStubResponder | null): void => {
+	pipelines_stub_responder = responder;
+};
 
 const handlePipelinesStubFetch = async (request: Request): Promise<Response> => {
 	const url = new URL(request.url);
@@ -65,7 +165,14 @@ const handlePipelinesStubFetch = async (request: Request): Promise<Response> => 
 		actor_channel: request.headers.get("x-devpad-actor-channel") ?? "",
 		body,
 	});
-	return pipelines_stub_json({ recorded: request.method });
+	const override = pipelines_stub_responder?.({
+		method: request.method,
+		pathname: url.pathname,
+		url,
+		request,
+	});
+	if (override !== null && override !== undefined) return override;
+	return pipelines_stub_json(stub_value_for(request.method, url.pathname));
 };
 
 let pipelinesStubServer: ReturnType<typeof Bun.serve> | null = null;
@@ -194,11 +301,19 @@ const cleanup = async () => {
 	await performCleanup();
 };
 
-process.on("exit", () => void cleanup());
-process.on("SIGINT", () => void cleanup());
-process.on("SIGTERM", () => void cleanup());
-process.on("uncaughtException", () => void cleanup());
-process.on("unhandledRejection", () => void cleanup());
+// Process-event handlers can't await — hand the promise a rejection handler
+// that logs, so a failed cleanup is visible rather than dropped.
+const run_cleanup = (): void => {
+	cleanup().catch((error: unknown) => {
+		log(`cleanup failed: ${String(error)}`);
+	});
+};
+
+process.on("exit", run_cleanup);
+process.on("SIGINT", run_cleanup);
+process.on("SIGTERM", run_cleanup);
+process.on("uncaughtException", run_cleanup);
+process.on("unhandledRejection", run_cleanup);
 
 async function startHonoServer(): Promise<void> {
 	log("Starting shared Hono server in-process...");

@@ -4,6 +4,7 @@ import { Button, Empty, Input, Tree } from "@f0rbit/ui";
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, For, lazy, onCleanup, onMount, Show, Suspense } from "solid-js";
 import { track } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 import { loadOutline } from "@/utils/outline-data";
 import { Rail } from "./rail";
 import { OutlineRow } from "./row";
@@ -72,9 +73,12 @@ export default function Outline(props: OutlineProps) {
 		containerRef?.focus();
 		const onPopState = () => {
 			suppressPush = true;
-			void navigateTo(new URL(window.location.href).searchParams.get("node")).finally(() => {
-				suppressPush = false;
-			});
+			run_task(
+				navigateTo(new URL(window.location.href).searchParams.get("node")).finally(() => {
+					suppressPush = false;
+				}),
+				{ component: "outline", action: "popstate-travel" },
+			);
 		};
 		window.addEventListener("popstate", onPopState);
 		onCleanup(() => {
@@ -93,10 +97,15 @@ export default function Outline(props: OutlineProps) {
 		track("outline_zoomed", { project_id: props.project.id, node_id: nodeId ?? "root" });
 	};
 
+	/** run_task-wrapped navigateTo — the shared sink for every zoom/travel handler. */
+	const travelTo = (nodeId: string | null, selectAfter: string | null = null): void => {
+		run_task(navigateTo(nodeId, selectAfter), { component: "outline", action: "travel" });
+	};
+
 	/** Zooming out keeps context — the node you zoomed out FROM stays selected. */
 	const zoomOut = () => {
 		const ancestors = store.ancestors();
-		void navigateTo(ancestors[0]?.id ?? null, store.zoomTask()?.id ?? null);
+		travelTo(ancestors[0]?.id ?? null, store.zoomTask()?.id ?? null);
 	};
 
 	const submitQuickAdd = async () => {
@@ -135,7 +144,10 @@ export default function Outline(props: OutlineProps) {
 		if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
 			e.preventDefault();
 			if (!selected || !store.tasks[selected]) return;
-			void store.moveSibling(selected, e.key === "ArrowUp" ? "up" : "down");
+			run_task(store.moveSibling(selected, e.key === "ArrowUp" ? "up" : "down"), {
+				component: "outline",
+				action: "move-sibling",
+			});
 			return;
 		}
 		if (e.key === "j" || e.key === "ArrowDown") {
@@ -159,11 +171,11 @@ export default function Outline(props: OutlineProps) {
 				store.showMore(selected.replace(/__more$/, ""));
 				return;
 			}
-			void store.advance(selected);
+			run_task(store.advance(selected), { component: "outline", action: "advance" });
 			return;
 		}
 		if (e.key === "z" && !e.shiftKey) {
-			if (selected && store.tasks[selected] && hasChildren(selected, store.tasks)) void navigateTo(selected);
+			if (selected && store.tasks[selected] && hasChildren(selected, store.tasks)) travelTo(selected);
 			return;
 		}
 		if (e.key === "Z" || (e.key === "z" && e.shiftKey)) {
@@ -194,7 +206,7 @@ export default function Outline(props: OutlineProps) {
 		if (e.key === "Tab") {
 			if (!selected || !store.tasks[selected]) return;
 			e.preventDefault();
-			void store.reparent(selected, e.shiftKey ? "out" : "in");
+			run_task(store.reparent(selected, e.shiftKey ? "out" : "in"), { component: "outline", action: "reparent" });
 		}
 	};
 
@@ -233,7 +245,15 @@ export default function Outline(props: OutlineProps) {
 			);
 		}
 		if (!node.data) return null;
-		return <OutlineRow task={node.data.task} store={store} onZoom={(id) => void navigateTo(id)} />;
+		return (
+			<OutlineRow
+				task={node.data.task}
+				store={store}
+				onZoom={(id) => {
+					travelTo(id);
+				}}
+			/>
+		);
 	};
 
 	return (
@@ -241,7 +261,9 @@ export default function Outline(props: OutlineProps) {
 			<ZoomHeader
 				projectName={props.project.name}
 				store={store}
-				onZoomTo={(id) => void navigateTo(id, store.zoomTask()?.id ?? null)}
+				onZoomTo={(id) => {
+					travelTo(id, store.zoomTask()?.id ?? null);
+				}}
 				onOpenGraphLens={openGraphLens}
 				onOpenMilestoneLens={openMilestoneLens}
 			/>
@@ -278,7 +300,9 @@ export default function Outline(props: OutlineProps) {
 								onInput={(e) => setQuickAdd(e.currentTarget.value)}
 								onKeyDown={(e) => {
 									e.stopPropagation();
-									if (e.key === "Enter") void submitQuickAdd();
+									if (e.key === "Enter") {
+										run_task(submitQuickAdd(), { component: "outline", action: "quick-add" });
+									}
 									if (e.key === "Escape") {
 										setQuickAdd("");
 										setQuickAddOpen(false);
@@ -292,7 +316,13 @@ export default function Outline(props: OutlineProps) {
 					</Show>
 				</div>
 
-				<Rail selectedTask={selectedTask()} rollups={store.rollups} onNavigate={(id) => void navigateTo(id)} />
+				<Rail
+					selectedTask={selectedTask()}
+					rollups={store.rollups}
+					onNavigate={(id) => {
+						travelTo(id);
+					}}
+				/>
 			</div>
 
 			<div class="outline-hintbar">
@@ -338,14 +368,26 @@ export default function Outline(props: OutlineProps) {
 			<Show when={lensOpen() === "graph" && lensFocusId()}>
 				{(focusId) => (
 					<Suspense>
-						<GraphLens focusId={focusId()} onClose={closeLens} onZoom={(id) => void navigateTo(id)} />
+						<GraphLens
+							focusId={focusId()}
+							onClose={closeLens}
+							onZoom={(id) => {
+								travelTo(id);
+							}}
+						/>
 					</Suspense>
 				)}
 			</Show>
 
 			<Show when={lensOpen() === "milestone"}>
 				<Suspense>
-					<MilestoneLens projectId={props.project.id} onClose={closeLens} onZoom={(id) => void navigateTo(id)} />
+					<MilestoneLens
+						projectId={props.project.id}
+						onClose={closeLens}
+						onZoom={(id) => {
+							travelTo(id);
+						}}
+					/>
 				</Suspense>
 			</Show>
 		</div>

@@ -13,7 +13,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { ok, type Result } from "@f0rbit/corpus";
+import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { EventDeps, EventDoRouter, EventPulseEmitter, IngestEventInput } from "../../events.js";
 import { ingest_event } from "../../events.js";
@@ -150,9 +150,37 @@ describe("ingest_event — happy path", () => {
 	});
 
 	test("pulse emit failure does NOT fail the call", async () => {
-		const flaky: EventPulseEmitter = { emit: async () => Promise.reject(new Error("boom")) };
+		// The emit contract is never-rejecting: failures are Result values.
+		// A rejecting emitter would surface as an unhandled rejection —
+		// deliberately not tolerated here.
+		const flaky: EventPulseEmitter = {
+			emit: async () => err({ kind: "emit_error", message: "boom" }),
+		};
 		const r = await ingest_event({ ...h.deps, pulse: flaky }, base_input());
 		expect(r.ok).toBe(true);
+	});
+
+	test("pulse emit is awaited when no waitUntil is threaded (dev/test path)", async () => {
+		let awaited = false;
+		const slow: EventPulseEmitter = {
+			emit: async () => {
+				awaited = true;
+				return ok(undefined);
+			},
+		};
+		await ingest_event({ ...h.deps, pulse: slow }, base_input());
+		expect(awaited).toBe(true);
+	});
+
+	test("pulse emit is handed to waitUntil when the caller threads one", async () => {
+		const tracked: Promise<unknown>[] = [];
+		const wait_until = (promise: Promise<unknown>) => {
+			tracked.push(promise);
+		};
+		const out = expect_ok(await ingest_event({ ...h.deps, wait_until }, base_input()));
+		expect(tracked).toHaveLength(1);
+		expect(h.pulse.emitted).toHaveLength(1);
+		expect(out.tick).toBe("skipped:informational");
 	});
 });
 
@@ -345,6 +373,3 @@ describe("ingest_event — awaited tick outcomes", () => {
 		expect(out.tick).toBe("failed:unreadable_tick_response");
 	});
 });
-
-// satisfy lint when ok isn't used elsewhere
-void ok;

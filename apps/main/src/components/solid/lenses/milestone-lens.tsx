@@ -3,6 +3,7 @@ import type { MilestoneLensRow } from "@devpad/api";
 import type { Task } from "@devpad/schema";
 import Link2 from "lucide-solid/icons/link-2";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { Ring } from "../outline/ring";
 import { LensShell } from "./lens-shell";
 
@@ -37,7 +38,9 @@ export default function MilestoneLens(props: MilestoneLensProps) {
 	const [loading, setLoading] = createSignal(true);
 	const [expanded, setExpanded] = createSignal<Set<string>>(new Set());
 
-	onMount(() => void load());
+	onMount(() => {
+		run_task(load(), { component: "milestone-lens", action: "load" });
+	});
 
 	async function load(): Promise<void> {
 		setLoading(true);

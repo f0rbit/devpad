@@ -2,6 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { ApiKey } from "@devpad/schema";
 import { Button, Input } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 export type ScopedKeysProps = { projectId: string };
 
@@ -28,7 +29,9 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 		const result = await client.auth.keys.list();
 		if (result.ok) setKeys(result.value.filter((k) => k.project_id === props.projectId));
 	}
-	onMount(() => void load());
+	onMount(() => {
+		run_task(load(), { component: "scoped-keys", action: "load" });
+	});
 
 	async function create(): Promise<void> {
 		const trimmed = name().trim();
@@ -90,7 +93,7 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 					data-testid="scoped-key-create"
 					disabled={creating()}
 					onClick={() => {
-						void create();
+						run_task(create(), { component: "scoped-keys", action: "create" });
 					}}
 				>
 					Create key
@@ -130,7 +133,7 @@ export default function ScopedKeys(props: ScopedKeysProps) {
 											class="thread-action-link"
 											data-testid="scoped-key-revoke-confirm"
 											onClick={() => {
-												void revoke(key.id);
+												run_task(revoke(key.id), { component: "scoped-keys", action: "revoke" });
 											}}
 										>
 											confirm?

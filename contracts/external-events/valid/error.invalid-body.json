@@ -1,0 +1,7 @@
+{
+	"ok": false,
+	"error": {
+		"code": "invalid_body",
+		"message": "stage_name must be at least 1 character"
+	}
+}

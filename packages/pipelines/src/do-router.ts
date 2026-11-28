@@ -1,3 +1,5 @@
+import type { DurableObjectId, DurableObjectNamespace } from "@cloudflare/workers-types";
+
 /**
  * @module pipelines/do-router
  *
@@ -17,14 +19,14 @@ export type DoRouter = {
 };
 
 /**
- * Production router. Wraps the real `DurableObjectNamespace`. The
- * `unknown` type sidesteps the workers-types vs. test-types friction;
- * the production wiring passes the actual namespace through and the
- * test wiring passes the in-memory fake.
+ * Production router. Wraps the real `DurableObjectNamespace`. Generic
+ * over the namespace's id type so the production wiring passes the
+ * actual namespace and the test wiring passes the in-memory fake — no
+ * cast on either side.
  */
-export const make_cf_router = (namespace: {
-	idFromName(name: string): unknown;
-	get(id: unknown): { fetch(request: Request): Promise<Response> };
+export const make_cf_router = <Id>(namespace: {
+	idFromName(name: string): Id;
+	get(id: Id): { fetch(request: Request): Promise<Response> };
 }): DoRouter => ({
 	get(run_id) {
 		const id = namespace.idFromName(run_id);
@@ -34,3 +36,14 @@ export const make_cf_router = (namespace: {
 		};
 	},
 });
+
+/**
+ * Router over the real Workers `DurableObjectNamespace`. This package loads
+ * both workers-types and bun-types globals, so the binding's `fetch` is
+ * typed against workers-types' `Request` while {@link DoStub} uses the
+ * global one (`Headers.forEach` signatures differ) — identical at runtime.
+ * The bridge is isolated here.
+ */
+export const make_workers_router = (namespace: DurableObjectNamespace): DoRouter =>
+	// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- workers-types vs bun-types `Request`/`Headers` global duplication; structurally identical at runtime (see doc comment).
+	make_cf_router(namespace as unknown as Parameters<typeof make_cf_router<DurableObjectId>>[0]);

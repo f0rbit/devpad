@@ -2,6 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { ReviewItem, ReviewItemKind } from "@devpad/api";
 import { Badge, Button } from "@f0rbit/ui";
 import { createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 export type WaitingOnYouProps = {
 	items: ReviewItem[];
@@ -71,7 +72,9 @@ export function WaitingOnYou(props: WaitingOnYouProps) {
 											variant="primary"
 											size="sm"
 											disabled={deciding() === item.subject_id}
-											onClick={() => void decide(item, "approved")}
+											onClick={() => {
+												run_task(decide(item, "approved"), { component: "waiting-on-you", action: "decide" });
+											}}
 										>
 											Approve
 										</Button>
@@ -79,7 +82,9 @@ export function WaitingOnYou(props: WaitingOnYouProps) {
 											variant="ghost"
 											size="sm"
 											disabled={deciding() === item.subject_id}
-											onClick={() => void decide(item, "changes_requested")}
+											onClick={() => {
+												run_task(decide(item, "changes_requested"), { component: "waiting-on-you", action: "decide" });
+											}}
 										>
 											Request changes
 										</Button>

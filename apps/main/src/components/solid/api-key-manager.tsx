@@ -18,6 +18,7 @@ import Key from "lucide-solid/icons/key";
 import Plus from "lucide-solid/icons/plus";
 import Trash2 from "lucide-solid/icons/trash-2";
 import { createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { track } from "@/lib/pulse";
 
 type ApiKeyManagerProps = {
@@ -98,7 +99,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 	const handleCopy = () => {
 		const key = createdKey();
 		if (!key) return;
-		void navigator.clipboard.writeText(key);
+		run_task(navigator.clipboard.writeText(key), { component: "api-key-manager", action: "copy" });
 		setCopied(true);
 		setTimeout(() => setCopied(false), 2000);
 	};
@@ -224,7 +225,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 					</Button>
 					<Button
 						onClick={() => {
-							void handleCreate();
+							run_task(handleCreate(), { component: "api-key-manager", action: "create" });
 						}}
 						disabled={loading()}
 					>
@@ -288,7 +289,7 @@ export default function ApiKeyManager(props: ApiKeyManagerProps) {
 					<Button
 						variant="danger"
 						onClick={() => {
-							void handleDelete();
+							run_task(handleDelete(), { component: "api-key-manager", action: "delete" });
 						}}
 						disabled={loading()}
 					>

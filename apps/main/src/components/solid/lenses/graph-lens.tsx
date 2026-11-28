@@ -3,6 +3,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import type { RollupCounts } from "@devpad/api";
 import { TASK_LINK_KINDS, type Task, type TaskLink } from "@devpad/schema";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { LensShell } from "./lens-shell";
 
 export type GraphLensProps = {
@@ -130,15 +131,18 @@ export default function GraphLens(props: GraphLensProps) {
 		const id = focusId();
 		const d = depth();
 		setLoading(true);
-		void getBrowserClient()
-			.tasks.near(id, d)
-			.then((result) => {
-				if (result.ok) {
-					setData({ tasks: result.value.tasks, links: result.value.links, rollups: result.value.rollups });
-					fit();
-				}
-			})
-			.finally(() => setLoading(false));
+		run_task(
+			getBrowserClient()
+				.tasks.near(id, d)
+				.then((result) => {
+					if (result.ok) {
+						setData({ tasks: result.value.tasks, links: result.value.links, rollups: result.value.rollups });
+						fit();
+					}
+				})
+				.finally(() => setLoading(false)),
+			{ component: "graph-lens", action: "load-near" },
+		);
 	});
 
 	let dragging = false;

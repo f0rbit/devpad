@@ -302,7 +302,8 @@ app.patch("/save_config", requireAuth, zValidator("json", save_config_request), 
 		}
 
 		return c.json(null, 200);
-	} catch {
+	} catch (error) {
+		c.get("log")?.error("project config save failed", error);
 		return c.json({ error: "Error saving configuration" }, 500);
 	}
 });

@@ -121,11 +121,11 @@ describe("pending_reviews — the human's queue aggregate (task A4.6)", () => {
 	});
 
 	test("aggregates a pending scanner diff", async () => {
-		const tracker_rows = await db.insert(tracker_result).values({ project_id, data: {} }).returning();
+		const tracker_rows = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
 		const tracked = tracker_rows[0];
 		const update_rows = await db
 			.insert(todo_updates)
-			.values({ project_id, new_id: tracked.id, data: {}, status: "PENDING" })
+			.values({ project_id, new_id: tracked.id, data: [], status: "PENDING" })
 			.returning();
 		const scan_diff = update_rows[0];
 
@@ -144,8 +144,8 @@ describe("pending_reviews — the human's queue aggregate (task A4.6)", () => {
 			{ project_id, subject_kind: "stage", subject_id: "some-stage", checkpoint: "plan", blocks: [] },
 			{ owner_id, auth_channel: "api" },
 		);
-		const tracker_rows = await db.insert(tracker_result).values({ project_id, data: {} }).returning();
-		await db.insert(todo_updates).values({ project_id, new_id: tracker_rows[0].id, data: {}, status: "PENDING" });
+		const tracker_rows = await db.insert(tracker_result).values({ project_id, data: [] }).returning();
+		await db.insert(todo_updates).values({ project_id, new_id: tracker_rows[0].id, data: [], status: "PENDING" });
 
 		const result = await pending_reviews(db, owner_id);
 		expect(result.ok).toBe(true);

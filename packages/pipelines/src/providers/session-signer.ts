@@ -15,7 +15,8 @@
  *   it to 503 instead of leaking a generic 500.
  */
 
-import type { OidcSessionClaims } from "@devpad/core/services/pipelines";
+import { type OidcSessionClaims, oidc_session_claims_schema } from "@devpad/core/services/pipelines";
+import { createLogger } from "@devpad/core/utils/logger";
 import type { SecretsStoreSecret } from "@cloudflare/workers-types";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { errors as jose_errors, jwtVerify, SignJWT } from "jose";
@@ -42,8 +43,12 @@ const decode_signing_key = (raw: string): Uint8Array => {
 			const bytes = new Uint8Array(binary.length);
 			for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
 			return bytes;
-		} catch {
-			// fall through to utf-8 encode
+		} catch (error) {
+			// Not valid base64 -- fall through to utf-8 encode (documented
+			// two-format probe); keep the failure visible.
+			createLogger("pipelines:session-signer").debug("base64 decode failed, using utf-8", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 		}
 	}
 	return new TextEncoder().encode(trimmed);
@@ -116,7 +121,9 @@ export const make_session_signer = (env: { OIDC_SESSION_SIGNING_KEY?: SecretsSto
 				audience: SESSION_AUDIENCE,
 				algorithms: ["HS256"],
 			});
-			return ok(payload as unknown as OidcSessionClaims);
+			const claims = oidc_session_claims_schema.safeParse(payload);
+			if (!claims.success) return err({ reason: `session claims invalid: ${claims.error.message}` });
+			return ok(claims.data);
 		} catch (e) {
 			return err(map_verify_error(e));
 		}

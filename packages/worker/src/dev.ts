@@ -29,8 +29,10 @@ export function migrateBunDb(options: { database_file: string; migration_paths?:
 			migrateBunDatabase(sqlite, p);
 			sqlite.close();
 			return;
-		} catch {
-			// try next path
+		} catch (error) {
+			// try next path -- but keep the failure visible; the final failure
+			// below throws, and this shows which paths were attempted.
+			console.error(`[dev] migration path failed: ${p}:`, error instanceof Error ? error.message : String(error));
 		}
 	}
 

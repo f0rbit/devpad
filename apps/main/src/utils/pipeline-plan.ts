@@ -3,13 +3,17 @@
  * run-detail page (StageGate + RunProgress).
  *
  * These arrive as already-parsed OBJECTS on the wire (drizzle `mode: "json"`
- * on the orchestrator; the main-worker proxy forwards them unchanged). The
- * previous UI `JSON.parse`d them — the throw was swallowed by a silent
- * catch, so Approve/Deny never rendered for any `awaiting_approval` run.
+ * on the orchestrator, Zod-validated at the core read boundary
+ * (`services/pipelines/row-parse.ts`); the main-worker proxy forwards them
+ * unchanged). The previous UI `JSON.parse`d them — the throw was swallowed
+ * by a silent catch, so Approve/Deny never rendered for any
+ * `awaiting_approval` run. The defensive JSON-string fallback that followed
+ * is gone: the columns are typed end-to-end now, and a malformed row is a
+ * `store_error` at the core read, never a string on the wire.
  *
- * All readers accept the object form, and defensively a JSON string (older
- * wire shapes), and return a typed Result — a parse failure is surfaced to
- * the caller for explicit rendering, never swallowed.
+ * All readers Zod-validate the object form and return a typed Result — a
+ * parse failure is surfaced to the caller for explicit rendering, never
+ * swallowed.
  */
 import { resolved_rollout } from "@devpad/schema";
 import { z } from "zod";
@@ -76,23 +80,10 @@ const summarize = (error: z.ZodError): string => {
 	return `${path}${first.message}`;
 };
 
-const json_from_string = (raw: string): PlanResult<unknown> => {
-	try {
-		return { ok: true, value: JSON.parse(raw) as unknown };
-	} catch (error) {
-		return { ok: false, reason: error instanceof Error ? error.message : "not valid JSON" };
-	}
-};
-
 const flex_read = <T>(schema: z.ZodType<T>, raw: unknown): PlanResult<T> => {
-	const direct = schema.safeParse(raw);
-	if (direct.success) return { ok: true, value: direct.data };
-	if (typeof raw !== "string") return { ok: false, reason: summarize(direct.error) };
-	const json = json_from_string(raw);
-	if (!json.ok) return { ok: false, reason: json.reason };
-	const revalidated = schema.safeParse(json.value);
-	if (revalidated.success) return { ok: true, value: revalidated.data };
-	return { ok: false, reason: summarize(revalidated.error) };
+	const parsed = schema.safeParse(raw);
+	if (parsed.success) return { ok: true, value: parsed.data };
+	return { ok: false, reason: summarize(parsed.error) };
 };
 
 export const read_gates = (raw: unknown): PlanResult<Record<string, GateEntry>> =>

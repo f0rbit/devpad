@@ -62,8 +62,12 @@ export function PipelineActionExecutor(deps: PipelineExecutorDeps): ActionExecut
 			let wire_parsed: ReturnType<typeof runs_wire_response.safeParse>;
 			try {
 				wire_parsed = runs_wire_response.safeParse(await response.json());
-			} catch {
-				return { ok: false, transient: false, message: "orchestrator returned invalid JSON" };
+			} catch (error) {
+				return {
+					ok: false,
+					transient: false,
+					message: `orchestrator returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`,
+				};
 			}
 			if (!wire_parsed.success || !wire_parsed.data.ok) {
 				return { ok: false, transient: false, message: "orchestrator response missing run_id" };

@@ -104,9 +104,8 @@ describe("refresh_rollup_chain — after a scripted op sequence, cache equals br
 describe("rebuild_rollup — converges an intentionally corrupted cache", () => {
 	test("recomputes every task's rollup row for a project from scratch", async () => {
 		const parent = await seed_task(db, owner_id, { project_id });
-		const child_a = await seed_task(db, owner_id, { project_id, parent_id: parent.id, progress: "COMPLETED" });
+		await seed_task(db, owner_id, { project_id, parent_id: parent.id, progress: "COMPLETED" });
 		await seed_task(db, owner_id, { project_id, parent_id: parent.id });
-		void child_a;
 
 		await db
 			.insert(task_rollup)

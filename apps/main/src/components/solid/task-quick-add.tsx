@@ -4,6 +4,7 @@ import Loader from "lucide-solid/icons/loader";
 import Plus from "lucide-solid/icons/plus";
 import { createSignal, Show } from "solid-js";
 import { track } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 type Props = {
 	project_id: string;
@@ -48,7 +49,7 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 	const handleKeyDown = (e: KeyboardEvent) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
-			void handleSubmit();
+			run_task(handleSubmit(), { component: "task-quick-add", action: "submit" });
 		}
 	};
 
@@ -79,7 +80,7 @@ export function TaskQuickAdd({ project_id, user_id, onCreated }: Props) {
 				type="button"
 				class="btn btn-ghost btn-icon btn-sm"
 				onClick={() => {
-					void handleSubmit();
+					run_task(handleSubmit(), { component: "task-quick-add", action: "submit" });
 				}}
 				disabled={loading()}
 			>

@@ -8,9 +8,11 @@
  * Surface:
  *
  * - `ingest_event(deps, input)` — idempotently insert a row into
- *   `pipeline_stage_event`, fire-and-forget a pulse signal, and — iff the
- *   kind is state-transition-relevant — AWAIT the run's Durable Object
- *   tick and return its outcome in `tick`.
+ *   `pipeline_stage_event`, emit a pulse signal (via the caller's
+ *   `waitUntil` when threaded, awaited otherwise — never a bare `void`:
+ *   the Workers runtime cancels unhandled promises once the response is
+ *   returned, #175), and — iff the kind is state-transition-relevant —
+ *   AWAIT the run's Durable Object tick and return its outcome in `tick`.
  *
  * Idempotency: per `(run_id, idempotency_key, payload)` triple. We hash
  * the key + JSON-serialised payload into a content-addressed
@@ -31,6 +33,8 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createLogger } from "../../utils/logger.js";
 import type { ServiceError } from "../errors.js";
+import { is_record } from "./is-record.js";
+import { parse_run_row } from "./row-parse.js";
 
 const logger = createLogger("pipelines.events");
 
@@ -90,8 +94,19 @@ export type EventDoRouter = {
 };
 
 /**
- * Pulse emitter accepting arbitrary `{ event, ... }` payloads —
- * fire-and-forget, so the return type intentionally loose.
+ * Optional `ctx.waitUntil` threaded from the caller (a real Worker route).
+ * Present → pulse emits are fire-and-forget telemetry that survives past
+ * the response. Absent (bun dev / integration tests) → the emit is awaited
+ * instead, because a bare `void` is cancelled by the Workers runtime once
+ * the response is returned (#175).
+ */
+export type EventWaitUntil = (promise: Promise<unknown>) => void;
+
+/**
+ * Pulse emitter accepting arbitrary `{ event, ... }` payloads. The
+ * contract is never-rejecting: failures are reported as a `Result` value
+ * (the production wrapper is `pipe.try`-wrapped), so callers may `await`
+ * the emit or hand the promise to `waitUntil` without a catch.
  */
 export type EventPulseEmitter = {
 	emit(event: { event: string } & Record<string, unknown>): Promise<unknown>;
@@ -101,6 +116,8 @@ export type EventDeps = {
 	db: Database;
 	pulse: EventPulseEmitter;
 	do: EventDoRouter;
+	/** Worker execution context's `waitUntil`, when the caller has one. */
+	wait_until?: EventWaitUntil;
 };
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -187,6 +204,9 @@ export const ingest_event = async (
 	if (!run_row) {
 		return err({ kind: "not_found", resource: "pipeline_run", id: input.run_id } satisfies ServiceError);
 	}
+	const checked_run = parse_run_row(run_row);
+	if (!checked_run.ok) return checked_run;
+	run_row = checked_run.value;
 	if (run_row.package_id !== input.package_id) {
 		return err({
 			kind: "forbidden",
@@ -232,7 +252,7 @@ export const ingest_event = async (
 			ts: now,
 			idempotency_hash: hash,
 		};
-		await deps.db.insert(pipeline_stage_event).values(insert_values as never);
+		await deps.db.insert(pipeline_stage_event).values(insert_values);
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
 		if (message.includes("UNIQUE constraint failed") && message.includes("pipeline_stage_event.idempotency_hash")) {
@@ -251,8 +271,14 @@ export const ingest_event = async (
 		} satisfies ServiceError);
 	}
 
-	// (5a) Fire-and-forget pulse emit.
-	void deps.pulse
+	// (5a) Fire-and-forget pulse emit. Never a bare `void` — the Workers
+	// runtime cancels unhandled promises once the response is returned
+	// (#175). The caller's `waitUntil` keeps the emit alive past the
+	// response; without one (bun dev / integration tests) the emit is
+	// awaited instead. `emit` never rejects — failures are `Result` values
+	// (the production wrapper is `pipe.try`-wrapped) — so both paths are
+	// rejection-safe.
+	const emit_promise = deps.pulse
 		.emit({
 			event: "stage_event_external",
 			run_id: input.run_id,
@@ -260,7 +286,17 @@ export const ingest_event = async (
 			stage_name: input.stage_name,
 			kind: input.kind,
 		})
-		.catch(() => undefined);
+		.catch((error: unknown) => {
+			logger.warn("pulse emit failed for external stage event", {
+				run_id: input.run_id,
+				error: error instanceof Error ? error.message : String(error),
+			});
+		});
+	if (deps.wait_until === undefined) {
+		await emit_promise;
+	} else {
+		deps.wait_until(emit_promise);
+	}
 
 	// (5b) AWAITED DO tick for transition-relevant kinds only. The body
 	// carries the stage name + raw payload so the DO side of external
@@ -313,7 +349,10 @@ const tick_outcome_from = async (response: Response): Promise<IngestTick> => {
 	try {
 		const parsed_body: unknown = await response.json();
 		body = parsed_body;
-	} catch {
+	} catch (error) {
+		logger.debug("tick response body was not JSON", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		body = null;
 	}
 	if (!response.ok) {
@@ -341,10 +380,7 @@ const tick_outcome_from = async (response: Response): Promise<IngestTick> => {
  * `source` field, we overwrite. Same for `idempotency_key`.
  */
 const stamp_external_source = (payload: unknown, idempotency_key: string): Record<string, unknown> => {
-	const base =
-		payload === undefined || payload === null || typeof payload !== "object" || Array.isArray(payload)
-			? { value: payload ?? null }
-			: { ...(payload as Record<string, unknown>) };
+	const base = is_record(payload) ? { ...payload } : { value: payload ?? null };
 	return { ...base, source: "external", idempotency_key };
 };
 
@@ -368,7 +404,7 @@ const find_key_collision = async (
 		const rows = await db.select().from(pipeline_stage_event).where(eq(pipeline_stage_event.run_id, run_id));
 		for (const row of rows) {
 			if (row.idempotency_hash === current_hash) continue;
-			const payload = row.payload as Record<string, unknown> | null;
+			const payload = row.payload;
 			if (payload && payload.idempotency_key === idempotency_key) {
 				return ok(row);
 			}

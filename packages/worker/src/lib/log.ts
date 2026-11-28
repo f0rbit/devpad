@@ -15,6 +15,7 @@
 
 import type { Pulse, LogLevel as PulseLogLevel } from "@f0rbit/pulse-client";
 import { startSpan, type Span } from "@f0rbit/pulse-client/spans";
+import { is_record } from "./is-record";
 
 const PULSE_LEVEL = {
 	raw: "debug",
@@ -26,8 +27,7 @@ const PULSE_LEVEL = {
 
 type DevpadLogLevel = keyof typeof PULSE_LEVEL;
 
-const isError = (x: unknown): x is Error =>
-	x instanceof Error || (typeof x === "object" && x !== null && "stack" in (x as Record<string, unknown>));
+const isError = (x: unknown): x is Error => x instanceof Error || (typeof x === "object" && x !== null && "stack" in x);
 
 export type PulseLog = {
 	raw(msg: string, attrs?: Record<string, unknown>): void;
@@ -71,7 +71,7 @@ const emit_error =
 			pulse.captureError(err_or_attrs, { message, level, ...attrs });
 			return;
 		}
-		pulse.log(level, message, err_or_attrs as Record<string, unknown> | undefined);
+		pulse.log(level, message, is_record(err_or_attrs) ? err_or_attrs : undefined);
 	};
 
 /** Build a `PulseLog` bound to a specific pulse instance. */

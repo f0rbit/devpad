@@ -9,7 +9,12 @@
  */
 
 import type { Hook, HookDelivery, HookDeliveryStatus, HookTrigger, UpsertHook } from "@devpad/schema";
-import { hook_action_stored, hook_trigger, type HookActionPublic } from "@devpad/schema/validation";
+import {
+	hook_action_stored,
+	hook_trigger,
+	type HookActionPublic,
+	type HookActionStored,
+} from "@devpad/schema/validation";
 import { hook, hook_delivery } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -70,7 +75,7 @@ export async function upsert_hook(
 	encryption_key: string,
 	input: UpsertHook,
 ): Promise<Result<PublicHook, ServiceError>> {
-	let action: Record<string, unknown> = input.action;
+	let action: HookActionStored = input.action;
 	if (input.action.kind === "webhook" && input.action.secret) {
 		const encrypted = await secrets.encrypt(input.action.secret, encryption_key);
 		if (!encrypted.ok) return err({ kind: "encryption_error", operation: "encrypt", message: encrypted.error.message });

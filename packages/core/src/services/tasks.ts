@@ -6,6 +6,7 @@ import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, inArray, notInArray, type SQL, sql } from "drizzle-orm";
 import { batchedQuery, D1_PARAM_LIMIT } from "./batch.js";
 import type { ServiceError } from "./errors.js";
+import { scan_context_stored } from "@devpad/schema/validation";
 import { SqlCompletionEngine } from "./graph/completion.js";
 import { get_task_row, type GraphConflictError } from "./graph/graph.js";
 import { legacy_goal_id } from "./graph/legacy-goal.js";
@@ -35,11 +36,22 @@ async function fetchTasksWithDetails(
 		.leftJoin(codebase_tasks, eq(task.codebase_task_id, codebase_tasks.id))
 		.where(and(NOT_FOLD_KIND, ...where_conditions));
 
-	const tasks: Task[] = fetched_tasks.map((t) => ({
-		task: t.task,
-		codebase_tasks: t.codebase_tasks,
-		tags: [],
-	}));
+	const tasks: Task[] = [];
+	for (const t of fetched_tasks) {
+		if (t.codebase_tasks === null) {
+			tasks.push({ task: t.task, codebase_tasks: null, tags: [] });
+			continue;
+		}
+		const context = scan_context_stored.safeParse(t.codebase_tasks.context);
+		if (!context.success) {
+			return err({
+				kind: "store_error",
+				operation: "read_codebase_task_context",
+				message: `codebase_tasks.context (${t.codebase_tasks.id}): ${context.error.message}`,
+			});
+		}
+		tasks.push({ task: t.task, codebase_tasks: { ...t.codebase_tasks, context: context.data }, tags: [] });
+	}
 
 	const task_ids = tasks.map((t) => t.task.id);
 	if (task_ids.length > 0) {

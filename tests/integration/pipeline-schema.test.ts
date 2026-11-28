@@ -204,7 +204,9 @@ describe("pipeline schema round-trips", () => {
 
 	test("inserts and reads a pipeline_analysis_template row", async () => {
 		const query_dsl = { metric: "error_rate", window: "5m" };
-		const threshold_dsl = { op: "lt", value: 0.01 };
+		// `threshold_dsl` stores the DSL STRING (drizzle json mode stringifies
+		// it; `parse_threshold_dsl` re-parses it at gate time) — verification-hardening 2.1.
+		const threshold_dsl = "error_rate < 0.01\np99_latency_ms > 500";
 
 		const [template] = await db
 			.insert(pipeline_analysis_template)

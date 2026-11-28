@@ -16,6 +16,7 @@
 import type {
 	EventDoRouter,
 	EventPulseEmitter,
+	EventWaitUntil,
 	OidcSessionClaims,
 	ResolvedPlan,
 	RunTarget,
@@ -70,13 +71,23 @@ import type { PipelineRun, ServiceError } from "@devpad/schema";
 import type { ExternalTarget } from "@devpad/schema/validation";
 import { webhook_event_body } from "@devpad/schema/validation";
 import type { Backend, Result, SnapshotMeta, VersionSetManifest } from "@f0rbit/corpus";
-import { err, ok, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
+import { err, ok, try_catch, VersionSetManifestSchema, version_set_store } from "@f0rbit/corpus";
 import { and, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { deploy_mode as deploy_mode_zod, external_target as external_target_zod } from "@devpad/schema/validation";
+import {
+	wire_dispatch_entry,
+	wire_grant,
+	wire_package,
+	wire_run,
+	wire_stage_event,
+	type PipelineDispatches,
+	type PipelineIngestResponseWire,
+} from "@devpad/schema/pipelines";
 import type { AuthError, AuthIdentity } from "./auth";
 import type { DoRouter } from "./do-router";
+import { is_record, read_json } from "./record";
 
 export const create_run_body = z.object({
 	package_id: z.string().min(1),
@@ -98,10 +109,10 @@ type CreateRunBranch = { kind: "version_set"; version_set_id: string } | { kind:
  */
 const classify_create_run = (body: z.infer<typeof create_run_body>): Result<CreateRunBranch, "both" | "neither"> => {
 	const { version_set_id, commit_sha } = body;
-	if (version_set_id !== undefined && commit_sha !== undefined) return err("both");
-	if (version_set_id === undefined && commit_sha === undefined) return err("neither");
-	if (commit_sha !== undefined) return ok({ kind: "commit", commit_sha });
-	return ok({ kind: "version_set", version_set_id: version_set_id as string });
+	if (version_set_id !== undefined) {
+		return commit_sha !== undefined ? err("both") : ok({ kind: "version_set", version_set_id });
+	}
+	return commit_sha !== undefined ? ok({ kind: "commit", commit_sha }) : err("neither");
 };
 
 /**
@@ -295,7 +306,7 @@ export type RoutesDeps = {
 	oidc?: OidcDeps;
 };
 
-type AppCtx = { Variables: { deps: RoutesDeps } };
+type AppCtx<Env extends object> = { Bindings: Env; Variables: { deps: RoutesDeps } };
 
 /**
  * Public wire envelope. Errors land here as a single flat object —
@@ -365,21 +376,31 @@ const log_5xx = (wire: WireError, status: number, context?: { run_id?: string; r
 };
 
 /**
+ * Swallowed-error guard (verification-hardening 2.3b): a promise fallback
+ * (`p.catch(() => fallback)`) must never discard the rejection silently --
+ * every use logs it before degrading to the fallback value.
+ */
+const caught_fallback = <T, F>(p: Promise<T>, fallback: F, context: string): Promise<T | F> =>
+	p.catch((e: unknown) => {
+		console.warn(`[pipelines] ${context}:`, e instanceof Error ? e.message : String(e));
+		return fallback;
+	});
+
+/**
  * Normalise a service-layer error (`kind` discriminator, corpus convention)
  * into the public wire shape (`code` discriminator). Strips any outer
  * Result wrapping so a `{ ok, value | error }` envelope is never
  * double-wrapped when bubbled through the route layer.
  */
 const to_wire_error = (input: unknown): WireError => {
-	if (input === null || typeof input !== "object") return { code: "unknown", message: String(input) };
-	const rec = input as Record<string, unknown>;
+	if (!is_record(input)) return { code: "unknown", message: String(input) };
 
 	// Strip any accidental Result-envelope wrapping (input was already
 	// `{ ok: false, error: ... }`). Always unwrap to the underlying error.
-	if (rec.ok === false && "error" in rec) return to_wire_error(rec.error);
+	if (input.ok === false && "error" in input) return to_wire_error(input.error);
 
-	const code = typeof rec.code === "string" ? rec.code : typeof rec.kind === "string" ? rec.kind : "unknown";
-	const { kind: _kind, code: _code, ok: _ok, ...rest } = rec;
+	const code = typeof input.code === "string" ? input.code : typeof input.kind === "string" ? input.kind : "unknown";
+	const { kind: _kind, code: _code, ok: _ok, ...rest } = input;
 	return { code, ...rest };
 };
 
@@ -415,13 +436,40 @@ const json_ok = (value: unknown) =>
 const first_row = <T>(rows: T[]): T | undefined => rows[0];
 
 /**
+ * The request's `waitUntil`, when this Worker execution context has one.
+ * Hono's `c.executionCtx` getter THROWS when the app was fetched without a
+ * Cloudflare execution context (bun dev, integration tests driving
+ * `app.fetch(req, env)` two-arg), so the absence probe goes through
+ * `try_catch` — no try/catch statement, no empty catch (2.3b's selectors).
+ * Absence means "no background lifetime available": the service awaits
+ * its emit instead.
+ */
+const execution_wait_until = (c: {
+	executionCtx: { waitUntil: (promise: Promise<unknown>) => void };
+}): EventWaitUntil | undefined => {
+	const ctx = try_catch(
+		() => c.executionCtx,
+		(cause) => String(cause),
+	);
+	if (!ctx.ok) return undefined;
+	return (promise: Promise<unknown>) => {
+		ctx.value.waitUntil(promise);
+	};
+};
+
+/**
  * Build the `EventDeps` bundle the `ingest_event` service expects.
  * Wires the route layer's `do_router` (per-run stub) into the simpler
- * `(run_id, path, body) → Response` shape the service uses, and
- * promotes the optional pulse emitter to a no-op when absent so the
- * service can always call it.
+ * `(run_id, path, body) → Response` shape the service uses, promotes the
+ * optional pulse emitter to a no-op when absent so the service can always
+ * call it, and threads the request's `waitUntil` (when this Worker
+ * execution context has one) so pulse emits survive past the response
+ * instead of being cancelled by the runtime (#175).
  */
-const make_event_deps = (deps: RoutesDeps): { db: Database; pulse: EventPulseEmitter; do: EventDoRouter } => {
+const make_event_deps = (
+	deps: RoutesDeps,
+	wait_until?: EventWaitUntil,
+): { db: Database; pulse: EventPulseEmitter; do: EventDoRouter; wait_until?: EventWaitUntil } => {
 	const pulse: EventPulseEmitter = deps.pulse ?? { emit: async () => undefined };
 	const do_adapter: EventDoRouter = {
 		fetch: async (run_id, path, body) => {
@@ -435,7 +483,7 @@ const make_event_deps = (deps: RoutesDeps): { db: Database; pulse: EventPulseEmi
 			);
 		},
 	};
-	return { db: deps.db, pulse, do: do_adapter };
+	return { db: deps.db, pulse, do: do_adapter, wait_until };
 };
 
 const do_call = async (deps: RoutesDeps, run_id: string, action: string, body: unknown): Promise<Response> => {
@@ -448,8 +496,8 @@ const do_call = async (deps: RoutesDeps, run_id: string, action: string, body: u
 	return stub.fetch(req);
 };
 
-export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
-	const app = new Hono<AppCtx>();
+export const make_routes = <Env extends object = object>(deps_factory: (env: Env) => RoutesDeps) => {
+	const app = new Hono<AppCtx<Env>>();
 
 	app.use("*", async (c, next) => {
 		const deps = deps_factory(c.env);
@@ -458,7 +506,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 	});
 
 	app.post("/runs", async (c) => {
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_run_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const deps = c.get("deps");
@@ -530,7 +578,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 			try {
 				const advance_json: unknown = await advance_res.json();
 				advance_body = advance_json;
-			} catch {
+			} catch (error) {
+				console.warn(
+					"[pipelines] advance response body was not JSON:",
+					error instanceof Error ? error.message : String(error),
+				);
 				advance_body = null;
 			}
 			if (advance_res.status >= 400)
@@ -563,7 +615,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		try {
 			const advance_json: unknown = await advance_res.json();
 			advance_body = advance_json;
-		} catch {
+		} catch (error) {
+			console.warn(
+				"[pipelines] advance response body was not JSON:",
+				error instanceof Error ? error.message : String(error),
+			);
 			advance_body = null;
 		}
 		if (advance_res.status >= 400)
@@ -579,14 +635,14 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const result = await list_runs(deps.db, filter.value);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(result.value.map(wire_run));
 	});
 
 	app.get("/runs/:id", async (c) => {
 		const deps = c.get("deps");
 		const run = await get_run(deps.db, c.req.param("id"));
 		if (!run.ok) return wire_err(run.error);
-		return json_ok(run.value);
+		return json_ok(wire_run(run.value));
 	});
 
 	// ─── Phase 2.C — webhook event ingestion ────────────────────────
@@ -617,7 +673,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result instanceof Response) return auth_result;
 		const identity = auth_result.identity;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = webhook_event_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -646,7 +702,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const header_key = c.req.header("x-idempotency-key");
 		const idempotency_key = header_key !== undefined && header_key !== "" ? header_key : parsed.data.idempotency_key;
 
-		const event_deps = make_event_deps(deps);
+		const event_deps = make_event_deps(deps, execution_wait_until(c));
 		const result = await ingest_event(event_deps, {
 			run_id,
 			package_id: run.value.package_id,
@@ -658,7 +714,8 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (!result.ok) return wire_err(result.error);
 
 		const status = result.value.duplicated ? 200 : 201;
-		return new Response(JSON.stringify({ ok: true, value: result.value }), {
+		const value = result.value satisfies PipelineIngestResponseWire;
+		return new Response(JSON.stringify({ ok: true, value }), {
 			status,
 			headers: { "content-type": "application/json" },
 		});
@@ -679,7 +736,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 				.from(pipeline_stage_event)
 				.where(eq(pipeline_stage_event.run_id, run_id))
 				.orderBy(desc(pipeline_stage_event.ts));
-			return json_ok(rows);
+			return json_ok(rows.map(wire_stage_event));
 		} catch (e) {
 			return wire_err({ code: "db_error", message: `failed to list pipeline_stage_event: ${String(e)}` }, 500);
 		}
@@ -714,20 +771,13 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		try {
 			const rows = await deps.db.select().from(pipeline_dispatch).where(eq(pipeline_dispatch.run_id, run_id));
-			return json_ok({
+			const ledger = {
 				run_id: run.value.id,
 				run_status: run.value.status,
 				commit_sha: run.value.commit_sha,
-				dispatches: rows.map((row) => ({
-					stage_name: row.stage_name,
-					commit_sha: row.commit_sha,
-					status: row.status,
-					error: row.error,
-					requested_by: row.requested_by,
-					created_at: row.created_at,
-					updated_at: row.updated_at,
-				})),
-			});
+				dispatches: rows.map(wire_dispatch_entry),
+			} satisfies PipelineDispatches;
+			return json_ok(ledger);
 		} catch (e) {
 			return wire_err({ code: "db_error", message: `failed to list pipeline_dispatch: ${String(e)}` }, 500);
 		}
@@ -744,7 +794,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const human = await require_human_actor(deps, c.req.raw);
 		if (human instanceof Response) return human;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = approve_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -859,7 +909,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (!is_terminal_status(source.status)) {
 			const source_plan = await reconstruct_plan_for_run(deps, source);
 			if (source_plan !== null) {
-				await do_call(deps, run_id, "cancel", { plan: source_plan }).catch(() => null);
+				await caught_fallback(
+					do_call(deps, run_id, "cancel", { plan: source_plan }),
+					null,
+					"best-effort source cancel failed",
+				);
 			}
 		}
 
@@ -896,7 +950,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const grants_result = await list_grants(deps.db, package_id);
 		if (!grants_result.ok) return wire_err(grants_result.error);
-		return json_ok(grants_result.value);
+		return json_ok(grants_result.value.map(wire_grant));
 	});
 
 	// ─── POST /grants (admin-only grant request) ─────────────────────
@@ -915,7 +969,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "grant requests require admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_grant_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 		const { package_id, stage_name, scope } = parsed.data;
@@ -931,11 +985,11 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const existing = await list_grants(deps.db, package_id);
 		if (!existing.ok) return wire_err(existing.error);
 		const duplicate = existing.value.find((g) => g.stage_name === stage_name && g.scope === scope);
-		if (duplicate !== undefined) return json_ok(duplicate);
+		if (duplicate !== undefined) return json_ok(wire_grant(duplicate));
 
 		const created = await request_grant(deps.db, package_id, stage_name, scope);
 		if (!created.ok) return wire_err(created.error);
-		return new Response(JSON.stringify({ ok: true, value: created.value }), {
+		return new Response(JSON.stringify({ ok: true, value: wire_grant(created.value) }), {
 			status: 201,
 			headers: { "content-type": "application/json" },
 		});
@@ -949,14 +1003,14 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const human = await require_human_actor(deps, c.req.raw);
 		if (human instanceof Response) return human;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = grant_approve_body.safeParse(body ?? {});
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
 		const grant_id = c.req.param("id");
 		const result = await approve_grant(deps.db, grant_id, human.actor);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_grant(result.value));
 	});
 
 	app.post("/grants/:id/deny", async (c) => {
@@ -967,7 +1021,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const human = await require_human_actor(deps, c.req.raw);
 		if (human instanceof Response) return human;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = grant_deny_body.safeParse(body ?? {});
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -982,14 +1036,14 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const project_id = c.req.query("project_id");
 		const result = await list_packages(deps.db, project_id !== undefined ? { project_id } : {});
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(result.value.map(wire_package));
 	});
 
 	app.get("/packages/:id", async (c) => {
 		const deps = c.get("deps");
 		const result = await get_package(deps.db, c.req.param("id"));
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_package(result.value));
 	});
 
 	// ─── Package write routes (auth-gated) ──────────────────────────
@@ -1004,7 +1058,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_package_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1013,7 +1067,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const result = await create_package(deps.db, parsed.data);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_package(result.value));
 	});
 
 	app.patch("/packages/:id", async (c) => {
@@ -1021,7 +1075,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		const auth_result = await apply_auth(deps, c.req.raw);
 		if (auth_result instanceof Response) return auth_result;
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = update_package_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1030,7 +1084,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 
 		const result = await update_package(deps.db, c.req.param("id"), parsed.data);
 		if (!result.ok) return wire_err(result.error);
-		return json_ok(result.value);
+		return json_ok(wire_package(result.value));
 	});
 
 	app.delete("/packages/:id", async (c) => {
@@ -1102,7 +1156,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_oidc_trust_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1118,7 +1172,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "trust policy management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = update_oidc_trust_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1189,7 +1243,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = create_analysis_template_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1205,7 +1259,7 @@ export const make_routes = (deps_factory: (env: unknown) => RoutesDeps) => {
 		if (auth_result.identity.kind !== "admin")
 			return wire_err({ code: "forbidden", message: "analysis template management requires admin auth" }, 403);
 
-		const body = await c.req.json().catch(() => null);
+		const body = await read_json(c.req);
 		const parsed = update_analysis_template_body.safeParse(body);
 		if (!parsed.success) return wire_err({ code: "invalid_body", issues: parsed.error.issues }, 400);
 
@@ -1331,7 +1385,11 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 	try {
 		const parsed_body: unknown = await request.json();
 		body = parsed_body;
-	} catch {
+	} catch (error) {
+		console.warn(
+			"[pipelines] oidc exchange body was not JSON:",
+			error instanceof Error ? error.message : String(error),
+		);
 		body = null;
 	}
 	const parsed = oidc_exchange_body.safeParse(body);
@@ -1350,15 +1408,17 @@ const apply_oidc_exchange = async (request: Request, deps: RoutesDeps): Promise<
 	if (!result.ok) return wire_err(result.error);
 
 	if (deps.pulse !== undefined) {
-		await deps.pulse
-			.emit({
+		await caught_fallback(
+			deps.pulse.emit({
 				event: "oidc_exchange",
 				trust_policy_id: result.value.trust_policy_id,
 				package_id: result.value.package_ids[0] ?? null,
 				scope: result.value.scope,
 				status: "ok",
-			})
-			.catch(() => undefined);
+			}),
+			undefined,
+			"pulse emit failed for oidc_exchange",
+		);
 	}
 
 	return json_ok({
@@ -1400,7 +1460,7 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 		);
 	}
 
-	const buffer = await request.arrayBuffer().catch(() => null);
+	const buffer = await caught_fallback(request.arrayBuffer(), null, "could not read request body");
 	if (buffer === null) return wire_err({ code: "invalid_body", message: "could not read body" }, 400);
 	if (buffer.byteLength > MAX_BLOB_SIZE_BYTES)
 		return wire_err(
@@ -1434,7 +1494,11 @@ const apply_artifact_blob = async (request: Request, deps: RoutesDeps): Promise<
 	if (!put_meta.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put_meta.error) });
 
 	if (deps.pulse !== undefined)
-		await deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }).catch(() => undefined);
+		await caught_fallback(
+			deps.pulse.emit({ event: "artifact_uploaded", store_id, content_hash, kind: "blob" }),
+			undefined,
+			"pulse emit failed for artifact_uploaded",
+		);
 
 	return json_ok({ version, content_hash, store_id, ref: data_key });
 };
@@ -1482,7 +1546,8 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	try {
 		const parsed_body: unknown = await request.json();
 		body = parsed_body;
-	} catch {
+	} catch (error) {
+		console.warn("[pipelines] version-set body was not JSON:", error instanceof Error ? error.message : String(error));
 		body = null;
 	}
 	if (body === null) return wire_err({ code: "invalid_body", message: "request body is not valid JSON" }, 400);
@@ -1522,15 +1587,17 @@ const apply_artifact_version_set = async (request: Request, deps: RoutesDeps): P
 	if (!put.ok) return wire_err({ code: "storage_error", message: format_corpus_error(put.error) });
 
 	if (deps.pulse !== undefined)
-		await deps.pulse
-			.emit({
+		await caught_fallback(
+			deps.pulse.emit({
 				event: "artifact_uploaded",
 				store_id: "version-sets",
 				content_hash: put.value.content_hash,
 				kind: "version_set",
 				package: manifest.package,
-			})
-			.catch(() => undefined);
+			}),
+			undefined,
+			"pulse emit failed for version_set upload",
+		);
 
 	return json_ok({
 		version_set_id: put.value.version,
@@ -1587,7 +1654,11 @@ const normalise_do_response = async (
 			: ((): unknown => {
 					try {
 						return JSON.parse(text);
-					} catch {
+					} catch (error) {
+						console.warn(
+							"[pipelines] upstream error body was not JSON:",
+							error instanceof Error ? error.message : String(error),
+						);
 						return null;
 					}
 				})();
@@ -1681,7 +1752,11 @@ const apply_external_rollback = async (deps: RoutesDeps, source: PipelineRun, ac
 	if (!is_terminal_status(source.status)) {
 		const source_plan = await reconstruct_plan_for_run(deps, source);
 		if (source_plan !== null) {
-			await do_call(deps, source.id, "cancel", { plan: source_plan }).catch(() => null);
+			await caught_fallback(
+				do_call(deps, source.id, "cancel", { plan: source_plan }),
+				null,
+				"best-effort source cancel failed",
+			);
 		}
 	}
 
@@ -1724,7 +1799,11 @@ const finish_rollback_response = async (
 	try {
 		const advance_json: unknown = await advance_res.json();
 		advance_body = advance_json;
-	} catch {
+	} catch (error) {
+		console.warn(
+			"[pipelines] advance response body was not JSON:",
+			error instanceof Error ? error.message : String(error),
+		);
 		advance_body = null;
 	}
 	if (advance_res.status >= 400)

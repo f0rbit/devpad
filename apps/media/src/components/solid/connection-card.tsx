@@ -1,6 +1,7 @@
 import { Button } from "@f0rbit/ui";
 import { RefreshCw, Trash2 } from "lucide-solid";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 import { format } from "@/utils/formatters";
 import type { Connection } from "@/utils/types";
@@ -63,7 +64,9 @@ export default function ConnectionCard(props: Props) {
 						icon
 						variant="ghost"
 						label="Refresh data"
-						onClick={() => void handleRefresh()}
+						onClick={() => {
+							run_task(handleRefresh(), { component: "connection-card", action: "refresh" });
+						}}
 						disabled={refreshing()}
 					>
 						<RefreshCw size={16} class={refreshing() ? "animate-spin" : ""} />
@@ -72,7 +75,9 @@ export default function ConnectionCard(props: Props) {
 						icon
 						variant="ghost"
 						label="Remove connection"
-						onClick={() => void handleDelete()}
+						onClick={() => {
+							run_task(handleDelete(), { component: "connection-card", action: "delete" });
+						}}
 						disabled={deleting()}
 					>
 						<Trash2 size={16} />

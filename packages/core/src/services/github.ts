@@ -5,6 +5,9 @@ import { Octokit } from "@octokit/rest";
 import type { Endpoints } from "@octokit/types";
 import { batchedQuery } from "./batch.js";
 import type { ServiceError } from "./errors.js";
+import { createLogger } from "../utils/logger";
+
+const github_log = createLogger("core.github");
 
 type GitHubBranchFromAPI = Awaited<ReturnType<Octokit["rest"]["repos"]["listBranches"]>>["data"][number];
 type GitHubRepoListItem = Endpoints["GET /user/repos"]["response"]["data"][0];
@@ -131,7 +134,13 @@ async function getCommitDetails(
 
 		const fetched = await Promise.all(
 			missing_shas.map(async (commit_sha) => {
-				const response = await octokit.rest.repos.getCommit({ owner, repo, ref: commit_sha }).catch(() => null);
+				const response = await octokit.rest.repos.getCommit({ owner, repo, ref: commit_sha }).catch((e: unknown) => {
+					github_log.warn("getCommit fetch failed, skipping sha", {
+						sha: commit_sha,
+						error: e instanceof Error ? e.message : String(e),
+					});
+					return null;
+				});
 				return response?.data ?? null;
 			}),
 		);

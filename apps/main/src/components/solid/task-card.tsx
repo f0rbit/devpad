@@ -15,6 +15,7 @@ import Target from "lucide-solid/icons/target";
 import { createSignal, For, onMount } from "solid-js";
 import { TagBadge } from "@/components/solid/tag-editor";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 import {
 	advanceTaskProgress,
 	formatDueDate,
@@ -50,7 +51,7 @@ const GoalInfo = ({ goal_id }: { goal_id: string }) => {
 	};
 
 	onMount(() => {
-		void load();
+		run_task(load(), { component: "task-card", action: "load-goal" });
 	});
 
 	if (!goalName()) return null;
@@ -102,7 +103,7 @@ export const TaskCard = (props: Props) => {
 					<TaskProgress
 						progress={task.progress}
 						onClick={() => {
-							void progress();
+							run_task(progress(), { component: "task-card", action: "advance" });
 						}}
 						type="box"
 					/>

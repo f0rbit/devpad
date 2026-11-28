@@ -19,10 +19,11 @@
 
 import { pipeline_approval, pipeline_run, pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import type { DashboardResponse } from "@devpad/schema/validation";
+import type { DashboardResponse, ResolvedGates } from "@devpad/schema/validation";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { and, eq, gte } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
+import { is_record } from "./is-record.js";
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -53,11 +54,9 @@ type VerdictValue = (typeof VERDICT_VALUES)[number];
 const GATE_TYPES = ["manual", "auto", "analysis"] as const;
 type GateType = (typeof GATE_TYPES)[number];
 
-const is_verdict_value = (v: unknown): v is VerdictValue =>
-	typeof v === "string" && (VERDICT_VALUES as readonly string[]).includes(v);
+const is_verdict_value = (v: unknown): v is VerdictValue => VERDICT_VALUES.some((known) => known === v);
 
-const is_gate_type = (v: unknown): v is GateType =>
-	typeof v === "string" && (GATE_TYPES as readonly string[]).includes(v);
+const is_gate_type = (v: unknown): v is GateType => GATE_TYPES.some((known) => known === v);
 
 // ─── Pure helpers ───────────────────────────────────────────────────
 
@@ -122,8 +121,8 @@ export const group_verdicts = (
 };
 
 const extract_verdict = (payload: unknown): VerdictValue | null => {
-	if (payload === null || typeof payload !== "object") return null;
-	const raw = (payload as Record<string, unknown>).verdict;
+	if (!is_record(payload)) return null;
+	const raw = payload.verdict;
 	return is_verdict_value(raw) ? raw : null;
 };
 
@@ -131,8 +130,8 @@ const lookup_gate_type = (resolved_gates: Record<string, unknown>, from_stage: s
 	const prefix = `${from_stage}→`;
 	for (const [key, value] of Object.entries(resolved_gates)) {
 		if (!key.startsWith(prefix)) continue;
-		if (value === null || typeof value !== "object") continue;
-		const t = (value as Record<string, unknown>).type;
+		if (!is_record(value)) continue;
+		const t = value.type;
 		if (is_gate_type(t)) return t;
 	}
 	return null;
@@ -265,7 +264,7 @@ export const get_dashboard = async (
 		status: string;
 		started_at: string | null;
 		finished_at: string | null;
-		resolved_gates: unknown;
+		resolved_gates: ResolvedGates;
 	}>;
 	try {
 		runs = await deps.db
@@ -284,9 +283,7 @@ export const get_dashboard = async (
 	}
 
 	const run_ids = runs.map((r) => r.id);
-	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(
-		runs.map((r) => [r.id, (r.resolved_gates as Record<string, unknown> | null) ?? {}]),
-	);
+	const resolved_gates_by_run = new Map<string, Record<string, unknown>>(runs.map((r) => [r.id, r.resolved_gates]));
 
 	// (2) gate_verdict events for those runs.
 	let verdict_events: Array<{ run_id: string; stage_name: string; payload: unknown }> = [];

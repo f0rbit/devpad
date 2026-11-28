@@ -4,7 +4,15 @@ import { eq, inArray } from "drizzle-orm";
 import { pipeline_grant, pipeline_package, pipeline_run, session, user as user_table } from "@devpad/schema";
 import { createBunDatabase } from "@devpad/schema/database/bun";
 import { setupIntegration } from "../shared/base-integration-test";
-import { getPipelinesUpstreamCalls, resetPipelinesUpstreamCalls, TEST_BASE_URL, TEST_USER_ID } from "./setup";
+import {
+	getPipelinesUpstreamCalls,
+	pipelines_stub_run,
+	pipelinesStubJson,
+	resetPipelinesUpstreamCalls,
+	setPipelinesStubResponder,
+	TEST_BASE_URL,
+	TEST_USER_ID,
+} from "./setup";
 
 const t = setupIntegration();
 
@@ -72,14 +80,14 @@ describe("Pipelines proxy (issue #156)", () => {
 					package_id: OWNED_PACKAGE_ID,
 					version_set_id: "vs_proxy_owned",
 					shape: "gradual",
-					resolved_rollout: {},
+					resolved_rollout: { type: "atomic" },
 					resolved_gates: {},
 				},
 				{
 					package_id: OTHER_PACKAGE_ID,
 					version_set_id: "vs_proxy_other",
 					shape: "gradual",
-					resolved_rollout: {},
+					resolved_rollout: { type: "atomic" },
 					resolved_gates: {},
 				},
 			])
@@ -263,5 +271,53 @@ describe("Pipelines proxy (issue #156)", () => {
 		if (!call) throw new Error("no upstream call recorded");
 		expect(call.actor).toBe(TEST_USER_ID);
 		expect(call.actor_channel).toBe("user");
+	});
+
+	// ─── Wire-contract enforcement (verification-hardening 2.2) ──────
+	//
+	// The proxy parses every upstream body with the matching schema from
+	// `@devpad/schema/pipelines`. A body violating the schema (here: the
+	// historically-fatal string-encoded `resolved_gates`) must be a 502
+	// `pipelines_contract_violation` — never a silently broken page.
+
+	test("run GET with a string-encoded resolved_gates upstream → 502 pipelines_contract_violation", async () => {
+		setPipelinesStubResponder(({ pathname }) => {
+			if (pathname !== `/runs/${owned_run_id}`) return null;
+			const bad = pipelines_stub_run();
+			bad.resolved_gates = "{}";
+			return pipelinesStubJson(bad);
+		});
+		try {
+			const res = await fetch(`${TEST_BASE_URL}/runs/${owned_run_id}`, {
+				method: "GET",
+				headers: { "content-type": "application/json", cookie: user_cookie },
+			});
+			expect(res.status).toBe(502);
+			const body: unknown = await res.json();
+			expect(body).toMatchObject({ error: "pipelines_contract_violation" });
+		} finally {
+			setPipelinesStubResponder(null);
+		}
+	});
+
+	test("schema-valid upstream run body passes through unchanged (200)", async () => {
+		setPipelinesStubResponder(({ pathname }) =>
+			pathname === `/runs/${owned_run_id}` ? pipelinesStubJson(pipelines_stub_run()) : null,
+		);
+		try {
+			const res = await fetch(`${TEST_BASE_URL}/runs/${owned_run_id}`, {
+				method: "GET",
+				headers: { "content-type": "application/json", cookie: user_cookie },
+			});
+			expect(res.status).toBe(200);
+			const body: unknown = await res.json();
+			expect(body).toMatchObject({
+				id: "pipeline-run_stub",
+				package_id: "pipeline-package_stub",
+				resolved_gates: {},
+			});
+		} finally {
+			setPipelinesStubResponder(null);
+		}
 	});
 });

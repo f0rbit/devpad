@@ -1,6 +1,16 @@
 import { Spinner } from "@f0rbit/ui";
 import { type JSX, Show } from "solid-js";
 
+/**
+ * Solid's `Resource.error` is typed `any`; read it through this guard so the
+ * `any` never reaches a consumer. Non-Error rejections are wrapped.
+ */
+export const error_of = (resource: { error: unknown }): Error | undefined => {
+	const failure: unknown = resource.error;
+	if (failure === undefined || failure === null) return undefined;
+	return failure instanceof Error ? failure : new Error(typeof failure === "string" ? failure : "Unknown error");
+};
+
 type LoadingProps = {
 	message?: string;
 	size?: "sm" | "md" | "lg";

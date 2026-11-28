@@ -7,6 +7,7 @@
  */
 
 import type { PipelineStageEvent, StageEventKind } from "@devpad/schema";
+import type { StageEventPayload } from "@devpad/schema/validation";
 import { pipeline_stage_event } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -16,7 +17,7 @@ const make_event_id = (): string => `pipeline-stage-event_${crypto.randomUUID()}
 
 export const record_stage_event_row = async (
 	db: Database,
-	input: { run_id: string; stage_name: string; kind: StageEventKind; payload?: unknown },
+	input: { run_id: string; stage_name: string; kind: StageEventKind; payload?: StageEventPayload | null },
 ): Promise<Result<PipelineStageEvent, ServiceError>> => {
 	try {
 		const insert_values = {
@@ -27,10 +28,7 @@ export const record_stage_event_row = async (
 			payload: input.payload ?? null,
 			ts: new Date().toISOString(),
 		};
-		const inserted = await db
-			.insert(pipeline_stage_event)
-			.values(insert_values as never)
-			.returning();
+		const inserted = await db.insert(pipeline_stage_event).values(insert_values).returning();
 		const row = inserted.at(0);
 		if (!row)
 			return err({

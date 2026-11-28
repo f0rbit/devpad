@@ -161,11 +161,11 @@ const deploy = async (worktree: string, env_path: string, log_path: string): Pro
 		for await (const chunk of stream) {
 			const text = decoder.decode(chunk, { stream: true });
 			process.stdout.write(text);
-			void writer.write(text);
+			await writer.write(text);
 		}
 	};
 	await Promise.all([pump(proc.stdout as ReadableStream<Uint8Array>), pump(proc.stderr as ReadableStream<Uint8Array>)]);
-	void writer.end();
+	await writer.end();
 	await proc.exited;
 	console.log(`deploy log: ${log_path}`);
 	return proc.exitCode;
@@ -200,7 +200,11 @@ const status_of = async (url: string, init?: RequestInit): Promise<number | null
 	try {
 		const res = await fetch(url, init);
 		return res.status;
-	} catch {
+	} catch (error) {
+		console.error(
+			`[deploy-orchestrator] probe failed for ${url}:`,
+			error instanceof Error ? error.message : String(error),
+		);
 		return null;
 	}
 };
@@ -216,7 +220,11 @@ const fetch_bound_names = async (token: string): Promise<Set<string> | null> => 
 			.map((binding) => binding.name)
 			.filter((name): name is string => typeof name === "string");
 		return new Set(names);
-	} catch {
+	} catch (error) {
+		console.error(
+			"[deploy-orchestrator] bindings settings fetch failed:",
+			error instanceof Error ? error.message : String(error),
+		);
 		return null;
 	}
 };

@@ -1,0 +1,8 @@
+{
+	"ok": true,
+	"value": {
+		"event_id": "pipeline-stage-event_5eb63bbbe01eeed9",
+		"duplicated": false,
+		"tick": "noop:sha_mismatch"
+	}
+}

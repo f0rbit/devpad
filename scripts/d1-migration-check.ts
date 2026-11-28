@@ -62,8 +62,10 @@ const query = (sql: string): Row[] => {
 		try {
 			const end = res.out.lastIndexOf("\n]") + 2;
 			return JSON.parse(res.out.slice(start, end));
-		} catch {
-			throw new Error(`unparseable JSON from: ${sql}\n${res.out}`);
+		} catch (error) {
+			// Re-throw with the offending output attached -- the cause is
+			// carried in the new error, never discarded.
+			throw new Error(`unparseable JSON from: ${sql}\n${res.out}`, { cause: error });
 		}
 	})();
 	if (!Array.isArray(parsed)) throw new Error(`unexpected output: ${res.out}`);

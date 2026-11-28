@@ -28,6 +28,7 @@
 
 import { createPulse, type Pulse, type LogLevel as PulseLogLevel } from "@f0rbit/pulse-client";
 import { startSpan, type Span } from "@f0rbit/pulse-client/spans";
+import { is_record } from "@/utils/is-record";
 
 /** devpad's severity ladder mapped onto pulse's own LogLevel enum —
  * pulse accepts only debug|info|warn|error|critical. Adding an entry whose
@@ -92,8 +93,7 @@ const install_browser_handlers = (p: Pulse): void => {
 	});
 };
 
-const isError = (x: unknown): x is Error =>
-	x instanceof Error || (typeof x === "object" && x !== null && "stack" in (x as Record<string, unknown>));
+const isError = (x: unknown): x is Error => x instanceof Error || (typeof x === "object" && x !== null && "stack" in x);
 
 const emit = (level: DevpadLogLevel, message: string, attrs?: Record<string, unknown>): void => {
 	ensureInitialized()?.log(PULSE_LEVEL[level], message, attrs);
@@ -108,7 +108,7 @@ const error_or_critical =
 			p.captureError(err_or_attrs, { message, level, ...attrs });
 			return;
 		}
-		p.log(level, message, err_or_attrs as Record<string, unknown> | undefined);
+		p.log(level, message, is_record(err_or_attrs) ? err_or_attrs : undefined);
 	};
 
 /** Opinionated namespaced log surface — see file header for the severity ladder. */

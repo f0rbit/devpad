@@ -7,6 +7,7 @@ import Trash from "lucide-solid/icons/trash";
 import { createSignal, For } from "solid-js";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 
 type Props = {
 	items: UpdateData[];
@@ -141,7 +142,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				<a
 					role="button"
 					onClick={() => {
-						void saveActions();
+						run_task(saveActions(), { component: "update-diff", action: "save" });
 					}}
 					class="row row-sm"
 				>
@@ -150,7 +151,7 @@ export function UpdateDiffList({ items, tasks, project_id, update_id }: Props) {
 				<a
 					role="button"
 					onClick={() => {
-						void ignoreUpdate();
+						run_task(ignoreUpdate(), { component: "update-diff", action: "ignore" });
 					}}
 					class="row row-sm"
 				>
@@ -174,16 +175,16 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 
 	const title: string | null = update.task?.task.title ?? null;
 
-	// Determine the path based on new or old data
-	const path = data.new.file
+	// `old`/`new` are nullable (only the side a diff carries is set).
+	const path = data.new?.file
 		? formatCodeLocation(data.new.file, data.new.line)
-		: data.old.file
+		: data.old?.file
 			? formatCodeLocation(data.old.file, data.old.line)
 			: "unknown:?";
 
 	// Build contexts for old and new code
-	const old_context = data.old.context ? buildCodeContext(data.old.context) : null;
-	const new_context = data.new.context ? buildCodeContext(data.new.context) : null;
+	const old_context = data.old?.context ? buildCodeContext(data.old.context) : null;
+	const new_context = data.new?.context ? buildCodeContext(data.new.context) : null;
 
 	return (
 		<div class="stack stack-sm" style="gap: 2px;">
@@ -209,10 +210,10 @@ export function UpdateDiff({ update, action, onActionChange, onTitleChange }: It
 			</div>
 			<div style="padding-left: 0ch; gap: 3px;" class="stack stack-sm">
 				<div class="item old">
-					<code>{data.old.text}</code>
+					<code>{data.old?.text ?? ""}</code>
 				</div>
 				<div class="item new">
-					<code>{data.new.text}</code>
+					<code>{data.new?.text ?? ""}</code>
 				</div>
 			</div>
 			<div style="position: relative; padding-top: 2px">

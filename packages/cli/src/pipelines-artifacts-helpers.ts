@@ -9,7 +9,7 @@ import path from "node:path";
 import { AssetManifest, type AssetPart, BundleManifest, type ModulePart } from "@devpad/pipeline-fakes/manifests";
 import { type PipelineTemplate, PipelineTemplateSchema } from "@devpad/pipeline-templates";
 import type { VersionSetManifest } from "@f0rbit/corpus";
-import { err, ok, type Result } from "@f0rbit/corpus";
+import { err, ok, try_catch, type Result } from "@f0rbit/corpus";
 import { createHash } from "crypto";
 import type { WalkedAssets } from "./asset-walker";
 import type { WalkedBundle } from "./bundle-walker";
@@ -125,15 +125,16 @@ export function build_manifest(
 		const git_sha = inputs.git_sha || "0000000000000000000000000000000000000000";
 		const compatibility_date = inputs.compatibility_date || "2025-05-01";
 
-		let manifest_data = artifacts.manifest;
-		if (typeof manifest_data === "string") {
-			try {
-				const parsed: unknown = JSON.parse(manifest_data);
-				manifest_data = parsed as typeof artifacts.manifest;
-			} catch {
+		if (typeof artifacts.manifest === "string") {
+			const manifest_text = artifacts.manifest;
+			const parsed = try_catch(
+				(): unknown => JSON.parse(manifest_text),
+				(e: unknown) => e,
+			);
+			if (!parsed.ok) {
 				return err({
 					kind: "schema_error",
-					message: "manifest.json is not valid JSON",
+					message: `manifest.json is not valid JSON: ${parsed.error instanceof Error ? parsed.error.message : String(parsed.error)}`,
 				});
 			}
 		}

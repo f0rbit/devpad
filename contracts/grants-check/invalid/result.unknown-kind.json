@@ -1,0 +1,7 @@
+{
+	"ok": false,
+	"error": {
+		"kind": "grant_denied",
+		"message": "x"
+	}
+}

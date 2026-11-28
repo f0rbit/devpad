@@ -287,8 +287,8 @@ describe("Project Edge Cases Integration", () => {
 				const raw: unknown = await response.json();
 				const errorData = raw as any;
 				expect(errorData.error).toContain("repo_url");
-			} catch {
-				console.warn("Specification fetch endpoint not available");
+			} catch (error) {
+				console.warn("Specification fetch endpoint not available:", error);
 			}
 		});
 

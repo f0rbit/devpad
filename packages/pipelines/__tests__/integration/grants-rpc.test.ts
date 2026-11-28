@@ -1,4 +1,10 @@
 import { beforeEach, describe, expect, test } from "bun:test";
+import {
+	grant_check_caller,
+	grant_check_error,
+	grant_check_response,
+	grant_check_scope,
+} from "@devpad/schema/contracts";
 import { pipeline_grant } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { PipelinesGrantsService } from "../../src/grants-rpc";
@@ -173,5 +179,37 @@ describe("PipelinesGrantsService.check — RPC contract consumed by vault", () =
 			return;
 		}
 		expect(result.value.granted).toBe(true);
+	});
+
+	// Contract wiring (verification-hardening 2.4): the traffic this
+	// service exchanges with vault must parse against the Zod contract
+	// in `@devpad/schema/contracts` — fixtures in `contracts/grants-check/`.
+	test("request/response traffic parses against the grants-check contract", async () => {
+		await seed_grant(db, { package_id, stage_name: "staging", scope: "anthropic:messages" });
+
+		const caller = { package_id: package_id, environment: "staging" as const, version_set_id: "vs_v1" };
+		const scope = "anthropic:messages";
+
+		expect(grant_check_caller.parse(caller)).toEqual(caller);
+		expect(grant_check_scope.parse(scope)).toBe(scope);
+
+		const result = await service.check(caller, scope);
+		if (!result.ok) {
+			expect(grant_check_error.parse(result.error).kind).toBe("store_error");
+			return;
+		}
+		expect(grant_check_response.parse(result.value)).toEqual(result.value);
+	});
+
+	test("a caller keyed by `package` fails the contract at the package_id field (vault #14)", () => {
+		const parsed = grant_check_caller.safeParse({
+			package: "x",
+			environment: "staging",
+			version_set_id: "vs_v1",
+		});
+
+		expect(parsed.success).toBe(false);
+		if (parsed.success) return;
+		expect(parsed.error.issues.some((issue) => issue.path.includes("package_id"))).toBe(true);
 	});
 });

@@ -1,5 +1,6 @@
 import { Button, FormField, Input } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 
 type RedditCredentialsFormProps = {
@@ -89,7 +90,13 @@ export default function RedditCredentialsForm(props: RedditCredentialsFormProps)
 				</div>
 			</Show>
 
-			<form onSubmit={(e) => void handleSubmit(e)} class="stack stack-sm" style={{ gap: "12px", "margin-top": "12px" }}>
+			<form
+				onSubmit={(e) => {
+					run_task(handleSubmit(e), { component: "reddit-credentials-form", action: "submit" });
+				}}
+				class="stack stack-sm"
+				style={{ gap: "12px", "margin-top": "12px" }}
+			>
 				<FormField label="Your Reddit Username" id="reddit-username">
 					<Input
 						id="reddit-username"

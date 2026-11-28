@@ -12,7 +12,6 @@ import {
 	github_commit_url,
 	github_repo_from_url,
 	github_workflow_url,
-	parse_external_target,
 	short_sha,
 } from "@/utils/pipeline-external";
 
@@ -58,13 +57,10 @@ const events_result = run ? await client.pipelines.events.list(run.id) : null;
 const run_events = events_result && events_result.ok ? events_result.value : [];
 
 // External deploy mode (#155): resolve the package-derived GitHub link targets
-// used for commit/workflow deep-links. Defensive parse — the raw JSON column
-// is untrusted on read.
+// used for commit/workflow deep-links. `external_target` is a typed json
+// column validated at the core read boundary — consume it directly.
 const pkg: PipelinePackage | null = run ? run_package : null;
-const external_target = pkg && pkg.deploy_mode === "external" ? parse_external_target(pkg.external_target) : null;
-if (pkg && pkg.deploy_mode === "external" && external_target === null) {
-	console.error(`[run-detail] run ${run_id}: external package ${pkg.id} has an unparseable external_target`);
-}
+const external_target = pkg && pkg.deploy_mode === "external" ? pkg.external_target : null;
 const repo = external_target?.repo ?? github_repo_from_url(pkg?.repo_url) ?? null;
 const commit_url = run && run.commit_sha && repo ? github_commit_url(repo, run.commit_sha) : null;
 

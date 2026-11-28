@@ -3,6 +3,7 @@ import type { Category as SchemaCategory } from "@devpad/schema/blog";
 import { Button, buildTree, Spinner, Tree } from "@f0rbit/ui";
 import { type Component, createMemo, createResource, createSignal, Show } from "solid-js";
 import { unwrap } from "@/lib/client";
+import { run_task } from "@/lib/run-task";
 import CategoryForm from "./category-form";
 
 type Category = Pick<SchemaCategory, "id" | "name" | "parent">;
@@ -90,7 +91,8 @@ const CategoriesPage: Component<Props> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.categories.delete(encodeURIComponent(name)));
 			refreshCategories();
-		} catch {
+		} catch (cause) {
+			console.error("[categories] delete failed:", cause);
 			setError("Failed to delete category");
 		}
 	};
@@ -110,7 +112,8 @@ const CategoriesPage: Component<Props> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.categories.create(data));
 			refreshCategories();
-		} catch {
+		} catch (cause) {
+			console.error("[categories] create failed:", cause);
 			setError("Failed to create category");
 		}
 	};
@@ -140,7 +143,7 @@ const CategoriesPage: Component<Props> = (props) => {
 				<Spinner size="sm" />
 			</Show>
 
-			<Show when={categories.error}>
+			<Show when={categories.error !== undefined}>
 				<div
 					style={{
 						padding: "0.5rem 0.75rem",
@@ -182,7 +185,9 @@ const CategoriesPage: Component<Props> = (props) => {
 												variant="ghost"
 												icon
 												size="sm"
-												onClick={() => void handleDelete(node.id)}
+												onClick={() => {
+													run_task(handleDelete(node.id), { component: "categories-page", action: "delete" });
+												}}
 												label={`Delete ${node.label}`}
 											>
 												<IconMinus />

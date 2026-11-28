@@ -18,8 +18,10 @@
 
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineStageEvent, StageEventKind } from "@devpad/schema";
+import { try_catch } from "@f0rbit/corpus";
 import { Badge, Empty } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 
 type StageEventTimelineProps = {
@@ -84,11 +86,11 @@ const format_relative = (iso: string): string => {
 
 const stringify_payload = (payload: unknown): string => {
 	if (payload === null || payload === undefined) return "null";
-	try {
-		return JSON.stringify(payload, null, 2);
-	} catch {
-		return "[unserializable payload]";
-	}
+	const serialized = try_catch(
+		() => JSON.stringify(payload, null, 2),
+		(e: unknown) => e,
+	);
+	return serialized.ok ? serialized.value : "[unserializable payload]";
 };
 
 export default function StageEventTimeline(props: StageEventTimelineProps) {
@@ -127,7 +129,7 @@ const StageEventTimelineContent = (props: StageEventTimelineProps) => {
 	};
 
 	onMount(() => {
-		void load();
+		run_task(load(), { component: "stage-event-timeline", action: "load" });
 	});
 
 	return (
@@ -182,46 +184,44 @@ const StageEventTimelineContent = (props: StageEventTimelineProps) => {
 							</span>
 						</div>
 
-						<Show when={ev.payload !== null && ev.payload !== undefined}>
-							<div class="stack stack-xs">
-								<button
-									type="button"
-									onClick={() => {
-										toggle(ev.id);
-									}}
+						<div class="stack stack-xs">
+							<button
+								type="button"
+								onClick={() => {
+									toggle(ev.id);
+								}}
+								style={{
+									"align-self": "flex-start",
+									background: "none",
+									border: "none",
+									color: "var(--text-link)",
+									cursor: "pointer",
+									padding: "0",
+									"font-size": "0.8rem",
+								}}
+							>
+								{expanded().has(ev.id) ? "▾ payload" : "▸ payload"}
+							</button>
+							<Show when={expanded().has(ev.id)}>
+								<pre
 									style={{
-										"align-self": "flex-start",
-										background: "none",
-										border: "none",
-										color: "var(--text-link)",
-										cursor: "pointer",
-										padding: "0",
-										"font-size": "0.8rem",
+										margin: "0",
+										padding: "0.5rem",
+										"background-color": "var(--bg-alt)",
+										"border-radius": "var(--radius)",
+										"font-size": "0.75rem",
+										"font-family": "monospace",
+										"max-height": "240px",
+										"overflow-y": "auto",
+										"overflow-x": "auto",
+										"white-space": "pre-wrap",
+										"word-break": "break-word",
 									}}
 								>
-									{expanded().has(ev.id) ? "▾ payload" : "▸ payload"}
-								</button>
-								<Show when={expanded().has(ev.id)}>
-									<pre
-										style={{
-											margin: "0",
-											padding: "0.5rem",
-											"background-color": "var(--bg-alt)",
-											"border-radius": "var(--radius)",
-											"font-size": "0.75rem",
-											"font-family": "monospace",
-											"max-height": "240px",
-											"overflow-y": "auto",
-											"overflow-x": "auto",
-											"white-space": "pre-wrap",
-											"word-break": "break-word",
-										}}
-									>
-										{stringify_payload(ev.payload)}
-									</pre>
-								</Show>
-							</div>
-						</Show>
+									{stringify_payload(ev.payload)}
+								</pre>
+							</Show>
+						</div>
 					</div>
 				)}
 			</For>

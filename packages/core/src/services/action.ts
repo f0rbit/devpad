@@ -1,4 +1,5 @@
-import type { Action, HistoryAction, TodoUpdate } from "@devpad/schema";
+import type { Action, ActionData, HistoryAction, TodoUpdate } from "@devpad/schema";
+import { action_data as action_data_schema } from "@devpad/schema/validation";
 import type { ActionType } from "@devpad/schema/database";
 import { action, todo_updates } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
@@ -6,19 +7,20 @@ import { ok, type Result } from "@f0rbit/corpus";
 import { and, desc, eq, gt, inArray } from "drizzle-orm";
 import type { ServiceError } from "./errors.js";
 import { getProjectById, getUserProjectMap } from "./projects.js";
+import { decode_todo_update } from "./scanning.js";
 import { getTask } from "./tasks.js";
 
-type ActionData = {
-	task_id?: string;
-	project_id?: string;
-	title?: string;
-	href?: string;
-	name?: string;
-	message?: string;
-	status?: string;
-};
-
 type ActionWithData = Omit<Action, "data"> & { data: ActionData };
+
+/**
+ * Zod-parse the `action.data` column defensively: the display feed must
+ * survive a malformed historical row (falls back to an empty payload) —
+ * the column type only covers what well-formed writers store.
+ */
+function parse_action_data(raw: ActionData | null): ActionData {
+	const parsed = action_data_schema.safeParse(raw ?? {});
+	return parsed.success ? parsed.data : {};
+}
 
 export async function getActions(
 	db: Database,
@@ -39,7 +41,7 @@ export async function getActions(
 	const project_map = project_map_result.value;
 
 	const data: ActionWithData[] = raw_data.map((a) => {
-		const action_data = (a.data ?? {}) as ActionData;
+		const action_data = parse_action_data(a.data);
 		const p = action_data.project_id ? project_map[action_data.project_id] : undefined;
 		if (p) {
 			action_data.href = p.project_id;
@@ -60,7 +62,14 @@ export async function getProjectScanHistory(
 		.from(todo_updates)
 		.where(eq(todo_updates.project_id, project_id))
 		.orderBy(desc(todo_updates.created_at));
-	return ok(result);
+
+	const decoded: TodoUpdate[] = [];
+	for (const row of result) {
+		const item = decode_todo_update(row);
+		if (!item.ok) return item;
+		decoded.push(item.value);
+	}
+	return ok(decoded);
 }
 
 function sortByDate(a: HistoryAction, b: HistoryAction) {
@@ -171,7 +180,7 @@ export async function getAIActivity(
 	const project_map = project_map_result.value;
 
 	const actions: ActionWithData[] = raw_data.map((a) => {
-		const action_data = (a.data ?? {}) as ActionData;
+		const action_data = parse_action_data(a.data);
 		const p = action_data.project_id ? project_map[action_data.project_id] : undefined;
 		if (p) {
 			action_data.href = p.project_id;

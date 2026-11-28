@@ -12,6 +12,7 @@ import HistoryTimeline from "@/components/solid/history-timeline";
 import { ProjectSelector } from "@/components/solid/project-selector";
 import { TagPicker } from "@/components/solid/tag-picker";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 import { buildCodeContext, formatCodeLocation } from "@/utils/code-utils";
 import { getProjectContext } from "@/utils/project-context";
 import {
@@ -256,8 +257,9 @@ const TaskEditor = ({
 				role="button"
 				id="save-button"
 				onClick={() => {
-					// fire-and-forget: saveTask handles its own errors via requestState
-					void saveTask();
+					// saveTask handles its own errors via requestState; run_task
+					// surfaces the rejection path to pulse instead of dropping it.
+					run_task(saveTask(), { component: "task-editor", action: "save" });
 				}}
 			>
 				save

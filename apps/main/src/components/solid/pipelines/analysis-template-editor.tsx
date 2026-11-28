@@ -1,7 +1,9 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import type { PipelineAnalysisTemplate } from "@devpad/schema";
+import { try_catch } from "@f0rbit/corpus";
 import { Button, FormField, Input, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
 import { createEffect, createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 type AnalysisTemplateEditorProps = {
 	open: boolean;
@@ -15,11 +17,11 @@ type AnalysisTemplateEditorProps = {
 const threshold_dsl_string = (raw: unknown): string => {
 	if (typeof raw === "string") return raw;
 	if (raw === null || raw === undefined) return "";
-	try {
-		return JSON.stringify(raw);
-	} catch {
-		return "";
-	}
+	const serialized = try_catch(
+		() => JSON.stringify(raw),
+		(e: unknown) => e,
+	);
+	return serialized.ok ? serialized.value : "";
 };
 
 export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProps) {
@@ -57,11 +59,11 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 				window_ms: windowMs(),
 			});
 			if (!result.ok) {
-				const err = result.error as { code?: string; field?: string; message?: string };
-				if (err.code === "validation_error" && err.field === "threshold_dsl") {
-					setThresholdError(err.message ?? "Invalid threshold DSL");
+				const err = result.error;
+				if (err.code === "validation_error" && err.message.includes("threshold_dsl")) {
+					setThresholdError(err.message);
 				} else {
-					setGeneralError(err.message ?? "Failed to create template");
+					setGeneralError(err.message);
 				}
 				setLoading(false);
 				return;
@@ -84,11 +86,11 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 			window_ms: windowMs(),
 		});
 		if (!result.ok) {
-			const err = result.error as { code?: string; field?: string; message?: string };
-			if (err.code === "validation_error" && err.field === "threshold_dsl") {
-				setThresholdError(err.message ?? "Invalid threshold DSL");
+			const err = result.error;
+			if (err.code === "validation_error" && err.message.includes("threshold_dsl")) {
+				setThresholdError(err.message);
 			} else {
-				setGeneralError(err.message ?? "Failed to update template");
+				setGeneralError(err.message);
 			}
 			setLoading(false);
 			return;
@@ -169,7 +171,7 @@ export default function AnalysisTemplateEditor(props: AnalysisTemplateEditorProp
 				</Button>
 				<Button
 					onClick={() => {
-						void handleSave();
+						run_task(handleSave(), { component: "analysis-template-editor", action: "save" });
 					}}
 					disabled={loading() || name().trim() === "" || thresholdDsl().trim() === ""}
 				>

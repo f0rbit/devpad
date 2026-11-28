@@ -1,6 +1,7 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button, Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import IslandBoundary from "@/components/solid/pipelines/island-boundary";
 
 type RollbackButtonProps = {
@@ -103,7 +104,7 @@ const RollbackButtonContent = (props: RollbackButtonProps) => {
 					<Button
 						variant="danger"
 						onClick={() => {
-							void handle_rollback();
+							run_task(handle_rollback(), { component: "rollback-button", action: "rollback" });
 						}}
 						disabled={loading()}
 						loading={loading()}

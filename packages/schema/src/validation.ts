@@ -1,3 +1,4 @@
+import { try_catch } from "@f0rbit/corpus";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import {
@@ -241,6 +242,7 @@ export const external_target = z.object({
 	gate: z.object({ type: z.literal("manual") }).default({ type: "manual" }),
 });
 export type ExternalTarget = z.infer<typeof external_target>;
+export type ExternalRef = z.infer<typeof external_ref>;
 
 export const dispatch_status = z.union([z.literal("claimed"), z.literal("dispatched"), z.literal("failed")]);
 
@@ -750,3 +752,116 @@ export type ProjectGraphResponse = z.infer<typeof project_graph_response>;
 export const project_view_pin = z.object({ x: z.number(), y: z.number() });
 export const project_view_layout = z.object({ pins: z.record(z.string(), project_view_pin) });
 export type ProjectViewLayoutInput = z.infer<typeof project_view_layout>;
+
+// ---------------------------------------------------------------------------
+// JSON-column contracts (verification-hardening 2.1) — every `mode: "json"`
+// column in `database/schema.ts` anchors its TS type to one of these schemas
+// via `.$type<z.infer<typeof X>>()`. Pipeline-table readers in core parse
+// with these same schemas and surface `store_error` on mismatch, so a
+// corrupted row is a typed error, never a silently-wrong value.
+// ---------------------------------------------------------------------------
+
+/** `action.data` — audit metadata written by the domain services. All fields optional: each action type writes its own subset. */
+export const action_data = z.object({
+	task_id: z.string().optional(),
+	project_id: z.string().optional(),
+	milestone_id: z.string().optional(),
+	goal_id: z.string().optional(),
+	title: z.string().optional(),
+	name: z.string().nullish(),
+	href: z.string().nullish(),
+	message: z.string().nullish(),
+	status: z.string().nullish(),
+	from: z.string().nullish(),
+	to: z.string().nullish(),
+	override: z.boolean().optional(),
+	reason: z.string().nullish(),
+});
+export type ActionData = z.infer<typeof action_data>;
+
+// `tracker_result.data` / `todo_updates.data` — scanner output. Writers
+// historically double-encoded these (passed a pre-`JSON.stringify`ed string
+// into the drizzle json column), so rows written before that was fixed read
+// back as a JSON string; the `*_stored` variants decode that legacy shape
+// before validating. New writers store the array directly.
+export const scan_diff_info = z.object({
+	text: z.string(),
+	line: z.number(),
+	file: z.string(),
+	// Optional: historical rows predate the context capture (the old hand-written UpdateData carried `context?`).
+	context: z.array(z.string()).optional(),
+});
+
+export const scan_diff_result = z.object({
+	id: z.string(),
+	tag: z.string(),
+	type: z.enum(["SAME", "MOVE", "UPDATE", "NEW", "DELETE"]),
+	data: z.object({ old: scan_diff_info.nullable(), new: scan_diff_info.nullable() }),
+	// v2.4 (task A5.4) — placement proposal for NEW items only; older rows omit the key entirely.
+	proposal: scan_diff_proposal.nullable().optional(),
+});
+export type ScanDiffResult = z.infer<typeof scan_diff_result>;
+
+export const scan_diff_results = z.array(scan_diff_result);
+
+export const scan_parsed_task = z.object({
+	id: z.string(),
+	file: z.string(),
+	line: z.number(),
+	tag: z.string(),
+	text: z.string(),
+	context: z.array(z.string()),
+});
+export type ScanParsedTask = z.infer<typeof scan_parsed_task>;
+
+export const scan_parsed_tasks = z.array(scan_parsed_task);
+
+const decode_legacy_json_string = (value: unknown): unknown => {
+	if (typeof value !== "string") return value;
+	const decoded = try_catch(
+		(): unknown => JSON.parse(value),
+		(e: unknown) => e,
+	);
+	// Not JSON -- it wasn't double-encoded; keep the raw string.
+	return decoded.ok ? decoded.value : value;
+};
+
+export const scan_diff_results_stored = z.preprocess(decode_legacy_json_string, scan_diff_results);
+export const scan_parsed_tasks_stored = z.preprocess(decode_legacy_json_string, scan_parsed_tasks);
+
+/** `codebase_tasks.context` — scanned source lines around the todo. */
+export const scan_context = z.array(z.string());
+/** Legacy double-encoded `codebase_tasks.context` rows (JSON string) decode before validating. */
+export const scan_context_stored = z.preprocess(decode_legacy_json_string, scan_context.nullable());
+
+/** `apply_log.response` — the idempotent-replay body stored verbatim (task A1.4). */
+export const apply_op_result = z.object({
+	op: z.enum(["create", "update", "reparent", "link", "unlink", "claim", "complete"]),
+	id: z.string(),
+});
+export const apply_log_response = z.object({ idempotency_key: z.string(), results: z.array(apply_op_result) });
+export type ApplyLogResponse = z.infer<typeof apply_log_response>;
+
+/**
+ * `pipeline_stage_event.payload` — genuinely heterogeneous per event kind
+ * (internal payloads from `runs.ts`/`external-deploy.ts`, CI-reported
+ * payloads stamped by `events.ts`'s `ingest_event`). No single discriminated
+ * union can describe it at the column level, so the honest contract is an
+ * object record; consumers needing specific fields (e.g. the run-detail
+ * `gate_verdict` decision) Zod-parse their own slice.
+ */
+export const stage_event_payload = z.record(z.string(), z.unknown());
+export type StageEventPayload = z.infer<typeof stage_event_payload>;
+
+/** `pipeline_analysis_template.query_dsl` — free-form JSON, stored but never read back by any consumer yet. */
+export const analysis_query_dsl = z.unknown();
+
+/** `pipeline_analysis_template.threshold_dsl` — the multi-line threshold DSL string (see `analysis-domain.ts`). */
+export const analysis_threshold_dsl = z.string();
+
+/** `pipeline_package.script_name_overrides` — stage → script-name map. */
+export const script_name_overrides = z.record(z.string(), z.string());
+export type ScriptNameOverrides = z.infer<typeof script_name_overrides>;
+
+export type ResolvedRollout = z.infer<typeof resolved_rollout>;
+export type ResolvedGates = z.infer<typeof resolved_gates>;

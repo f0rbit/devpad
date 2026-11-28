@@ -1,5 +1,6 @@
 import { Checkbox } from "@f0rbit/ui";
 import { createSignal, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 
 type Props = {
@@ -37,13 +38,19 @@ export default function YouTubeSettings(props: Props) {
 			<div class="filter-toggles">
 				<Checkbox
 					checked={includeWatchHistory()}
-					onChange={() => void updateSetting("include_watch_history", !includeWatchHistory())}
+					onChange={() => {
+						run_task(updateSetting("include_watch_history", !includeWatchHistory()), {
+							component: "you-tube-settings",
+						});
+					}}
 					label="Include watch history"
 					disabled={updating()}
 				/>
 				<Checkbox
 					checked={includeLiked()}
-					onChange={() => void updateSetting("include_liked", !includeLiked())}
+					onChange={() => {
+						run_task(updateSetting("include_liked", !includeLiked()), { component: "you-tube-settings" });
+					}}
 					label="Include liked videos"
 					disabled={updating()}
 				/>

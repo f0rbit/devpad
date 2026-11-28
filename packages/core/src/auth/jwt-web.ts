@@ -1,6 +1,8 @@
 import { err, ok, type Result } from "@f0rbit/corpus";
 import { z } from "zod";
 
+import { createLogger } from "../utils/logger";
+
 const JWTPayloadSchema = z.object({
 	user_id: z.string(),
 	session_id: z.string(),
@@ -94,7 +96,12 @@ export async function verifyJWT(secret: string, token: string): Promise<Result<J
 	const signature = base64UrlDecode(encoded_signature);
 	const encoder = new TextEncoder();
 
-	const is_valid = await crypto.subtle.verify("HMAC", key, signature, encoder.encode(signing_input)).catch(() => false);
+	const is_valid = await crypto.subtle
+		.verify("HMAC", key, signature, encoder.encode(signing_input))
+		.catch((e: unknown) => {
+			createLogger("auth.jwt").warn("hmac verify threw", { error: e instanceof Error ? e.message : String(e) });
+			return false;
+		});
 
 	if (!is_valid) return err({ kind: "invalid_signature" });
 
@@ -113,7 +120,10 @@ export function decodeJWT(token: string): Result<JWTPayload, JWTError> {
 	const raw = (() => {
 		try {
 			return JWTPayloadSchema.parse(JSON.parse(base64UrlDecodeString(parts[1])));
-		} catch {
+		} catch (error) {
+			createLogger("auth.jwt").warn("jwt payload parse failed", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 			return null;
 		}
 	})();

@@ -1,7 +1,7 @@
 import type { PipelineGrant, UpsertPipelineGrant } from "@devpad/schema";
 import { pipeline_grant } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
-import { err, match, ok, type Result } from "@f0rbit/corpus";
+import { err, ok, type Result } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import type { ServiceError } from "../errors.js";
 import { createLogger } from "../../utils/logger.js";
@@ -45,14 +45,9 @@ export async function check_grant(
 	stage_name: string,
 	scope: string,
 ): Promise<Result<boolean, ServiceError>> {
-	return match(
-		await list_grants(db, package_id),
-		(grants) => {
-			const verdict = evaluate_grant_check(grants, scope, stage_name);
-			return ok(verdict.granted);
-		},
-		(error) => err(error) as Result<boolean, ServiceError>,
-	);
+	const grants = await list_grants(db, package_id);
+	if (!grants.ok) return grants;
+	return ok(evaluate_grant_check(grants.value, scope, stage_name).granted);
 }
 
 /**

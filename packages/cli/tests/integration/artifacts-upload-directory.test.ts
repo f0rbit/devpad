@@ -131,7 +131,8 @@ const start_test_server = async (): Promise<ServerHandle> => {
 				try {
 					const raw_body: unknown = JSON.parse(buf.toString("utf8"));
 					parsed_body = raw_body;
-				} catch {
+				} catch (error) {
+					console.error("[test] version-set request body was not JSON:", error);
 					send_json(res, 400, { ok: false, error: { code: "invalid_body" } });
 					return;
 				}
@@ -172,7 +173,12 @@ const start_test_server = async (): Promise<ServerHandle> => {
 		}
 	};
 	const server = http.createServer((req, res) => {
-		void handle_request(req, res);
+		// createServer's callback can't await. `handle_request` catches
+		// internally, so a rejection is a test-harness bug — rethrow so bun
+		// surfaces it instead of the promise being dropped.
+		handle_request(req, res).catch((e: unknown) => {
+			throw e;
+		});
 	});
 	await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
 	const address = server.address();
@@ -230,8 +236,9 @@ const setup_fixtures = (): Fixtures => {
 const cleanup_fixtures = (fx: Fixtures): void => {
 	try {
 		rmSync(fx.dir, { recursive: true, force: true });
-	} catch {
-		// ignore — temp dir best-effort
+	} catch (error) {
+		// best-effort temp-dir cleanup, but visible
+		console.warn("[test] fixture cleanup failed:", error);
 	}
 };
 

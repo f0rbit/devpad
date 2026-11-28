@@ -1,3 +1,4 @@
+import { try_catch } from "@f0rbit/corpus";
 import { HTTP_STATUS, handleHttpResponse, handleNetworkError, handleResponseError } from "./error-handlers";
 import { ApiError, AuthenticationError } from "./errors";
 
@@ -126,6 +127,23 @@ export class ApiClient {
 		return `${String(Date.now())}-${Math.random().toString(36).substring(2, 11)}`;
 	}
 
+	private async read_body(response: Response): Promise<unknown> {
+		if (response.status === HTTP_STATUS.NO_CONTENT) return undefined;
+		const text = await response.text();
+		if (!text || text.trim() === "" || text.trim() === "null") return undefined;
+		const parsed = try_catch(
+			(): unknown => JSON.parse(text),
+			(error: unknown) => error,
+		);
+		if (parsed.ok) return parsed.value;
+		if (this.debug) {
+			console.log(`[DEBUG][${this.category}] response body is not JSON, returning raw text`, {
+				error: parsed.error instanceof Error ? parsed.error.message : String(parsed.error),
+			});
+		}
+		return text;
+	}
+
 	private async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
 		const { method = "GET", headers = {}, body, query } = options;
 		const url = this.buildUrl(path, query);
@@ -210,22 +228,7 @@ export class ApiClient {
 			this.request_history.add(historyEntry);
 
 			// Handle response parsing
-			let result: T;
-			if (response.status === HTTP_STATUS.NO_CONTENT) {
-				result = undefined as T;
-			} else {
-				const text = await response.text();
-				if (!text || text.trim() === "" || text.trim() === "null") {
-					result = undefined as T;
-				} else {
-					try {
-						const raw: unknown = JSON.parse(text);
-						result = raw as T;
-					} catch {
-						result = text as T;
-					}
-				}
-			}
+			const result = await this.read_body(response);
 
 			if (this.debug) {
 				console.log(`[INFO][${this.category}] ${method} ${path} [${requestId}] completed`, {
@@ -234,7 +237,8 @@ export class ApiClient {
 				});
 			}
 
-			return result;
+			// eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- generic HTTP-client contract: `T` is the response shape the CALLER declares. Pipelines call sites pass `unknown` and Zod-parse (wire schemas); the remaining ~150 namespaces still trust `T` pending per-call schemas (task_ed8646a5). This is the single cast site.
+			return result as T;
 		} catch (error) {
 			const duration = Date.now() - startTime;
 

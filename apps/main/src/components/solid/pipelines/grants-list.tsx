@@ -4,6 +4,7 @@ import { Badge, Button, Empty } from "@f0rbit/ui";
 import Check from "lucide-solid/icons/check";
 import X from "lucide-solid/icons/x";
 import { createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 
 type GrantsListProps = {
 	grants: PipelineGrant[];
@@ -149,7 +150,7 @@ export default function GrantsList(props: GrantsListProps) {
 																variant="primary"
 																disabled={loading() === grant.id}
 																onClick={() => {
-																	void handleApprove(grant);
+																	run_task(handleApprove(grant), { component: "grants-list", action: "approve" });
 																}}
 															>
 																<Check size={14} />
@@ -160,7 +161,7 @@ export default function GrantsList(props: GrantsListProps) {
 																variant="secondary"
 																disabled={loading() === grant.id}
 																onClick={() => {
-																	void handleDeny(grant);
+																	run_task(handleDeny(grant), { component: "grants-list", action: "deny" });
 																}}
 															>
 																<X size={14} />

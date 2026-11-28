@@ -17,6 +17,7 @@ import { type Accessor, createEffect, createSignal, For } from "solid-js";
 import { ProjectSelector } from "@/components/solid/project-selector";
 import { TagSelect } from "@/components/solid/tag-picker";
 import { log } from "@/lib/pulse";
+import { run_task } from "@/lib/run-task";
 import { getProjectContext } from "@/utils/project-context";
 import { TaskCard } from "./task-card";
 import { TaskQuickAdd } from "./task-quick-add";
@@ -209,7 +210,7 @@ export function TaskSorter({
 						role="button"
 						onClick={(e) => {
 							e.preventDefault();
-							void selectView("list");
+							run_task(selectView("list"), { component: "task-sorter" });
 						}}
 					>
 						<LayoutList size={16} />
@@ -218,7 +219,7 @@ export function TaskSorter({
 						role="button"
 						onClick={(e) => {
 							e.preventDefault();
-							void selectView("grid");
+							run_task(selectView("grid"), { component: "task-sorter" });
 						}}
 					>
 						<LayoutGrid size={16} />

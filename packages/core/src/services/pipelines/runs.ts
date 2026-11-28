@@ -32,8 +32,14 @@ import type { CloudflareProvider } from "@devpad/pipeline-fakes";
 import type { PulseSummaryProvider } from "@devpad/pipeline-fakes/pulse-summary";
 import type { Gate, PipelineTemplate, Stage, TransitionKey } from "@devpad/pipeline-templates";
 import { defaultAtomicGates, expand_rollout, resolve_rollout } from "@devpad/pipeline-templates";
-import { type ExternalTarget } from "@devpad/schema/validation";
-import type { ApprovalDecision, PipelineRun, StageEventKind, UpsertPipelineRun } from "@devpad/schema";
+import { type ExternalTarget, type ResolvedGates, type ResolvedRollout } from "@devpad/schema/validation";
+import type {
+	ApprovalDecision,
+	InsertPipelineRun,
+	PipelineRun,
+	StageEventKind,
+	UpsertPipelineRun,
+} from "@devpad/schema";
 import { pipeline_run } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import type { VersionSetManifest } from "@f0rbit/corpus";
@@ -53,8 +59,10 @@ import {
 	parse_external_target,
 	redispatch_failed,
 } from "./external-deploy.js";
+import { is_record } from "./is-record.js";
 import { get_package } from "./packages.js";
 import { type RollbackError, rollback_run, type VersionSetRef } from "./rollback.js";
+import { parse_run_row } from "./row-parse.js";
 import { resolve_script_name } from "./script-name.js";
 import { record_stage_event_row } from "./stage-events.js";
 import {
@@ -155,7 +163,7 @@ export const external_plan = (
 	external_timeout_ms: external_target.timeout_ms,
 });
 
-const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "atomic"): unknown => {
+const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "atomic"): ResolvedRollout => {
 	if (shape === "atomic") return { type: "atomic" };
 	return {
 		type: "gradual",
@@ -165,10 +173,9 @@ const stages_to_resolved_rollout_json = (stages: Stage[], shape: "gradual" | "at
 	};
 };
 
-const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Record<string, unknown> => {
-	const out: Record<string, unknown> = {};
-	for (const key of Object.keys(gates)) {
-		const g = gates[key as TransitionKey];
+const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): ResolvedGates => {
+	const out: ResolvedGates = {};
+	for (const [key, g] of Object.entries(gates)) {
 		if (g.type === "analysis") out[key] = { type: "analysis", template: g.template.template_id };
 		else if (g.type === "auto")
 			out[key] = g.afterBake !== undefined ? { type: "auto", afterBake: g.afterBake } : { type: "auto" };
@@ -178,6 +185,25 @@ const gates_to_resolved_gates_json = (gates: Record<TransitionKey, Gate>): Recor
 };
 
 const make_id = (): string => `pipeline-run_${crypto.randomUUID()}`;
+
+/**
+ * The upsert shape allows a null/absent `id`; the insert model doesn't —
+ * the explicit `id` override (and the `current_stage` default) is what
+ * makes the spread a valid {@link InsertPipelineRun}, checked by the
+ * compiler rather than silenced.
+ */
+const run_insert_values = (upsert: UpsertPipelineRun, row_id: string, now: string): InsertPipelineRun => ({
+	...upsert,
+	id: row_id,
+	current_stage: upsert.current_stage ?? null,
+	started_at: now,
+	created_at: now,
+	updated_at: now,
+	created_by: "api",
+	modified_by: "api",
+	protected: false,
+	deleted: false,
+});
 
 /**
  * Persist a freshly-created run row, snapshotting the resolved plan
@@ -235,29 +261,17 @@ export const create_run = async (
 		kind,
 		status: "queued",
 		current_stage: plan.stages[0]?.name ?? null,
-		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape) as never,
-		resolved_gates: gates_to_resolved_gates_json(plan.gates) as never,
+		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape),
+		resolved_gates: gates_to_resolved_gates_json(plan.gates),
 		forced_atomic_reason: plan.forced_reason,
 		started_at: now,
 		finished_at: null,
 	};
 
 	try {
-		const insert_values = {
-			...upsert,
-			id: row_id,
-			current_stage: upsert.current_stage ?? null,
-			started_at: now,
-			created_at: now,
-			updated_at: now,
-			created_by: "api",
-			modified_by: "api",
-			protected: false,
-			deleted: false,
-		};
 		const inserted = await db
 			.insert(pipeline_run)
-			.values(insert_values as never)
+			.values(run_insert_values(upsert, row_id, now))
 			.returning();
 		const row = inserted.at(0);
 		if (!row) {
@@ -330,29 +344,17 @@ export const create_external_run = async (
 		kind,
 		status: "queued",
 		current_stage: plan.stages[0]?.name ?? null,
-		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape) as never,
-		resolved_gates: gates_to_resolved_gates_json(plan.gates) as never,
+		resolved_rollout: stages_to_resolved_rollout_json(plan.stages, shape),
+		resolved_gates: gates_to_resolved_gates_json(plan.gates),
 		forced_atomic_reason: plan.forced_reason,
 		started_at: now,
 		finished_at: null,
 	};
 
 	try {
-		const insert_values = {
-			...upsert,
-			id: row_id,
-			current_stage: upsert.current_stage ?? null,
-			started_at: now,
-			created_at: now,
-			updated_at: now,
-			created_by: "api",
-			modified_by: "api",
-			protected: false,
-			deleted: false,
-		};
 		const inserted = await db
 			.insert(pipeline_run)
-			.values(insert_values as never)
+			.values(run_insert_values(upsert, row_id, now))
 			.returning();
 		const row = inserted.at(0);
 		if (!row) {
@@ -373,7 +375,7 @@ export const get_run = async (db: Database, run_id: string): Promise<Result<Pipe
 		const rows = await db.select().from(pipeline_run).where(eq(pipeline_run.id, run_id));
 		const row = rows.at(0);
 		if (!row) return err({ kind: "not_found", resource: "pipeline_run", id: run_id });
-		return ok(row);
+		return parse_run_row(row);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to read pipeline_run ${run_id}: ${String(e)}` });
 	}
@@ -409,7 +411,13 @@ export const list_runs = async (
 					? base.where(conditions[0])
 					: base.where(and(...conditions));
 		const rows = await where.orderBy(desc(pipeline_run.created_at)).limit(limit);
-		return ok(rows);
+		const parsed: PipelineRun[] = [];
+		for (const row of rows) {
+			const checked = parse_run_row(row);
+			if (!checked.ok) return checked;
+			parsed.push(checked.value);
+		}
+		return ok(parsed);
 	} catch (e) {
 		return err({ kind: "db_error", message: `failed to list pipeline_run: ${String(e)}` });
 	}
@@ -798,7 +806,7 @@ const package_script_for_stage = async (
 		const script_name = resolve_script_name({
 			package: {
 				name: pkg.name,
-				script_name_overrides: pkg.script_name_overrides as Record<string, string> | null,
+				script_name_overrides: pkg.script_name_overrides,
 			},
 			stage_name,
 		});
@@ -1018,10 +1026,8 @@ const external_event_plan = async (deps: RunDeps, run: PipelineRun): Promise<Res
 };
 
 const external_event_sha_of = (payload: unknown): Result<string, ExternalEventNoOp> => {
-	if (payload === null || payload === undefined || typeof payload !== "object" || Array.isArray(payload)) {
-		return err("malformed_payload");
-	}
-	const sha = (payload as Record<string, unknown>).sha;
+	if (!is_record(payload)) return err("malformed_payload");
+	const sha = payload.sha;
 	if (typeof sha !== "string" || sha.length === 0) return err("malformed_payload");
 	return ok(sha);
 };

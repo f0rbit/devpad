@@ -1,7 +1,7 @@
 import { getBrowserClient } from "@devpad/core/ui/client";
-import type { Task, TaskLink } from "@devpad/schema";
-import { external_ref } from "@devpad/schema";
+import type { ExternalRef, Task, TaskLink } from "@devpad/schema";
 import { createEffect, createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { Ring } from "./ring";
 import type { RollupCounts } from "./types";
 
@@ -15,10 +15,8 @@ type RailProps = {
 
 type NearState = { links: TaskLink[]; tasksById: Partial<Record<string, Task>> };
 
-const refLabel = (raw: unknown): string | null => {
-	const parsed = external_ref.safeParse(raw);
-	if (!parsed.success) return null;
-	const ref = parsed.data;
+const refLabel = (ref: ExternalRef | null): string | null => {
+	if (ref === null) return null;
 	switch (ref.type) {
 		case "pr":
 			return `PR ${ref.url}`;
@@ -53,19 +51,25 @@ export function Rail(props: RailProps) {
 		}
 		const id = task.id;
 		setLoading(true);
-		void getBrowserClient()
-			.tasks.near(id)
-			.then((result) => {
-				// A fast reselect can land an earlier row's response after a later
-				// one — drop it rather than overwrite the rail with stale data.
-				if (props.selectedTask?.id !== id) return;
-				if (!result.ok) {
-					setNear({ links: [], tasksById: {} });
-					return;
-				}
-				setNear({ links: result.value.links, tasksById: Object.fromEntries(result.value.tasks.map((t) => [t.id, t])) });
-			})
-			.finally(() => setLoading(false));
+		run_task(
+			getBrowserClient()
+				.tasks.near(id)
+				.then((result) => {
+					// A fast reselect can land an earlier row's response after a later
+					// one — drop it rather than overwrite the rail with stale data.
+					if (props.selectedTask?.id !== id) return;
+					if (!result.ok) {
+						setNear({ links: [], tasksById: {} });
+						return;
+					}
+					setNear({
+						links: result.value.links,
+						tasksById: Object.fromEntries(result.value.tasks.map((t) => [t.id, t])),
+					});
+				})
+				.finally(() => setLoading(false)),
+			{ component: "rail", action: "load-near" },
+		);
 	});
 
 	const section = (kind: TaskLink["kind"], direction: "src" | "dst") => {

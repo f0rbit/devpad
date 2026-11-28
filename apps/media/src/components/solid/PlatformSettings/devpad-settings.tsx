@@ -1,5 +1,6 @@
 import { Checkbox } from "@f0rbit/ui";
 import { createSignal } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 
 type Props = {
@@ -33,7 +34,9 @@ export default function DevpadSettings(props: Props) {
 			<div class="filter-toggles">
 				<Checkbox
 					checked={allProjects()}
-					onChange={() => void updateSetting("all_projects", !allProjects())}
+					onChange={() => {
+						run_task(updateSetting("all_projects", !allProjects()), { component: "devpad-settings" });
+					}}
 					label="Include all projects"
 					disabled={updating()}
 				/>

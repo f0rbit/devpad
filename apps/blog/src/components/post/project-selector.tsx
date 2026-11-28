@@ -2,6 +2,7 @@ import { getBrowserClient } from "@devpad/core/ui/client";
 import { Button, MultiSelect, type MultiSelectOption } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { unwrap } from "@/lib/client";
+import { run_task } from "@/lib/run-task";
 
 type Project = {
 	id: string;
@@ -80,7 +81,9 @@ const ProjectSelector = (props: ProjectSelectorProps) => {
 				<Button
 					variant="ghost"
 					size="sm"
-					onClick={() => void handleRefresh()}
+					onClick={() => {
+						run_task(handleRefresh(), { component: "project-selector", action: "refresh" });
+					}}
 					disabled={refreshing()}
 					label="Refresh projects from DevPad"
 				>

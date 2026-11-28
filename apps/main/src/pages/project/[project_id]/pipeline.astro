@@ -6,11 +6,7 @@ import PipelineDashboard, { type PipelineDashboardData } from "@/components/soli
 import PageLayout from "@/layouts/PageLayout.astro";
 import ProjectLayout from "@/layouts/ProjectLayout.astro";
 import { getProject } from "@/utils/api-client";
-import {
-	github_workflow_url,
-	parse_external_target,
-	short_sha,
-} from "@/utils/pipeline-external";
+import { github_workflow_url, short_sha } from "@/utils/pipeline-external";
 
 const project_id = Astro.params.project_id!;
 
@@ -83,7 +79,8 @@ if (active_tab === "dashboard" && has_shell) {
 }
 
 const EXT_PKG = pkg && pkg.deploy_mode === "external" ? pkg : null;
-const external_target = EXT_PKG ? parse_external_target(EXT_PKG.external_target) : null;
+// `external_target` is a typed json column validated at the core read boundary — consume it directly.
+const external_target = EXT_PKG?.external_target ?? null;
 
 // Status vocab is a closed enum derived from the schema — a new RunStatus
 // added to RUN_STATUSES makes this Record non-exhaustive and fails the

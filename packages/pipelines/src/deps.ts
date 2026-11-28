@@ -40,7 +40,8 @@ import { err, ok } from "@f0rbit/corpus";
 import { create_cloudflare_backend } from "@f0rbit/corpus/cloudflare";
 import { authenticate_request, type AuthIdentity, type SessionVerifier } from "./auth";
 import type { PipelineEnv } from "./bindings";
-import { make_cf_router } from "./do-router";
+import { corpus_r2 } from "./corpus-r2";
+import { make_workers_router } from "./do-router";
 import { make_d1_approval_store } from "./providers/approval-store";
 import { make_cf_api_provider } from "./providers/cf-api-provider";
 import {
@@ -167,8 +168,13 @@ const make_bundle_provider = (backend: Backend): BundleProvider =>
  * "unconfigured" (pulse emitter no-ops, summary client returns typed
  * `not_configured`). Never throws at construction.
  */
-const make_lazy_secret = (env: PipelineEnv, key: keyof PipelineEnv): { get(): Promise<string> } | undefined =>
-	env[key] === undefined ? undefined : { get: () => (env[key] as SecretsStoreSecret).get() };
+const make_lazy_secret = (
+	env: PipelineEnv,
+	key: "PULSE_INGEST_KEY" | "PULSE_READ_KEY",
+): { get(): Promise<string> } | undefined => {
+	const secret: SecretsStoreSecret | undefined = env[key];
+	return secret === undefined ? undefined : { get: () => secret.get() };
+};
 
 /**
  * Shared core providers used by both the routes layer and the DO. Built
@@ -177,10 +183,10 @@ const make_lazy_secret = (env: PipelineEnv, key: keyof PipelineEnv): { get(): Pr
  */
 const build_core = (env: PipelineEnv) => {
 	const db = createD1Database(env.DB);
-	// Cast: corpus's local R2Bucket type uses `put: Promise<void>` while
-	// the workers-types R2Bucket returns `Promise<R2Object | null>`. The
-	// shapes are runtime-compatible — corpus discards the return value.
-	const backend: Backend = create_cloudflare_backend({ d1: env.DB, r2: env.CORPUS_BUCKET as never });
+	// corpus's local R2Bucket type uses `put: Promise<void>` while the
+	// workers-types R2Bucket returns `Promise<R2Object | null>` — bridged by
+	// a typed adapter (corpus discards the return value), not a cast.
+	const backend: Backend = create_cloudflare_backend({ d1: env.DB, r2: corpus_r2(env.CORPUS_BUCKET) });
 	const cf = make_lazy_cf_provider(env);
 	// #158: optional pulse observability — unbound config degrades to a
 	// no-op emitter + `not_configured` summary client (analysis gates
@@ -255,7 +261,7 @@ export const build_routes_deps_from_env = (env: PipelineEnv, verify_session?: Se
 	const auth: AuthGate<AuthIdentity> = {
 		check: (request) => authenticate_request(env, request, { verify_session: verifier }),
 	};
-	const pulse_lite: PulseEmitterLite = { emit: async (event) => core.pulse.emit(event as never) };
+	const pulse_lite: PulseEmitterLite = core.pulse;
 	const verifier_oidc: OidcVerifier = make_github_oidc_verifier({
 		expected_audience: env.OIDC_EXPECTED_AUDIENCE ?? "",
 	});
@@ -266,12 +272,7 @@ export const build_routes_deps_from_env = (env: PipelineEnv, verify_session?: Se
 	};
 	return {
 		db: core.db,
-		do_router: make_cf_router(
-			env.PIPELINE_RUNS as unknown as {
-				idFromName(name: string): unknown;
-				get(id: unknown): { fetch(request: Request): Promise<Response> };
-			},
-		),
+		do_router: make_workers_router(env.PIPELINE_RUNS),
 		manifests: core.manifests,
 		templates: make_corpus_template_resolver(core.backend, core.manifests),
 		lineage: make_corpus_lineage_provider(core.backend),

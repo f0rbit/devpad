@@ -21,7 +21,7 @@
  *   safe and does not orphan in-flight runs.
  */
 
-import type { PipelineAnalysisTemplate } from "@devpad/schema";
+import type { InsertPipelineAnalysisTemplate, PipelineAnalysisTemplate } from "@devpad/schema";
 import { pipeline_analysis_template } from "@devpad/schema/database/schema";
 import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result } from "@f0rbit/corpus";
@@ -115,17 +115,16 @@ export const create_analysis_template = async (
 			.from(pipeline_analysis_template)
 			.where(and(eq(pipeline_analysis_template.id, id), eq(pipeline_analysis_template.owner_id, input.owner_id)));
 		if (existing[0]) {
-			const conflict_error = {
+			return err({
 				kind: "conflict",
 				resource: "pipeline_analysis_template",
 				id,
 				message: `pipeline_analysis_template "${id}" already exists`,
-			};
-			return err(conflict_error as ServiceError);
+			});
 		}
 
 		const now = new Date().toISOString();
-		const insert_values = {
+		const insert_values: InsertPipelineAnalysisTemplate = {
 			id,
 			owner_id: input.owner_id,
 			name: input.name,
@@ -139,10 +138,7 @@ export const create_analysis_template = async (
 			protected: false,
 			deleted: false,
 		};
-		const inserted = await db
-			.insert(pipeline_analysis_template)
-			.values(insert_values as never)
-			.returning();
+		const inserted = await db.insert(pipeline_analysis_template).values(insert_values).returning();
 
 		const row = inserted.at(0);
 		if (!row)
@@ -195,7 +191,10 @@ export const update_analysis_template = async (
 			.where(and(eq(pipeline_analysis_template.id, input.id), eq(pipeline_analysis_template.owner_id, input.owner_id)));
 		if (!existing[0]) return err({ kind: "not_found", resource: "pipeline_analysis_template", id: input.id });
 
-		const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), modified_by: "api" };
+		const patch: Partial<InsertPipelineAnalysisTemplate> = {
+			updated_at: new Date().toISOString(),
+			modified_by: "api",
+		};
 		if ("name" in input && input.name !== undefined) patch.name = input.name;
 		if ("threshold_dsl" in input && input.threshold_dsl !== undefined) patch.threshold_dsl = input.threshold_dsl;
 		if ("query_dsl" in input) patch.query_dsl = input.query_dsl;
@@ -203,7 +202,7 @@ export const update_analysis_template = async (
 
 		const updated = await db
 			.update(pipeline_analysis_template)
-			.set(patch as never)
+			.set(patch)
 			.where(and(eq(pipeline_analysis_template.id, input.id), eq(pipeline_analysis_template.owner_id, input.owner_id)))
 			.returning();
 		const row = updated.at(0);

@@ -56,6 +56,11 @@
 			"types": "./dist/rank.d.ts",
 			"import": "./dist/rank.js"
 		},
+		"./contracts": {
+			"source": "./src/contracts/index.ts",
+			"types": "./dist/contracts/index.d.ts",
+			"import": "./dist/contracts/index.js"
+		},
 		"./blog": {
 			"source": "./src/blog/index.ts",
 			"types": "./dist/blog/index.d.ts",
@@ -135,6 +140,11 @@
 			"source": "./src/pulse/index.ts",
 			"types": "./dist/pulse/index.d.ts",
 			"import": "./dist/pulse/index.js"
+		},
+		"./pipelines": {
+			"source": "./src/pipelines/index.ts",
+			"types": "./dist/pipelines/index.d.ts",
+			"import": "./dist/pipelines/index.js"
 		},
 		"./bindings": {
 			"source": "./src/bindings.ts",

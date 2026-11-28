@@ -1,12 +1,35 @@
-import type { ZodIssue } from "zod";
+import { try_catch } from "@f0rbit/corpus";
+import { z, type ZodIssue } from "zod";
 import { ApiError, AuthenticationError, NetworkError, ValidationError } from "./errors";
 
 // Shape of a parsed HTTP error body -- genuinely unknown JSON from the wire,
-// narrowed just enough to detect the Zod validation-error envelope the
-// worker's `zValidator` middleware emits.
-type ParsedErrorBody = {
-	error?: string | { name?: string; issues?: ZodIssue[] };
-	issues?: ZodIssue[];
+// Zod-parsed just enough to detect the validation-error envelope the
+// worker's `zValidator` middleware emits. Issues are checked structurally
+// (an object with a `path` array); their finer shape is Zod's own.
+const zod_issue = z.custom<ZodIssue>(
+	(value: unknown) => typeof value === "object" && value !== null && "path" in value && Array.isArray(value.path),
+);
+
+const parsed_error_body = z.object({
+	error: z
+		.union([z.string(), z.object({ name: z.string().optional(), issues: z.array(zod_issue).optional() })])
+		.optional(),
+	issues: z.array(zod_issue).optional(),
+});
+
+type ParsedErrorBody = z.infer<typeof parsed_error_body>;
+
+const parse_error_body = (raw: unknown): ParsedErrorBody | null => {
+	const parsed = parsed_error_body.safeParse(raw);
+	return parsed.success ? parsed.data : null;
+};
+
+const parse_json_error_body = (text: string): ParsedErrorBody | null => {
+	const raw = try_catch(
+		(): unknown => JSON.parse(text),
+		(e: unknown) => e,
+	);
+	return raw.ok ? parse_error_body(raw.value) : null;
 };
 
 /**
@@ -56,13 +79,8 @@ export async function handleResponseError(response: Response): Promise<never> {
 	const errorMessage = errorText || "Request failed";
 
 	// Try to parse structured error responses
-	let parsedError: ParsedErrorBody | null = null;
-	try {
-		const raw: unknown = JSON.parse(errorText);
-		parsedError = raw as ParsedErrorBody;
-	} catch {
-		// Not JSON, use raw text
-	}
+	// Not JSON -> parsedError stays null, raw text is used below
+	const parsedError = parse_json_error_body(errorText);
 
 	const structuredError = typeof parsedError?.error === "object" ? parsedError.error : undefined;
 	if (response.status === HTTP_STATUS.BAD_REQUEST && structuredError?.name === "ZodError") {
@@ -113,102 +131,99 @@ export function isNetworkError(error: unknown): error is NetworkError {
 function tryParseZodErrorString(errorMessage: string): ParsedErrorBody | null {
 	const zodErrorMatch = errorMessage.match(/ZodError: (.+)/);
 	if (!zodErrorMatch?.[1]) return null;
-	try {
-		const raw: unknown = JSON.parse(zodErrorMatch[1]);
-		return raw as ParsedErrorBody;
-	} catch {
-		// If still not JSON, try to extract from the message
-		const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
-		if (!issuesMatch?.[1]) return null;
-		try {
-			const raw_issues: unknown = JSON.parse(issuesMatch[1]);
-			return { issues: raw_issues as ZodIssue[] };
-		} catch {
-			// Fall back to basic parsing
-			return null;
-		}
-	}
+	const zod_json = parse_json_error_body(zodErrorMatch[1]);
+	if (zod_json) return zod_json;
+	// If still not JSON, try to extract from the message
+	const issuesMatch = errorMessage.match(/issues:\s*(\[.*\])/s);
+	if (!issuesMatch?.[1]) return null;
+	const issues_json = try_catch(
+		(): unknown => JSON.parse(issuesMatch[1] ?? ""),
+		(e: unknown) => e,
+	);
+	// Fall back to basic parsing when neither probe parses
+	return issues_json.ok ? parse_error_body({ issues: issues_json.value }) : null;
 }
 
 /**
  * Parse Zod validation errors into user-friendly messages
  */
 export function parseZodErrors(errorMessage: string): string {
-	try {
-		// Try to parse as JSON first to get structured error info
-		let parsedError: ParsedErrorBody | null = null;
-		try {
-			const raw: unknown = JSON.parse(errorMessage);
-			parsedError = raw as ParsedErrorBody;
-		} catch {
-			// If not JSON, try to extract Zod error details from the error message
-			parsedError = tryParseZodErrorString(errorMessage);
-		}
+	const friendly = try_catch(
+		() => friendly_validation_message(errorMessage),
+		(e: unknown) => e,
+	);
+	if (friendly.ok && friendly.value !== null) return friendly.value;
+	// Fall back to original message if parsing fails
+	return errorMessage;
+}
 
-		if (parsedError?.issues && Array.isArray(parsedError.issues)) {
-			const friendlyMessages = parsedError.issues.map((issue) => {
-				const path = issue.path.length > 0 ? issue.path.join(".") : "field";
-				const message = issue.message || "is invalid";
+/** Extract structured Zod issues from an error message; null when not structured. */
+function friendly_validation_message(errorMessage: string): string | null {
+	// Try to parse as JSON first to get structured error info
+	// If not JSON, try to extract Zod error details from the error message
+	const parsedError = parse_json_error_body(errorMessage) ?? tryParseZodErrorString(errorMessage);
 
-				// Handle common validation types with friendly messages
-				switch (issue.code) {
-					case "invalid_type":
-						return `${path} must be a ${issue.expected} (received ${issue.received})`;
-					case "too_small":
-						if (issue.type === "string") {
-							return `${path} must be at least ${String(issue.minimum)} characters long`;
-						}
-						if (issue.type === "number") {
-							return `${path} must be at least ${String(issue.minimum)}`;
-						}
-						return `${path} is too small`;
-					case "too_big":
-						if (issue.type === "string") {
-							return `${path} must be no more than ${String(issue.maximum)} characters long`;
-						}
-						if (issue.type === "number") {
-							return `${path} must be no more than ${String(issue.maximum)}`;
-						}
-						return `${path} is too large`;
-					case "invalid_string":
-						if (issue.validation === "email") {
-							return `${path} must be a valid email address`;
-						}
-						if (issue.validation === "url") {
-							return `${path} must be a valid URL`;
-						}
-						if (issue.validation === "uuid") {
-							return `${path} must be a valid UUID`;
-						}
-						return `${path} format is invalid`;
-					case "custom":
-						return `${path}: ${message}`;
-					case "invalid_literal":
-					case "unrecognized_keys":
-					case "invalid_union":
-					case "invalid_union_discriminator":
-					case "invalid_enum_value":
-					case "invalid_arguments":
-					case "invalid_return_type":
-					case "invalid_date":
-					case "invalid_intersection_types":
-					case "not_multiple_of":
-					case "not_finite":
-					default:
-						return `${path}: ${message}`;
-				}
-			});
+	if (parsedError?.issues && Array.isArray(parsedError.issues)) {
+		const friendlyMessages = parsedError.issues.map((issue) => {
+			const path = issue.path.length > 0 ? issue.path.join(".") : "field";
+			const message = issue.message || "is invalid";
 
-			if (friendlyMessages.length === 1) {
-				return friendlyMessages[0] ?? errorMessage;
+			// Handle common validation types with friendly messages
+			switch (issue.code) {
+				case "invalid_type":
+					return `${path} must be a ${issue.expected} (received ${issue.received})`;
+				case "too_small":
+					if (issue.type === "string") {
+						return `${path} must be at least ${String(issue.minimum)} characters long`;
+					}
+					if (issue.type === "number") {
+						return `${path} must be at least ${String(issue.minimum)}`;
+					}
+					return `${path} is too small`;
+				case "too_big":
+					if (issue.type === "string") {
+						return `${path} must be no more than ${String(issue.maximum)} characters long`;
+					}
+					if (issue.type === "number") {
+						return `${path} must be no more than ${String(issue.maximum)}`;
+					}
+					return `${path} is too large`;
+				case "invalid_string":
+					if (issue.validation === "email") {
+						return `${path} must be a valid email address`;
+					}
+					if (issue.validation === "url") {
+						return `${path} must be a valid URL`;
+					}
+					if (issue.validation === "uuid") {
+						return `${path} must be a valid UUID`;
+					}
+					return `${path} format is invalid`;
+				case "custom":
+					return `${path}: ${message}`;
+				case "invalid_literal":
+				case "unrecognized_keys":
+				case "invalid_union":
+				case "invalid_union_discriminator":
+				case "invalid_enum_value":
+				case "invalid_arguments":
+				case "invalid_return_type":
+				case "invalid_date":
+				case "invalid_intersection_types":
+				case "not_multiple_of":
+				case "not_finite":
+				default:
+					return `${path}: ${message}`;
 			}
-			return `Validation failed:\n• ${friendlyMessages.join("\n• ")}`;
+		});
+
+		if (friendlyMessages.length === 1) {
+			return friendlyMessages[0] ?? errorMessage;
 		}
-	} catch {
-		// Fall back to original message if parsing fails
+		return `Validation failed:\n• ${friendlyMessages.join("\n• ")}`;
 	}
 
-	return errorMessage;
+	return null;
 }
 
 /**

@@ -1,0 +1,10 @@
+{
+	"ok": true,
+	"value": {
+		"session_token": "eyJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJkZXZwYWQtcGlwZWxpbmVzIn0.sig",
+		"expires_at": "2026-11-28T12:15:00.000Z",
+		"scope": [],
+		"package_ids": ["pipeline-package_anthropic-search"],
+		"trust_policy_id": "pipeline-oidc-trust_01h8"
+	}
+}

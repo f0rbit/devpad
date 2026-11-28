@@ -22,6 +22,7 @@
  */
 
 import type { OidcAudit, OidcSessionClaims } from "@devpad/core/services/pipelines";
+import { createLogger } from "@devpad/core/utils/logger";
 import { err, ok, type Result } from "@f0rbit/corpus";
 import type { PipelineEnv } from "./bindings";
 
@@ -84,7 +85,12 @@ const looks_like_jwt = (token: string): boolean => {
 	try {
 		const decoded: unknown = JSON.parse(atob(parts[0]));
 		return decoded !== undefined;
-	} catch {
+	} catch (error) {
+		// Not a JWT-shaped token -- the caller falls through to the literal
+		// bearer check; keep a breadcrumb instead of discarding the error.
+		createLogger("pipelines:auth").debug("token header is not decodable as JWT", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return false;
 	}
 };

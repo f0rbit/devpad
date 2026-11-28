@@ -1,0 +1,6 @@
+{
+	"repo": "acme/my-pkg",
+	"workflow": "deploy.yml",
+	"ref": "",
+	"inputs": {}
+}

@@ -2,6 +2,25 @@ import { describe, expect, it } from "bun:test";
 import { ApiClient } from "../../../src/api-client";
 import { tools } from "../../../src/tools";
 
+/** Schema-valid `pipeline_package_wire` stand-in for fake fetches. */
+const valid_package_stub = (): Record<string, unknown> => ({
+	id: "pipeline-package_x",
+	owner_id: "user_1",
+	name: "x",
+	repo_url: null,
+	default_template_ref: null,
+	script_name_overrides: null,
+	project_id: null,
+	deploy_mode: "orchestrated",
+	external_target: null,
+	created_at: "2026-01-01T00:00:00.000Z",
+	updated_at: "2026-01-01T00:00:00.000Z",
+	deleted: false,
+	created_by: "user",
+	modified_by: "user",
+	protected: false,
+});
+
 /**
  * Pipelines API Client + MCP Tools Tests
  *
@@ -10,6 +29,35 @@ import { tools } from "../../../src/tools";
  * 2. MCP tool schemas accept valid inputs and reject invalid ones
  * 3. MCP tools are registered correctly
  */
+
+const json_response = (body: unknown): Response =>
+	new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+
+const valid_run_fetch = async (): Promise<Response> =>
+	json_response({
+		id: "pipeline-run_123",
+		package_id: "pipeline-package_x",
+		version_set_id: "vs_1",
+		commit_sha: null,
+		shape: "atomic",
+		kind: "deploy",
+		status: "awaiting_approval",
+		current_stage: "production",
+		resolved_rollout: { type: "atomic" },
+		resolved_gates: { production: { type: "manual" } },
+		forced_atomic_reason: null,
+		started_at: "2026-01-01T00:00:00.000Z",
+		finished_at: null,
+		error: null,
+		created_at: "2026-01-01T00:00:00.000Z",
+		updated_at: "2026-01-01T00:00:00.000Z",
+		deleted: false,
+		created_by: "api",
+		modified_by: "user",
+		protected: false,
+	});
+
+const invalid_run_fetch = async (): Promise<Response> => json_response({ id: "run_123" });
 
 describe("Pipelines API Client", () => {
 	it("exposes pipelines.* methods", () => {
@@ -175,6 +223,35 @@ describe("Pipelines API Client", () => {
 		if (result.ok) expect(result.value.dispatches.length).toBe(1);
 	});
 
+	it("pipelines.get parses a schema-valid run body into typed fields", async () => {
+		const fake_fetch = valid_run_fetch;
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+			custom_fetch: fake_fetch as unknown as typeof fetch,
+		});
+
+		const result = await client.pipelines.get("pipeline-run_123");
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.value.status).toBe("awaiting_approval");
+			expect(result.value.resolved_gates).toEqual({ production: { type: "manual" } });
+		}
+	});
+
+	it("pipelines.get returns an ApiResult error on a schema-violating run body (no typed lie)", async () => {
+		const fake_fetch = invalid_run_fetch;
+		const client = new ApiClient({
+			base_url: "http://test.localhost/api/v1",
+			api_key: "test-api-key",
+			custom_fetch: fake_fetch as unknown as typeof fetch,
+		});
+
+		const result = await client.pipelines.get("run_123");
+		expect(result.ok).toBe(false);
+		if (!result.ok) expect(result.error.message.length).toBeGreaterThan(0);
+	});
+
 	it("exposes pipelines.packages.* methods", () => {
 		const client = new ApiClient({
 			base_url: "http://test.localhost/api/v1",
@@ -221,7 +298,7 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET" });
-			return new Response(JSON.stringify({ id: "pipeline-package_x" }), {
+			return new Response(JSON.stringify(valid_package_stub()), {
 				status: 200,
 				headers: { "content-type": "application/json" },
 			});
@@ -254,7 +331,7 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
-			return new Response(JSON.stringify({ id: "pipeline-package_new", name: "new-pkg" }), {
+			return new Response(JSON.stringify(valid_package_stub()), {
 				status: 200,
 				headers: { "content-type": "application/json" },
 			});
@@ -282,7 +359,7 @@ describe("Pipelines API Client", () => {
 		const fake_fetch = async (input: Request | string | URL, init?: RequestInit): Promise<Response> => {
 			const url = typeof input === "string" ? input : input instanceof Request ? input.url : input.toString();
 			recorded.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : null });
-			return new Response(JSON.stringify({ id: "pipeline-package_x", repo_url: "https://new.example/x" }), {
+			return new Response(JSON.stringify(valid_package_stub()), {
 				status: 200,
 				headers: { "content-type": "application/json" },
 			});

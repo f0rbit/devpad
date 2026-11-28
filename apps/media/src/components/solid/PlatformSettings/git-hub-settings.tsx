@@ -1,7 +1,8 @@
 import { Checkbox, Collapsible } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
-import { AsyncState } from "../resource-state";
+import { AsyncState, error_of } from "../resource-state";
 import { useSettings } from "./use-settings";
 
 type GitHubSettingsData = { hidden_repos?: string[] };
@@ -60,7 +61,7 @@ export default function GitHubSettings(props: Props) {
 			<div class="settings-content">
 				<AsyncState
 					loading={repos.loading}
-					error={repos.error}
+					error={error_of(repos)}
 					data={repos()}
 					loadingFallback={<p class="muted text-sm">Loading repositories...</p>}
 					errorPrefix="Failed to load repositories"
@@ -79,7 +80,9 @@ export default function GitHubSettings(props: Props) {
 											<div class="repo-item">
 												<Checkbox
 													checked={!isHidden()}
-													onChange={() => void toggleRepo(repo.full_name)}
+													onChange={() => {
+														run_task(toggleRepo(repo.full_name), { component: "git-hub-settings" });
+													}}
 													label={repo.full_name}
 													disabled={isUpdating()}
 													class={`mono text-sm ${isHidden() ? "opacity-50" : ""}`}

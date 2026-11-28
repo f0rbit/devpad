@@ -1,5 +1,6 @@
 import { createBlankSessionCookie, createSessionCookie, invalidateSession, oauth } from "@devpad/core/auth";
 import { users } from "@devpad/core/services";
+import { createLogger } from "@devpad/core/utils/logger";
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import type { AppContext } from "../bindings.js";
@@ -18,7 +19,10 @@ const isAllowedRedirectUrl = (url: string): boolean => {
 	try {
 		const parsed = new URL(url);
 		return ALLOWED_REDIRECT_PATTERNS.some((pattern) => pattern.test(parsed.origin));
-	} catch {
+	} catch (error) {
+		createLogger("worker.auth").debug("return_to is not a valid URL, rejecting", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return false;
 	}
 };
@@ -74,7 +78,10 @@ app.get("/callback/github", async (c) => {
 	try {
 		const raw_state: unknown = JSON.parse(atob(state.replace(/-/g, "+").replace(/_/g, "/")));
 		decoded = raw_state as Record<string, unknown>;
-	} catch {
+	} catch (error) {
+		c.get("log")?.warning("oauth state decode failed, returning 400", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return c.json({ error: "Invalid OAuth state" }, 400);
 	}
 

@@ -1,4 +1,4 @@
-import type { InferSelectModel } from "drizzle-orm";
+import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { z } from "zod";
 import type {
 	ActionType,
@@ -38,11 +38,11 @@ import type {
 } from "./database/schema.js";
 import type {
 	config_schema,
-	external_ref,
 	insert_pipeline_stage_event,
 	project_config,
-	save_config_request,
 	scan_diff_proposal,
+	ScanDiffResult,
+	save_config_request,
 	update_action,
 	update_user,
 	upsert_goal,
@@ -124,6 +124,14 @@ export type PipelineAnalysisTemplate = InferSelectModel<typeof pipeline_analysis
 export type PipelineOidcTrust = InferSelectModel<typeof pipeline_oidc_trust>;
 export type PipelineDispatch = InferSelectModel<typeof pipeline_dispatch>;
 
+// Insert models — what `db.insert(...).values(...)` accepts. Services build
+// their insert objects against these so the compiler checks every field
+// (the old `as never` casts silenced exactly that check).
+export type InsertPipelinePackage = InferInsertModel<typeof pipeline_package>;
+export type InsertPipelineRun = InferInsertModel<typeof pipeline_run>;
+export type InsertPipelineAnalysisTemplate = InferInsertModel<typeof pipeline_analysis_template>;
+export type InsertPipelineOidcTrust = InferInsertModel<typeof pipeline_oidc_trust>;
+
 export type UpsertPipelinePackage = z.infer<typeof upsert_pipeline_package>;
 export type UpsertPipelineRun = z.infer<typeof upsert_pipeline_run>;
 export type InsertPipelineStageEvent = z.infer<typeof insert_pipeline_stage_event>;
@@ -139,7 +147,6 @@ export type UpsertTodo = z.infer<typeof upsert_todo>;
 export type UpsertTag = z.infer<typeof upsert_tag>;
 export type UpsertMilestone = z.infer<typeof upsert_milestone>;
 export type UpsertGoal = z.infer<typeof upsert_goal>;
-export type ExternalRef = z.infer<typeof external_ref>;
 export type UpsertTaskLink = z.infer<typeof upsert_task_link>;
 export type UpdateAction = z.infer<typeof update_action>;
 export type ProjectConfig = z.infer<typeof project_config>;
@@ -201,25 +208,10 @@ export type HistoryAction = Omit<Action, "updated_at" | "owner_id" | "type"> & {
 	type: ActionType | "SCAN";
 };
 
-// Update data type for project scanning
-export type UpdateData = {
-	id: string;
-	tag: string;
-	type: "SAME" | "UPDATE" | "DELETE" | "NEW" | "MOVE";
-	data: {
-		old: {
-			text: string;
-			line: number;
-			file: string;
-			context?: string[];
-		};
-		new: {
-			text: string;
-			line: number;
-			file: string;
-			context?: string[];
-		};
-	};
+// Update data type for project scanning — the honest DiffResult shape the
+// scanner stores in `todo_updates.data` (old/new nullable; only NEW items
+// carry a placement proposal), augmented with the matched task for the UI.
+export type UpdateData = ScanDiffResult & {
 	task?: TaskWithDetails;
 };
 

@@ -1,5 +1,79 @@
 import { define_lint_config } from "@f0rbit/lint";
 
+// --- verification-hardening 2.3c: "the compiler can't be lied to" -----------
+// Boundary scope for `as` + `no-unsafe-*` at error (plan task 2.3 (c)). Data
+// crossing these files is parsed (Zod) or derived from its source of truth
+// (typed columns, wire schemas in @devpad/schema/pipelines, pulse-client's
+// LogLevel) — never asserted. Tests are excluded (`TEST_GLOBS`).
+//   `as` AND `no-unsafe-*`: the orchestrator, its core services, the ApiClient,
+//     the main-worker pipelines/pulse proxies, the MCP server, and the two
+//     outbound-telemetry emitters (where incident 10 — `level as never` — lived).
+//   `no-unsafe-*` only (additionally): every app's src.
+const TEST_GLOBS = ["**/__tests__/**", "**/*.test.ts", "**/*.test.tsx", "tests/**", "**/tests/**"];
+
+const BOUNDARY_FILES = [
+	"packages/pipelines/src/**",
+	"packages/core/src/services/pipelines/**",
+	"packages/api/src/**",
+	"packages/worker/src/routes/v1/pipelines.ts",
+	"packages/worker/src/routes/v1/pipelines-dashboard.ts",
+	"packages/worker/src/routes/v1/pulse.ts",
+	"packages/worker/src/lib/log.ts",
+	"packages/mcp/src/**",
+	"apps/main/src/lib/pulse.ts",
+	"apps/main/src/components/solid/pipelines/**",
+	"apps/main/src/utils/**",
+	// The DB construction boundary: bun.ts carries the one sanctioned
+	// `as unknown as Database` (disable-next-line with a reason); d1.ts needs none.
+	"packages/schema/src/database/bun.ts",
+	"packages/schema/src/database/d1.ts",
+];
+
+// Repo-wide (all non-test source) `no-restricted-syntax` selectors: `as never` /
+// `as any` (and the angle-bracket forms) are how incident 10 shipped. `no-restricted-syntax`
+// takes ONE options array per file, so sibling tasks that add selectors (2.3b's
+// swallowed-catch ones, SWALLOWED_CATCH_SELECTORS) are spread into the same array, not a second object.
+const NEVER_ANY_CAST_SELECTORS = [
+	{
+		selector: "TSAsExpression > TSNeverKeyword",
+		message:
+			"`as never` silences the compiler wholesale — derive the type from its source of truth or Zod-parse (see PULSE_LEVEL in packages/worker/src/lib/log.ts).",
+	},
+	{
+		selector: "TSAsExpression > TSAnyKeyword",
+		message: "`as any` silences the compiler wholesale — derive the type from its source of truth or Zod-parse.",
+	},
+	{
+		selector: "TSTypeAssertion > TSNeverKeyword",
+		message: "`<never>x` silences the compiler wholesale — derive the type from its source of truth or Zod-parse.",
+	},
+	{
+		selector: "TSTypeAssertion > TSAnyKeyword",
+		message: "`<any>x` silences the compiler wholesale — derive the type from its source of truth or Zod-parse.",
+	},
+];
+
+// Swallowed-error selectors (2.3b). Same rule as above: `no-restricted-syntax`
+// takes ONE options array per file, so the non-test block at the end of this
+// config spreads BOTH selector lists; test files only match the 2.3b block.
+const SWALLOWED_CATCH_SELECTORS = [
+	{
+		selector: "CatchClause[param=null]",
+		message:
+			'catch without a binding discards the error -- bind it (`catch (error)`) and log through the sanctioned channel (worker: c.get("log"); core: createLogger; browser: @/lib/pulse log.error; scripts/CLI: stderr), or convert to try_catch/try_catch_async/pipe.try returning a Result.',
+	},
+	{
+		selector: "CallExpression[callee.property.name='catch'] > ArrowFunctionExpression[params.length=0]",
+		message:
+			".catch(() => ...) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
+	},
+	{
+		selector: "CallExpression[callee.property.name='catch'] > FunctionExpression[params.length=0]",
+		message:
+			".catch(function () { ... }) discards the rejection -- accept the error and log through the sanctioned channel, or convert to a Result-returning helper.",
+	},
+];
+
 export default define_lint_config({
 	naming: "snake_case",
 	tsconfig_root_dir: import.meta.dirname,
@@ -9,6 +83,26 @@ export default define_lint_config({
 	// on the module_resolution option (added 0.1.4 specifically for this case).
 	module_resolution: "bundler",
 	overrides: [
+		{
+			// --- Floating-promise ban (verification-hardening 2.3a, incident #175) ---
+			// The factory ships no-floating-promises at error with the default
+			// `ignoreVoid: true`, which made `void somePromise()` a legal escape:
+			// incident #175 was exactly that — a `void deps.do.fetch(...)` inside a
+			// Worker request handler was CANCELLED by the runtime when the response
+			// returned, stranding the run. Setting `ignoreVoid: false` makes every
+			// `void <promise>` site an error: browser handlers must go through
+			// `run_task()` (apps/*/src/lib/run-task.ts — awaits + reports rejections
+			// to the app's logging channel), worker-side sites must `await` or hand
+			// the promise to `ctx.waitUntil(...)`, and tests must `await`.
+			// `no-misused-promises` is restated at error alongside it (it is already
+			// error-tier via strictTypeChecked; restated so this block is the single
+			// self-contained statement of the "no fire-and-forget promises" policy).
+			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			rules: {
+				"@typescript-eslint/no-floating-promises": ["error", { ignoreVoid: false }],
+				"@typescript-eslint/no-misused-promises": "error",
+			},
+		},
 		{
 			// f0rbit/require-d1-wrapper (0.4.0) targets RPC-entrypoint callers that
 			// must route through createD1Database before touching drizzle.
@@ -44,7 +138,10 @@ export default define_lint_config({
 			//     task_77589418-c5e0-4f8f-8864-713d5199085f
 			//   - no-unsafe-{assignment,member-access,argument,call,return} +
 			//     functional/no-this-expressions + functional/no-classes: tracked by
-			//     task_ed8646a5-97e8-41a8-b279-317fe5b210bd
+			//     task_ed8646a5-97e8-41a8-b279-317fe5b210bd. verification-hardening
+			//     2.3c graduated the five `no-unsafe-*` to ERROR for the boundary scope
+			//     (BOUNDARY_FILES + apps/*/src, see the blocks at the END of this
+			//     file); they stay warn everywhere else.
 			//   - functional/no-throw-statements + no-try-statements: this family
 			//     wasn't in the original wiring-PR's top-5 list (dominated at the
 			//     time by naming-convention/unsafe-*) but the post-bump survey found
@@ -87,6 +184,61 @@ export default define_lint_config({
 				"functional/no-classes": "warn",
 				"functional/no-throw-statements": "warn",
 				"functional/no-try-statements": "warn",
+			},
+		},
+		{
+			// --- Swallowed-error escapes (verification-hardening 2.3b, incident 2) ---
+			// A `catch { return null }` hid a JSON.parse failure and the run-detail
+			// Approve button never rendered (the #157-class silent-degradation
+			// incident). Three rules close every swallow shape:
+			//   1. optional catch binding (`catch {`) -- the error vanishes with no
+			//      way to log it;
+			//   2. zero-param `.catch(() => ...)` -- the same discard on the promise
+			//      path;
+			//   3. no-unused-vars with caughtErrors:"all" -- `catch (e) {}` that
+			//      binds but ignores `e` is the same swallow one step removed.
+			// Every site must route the error through a sanctioned channel (worker:
+			// `c.get("log")`; core: `createLogger`; browser: `@/lib/pulse`
+			// `log.error`; scripts + CLI: stderr) AND degrade exactly as before but
+			// visibly, or convert to `try_catch`/`try_catch_async`/`pipe.try` from
+			// @f0rbit/corpus returning a Result. A `_`-prefixed binding stays the
+			// sanctioned deliberate-discard escape for the rare site that truly has
+			// nothing to do with the error.
+			// No conflict with the functional/no-try-statements warn tier: that
+			// rule stays warn (the try/catch -> Result migration is tracked
+			// separately by task_90024e9a), and these rules only make an EXISTING
+			// catch's error visible -- they never force a new try/catch.
+			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			rules: {
+				"no-restricted-syntax": ["error", ...SWALLOWED_CATCH_SELECTORS],
+				"@typescript-eslint/no-unused-vars": [
+					"error",
+					{
+						argsIgnorePattern: "^_",
+						varsIgnorePattern: "^_",
+						caughtErrors: "all",
+						caughtErrorsIgnorePattern: "^_",
+					},
+				],
+			},
+		},
+		{
+			// 2.3b companion: pipelines integration test fixtures now log
+			// best-effort fixture-cleanup failures instead of discarding them;
+			// test-diagnostic console output is the sanctioned channel here.
+			files: ["packages/pipelines/__tests__/**"],
+			rules: {
+				"no-console": "off",
+			},
+		},
+		{
+			// 2.3b companion: apps/main's SSR middleware has no browser pulse
+			// client, so its nav-history-cookie degradation logs through
+			// console.error (the CF Workers Logs channel, island-boundary
+			// precedent).
+			files: ["apps/main/src/middleware.ts"],
+			rules: {
+				"no-console": "off",
 			},
 		},
 		{
@@ -405,6 +557,8 @@ export default define_lint_config({
 			files: [
 				"apps/blog/src/components/post/project-selector.tsx",
 				"apps/blog/src/components/post/post-editor.tsx",
+				"apps/blog/src/components/category/categories-page.tsx",
+				"apps/blog/src/components/settings/settings-page.tsx",
 				"apps/main/src/components/solid/pipelines/island-boundary.tsx",
 				"apps/media/src/utils/error-logger.ts",
 				"apps/media/src/components/solid/profile-selector.tsx",
@@ -416,6 +570,49 @@ export default define_lint_config({
 			],
 			rules: {
 				"no-console": "off",
+			},
+		},
+		{
+			// --- verification-hardening 2.3c (1/3): boundary scope -> `as` banned ---
+			// `assertionStyle: "never"` bans every type assertion (`x as T`, `<T>x`);
+			// `as const` is always legal (typescript-eslint exempts const assertions
+			// from this rule in every mode). The rule-tier table above no longer
+			// applies to these files for the rules below — they are error, not warn.
+			// Genuine construction casts need an `eslint-disable-next-line ... -- <reason>`
+			// (reportUnusedDisableDirectives is on). Today there are exactly two: the DB
+			// construction cast in packages/schema/src/database/bun.ts and the single
+			// generic HTTP-client return in packages/api/src/request.ts.
+			files: BOUNDARY_FILES,
+			ignores: TEST_GLOBS,
+			rules: {
+				"@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }],
+			},
+		},
+		{
+			// --- verification-hardening 2.3c (2/3): boundary scope -> no-unsafe-* at error ---
+			// The five `no-unsafe-*` rules graduate from the warn tier (task_ed8646a5)
+			// to error for the boundary files above PLUS every app's src (apps/*/src).
+			// Everything outside this scope stays warn — see the tier table.
+			files: [...BOUNDARY_FILES, "apps/*/src/**"],
+			ignores: TEST_GLOBS,
+			rules: {
+				"@typescript-eslint/no-unsafe-assignment": "error",
+				"@typescript-eslint/no-unsafe-member-access": "error",
+				"@typescript-eslint/no-unsafe-argument": "error",
+				"@typescript-eslint/no-unsafe-call": "error",
+				"@typescript-eslint/no-unsafe-return": "error",
+			},
+		},
+		{
+			// --- verification-hardening 2.3c (3/3): repo-wide `as never` / `as any` ban ---
+			// All non-test source (tests keep their pre-existing fixtures casts; they are
+			// tracked by task_ed8646a5). The ONE `no-restricted-syntax` array for these
+			// files — add new selectors to NEVER_ANY_CAST_SELECTORS' array above, don't
+			// append another config object (a later object REPLACES this rule's options).
+			files: ["**/*.ts", "**/*.tsx", "**/*.mts", "**/*.cts"],
+			ignores: TEST_GLOBS,
+			rules: {
+				"no-restricted-syntax": ["error", ...NEVER_ANY_CAST_SELECTORS, ...SWALLOWED_CATCH_SELECTORS],
 			},
 		},
 	],

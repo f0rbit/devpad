@@ -3,6 +3,7 @@ import type { DocVersionInfo, PullDocResponse } from "@devpad/api";
 import type { Document } from "@devpad/schema";
 import { Badge } from "@f0rbit/ui";
 import { createSignal, For, onMount, Show } from "solid-js";
+import { run_task } from "@/lib/run-task";
 import { formatRelativeTime } from "@/utils/time-utils";
 import DocViewer from "./doc-viewer";
 
@@ -32,7 +33,9 @@ export default function DocsTab(props: DocsTabProps) {
 	}
 
 	onMount(() => {
-		if (props.initialDocId) void select(props.initialDocId);
+		if (props.initialDocId) {
+			run_task(select(props.initialDocId), { component: "docs-tab", action: "select" });
+		}
 	});
 
 	return (
@@ -62,7 +65,7 @@ export default function DocsTab(props: DocsTabProps) {
 										data-testid="doc-list-item"
 										data-document-id={doc.id}
 										onClick={() => {
-											void select(doc.id);
+											run_task(select(doc.id), { component: "docs-tab", action: "select" });
 										}}
 									>
 										<span class="docs-list__title">{doc.title}</span>

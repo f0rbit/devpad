@@ -3,6 +3,7 @@ import type { Database } from "@devpad/schema/database/types";
 import { err, ok, type Result, try_catch_async } from "@f0rbit/corpus";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { createLogger } from "../utils/logger";
 import { createSession } from "./session.js";
 
 const GitHubTokenResponseSchema = z.object({
@@ -156,7 +157,10 @@ export function decodeOAuthState(encoded_state: string): Result<DecodedOAuthStat
 			const padded = encoded_state.replace(/-/g, "+").replace(/_/g, "/");
 			const pad_length = (4 - (padded.length % 4)) % 4;
 			return DecodedOAuthStateSchema.parse(JSON.parse(atob(padded + "=".repeat(pad_length))));
-		} catch {
+		} catch (error) {
+			createLogger("auth.oauth").warn("oauth state decode failed", {
+				error: error instanceof Error ? error.message : String(error),
+			});
 			return null;
 		}
 	})();

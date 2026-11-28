@@ -3,6 +3,7 @@ import type { AuthUser } from "@devpad/schema/bindings";
 import { Button } from "@f0rbit/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
 import { unwrap } from "@/lib/client";
+import { run_task } from "@/lib/run-task";
 import { date } from "../../lib/date-utils";
 import DevpadConnection from "./devpad-connection";
 import TokenForm from "./token-form";
@@ -59,7 +60,8 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		try {
 			const data = unwrap(await getBrowserClient().blog.tokens.list());
 			setTokens(data.tokens);
-		} catch {
+		} catch (error) {
+			console.error("[settings] token fetch failed:", error);
 			setTokensError("Failed to fetch tokens");
 		} finally {
 			setTokensLoading(false);
@@ -69,7 +71,7 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 	const refetchTokens = () => {
 		setTokensLoading(true);
 		setTokensError(null);
-		void fetchTokens();
+		run_task(fetchTokens(), { component: "settings-page", action: "fetch-tokens" });
 	};
 
 	const handleToggle = async (id: string, enabled: boolean) => {
@@ -77,7 +79,8 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.tokens.update(id, { enabled }));
 			refetchTokens();
-		} catch {
+		} catch (error) {
+			console.error("[settings] token update failed:", error);
 			setTokensError("Failed to update token");
 		}
 	};
@@ -87,7 +90,8 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 		try {
 			unwrap(await getBrowserClient().blog.tokens.delete(id));
 			refetchTokens();
-		} catch {
+		} catch (error) {
+			console.error("[settings] token delete failed:", error);
 			setTokensError("Failed to delete token");
 		}
 	};
@@ -210,8 +214,12 @@ const SettingsPage: Component<SettingsPageProps> = (props) => {
 						{(tokenList) => (
 							<TokenList
 								tokens={tokenList}
-								onToggle={(id, enabled) => void handleToggle(id, enabled)}
-								onDelete={(id) => void handleDelete(id)}
+								onToggle={(id, enabled) => {
+									run_task(handleToggle(id, enabled), { component: "settings-page", action: "toggle" });
+								}}
+								onDelete={(id) => {
+									run_task(handleDelete(id), { component: "settings-page", action: "delete" });
+								}}
 							/>
 						)}
 					</Show>

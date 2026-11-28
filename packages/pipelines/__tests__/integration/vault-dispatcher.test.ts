@@ -13,6 +13,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { err, ok } from "@f0rbit/corpus";
+import { dispatch_call_input, dispatch_identity, github_dispatch_result } from "@devpad/schema/contracts";
 import type { DispatchInput } from "@devpad/core/services/pipelines";
 import { make_vault_dispatcher } from "../../src/providers/vault-dispatcher";
 import type { GitHubVaultBinding } from "../../src/bindings";
@@ -39,12 +40,17 @@ const make_fake_vault = (
 			input: { repo: string; workflow: string; ref: string; inputs: Record<string, string> },
 			identity: { package_id: string; environment: string },
 		) => {
+			// The fake validates its own traffic against the github-dispatch
+			// contract (verification-hardening 2.4) — a malformed call from
+			// the production dispatcher fails here, not silently downstream.
+			dispatch_call_input.parse(input);
+			dispatch_identity.parse(identity);
 			calls.push({ input, identity });
-			if (outcome.ok) return ok({ dispatched: true as const });
-			return err(outcome.error);
+			const result = outcome.ok ? ok({ dispatched: true as const }) : err(outcome.error);
+			return github_dispatch_result.parse(result);
 		},
 	};
-	return { binding: binding as unknown as GitHubVaultBinding, calls };
+	return { binding, calls };
 };
 
 describe("make_vault_dispatcher", () => {
@@ -126,5 +132,13 @@ describe("make_vault_dispatcher", () => {
 		expect((await failing({ kind: "upstream_error", cause: { kind: "network", message: "dns" } }))?.message).toContain(
 			"dns",
 		);
+	});
+
+	// Contract regression (verification-hardening 2.4): a workflow file
+	// without .yml/.yaml can never dispatch — fixtures in
+	// `contracts/github-dispatch/invalid/input.workflow-extension.json`.
+	test("dispatch contract rejects a workflow without a .yml/.yaml extension", () => {
+		const parsed = dispatch_call_input.safeParse({ repo: "acme/my-pkg", workflow: "deploy", ref: "main", inputs: {} });
+		expect(parsed.success).toBe(false);
 	});
 });

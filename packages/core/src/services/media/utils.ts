@@ -8,7 +8,10 @@ export const safeJsonParse = <T>(value: string, schema: z.ZodType<T>): T | undef
 		const parsed = JSON.parse(value);
 		const result = schema.safeParse(parsed);
 		return result.success ? result.data : undefined;
-	} catch {
+	} catch (error) {
+		createLogger("media.utils").debug("safeJsonParse failed", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return undefined;
 	}
 };
@@ -16,7 +19,10 @@ export const safeJsonParse = <T>(value: string, schema: z.ZodType<T>): T | undef
 export const tryJsonParse = (value: string): unknown => {
 	try {
 		return JSON.parse(value);
-	} catch {
+	} catch (error) {
+		createLogger("media.utils").debug("tryJsonParse failed", {
+			error: error instanceof Error ? error.message : String(error),
+		});
 		return undefined;
 	}
 };
@@ -169,9 +175,10 @@ export const safeWaitUntil = (
 	const log = createLogger(taskName);
 	try {
 		ctx.executionCtx?.waitUntil?.(task());
-	} catch {
-		task().catch((error: unknown) => {
-			log.error("Background task failed", { error });
+	} catch (error) {
+		log.error("waitUntil threw synchronously, falling back to detached task", { error });
+		task().catch((task_error: unknown) => {
+			log.error("Background task failed", { error: task_error });
 		});
 	}
 };

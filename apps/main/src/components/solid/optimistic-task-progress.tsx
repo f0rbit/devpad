@@ -8,6 +8,7 @@ import SquareCheck from "lucide-solid/icons/square-check";
 import SquareDot from "lucide-solid/icons/square-dot";
 import { Show } from "solid-js";
 import { OptimisticStatus } from "@/components/solid/optimistic-status";
+import { run_task } from "@/lib/run-task";
 import { createOptimisticUpdate } from "@/utils/optimistic-updates";
 
 type Progress = Task["progress"];
@@ -64,7 +65,7 @@ export function OptimisticTaskProgress(props: OptimisticTaskProgressProps) {
 	const handleProgressClick = () => {
 		const current = currentProgress();
 		const next = nextProgress(current);
-		void progressUpdate.updateFields({ progress: next });
+		run_task(progressUpdate.updateFields({ progress: next }), { component: "optimistic-task-progress" });
 	};
 
 	const ProgressIcon = () => {

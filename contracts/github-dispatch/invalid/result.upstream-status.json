@@ -1,0 +1,11 @@
+{
+	"ok": false,
+	"error": {
+		"kind": "upstream_error",
+		"cause": {
+			"kind": "rate_limited",
+			"status": 500,
+			"message": "x"
+		}
+	}
+}

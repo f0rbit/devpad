@@ -1,6 +1,7 @@
 import { Empty } from "@f0rbit/ui";
 import { createResource, createSignal, For, Show } from "solid-js";
 import { isServer } from "solid-js/web";
+import { run_task } from "@/lib/run-task";
 import { getClient } from "@/utils/client";
 import type { ConnectionWithSettings, ProfileSummary } from "@/utils/types";
 import PlatformCard from "./platform-card";
@@ -118,7 +119,9 @@ export default function ConnectionList(props: ConnectionListProps) {
 											platform={platform}
 											profileId={id}
 											connection={getConnection(platform)}
-											onConnectionChange={() => void refetch()}
+											onConnectionChange={() => {
+												run_task(Promise.resolve(refetch()), { component: "connection-list", action: "refetch" });
+											}}
 										/>
 									)}
 								</For>
